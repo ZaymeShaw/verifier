@@ -1,0 +1,28 @@
+project_id: QA
+name: QA 评估项目
+description: 评估已产出的问答输入、输出、参考答案或上下文证据，支持样本级 scenario。
+adapter: adapter.py
+capabilities: ["live_run", "judge", "attribute", "cluster", "check", "scenario"]
+application:
+  mode: uploaded_output_evaluation
+documents:
+  application: application.md
+  mock: mock.md
+  evaluation: evaluation.md
+  judge_boundary: judge_boundary.md
+  attribution: attribution.md
+  checklist: checklist.md
+frontend_extensions:
+  scenarios: ["qa_gold_answer", "qa_context_faithfulness", "qa_weak_quality"]
+  score_dimensions: ["correctness", "completeness", "key_point_coverage", "faithfulness", "relevance", "usefulness", "coherence", "risk_control", "clarity"]
+  error_taxonomy: ["answer_incorrect", "answer_incomplete", "question_misunderstood", "irrelevant_answer", "unsupported_claim", "hallucination", "context_not_used", "insufficient_context", "context_noise", "over_refusal", "format_error", "too_vague", "contradiction", "needs_human_review", "none"]
+  core_forbidden_markers: []
+  check_rules:
+    require_scenario: true
+    scenario_requirements:
+      qa_gold_answer:
+        reference_field: golden_answer
+      qa_context_faithfulness:
+        input_field: contexts
+      qa_weak_quality:
+        project_field: estimated_quality_only

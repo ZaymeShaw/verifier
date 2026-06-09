@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>归因总结</title>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f6f8fb;color:#172033}header{background:linear-gradient(135deg,#0f172a,#1d4ed8);color:white;padding:24px 32px}main{max-width:1600px;margin:0 auto;padding:20px}.panel,.card,.stat{background:white;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.04)}.panel,.card{padding:16px;margin-bottom:16px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:14px 0}.stat{padding:14px}.stat b{display:block;font-size:24px;margin-bottom:4px}.stat span,.muted,.hint{color:#64748b}.layout{display:grid;grid-template-columns:360px minmax(0,1fr);gap:16px;align-items:start}.pool-library{max-height:260px;overflow:auto}.pool-item{border:1px solid #e5e7eb;border-radius:10px;background:#f8fafc;padding:10px;margin-top:8px}.pool-item b{display:block;margin-bottom:4px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.full{grid-column:1/-1}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}label{display:block;font-weight:700;margin:12px 0 6px}input,textarea,select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px}input[type="checkbox"]{width:auto}textarea{min-height:96px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}button,a.button{background:#2563eb;color:white;border:0;border-radius:9px;padding:10px 13px;font-weight:700;text-decoration:none;cursor:pointer}button.secondary{background:#e2e8f0;color:#172033}button.warn{background:#b45309}button:disabled{opacity:.55;cursor:not-allowed}.inline-label{display:flex;gap:6px;align-items:center;margin:0;font-weight:700}.inline-label select,.inline-label input{width:auto;min-width:86px}.pill{display:inline-block;border-radius:999px;background:#e2e8f0;color:#334155;font-size:12px;font-weight:700;padding:2px 8px}.pill.ok{background:#dcfce7;color:#166534}.pill.bad{background:#fee2e2;color:#991b1b}.pill.warn{background:#fef3c7;color:#92400e}.case-table-wrap{max-height:560px;overflow:auto;border:1px solid #e5e7eb;border-radius:12px}.case-table{min-width:1640px;width:100%;border-collapse:collapse;background:white}.case-table th,.case-table td{border-bottom:1px solid #e5e7eb;padding:9px;text-align:left;vertical-align:top;font-size:13px}.case-table th{position:sticky;top:0;background:#f8fafc;z-index:1}.case-input{min-width:360px;max-width:520px;word-break:break-word}.case-output,.case-reference{min-width:420px;max-width:520px;word-break:break-word}.case-summary{min-width:260px;max-width:420px;word-break:break-word}.accordion{border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:white;margin-top:10px}.accordion>summary{cursor:pointer;list-style:none;background:#f8fafc;padding:12px 14px;font-weight:800}.accordion>summary::-webkit-details-marker{display:none}.accordion-body{padding:12px 14px;border-top:1px solid #e5e7eb}.progress-box{position:sticky;top:8px;z-index:10;border:1px solid #bfdbfe;background:#eff6ff;border-radius:12px;padding:12px;margin:10px 0;color:#1e3a8a}.progress-bar{height:9px;background:#dbeafe;border-radius:999px;overflow:hidden;margin:8px 0}.progress-bar>span{display:block;height:100%;width:0;background:#2563eb;transition:width .2s ease}.progress-log{max-height:150px;overflow:auto;background:white;border:1px solid #dbeafe;border-radius:8px;padding:8px;font-size:12px;line-height:1.5}pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px;max-height:360px;overflow:auto}.cluster-card{border:1px solid #bfdbfe;background:#eff6ff;border-radius:12px;padding:12px;margin-top:10px}@media(max-width:1000px){.layout,.grid,.stats{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header><h1>归因总结</h1><p>协议式单链路、用例池、批量归因、聚簇和 Check 审核视图。</p></header>
+<main>
+  <section class="panel">
+    <div class="toolbar">
+      <a class="button" href="live.html">返回 Live 请求</a>
+      <button onclick="runChain(false)">真实单链路</button>
+      <button class="secondary" onclick="runChain(true)">Mock 单链路</button>
+      <button class="secondary" onclick="loadLastChain()">加载最近结果</button>
+      <button class="secondary" onclick="buildMockCases()">构建 Mock 用例池</button>
+      <button class="secondary" onclick="loadMockDatasets()">加载 Mock 数据集</button>
+      <label class="inline-label">执行模式<select id="batchMode"><option value="live">真实服务</option><option value="mock">Mock 响应</option></select></label>
+      <label class="inline-label">并发数<input id="batchConcurrency" type="number" min="1" max="8" value="4" /></label>
+      <button class="secondary" id="batchRunButton" onclick="runSelectedCases()">批量归因</button>
+      <button class="secondary" onclick="loadAnalysis()">分析项目配置</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="stat-total">0</b><span>用例总数</span></div>
+      <div class="stat"><b id="stat-selected">0</b><span>已选择</span></div>
+      <div class="stat"><b id="stat-correct">0</b><span>Correct</span></div>
+      <div class="stat"><b id="stat-incorrect">0</b><span>Incorrect</span></div>
+      <div class="stat"><b id="stat-clusters">0</b><span>Clusters</span></div>
+    </div>
+  </section>
+
+  <div class="layout">
+    <aside>
+      <section class="card">
+        <h2>运行输入</h2>
+        <label>Project</label>
+        <select id="project" onchange="switchProject()"></select>
+        <label>单链路 Input JSON</label>
+        <textarea id="input">{"query":"45岁女性保费10万以上"}</textarea>
+        <label>Expected Intent（可选）</label>
+        <textarea id="expected" placeholder="可留空；填写后会传给 judge agent。"></textarea>
+        <label>上传/导入用例 JSON</label>
+        <input id="casePoolFile" type="file" accept="application/json,.json" onchange="importCasePoolFile(this.files[0])" />
+        <textarea id="casePoolText">[{"query":"45岁女性保费10万以上"},{"query":"有生存金未领取的客户"}]</textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="secondary" onclick="importCasePool()">导入候选区</button>
+          <button class="secondary" onclick="exportSelectedCases()">导出已选</button>
+          <button class="warn" onclick="clearCasePool()">清空</button>
+        </div>
+        <p class="hint">参考 8011 页面后，这里把“上传/生成/选择/批量归因”集中成候选区；所有数据先转成通用 case 协议，再交给后端统一 batch 链路执行。</p>
+      </section>
+
+      <section class="card">
+        <h2>用例池库</h2>
+        <label>保存名称</label>
+        <input id="poolName" placeholder="例如：生存金专项用例池" />
+        <div class="row" style="margin-top:10px">
+          <button class="secondary" onclick="saveNamedPool()">保存当前候选区</button>
+          <button class="secondary" onclick="renderPoolLibrary()">刷新列表</button>
+        </div>
+        <p class="hint">已完成的一批用例可以保存成命名用例池；之后可加载另一批继续分析，互不覆盖。</p>
+        <div id="poolLibrary" class="pool-library"></div>
+      </section>
+
+      <section class="card">
+        <h2>聚簇概览</h2>
+        <div id="clusterSummary" class="muted">尚未批量归因。</div>
+      </section>
+    </aside>
+
+    <section>
+      <section class="card">
+        <div class="row" style="justify-content:space-between">
+          <h2>用例池候选区</h2>
+          <div class="row">
+            <button class="secondary" onclick="selectAllCases(true)">全选</button>
+            <button class="secondary" onclick="selectAllCases(false)">取消全选</button>
+            <select id="scenarioFilter" onchange="renderCasePool()"><option value="all">全部场景</option></select>
+            <select id="caseFilter" onchange="renderCasePool()">
+              <option value="all">全部状态</option>
+              <option value="pending">pending</option>
+              <option value="correct">correct</option>
+              <option value="incorrect">incorrect</option>
+              <option value="uncertain">uncertain</option>
+            </select>
+          </div>
+        </div>
+        <div id="progress" class="progress-box" style="display:none">
+          <b id="progressTitle">批量归因中</b>
+          <div class="progress-bar"><span id="progressBar"></span></div>
+          <div id="progressText" class="hint">0 / 0</div>
+          <div id="progressLog" class="progress-log"></div>
+        </div>
+        <div class="case-table-wrap"><table class="case-table"><thead><tr><th>选择</th><th>ID</th><th>来源</th><th>Scenario</th><th>Input</th><th>Output / 被评估输出</th><th>Reference</th><th>状态</th><th>Score / Judge</th><th>归因摘要</th></tr></thead><tbody id="casePoolRows"></tbody></table></div>
+      </section>
+
+      <div class="grid">
+        <section class="card"><h2>RunTrace</h2><pre id="trace">尚未加载。</pre></section>
+        <section class="card"><h2>Reference</h2><pre id="reference">尚未加载。</pre></section>
+        <section class="card"><h2>Judge</h2><pre id="judge">尚未加载。</pre></section>
+        <section class="card"><h2>Attribute</h2><pre id="attribute">尚未加载。</pre></section>
+        <section class="card"><h2>Cluster</h2><pre id="cluster">尚未加载。</pre></section>
+        <section class="card"><h2>Check Agent 审核</h2><pre id="check">尚未加载。</pre></section>
+        <section class="card"><h2>Frontend ViewModel</h2><pre id="view">尚未加载。</pre></section>
+        <section class="card"><h2>Project Analysis</h2><pre id="analysis">尚未加载。</pre></section>
+        <section class="card full"><h2>Batch / Case Pool Raw</h2><pre id="batch">尚未加载。</pre></section>
+      </div>
+    </section>
+  </div>
+</main>
+<script>
+const PAGE_VERSION='20260609-summary-json-reference-equal-cells-1';
+async function post(path, body){
+  const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json();
+  if(!res.ok || data.error){throw new Error(data.error || ('HTTP '+res.status));}
+  return data;
+}
+const defaultInputs={client_search:{query:'45岁女性保费10万以上'},QA:{question:'什么是犹豫期？',actual_answer:'犹豫期通常是投保人收到合同后的一段可无条件退保期限。',golden_answer:'犹豫期是投保人收到保险合同后，在规定天数内可申请解除合同并通常退还已交保费的期限。'}};
+const defaultCasePoolText={client_search:'[{"query":"45岁女性保费10万以上"},{"query":"有生存金未领取的客户"}]',QA:'[{"question":"什么是犹豫期？","actual_answer":"犹豫期通常是投保人收到合同后的一段可无条件退保期限。","golden_answer":"犹豫期是投保人收到保险合同后，在规定天数内可申请解除合同并通常退还已交保费的期限。"}]'};
+function scopedKey(key){return key+':'+project();}
+const seedQueries=[];
+let casePool=[];
+let mockDatasets=[];
+let poolLibrary=[];
+let latestCluster=null;
+function readJson(key, fallback){const text=sessionStorage.getItem(key);return text?JSON.parse(text):fallback;}
+function saveCasePool(){casePool=sanitizeCasePool(casePool);sessionStorage.setItem(scopedKey('casePool'),JSON.stringify(casePool));renderCasePool();}
+async function savePoolLibrary(){await renderPoolLibrary();}
+function project(){return document.getElementById('project').value;}
+function resetStalePageState(){
+  const versionKey=scopedKey('pageVersion');
+  if(sessionStorage.getItem(versionKey)===PAGE_VERSION){return;}
+  sessionStorage.removeItem(scopedKey('lastChain'));
+  sessionStorage.removeItem(scopedKey('casePool'));
+  sessionStorage.removeItem(scopedKey('latestCluster'));
+  sessionStorage.setItem(versionKey,PAGE_VERSION);
+}
+function switchProject(){
+  resetStalePageState();
+  casePool=sanitizeCasePool(readJson(scopedKey('casePool'),[]));
+  latestCluster=readJson(scopedKey('latestCluster'),null);
+  document.getElementById('input').value=sessionStorage.getItem(scopedKey('input')) || JSON.stringify(defaultInputs[project()] || {}, null, 2);
+  document.getElementById('casePoolText').value=sessionStorage.getItem(scopedKey('casePoolText')) || defaultCasePoolText[project()] || '[]';
+  sessionStorage.setItem(scopedKey('casePool'),JSON.stringify(casePool));
+  renderCasePool();renderClusterSummary(latestCluster);renderPoolLibrary();setStatus('页面已加载轻量摘要；如需查看最近单链路结果，请点击“加载最近结果”。');
+}
+async function initProjects(){
+  const res=await fetch('/projects');
+  const data=await res.json();
+  const projects=data.projects || ['client_search'];
+  document.getElementById('project').innerHTML=projects.map(item=>'<option value="'+escapeHtml(item)+'">'+escapeHtml(item)+'</option>').join('');
+  if(projects.includes('client_search')){document.getElementById('project').value='client_search';}
+  switchProject();
+}
+function expectedIntent(){return document.getElementById('expected').value.trim();}
+function show(id,data){document.getElementById(id).textContent=JSON.stringify(data??{},null,2);}
+function showCompact(id,data){
+  const text=JSON.stringify(data??{},null,2);
+  const limit=12000;
+  document.getElementById(id).textContent=text.length>limit?text.slice(0,limit)+'\n... 已截断大体积 JSON，详情请查看后端结果或单条用例。':text;
+}
+function escapeHtml(text){return String(text).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function formatJsonCell(value, limit=1800){
+  if(value===null || value===undefined || value===''){return '-';}
+  const text=typeof value==='string'?value:JSON.stringify(value,null,2);
+  return text.length>limit?text.slice(0,limit)+'\n... 已截断，点击下方完整结果查看原始 JSON':text;
+}
+function shortText(value, limit=180){
+  if(value===null || value===undefined){return '';}
+  let text;
+  if(typeof value==='string'){text=value;}
+  else if(typeof value==='number' || typeof value==='boolean'){text=String(value);}
+  else if(Array.isArray(value)){text='Array('+value.length+') '+JSON.stringify(value.slice(0,3));}
+  else{text=Object.entries(value).slice(0,6).map(([key,item])=>key+': '+(typeof item==='object'&&item!==null?(Array.isArray(item)?'Array('+item.length+')':'Object'):String(item))).join(', ');}
+  return text.length>limit?text.slice(0,limit)+'…':text;
+}
+function inputLabel(input){if(!input || typeof input!=='object'){return shortText(input);}const values=Object.values(input).filter(v=>['string','number','boolean'].includes(typeof v));return values.length?String(values[0]):shortText(input);}
+function caseFromInput(input,index,source){return {id:'case-'+Date.now()+'-'+index,selected:true,input,expected_intent:'',source,status:'pending',judge:null,attribute:null,trace:null};}
+function clearCaseResult(item,status='pending'){return {...item,status,trace:null,judge:null,attribute:null,frontend_view:null,cluster:null,check:null};}
+function comparableInput(input){
+  if(!input || typeof input!=='object'){return input;}
+  const copy={...input};
+  delete copy.case_id;
+  if(copy.input && typeof copy.input==='object'){
+    copy.input={...copy.input};
+    delete copy.input.case_id;
+  }
+  return copy;
+}
+function sameInput(left,right){return JSON.stringify(comparableInput(left))===JSON.stringify(comparableInput(right));}
+function hasNonEmptyQuery(value){const input=value?.input || value;return !!(input && typeof input==='object' && String(input.query || input.user_text || '').trim());}
+function hasStoredResult(item){return !!(item.trace || item.judge || item.attribute || item.frontend_view || item.cluster || item.check);}
+function resultOutput(item){return item.trace?.extracted_output || item.judge?.actual || item.frontend_view?.run_trace_summary?.extracted_output || item.frontend_view?.judge_panel?.actual || null;}
+function hasStaleEmptyQueryResult(item){return project()==='client_search' && hasNonEmptyQuery(item.input) && resultOutput(item)?.empty_result_reason==='empty_query';}
+function resultMatchesCase(item){
+  if(!hasStoredResult(item)){return true;}
+  if(!item.trace){return false;}
+  const traceInput=item.trace.input || {};
+  return sameInput(traceInput, caseRunInput(item)) || sameInput(traceInput, item.input || {});
+}
+function stripResult(item){return {...item,status:'pending',trace:null,judge:null,attribute:null,frontend_view:null,cluster:null,check:null};}
+function sanitizeCaseResult(item){return resultMatchesCase(item) && !hasStaleEmptyQueryResult(item)?item:stripResult(item);}
+function sanitizeCasePool(items){return (items || []).map(sanitizeCaseResult);}
+function inferCaseScenario(item){return item.scenario || item.trace?.project_fields?.scenario || item.input?.scenario || item.input?.metadata?.scenario || '';}
+function caseRunInput(item){
+  const payload={};
+  if(item.input!==undefined){payload.input=item.input;}
+  if(item.output!==undefined){payload.output=item.output;}
+  if(item.reference!==undefined){payload.reference=item.reference;}
+  if(item.metadata!==undefined){payload.metadata=item.metadata;}
+  if(item.scenario!==undefined){payload.scenario=item.scenario;}
+  if(Object.keys(payload).length===1 && payload.input && !item.output && !item.reference && !item.metadata && !item.scenario){return payload.input;}
+  return payload;
+}
+function caseOutput(item){return item.output || item.input?.output || item.trace?.extracted_output || null;}
+function inputReference(item){return item.reference || item.input?.reference || (item.input?.golden_answer || item.input?.gold_answer ? {golden_answer:item.input.golden_answer || item.input.gold_answer} : null) || null;}
+function caseReference(item){return item.frontend_view?.reference_panel?.reference || item.judge?.expected || inputReference(item) || null;}
+function normalizeCase(item,index,source){return item && item.input?sanitizeCaseResult({...item,id:item.id||('case-'+Date.now()+'-'+index),selected:true,status:item.status||'pending',source:item.source||source,scenario:inferCaseScenario(item)}):caseFromInput(item,index,source);}
+async function buildMockCases(){const data=await post('/api/mock_cases',{project:project()});casePool=(data.cases||[]).map((x,index)=>normalizeCase(x,index,'mock_agent_seed'));resetCasePoolFilters();saveCasePool();setStatus('已通过统一 mock agent 构建用例池。');}
+async function loadMockDatasets(){
+  const data=await post('/api/mock_datasets',{project:project()});
+  mockDatasets=data.datasets||[];
+  const cases=mockDatasets.flatMap(dataset=>(dataset.cases||[]).map(item=>({...item,dataset_name:dataset.name})));
+  casePool=cases.map((x,index)=>normalizeCase(x,index,'mock_dataset_agent'));
+  resetCasePoolFilters();
+  saveCasePool();
+  show('batch',{mock_datasets:mockDatasets,dataset_count:mockDatasets.length,case_count:casePool.length});
+  setStatus('已加载 '+mockDatasets.length+' 批 Mock 数据集，共 '+casePool.length+' 条，可直接选择后批量归因。');
+}
+function importCasePool(){const inputs=JSON.parse(document.getElementById('casePoolText').value);sessionStorage.setItem(scopedKey('casePoolText'),document.getElementById('casePoolText').value);casePool=(Array.isArray(inputs)?inputs:(inputs.cases||[])).map((item,index)=>normalizeCase(item,index,'uploaded_or_manual'));resetCasePoolFilters();saveCasePool();setStatus('已导入候选用例。');}
+async function importCasePoolFile(file){
+  if(!file){return;}
+  const text=await file.text();
+  document.getElementById('casePoolText').value=text;
+  importCasePool();
+  setStatus('已从文件导入自定义数据集：'+file.name);
+}
+function exportSelectedCases(){document.getElementById('casePoolText').value=JSON.stringify(casePool.filter(x=>x.selected),null,2);setStatus('已导出已选择用例。');}
+function clearCasePool(){casePool=[];latestCluster=null;saveCasePool();renderClusterSummary(null);show('batch',{});setStatus('已清空用例池。');}
+function selectAllCases(selected){casePool=casePool.map(x=>({...x,selected}));saveCasePool();}
+async function saveNamedPool(){
+  const name=document.getElementById('poolName').value.trim() || '未命名用例池 '+new Date().toLocaleString();
+  await post('/api/case_pool/save',{project:project(),name,cases:casePool});
+  await renderPoolLibrary();
+  setStatus('已持久化保存用例池：'+name);
+}
+async function loadNamedPool(id){
+  const pool=await post('/api/case_pool/load',{project:project(),id});
+  casePool=sanitizeCasePool((pool.cases || []).map(x=>({...x,selected:true})));
+  latestCluster=null;
+  resetCasePoolFilters();
+  saveCasePool();
+  renderClusterSummary(null);
+  setStatus('已加载持久化用例池：'+pool.name);
+}
+async function deleteNamedPool(id){
+  await post('/api/case_pool/delete',{project:project(),id});
+  await renderPoolLibrary();
+  setStatus('已删除持久化用例池。');
+}
+async function renderPoolLibrary(){
+  const el=document.getElementById('poolLibrary');
+  if(!el){return;}
+  const data=await post('/api/case_pools',{project:project()});
+  poolLibrary=data.pools || [];
+  if(!poolLibrary.length){el.innerHTML='<div class="muted">暂无已保存用例池。</div>';return;}
+  el.innerHTML=poolLibrary.map(pool=>'<div class="pool-item"><b>'+escapeHtml(pool.name)+'</b><div class="muted">'+escapeHtml(pool.case_count)+' 条 · '+escapeHtml(pool.created_at || '')+'</div><div class="row" style="margin-top:8px"><button class="secondary" onclick="loadNamedPool(\''+escapeHtml(pool.id)+'\')">加载</button><button class="secondary" onclick="deleteNamedPool(\''+escapeHtml(pool.id)+'\')">删除</button></div></div>').join('');
+}
+function toggleCase(id,checked){casePool=casePool.map(x=>x.id===id?{...x,selected:checked}:x);saveCasePool();}
+function statusPill(status){const cls=status==='correct'?'ok':status==='incorrect'?'bad':status==='uncertain'?'warn':'';return '<span class="pill '+cls+'">'+escapeHtml(status||'pending')+'</span>';}
+function renderCaseJudge(item){
+  if(!item.judge){return '<span class="muted">尚未评估</span>';}
+  return renderJudgeCard(item.judge);
+}
+function renderCaseAttribute(item){
+  if(!item.attribute){return '<span class="muted">尚未归因</span>';}
+  return renderAttributeCard(item.attribute);
+}
+function renderScenarioFilter(){
+  const el=document.getElementById('scenarioFilter');
+  if(!el){return;}
+  const current=el.value || 'all';
+  const scenarios=[...new Set(casePool.map(inferCaseScenario).filter(Boolean))];
+  el.innerHTML='<option value="all">全部场景</option>'+scenarios.map(item=>'<option value="'+escapeHtml(item)+'">'+escapeHtml(item)+'</option>').join('');
+  el.value=scenarios.includes(current)?current:'all';
+}
+function resetCasePoolFilters(){
+  const caseFilter=document.getElementById('caseFilter');
+  const scenarioFilter=document.getElementById('scenarioFilter');
+  if(caseFilter){caseFilter.value='all';}
+  if(scenarioFilter){scenarioFilter.value='all';}
+}
+function renderCasePool(){
+  const filter=document.getElementById('caseFilter')?.value || 'all';
+  renderScenarioFilter();
+  const scenarioFilter=document.getElementById('scenarioFilter')?.value || 'all';
+  const rows=document.getElementById('casePoolRows');
+  const visible=casePool.filter(x=>(filter==='all' || (x.status||'pending')===filter) && (scenarioFilter==='all' || inferCaseScenario(x)===scenarioFilter));
+  const page=visible.slice(0,100);
+  const more=visible.length>page.length?'<tr><td colspan="10" class="muted">仅展示前 '+page.length+' / '+visible.length+' 条；请使用场景或状态筛选缩小范围，批量执行仍会使用已选择用例。</td></tr>':'';
+  const emptyText=casePool.length?'当前筛选未命中用例，候选区仍有 '+casePool.length+' 条；请选择“全部状态/全部场景”查看跑完后的结果。':'候选区为空，可构建 Mock 用例池或导入自定义数据集。';
+  rows.innerHTML=visible.length?page.map(x=>'<tr><td><input type="checkbox" '+(x.selected?'checked':'')+' onchange="toggleCase(\''+escapeHtml(x.id)+'\',this.checked)"></td><td>'+escapeHtml(x.id)+'</td><td>'+escapeHtml(x.source||'')+'</td><td>'+escapeHtml(inferCaseScenario(x) || '-')+'</td><td class="case-input">'+escapeHtml(inputLabel(x.input))+'<br><span class="muted">'+escapeHtml(shortText(x.input,260))+'</span></td><td class="case-output"><pre>'+escapeHtml(formatJsonCell(caseOutput(x) || outputSummary(x),1800))+'</pre></td><td class="case-reference"><pre>'+escapeHtml(formatJsonCell(caseReference(x),1800))+'</pre></td><td>'+statusPill(x.status)+'</td><td class="case-summary">'+renderCaseJudge(x)+'</td><td class="case-summary">'+renderCaseAttribute(x)+'</td></tr>').join('')+more:'<tr><td colspan="10" class="muted">'+escapeHtml(emptyText)+'</td></tr>';
+  updateStats();
+}
+function outputSummary(item){
+  const raw=item.trace?.raw_response;
+  const output=item.trace?.extracted_output;
+  const projectFields=item.trace?.project_fields;
+  if(!raw && !output){return '-';}
+  return {extracted_output:output, project_fields:projectFields, raw_response:raw};
+}
+function updateStats(){
+  document.getElementById('stat-total').textContent=casePool.length;
+  document.getElementById('stat-selected').textContent=casePool.filter(x=>x.selected).length;
+  document.getElementById('stat-correct').textContent=casePool.filter(x=>x.status==='correct').length;
+  document.getElementById('stat-incorrect').textContent=casePool.filter(x=>x.status==='incorrect').length;
+  document.getElementById('stat-clusters').textContent=(latestCluster?.clusters || []).length;
+}
+function setStatus(text){document.getElementById('progress').style.display='block';document.getElementById('progressText').textContent=text;}
+function setProgress(done,total,line){
+  document.getElementById('progress').style.display='block';
+  document.getElementById('progressBar').style.width=(total?Math.round(done*100/total):0)+'%';
+  document.getElementById('progressText').textContent=done+' / '+total;
+  if(line){
+    const log=document.getElementById('progressLog');
+    log.innerHTML+='<div>'+escapeHtml(line)+'</div>';
+    while(log.children.length>120){log.removeChild(log.firstChild);}
+  }
+}
+function runStatus(run,eventStatus){return run?.judge?.verdict || run?.status || eventStatus || (run?.error?'error':'done');}
+function applyRunToCase(item,run,eventStatus){
+  return {...item,status:runStatus(run,eventStatus),trace:run.trace||null,judge:run.judge||null,attribute:run.attribute||null,frontend_view:run.frontend_view||null,check:run.check||null,cluster:run.cluster||null,error:run.error||null};
+}
+function applyBatchEvents(events){
+  const latestByCase={};
+  (events||[]).forEach(event=>{if(event.case_id){latestByCase[event.case_id]=event;}});
+  let changed=false;
+  casePool=casePool.map(item=>{
+    const event=latestByCase[item.id];
+    if(!event){return item;}
+    const run=event.run;
+    if(run){
+      changed=true;
+      return applyRunToCase(item,run,event.status);
+    }
+    if(event.status===item.status){return item;}
+    changed=true;
+    return clearCaseResult(item,event.status || 'done');
+  });
+  if(changed){sessionStorage.setItem(scopedKey('casePool'),JSON.stringify(casePool));renderCasePool();}
+}
+function applyBatchRuns(runs){
+  const runsByCase={};
+  (runs||[]).forEach(run=>{if(run.case_id){runsByCase[run.case_id]=run;}});
+  casePool=casePool.map(item=>{
+    const run=runsByCase[item.id];
+    return run?applyRunToCase(item,run):item;
+  });
+  saveCasePool();
+}
+async function runSelectedCases(){
+  const selected=casePool.filter(x=>x.selected);
+  if(!selected.length){setStatus('没有选择用例。');return;}
+  const mock=document.getElementById('batchMode').value==='mock';
+  const concurrency=Math.max(1,Math.min(parseInt(document.getElementById('batchConcurrency').value||'4',10),8));
+  const button=document.getElementById('batchRunButton');
+  document.getElementById('progressLog').innerHTML='';
+  button.disabled=true;
+  setProgress(0,selected.length,'统一 batch pipeline 已提交：模式='+(mock?'Mock 响应':'真实服务')+'，并发='+concurrency+'。');
+  try{
+    const body={project:project(),cases:selected,mock,concurrency};
+    const expected=expectedIntent();
+    if(expected){body.expected_intent=expected;}
+    const started=await post('/api/batch_start',body);
+    let batch=null;
+    while(true){
+      await new Promise(resolve=>setTimeout(resolve,1200));
+      const status=await post('/api/batch_status',{project:project(),job_id:started.job_id});
+      const events=(status.events||[]).slice(-120);
+      document.getElementById('progressLog').innerHTML=events.map(event=>{
+        const detail=event.error || event.reason || '';
+        return '<div>完成 '+escapeHtml(event.case_id || event.index)+'：'+escapeHtml(event.status || '')+(detail?' — '+escapeHtml(shortText(detail,160)):'')+'</div>';
+      }).join('');
+      applyBatchEvents(events);
+      setProgress(status.done||0,status.total||selected.length,'批量任务状态：'+status.status+'，已完成 '+(status.done||0)+' / '+(status.total||selected.length));
+      if(status.status==='completed'){batch=status.result;break;}
+      if(status.status==='failed'){throw new Error(status.error || 'batch job failed');}
+    }
+    const runs=batch.runs||[];
+    resetCasePoolFilters();
+    applyBatchRuns(runs);
+    latestCluster=batch.cluster||null;
+    sessionStorage.setItem(scopedKey('latestCluster'),JSON.stringify(latestCluster));
+    const last=runs[runs.length-1];
+    if(last){renderChain(last);}
+    show('cluster',latestCluster);show('check',batch.check);showCompact('batch',{case_pool_summary:{total:casePool.length,selected:casePool.filter(x=>x.selected).length},batch_summary:{project_id:batch.project_id,total:batch.total,cluster:batch.cluster,check:batch.check},execution_mode:mock?'mock':'live',concurrency,job_id:started.job_id});
+    renderClusterSummary(latestCluster);
+    setProgress(selected.length,selected.length,'完成统一批量归因：'+runs.length+' / '+selected.length+' 条。');
+    updateStats();
+  }catch(err){
+    setProgress(0,selected.length,'批量归因失败：'+err.message);
+    show('batch',{error:err.message,execution_mode:mock?'mock':'live',concurrency});
+  }finally{
+    button.disabled=false;
+  }
+}
+function renderClusterSummary(cluster){
+  const el=document.getElementById('clusterSummary');
+  if(!cluster){el.textContent='尚未批量归因。';return;}
+  const clusters=cluster.clusters || [];
+  el.innerHTML=clusters.length?clusters.map((c,i)=>'<div class="cluster-card"><b>Cluster '+(i+1)+'</b><div>'+escapeHtml(c.title || c.failure_category || c.cluster_id || '未命名聚簇')+'</div><div class="muted">代表用例：'+escapeHtml(shortText(c.representative_cases || [],160))+'</div></div>').join(''):'<div class="muted">暂无聚簇。</div>';
+}
+function chainPayload(mock){sessionStorage.setItem(scopedKey('input'),document.getElementById('input').value);const body={project:project(),input:JSON.parse(document.getElementById('input').value),mock};const expected=expectedIntent();if(expected){body.expected_intent=expected;}return body;}
+function chainOutput(data){return data.trace?.extracted_output || data.judge?.actual || data.frontend_view?.run_trace_summary?.extracted_output || data.frontend_view?.judge_panel?.actual || null;}
+function chainHasStaleEmptyQuery(data,currentInput){return project()==='client_search' && hasNonEmptyQuery({input:currentInput}) && chainOutput(data)?.empty_result_reason==='empty_query';}
+async function runChain(mock){const data=await post('/api/run_chain',chainPayload(mock));sessionStorage.setItem(scopedKey('lastChain'),JSON.stringify(data));renderChain(data);}
+function loadLastChain(){
+  const text=sessionStorage.getItem(scopedKey('lastChain'));
+  if(!text){setStatus('没有 lastChain，可直接运行单链路或用例池批量归因。');return;}
+  const data=JSON.parse(text);
+  const currentInput=JSON.parse(document.getElementById('input').value);
+  if(!data.trace || !sameInput(data.trace.input || {}, currentInput)){
+    sessionStorage.removeItem(scopedKey('lastChain'));
+    setStatus('最近结果与当前单链路输入不一致，已清理；请重新运行单链路。');
+    return;
+  }
+  if(chainHasStaleEmptyQuery(data,currentInput)){
+    sessionStorage.removeItem(scopedKey('lastChain'));
+    setStatus('最近结果是旧的 empty_query 结果，已清理；请重新运行单链路。');
+    return;
+  }
+  renderChain(data);
+}
+async function loadAnalysis(){show('analysis',await post('/api/analysis',{project:project()}));}
+function renderJudgeCard(judge){
+  if(!judge){return '<div class="muted">尚未评估。</div>';}
+  return '<div><b>结论：</b>'+escapeHtml(judge.verdict || '')+'</div>'+
+    '<div><b>评分：</b>'+escapeHtml(judge.score ?? '')+'</div>'+
+    '<div><b>置信度：</b>'+escapeHtml(judge.confidence ?? '')+'</div>'+
+    '<div><b>原因：</b>'+escapeHtml(judge.reasoning_summary || '')+'</div>'+
+    '<details class="accordion"><summary>完整 JudgeResult</summary><div class="accordion-body"><pre>'+escapeHtml(JSON.stringify(judge,null,2))+'</pre></div></details>';
+}
+function renderAttributeCard(attribute){
+  if(!attribute){return '<div class="muted">尚未归因。</div>';}
+  return '<div><b>失败类别：</b>'+escapeHtml(attribute.failure_category || '')+'</div>'+
+    '<div><b>失败阶段：</b>'+escapeHtml(attribute.failure_stage || '')+'</div>'+
+    '<div><b>根因假设：</b>'+escapeHtml(attribute.root_cause_hypothesis || '')+'</div>'+
+    '<details class="accordion"><summary>完整 AttributeResult</summary><div class="accordion-body"><pre>'+escapeHtml(JSON.stringify(attribute,null,2))+'</pre></div></details>';
+}
+function renderChain(data){
+  const currentInput=JSON.parse(document.getElementById('input').value);
+  if(data.trace && !sameInput(data.trace.input || {}, currentInput)){
+    showCompact('trace',{stale_result:true,current_input:currentInput,result_input:data.trace.input});showCompact('reference',{});document.getElementById('judge').innerHTML='<div class="muted">当前结果与输入不一致，请重新运行单链路。</div>';document.getElementById('attribute').innerHTML='<div class="muted">当前结果与输入不一致，请重新运行单链路。</div>';showCompact('cluster',{});showCompact('check',{});showCompact('view',{});showCompact('batch',{});setStatus('当前结果与输入不一致，已阻止展示旧 judge。');return;
+  }
+  if(chainHasStaleEmptyQuery(data,currentInput)){
+    showCompact('trace',{stale_empty_query:true,current_input:currentInput,result:chainOutput(data)});showCompact('reference',{});document.getElementById('judge').innerHTML='<div class="muted">旧 empty_query 结果已被阻止展示，请重新运行单链路。</div>';document.getElementById('attribute').innerHTML='<div class="muted">旧 empty_query 结果已被阻止展示，请重新运行单链路。</div>';showCompact('cluster',{});showCompact('check',{});showCompact('view',{});showCompact('batch',{});setStatus('旧 empty_query 结果已被阻止展示，请重新运行单链路。');return;
+  }
+  const trace=data.trace||{},judge=data.judge||{},attribute=data.attribute||{},cluster=data.cluster||{},check=data.check||{},view=data.frontend_view||{};
+  showCompact('trace',trace);showCompact('reference',view.reference_panel || {reference:judge.expected,source:judge.expected?'judge_generated':'missing',actual:judge.actual});document.getElementById('judge').innerHTML=renderJudgeCard(judge);document.getElementById('attribute').innerHTML=renderAttributeCard(attribute);showCompact('cluster',cluster);showCompact('check',check);showCompact('view',view);showCompact('batch',{last_chain_summary:{case_id:data.case_id,trace_id:trace.trace_id,status:trace.status,verdict:judge.verdict,score:judge.score,root_cause:attribute.root_cause_hypothesis}});
+  if(cluster.clusters){latestCluster=cluster;renderClusterSummary(cluster);updateStats();}
+}
+initProjects();
+</script>
+</body>
+</html>

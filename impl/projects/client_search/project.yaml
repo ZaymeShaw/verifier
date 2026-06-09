@@ -1,0 +1,27 @@
+project_id: client_search
+name: 客户搜索评估示例
+description: 将客户搜索项目作为通用评估系统的第一个项目适配实现。
+adapter: adapter.py
+capabilities: ["live_run", "judge", "attribute", "cluster", "check"]
+api:
+  base_url: http://localhost:8000
+  endpoint: /api/v1/client_search_query_parse_no_encipher
+  method: POST
+  timeout: 60
+application:
+  mode: existing_service
+  api_base: http://localhost:8000
+documents:
+  application: application.md
+  mock: mock.md
+  evaluation: evaluation.md
+  judge_boundary: judge_boundary_protocals.md
+  judge_standard: judge.md
+  attribution: attribution.md
+  checklist: checklist.md
+  source_readme: ../../../projects/client_search/readme.md
+  source_config: ../../../projects/client_search/config.md
+  source_prompt: ../../../projects/client_search/prompt.md
+  source_judge_boundary: ../../../projects/client_search/judge_boundary-template.md
+frontend_extensions:
+  core_forbidden_markers: ["query_logic", "conditions", "matched_level", "intent_summary", "clientAge", "annPremSegNum", "clientSex"]

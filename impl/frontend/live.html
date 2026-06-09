@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Live 请求</title>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f6f8fb;color:#172033}header{background:#101828;color:white;padding:22px 30px}main{display:grid;grid-template-columns:420px 1fr;gap:16px;padding:18px}.panel,.card{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:16px}.cards{display:grid;gap:14px}.step{padding:0;overflow:hidden}.step>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;list-style:none;cursor:pointer;padding:16px 18px;background:#f8fafc}.step>summary::-webkit-details-marker{display:none}.step>summary h2{margin:0;font-size:17px}.step>summary:after{content:"展开";font-size:12px;color:#64748b}.step[open]>summary:after{content:"收起"}.step-body{padding:16px 18px;border-top:1px solid #e5e7eb}.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}.metric{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:10px}.metric b{display:block;font-size:13px;color:#64748b;margin-bottom:4px}.badge{display:inline-block;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:700;background:#e2e8f0;color:#334155}.badge.ok{background:#dcfce7;color:#166534}.badge.bad{background:#fee2e2;color:#991b1b}.badge.warn{background:#fef3c7;color:#92400e}label{display:block;font-weight:700;margin:12px 0 6px}input,textarea,select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:10px}textarea{min-height:128px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}button{background:#2563eb;color:white;border:0;border-radius:8px;padding:10px 13px;font-weight:700;cursor:pointer;margin-top:12px}button.secondary{background:#e2e8f0;color:#172033}pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px;max-height:260px;overflow:auto}.inline-details{border:1px solid #e2e8f0;border-radius:10px;margin:10px 0;background:#f8fafc}.inline-details summary{cursor:pointer;padding:10px 12px;font-weight:700;color:#334155}.inline-details pre{margin:0 10px 10px;max-height:180px}.row{display:flex;gap:8px;flex-wrap:wrap}.hint,.muted{color:#64748b;font-size:13px}.empty{color:#94a3b8}.kv{margin:6px 0}.kv b{color:#334155}.raw-title{margin:14px 0 6px;font-weight:700;color:#475569}@media(max-width:1000px){main{grid-template-columns:1fr}.summary{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header><h1>Live 请求</h1><p>单次请求链路：业务服务 → Judge → Attribute。Cluster 聚合在归因总结页处理。</p></header>
+<main>
+  <section class="panel">
+    <label>Project</label>
+    <select id="project" onchange="switchProject()"></select>
+    <label>Input JSON</label>
+    <textarea id="input">{"query":"45岁女性保费10万以上"}</textarea>
+    <label>Expected Intent（可选，传给 judge agent）</label>
+    <textarea id="expected" placeholder="可留空；填写后用于 judge 当前 RunTrace。"></textarea>
+    <div class="row">
+      <button onclick="liveRun(false)">请求业务服务</button>
+      <button class="secondary" onclick="liveRun(true)">Mock 请求</button>
+      <button class="secondary" onclick="runJudge()">请求 Judge</button>
+      <button class="secondary" onclick="runAttribute()">请求 Attribute</button>
+      <button class="secondary" onclick="runChain(false)">真实全链路</button>
+      <button class="secondary" onclick="runChain(true)">Mock 全链路</button>
+    </div>
+    <div class="hint">按顺序执行单步按钮会复用当前页面保存的 lastTrace / lastJudge。</div>
+    <div id="status" class="muted" style="margin-top:12px">等待请求。</div>
+  </section>
+
+  <section class="cards">
+    <div class="summary">
+      <div class="metric"><b>业务请求</b><span id="traceBadge" class="badge">未运行</span></div>
+      <div class="metric"><b>Judge</b><span id="judgeBadge" class="badge">未运行</span></div>
+      <div class="metric"><b>Attribute</b><span id="attributeBadge" class="badge">未运行</span></div>
+    </div>
+    <details class="card step" open>
+      <summary><h2>业务请求结果</h2><span id="traceBadgeInPanel" class="badge">未运行</span></summary>
+      <div class="step-body">
+        <div id="traceHuman" class="empty">尚未请求业务服务。</div>
+        <div class="raw-title">Raw JSON</div>
+        <pre id="traceRaw">{}</pre>
+      </div>
+    </details>
+    <details class="card step">
+      <summary><h2>Judge 评估</h2><span id="judgeBadgeInPanel" class="badge">未运行</span></summary>
+      <div class="step-body">
+        <div id="judgeHuman" class="empty">尚未请求 judge agent。</div>
+        <div class="raw-title">Raw JSON</div>
+        <pre id="judgeRaw">{}</pre>
+      </div>
+    </details>
+    <details class="card step">
+      <summary><h2>Attribute 归因</h2><span id="attributeBadgeInPanel" class="badge">未运行</span></summary>
+      <div class="step-body">
+        <div id="attributeHuman" class="empty">尚未请求 attribute agent。</div>
+        <div class="raw-title">Raw JSON</div>
+        <pre id="attributeRaw">{}</pre>
+      </div>
+    </details>
+  </section>
+</main>
+<script>
+const defaultInputs={
+  client_search:{query:'45岁女性保费10万以上'},
+  QA:{question:'什么是犹豫期？',actual_answer:'犹豫期通常是投保人收到合同后的一段可无条件退保期限。',golden_answer:'犹豫期是投保人收到保险合同后，在规定天数内可申请解除合同并通常退还已交保费的期限。'}
+};
+function scopedKey(key){return key+':'+project()}
+let currentTrace = null;
+let currentJudge = null;
+let currentAttribute = null;
+let currentCluster = null;
+function readSession(key){
+  const text=sessionStorage.getItem(key);
+  return text ? JSON.parse(text) : null;
+}
+async function post(path, body){
+  const res = await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data = await res.json();
+  if(!res.ok || data.error){throw new Error(data.error || ('HTTP '+res.status));}
+  return data;
+}
+function project(){return document.getElementById('project').value}
+function loadScopedState(){currentTrace=readSession(scopedKey('lastTrace'));currentJudge=readSession(scopedKey('lastJudge'));currentAttribute=readSession(scopedKey('lastAttribute'));currentCluster=readSession(scopedKey('lastCluster'));}
+function switchProject(){
+  const savedInput=sessionStorage.getItem(scopedKey('input'));
+  document.getElementById('input').value=savedInput || JSON.stringify(defaultInputs[project()] || {}, null, 2);
+  loadScopedState();renderAll();
+}
+async function initProjects(){
+  const res=await fetch('/projects');
+  const data=await res.json();
+  const projects=data.projects || ['client_search'];
+  document.getElementById('project').innerHTML=projects.map(item=>'<option value="'+escapeHtml(item)+'">'+escapeHtml(item)+'</option>').join('');
+  if(projects.includes('client_search')){document.getElementById('project').value='client_search';}
+  switchProject();
+}
+function payload(mock){sessionStorage.setItem(scopedKey('input'),document.getElementById('input').value);return {project:project(),input:JSON.parse(document.getElementById('input').value),mock}}
+function traceMatchesCurrentInput(trace){return !!trace && trace.project_id===project() && JSON.stringify(trace.input || {})===JSON.stringify(payload(false).input)}
+function expectedIntent(){return document.getElementById('expected').value.trim()}
+function requireValue(value, name){if(!value){throw new Error('缺少 '+name+'，请先执行前一步。')}return value}
+function showRaw(id, data){document.getElementById(id).textContent=JSON.stringify(data ?? {}, null, 2)}
+function setBadge(id, text, state){
+  const el=document.getElementById(id);
+  if(!el){return;}
+  el.textContent=text;
+  el.className='badge '+(state || '');
+}
+function setStepBadge(base, text, state){
+  setBadge(base+'Badge', text, state);
+  setBadge(base+'BadgeInPanel', text, state);
+}
+function list(items){
+  if(!items || !items.length){return '<span class="muted">无</span>';}
+  return '<ul>'+items.map(item=>'<li>'+escapeHtml(typeof item==='string'?item:JSON.stringify(item))+'</li>').join('')+'</ul>';
+}
+function escapeHtml(text){return String(text).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function collapsedJson(title, value){
+  const count=value && typeof value==='object' ? Object.keys(value).length : 0;
+  const label=count ? title+'（'+count+'项）' : title+'（空）';
+  return '<details class="inline-details"><summary>'+escapeHtml(label)+'</summary><pre>'+escapeHtml(JSON.stringify(value || {}, null, 2))+'</pre></details>';
+}
+function renderTrace(trace){
+  showRaw('traceRaw', trace);
+  if(!trace){setStepBadge('trace','未运行','');return;}
+  setStepBadge('trace', trace.status || 'unknown', trace.status==='ok'?'ok':'bad');
+  const output=trace.extracted_output || {};
+  const fields=trace.project_fields || {};
+  document.getElementById('traceHuman').innerHTML =
+    '<div class="kv"><b>Trace ID：</b>'+escapeHtml(trace.trace_id || '')+'</div>'+
+    '<div class="kv"><b>状态：</b>'+escapeHtml(trace.status || '')+'</div>'+
+    '<div class="kv"><b>Output / 被评估输出：</b>'+escapeHtml(output.summary || output.user_visible_text || output.actual_answer || '')+'</div>'+
+    '<div class="kv"><b>结构化输出：</b>'+escapeHtml(JSON.stringify(output.structured_output || output.logic || {}, null, 2))+'</div>'+collapsedJson('项目扩展字段', fields);
+}
+function renderJudge(judge){
+  showRaw('judgeRaw', judge);
+  if(!judge){setStepBadge('judge','未运行','');return;}
+  const state=judge.verdict==='correct'?'ok':(judge.verdict==='incorrect'?'bad':'warn');
+  setStepBadge('judge', judge.verdict || 'unknown', state);
+  document.getElementById('judgeHuman').innerHTML =
+    '<div class="kv"><b>结论：</b>'+escapeHtml(judge.verdict || '')+'</div>'+
+    '<div class="kv"><b>评分：</b>'+escapeHtml(judge.score ?? '')+'</div>'+
+    '<div class="kv"><b>置信度：</b>'+escapeHtml(judge.confidence ?? '')+'</div>'+
+    '<div class="kv"><b>原因：</b>'+escapeHtml(judge.reasoning_summary || '')+'</div>'+collapsedJson('最终评估口径', judge.evaluation_boundary || {})+collapsedJson('口径内判断', judge.primary_assessment || {})+collapsedJson('补充对照说明', judge.contrast_assessments || [])+
+    '<div class="kv"><b>证据：</b>'+list(judge.evidence)+'</div>'+collapsedJson('缺失/错误/多余', {missing:judge.missing || [], wrong:judge.wrong || [], extra:judge.extra || []});
+}
+function renderAttribute(attribute){
+  showRaw('attributeRaw', attribute);
+  if(!attribute){setStepBadge('attribute','未运行','');return;}
+  const state=attribute.failure_category==='none'?'ok':'warn';
+  setStepBadge('attribute', attribute.failure_category || 'unknown', state);
+  document.getElementById('attributeHuman').innerHTML =
+    '<div class="kv"><b>失败类别：</b>'+escapeHtml(attribute.failure_category || '')+'</div>'+
+    '<div class="kv"><b>失败阶段：</b>'+escapeHtml(attribute.failure_stage || '')+'</div>'+
+    '<div class="kv"><b>根因假设：</b>'+escapeHtml(attribute.root_cause_hypothesis || '')+'</div>'+
+    '<div class="kv"><b>证据链：</b>'+list(attribute.evidence_chain)+'</div>'+
+    '<div class="kv"><b>验证步骤：</b>'+list(attribute.verification_steps)+'</div>'+
+    '<div class="kv"><b>修改方向：</b>'+list(attribute.patch_direction)+'</div>';
+}
+function renderAll(){renderTrace(currentTrace);renderJudge(currentJudge);renderAttribute(currentAttribute)}
+async function liveRun(mock){
+  document.getElementById('status').textContent='请求业务服务中...';
+  try{
+    const data = await post('/api/live_run', payload(mock));
+    currentTrace=data;currentJudge=null;currentAttribute=null;currentCluster=null;
+    sessionStorage.setItem(scopedKey('lastTrace'), JSON.stringify(data));
+    sessionStorage.removeItem(scopedKey('lastJudge'));sessionStorage.removeItem(scopedKey('lastAttribute'));sessionStorage.removeItem(scopedKey('lastCluster'));
+    renderAll();
+    document.getElementById('status').textContent='业务请求完成，可继续请求 Judge。';
+  }catch(err){document.getElementById('status').textContent='请求失败：'+err.message}
+}
+async function runJudge(){
+  document.getElementById('status').textContent='judge agent 分析中...';
+  try{
+    if(!traceMatchesCurrentInput(currentTrace)){
+      currentTrace = await post('/api/live_run', payload(false));
+      sessionStorage.setItem(scopedKey('lastTrace'), JSON.stringify(currentTrace));
+    }
+    const body={project:project(),trace:requireValue(currentTrace,'lastTrace')};
+    const expected=expectedIntent();
+    if(expected){body.expected_intent=expected;}
+    const data=await post('/api/judge', body);
+    currentJudge=data;currentAttribute=null;
+    sessionStorage.setItem(scopedKey('lastJudge'), JSON.stringify(data));sessionStorage.removeItem(scopedKey('lastAttribute'));
+    renderAll();
+    document.getElementById('status').textContent='Judge 完成，可继续请求 Attribute。';
+  }catch(err){document.getElementById('status').textContent='Judge 失败：'+err.message}
+}
+async function runAttribute(){
+  document.getElementById('status').textContent='attribute agent 归因中...';
+  try{
+    const data=await post('/api/attribute', {project:project(),trace:requireValue(currentTrace,'lastTrace'),judge:requireValue(currentJudge,'lastJudge')});
+    currentAttribute=data;sessionStorage.setItem(scopedKey('lastAttribute'), JSON.stringify(data));
+    renderAll();
+    document.getElementById('status').textContent='Attribute 完成。cluster 聚合请到归因总结页查看。';
+  }catch(err){document.getElementById('status').textContent='Attribute 失败：'+err.message}
+}
+async function runChain(mock){
+  document.getElementById('status').textContent='全链路运行中...';
+  try{
+    const body=payload(mock);
+    const expected=expectedIntent();
+    if(expected){body.expected_intent=expected;}
+    const data = await post('/api/run_chain', body);
+    currentTrace=data.trace;currentJudge=data.judge;currentAttribute=data.attribute;currentCluster=data.cluster;
+    sessionStorage.setItem(scopedKey('lastTrace'), JSON.stringify(currentTrace));
+    sessionStorage.setItem(scopedKey('lastJudge'), JSON.stringify(currentJudge));
+    sessionStorage.setItem(scopedKey('lastAttribute'), JSON.stringify(currentAttribute));
+    if(currentCluster){sessionStorage.setItem(scopedKey('lastCluster'), JSON.stringify(currentCluster));}
+    sessionStorage.setItem(scopedKey('lastChain'), JSON.stringify(data));
+    renderAll();
+    document.getElementById('status').innerHTML='全链路完成，已保存 lastChain。<a href="summary.html">查看归因总结</a>';
+  }catch(err){document.getElementById('status').textContent='全链路失败：'+err.message}
+}
+initProjects();
+</script>
+</body>
+</html>
