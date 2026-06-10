@@ -59,13 +59,19 @@ def attribute_failure(spec: ProjectSpec, trace: RunTrace, judge: JudgeResult, ll
     )
     data = (llm or LlmClient()).complete_json(system, user)
     if data.get("error"):
+        error_text = data.get("raw_text") or data.get("error")
         return AttributeResult(
             trace_id=trace.trace_id,
             project_id=trace.project_id,
             case_id=str(trace.input.get("case_id") or ""),
             failure_category="未归因",
-            failure_stage="不确定",
-            evidence_chain=[data.get("raw_text") or data.get("error")],
+            failure_stage="llm_attribute_call",
+            evidence_chain=[error_text, *(judge.evidence or [])],
+            trace_analysis=list(trace.execution_trace or []),
+            suspected_locations=[{"type": "unverified", "location": "attribute agent LLM call", "reason": error_text}],
+            root_cause_hypothesis="attribute agent 调用失败，当前只能确认 judge 结果和执行 trace，无法完成模型归因。",
+            verification_steps=["检查 LLM API key、余额、网络和模型配置。", "恢复 LLM 后重新运行 attribute agent。"],
+            patch_direction=["修复 LLM 调用配置或费用问题；不要把该兜底结果当作最终业务根因。"],
             primary_error_type="needs_human_review",
             error_types=["needs_human_review"],
             severity="unknown",

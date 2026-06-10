@@ -83,6 +83,7 @@
             - 用例池管理中，请使reference格式与output保持一致，因为他们理论上就是有相同格式的，如果需要格式转换的话，请对reference进行格式转换，与output对齐格式     
             - 如果output/reference过于冗长，请impl/<project>中的实现去做字段选择和截取
             - 如果output/reference的格式是json，请以格式化换行的方式展示来看的清楚点，然后两个前端格子使用一样的大小，没观点让人看的方便点
+            - 归因失败时应实现跳过/重试机制
     + 关于trace的部分说明
         + 根据project特点判断：如果输入不包含output则trace要先调取api生成output，如果输入包含output则直接提取，impl里面根据情况再协议范围内进行调整
         + 放在前端对应协议字段里面，reference格式与output保持一致（请确保这一点）

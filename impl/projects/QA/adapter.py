@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from impl.core.adapter import ProjectAdapter
+from impl.core.schema import JudgeResult
 
 
 class Adapter(ProjectAdapter):
@@ -62,6 +63,80 @@ class Adapter(ProjectAdapter):
             "score_dimensions": self.spec.frontend_extensions.get("score_dimensions") or [],
             "error_taxonomy": self.spec.frontend_extensions.get("error_taxonomy") or [],
         }
+
+    def normalize_judge_result(self, trace, judge_result):
+        if "llm_call_failed" not in (judge_result.quality_flags or []):
+            return judge_result
+        result = self._fallback_judge(trace, judge_result)
+        return result or judge_result
+
+    def _fallback_judge(self, trace, judge_result):
+        actual = trace.extracted_output or {}
+        actual_text = str(actual.get("actual_answer") or "").strip()
+        request = trace.normalized_request or {}
+        reference = request.get("reference") or trace.project_fields.get("reference") or {}
+        golden_text = str(reference.get("golden_answer") or "").strip()
+        contexts = list((request.get("input") or {}).get("contexts") or [])
+        scenario = str(trace.project_fields.get("scenario") or request.get("scenario") or "")
+        if scenario == "qa_gold_answer" and golden_text:
+            score, verdict, missing = self._compare_answer(actual_text, golden_text)
+            reason = "LLM judge 不可用，已使用 QA golden answer 的确定性覆盖率兜底。"
+            evidence = [f"actual_answer={actual_text}", f"golden_answer={golden_text}"]
+        elif scenario == "qa_context_faithfulness" and contexts:
+            score = 1.0 if actual_text and any(self._text_overlap_ratio(actual_text, str(ctx)) >= 0.35 for ctx in contexts) else 0.5 if actual_text else 0.0
+            verdict = "correct" if score >= 0.75 else "incorrect" if score < 0.5 else "uncertain"
+            missing = [] if score >= 0.5 else ["answer lacks support from provided contexts"]
+            reason = "LLM judge 不可用，已使用 QA context faithfulness 的文本重叠兜底。"
+            evidence = [f"actual_answer={actual_text}", f"contexts={contexts}"]
+        elif scenario == "qa_weak_quality":
+            score = 0.75 if len(actual_text) >= 20 else 0.4 if actual_text else 0.0
+            verdict = "correct" if score >= 0.7 else "incorrect" if score < 0.5 else "uncertain"
+            missing = [] if score >= 0.7 else ["answer is too short or empty for weak-quality usefulness estimate"]
+            reason = "LLM judge 不可用，已使用 QA weak-quality 的基础可用性兜底；该场景只作为质量估计。"
+            evidence = [f"actual_answer={actual_text}"]
+        else:
+            return None
+        return JudgeResult(
+            trace_id=trace.trace_id,
+            project_id=trace.project_id,
+            verdict=verdict,
+            score=score,
+            confidence=0.55,
+            expected=reference or None,
+            actual=actual,
+            reconstructed_intent=str((request.get("input") or {}).get("question") or ""),
+            judge_basis="qa_deterministic_fallback_after_llm_failure",
+            boundary_decision={"within_evaluable_scope": scenario != "invalid_sample", "reasoning": reason},
+            evaluation_boundary={"primary_boundary_id": scenario or "qa_fallback", "primary_boundary_name": "QA fallback evaluation", "judge_question": "当前 QA 输出是否满足样本参考或场景要求", "verdict_basis": reason, "boundary_sources": "impl/projects/QA/evaluation.md", "conflict_policy": "fallback is conservative when evidence is insufficient"},
+            primary_assessment={"boundary_id": scenario or "qa_fallback", "score": score, "covered": [] if missing else ["basic scenario requirement covered"], "missing": missing, "wrong": [], "reasoning": reason},
+            missing=missing,
+            wrong=[],
+            extra=[],
+            evidence=evidence,
+            reasoning_summary=reason,
+            score_details=[{"name": "fallback_score", "score": score, "weight": 1, "reason": reason}],
+            needs_human_review=verdict == "uncertain",
+            scenario=scenario,
+            quality_flags=["llm_call_failed", "deterministic_fallback"],
+            raw_model_output=judge_result.raw_model_output,
+        )
+
+    def _compare_answer(self, actual: str, golden: str):
+        if not actual:
+            return 0.0, "incorrect", ["actual_answer is empty"]
+        ratio = self._text_overlap_ratio(actual, golden)
+        if actual == golden or ratio >= 0.72:
+            return 1.0, "correct", []
+        if ratio >= 0.45:
+            return 0.65, "uncertain", ["golden answer is only partially covered"]
+        return 0.3, "incorrect", ["golden answer is mostly missing"]
+
+    def _text_overlap_ratio(self, actual: str, expected: str) -> float:
+        expected_chars = {char for char in expected if not char.isspace() and char not in "，。！？；：,.!?;:"}
+        actual_chars = {char for char in actual if not char.isspace() and char not in "，。！？；：,.!?;:"}
+        if not expected_chars:
+            return 0.0
+        return len(expected_chars & actual_chars) / len(expected_chars)
 
     def build_mock_cases(self) -> list[Dict[str, Any]]:
         return [

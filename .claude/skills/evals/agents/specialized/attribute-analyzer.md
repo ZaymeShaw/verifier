@@ -15,7 +15,8 @@ Attribution is successful only when it connects the current user intent, actual 
 5. Use available project code/config/log/prompt evidence. Prefer importing or calling existing functions for local checks over inventing standalone mock logic.
 6. Identify the earliest verifiable divergence point: request normalization, routing, rule/prompt construction, model parsing, config mapping, post-processing, adapter extraction, service/tooling, or evaluation-standard mismatch.
 7. Check whether the proposed cause generalizes beyond the current sample. If it depends on unrelated historical fields or one known query, mark it as overfit risk instead of a valid attribution.
-8. Give a minimal root-cause hypothesis, verification steps, and patch direction.
+8. If attribution cannot collect enough evidence for the current case, return an explicit incomplete attribution with missing evidence and next verification steps; do not present a plausible story as a completed root cause.
+9. Give a minimal root-cause hypothesis, verification steps, and patch direction.
 
 ## Quality bar
 

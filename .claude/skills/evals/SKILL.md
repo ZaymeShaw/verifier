@@ -19,7 +19,8 @@ Use this skill to build and audit project evaluation pipelines under `impl/`.
 4. When protocol changes are needed, update the protocol, every affected project implementation, frontend output, batch/CLI/API usage, and check gates together.
 5. Avoid parallel orchestration paths: live, mock, batch, frontend, and CLI should reuse the same judge, attribute, cluster, and check mechanisms.
 6. After code changes, run compile/API/mock-chain/frontend smoke tests and report the check result.
-7. When check finds non-trivial standardization issues, track actionable findings under `search-test-case/issue` if issue tracking is requested.
+7. Treat batch, browser persistence, and frontend display as part of the evaluated mechanism: failures there must be isolated and must not hide source pipeline defects.
+8. When check finds non-trivial standardization issues, track actionable findings under `search-test-case/issue` if issue tracking is requested.
 
 ## Specialized agents
 

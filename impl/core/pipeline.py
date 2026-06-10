@@ -140,6 +140,43 @@ def _batch_case(index: int, case: Dict[str, Any], project_id: str, mock: bool, e
         return {"case_id": case_id, "trace": to_dict(trace), "judge": to_dict(judge_result), "attribute": to_dict(attribute_result), "error": str(exc)}
 
 
+def _batch_error_run(index: int, case: Dict[str, Any], project_id: str, exc: Exception) -> Dict[str, Any]:
+    from .schema import to_dict
+
+    case_id = str(case.get("id")) if isinstance(case, dict) and case.get("id") else f"case-{index + 1}"
+    case_input = case.get("input", case) if isinstance(case, dict) else {"value": case}
+    if not isinstance(case_input, dict):
+        case_input = {"value": case_input}
+    trace = RunTrace(
+        trace_id=f"batch-error-{case_id}",
+        project_id=project_id,
+        input={**case_input, "case_id": case_id},
+        normalized_request={},
+        status="error",
+        error=str(exc),
+        runtime_logs=["batch case failed outside run_chain"],
+    )
+    judge_result = JudgeResult(
+        trace_id=trace.trace_id,
+        project_id=project_id,
+        verdict="error",
+        score=0,
+        confidence=1,
+        reasoning_summary=str(exc),
+        quality_flags=["batch_case_failed"],
+    )
+    attribute_result = AttributeResult(
+        trace_id=trace.trace_id,
+        project_id=project_id,
+        case_id=case_id,
+        failure_category="执行失败",
+        failure_stage="batch_run",
+        root_cause_hypothesis=str(exc),
+        quality_flags=["batch_case_failed"],
+    )
+    return {"case_id": case_id, "trace": to_dict(trace), "judge": to_dict(judge_result), "attribute": to_dict(attribute_result), "error": str(exc)}
+
+
 def batch_run(
     project_id: str,
     cases: Iterable[Dict[str, Any]],
@@ -165,7 +202,10 @@ def batch_run(
         }
         for future in as_completed(futures):
             index = futures[future]
-            run = future.result()
+            try:
+                run = future.result()
+            except Exception as exc:
+                run = _batch_error_run(index, case_list[index], project_id, exc)
             runs_by_index[index] = run
             if on_case_done:
                 on_case_done(index, run)

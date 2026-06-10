@@ -1,3 +1,8 @@
+# 202606092301 review
+1. 批量归因失败：Failed to execute 'setItem' on 'Storage': Setting the value of 'casePool:client_search' exceeded the quota.似乎由于这个报错导致整批量归因停止了。不太应该，即便有错误也要继续的，如果是一两个错误的样本，应该选择跳过/重拾
+2. QA project中，点批量归因大量uncertain案例
+
+
 # 202606091939 review
 
 1. 第一个问题：跑完之后表格就被强行清空了，跑的时候其实是有东西的

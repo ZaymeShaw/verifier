@@ -113,7 +113,7 @@
   </div>
 </main>
 <script>
-const PAGE_VERSION='20260609-summary-json-reference-equal-cells-1';
+const PAGE_VERSION='20260609-summary-storage-lightcase-2';
 async function post(path, body){
   const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const data=await res.json();
@@ -128,15 +128,31 @@ let casePool=[];
 let mockDatasets=[];
 let poolLibrary=[];
 let latestCluster=null;
+function lightCase(item){
+  const keep={id:item.id,selected:item.selected,input:item.input,output:item.output,reference:item.reference,metadata:item.metadata,scenario:item.scenario,source:item.source,status:item.status,error:item.error};
+  Object.keys(keep).forEach(key=>keep[key]===undefined && delete keep[key]);
+  return keep;
+}
+function lightCasePool(items){return (items || []).map(lightCase);}
+function safeSetSessionJson(key,value){
+  try{sessionStorage.setItem(key,JSON.stringify(value));return true;}
+  catch(err){
+    if(key===scopedKey('casePool')){sessionStorage.removeItem(key);}
+    console.warn('sessionStorage 保存失败，已跳过持久化：',err);
+    return false;
+  }
+}
 function readJson(key, fallback){const text=sessionStorage.getItem(key);return text?JSON.parse(text):fallback;}
-function saveCasePool(){casePool=sanitizeCasePool(casePool);sessionStorage.setItem(scopedKey('casePool'),JSON.stringify(casePool));renderCasePool();}
+function persistCasePool(){safeSetSessionJson(scopedKey('casePool'),lightCasePool(casePool));}
+function saveCasePool(){casePool=sanitizeCasePool(casePool);persistCasePool();renderCasePool();}
 async function savePoolLibrary(){await renderPoolLibrary();}
 function project(){return document.getElementById('project').value;}
 function resetStalePageState(){
   const versionKey=scopedKey('pageVersion');
   if(sessionStorage.getItem(versionKey)===PAGE_VERSION){return;}
-  sessionStorage.removeItem(scopedKey('lastChain'));
   sessionStorage.removeItem(scopedKey('casePool'));
+  sessionStorage.removeItem(scopedKey('casePoolText'));
+  sessionStorage.removeItem(scopedKey('lastChain'));
   sessionStorage.removeItem(scopedKey('latestCluster'));
   sessionStorage.setItem(versionKey,PAGE_VERSION);
 }
@@ -146,7 +162,7 @@ function switchProject(){
   latestCluster=readJson(scopedKey('latestCluster'),null);
   document.getElementById('input').value=sessionStorage.getItem(scopedKey('input')) || JSON.stringify(defaultInputs[project()] || {}, null, 2);
   document.getElementById('casePoolText').value=sessionStorage.getItem(scopedKey('casePoolText')) || defaultCasePoolText[project()] || '[]';
-  sessionStorage.setItem(scopedKey('casePool'),JSON.stringify(casePool));
+  persistCasePool();
   renderCasePool();renderClusterSummary(latestCluster);renderPoolLibrary();setStatus('页面已加载轻量摘要；如需查看最近单链路结果，请点击“加载最近结果”。');
 }
 async function initProjects(){
@@ -232,7 +248,7 @@ async function loadMockDatasets(){
   show('batch',{mock_datasets:mockDatasets,dataset_count:mockDatasets.length,case_count:casePool.length});
   setStatus('已加载 '+mockDatasets.length+' 批 Mock 数据集，共 '+casePool.length+' 条，可直接选择后批量归因。');
 }
-function importCasePool(){const inputs=JSON.parse(document.getElementById('casePoolText').value);sessionStorage.setItem(scopedKey('casePoolText'),document.getElementById('casePoolText').value);casePool=(Array.isArray(inputs)?inputs:(inputs.cases||[])).map((item,index)=>normalizeCase(item,index,'uploaded_or_manual'));resetCasePoolFilters();saveCasePool();setStatus('已导入候选用例。');}
+function importCasePool(){const inputs=JSON.parse(document.getElementById('casePoolText').value);safeSetSessionJson(scopedKey('casePoolText'),document.getElementById('casePoolText').value);casePool=(Array.isArray(inputs)?inputs:(inputs.cases||[])).map((item,index)=>normalizeCase(item,index,'uploaded_or_manual'));resetCasePoolFilters();saveCasePool();setStatus('已导入候选用例。');}
 async function importCasePoolFile(file){
   if(!file){return;}
   const text=await file.text();
@@ -352,7 +368,7 @@ function applyBatchEvents(events){
     changed=true;
     return clearCaseResult(item,event.status || 'done');
   });
-  if(changed){sessionStorage.setItem(scopedKey('casePool'),JSON.stringify(casePool));renderCasePool();}
+  if(changed){persistCasePool();renderCasePool();}
 }
 function applyBatchRuns(runs){
   const runsByCase={};
@@ -395,7 +411,7 @@ async function runSelectedCases(){
     resetCasePoolFilters();
     applyBatchRuns(runs);
     latestCluster=batch.cluster||null;
-    sessionStorage.setItem(scopedKey('latestCluster'),JSON.stringify(latestCluster));
+    safeSetSessionJson(scopedKey('latestCluster'),latestCluster);
     const last=runs[runs.length-1];
     if(last){renderChain(last);}
     show('cluster',latestCluster);show('check',batch.check);showCompact('batch',{case_pool_summary:{total:casePool.length,selected:casePool.filter(x=>x.selected).length},batch_summary:{project_id:batch.project_id,total:batch.total,cluster:batch.cluster,check:batch.check},execution_mode:mock?'mock':'live',concurrency,job_id:started.job_id});
@@ -415,10 +431,10 @@ function renderClusterSummary(cluster){
   const clusters=cluster.clusters || [];
   el.innerHTML=clusters.length?clusters.map((c,i)=>'<div class="cluster-card"><b>Cluster '+(i+1)+'</b><div>'+escapeHtml(c.title || c.failure_category || c.cluster_id || '未命名聚簇')+'</div><div class="muted">代表用例：'+escapeHtml(shortText(c.representative_cases || [],160))+'</div></div>').join(''):'<div class="muted">暂无聚簇。</div>';
 }
-function chainPayload(mock){sessionStorage.setItem(scopedKey('input'),document.getElementById('input').value);const body={project:project(),input:JSON.parse(document.getElementById('input').value),mock};const expected=expectedIntent();if(expected){body.expected_intent=expected;}return body;}
+function chainPayload(mock){safeSetSessionJson(scopedKey('input'),document.getElementById('input').value);const body={project:project(),input:JSON.parse(document.getElementById('input').value),mock};const expected=expectedIntent();if(expected){body.expected_intent=expected;}return body;}
 function chainOutput(data){return data.trace?.extracted_output || data.judge?.actual || data.frontend_view?.run_trace_summary?.extracted_output || data.frontend_view?.judge_panel?.actual || null;}
 function chainHasStaleEmptyQuery(data,currentInput){return project()==='client_search' && hasNonEmptyQuery({input:currentInput}) && chainOutput(data)?.empty_result_reason==='empty_query';}
-async function runChain(mock){const data=await post('/api/run_chain',chainPayload(mock));sessionStorage.setItem(scopedKey('lastChain'),JSON.stringify(data));renderChain(data);}
+async function runChain(mock){const data=await post('/api/run_chain',chainPayload(mock));safeSetSessionJson(scopedKey('lastChain'),data);renderChain(data);}
 function loadLastChain(){
   const text=sessionStorage.getItem(scopedKey('lastChain'));
   if(!text){setStatus('没有 lastChain，可直接运行单链路或用例池批量归因。');return;}
