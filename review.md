@@ -1,7 +1,13 @@
+# 202606111241 review
+1. client_search这块，你不应该每次judge和attribute都强调一次下游不可用，而是应该ai做impl实现的时候application agent就分析出下游当前不可用，然后impl/project中避开关于下游验证的judge/attribute逻辑
+2. 我对当前judge/attriubte/mock构建的协议感到怀疑，因为粗看了一眼感觉结构很受限且简单，我感觉按当前的方案做没法做的很准。你看下下面这两agent怎么做的，因为我觉得他们做的还挺好的，我的意思是他们现在分的准但是你的不准，你看看当前协议的架构有没有必要升级，是不是受限.他们不是按通用协议的方案做的，但是他们效果我记得还不错，你参考下他们的方案
++ judge agent：search-test-case/llm_attribution_server.py 中的judge逻辑
++ attribute agent：search-test-case/llm_attribution_server.py 中的judge逻辑
+
 # 202606092301 review
 1. 批量归因失败：Failed to execute 'setItem' on 'Storage': Setting the value of 'casePool:client_search' exceeded the quota.似乎由于这个报错导致整批量归因停止了。不太应该，即便有错误也要继续的，如果是一两个错误的样本，应该选择跳过/重拾
 2. QA project中，点批量归因大量uncertain案例
-
+3. 我觉得现在judge和attribute有时候分不清应该以什么作为核心判断边界，引用来判断的东西不太对（比如关于contains和match的区分）
 
 # 202606091939 review
 

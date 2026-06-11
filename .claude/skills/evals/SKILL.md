@@ -20,7 +20,8 @@ Use this skill to build and audit project evaluation pipelines under `impl/`.
 5. Avoid parallel orchestration paths: live, mock, batch, frontend, and CLI should reuse the same judge, attribute, cluster, and check mechanisms.
 6. After code changes, run compile/API/mock-chain/frontend smoke tests and report the check result.
 7. Treat batch, browser persistence, and frontend display as part of the evaluated mechanism: failures there must be isolated and must not hide source pipeline defects.
-8. When check finds non-trivial standardization issues, track actionable findings under `search-test-case/issue` if issue tracking is requested.
+8. Check attribution for historical-case overfit: fields, expected conditions, and patch directions in an attribution must be grounded in the current query, actual output, expected output, trace, and project docs.
+9. When check finds non-trivial standardization issues, track actionable findings under `search-test-case/issue` if issue tracking is requested.
 
 ## Specialized agents
 

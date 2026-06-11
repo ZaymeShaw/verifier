@@ -43,12 +43,16 @@ def live_run(project_id: str, input_data: Dict[str, Any], mock: bool = False) ->
 
 def judge(project_id: str, trace: RunTrace, expected_intent: Optional[str] = None) -> JudgeResult:
     spec = load_project(project_id)
-    result = judge_trace(spec, trace, expected_intent=expected_intent)
-    return load_adapter(spec).normalize_judge_result(trace, result)
+    adapter = load_adapter(spec)
+    result = judge_trace(spec, trace, expected_intent=expected_intent, project_judge_context=adapter.build_judge_context(trace))
+    return adapter.reconcile_judge_result(trace, result)
 
 
 def attribute(project_id: str, trace: RunTrace, judge_result: JudgeResult) -> AttributeResult:
-    return attribute_failure(load_project(project_id), trace, judge_result)
+    spec = load_project(project_id)
+    adapter = load_adapter(spec)
+    result = attribute_failure(spec, trace, judge_result, project_attribute_context=adapter.build_attribute_context(trace, judge_result))
+    return adapter.normalize_attribute_result(trace, judge_result, result)
 
 
 def cluster(project_id: str, attributes: Iterable[AttributeResult]) -> ClusterSummary:
@@ -95,6 +99,14 @@ def _batch_case(index: int, case: Dict[str, Any], project_id: str, mock: bool, e
 
     if isinstance(case, dict) and any(key in case for key in ("output", "reference", "metadata", "scenario")):
         case_input = {key: case[key] for key in ("input", "output", "reference", "metadata", "scenario") if key in case}
+        if "input" not in case_input:
+            flat_input = {
+                key: value
+                for key, value in case.items()
+                if key not in {"id", "selected", "source", "status", "expected_intent", "output", "reference", "metadata", "scenario"}
+            }
+            if flat_input:
+                case_input["input"] = flat_input
     else:
         case_input = case.get("input", case) if isinstance(case, dict) else case
     if not isinstance(case_input, dict):
@@ -122,9 +134,11 @@ def _batch_case(index: int, case: Dict[str, Any], project_id: str, mock: bool, e
         judge_result = JudgeResult(
             trace_id=trace.trace_id,
             project_id=project_id,
-            verdict="error",
+            verdict="uncertain",
             score=0,
             confidence=1,
+            judge_method="batch_case_exception",
+            verdict_derivation={"why_verdict": str(exc), "blocking_gaps": ["batch case failed before completing run_chain"]},
             reasoning_summary=str(exc),
             quality_flags=["batch_case_failed"],
         )
@@ -134,6 +148,11 @@ def _batch_case(index: int, case: Dict[str, Any], project_id: str, mock: bool, e
             case_id=case_id,
             failure_category="执行失败",
             failure_stage="batch_run",
+            analysis_method="batch_case_exception",
+            chain_nodes=[{"name": "batch_run", "status": "failed", "evidence": [str(exc)], "reason": str(exc)}],
+            earliest_divergence={"node": "batch_run", "evidence": [str(exc)], "confidence": "high"},
+            analysis_quality={"passed": False, "missing": ["completed run_chain"], "standard": "单 case 失败需要保留错误并让批次继续。"},
+            incomplete_reason="batch case failed before completing run_chain",
             root_cause_hypothesis=str(exc),
             quality_flags=["batch_case_failed"],
         )
@@ -159,9 +178,11 @@ def _batch_error_run(index: int, case: Dict[str, Any], project_id: str, exc: Exc
     judge_result = JudgeResult(
         trace_id=trace.trace_id,
         project_id=project_id,
-        verdict="error",
+        verdict="uncertain",
         score=0,
         confidence=1,
+        judge_method="batch_future_exception",
+        verdict_derivation={"why_verdict": str(exc), "blocking_gaps": ["batch case failed outside run_chain"]},
         reasoning_summary=str(exc),
         quality_flags=["batch_case_failed"],
     )
@@ -171,6 +192,11 @@ def _batch_error_run(index: int, case: Dict[str, Any], project_id: str, exc: Exc
         case_id=case_id,
         failure_category="执行失败",
         failure_stage="batch_run",
+        analysis_method="batch_future_exception",
+        chain_nodes=[{"name": "batch_run", "status": "failed", "evidence": [str(exc)], "reason": str(exc)}],
+        earliest_divergence={"node": "batch_run", "evidence": [str(exc)], "confidence": "high"},
+        analysis_quality={"passed": False, "missing": ["completed future result"], "standard": "线程外层失败需要保留错误并让批次继续。"},
+        incomplete_reason="batch case failed outside run_chain",
         root_cause_hypothesis=str(exc),
         quality_flags=["batch_case_failed"],
     )

@@ -52,6 +52,12 @@ class JudgeResult:
     actual: Any = None
     reconstructed_intent: str = ""
     judge_basis: str = ""
+    judge_method: str = ""
+    intent_decomposition: List[Dict[str, Any]] = field(default_factory=list)
+    condition_assessments: List[Dict[str, Any]] = field(default_factory=list)
+    semantic_equivalence_checks: List[Dict[str, Any]] = field(default_factory=list)
+    reference_generation_basis: Dict[str, Any] = field(default_factory=dict)
+    verdict_derivation: Dict[str, Any] = field(default_factory=dict)
     boundary_decision: Dict[str, Any] = field(default_factory=dict)
     evaluation_boundary: Dict[str, Any] = field(default_factory=dict)
     primary_assessment: Dict[str, Any] = field(default_factory=dict)
@@ -75,8 +81,15 @@ class AttributeResult:
     case_id: str = ""
     failure_category: str = "未归因"
     failure_stage: str = "不确定"
+    analysis_method: str = ""
     evidence_chain: List[Any] = field(default_factory=list)
     trace_analysis: List[Any] = field(default_factory=list)
+    chain_nodes: List[Dict[str, Any]] = field(default_factory=list)
+    local_verifications: List[Dict[str, Any]] = field(default_factory=list)
+    earliest_divergence: Dict[str, Any] = field(default_factory=dict)
+    evidence_coverage: Dict[str, Any] = field(default_factory=dict)
+    analysis_quality: Dict[str, Any] = field(default_factory=dict)
+    incomplete_reason: str = ""
     suspected_locations: List[Any] = field(default_factory=list)
     root_cause_hypothesis: str = ""
     verification_steps: List[str] = field(default_factory=list)

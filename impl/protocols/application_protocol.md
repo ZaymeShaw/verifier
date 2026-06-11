@@ -10,6 +10,7 @@ Fields:
 - `api_base`: default API base URL.
 - `dependencies`: local or external dependencies.
 - `known_external_services`: databases, search services, queues, model services, or other dependencies.
+- `application_boundary`: current runtime capability boundary discovered before judge/attribute, such as whether downstream result-set verification is available and which judge scope should be used.
 
 Rules:
 

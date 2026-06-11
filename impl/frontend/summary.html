@@ -233,8 +233,8 @@ function caseRunInput(item){
   if(Object.keys(payload).length===1 && payload.input && !item.output && !item.reference && !item.metadata && !item.scenario){return payload.input;}
   return payload;
 }
-function caseOutput(item){return item.output || item.input?.output || item.trace?.extracted_output || null;}
-function inputReference(item){return item.reference || item.input?.reference || (item.input?.golden_answer || item.input?.gold_answer ? {golden_answer:item.input.golden_answer || item.input.gold_answer} : null) || null;}
+function caseOutput(item){return item.output || item.input?.output || (item.actual_answer || item.answer ? {actual_answer:item.actual_answer || item.answer} : null) || (item.input?.actual_answer || item.input?.answer ? {actual_answer:item.input.actual_answer || item.input.answer} : null) || item.trace?.extracted_output || null;}
+function inputReference(item){return item.reference || item.input?.reference || (item.golden_answer || item.gold_answer ? {golden_answer:item.golden_answer || item.gold_answer} : null) || (item.input?.golden_answer || item.input?.gold_answer ? {golden_answer:item.input.golden_answer || item.input.gold_answer} : null) || null;}
 function caseReference(item){return item.frontend_view?.reference_panel?.reference || item.judge?.expected || inputReference(item) || null;}
 function normalizeCase(item,index,source){return item && item.input?sanitizeCaseResult({...item,id:item.id||('case-'+Date.now()+'-'+index),selected:true,status:item.status||'pending',source:item.source||source,scenario:inferCaseScenario(item)}):caseFromInput(item,index,source);}
 async function buildMockCases(){const data=await post('/api/mock_cases',{project:project()});casePool=(data.cases||[]).map((x,index)=>normalizeCase(x,index,'mock_agent_seed'));resetCasePoolFilters();saveCasePool();setStatus('已通过统一 mock agent 构建用例池。');}
@@ -350,7 +350,10 @@ function setProgress(done,total,line){
 }
 function runStatus(run,eventStatus){return run?.judge?.verdict || run?.status || eventStatus || (run?.error?'error':'done');}
 function applyRunToCase(item,run,eventStatus){
-  return {...item,status:runStatus(run,eventStatus),trace:run.trace||null,judge:run.judge||null,attribute:run.attribute||null,frontend_view:run.frontend_view||null,check:run.check||null,cluster:run.cluster||null,error:run.error||null};
+  const next={...item,status:runStatus(run,eventStatus),trace:run.trace||null,judge:run.judge||null,attribute:run.attribute||null,frontend_view:run.frontend_view||null,check:run.check||null,cluster:run.cluster||null,error:run.error||null};
+  const generatedRef=run.frontend_view?.reference_panel?.source==='judge_generated'?run.frontend_view?.reference_panel?.reference:null;
+  if(!inputReference(next) && generatedRef){next.reference=generatedRef;}
+  return next;
 }
 function applyBatchEvents(events){
   const latestByCase={};
@@ -413,7 +416,7 @@ async function runSelectedCases(){
     latestCluster=batch.cluster||null;
     safeSetSessionJson(scopedKey('latestCluster'),latestCluster);
     const last=runs[runs.length-1];
-    if(last){renderChain(last);}
+    if(last){renderChain(last,{skipInputGuard:true});}
     show('cluster',latestCluster);show('check',batch.check);showCompact('batch',{case_pool_summary:{total:casePool.length,selected:casePool.filter(x=>x.selected).length},batch_summary:{project_id:batch.project_id,total:batch.total,cluster:batch.cluster,check:batch.check},execution_mode:mock?'mock':'live',concurrency,job_id:started.job_id});
     renderClusterSummary(latestCluster);
     setProgress(selected.length,selected.length,'完成统一批量归因：'+runs.length+' / '+selected.length+' 条。');
@@ -468,12 +471,12 @@ function renderAttributeCard(attribute){
     '<div><b>根因假设：</b>'+escapeHtml(attribute.root_cause_hypothesis || '')+'</div>'+
     '<details class="accordion"><summary>完整 AttributeResult</summary><div class="accordion-body"><pre>'+escapeHtml(JSON.stringify(attribute,null,2))+'</pre></div></details>';
 }
-function renderChain(data){
+function renderChain(data,options={}){
   const currentInput=JSON.parse(document.getElementById('input').value);
-  if(data.trace && !sameInput(data.trace.input || {}, currentInput)){
+  if(!options.skipInputGuard && data.trace && !sameInput(data.trace.input || {}, currentInput)){
     showCompact('trace',{stale_result:true,current_input:currentInput,result_input:data.trace.input});showCompact('reference',{});document.getElementById('judge').innerHTML='<div class="muted">当前结果与输入不一致，请重新运行单链路。</div>';document.getElementById('attribute').innerHTML='<div class="muted">当前结果与输入不一致，请重新运行单链路。</div>';showCompact('cluster',{});showCompact('check',{});showCompact('view',{});showCompact('batch',{});setStatus('当前结果与输入不一致，已阻止展示旧 judge。');return;
   }
-  if(chainHasStaleEmptyQuery(data,currentInput)){
+  if(!options.skipInputGuard && chainHasStaleEmptyQuery(data,currentInput)){
     showCompact('trace',{stale_empty_query:true,current_input:currentInput,result:chainOutput(data)});showCompact('reference',{});document.getElementById('judge').innerHTML='<div class="muted">旧 empty_query 结果已被阻止展示，请重新运行单链路。</div>';document.getElementById('attribute').innerHTML='<div class="muted">旧 empty_query 结果已被阻止展示，请重新运行单链路。</div>';showCompact('cluster',{});showCompact('check',{});showCompact('view',{});showCompact('batch',{});setStatus('旧 empty_query 结果已被阻止展示，请重新运行单链路。');return;
   }
   const trace=data.trace||{},judge=data.judge||{},attribute=data.attribute||{},cluster=data.cluster||{},check=data.check||{},view=data.frontend_view||{};

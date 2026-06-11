@@ -11,6 +11,12 @@ api:
 application:
   mode: existing_service
   api_base: http://localhost:8000
+  downstream_search:
+    base_url: http://localhost:8081
+    endpoint: /api/v1/search/customer
+    method: POST
+    timeout: 3
+    enabled: true
 documents:
   application: application.md
   mock: mock.md
@@ -21,7 +27,15 @@ documents:
   checklist: checklist.md
   source_readme: ../../../projects/client_search/readme.md
   source_config: ../../../projects/client_search/config.md
+  source_field_definitions: ../../../../llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml
+  source_field_enums: ../../../../llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml
+  source_value_mappings: ../../../../llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml
+  source_enhanced_rules: ../../../../llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml
   source_prompt: ../../../projects/client_search/prompt.md
   source_judge_boundary: ../../../projects/client_search/judge_boundary-template.md
 frontend_extensions:
   core_forbidden_markers: ["query_logic", "conditions", "matched_level", "intent_summary", "clientAge", "annPremSegNum", "clientSex"]
+  semantic_equivalence_rules:
+    equivalent_condition_forms: [{"field":"pCategorys","operator":"MATCH","value":"疾病保险","equivalent_operator":"CONTAINS","equivalent_value":["疾病保险"],"basis":"source_value_mappings/source_field_definitions define pCategorys as list-like product category semantics; this equivalence is project-output normalization, not a historical case patch."}]
+    operator_compatibility: [{"field":"*","operator":"MATCH","equivalent_operator":"CONTAINS","condition":"same field and exactly one identical enum/list value","basis":"source_prompt and query_router normalization allow single enum value surface-form normalization when downstream executable semantics are identical."}]
+    equivalent_fields: [{"field":"familyInfo.familyclientage","equivalent_field":"familyInfo.familyclientbirthday","condition":"birthday date range is equivalent to the family member age boundary under the current date","basis":"source_enhanced_rules/source_config describe age-to-birthday executable conversion; judge should compare semantic boundary rather than raw field spelling."}]

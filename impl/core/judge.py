@@ -57,14 +57,41 @@ def _fallback_primary_assessment(boundary: Dict[str, Any], data: Dict[str, Any])
     }
 
 
+def _score_0_1(value: Any) -> Any:
+    if isinstance(value, (int, float)):
+        return value / 100 if value > 1 else value
+    return value
+
+
+def _normalized_score_details(items: Any) -> list[Dict[str, Any]]:
+    details = []
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        detail = dict(item)
+        detail["score"] = _score_0_1(detail.get("score"))
+        details.append(detail)
+    return details
+
+
+def _non_empty_reference(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, dict):
+        return any(item not in (None, "", [], {}) for item in value.values())
+    if isinstance(value, list):
+        return bool(value)
+    return value != ""
+
+
 def _trace_reference(trace: RunTrace) -> Any:
     input_data = trace.input or {}
-    if input_data.get("reference") is not None:
+    if _non_empty_reference(input_data.get("reference")):
         return input_data.get("reference")
-    if trace.project_fields and trace.project_fields.get("reference"):
+    if trace.project_fields and _non_empty_reference(trace.project_fields.get("reference")):
         return trace.project_fields.get("reference")
     request = trace.normalized_request or {}
-    if request.get("reference"):
+    if _non_empty_reference(request.get("reference")):
         return request.get("reference")
     return None
 
@@ -141,30 +168,62 @@ def _generated_expected(trace: RunTrace, data: Dict[str, Any], actual: Any) -> A
     return _align_reference_shape(None, output_shape, data)
 
 
-def judge_trace(spec: ProjectSpec, trace: RunTrace, expected_intent: Optional[str] = None, llm: Optional[LlmClient] = None) -> JudgeResult:
+def _reference_generation_basis(trace: RunTrace, expected_intent: Optional[str], data: Dict[str, Any], expected: Any) -> Dict[str, Any]:
+    provided = _trace_reference(trace)
+    existing = data.get("reference_generation_basis")
+    if isinstance(existing, dict) and existing:
+        return existing
+    if provided is not None:
+        source = "case_reference"
+        evidence = ["input reference"]
+    elif expected_intent:
+        source = "expected_intent"
+        evidence = ["expected_intent"]
+    elif data.get("expected") is not None:
+        source = "query_reconstruction"
+        evidence = ["judge expected"]
+    else:
+        source = "query_reconstruction"
+        evidence = ["run_trace input", "judge reasoning"]
+    return {
+        "source": source,
+        "alignment_to_actual_shape": "expected was aligned to the current actual output shape when possible.",
+        "evidence": evidence,
+        "expected_present": expected is not None,
+    }
+
+
+def _source_documents(spec: ProjectSpec) -> Dict[str, str]:
+    return {
+        key: load_project_document(spec, key)
+        for key in sorted(spec.documents)
+        if key.startswith("source_")
+    }
+
+
+def judge_trace(
+    spec: ProjectSpec,
+    trace: RunTrace,
+    expected_intent: Optional[str] = None,
+    llm: Optional[LlmClient] = None,
+    project_judge_context: Optional[Dict[str, Any]] = None,
+) -> JudgeResult:
     evaluation = load_project_document(spec, "evaluation")
     judge_boundary = load_project_document(spec, "judge_boundary")
     judge_standard = load_project_document(spec, "judge_standard")
-    source_readme = load_project_document(spec, "source_readme")
-    source_config = load_project_document(spec, "source_config")
-    source_prompt = load_project_document(spec, "source_prompt")
-    source_judge_boundary = load_project_document(spec, "source_judge_boundary")
-    system = "你是通用评估系统的 judge agent。只基于当前 RunTrace、项目评判标准和项目源文档判断，不继承历史 case。按项目文档定义的业务口径判断 expected-vs-actual；证据不足时返回 uncertain。分析文字尽量使用中文，输出 JSON。"
+    source_documents = _source_documents(spec)
+    system = "你是通用评估系统的 judge agent。只基于当前 RunTrace、项目评判标准、项目源文档和 project_judge_context 判断，不继承历史 case、UI 状态、cluster、review 标签或归因结论。你的职责只判断当前 actual output 是否满足当前 query/expected intent，不做根因归因；不要把 HTTP 状态、run_status、source、review_verdict、attribute/cluster 结论当作正确性依据。先重建当前意图，再逐项比较 expected-vs-actual；必须检查字段是否承载业务语义、操作符是否符合字段类型、值归一化/单位/枚举是否正确、逻辑关系是否完整、是否存在 missing/wrong/extra 条件。表示形式不同但 project_judge_context.semantic_equivalence_rules 或项目文档证明下游可执行语义等价时，要在 semantic_equivalence_checks 说明，不能机械因 MATCH/CONTAINS、年龄/生日等形态差异判错。若 evidence 足够，verdict 应尽量为 correct 或 incorrect；只有 judge 调用/证据不足或边界不可判时才 uncertain。最终 verdict 必须能从 intent_decomposition、condition_assessments、boundary_decision 和 verdict_derivation 追溯。分析文字尽量使用中文，输出 JSON。"
     user = json.dumps(
         {
             "evaluation_spec": evaluation,
             "judge_boundary_spec": judge_boundary,
             "judge_standard": judge_standard,
-            "project_source_references": {
-                "readme_md": source_readme,
-                "config_md": source_config,
-                "prompt_md": source_prompt,
-                "judge_boundary_standard": source_judge_boundary,
-            },
+            "project_source_references": source_documents,
+            "project_judge_context": project_judge_context or {},
             "expected_intent": expected_intent,
             "run_trace": trace.__dict__,
             "required_output": {
-                "verdict": "correct|incorrect|uncertain",
+                "verdict": "correct|incorrect|uncertain. Use uncertain only for unavailable judge/evidence-insufficient cases; do not use it as a soft maybe when expected-vs-actual can be judged.",
                 "score": "number|null",
                 "confidence": "number|null",
                 "probability": "number|null",
@@ -172,6 +231,27 @@ def judge_trace(spec: ProjectSpec, trace: RunTrace, expected_intent: Optional[st
                 "judge_basis": "string",
                 "expected": "object|array|string|null. If the input/case has no reference answer, reconstruct a reference in the same general shape as actual.",
                 "actual": "object|array|string|null",
+                "judge_method": "string",
+                "intent_decomposition": [
+                    {"requirement": "string", "evidence_source": "current query|expected_intent|reference|project_doc|run_trace", "within_boundary": "boolean|null"}
+                ],
+                "condition_assessments": [
+                    {"requirement": "string", "expected_fragment": "object|string|null", "actual_fragment": "object|string|null", "status": "matched|missing|wrong|extra|not_verified", "evidence": [], "semantic_basis": "string|null"}
+                ],
+                "semantic_equivalence_checks": [
+                    {"expected_fragment": "object|string", "actual_fragment": "object|string", "equivalent": "boolean|null", "basis": "string"}
+                ],
+                "reference_generation_basis": {
+                    "source": "case_reference|expected_intent|query_reconstruction|project_docs|mixed|unknown",
+                    "alignment_to_actual_shape": "string",
+                    "evidence": []
+                },
+                "verdict_derivation": {
+                    "primary_boundary": "string",
+                    "assessment_summary": "string",
+                    "blocking_gaps": [],
+                    "why_verdict": "string"
+                },
                 "boundary_decision": {
                     "within_evaluable_scope": "boolean|null",
                     "uncontrollable_limits": [],
@@ -211,18 +291,27 @@ def judge_trace(spec: ProjectSpec, trace: RunTrace, expected_intent: Optional[st
         ensure_ascii=False,
     )
     data = (llm or LlmClient()).complete_json(system, user)
-    if data.get("error"):
+    if data.get("error") or not data.get("verdict"):
         boundary = _fallback_evaluation_boundary(judge_boundary)
-        error_text = data.get("raw_text") or data.get("error")
+        error_text = data.get("raw_text") or data.get("error") or "judge LLM returned no verdict"
         return JudgeResult(
             trace_id=trace.trace_id,
             project_id=trace.project_id,
             verdict="uncertain",
+            expected=_generated_expected(trace, {"reasoning_summary": error_text}, trace.extracted_output),
+            actual=trace.extracted_output,
+            reconstructed_intent=str(trace.normalized_request or trace.input or ""),
             evaluation_boundary=boundary,
             primary_assessment=_fallback_primary_assessment(boundary, {"reasoning_summary": error_text}),
             judge_basis="llm_call_failed",
+            intent_decomposition=[{"requirement": "current RunTrace semantic judgment", "evidence_source": "run_trace", "within_boundary": None}],
+            condition_assessments=[{"requirement": "semantic judge result", "expected_fragment": None, "actual_fragment": trace.extracted_output, "status": "not_verified", "evidence": [error_text], "semantic_basis": "judge LLM call failed"}],
+            reference_generation_basis=_reference_generation_basis(trace, expected_intent, {}, trace.extracted_output),
             boundary_decision={"within_evaluable_scope": None, "reasoning": error_text},
+            judge_method="llm_call_failed",
+            verdict_derivation={"why_verdict": "judge LLM call failed; verdict is uncertain", "blocking_gaps": [error_text]},
             evidence=[error_text],
+            needs_human_review=True,
             quality_flags=["llm_call_failed"],
             raw_model_output=data,
         )
@@ -241,13 +330,19 @@ def judge_trace(spec: ProjectSpec, trace: RunTrace, expected_intent: Optional[st
         trace_id=trace.trace_id,
         project_id=trace.project_id,
         verdict=str(data.get("verdict") or "uncertain"),
-        score=data.get("score"),
-        confidence=data.get("confidence"),
-        probability=data.get("probability"),
+        score=_score_0_1(data.get("score")),
+        confidence=_score_0_1(data.get("confidence")),
+        probability=_score_0_1(data.get("probability")),
         expected=expected,
         actual=actual,
         reconstructed_intent=str(data.get("reconstructed_intent") or ""),
         judge_basis=str(data.get("judge_basis") or ""),
+        judge_method=str(data.get("judge_method") or "current_case_llm_judge"),
+        intent_decomposition=list(data.get("intent_decomposition") or []),
+        condition_assessments=list(data.get("condition_assessments") or []),
+        semantic_equivalence_checks=list(data.get("semantic_equivalence_checks") or []),
+        reference_generation_basis=_reference_generation_basis(trace, expected_intent, data, expected),
+        verdict_derivation=dict(data.get("verdict_derivation") or {}),
         boundary_decision=dict(data.get("boundary_decision") or {}),
         evaluation_boundary=boundary,
         primary_assessment=primary_assessment,
@@ -257,7 +352,7 @@ def judge_trace(spec: ProjectSpec, trace: RunTrace, expected_intent: Optional[st
         extra=list(data.get("extra") or []),
         evidence=evidence,
         reasoning_summary=str(data.get("reasoning_summary") or ""),
-        score_details=list(data.get("score_details") or []),
+        score_details=_normalized_score_details(data.get("score_details")),
         needs_human_review=data.get("needs_human_review"),
         scenario=str(data.get("scenario") or trace.project_fields.get("scenario") or ""),
         quality_flags=list(data.get("quality_flags") or []),

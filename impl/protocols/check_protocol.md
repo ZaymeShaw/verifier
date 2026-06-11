@@ -19,7 +19,7 @@ Rules:
 - Check mechanisms, not only generated artifacts.
 - Verify source -> analysis -> run -> judge -> attribute -> cluster -> frontend consistency.
 - Flag project-specific fields, ports, paths, or cases if they appear in generic core code.
-- Flag judge results without expected-vs-actual evidence.
-- Flag attribution results without evidence chain, executable trace analysis, root-cause hypothesis, verification steps, or patch direction.
+- Flag judge results without current intent decomposition, expected-vs-actual evidence, condition assessments, semantic-equivalence reasoning when representations differ, or verdict derivation for incorrect/uncertain cases.
+- Flag attribution results without evidence chain, executable trace analysis, chain-node walkthrough, earliest divergence or explicit incomplete reason, analysis-quality gate, root-cause hypothesis, verification steps, or patch direction.
 - Flag frontend outputs that are static or disconnected from current API results.
 - Flag implementation/frontend additions that are not represented in `impl/protocols` when they introduce reusable protocol concepts.

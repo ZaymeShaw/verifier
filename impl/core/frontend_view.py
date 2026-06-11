@@ -36,6 +36,8 @@ def _align_reference_shape(reference: Any, actual: Any) -> Any:
     if not isinstance(actual, dict):
         return reference
     if isinstance(reference, dict):
+        if "golden_answer" in reference:
+            return reference
         if set(actual).intersection(reference):
             return reference
         list_key = _first_list_key(actual)
@@ -54,16 +56,26 @@ def _align_reference_shape(reference: Any, actual: Any) -> Any:
     return reference
 
 
+def _non_empty_reference(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, dict):
+        return any(item not in (None, "", [], {}) for item in value.values())
+    if isinstance(value, list):
+        return bool(value)
+    return value != ""
+
+
 def _trace_reference(trace: Optional[RunTrace]) -> Any:
     if not trace:
         return None
     input_data = trace.input or {}
-    if input_data.get("reference") is not None:
+    if _non_empty_reference(input_data.get("reference")):
         return input_data.get("reference")
-    if trace.project_fields and trace.project_fields.get("reference"):
+    if trace.project_fields and _non_empty_reference(trace.project_fields.get("reference")):
         return trace.project_fields.get("reference")
     request = trace.normalized_request or {}
-    if request.get("reference"):
+    if _non_empty_reference(request.get("reference")):
         return request.get("reference")
     return None
 

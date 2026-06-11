@@ -1,23 +1,22 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 import threading
 import time
+import urllib.error
+import urllib.request
 from typing import Any, Dict
+from urllib.parse import urljoin
 
 from impl.core.adapter import ProjectAdapter
-from impl.core.schema import JudgeResult, RunTrace
+from impl.core.schema import AttributeResult, JudgeResult, RunTrace
 
 
 _SERVICE_LOCK = threading.Lock()
 
 
 class Adapter(ProjectAdapter):
-    equivalent_condition_forms = {
-        "pCategorys": {
-            ("MATCH", "疾病保险"): ("CONTAINS", ("疾病保险",)),
-        }
-    }
-
     field_patterns = {
         "clientAge": {
             "field": "clientAge",
@@ -58,6 +57,17 @@ class Adapter(ProjectAdapter):
         },
     }
 
+    def _source_config_paths(self) -> Dict[str, str]:
+        paths = {}
+        root = Path(self.spec.root)
+        for key, rel in (self.spec.documents or {}).items():
+            if key.startswith("source_") and "config/" in str(rel):
+                paths[key] = str((root / str(rel)).resolve())
+        return paths
+
+    def _external_boundary_sources(self) -> Dict[str, Any]:
+        return {"config_paths": self._source_config_paths()}
+
     def build_request(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         nested_input = input_data.get("input") if isinstance(input_data.get("input"), dict) else {}
         query = input_data.get("query") or input_data.get("user_text") or nested_input.get("query") or nested_input.get("user_text") or ""
@@ -74,6 +84,43 @@ class Adapter(ProjectAdapter):
     def call_or_prepare(self, request: Dict[str, Any]) -> Any:
         with _SERVICE_LOCK:
             return super().call_or_prepare(request)
+
+    def to_run_trace(self, input_data: Dict[str, Any], request: Dict[str, Any], raw_response: Any):
+        if isinstance(raw_response, dict):
+            raw_response = {**raw_response, "_downstream_search": self._probe_downstream_search(raw_response)}
+        return super().to_run_trace(input_data, request, raw_response)
+
+    def _probe_downstream_search(self, raw_response: Dict[str, Any]) -> Dict[str, Any]:
+        config = self.spec.application.get("downstream_search") if isinstance(self.spec.application, dict) else None
+        if not isinstance(config, dict) or not config.get("enabled", True):
+            return {"status": "not_configured"}
+        extra = (((raw_response.get("data") or {}).get("extra_output_params")) or {})
+        conditions = list(extra.get("conditions") or [])
+        query_logic = str(extra.get("query_logic") or "AND")
+        payload = {
+            "header": {"agent_id": "eval-user", "page": 1, "size": 20},
+            "query_logic": query_logic,
+            "conditions": conditions,
+        }
+        if not conditions:
+            return {"status": "skipped", "reason": "parse returned no conditions", "payload": payload}
+        base_url = str(config.get("base_url") or "").rstrip("/") + "/"
+        endpoint = str(config.get("endpoint") or "").lstrip("/")
+        if not base_url.strip("/") or not endpoint:
+            return {"status": "not_configured", "payload": payload}
+        url = urljoin(base_url, endpoint)
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        search_request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method=str(config.get("method") or "POST").upper())
+        try:
+            with urllib.request.urlopen(search_request, timeout=float(config.get("timeout") or 3)) as response:
+                text = response.read().decode("utf-8")
+            try:
+                result = json.loads(text)
+            except json.JSONDecodeError:
+                result = {"text": text}
+            return {"status": "ok", "url": url, "payload": payload, "result": result}
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            return {"status": "unavailable", "url": url, "payload": payload, "error": str(exc)}
 
     def provided_output_raw(self, input_data: Dict[str, Any], request: Dict[str, Any]) -> Any:
         if "raw_response" in input_data:
@@ -137,6 +184,8 @@ class Adapter(ProjectAdapter):
         if not isinstance(raw_response, dict):
             return {}
         extra = (((raw_response.get("data") or {}).get("extra_output_params")) or {})
+        downstream_search = raw_response.get("_downstream_search") if isinstance(raw_response.get("_downstream_search"), dict) else {}
+        application_boundary = self._application_boundary(downstream_search)
         return {
             "query_logic": extra.get("query_logic"),
             "conditions": extra.get("conditions"),
@@ -147,14 +196,19 @@ class Adapter(ProjectAdapter):
             "source_query": extracted_output.get("source_query"),
             "empty_result_reason": extracted_output.get("empty_result_reason"),
             "is_empty_result": extracted_output.get("is_empty_result"),
+            "downstream_search": downstream_search,
+            "application_boundary": application_boundary,
+            "external_boundary_sources": self._external_boundary_sources(),
         }
 
     def build_execution_trace(self, input_data: Dict[str, Any], request: Dict[str, Any], raw_response: Any, extracted_output: Dict[str, Any]) -> list[Dict[str, Any]]:
         extra = (((raw_response.get("data") or {}).get("extra_output_params")) or {}) if isinstance(raw_response, dict) else {}
+        downstream_search = raw_response.get("_downstream_search") if isinstance(raw_response, dict) and isinstance(raw_response.get("_downstream_search"), dict) else {}
         return [
             {"stage": "adapter.build_request", "status": "ok", "evidence": {"user_text": request.get("user_text"), "source": request.get("source")}},
             {"stage": "client_search.api", "status": "ok" if isinstance(raw_response, dict) and raw_response.get("code") == 0 else "suspicious", "evidence": {"code": raw_response.get("code") if isinstance(raw_response, dict) else None}},
             {"stage": "client_search.routing", "status": "ok" if extra.get("matched_level") is not None else "not_verified", "evidence": {"matched_level": extra.get("matched_level"), "matched_patterns": extra.get("matched_patterns")}},
+            {"stage": "client_search.downstream_search", "status": downstream_search.get("status") or "not_verified", "evidence": downstream_search},
             {"stage": "adapter.extract_output", "status": "suspicious" if extracted_output.get("is_empty_result") else "ok", "evidence": {"logic": extracted_output.get("logic"), "condition_count": len(extracted_output.get("structured_output") or []), "empty_result_reason": extracted_output.get("empty_result_reason")}},
         ]
 
@@ -172,6 +226,26 @@ class Adapter(ProjectAdapter):
             return [self._jsonable_value(item) for item in value]
         return value
 
+    def _semantic_equivalence_config(self) -> Dict[str, Any]:
+        extensions = self.spec.frontend_extensions or {}
+        config = extensions.get("semantic_equivalence_rules")
+        return config if isinstance(config, dict) else {}
+
+    def _equivalent_condition_forms(self) -> Dict[str, Dict[Any, Any]]:
+        forms: Dict[str, Dict[Any, Any]] = {}
+        for item in self._semantic_equivalence_config().get("equivalent_condition_forms") or []:
+            if not isinstance(item, dict):
+                continue
+            field = item.get("field")
+            operator = item.get("operator")
+            equivalent_operator = item.get("equivalent_operator")
+            if not field or not operator or not equivalent_operator:
+                continue
+            value = self._hashable_value(item.get("value"))
+            equivalent_value = self._hashable_value(item.get("equivalent_value"))
+            forms.setdefault(str(field), {})[(str(operator), value)] = (str(equivalent_operator), equivalent_value)
+        return forms
+
     def _canonical_condition(self, condition: Any) -> Any:
         if not isinstance(condition, dict):
             return condition
@@ -179,7 +253,7 @@ class Adapter(ProjectAdapter):
         operator = condition.get("operator")
         value = condition.get("value")
         normalized_value = self._hashable_value(value)
-        equivalent = self.equivalent_condition_forms.get(field, {}).get((operator, normalized_value))
+        equivalent = self._equivalent_condition_forms().get(field, {}).get((operator, normalized_value))
         if equivalent:
             operator, normalized_value = equivalent
         normalized_value = self._jsonable_value(normalized_value)
@@ -192,26 +266,114 @@ class Adapter(ProjectAdapter):
             conditions = value if isinstance(value, list) else []
         return [self._canonical_condition(condition) for condition in conditions]
 
-    def normalize_judge_result(self, trace: RunTrace, judge_result: JudgeResult) -> JudgeResult:
-        if judge_result.verdict == "correct":
-            return judge_result
-        expected = self._canonical_conditions(judge_result.expected)
-        actual = self._canonical_conditions(judge_result.actual or trace.extracted_output)
-        if not expected or expected != actual:
-            return judge_result
-        judge_result.verdict = "correct"
-        judge_result.score = 1
-        judge_result.confidence = max(float(judge_result.confidence or 0), 0.9)
-        judge_result.probability = max(float(judge_result.probability or 0), 0.9)
-        judge_result.actual = {"query_logic": trace.extracted_output.get("logic") or "AND", "conditions": actual}
-        judge_result.expected = {"query_logic": "AND", "conditions": expected}
-        judge_result.wrong = []
-        judge_result.missing = []
-        judge_result.extra = []
-        judge_result.reasoning_summary = "按项目后处理等价规则归一后，actual 与 expected 条件语义一致。"
-        judge_result.judge_basis = "project_equivalent_condition_normalization"
-        judge_result.quality_flags = [flag for flag in judge_result.quality_flags if flag not in {"operator_mismatch", "llm_call_failed"}]
-        return judge_result
+    def semantic_equivalence_rules(self) -> list[Dict[str, Any]]:
+        config = self._semantic_equivalence_config()
+        rules = []
+        rules.extend(list(config.get("equivalent_condition_forms") or []))
+        rules.extend(list(config.get("operator_compatibility") or []))
+        rules.extend(list(config.get("equivalent_fields") or []))
+        return rules
+
+    def _semantic_equivalence_rules(self) -> list[Dict[str, Any]]:
+        return self.semantic_equivalence_rules()
+
+    def _judge_governance(self) -> Dict[str, Any]:
+        return {
+            "canonical_method": "current_case_llm_judge",
+            "judge_role": "只判断当前 API actual output 是否语义覆盖当前 query，不做根因归因。",
+            "must_ignore_as_verdict_basis": ["HTTP 200", "review_verdict", "source", "run_status", "root_cause_cluster", "attribute_result", "cluster", "history"],
+            "binary_when_evidence_sufficient": True,
+            "uncertain_only_when": ["LLM/API judge 调用不可用", "当前配置/枚举/字段证据不足以判断 expected-vs-actual", "application_boundary 明确排除了该需求且无法判断范围内输出"],
+            "actual_output_priority": "以 API 最终 actual conditions 的下游可执行语义为准；prompt/config/后处理存在表述冲突时，先判断 actual 是否能搜出用户核心意图，再把冲突写入 evidence/check。",
+            "required_comparison": ["query core intent", "field semantic carrier", "operator for field type", "value normalization", "query_logic", "missing/wrong/extra conditions"],
+        }
+
+    def _attribute_quality_gate(self) -> Dict[str, Any]:
+        return {
+            "run_only_for": ["incorrect", "uncertain with inspectable expected-vs-actual gap"],
+            "block_when_judge_unavailable": True,
+            "minimum_evidence": ["current query", "actual conditions/matched_level", "judge expected-vs-actual diff", "execution_trace or project chain nodes", "project docs/config evidence"],
+            "required_outputs": ["clear root_cause_hypothesis", "evidence-backed chain_nodes", "earliest_divergence", "suspected_locations only when evidenced", "specific verification_steps", "minimal patch_direction", "business_impact", "analysis_quality"],
+            "quality_standard": "必须围绕当前 query 产出明确根因、可核验证据链、疑似文件/配置位置、具体修改建议、明确修改方案和业务影响；期望条件和修改方案必须来自当前 query 或同 query 链路证据，不能引用无关历史 case 字段。",
+        }
+
+    def build_judge_context(self, trace: RunTrace) -> Dict[str, Any]:
+        downstream = trace.project_fields.get("downstream_search") if isinstance(trace.project_fields, dict) else {}
+        application_boundary = trace.project_fields.get("application_boundary") if isinstance(trace.project_fields, dict) else None
+        return {
+            "semantic_equivalence_rules": self._semantic_equivalence_rules(),
+            "field_patterns": self.field_patterns,
+            "application_boundary": application_boundary or self._application_boundary(downstream),
+            "judge_governance": self._judge_governance(),
+            "boundary_usage": "application adapter has already decided whether result-set verification is in scope; judge should evaluate only within application_boundary.judge_scope.",
+            "external_boundary_sources": trace.project_fields.get("external_boundary_sources") if isinstance(trace.project_fields, dict) else {},
+        }
+
+    def build_attribute_context(self, trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:
+        project_fields = trace.project_fields if isinstance(trace.project_fields, dict) else {}
+        application_boundary = project_fields.get("application_boundary") or self._application_boundary(project_fields.get("downstream_search"))
+        chain_nodes = [
+            {"name": "request_normalization", "evidence": trace.normalized_request},
+            {"name": "client_search_parse", "evidence": trace.extracted_output},
+            {"name": "routing_pattern_match", "evidence": project_fields.get("matched_patterns")},
+            {"name": "judge_boundary", "evidence": judge_result.boundary_decision},
+        ]
+        if application_boundary.get("judge_scope") == "parser_and_result_set":
+            chain_nodes.insert(3, {"name": "downstream_result_set", "evidence": project_fields.get("downstream_search")})
+        return {
+            "chain_nodes_to_check": chain_nodes,
+            "conditions": project_fields.get("conditions"),
+            "query_logic": project_fields.get("query_logic"),
+            "matched_level": project_fields.get("matched_level"),
+            "application_boundary": application_boundary,
+            "attribute_quality_gate": self._attribute_quality_gate(),
+            "external_boundary_sources": project_fields.get("external_boundary_sources"),
+            "source_config_paths": self._source_config_paths(),
+            "attribute_instruction": "application_boundary 由 application adapter 在归因前判定；当 judge_scope=parser_condition_semantics_only 时，下游结果集验证不属于本次归因链路，归因只分析 query、parse 条件、matched_patterns、execution_trace 和项目文档中的可控解析问题；无法定位代码/配置时应标记 incomplete_reason。",
+        }
+
+    def _application_boundary(self, downstream: Any) -> Dict[str, Any]:
+        status = downstream.get("status") if isinstance(downstream, dict) else None
+        if status == "ok":
+            return {"downstream_result_set_available": True, "judge_scope": "parser_and_result_set", "result_set_verified": True}
+        return {
+            "downstream_result_set_available": False,
+            "downstream_status": status or "not_verified",
+            "judge_scope": "parser_condition_semantics_only",
+            "result_set_verified": False,
+            "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics.",
+        }
+
+    def reconcile_judge_result(self, trace: RunTrace, judge_result: JudgeResult) -> JudgeResult:
+        downstream = trace.project_fields.get("downstream_search") if isinstance(trace.project_fields, dict) else {}
+        application_boundary = trace.project_fields.get("application_boundary") if isinstance(trace.project_fields, dict) else self._application_boundary(downstream)
+        if isinstance(downstream, dict) and downstream.get("status") not in {None, "ok"}:
+            flags = [
+                flag
+                for flag in (judge_result.quality_flags or [])
+                if "downstream" not in str(flag) and "result_set" not in str(flag)
+            ]
+            if "application_boundary_parser_only" not in flags:
+                flags.append("application_boundary_parser_only")
+            judge_result.quality_flags = flags
+            judge_result.boundary_decision = {
+                **(judge_result.boundary_decision or {}),
+                "result_set_verified": False,
+                "application_boundary": application_boundary,
+            }
+        elif isinstance(downstream, dict) and downstream.get("status") == "ok":
+            flags = [flag for flag in (judge_result.quality_flags or []) if "downstream" not in str(flag)]
+            if "downstream_search_verified" not in flags:
+                flags.append("downstream_search_verified")
+            judge_result.quality_flags = flags
+            judge_result.boundary_decision = {
+                **(judge_result.boundary_decision or {}),
+                "result_set_verified": True,
+                "application_boundary": application_boundary,
+            }
+            if not any(isinstance(item, dict) and item.get("application_boundary") for item in (judge_result.evidence or [])):
+                judge_result.evidence = [*(judge_result.evidence or []), {"application_boundary": application_boundary}]
+        return super().reconcile_judge_result(trace, judge_result)
 
     def build_mock_cases(self) -> list[Dict[str, Any]]:
         queries = [

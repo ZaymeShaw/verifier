@@ -19,9 +19,10 @@ The central question is: after this change, will the same protocol-driven pipeli
 7. Look for overfit risk: hardcoded case values, fixed expected fields from one historical query, special branches for a few examples, or rules that improve one known case while weakening new scenarios.
 8. Look for dead or stale surface area: buttons that no longer call the right API, frontend panels that show obsolete fields, duplicate orchestration paths, unused generated files, and redundant code that bypasses the current protocol.
 9. Stress persistence and batch paths: large case pools, partial failures, retries, and storage failures must not erase finished results or stop unrelated cases.
-10. Classify each issue by root cause and blast radius, then propose the smallest generalized fix that preserves current working behavior.
-11. For non-trivial deletion, protocol change, or behavior-changing standardization, report the evidence and proposed fix for user confirmation before modifying.
-12. Record actionable findings in `search-test-case/issue` when the user requests issue tracking, using a checklist with evidence, root cause, fix, and verification result.
+10. For attribution output, audit the evidence chain rather than applying field blacklists: every field, expected condition, suspected location, and patch direction mentioned by the attribution must be tied to the current query, actual output, expected output, execution trace, project docs, or a verified local chain test. If the attribution cannot show that grounding, treat it as insufficient or untrusted evidence instead of a completed root cause.
+11. Classify each issue by root cause and blast radius, then propose the smallest generalized fix that preserves current working behavior.
+12. For non-trivial deletion, protocol change, or behavior-changing standardization, report the evidence and proposed fix for user confirmation before modifying.
+13. Record actionable findings in `search-test-case/issue` when the user requests issue tracking, using a checklist with evidence, root cause, fix, and verification result.
 
 ## What to inspect
 
@@ -29,7 +30,7 @@ The central question is: after this change, will the same protocol-driven pipeli
 - Boundary hygiene: generic code must not hardcode project-specific fields, cases, endpoints, ports, prompts, or business rules.
 - Production source quality: generators, adapters, prompts, and pipelines should be fixed before regenerated outputs or display snapshots.
 - Judge quality: verdicts must use the declared current boundary/standard and must not silently use unrelated contrast fields as the final basis.
-- Attribution quality: incorrect or uncertain outputs need a traceable evidence chain, earliest divergence point, verification steps, and patch direction.
+- Attribution quality: incorrect or uncertain outputs need a traceable evidence chain, earliest divergence point, verification steps, and patch direction; the mentioned fields and fixes must come from the current case evidence, not from a previously optimized example.
 - Batch consistency: mock batch and live batch should reuse the same single-chain judge/attribute/cluster/check logic.
 - Batch resilience: one failed case, retryable attribution error, oversized result, or browser storage failure must be isolated to that case/state and must not abort completed or unrelated cases.
 - Frontend/API consistency: pages should call current APIs, show current protocol fields, avoid obsolete single-case actions, and avoid rendering huge raw data by default.
@@ -38,7 +39,7 @@ The central question is: after this change, will the same protocol-driven pipeli
 
 ## Standardization failure patterns
 
-- Over-rule / hardcoded overfit: logic names a historical query, field, scenario, or expected failure instead of deriving it from project docs and current input.
+- Over-rule / hardcoded overfit: logic or attribution names a historical query, field, scenario, expected condition, or expected failure instead of deriving it from project docs and current input.
 - Local sample patch: only the current dataset/result is edited while mock generation or adapter normalization still produces the old shape.
 - Display-only fix: frontend text is changed but API output, protocol, or pipeline remains wrong.
 - Split-brain implementation: CLI, backend, frontend, mock, live, or batch each run different judge/attribute/cluster logic.
