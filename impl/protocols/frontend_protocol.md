@@ -6,9 +6,12 @@ Fields:
 
 - `project_info`
 - `run_trace_summary`
+- `raw_sections`
 - `reference_panel`
 - `judge_panel`
 - `attribute_panel`
+- `fulfillment_panel`
+- `expectation_attribution_panel`
 - `cluster_panel`
 - `check_panel`
 - `project_extensions`
@@ -17,6 +20,7 @@ Fields:
 
 Rules:
 
+- Build owns project frontend behavior and may implement shared frontend rendering or project frontend configuration, but project-specific display choices must be declared through project frontend standards rather than one-off rendering branches.
 - Project selection on live and summary pages must be an enumerable dropdown loaded from the unified projects API; free-text project inputs are not the generic UX.
 - Page-local state such as last chain, case pools, selected filters, and uploaded dataset text should be scoped by project id so switching projects does not contaminate another project.
 - Persisted or session case-pool rows must not reuse stale trace/judge/attribute results when the stored result input no longer matches the row input. Frontend should clear stale result fields and rerun through the unified batch pipeline.
@@ -32,9 +36,9 @@ Rules:
 - Summary pages should make the case pool a first-class workspace: visible stats, named saved pools, candidate table, selection controls, status filter, batch progress, per-case API output, per-case judge/attribute summaries, and cluster overview should be shown before raw JSON drill-downs.
 - Case-pool UI state must remain a list of generic case objects with `id`, `input`, optional `expected_intent`, `source`, and `status`; project semantics stay inside `input` or project documents.
 - Saved case-pool libraries should store named snapshots of generic case objects in a backend project-scoped store so completed pools can be reloaded after page refresh or later sessions while a new candidate pool is analyzed.
-- Uploaded or generated datasets must be converted into the same batch input shape used by `/api/batch_run`; file upload should parse JSON locally, show the normalized candidate pool, and still submit through the unified batch job API.
+- Uploaded or generated datasets must be converted into the same batch input shape used by `/api/batch_start` + `/api/batch_status`; file upload should parse JSON locally, show the normalized candidate pool, and still submit through the unified async batch job API.
 - Summary pages should call generic mock and batch APIs rather than duplicating mock case lists or per-case judge/attribute/cluster/check orchestration in page JavaScript.
-- Summary pages should expose batch execution as one unified action with an execution mode (live service or mock response), concurrency, visible loading state, per-case progress from the batch job/status wrapper, and returned batch/cluster/check outputs.
+- Summary pages should expose batch execution as one unified action with an execution mode (live service or mock response), concurrency, visible loading state, per-case progress from the batch job/status wrapper, and returned batch/cluster/check outputs. Candidate rows must show or drill down to the execution mode/output source used by the same run that produced the displayed Output, Reference, status, Judge, and Attribute fields.
 - Live pages should present business request, judge, and attribute outputs as readable collapsible step panels with compact human summaries visible by default and raw JSON available in each panel's details area, not as one growing JSON blob or crowded always-expanded cards.
 - Project extension fields must be rendered as compact collapsible drill-down sections with counts or short summaries visible by default; large project-specific JSON must not be dumped inline into the main live summary.
 - Summary pages should avoid rendering large persisted chains, raw batch results, or unbounded case tables during initial page load; load heavy raw JSON only on user action or show compact summaries by default.

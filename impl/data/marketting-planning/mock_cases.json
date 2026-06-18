@@ -1,0 +1,373 @@
+[
+  {
+    "id": "mp-premium-growth-plan-correct-1",
+    "scenario": "execution_planning",
+    "input": {
+      "query": "帮我制定明年NBEV 120亿增长规划，重点看保费增长和客户增长两条路径",
+      "user_intent": "帮我制定明年NBEV 120亿增长规划，重点看保费增长和客户增长两条路径",
+      "turns": [
+        {
+          "role": "user",
+          "content": "帮我制定明年NBEV 120亿增长规划，重点看保费增长和客户增长两条路径"
+        }
+      ],
+      "expected_stage": "planning",
+      "expected_path_types": [
+        "premium_growth",
+        "customer_growth"
+      ],
+      "boundary": {
+        "dependency_status": "available",
+        "allow_fallback": false
+      }
+    },
+    "reference": {
+      "expected_stage": "planning",
+      "required_events": [
+        "intent_detected",
+        "planning_started",
+        "card_delta",
+        "done"
+      ],
+      "required_path_types": [
+        "premium_growth",
+        "customer_growth"
+      ],
+      "allow_fallback": false,
+      "session_requirements": {
+        "required_fields": []
+      }
+    },
+    "metadata": {
+      "business_axis": "premium_and_customer",
+      "expected_error_type": "none",
+      "quality_dimension": "planning_contract"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "mp-clarification-missing-target-1",
+    "scenario": "clarification",
+    "input": {
+      "query": "帮我规划明年的NBEV达成路径",
+      "user_intent": "帮我规划明年的NBEV达成路径",
+      "turns": [
+        {
+          "role": "user",
+          "content": "帮我规划明年的NBEV达成路径"
+        }
+      ],
+      "expected_stage": "clarification",
+      "expected_path_types": [],
+      "boundary": {
+        "dependency_status": "available",
+        "allow_fallback": false
+      }
+    },
+    "reference": {
+      "expected_stage": "clarification",
+      "required_events": [
+        "clarification_requested",
+        "done"
+      ],
+      "required_path_types": [],
+      "forbidden_path_types": [
+        "premium_growth",
+        "customer_growth",
+        "product_mix",
+        "activity"
+      ],
+      "allow_fallback": false,
+      "session_requirements": {
+        "required_fields": [
+          "target_value"
+        ]
+      }
+    },
+    "metadata": {
+      "business_axis": "field_clarification",
+      "expected_error_type": "none",
+      "quality_dimension": "clarification_contract"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "mp-multiturn-field-accumulation-1",
+    "scenario": "multi_turn_field_accumulation",
+    "input": {
+      "query": "明年120亿，重点看保费和客户增长",
+      "user_intent": "规划NBEV增长路径",
+      "turns": [
+        {
+          "role": "user",
+          "content": "帮我规划NBEV目标"
+        },
+        {
+          "role": "assistant",
+          "content": "请补充目标年份、目标值和路径类型"
+        },
+        {
+          "role": "user",
+          "content": "明年120亿，重点看保费和客户增长"
+        }
+      ],
+      "expected_stage": "planning",
+      "expected_path_types": [
+        "premium_growth",
+        "customer_growth"
+      ],
+      "shared_session": true,
+      "session_id": "eval-mp-multiturn-field-accumulation-1",
+      "boundary": {
+        "dependency_status": "available",
+        "allow_fallback": false
+      }
+    },
+    "reference": {
+      "expected_stage": "planning",
+      "required_events": [
+        "planning_started",
+        "card_delta",
+        "done"
+      ],
+      "required_path_types": [
+        "premium_growth",
+        "customer_growth"
+      ],
+      "allow_fallback": false,
+      "session_requirements": {
+        "required_fields": []
+      }
+    },
+    "metadata": {
+      "business_axis": "multi_turn",
+      "expected_error_type": "none",
+      "quality_dimension": "session_accumulation"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "mp-target-unit-error-1",
+    "scenario": "execution_planning",
+    "input": {
+      "query": "帮我规划明年NBEV 120亿目标的保费增长路径",
+      "user_intent": "帮我规划明年NBEV 120亿目标的保费增长路径",
+      "turns": [
+        {
+          "role": "user",
+          "content": "帮我规划明年NBEV 120亿目标的保费增长路径"
+        }
+      ],
+      "expected_stage": "planning",
+      "expected_path_types": [
+        "premium_growth"
+      ],
+      "boundary": {
+        "dependency_status": "available",
+        "allow_fallback": false
+      }
+    },
+    "reference": {
+      "expected_stage": "planning",
+      "required_events": [
+        "planning_started",
+        "card_delta",
+        "done"
+      ],
+      "required_path_types": [
+        "premium_growth"
+      ],
+      "allow_fallback": false,
+      "target_value_wan": 1200000,
+      "session_requirements": {
+        "required_fields": []
+      }
+    },
+    "metadata": {
+      "business_axis": "premium",
+      "expected_error_type": "target_value_unit_error",
+      "quality_dimension": "numeric_grounding"
+    },
+    "expected_quality": "incorrect",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "mp-fallback-allowed-1",
+    "scenario": "fallback_data_unavailable",
+    "input": {
+      "query": "外部数据源暂时不可用时，给我一个可解释的兜底NBEV规划",
+      "user_intent": "外部数据源暂时不可用时，给我一个可解释的兜底NBEV规划",
+      "turns": [
+        {
+          "role": "user",
+          "content": "外部数据源暂时不可用时，给我一个可解释的兜底NBEV规划"
+        }
+      ],
+      "expected_stage": "fallback",
+      "expected_path_types": [],
+      "boundary": {
+        "dependency_status": "unavailable",
+        "allow_fallback": true,
+        "notes": "declared dependency outage"
+      }
+    },
+    "reference": {
+      "expected_stage": "fallback",
+      "required_events": [
+        "fallback",
+        "done"
+      ],
+      "required_path_types": [],
+      "allow_fallback": true,
+      "session_requirements": {
+        "required_fields": []
+      }
+    },
+    "metadata": {
+      "business_axis": "external_dependency",
+      "expected_error_type": "none",
+      "quality_dimension": "boundary_fallback"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "mp-fallback-not-allowed-1",
+    "scenario": "fallback_data_unavailable",
+    "input": {
+      "query": "数据源正常时请直接给出保费增长路径，不要兜底回答",
+      "user_intent": "数据源正常时请直接给出保费增长路径，不要兜底回答",
+      "turns": [
+        {
+          "role": "user",
+          "content": "数据源正常时请直接给出保费增长路径，不要兜底回答"
+        }
+      ],
+      "expected_stage": "planning",
+      "expected_path_types": [
+        "premium_growth"
+      ],
+      "boundary": {
+        "dependency_status": "available",
+        "allow_fallback": false
+      }
+    },
+    "reference": {
+      "expected_stage": "planning",
+      "required_events": [
+        "planning_started",
+        "card_delta",
+        "done"
+      ],
+      "required_path_types": [
+        "premium_growth"
+      ],
+      "allow_fallback": false,
+      "session_requirements": {
+        "required_fields": []
+      }
+    },
+    "metadata": {
+      "business_axis": "external_dependency",
+      "expected_error_type": "fallback_not_allowed",
+      "quality_dimension": "boundary_fallback"
+    },
+    "expected_quality": "incorrect",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "mp-non-agent-1",
+    "scenario": "non_agent_intent",
+    "input": {
+      "query": "帮我写一首关于春天的诗",
+      "user_intent": "帮我写一首关于春天的诗",
+      "turns": [
+        {
+          "role": "user",
+          "content": "帮我写一首关于春天的诗"
+        }
+      ],
+      "expected_stage": "non_agent",
+      "expected_path_types": [],
+      "boundary": {
+        "dependency_status": "available",
+        "allow_fallback": false
+      }
+    },
+    "reference": {
+      "expected_stage": "non_agent",
+      "required_events": [
+        "non_agent_rejected",
+        "done"
+      ],
+      "required_path_types": [],
+      "allow_fallback": false,
+      "session_requirements": {
+        "required_fields": []
+      }
+    },
+    "metadata": {
+      "business_axis": "out_of_scope",
+      "expected_error_type": "none",
+      "quality_dimension": "scope_control"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "mp-stream-event-order-1",
+    "scenario": "streaming_protocol",
+    "input": {
+      "query": "流式返回保费增长规划，要求能看到开始、卡片和完成事件",
+      "user_intent": "流式返回保费增长规划，要求能看到开始、卡片和完成事件",
+      "turns": [
+        {
+          "role": "user",
+          "content": "流式返回保费增长规划，要求能看到开始、卡片和完成事件"
+        }
+      ],
+      "expected_stage": "planning",
+      "expected_path_types": [
+        "premium_growth"
+      ],
+      "boundary": {
+        "dependency_status": "available",
+        "allow_fallback": false
+      }
+    },
+    "reference": {
+      "expected_stage": "planning",
+      "required_events": [
+        "intent_detected",
+        "planning_started",
+        "card_delta",
+        "done"
+      ],
+      "required_path_types": [
+        "premium_growth"
+      ],
+      "allow_fallback": false,
+      "session_requirements": {
+        "required_fields": []
+      }
+    },
+    "metadata": {
+      "business_axis": "sse",
+      "expected_error_type": "none",
+      "quality_dimension": "sse_protocol"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  }
+]

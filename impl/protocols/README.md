@@ -2,6 +2,8 @@
 
 This directory defines the generic evaluation chain used by `impl`.
 
+Agent responsibility boundaries are defined in `agent_role_protocol.md`: ownership follows capabilities, not whether an agent writes code. Capability agents may implement project-specific code inside their own boundary, while shared cross-capability glue must follow project implementation standards.
+
 ```text
 ProjectSpec -> ProjectAnalysis -> ApplicationSpec -> MockSpec/LiveInput -> RunTrace -> JudgeResult -> AttributeResult -> ClusterSummary -> FrontendViewModel -> CheckReport
 ```

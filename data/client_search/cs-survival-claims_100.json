@@ -1,0 +1,2731 @@
+[
+  {
+    "id": "survival_claims_finance-001",
+    "scenario": "single_condition",
+    "input": {
+      "query": "有未领取生存金的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.payamountdue",
+          "operator": "MATCH",
+          "value": "否"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选有未领取生存金的客户",
+      "reason": "生存金理赔基础"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-002",
+    "scenario": "single_condition",
+    "input": {
+      "query": "没有未领取生存金的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.payamountdue",
+          "operator": "MATCH",
+          "value": "是"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选没有未领取生存金的客户",
+      "reason": "生存金理赔基础"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-003",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金已转入万能账户的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "EXISTS"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金已转入万能账户的客户",
+      "reason": "生存金理赔基础"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-004",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金转入万能账户1万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 10000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户1万以上客户",
+      "reason": "生存金理赔基础"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-005",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取500元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 500
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取500元以上客户",
+      "reason": "生存金理赔基础"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-006",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔时间在本月的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimdate",
+          "operator": "RANGE",
+          "value": "本月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔时间在本月的客户",
+      "reason": "生存金理赔基础"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-007",
+    "scenario": "single_condition",
+    "input": {
+      "query": "近180天理赔过的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimdate",
+          "operator": "RANGE",
+          "value": "近180天"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选近180天理赔过的客户",
+      "reason": "生存金理赔基础"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-008",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔案件号MC20240509000001的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimno",
+          "operator": "MATCH",
+          "value": "MC20240509000001"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔案件号MC20240509000001的客户",
+      "reason": "生存金理赔基础"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-009",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔金额1万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GTE",
+          "value": 10000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额1万以上客户",
+      "reason": "生存金理赔基础"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-010",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔金额2万到5万客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "RANGE",
+          "value": "20000-50000"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额2万到5万客户",
+      "reason": "生存金理赔基础"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-011",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含重疾险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "重疾险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含重疾险的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-012",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含医疗险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "医疗险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含医疗险的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-013",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含意外险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "意外险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含意外险的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-014",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含年金险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "年金险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含年金险的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-015",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含两全险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "两全险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含两全险的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-016",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含养老险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "养老险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含养老险的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-017",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含少儿险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "少儿险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含少儿险的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-018",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含住院医疗的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "住院医疗"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含住院医疗的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-019",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含门急诊的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "门急诊"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含门急诊的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-020",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含癌症医疗的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "癌症医疗"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含癌症医疗的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-021",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含骨折的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "骨折"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含骨折的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-022",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含津贴的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "津贴"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含津贴的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-023",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含豁免的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "豁免"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含豁免的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-024",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含护理险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "护理险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含护理险的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-025",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含长期医疗的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "长期医疗"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含长期医疗的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-026",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含百万医疗的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "百万医疗"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含百万医疗的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-027",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含防癌险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "防癌险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含防癌险的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-028",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含意外医疗的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "意外医疗"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含意外医疗的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-029",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含寿险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "寿险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含寿险的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-030",
+    "scenario": "single_condition",
+    "input": {
+      "query": "理赔险种包含住院津贴的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "住院津贴"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔险种包含住院津贴的客户",
+      "reason": "理赔险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-031",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过1万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 10000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过1万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-032",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取100元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 100
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取100元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-033",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过2万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 20000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过2万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-034",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取200元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 200
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取200元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-035",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过3万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 30000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过3万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-036",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取300元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 300
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取300元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-037",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过4万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 40000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过4万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-038",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取400元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 400
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取400元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-039",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过5万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 50000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过5万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-040",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过6万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 60000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过6万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-041",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取600元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 600
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取600元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-042",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过7万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 70000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过7万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-043",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取700元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 700
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取700元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-044",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过8万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 80000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过8万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-045",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取800元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 800
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取800元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-046",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过9万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 90000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过9万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-047",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取900元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 900
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取900元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-048",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过10万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 100000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过10万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-049",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取1000元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 1000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取1000元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-050",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过11万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 110000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过11万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-051",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取1100元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 1100
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取1100元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-052",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过12万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 120000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过12万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-053",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取1200元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 1200
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取1200元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-054",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过13万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 130000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过13万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-055",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取1300元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 1300
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取1300元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-056",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过14万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 140000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过14万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-057",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取1400元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 1400
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取1400元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-058",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过15万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 150000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过15万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-059",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取1500元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 1500
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取1500元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-060",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过16万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 160000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过16万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-061",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取1600元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 1600
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取1600元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-062",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过17万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 170000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过17万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-063",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取1700元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 1700
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取1700元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-064",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过18万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 180000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过18万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-065",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取1800元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 1800
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取1800元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-066",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过19万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 190000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过19万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-067",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取1900元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 1900
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取1900元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-068",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过20万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 200000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过20万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-069",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取2000元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 2000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取2000元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-070",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过21万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 210000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过21万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-071",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取2100元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 2100
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取2100元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-072",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过22万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 220000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过22万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-073",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取2200元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 2200
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取2200元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-074",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过23万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 230000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过23万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-075",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取2300元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 2300
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取2300元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-076",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过24万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 240000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过24万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-077",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取2400元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 2400
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取2400元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-078",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "理赔金额超过25万且A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GT",
+          "value": 250000
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选理赔金额超过25万且A类客户",
+      "reason": "理赔金额组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-079",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生存金利息未领取2500元以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.survivalinterestunpaidamt",
+          "operator": "GTE",
+          "value": 2500
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金利息未领取2500元以上客户",
+      "reason": "生存金利息"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-080",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生存金转入万能账户1万以上且低温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 10000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "低温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户1万以上且低温客户",
+      "reason": "万能账户"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-081",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生存金转入万能账户2万以上且低温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 20000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "低温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户2万以上且低温客户",
+      "reason": "万能账户"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-082",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生存金转入万能账户3万以上且低温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 30000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "低温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户3万以上且低温客户",
+      "reason": "万能账户"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-083",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生存金转入万能账户4万以上且低温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 40000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "低温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户4万以上且低温客户",
+      "reason": "万能账户"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-084",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生存金转入万能账户5万以上且低温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 50000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "低温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户5万以上且低温客户",
+      "reason": "万能账户"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-085",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生存金转入万能账户6万以上且低温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 60000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "低温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户6万以上且低温客户",
+      "reason": "万能账户"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-086",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生存金转入万能账户7万以上且低温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 70000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "低温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户7万以上且低温客户",
+      "reason": "万能账户"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-087",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生存金转入万能账户8万以上且低温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 80000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "低温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户8万以上且低温客户",
+      "reason": "万能账户"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-088",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生存金转入万能账户9万以上且低温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 90000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "低温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户9万以上且低温客户",
+      "reason": "万能账户"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-089",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生存金转入万能账户10万以上且低温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 100000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "低温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户10万以上且低温客户",
+      "reason": "万能账户"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-090",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生存金转入万能账户11万以上且低温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 110000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "低温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户11万以上且低温客户",
+      "reason": "万能账户"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-091",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生存金转入万能账户12万以上且低温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 120000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "低温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户12万以上且低温客户",
+      "reason": "万能账户"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-092",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生存金转入万能账户13万以上且低温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 130000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "低温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户13万以上且低温客户",
+      "reason": "万能账户"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-093",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生存金转入万能账户14万以上且低温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 140000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "低温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户14万以上且低温客户",
+      "reason": "万能账户"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-094",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生存金转入万能账户15万以上且低温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_universal_acct_transfer",
+          "operator": "GTE",
+          "value": 150000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "低温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生存金转入万能账户15万以上且低温客户",
+      "reason": "万能账户"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-095",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "2022年发生理赔且理赔金额5万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimdate",
+          "operator": "RANGE",
+          "value": "2022年"
+        },
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GTE",
+          "value": 50000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选2022年发生理赔且理赔金额5万以上客户",
+      "reason": "理赔时间金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-096",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "2023年发生理赔且理赔金额5万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimdate",
+          "operator": "RANGE",
+          "value": "2023年"
+        },
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GTE",
+          "value": 50000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选2023年发生理赔且理赔金额5万以上客户",
+      "reason": "理赔时间金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-097",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "2024年发生理赔且理赔金额5万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimdate",
+          "operator": "RANGE",
+          "value": "2024年"
+        },
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GTE",
+          "value": 50000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选2024年发生理赔且理赔金额5万以上客户",
+      "reason": "理赔时间金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-098",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "2025年发生理赔且理赔金额5万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimdate",
+          "operator": "RANGE",
+          "value": "2025年"
+        },
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GTE",
+          "value": 50000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选2025年发生理赔且理赔金额5万以上客户",
+      "reason": "理赔时间金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-099",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "2026年发生理赔且理赔金额5万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimdate",
+          "operator": "RANGE",
+          "value": "2026年"
+        },
+        {
+          "field": "polNoInfo.claimdatainfo.claimamt",
+          "operator": "GTE",
+          "value": 50000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选2026年发生理赔且理赔金额5万以上客户",
+      "reason": "理赔时间金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "survival_claims_finance-100",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "有医疗险理赔但没有百万医疗客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.claimdatainfo.claimplancodename",
+          "operator": "MATCH",
+          "value": "医疗险"
+        },
+        {
+          "field": "polNoInfo.plancodeinfo.abbrname",
+          "operator": "NOT_CONTAINS",
+          "value": "百万医疗产品组"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选有医疗险理赔但没有百万医疗客户",
+      "reason": "理赔组合"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  }
+]

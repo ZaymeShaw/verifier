@@ -4,6 +4,8 @@ Purpose: audit whether an eval system is standardized, minimal, current, and sti
 
 ## Core mechanism
 
+A check is a Claude subagent-backed review workflow for independent mechanism audit. It may inspect and propose or implement narrowly scoped audit/report fixes, but it must not replace runtime mock, judge, or attribute script agents for each case.
+
 A check is successful only when it verifies both the visible result and the mechanism that produces it. If a page, report, dataset, or attribution looks correct only because one artifact was manually edited while the source pipeline would regenerate stale or wrong output, the check must fail.
 
 The central question is: after this change, will the same protocol-driven pipeline still produce correct, traceable, generalized results for new cases, or did the implementation only patch a local symptom?
@@ -12,7 +14,7 @@ The central question is: after this change, will the same protocol-driven pipeli
 
 1. Reconstruct the latest user intent from current demand/review/project docs, not from old generated outputs.
 2. Identify the source of truth for each changed artifact: protocol, project standard, adapter, pipeline, dataset generator, backend endpoint, frontend component, or persisted case pool.
-3. Verify protocol alignment: generic concepts must live in protocols/core, and project-specific behavior must stay in project implementations or project docs.
+3. Verify protocol alignment: generic concepts must live in protocols/core, and project-specific behavior must stay in project implementations or project docs. Use `impl/protocols/agent_role_protocol.md` to decide which capability owns a gap; do not collapse all implementation work into check simply because check found it.
 4. Verify source consistency: generated docs/data/frontend views must match the newest source generator or project standard. If a generated artifact is stale, prefer fixing and rerunning the source mechanism over editing the artifact alone.
 5. Walk the end-to-end chain that the user will actually use: mock/live input, service or adapter run, judge, attribute, cluster, check, frontend display, and saved/uploaded case-pool behavior when relevant.
 6. Inspect the producing mechanism for every visible result: inputs, normalization, API response extraction, judge reference generation, attribution evidence, clustering, persistence, and rendering must all agree.

@@ -1,0 +1,592 @@
+[
+  {
+    "id": "family_property_claim-001",
+    "scenario": "single_condition",
+    "input": {
+      "query": "有子女的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "子女"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选有子女家庭成员客户",
+      "reason": "家庭成员关系"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-002",
+    "scenario": "single_condition",
+    "input": {
+      "query": "有配偶的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "配偶"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选有配偶家庭成员客户",
+      "reason": "家庭成员关系"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-003",
+    "scenario": "single_condition",
+    "input": {
+      "query": "有父母信息的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "父母"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选有父母家庭成员客户",
+      "reason": "家庭成员关系"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-004",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "子女年龄小于6岁的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "子女"
+        },
+        {
+          "field": "familyInfo.familyclientage",
+          "operator": "LT",
+          "value": 6
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选子女年龄<6客户",
+      "reason": "子女年龄"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-005",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "子女在6到12岁之间的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "子女"
+        },
+        {
+          "field": "familyInfo.familyclientage",
+          "operator": "RANGE",
+          "value": "6-12"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选子女6-12岁客户",
+      "reason": "子女年龄区间"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-006",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "子女18岁以上的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "子女"
+        },
+        {
+          "field": "familyInfo.familyclientage",
+          "operator": "GTE",
+          "value": 18
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选成年子女客户",
+      "reason": "子女年龄"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-007",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "父母年龄超过65岁的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "父母"
+        },
+        {
+          "field": "familyInfo.familyclientage",
+          "operator": "GTE",
+          "value": 66
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选父母年龄>65客户",
+      "reason": "父母年龄"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-008",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "配偶是女性的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "配偶"
+        },
+        {
+          "field": "familyInfo.familyclientsex",
+          "operator": "MATCH",
+          "value": "女"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选配偶性别女客户",
+      "reason": "家庭成员性别"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-009",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "儿子生日在本月的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "子女"
+        },
+        {
+          "field": "familyInfo.familyclientsex",
+          "operator": "MATCH",
+          "value": "男"
+        },
+        {
+          "field": "familyInfo.familyclientbirthday",
+          "operator": "RANGE",
+          "value": "本月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选子女性别男且本月生日客户",
+      "reason": "子女生日"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-010",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "女儿下个月生日的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "子女"
+        },
+        {
+          "field": "familyInfo.familyclientsex",
+          "operator": "MATCH",
+          "value": "女"
+        },
+        {
+          "field": "familyInfo.familyclientbirthday",
+          "operator": "RANGE",
+          "value": "下月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选子女性别女且下月生日客户",
+      "reason": "子女生日"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-011",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "父母生日在未来30天的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "父母"
+        },
+        {
+          "field": "familyInfo.familyclientbirthday",
+          "operator": "RANGE",
+          "value": "未来30天"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选父母未来30天生日客户",
+      "reason": "父母生日"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-012",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "配偶手机号尾号是8888的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "配偶"
+        },
+        {
+          "field": "familyInfo.familyclientmobile",
+          "operator": "MATCH",
+          "value": 8888
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选配偶手机号尾号8888客户",
+      "reason": "家庭成员手机号"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-013",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "子女姓名叫小明的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "子女"
+        },
+        {
+          "field": "familyInfo.familyclientname",
+          "operator": "MATCH",
+          "value": "小明"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选子女姓名小明客户",
+      "reason": "家庭成员姓名"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-014",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "父母手机号以139开头的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "父母"
+        },
+        {
+          "field": "familyInfo.familyclientmobile",
+          "operator": "MATCH",
+          "value": 139
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选父母手机号139开头客户",
+      "reason": "家庭成员手机号"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-015",
+    "scenario": "single_condition",
+    "input": {
+      "query": "有兄弟姐妹信息的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "兄弟姐妹"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选兄弟姐妹家庭成员客户",
+      "reason": "家庭成员关系"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-016",
+    "scenario": "single_condition",
+    "input": {
+      "query": "有祖父母信息的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "(外)祖父母"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选祖父母家庭成员客户",
+      "reason": "家庭成员关系"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-017",
+    "scenario": "single_condition",
+    "input": {
+      "query": "有孙子女信息的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "(外)孙子女"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选孙子女家庭成员客户",
+      "reason": "家庭成员关系"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-018",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "子女是男性且年龄小于10岁的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "子女"
+        },
+        {
+          "field": "familyInfo.familyclientsex",
+          "operator": "MATCH",
+          "value": "男"
+        },
+        {
+          "field": "familyInfo.familyclientage",
+          "operator": "LT",
+          "value": 10
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选男孩且小于10岁客户",
+      "reason": "子女年龄+性别"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-019",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "子女是女性且年龄在10到18岁的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "子女"
+        },
+        {
+          "field": "familyInfo.familyclientsex",
+          "operator": "MATCH",
+          "value": "女"
+        },
+        {
+          "field": "familyInfo.familyclientage",
+          "operator": "RANGE",
+          "value": "10-18"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选女孩10-18岁客户",
+      "reason": "子女年龄+性别"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "family_property_claim-020",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "父母年龄在55到70岁之间的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "familyInfo.familyrelation",
+          "operator": "MATCH",
+          "value": "父母"
+        },
+        {
+          "field": "familyInfo.familyclientage",
+          "operator": "RANGE",
+          "value": "55-70"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选父母55-70岁客户",
+      "reason": "父母年龄区间"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  }
+]

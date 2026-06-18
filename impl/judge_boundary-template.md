@@ -24,6 +24,16 @@
 边界依据：<写 judge 应该从哪些项目资料确认限制和评价范围；如果资料冲突，写优先级。>
 ```
 
+## 运行时结构
+
+impl 会把项目填写的边界文档和 `project.yaml.frontend_extensions.implementation_standard.judge_boundary` 合并为结构化边界：
+
+- `document`：项目边界文档来源。
+- `gate`：边界门禁何时应用，默认在最终 verdict reconciliation 前应用。
+- `evaluation_boundary`：由限制、评价范围和边界依据归一出的最终评估口径。
+
+如果 judge 判定未满足项完全来自外部/系统不可控限制，并且 `boundary_decision.within_evaluable_scope=false`、`uncontrollable_limits` 非空且 `evaluable_errors` 为空，边界门禁会避免把该项保留为 `incorrect`。如果未满足项属于模型、配置、prompt、代码、字段映射、值归一化或后处理等可控范围，则仍按口径保留 `incorrect`。
+
 ## 填写检查
 
 填完后应该能判断：

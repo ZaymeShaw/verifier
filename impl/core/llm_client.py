@@ -3,14 +3,21 @@ from __future__ import annotations
 import json
 import os
 import re
-import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+import time
 
 ROOT = Path(__file__).resolve().parents[2]
 MODEL_DEFAULT = "deepseek-v4-pro"
 BASE_URL_DEFAULT = "https://api.deepseek.com/v1/chat/completions"
+
+# Session start timestamp: ensures sessions from different runs don't share context
+SESSION_START_TIME = int(time.time())
+
+
+# REMOVED: _project_memory_path() - this function creates impl/knowledge directory
+# which triggers Agno's auto-persistence. We don't use it anymore.
 
 
 def load_env_md_key() -> str:
@@ -25,6 +32,20 @@ def load_env_md_key() -> str:
     return ""
 
 
+# CRITICAL: Set OPENAI_API_KEY before importing Agno modules.
+# Agno's DeepSeek inherits from OpenAILike, which uses OpenAI SDK internally.
+# The OpenAI SDK may cache environment variables at import time, so we must
+# set OPENAI_API_KEY to DeepSeek key BEFORE any Agno imports.
+_deepseek_key = os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("LLM_API_KEY") or load_env_md_key()
+if _deepseek_key and not os.environ.get("OPENAI_API_KEY"):
+    os.environ["OPENAI_API_KEY"] = _deepseek_key
+
+from agno.agent import Agent
+from agno.db.json import JsonDb
+from agno.memory.manager import MemoryManager
+from agno.models.deepseek import DeepSeek
+
+
 def extract_json(text: str) -> Any:
     text = text.strip()
     if not text:
@@ -33,12 +54,22 @@ def extract_json(text: str) -> Any:
         return json.loads(text)
     except json.JSONDecodeError:
         pass
-    match = re.search(r"```(?:json)?\s*(.*?)```", text, re.S)
-    if match:
-        try:
-            return json.loads(match.group(1))
-        except json.JSONDecodeError:
-            pass
+    # Try every fenced block in order. Many LLM outputs embed non-JSON
+    # snippets (yaml configs, regex examples) inside ``` fences BEFORE the
+    # actual JSON block — a non-greedy single match would silently grab the
+    # first fence and drop the real JSON. Prefer json-tagged fences, then
+    # any fence, then a bare-object fallback.
+    fence_matches = list(re.finditer(r"```(\w+)?\s*(.*?)```", text, re.S))
+    json_tagged = [m for m in fence_matches if (m.group(1) or "").lower() == "json"]
+    untagged = [m for m in fence_matches if (m.group(1) or "").lower() not in {"json", ""}]
+    any_tagged = fence_matches
+    for group in (json_tagged, untagged, any_tagged):
+        for m in group:
+            body = m.group(2)
+            try:
+                return json.loads(body)
+            except json.JSONDecodeError:
+                continue
     start = min([idx for idx in [text.find("{"), text.find("[")] if idx >= 0], default=-1)
     if start >= 0:
         try:
@@ -48,38 +79,255 @@ def extract_json(text: str) -> Any:
     return {"raw_text": text}
 
 
+def _response_content(result: Any) -> str:
+    content = getattr(result, "content", result)
+    if isinstance(content, str):
+        return content
+    if isinstance(content, (dict, list)):
+        return json.dumps(content, ensure_ascii=False)
+    return str(content or "")
+
+
+def _raw_response(result: Any) -> Any:
+    raw = getattr(result, "raw_response", None)
+    if raw is not None:
+        return raw
+    if hasattr(result, "model_dump"):
+        try:
+            dump = result.model_dump()
+            # Preserve metrics if available
+            if hasattr(result, "metrics") and "metrics" not in dump:
+                metrics = getattr(result, "metrics")
+                if hasattr(metrics, "model_dump"):
+                    dump["metrics"] = metrics.model_dump()
+                elif isinstance(metrics, dict):
+                    dump["metrics"] = metrics
+            return dump
+        except Exception:
+            pass
+    if isinstance(result, dict):
+        return result
+    response = {"content": _response_content(result)}
+    # Try to extract metrics from Agno RunOutput
+    if hasattr(result, "metrics"):
+        metrics = getattr(result, "metrics")
+        if hasattr(metrics, "model_dump"):
+            response["metrics"] = metrics.model_dump()
+        elif isinstance(metrics, dict):
+            response["metrics"] = metrics
+    return response
+
+
+def _normalize_base_url(base_url: str) -> str:
+    return base_url.rsplit("/v1/chat/completions", 1)[0] if base_url.endswith("/v1/chat/completions") else base_url
+
+
+def project_llm_client(spec: Any, role: str, knowledge: Any = None, tools: list = None,
+                       tool_call_limit: Optional[int] = None,
+                       compress_tool_results: bool = False,
+                       max_tool_calls_from_history: Optional[int] = None) -> "LlmClient":
+    """
+    Create LLM client for judge/attribute with NO persistence, NO memories, NO sessions.
+
+    Context engineering strategy:
+    - Knowledge: NO - use tools for on-demand retrieval
+    - User memories: NO - each case should be independent
+    - Session history: NO - each judge call is stateless
+    - DB persistence: NO - no session/memory storage
+    - Tool call budget: only set for roles that actually use tools (attribute).
+
+    Args:
+        spec: Project specification
+        role: Role name (e.g., "judge", "attribute")
+        knowledge: Optional knowledge base (DEPRECATED - use tools instead)
+        tools: Optional list of tools to provide to the agent
+        tool_call_limit: Cap on tool calls within one agent.run() (attribute only)
+        compress_tool_results: If True, compress prior tool results (attribute only)
+        max_tool_calls_from_history: Prune tool messages from history (attribute only)
+    """
+    project_id = str(getattr(spec, "project_id", "default") or "default")
+    # CRITICAL: Do NOT create JsonDb or MemoryManager
+    # CRITICAL: Do NOT set user_id - it triggers Agno to auto-create impl/knowledge/{user_id}/ directory
+    return LlmClient(
+        memory_db=None,  # NO persistence
+        memory_manager=None,  # NO memories
+        knowledge=knowledge,  # Will be set to None by caller
+        knowledge_retriever=None,
+        tools=tools,
+        user_id=None,  # CRITICAL: None to prevent auto directory creation
+        session_id=None,  # NO session persistence
+        tool_call_limit=tool_call_limit,
+        compress_tool_results=compress_tool_results,
+        max_tool_calls_from_history=max_tool_calls_from_history,
+    )
+
+
 class LlmClient:
-    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None, model: str = MODEL_DEFAULT):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        model: str = MODEL_DEFAULT,
+        memory_manager: Any = None,
+        memory_db: Any = None,
+        knowledge: Any = None,
+        knowledge_retriever: Any = None,
+        tools: list = None,
+        user_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        tool_call_limit: Optional[int] = None,
+        compress_tool_results: bool = False,
+        max_tool_calls_from_history: Optional[int] = None,
+    ):
         self.api_key = api_key or os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("LLM_API_KEY") or load_env_md_key()
         self.base_url = base_url or os.environ.get("DEEPSEEK_BASE_URL") or os.environ.get("LLM_BASE_URL") or BASE_URL_DEFAULT
         self.model = model
+        self.memory_manager = memory_manager
+        self.memory_db = memory_db
+        self.knowledge = knowledge
+        self.knowledge_retriever = knowledge_retriever
+        self.tools = tools or []
+        self.user_id = user_id
+        self.session_id = session_id
+        self.tool_call_limit = tool_call_limit
+        self.compress_tool_results = compress_tool_results
+        self.max_tool_calls_from_history = max_tool_calls_from_history
 
-    def complete_json(self, system: str, user: str) -> Dict[str, Any]:
+    def complete_json(self, system: str, user: str, trace_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Complete JSON request with isolated session per trace.
+
+        Args:
+            system: System prompt
+            user: User prompt
+            trace_id: Optional trace ID for session isolation. If provided, creates a unique
+                     session for this specific case/trace, preventing cross-case contamination.
+        """
+        # DEBUG: Log the actual trace_id received with call stack
+        import traceback
+        print(f"\n{'='*80}")
+        print(f"[DEBUG] complete_json called:")
+        print(f"  trace_id: {trace_id!r}")
+        print(f"  type: {type(trace_id).__name__}")
+        print(f"  len: {len(str(trace_id)) if trace_id else 0}")
+        print(f"  user_id: {self.user_id!r}")
+        print(f"\n[STACK]")
+        for line in traceback.format_stack()[-5:-1]:  # Show last 4 frames
+            print(line.rstrip())
+        print(f"{'='*80}\n")
+
         if not self.api_key:
             return {"error": "missing_api_key", "raw_text": "No DeepSeek API key configured."}
-        payload = {
-            "model": self.model,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            "temperature": 0,
-        }
-        data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        req = urllib.request.Request(
-            self.base_url,
-            data=data,
-            headers={"Content-Type": "application/json", "Authorization": f"Bearer {self.api_key}"},
-            method="POST",
-        )
+
+        # Ensure OPENAI_API_KEY is set for this request (defensive, already set at module import)
+        original_openai_key = os.environ.get("OPENAI_API_KEY")
+        os.environ["OPENAI_API_KEY"] = self.api_key
+
         try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
-                result = json.loads(resp.read().decode("utf-8"))
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            model = DeepSeek(
+                id=self.model,
+                api_key=self.api_key,
+                base_url=_normalize_base_url(self.base_url),
+                temperature=0,
+                reasoning_effort="max",
+            )
+
+            # CRITICAL: Use trace-specific session ID to isolate different cases
+            # BUT: Prevent conversation history accumulation within same session
+            if trace_id is None:
+                import uuid
+                trace_id = str(uuid.uuid4())
+
+            # Each trace gets unique session, prevents cross-case contamination
+            effective_session_id = f"{trace_id}:{SESSION_START_TIME}"
+
+            # Debug: log session ID and context sizes
+            print(f"[SESSION] Creating Agent with:")
+            print(f"  user_id: {self.user_id}")
+            print(f"  session_id: {effective_session_id}")
+            print(f"  Final (Agno will prepend user_id): {self.user_id}:{effective_session_id}")
+            print(f"[CONTEXT] Prompt sizes:")
+            print(f"  system: {len(system):,} chars (~{len(system)//4:,} tokens)")
+            print(f"  user: {len(user):,} chars (~{len(user)//4:,} tokens)")
+            print(f"  knowledge: {'enabled' if self.knowledge else 'disabled'}")
+            print(f"  tools: {len(self.tools)} tools")
+            print(f"  user_memories: {'enabled' if self.memory_manager else 'disabled'}")
+
+            # Retry once on transient LLM failure (network/timeout/rate-limit).
+            # Without this, a single hiccup yields verdict=uncertain for the case.
+            last_exc: Optional[Exception] = None
+            result = None
+            for attempt in range(2):
+                try:
+                    agent = Agent(
+                        model=model,
+                        system_message=system,
+                        use_json_mode=True,
+                        tools=self.tools,
+                        memory_manager=None,
+                        db=None,
+                        knowledge=None,
+                        knowledge_retriever=None,
+                        user_id=self.user_id,
+                        session_id=f"{effective_session_id}:retry{attempt}" if attempt else effective_session_id,
+                        enable_user_memories=False,
+                        add_memories_to_context=False,
+                        add_knowledge_to_context=False,
+                        add_history_to_context=False,
+                        num_history_runs=0,
+                        num_history_messages=0,
+                        tool_call_limit=self.tool_call_limit,
+                        compress_tool_results=self.compress_tool_results,
+                        max_tool_calls_from_history=self.max_tool_calls_from_history,
+                    )
+                    result = agent.run(user)
+                    last_exc = None
+                    break
+                except Exception as exc:
+                    last_exc = exc
+                    print(f"[LLM retry] attempt {attempt + 1} failed: {exc}")
+                    if attempt == 0:
+                        time.sleep(2)
+            if last_exc is not None:
+                raise last_exc
+
+            # Extract metrics for token tracking
+            token_metrics = {}
+            if hasattr(result, "metrics") and result.metrics:
+                metrics = result.metrics
+                token_metrics = {
+                    "input_tokens": getattr(metrics, "input_tokens", 0),
+                    "output_tokens": getattr(metrics, "output_tokens", 0),
+                    "cache_read_tokens": getattr(metrics, "cache_read_tokens", 0),
+                    "cache_write_tokens": getattr(metrics, "cache_write_tokens", 0),
+                    "reasoning_tokens": getattr(metrics, "reasoning_tokens", 0),
+                    "total_tokens": getattr(metrics, "total_tokens", 0),
+                }
+                print(f"[Token usage] {token_metrics['input_tokens']:,} in + {token_metrics['output_tokens']:,} out + {token_metrics['cache_read_tokens']:,} cache = {token_metrics['total_tokens']:,} total")
+        except Exception as exc:
+            # Restore original OPENAI_API_KEY on error
+            if original_openai_key is None:
+                os.environ.pop("OPENAI_API_KEY", None)
+            else:
+                os.environ["OPENAI_API_KEY"] = original_openai_key
             return {"error": "llm_request_failed", "raw_text": str(exc)}
-        content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+        finally:
+            # Always restore original OPENAI_API_KEY
+            if original_openai_key is None:
+                os.environ.pop("OPENAI_API_KEY", None)
+            else:
+                os.environ["OPENAI_API_KEY"] = original_openai_key
+
+        content = _response_content(result)
         parsed = extract_json(content)
+        raw_response = _raw_response(result)
+
+        # Add token metrics to raw_response if available
+        if token_metrics:
+            if isinstance(raw_response, dict):
+                raw_response["metrics"] = token_metrics
+
         if isinstance(parsed, dict):
-            parsed.setdefault("raw_model_response", result)
+            parsed.setdefault("raw_model_response", raw_response)
             return parsed
-        return {"value": parsed, "raw_model_response": result}
+        return {"value": parsed, "raw_model_response": raw_response}

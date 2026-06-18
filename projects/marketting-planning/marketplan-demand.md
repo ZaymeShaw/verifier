@@ -9,7 +9,7 @@
 
 # 分歧点
 
-1. 分析该业务项目如果接入当前评估系统，主要的分歧点和坑点是什么地方
+1. 分析该业务项目如果接入当前评估系统，主要的分歧点和坑点是什么地方（分歧点分析记录在impl/projects/marketting-planning/issue/20260611-marketplan-integration-risks.md）
 
 
 

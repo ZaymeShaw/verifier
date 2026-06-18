@@ -6,11 +6,15 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from urllib.parse import urljoin
 
 from impl.core.adapter import ProjectAdapter
 from impl.core.schema import AttributeResult, JudgeResult, RunTrace
+from impl.projects.client_search.tools import ClientSearchConditionCompareTool
+from impl.tools import ToolContext, ToolRegistry
+
+import yaml as _yaml
 
 
 _SERVICE_LOCK = threading.Lock()
@@ -56,6 +60,46 @@ class Adapter(ProjectAdapter):
             "examples": ["买了年金险或两全险的客户", "只有重疾险的客户"],
         },
     }
+
+    def _capability_manifest(self) -> dict:
+        """Generate full field capability manifest from source YAML configs."""
+        try:
+            config_paths = self._source_config_paths()
+            definitions_path = config_paths.get('source_field_definitions')
+            if not definitions_path or not Path(definitions_path).exists():
+                return {}
+            with open(definitions_path) as f:
+                data = _yaml.safe_load(f)
+            intents = data.get('intents', [])
+            fields = {}
+            for item in intents:
+                fn = item.get('field', '')
+                if not fn:
+                    continue
+                if fn not in fields:
+                    fields[fn] = {
+                        'field': fn,
+                        'operators': set(),
+                        'value_types': set(),
+                        'description': item.get('description', ''),
+                        'definition': item.get('description', ''),
+                        'enums': item.get('enum') or [],
+                        'unit': item.get('unit') or '',
+                        'notes': item.get('notes', ''),
+                    }
+                fields[fn]['operators'].add(item.get('operator', ''))
+                fields[fn]['value_types'].add(item.get('value_type', ''))
+            for f in fields.values():
+                f['operators'] = sorted(f['operators'])
+                f['value_types'] = sorted(f['value_types'])
+            return {k: {**v, 'operators': v['operators'], 'value_types': v['value_types']} for k, v in fields.items()}
+        except Exception:
+            return {}
+
+    def protocol_tools(self) -> ToolRegistry:
+        registry = ToolRegistry()
+        registry.register(ClientSearchConditionCompareTool())
+        return registry
 
     def _source_config_paths(self) -> Dict[str, str]:
         paths = {}
@@ -277,6 +321,31 @@ class Adapter(ProjectAdapter):
     def _semantic_equivalence_rules(self) -> list[Dict[str, Any]]:
         return self.semantic_equivalence_rules()
 
+    def _intent_expected_conditions(self, trace: RunTrace) -> Dict[str, Any]:
+        for source in (trace.project_fields.get("intent_expected") if trace.project_fields else None, trace.normalized_request.get("intent_expected") if trace.normalized_request else None):
+            if isinstance(source, dict) and source.get("conditions"):
+                return source
+        return {}
+
+    def _condition_comparison(self, trace: RunTrace) -> Dict[str, Any]:
+        inputs = {"expected": self._intent_expected_conditions(trace)}
+        results = self.run_protocol_tools(trace, purpose="judge", tool_type="comparison", inputs=inputs)
+        result = next((item for item in results if item.tool_id == "client_search.condition_compare"), None)
+        if result is None:
+            result = self.protocol_tools().run(
+                "client_search.condition_compare",
+                ToolContext(project_id=self.spec.project_id, purpose="judge", spec=self.spec, trace=trace, inputs=inputs),
+            )
+        return {
+            "tool_id": result.tool_id,
+            "tool_type": result.tool_type,
+            "status": result.status,
+            "outputs": result.outputs,
+            "evidence": result.evidence,
+            "boundary_limits": result.boundary_limits,
+            "error": result.error,
+        }
+
     def _judge_governance(self) -> Dict[str, Any]:
         return {
             "canonical_method": "current_case_llm_judge",
@@ -297,16 +366,152 @@ class Adapter(ProjectAdapter):
             "quality_standard": "必须围绕当前 query 产出明确根因、可核验证据链、疑似文件/配置位置、具体修改建议、明确修改方案和业务影响；期望条件和修改方案必须来自当前 query 或同 query 链路证据，不能引用无关历史 case 字段。",
         }
 
+    def _default_consumer_contract(self, trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:
+        context = self.build_judge_context(trace)
+        return {
+            "consumer": "downstream client search",
+            "contract": "parsed field/operator/value conditions and query logic must be executable for downstream client search within the active application boundary",
+            "reference_contract": context.get("field_patterns") or {},
+            "application_boundary": context.get("application_boundary") or {},
+        }
+
+    def _comparison_outputs(self, trace: RunTrace) -> Dict[str, Any]:
+        return (self._condition_comparison(trace).get("outputs") or {})
+
+    def _apply_condition_comparison(self, trace: RunTrace, judge_result: JudgeResult) -> None:
+        comparison = self._comparison_outputs(trace)
+        if not comparison:
+            return
+        wrong = list(comparison.get("wrong") or [])
+        missing = list(comparison.get("missing") or [])
+        extra = list(comparison.get("extra") or [])
+        if wrong or missing or extra:
+            judge_result.wrong = wrong
+            judge_result.missing = missing
+            judge_result.extra = extra
+        judge_result.condition_assessments = [
+            *[{**item, "status": "wrong"} for item in wrong if isinstance(item, dict)],
+            *[{**item, "status": "missing"} for item in missing if isinstance(item, dict)],
+            *[{**item, "status": "extra"} for item in extra if isinstance(item, dict)],
+        ] or judge_result.condition_assessments
+        expected = comparison.get("expected")
+        actual = comparison.get("actual")
+        if expected:
+            judge_result.expected = expected
+        if actual:
+            judge_result.actual = actual
+        basis = dict(judge_result.reference_generation_basis or {})
+        basis.setdefault("source", comparison.get("expected_source") or "client_search_condition_compare")
+        basis.setdefault("comparison_basis", comparison.get("comparison_basis"))
+        basis.setdefault("expected_source", comparison.get("expected_source"))
+        judge_result.reference_generation_basis = basis
+        if comparison.get("evaluable") is False:
+            derivation = dict(judge_result.verdict_derivation or {})
+            derivation.setdefault("why_verdict", "client_search condition comparison has no current intent/config expected conditions; reference conditions are evidence only")
+            derivation.setdefault("missing_evidence", ["current intent/config expected conditions"])
+            judge_result.verdict_derivation = derivation
+        elif wrong or missing or extra:
+            derivation = dict(judge_result.verdict_derivation or {})
+            derivation.setdefault("blocking_gaps", [*(missing or []), *(wrong or []), *(extra or [])])
+            derivation.setdefault("why_verdict", "client_search condition comparison found wrong/missing/extra customer-search gaps")
+            judge_result.verdict_derivation = derivation
+
+    def _default_business_expectation(self, trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:
+        expectation = super()._default_business_expectation(trace, judge_result)
+        comparison = self._comparison_outputs(trace)
+        expectation.update(
+            {
+                "expectation_id": "client_search:search_condition_contract",
+                "downstream_consumer": "downstream client search",
+                "required_capabilities": expectation.get("required_capabilities") or ["field_operator_value_logic", "semantic_equivalence", "downstream_search_executability"],
+                "boundary": judge_result.boundary_decision or self.build_judge_context(trace).get("application_boundary") or expectation.get("boundary") or {},
+                "comparison_basis": comparison.get("comparison_basis") or "client_search wrong/missing/extra customer-search coverage",
+                "expected_source": comparison.get("expected_source"),
+            }
+        )
+        if comparison:
+            expectation.update(
+                {
+                    "user_intent": comparison.get("target_population") or expectation.get("user_intent"),
+                    "expected_outcome": "actual search conditions should cover the target customer population without wrong, missing, or extra conditions",
+                    "acceptance_criteria": {
+                        "expected": comparison.get("expected"),
+                        "wrong": comparison.get("wrong") or [],
+                        "missing": comparison.get("missing") or [],
+                        "extra": comparison.get("extra") or [],
+                    },
+                }
+            )
+        elif not judge_result.intent_model:
+            expectation.update(
+                {
+                    "user_intent": str((trace.normalized_request or {}).get("user_text") or (trace.extracted_output or {}).get("source_query") or trace.input or ""),
+                    "expected_outcome": "current query should become complete, semantically correct, downstream-executable search conditions",
+                    "acceptance_criteria": list(judge_result.condition_assessments or judge_result.missing or judge_result.wrong or []),
+                }
+            )
+        return expectation
+
+    def _default_fulfillment_assessment(self, trace: RunTrace, judge_result: JudgeResult, expectation: Dict[str, Any]) -> Dict[str, Any]:
+        comparison = self._comparison_outputs(trace)
+        gaps = list(comparison.get("wrong") or []) + list(comparison.get("missing") or []) + list(comparison.get("extra") or [])
+        if comparison and comparison.get("evaluable") is False:
+            status = "not_evaluable"
+        elif comparison:
+            status = "not_fulfilled" if gaps else "fulfilled"
+        else:
+            status = self._expectation_status_from_verdict(judge_result)
+        return {
+            "expectation_id": expectation.get("expectation_id"),
+            "status": status,
+            "score": 0 if status == "not_fulfilled" else (1 if status == "fulfilled" else judge_result.score),
+            "expected_evidence": [comparison.get("expected")] if comparison else (list(judge_result.missing or []) or [judge_result.expected or self.field_patterns]),
+            "actual_evidence": [comparison.get("actual"), {"wrong_missing_extra": gaps}] if comparison else (list(judge_result.wrong or []) or [judge_result.actual or trace.extracted_output]),
+            "boundary_decision": judge_result.boundary_decision or self.build_judge_context(trace).get("application_boundary") or {},
+            "downstream_impact": "search conditions cover the target customer population" if status == "fulfilled" else (judge_result.reasoning_summary or "wrong/missing/extra conditions change the target customer population"),
+            "blocking": status in {"not_fulfilled", "not_evaluable"},
+            "confidence": judge_result.confidence,
+            "evidence_refs": list(getattr(trace, "evidence_refs", []) or []),
+        }
+
     def build_judge_context(self, trace: RunTrace) -> Dict[str, Any]:
         downstream = trace.project_fields.get("downstream_search") if isinstance(trace.project_fields, dict) else {}
         application_boundary = trace.project_fields.get("application_boundary") if isinstance(trace.project_fields, dict) else None
+        condition_comparison = self._condition_comparison(trace)
         return {
             "semantic_equivalence_rules": self._semantic_equivalence_rules(),
             "field_patterns": self.field_patterns,
             "application_boundary": application_boundary or self._application_boundary(downstream),
             "judge_governance": self._judge_governance(),
+            "condition_comparison": condition_comparison,
+            "protocol_tool_results": [condition_comparison],
+            "client_search_judge_basis": "wrong/missing/extra customer-search condition coverage within current field/config boundary",
             "boundary_usage": "application adapter has already decided whether result-set verification is in scope; judge should evaluate only within application_boundary.judge_scope.",
             "external_boundary_sources": trace.project_fields.get("external_boundary_sources") if isinstance(trace.project_fields, dict) else {},
+            "capability_manifest": self._capability_manifest(),
+        }
+
+    def build_intent_frame(self, trace: RunTrace) -> Dict[str, Any]:
+        context = self.build_judge_context(trace)
+        return {
+            **super().build_intent_frame(trace),
+            "business_task_type": "natural_language_to_downstream_client_search_conditions",
+            "downstream_consumer": "downstream client search",
+            "critical_intent_dimensions": ["target_population", "field_semantics", "operator", "value_or_unit", "boolean_logic", "unsupported_or_out_of_boundary_request"],
+            "boundary_rules": context.get("application_boundary") or {},
+            "output_semantics": "produce complete, semantically correct, downstream-executable search conditions and query logic for the current user request",
+            "semantic_equivalence_rules": context.get("semantic_equivalence_rules") or [],
+            "field_patterns": context.get("field_patterns") or {},
+            "condition_comparison": context.get("condition_comparison") or {},
+            "capability_manifest": context.get("capability_manifest") or {},
+            "critical_intent_dimensions_detail": {
+                "target_population": "目标客户群体描述，驱动 population-sensitive field/operator/value 组合",
+                "field_semantics": "请求中提到的字段及其语义定义，优先匹配 capability_manifest 中的 field/description",
+                "operator": "每个字段允许的操作符，必须匹配 capability_manifest 中对应字段的 operators 列表",
+                "value_or_unit": "值的单位换算与格式规范，如万=10000、岁以上用GTE+1等",
+                "boolean_logic": "条件间的 AND/OR/NOT 逻辑关系",
+                "unsupported_or_out_of_boundary_request": "系统不支持或超出评估边界的请求，应标记为 not_evaluable",
+            },
         }
 
     def build_attribute_context(self, trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:
@@ -332,6 +537,38 @@ class Adapter(ProjectAdapter):
             "attribute_instruction": "application_boundary 由 application adapter 在归因前判定；当 judge_scope=parser_condition_semantics_only 时，下游结果集验证不属于本次归因链路，归因只分析 query、parse 条件、matched_patterns、execution_trace 和项目文档中的可控解析问题；无法定位代码/配置时应标记 incomplete_reason。",
         }
 
+    def trace_state_graph(self) -> Dict[str, Any]:
+        return self.extend_default_trace_graph("collect_evidence", ["client_search_boundary_evidence"])
+
+    def state_executors(self) -> Dict[str, Any]:
+        return {"client_search_boundary_evidence": self._client_search_boundary_evidence}
+
+    def _client_search_boundary_evidence(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        trace = context.get("trace")
+        if not trace:
+            return {"status": "failed", "missing_evidence": ["trace"]}
+        fields = trace.project_fields or {}
+        evidence = {
+            "condition_count": len(fields.get("conditions") or []),
+            "query_logic": fields.get("query_logic"),
+            "downstream_status": (fields.get("downstream_search") or {}).get("status"),
+            "application_boundary": fields.get("application_boundary") or {},
+            "source_config_paths": (fields.get("external_boundary_sources") or {}).get("config_paths") or {},
+        }
+        return {
+            "status": "succeeded",
+            "outputs": evidence,
+            "evidence_refs": [{"type": "client_search_boundary", "evidence": evidence}],
+            "claims": [{"client_search_boundary": evidence}],
+        }
+
+    def collect_state_evidence(self, state_id: str, context: Dict[str, Any]) -> list[Dict[str, Any]]:
+        trace = context.get("trace")
+        if not trace:
+            return []
+        fields = trace.project_fields or {}
+        return [{"type": "client_search_state_boundary", "state_id": state_id, "application_boundary": fields.get("application_boundary") or {}, "external_boundary_sources": fields.get("external_boundary_sources") or {}}]
+
     def _application_boundary(self, downstream: Any) -> Dict[str, Any]:
         status = downstream.get("status") if isinstance(downstream, dict) else None
         if status == "ok":
@@ -345,6 +582,7 @@ class Adapter(ProjectAdapter):
         }
 
     def reconcile_judge_result(self, trace: RunTrace, judge_result: JudgeResult) -> JudgeResult:
+        self._apply_condition_comparison(trace, judge_result)
         downstream = trace.project_fields.get("downstream_search") if isinstance(trace.project_fields, dict) else {}
         application_boundary = trace.project_fields.get("application_boundary") if isinstance(trace.project_fields, dict) else self._application_boundary(downstream)
         if isinstance(downstream, dict) and downstream.get("status") not in {None, "ok"}:
@@ -376,28 +614,35 @@ class Adapter(ProjectAdapter):
         return super().reconcile_judge_result(trace, judge_result)
 
     def build_mock_cases(self) -> list[Dict[str, Any]]:
-        queries = [
-            "45岁女性保费10万以上",
-            "有生存金未领取的客户",
-            "年缴保费一万以上的客户",
-            "45岁以上女性客户",
-            "买了年金险或两全险的客户",
-            "大于50岁的客户",
-            "只有重疾险的客户",
-            "上有老下有小的客户",
-        ]
-        return [
-            {
-                "id": f"client-search-seed-{index + 1}",
-                "input": {"query": query},
-                "expected_intent": "",
-                "source": "mock_agent_seed",
-                "status": "pending",
-            }
-            for index, query in enumerate(queries)
-        ]
+        all_cases = []
+        # 1. Load original mock_cases from impl/data
+        legacy_path = Path(__file__).resolve().parents[2] / "data" / "client_search" / "mock_cases.json"
+        try:
+            legacy = json.loads(legacy_path.read_text(encoding="utf-8"))
+            if isinstance(legacy, list):
+                all_cases.extend(legacy)
+        except Exception:
+            pass
+        # 2. Load new dataset files from project-root data/
+        data_dir = Path(__file__).resolve().parents[3] / "data" / "client_search"
+        for fpath in sorted(data_dir.glob("*.json")):
+            name = fpath.name
+            if name in ("index.json",):
+                continue
+            try:
+                file_cases = json.loads(fpath.read_text(encoding="utf-8"))
+                if isinstance(file_cases, list):
+                    all_cases.extend(file_cases)
+            except Exception:
+                pass
+        return all_cases
 
     def build_mock_datasets(self) -> list[Dict[str, Any]]:
+        index_path = Path(__file__).resolve().parents[3] / "data" / "client_search" / "index.json"
+        try:
+            return json.loads(index_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
         dimensions = [
             {
                 "dataset_id": "client_search_demographic_100",
@@ -529,53 +774,3 @@ class Adapter(ProjectAdapter):
             })
         return {**{key: spec[key] for key in ["dataset_id", "name", "dimension_type", "description"]}, "case_count": len(cases), "cases": cases}
 
-    def mock_response(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        query = request.get("user_text") or ""
-        examples = {
-            "45岁女性保费10万以上": [
-                {"field": "clientAge", "operator": "RANGE", "value": {"min": 45, "max": 45}},
-                {"field": "clientSex", "operator": "MATCH", "value": "女"},
-                {"field": "annPremSegNum", "operator": "GTE", "value": 100000},
-            ],
-            "有生存金未领取的客户": [
-                {"field": "polNoInfo.payamountdue", "operator": "MATCH", "value": "是"},
-            ],
-            "年缴保费一万以上的客户": [
-                {"field": "annPremSegNum", "operator": "GTE", "value": 10000},
-            ],
-            "45岁以上女性客户": [
-                {"field": "clientAge", "operator": "GTE", "value": 45},
-                {"field": "clientSex", "operator": "MATCH", "value": "女"},
-            ],
-            "买了年金险或两全险的客户": [
-                {"field": "polNoInfo.plancodeinfo.plantypedesc", "operator": "CONTAINS", "value": ["年金", "两全险"]},
-            ],
-            "大于50岁的客户": [
-                {"field": "clientAge", "operator": "GTE", "value": 51},
-            ],
-            "只有重疾险的客户": [
-                {"field": "pCategorys", "operator": "CONTAINS", "value": ["疾病保险"]},
-                {"field": "pCategorys", "operator": "NOT_CONTAINS", "value": ["定期寿险", "护理保险", "两全保险", "年金保险", "医疗保险", "意外伤害保险", "终身寿险"]},
-            ],
-            "上有老下有小的客户": [
-                {"field": "familyInfo.familyrelation", "operator": "CONTAINS", "value": ["父母", "(外)祖父母"]},
-                {"field": "familyInfo.familyrelation", "operator": "MATCH", "value": "子女"},
-            ],
-        }
-        conditions = examples.get(query, [])
-        matched_patterns = [self.field_patterns[item["field"]] for item in conditions if item.get("field") in self.field_patterns]
-        return {
-            "code": 0,
-            "message": "mock client_search response",
-            "data": {
-                "robot_text": "mock response; real client_search service was not called",
-                "extra_output_params": {
-                    "query_logic": "AND",
-                    "conditions": conditions,
-                    "matched_level": 0,
-                    "intent_summary": f"mock intent for: {query}",
-                    "matched_patterns": matched_patterns,
-                    "rewritten_query": query,
-                },
-            },
-        }

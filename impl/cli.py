@@ -48,7 +48,6 @@ def main(argv=None):
     p = sub.add_parser("live-run")
     p.add_argument("--project", required=True)
     p.add_argument("--input", required=True)
-    p.add_argument("--mock", action="store_true")
 
     p = sub.add_parser("mock-cases")
     p.add_argument("--project", required=True)
@@ -79,13 +78,11 @@ def main(argv=None):
     p = sub.add_parser("run-chain")
     p.add_argument("--project", required=True)
     p.add_argument("--input", required=True)
-    p.add_argument("--mock", action="store_true")
     p.add_argument("--expected-intent")
 
     p = sub.add_parser("batch-run")
     p.add_argument("--project", required=True)
     p.add_argument("--inputs", required=True)
-    p.add_argument("--mock", action="store_true")
     p.add_argument("--expected-intent")
     p.add_argument("--concurrency", type=int, default=4)
 
@@ -95,7 +92,7 @@ def main(argv=None):
     elif args.cmd == "analysis":
         emit(pipeline.analysis(args.project))
     elif args.cmd == "live-run":
-        emit(pipeline.live_run(args.project, load_json_arg(args.input), mock=args.mock))
+        emit(pipeline.live_run(args.project, load_json_arg(args.input)))
     elif args.cmd == "mock-cases":
         emit({"project_id": args.project, "cases": pipeline.mock_cases(args.project)})
     elif args.cmd == "mock-datasets":
@@ -117,9 +114,9 @@ def main(argv=None):
             )
         )
     elif args.cmd == "run-chain":
-        emit(run_chain(args.project, load_json_arg(args.input), mock=args.mock, expected_intent=args.expected_intent))
+        emit(run_chain(args.project, load_json_arg(args.input), expected_intent=args.expected_intent))
     elif args.cmd == "batch-run":
-        emit(pipeline.batch_run(args.project, load_json_arg(args.inputs), mock=args.mock, expected_intent=args.expected_intent, concurrency=args.concurrency))
+        emit(pipeline.batch_run(args.project, load_json_arg(args.inputs), expected_intent=args.expected_intent, concurrency=args.concurrency))
 
 
 if __name__ == "__main__":

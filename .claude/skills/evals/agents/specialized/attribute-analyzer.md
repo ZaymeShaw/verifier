@@ -4,6 +4,8 @@ Purpose: explain an incorrect or uncertain evaluation result in a way that helps
 
 ## Core mechanism
 
+Attribute analysis is a runtime script-agent responsibility after judge produces an attribution-worthy current trace. It may be reviewed by Claude subagents during project/protocol audits, but per-case attribution must be generated through the verifier pipeline so batch and frontend paths share the same behavior.
+
 Attribution is successful only when it connects the current user intent, actual output, expected output, and executable/code/config evidence into a traceable chain. It should answer: where did the current chain first diverge from what the project docs say should happen, and what concrete change would make the same pipeline handle this and similar cases correctly?
 
 ## Required workflow

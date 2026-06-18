@@ -1,0 +1,362 @@
+[
+  {
+    "id": "cs-age-sex-premium-correct-1",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "45岁女性保费10万以上"
+    },
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "clientAge",
+          "operator": "RANGE",
+          "value": {
+            "min": 45,
+            "max": 45
+          }
+        },
+        {
+          "field": "clientSex",
+          "operator": "MATCH",
+          "value": "女"
+        },
+        {
+          "field": "annPremSegNum",
+          "operator": "GTE",
+          "value": 100000
+        }
+      ]
+    },
+    "metadata": {
+      "business_axis": "demographic_premium",
+      "expected_error_type": "none",
+      "quality_dimension": "condition_semantics",
+      "previous_output": {
+        "logic": "AND",
+        "conditions": [
+          {
+            "field": "clientAge",
+            "operator": "RANGE",
+            "value": {
+              "min": 45,
+              "max": 45
+            }
+          },
+          {
+            "field": "clientSex",
+            "operator": "MATCH",
+            "value": "女"
+          },
+          {
+            "field": "annPremSegNum",
+            "operator": "GTE",
+            "value": 100000
+          }
+        ],
+        "summary": "45岁女性且年缴保费10万以上客户"
+      }
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "cs-survival-benefit-correct-1",
+    "scenario": "policy_status_filter",
+    "input": {
+      "query": "有生存金未领取的客户"
+    },
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.payamountdue",
+          "operator": "MATCH",
+          "value": "是"
+        }
+      ]
+    },
+    "metadata": {
+      "business_axis": "survival_benefit",
+      "expected_error_type": "none",
+      "quality_dimension": "field_mapping",
+      "previous_output": {
+        "logic": "AND",
+        "conditions": [
+          {
+            "field": "polNoInfo.payamountdue",
+            "operator": "MATCH",
+            "value": "是"
+          }
+        ],
+        "summary": "存在未领取生存金客户"
+      }
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "cs-premium-unit-error-1",
+    "scenario": "premium_unit_conversion",
+    "input": {
+      "query": "年缴保费一万以上的客户"
+    },
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "annPremSegNum",
+          "operator": "GTE",
+          "value": 10000
+        }
+      ]
+    },
+    "metadata": {
+      "business_axis": "premium",
+      "expected_error_type": "premium_unit_error",
+      "quality_dimension": "numeric_grounding",
+      "previous_output": {
+        "logic": "AND",
+        "conditions": [
+          {
+            "field": "annPremSegNum",
+            "operator": "GTE",
+            "value": 1
+          }
+        ],
+        "summary": "年缴保费一万以上客户"
+      }
+    },
+    "expected_quality": "incorrect",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "cs-age-boundary-correct-1",
+    "scenario": "age_boundary",
+    "input": {
+      "query": "45岁以上女性客户"
+    },
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "clientAge",
+          "operator": "GTE",
+          "value": 45
+        },
+        {
+          "field": "clientSex",
+          "operator": "MATCH",
+          "value": "女"
+        }
+      ]
+    },
+    "metadata": {
+      "business_axis": "demographic",
+      "expected_error_type": "none",
+      "quality_dimension": "boundary_operator",
+      "previous_output": {
+        "logic": "AND",
+        "conditions": [
+          {
+            "field": "clientAge",
+            "operator": "GTE",
+            "value": 45
+          },
+          {
+            "field": "clientSex",
+            "operator": "MATCH",
+            "value": "女"
+          }
+        ],
+        "summary": "45岁以上女性客户"
+      }
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "cs-product-or-correct-1",
+    "scenario": "product_category_or",
+    "input": {
+      "query": "买了年金险或两全险的客户"
+    },
+    "reference": {
+      "expected_logic": "OR",
+      "expected_conditions": [
+        {
+          "field": "pCategorys",
+          "operator": "CONTAINS",
+          "value": [
+            "年金保险"
+          ]
+        },
+        {
+          "field": "pCategorys",
+          "operator": "CONTAINS",
+          "value": [
+            "两全保险"
+          ]
+        }
+      ]
+    },
+    "metadata": {
+      "business_axis": "product",
+      "expected_error_type": "none",
+      "quality_dimension": "or_semantics",
+      "previous_output": {
+        "logic": "OR",
+        "conditions": [
+          {
+            "field": "pCategorys",
+            "operator": "CONTAINS",
+            "value": [
+              "年金保险"
+            ]
+          },
+          {
+            "field": "pCategorys",
+            "operator": "CONTAINS",
+            "value": [
+              "两全保险"
+            ]
+          }
+        ],
+        "summary": "购买年金险或两全险客户"
+      }
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "cs-age-gt-boundary-error-1",
+    "scenario": "age_boundary",
+    "input": {
+      "query": "大于50岁的客户"
+    },
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "clientAge",
+          "operator": "GT",
+          "value": 50
+        }
+      ]
+    },
+    "metadata": {
+      "business_axis": "demographic",
+      "expected_error_type": "boundary_operator_error",
+      "quality_dimension": "boundary_operator",
+      "previous_output": {
+        "logic": "AND",
+        "conditions": [
+          {
+            "field": "clientAge",
+            "operator": "GTE",
+            "value": 50
+          }
+        ],
+        "summary": "50岁及以上客户"
+      }
+    },
+    "expected_quality": "incorrect",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "cs-critical-illness-only-1",
+    "scenario": "product_exclusion",
+    "input": {
+      "query": "只有重疾险的客户"
+    },
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "pCategorys",
+          "operator": "CONTAINS",
+          "value": [
+            "疾病保险"
+          ]
+        },
+        {
+          "field": "pCategorys",
+          "operator": "NOT_CONTAINS",
+          "value": [
+            "年金保险",
+            "两全保险",
+            "医疗保险",
+            "意外保险",
+            "寿险",
+            "护理保险"
+          ]
+        }
+      ]
+    },
+    "metadata": {
+      "business_axis": "product",
+      "expected_error_type": "enum_values_out_of_boundary",
+      "quality_dimension": "exclusion_semantics",
+      "previous_output": {
+        "logic": "AND",
+        "conditions": [
+          {
+            "field": "pCategorys",
+            "operator": "CONTAINS",
+            "value": [
+              "疾病保险"
+            ]
+          },
+          {
+            "field": "pCategorys",
+            "operator": "NOT_CONTAINS",
+            "value": [
+              "年金保险",
+              "两全保险",
+              "医疗保险",
+              "意外保险",
+              "寿险",
+              "护理保险"
+            ]
+          }
+        ],
+        "summary": "仅购买重疾险客户"
+      }
+    },
+    "expected_quality": "incorrect",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "cs-family-responsibility-unsupported-1",
+    "scenario": "unsupported_family_phrase",
+    "input": {
+      "query": "上有老下有小的客户"
+    },
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [],
+      "allow_empty_conditions": true,
+      "expected_reason": "该口语化家庭责任表达缺少当前字段定义支持，不能硬编造年龄或家庭成员条件。"
+    },
+    "metadata": {
+      "business_axis": "unsupported_semantic_phrase",
+      "expected_error_type": "unsupported_family_phrase",
+      "quality_dimension": "scope_control",
+      "previous_output": {
+        "logic": "AND",
+        "conditions": [],
+        "summary": "未能映射到可执行客户搜索条件"
+      }
+    },
+    "expected_quality": "incorrect",
+    "source": "data_mock_seed",
+    "status": "pending"
+  }
+]

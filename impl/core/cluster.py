@@ -32,11 +32,35 @@ def _unique(items: Iterable[Any]) -> list[Any]:
     return result
 
 
+def _expectation_items(item: AttributeResult) -> list[dict[str, Any]]:
+    result = []
+    for attribution in item.expectation_attributions or []:
+        if isinstance(attribution, dict):
+            result.append(attribution)
+        else:
+            result.append({
+                "expectation_id": getattr(attribution, "expectation_id", ""),
+                "fulfillment_status": getattr(attribution, "fulfillment_status", ""),
+                "causal_category": getattr(attribution, "causal_category", ""),
+            })
+    return result
+
+
+def _primary_expectation_item(item: AttributeResult) -> dict[str, Any]:
+    items = _expectation_items(item)
+    return items[0] if items else {}
+
+
 def _canonical(item: AttributeResult) -> bool:
     return not (item.incomplete_reason or item.needs_human_review or item.analysis_quality.get("passed") is False or "llm_call_failed" in (item.quality_flags or []))
 
 
 def _mechanism_key(item: AttributeResult) -> str:
+    expectation = _primary_expectation_item(item)
+    causal_category = item.causal_category or expectation.get("causal_category")
+    fulfillment_status = expectation.get("fulfillment_status")
+    if causal_category:
+        return "expectation::" + "::".join(part for part in [str(causal_category), str(fulfillment_status or "")] if part)
     if not _canonical(item):
         return "needs_human_review::insufficient_evidence"
     locations = item.suspected_locations or []
@@ -73,22 +97,30 @@ def _representative_diffs(items: list[AttributeResult]) -> list[dict[str, Any]]:
 def cluster_attributes(project_id: str, attributes: Iterable[AttributeResult]) -> ClusterSummary:
     grouped = defaultdict(list)
     for item in attributes:
-        if item.primary_error_type == "none" or item.failure_category == "none":
+        has_expectation_attribution = bool(_expectation_items(item))
+        if not has_expectation_attribution and (item.primary_error_type == "none" or item.failure_category == "none"):
             continue
-        if not item.root_cause_hypothesis and not item.failure_category and not item.primary_error_type:
+        if not has_expectation_attribution and not item.root_cause_hypothesis and not item.failure_category and not item.primary_error_type:
             continue
         grouped[_mechanism_key(item)].append(item)
     clusters = []
     for category, items in grouped.items():
         first = items[0] if items else None
         canonical = bool(first and _canonical(first))
+        expectation_items = [expectation for item in items for expectation in _expectation_items(item)]
+        causal_categories = _unique([item.causal_category for item in items if item.causal_category] + [expectation.get("causal_category") for expectation in expectation_items if expectation.get("causal_category")])
+        fulfillment_statuses = _unique(expectation.get("fulfillment_status") for expectation in expectation_items)
+        expectation_ids = _unique(expectation.get("expectation_id") for expectation in expectation_items)
         affected_fields = _unique(field for item in items for field in _field_values([item.earliest_divergence, item.suspected_locations, item.chain_nodes]))
         patch_directions = _unique(step for item in items for step in (item.patch_direction or []))
         verification_steps = _unique(step for item in items for step in (item.verification_steps or []))
         clusters.append(
             {
                 "cluster_id": category,
-                "mechanism": category.replace("mechanism::", "") if canonical else "insufficient_evidence_or_human_review",
+                "mechanism": category.replace("mechanism::", "").replace("expectation::", "") if canonical else "insufficient_evidence_or_human_review",
+                "causal_category": causal_categories[0] if causal_categories else "",
+                "fulfillment_statuses": fulfillment_statuses,
+                "expectation_ids": expectation_ids,
                 "failure_category": first.failure_category if first else category,
                 "scenario": first.scenario if first else "",
                 "primary_error_type": first.primary_error_type if first else "",

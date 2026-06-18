@@ -1,4 +1,8 @@
-### 意图类问题怎么做好judge
+
+
+
+
+<!-- ### 意图类问题怎么做好judge
 
 当核心是对意图识别类业务API 输出进行正确性判定时，职责包括但不限于：
 
@@ -16,3 +20,10 @@ g) 对已支持但输出不正确的 case，给出最小定位提示，例如更
 3. 不把 `review_verdict`、`root_cause_cluster`、`source`、`run_status`、`MATCH_AGENT_REALTIME_INCORRECT` 等来源/状态字段当作正确性依据。
 4. 不把 attribute-analyzer 的根因结论反推成 judge 结论；正确性必须先从 query 与 actual API output 判断。
 5. 不输出“可能正确/需要人工看”作为最终 verdict；这些只能体现在低置信度和 evidence 中。
+
+
+
+ -->
+
+
+

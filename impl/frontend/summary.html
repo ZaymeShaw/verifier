@@ -14,12 +14,10 @@
   <section class="panel">
     <div class="toolbar">
       <a class="button" href="live.html">返回 Live 请求</a>
-      <button onclick="runChain(false)">真实单链路</button>
-      <button class="secondary" onclick="runChain(true)">Mock 单链路</button>
+      <button onclick="runChain()">统一单链路</button>
       <button class="secondary" onclick="loadLastChain()">加载最近结果</button>
       <button class="secondary" onclick="buildMockCases()">构建 Mock 用例池</button>
       <button class="secondary" onclick="loadMockDatasets()">加载 Mock 数据集</button>
-      <label class="inline-label">执行模式<select id="batchMode"><option value="live">真实服务</option><option value="mock">Mock 响应</option></select></label>
       <label class="inline-label">并发数<input id="batchConcurrency" type="number" min="1" max="8" value="4" /></label>
       <button class="secondary" id="batchRunButton" onclick="runSelectedCases()">批量归因</button>
       <button class="secondary" onclick="loadAnalysis()">分析项目配置</button>
@@ -27,8 +25,8 @@
     <div class="stats">
       <div class="stat"><b id="stat-total">0</b><span>用例总数</span></div>
       <div class="stat"><b id="stat-selected">0</b><span>已选择</span></div>
-      <div class="stat"><b id="stat-correct">0</b><span>Correct</span></div>
-      <div class="stat"><b id="stat-incorrect">0</b><span>Incorrect</span></div>
+      <div class="stat"><b id="stat-fulfilled">0</b><span>Fulfilled</span></div>
+      <div class="stat"><b id="stat-not-fulfilled">0</b><span>Not Fulfilled</span></div>
       <div class="stat"><b id="stat-clusters">0</b><span>Clusters</span></div>
     </div>
   </section>
@@ -81,11 +79,13 @@
             <button class="secondary" onclick="selectAllCases(false)">取消全选</button>
             <select id="scenarioFilter" onchange="renderCasePool()"><option value="all">全部场景</option></select>
             <select id="caseFilter" onchange="renderCasePool()">
-              <option value="all">全部状态</option>
+              <option value="all">全部达成状态</option>
               <option value="pending">pending</option>
-              <option value="correct">correct</option>
-              <option value="incorrect">incorrect</option>
-              <option value="uncertain">uncertain</option>
+              <option value="fulfilled">fulfilled</option>
+              <option value="partially_fulfilled">partially_fulfilled</option>
+              <option value="not_fulfilled">not_fulfilled</option>
+              <option value="not_evaluable">not_evaluable</option>
+              <option value="contested">contested</option>
             </select>
           </div>
         </div>
@@ -95,7 +95,7 @@
           <div id="progressText" class="hint">0 / 0</div>
           <div id="progressLog" class="progress-log"></div>
         </div>
-        <div class="case-table-wrap"><table class="case-table"><thead><tr><th>选择</th><th>ID</th><th>来源</th><th>Scenario</th><th>Input</th><th>Output / 被评估输出</th><th>Reference</th><th>状态</th><th>Score / Judge</th><th>归因摘要</th></tr></thead><tbody id="casePoolRows"></tbody></table></div>
+        <div class="case-table-wrap"><table class="case-table"><thead><tr><th>选择</th><th>ID</th><th>来源</th><th>执行模式</th><th>Scenario</th><th>Input</th><th>Output / 被评估输出</th><th>Reference</th><th>状态</th><th>Score / Judge</th><th>归因摘要</th></tr></thead><tbody id="casePoolRows"></tbody></table></div>
       </section>
 
       <div class="grid">
@@ -120,24 +120,49 @@ async function post(path, body){
   if(!res.ok || data.error){throw new Error(data.error || ('HTTP '+res.status));}
   return data;
 }
-const defaultInputs={client_search:{query:'45岁女性保费10万以上'},QA:{question:'什么是犹豫期？',actual_answer:'犹豫期通常是投保人收到合同后的一段可无条件退保期限。',golden_answer:'犹豫期是投保人收到保险合同后，在规定天数内可申请解除合同并通常退还已交保费的期限。'}};
-const defaultCasePoolText={client_search:'[{"query":"45岁女性保费10万以上"},{"query":"有生存金未领取的客户"}]',QA:'[{"question":"什么是犹豫期？","actual_answer":"犹豫期通常是投保人收到合同后的一段可无条件退保期限。","golden_answer":"犹豫期是投保人收到保险合同后，在规定天数内可申请解除合同并通常退还已交保费的期限。"}]'};
+const defaultInputs={client_search:{query:'45岁女性保费10万以上'},QA:{question:'什么是犹豫期？',actual_answer:'犹豫期通常是投保人收到合同后的一段可无条件退保期限。',golden_answer:'犹豫期是投保人收到保险合同后，在规定天数内可申请解除合同并通常退还已交保费的期限。'},'marketting-planning':{query:'规划保费增长和客户增长两条达成路径',scenario:'execution_planning',expected_stage:'planning',expected_path_types:['premium_growth','customer_growth']}};
+const defaultCasePoolText={client_search:'[{"query":"45岁女性保费10万以上"},{"query":"有生存金未领取的客户"}]',QA:'[{"question":"什么是犹豫期？","actual_answer":"犹豫期通常是投保人收到合同后的一段可无条件退保期限。","golden_answer":"犹豫期是投保人收到保险合同后，在规定天数内可申请解除合同并通常退还已交保费的期限。"}]','marketting-planning':'[{"query":"帮我规划NBEV达成路径","scenario":"clarification","expected_stage":"clarification"},{"query":"规划保费增长和客户增长两条达成路径","scenario":"execution_planning","expected_stage":"planning","expected_path_types":["premium_growth","customer_growth"]}]'};
 function scopedKey(key){return key+':'+project();}
-const seedQueries=[];
 let casePool=[];
 let mockDatasets=[];
 let poolLibrary=[];
 let latestCluster=null;
 function lightCase(item){
-  const keep={id:item.id,selected:item.selected,input:item.input,output:item.output,reference:item.reference,metadata:item.metadata,scenario:item.scenario,source:item.source,status:item.status,error:item.error};
+  const keep={id:item.id,selected:item.selected,input:item.input,output:item.output,reference:item.reference,metadata:item.metadata,scenario:item.scenario,dataset_id:item.dataset_id,dimension_type:item.dimension_type,dataset_name:item.dataset_name,source:item.source,status:item.status,error:item.error,execution_mode:item.execution_mode,output_source:item.output_source,conversation_summary:conversationSummary(item),turn_traces:compactTurnTraces(item),judge_summary:item.judge_summary,attribution_summary:item.attribution_summary};
+  const generatedRef=item.frontend_view?.reference_panel?.source==='judge_generated'?item.frontend_view?.reference_panel?.reference:null;
+  if(!keep.reference && generatedRef){keep.reference=generatedRef;}
   Object.keys(keep).forEach(key=>keep[key]===undefined && delete keep[key]);
   return keep;
+}
+function compactTurnTraces(item){
+  const turns=item.turn_traces || item.trace?.project_fields?.turn_traces || [];
+  return (turns || []).map(turn=>{const keep={turn_index:turn.turn_index,user_input:turn.user_input,stage:turn.stage,missing_fields:turn.missing_fields,path_evidence:turn.path_evidence,card_evidence:turn.card_evidence,judge_verdict:turn.judge_verdict,error_summary:turn.error_summary};Object.keys(keep).forEach(key=>keep[key]===undefined && delete keep[key]);return keep;});
+}
+function conversationSummary(item){return item.conversation_summary || item.trace?.project_fields?.conversation_summary || null;}
+function interactionSummary(item){const summary=conversationSummary(item);if(!summary){return null;}return {intent:item.input?.user_intent?.goal || item.user_intent?.goal || inputLabel(item.input),conversation_summary:summary,turn_traces:compactTurnTraces(item)};}
+function renderInteractiveOutput(item){
+  const interaction=interactionSummary(item);
+  if(!interaction){return null;}
+  const summary=interaction.conversation_summary || {};
+  const turns=(interaction.turn_traces || []).map(turn=>'<div class="muted">第 '+escapeHtml(turn.turn_index || '')+' 轮 · 用户输入：'+escapeHtml(turn.user_input?.query || '')+' · 阶段：'+escapeHtml(turn.stage || '-')+(turn.missing_fields?.length?' · 缺失字段：'+escapeHtml(turn.missing_fields.join(', ')):'')+(turn.judge_verdict?' · 判定：'+escapeHtml(turn.judge_verdict):'')+'</div>').join('');
+  return '<div><b>多轮交互</b></div>'+
+    '<div>意图：'+escapeHtml(interaction.intent || '-')+'</div>'+
+    '<div>轮次：'+escapeHtml(summary.turn_count ?? '-')+' · 最终阶段：'+escapeHtml(summary.final_stage || '-')+' · 停止原因：'+escapeHtml(summary.stop_reason || '-')+'</div>'+
+    (turns?'<details class="accordion" open><summary>每轮证据</summary><div class="accordion-body">'+turns+'</div></details>':'');
+}
+function renderOutputCell(item){
+  const interactive=renderInteractiveOutput(item);
+  if(interactive){return interactive;}
+  return '<pre>'+escapeHtml(formatJsonCell(caseOutput(item) || outputSummary(item),1800))+'</pre>';
 }
 function lightCasePool(items){return (items || []).map(lightCase);}
 function safeSetSessionJson(key,value){
   try{sessionStorage.setItem(key,JSON.stringify(value));return true;}
   catch(err){
-    if(key===scopedKey('casePool')){sessionStorage.removeItem(key);}
+    if(key===scopedKey('casePool')){
+      try{sessionStorage.setItem(key,JSON.stringify(lightCasePool(value)));return true;}
+      catch(_){}
+    }
     console.warn('sessionStorage 保存失败，已跳过持久化：',err);
     return false;
   }
@@ -195,7 +220,7 @@ function shortText(value, limit=180){
   else{text=Object.entries(value).slice(0,6).map(([key,item])=>key+': '+(typeof item==='object'&&item!==null?(Array.isArray(item)?'Array('+item.length+')':'Object'):String(item))).join(', ');}
   return text.length>limit?text.slice(0,limit)+'…':text;
 }
-function inputLabel(input){if(!input || typeof input!=='object'){return shortText(input);}const values=Object.values(input).filter(v=>['string','number','boolean'].includes(typeof v));return values.length?String(values[0]):shortText(input);}
+function inputLabel(input){if(!input || typeof input!=='object'){return shortText(input);}if(input.user_intent && typeof input.user_intent==='object' && input.user_intent.goal){return String(input.user_intent.goal);}const values=Object.values(input).filter(v=>['string','number','boolean'].includes(typeof v));return values.length?String(values[0]):shortText(input);}
 function caseFromInput(input,index,source){return {id:'case-'+Date.now()+'-'+index,selected:true,input,expected_intent:'',source,status:'pending',judge:null,attribute:null,trace:null};}
 function clearCaseResult(item,status='pending'){return {...item,status,trace:null,judge:null,attribute:null,frontend_view:null,cluster:null,check:null};}
 function comparableInput(input){
@@ -211,11 +236,12 @@ function comparableInput(input){
 function sameInput(left,right){return JSON.stringify(comparableInput(left))===JSON.stringify(comparableInput(right));}
 function hasNonEmptyQuery(value){const input=value?.input || value;return !!(input && typeof input==='object' && String(input.query || input.user_text || '').trim());}
 function hasStoredResult(item){return !!(item.trace || item.judge || item.attribute || item.frontend_view || item.cluster || item.check);}
-function resultOutput(item){return item.trace?.extracted_output || item.judge?.actual || item.frontend_view?.run_trace_summary?.extracted_output || item.frontend_view?.judge_panel?.actual || null;}
-function hasStaleEmptyQueryResult(item){return project()==='client_search' && hasNonEmptyQuery(item.input) && resultOutput(item)?.empty_result_reason==='empty_query';}
+function resultOutput(item){return item.frontend_view?.run_trace_summary?.extracted_output || item.frontend_view?.judge_panel?.actual || item.trace?.extracted_output || item.judge?.actual || null;}
+function hasStaleEmptyQueryResult(item){return hasNonEmptyQuery(item.input) && resultOutput(item)?.empty_result_reason==='empty_query';}
 function resultMatchesCase(item){
   if(!hasStoredResult(item)){return true;}
-  if(!item.trace){return false;}
+  if(item.trace?.input?.case_id && item.id && String(item.trace.input.case_id)===String(item.id)){return true;}
+  if(!item.trace){return true;}
   const traceInput=item.trace.input || {};
   return sameInput(traceInput, caseRunInput(item)) || sameInput(traceInput, item.input || {});
 }
@@ -235,13 +261,14 @@ function caseRunInput(item){
 }
 function caseOutput(item){return item.output || item.input?.output || (item.actual_answer || item.answer ? {actual_answer:item.actual_answer || item.answer} : null) || (item.input?.actual_answer || item.input?.answer ? {actual_answer:item.input.actual_answer || item.input.answer} : null) || item.trace?.extracted_output || null;}
 function inputReference(item){return item.reference || item.input?.reference || (item.golden_answer || item.gold_answer ? {golden_answer:item.golden_answer || item.gold_answer} : null) || (item.input?.golden_answer || item.input?.gold_answer ? {golden_answer:item.input.golden_answer || item.input.gold_answer} : null) || null;}
-function caseReference(item){return item.frontend_view?.reference_panel?.reference || item.judge?.expected || inputReference(item) || null;}
+function caseReference(item){return item.frontend_view?.reference_panel?.reference || inputReference(item) || item.judge?.expected || null;}
 function normalizeCase(item,index,source){return item && item.input?sanitizeCaseResult({...item,id:item.id||('case-'+Date.now()+'-'+index),selected:true,status:item.status||'pending',source:item.source||source,scenario:inferCaseScenario(item)}):caseFromInput(item,index,source);}
 async function buildMockCases(){const data=await post('/api/mock_cases',{project:project()});casePool=(data.cases||[]).map((x,index)=>normalizeCase(x,index,'mock_agent_seed'));resetCasePoolFilters();saveCasePool();setStatus('已通过统一 mock agent 构建用例池。');}
 async function loadMockDatasets(){
   const data=await post('/api/mock_datasets',{project:project()});
   mockDatasets=data.datasets||[];
-  const cases=mockDatasets.flatMap(dataset=>(dataset.cases||[]).map(item=>({...item,dataset_name:dataset.name})));
+  const allCases=await post('/api/mock_cases',{project:project()});
+  const cases=(allCases.cases||[]).slice(0,500);
   casePool=cases.map((x,index)=>normalizeCase(x,index,'mock_dataset_agent'));
   resetCasePoolFilters();
   saveCasePool();
@@ -288,14 +315,34 @@ async function renderPoolLibrary(){
   el.innerHTML=poolLibrary.map(pool=>'<div class="pool-item"><b>'+escapeHtml(pool.name)+'</b><div class="muted">'+escapeHtml(pool.case_count)+' 条 · '+escapeHtml(pool.created_at || '')+'</div><div class="row" style="margin-top:8px"><button class="secondary" onclick="loadNamedPool(\''+escapeHtml(pool.id)+'\')">加载</button><button class="secondary" onclick="deleteNamedPool(\''+escapeHtml(pool.id)+'\')">删除</button></div></div>').join('');
 }
 function toggleCase(id,checked){casePool=casePool.map(x=>x.id===id?{...x,selected:checked}:x);saveCasePool();}
-function statusPill(status){const cls=status==='correct'?'ok':status==='incorrect'?'bad':status==='uncertain'?'warn':'';return '<span class="pill '+cls+'">'+escapeHtml(status||'pending')+'</span>';}
+function fulfillmentPill(status){const cls=status==='fulfilled'?'ok':status==='not_fulfilled'?'bad':['partially_fulfilled','not_evaluable','contested'].includes(status)?'warn':'';return '<span class="pill '+cls+'">'+escapeHtml(status||'pending')+'</span>';}
+function judgePanel(item){return item.frontend_view?.judge_panel || item.judge || {}; }
+function attributePanel(item){return item.frontend_view?.attribute_panel || item.attribute || {}; }
+function fulfillmentPanel(item){return item.frontend_view?.fulfillment_panel || {}; }
+function judgeReason(item){const panel=judgePanel(item);return panel.display_reason || panel.reasoning_summary || panel.verdict_derivation?.why_verdict || panel.primary_assessment?.reasoning || '';}
+function _judgeSummaryFromNested(item){
+  const panel=judgePanel(item), fulfillment=fulfillmentPanel(item);
+  if(!panel || !Object.keys(panel).length){return null;}
+  const assessments=fulfillment.matrix || panel.fulfillment_assessments || [];
+  const status=fulfillment.overall_fulfillment?.status || panel.display_status || panel.overall_fulfillment?.status || '';
+  const blocking=assessments.filter(x=>x.blocking).length;
+  return {status,fulfillment_status:status,verdict:fulfillment.derived_verdict || panel.verdict || '',score:panel.score,reason:judgeReason(item),assessment_count:assessments.length,blocking_count:blocking};
+}
 function renderCaseJudge(item){
-  if(!item.judge){return '<span class="muted">尚未评估</span>';}
-  return renderJudgeCard(item.judge);
+  const nested=_judgeSummaryFromNested(item);
+  const summary=item.judge_summary && nested?{...nested,...item.judge_summary,reason:item.judge_summary.reason || nested.reason}:item.judge_summary || nested;
+  if(summary){
+    const status=summary.fulfillment_status || summary.status || fulfillmentStatus(item) || '-';
+    const counts='assessments='+escapeHtml(summary.assessment_count ?? '-')+' · blocking='+escapeHtml(summary.blocking_count ?? '-');
+    const reason=summary.reason?'<div>'+escapeHtml(shortText(summary.reason,900))+'</div>':'';
+    return '<div><b>Fulfillment：</b>'+escapeHtml(status)+'</div><div class="muted">verdict='+escapeHtml(summary.verdict || '-')+' · score='+escapeHtml(summary.score ?? '-')+'</div><div class="muted">'+counts+'</div>'+reason;
+  }
+  return '<span class="muted">尚未评估</span>';
 }
 function renderCaseAttribute(item){
+  if(item.attribution_summary){return renderAttributionSummary(item);}
   if(!item.attribute){return '<span class="muted">尚未归因</span>';}
-  return renderAttributeCard(item.attribute);
+  return renderAttributionSummary(item);
 }
 function renderScenarioFilter(){
   const el=document.getElementById('scenarioFilter');
@@ -311,30 +358,52 @@ function resetCasePoolFilters(){
   if(caseFilter){caseFilter.value='all';}
   if(scenarioFilter){scenarioFilter.value='all';}
 }
+function runModeLabel(item){const mode=item.execution_mode || item.trace?.project_fields?.execution_mode || '';const source=item.output_source || item.trace?.project_fields?.output_source || '';return mode||source?(mode || '-')+(source?' / '+source:''):'-';}
 function renderCasePool(){
   const filter=document.getElementById('caseFilter')?.value || 'all';
   renderScenarioFilter();
   const scenarioFilter=document.getElementById('scenarioFilter')?.value || 'all';
   const rows=document.getElementById('casePoolRows');
-  const visible=casePool.filter(x=>(filter==='all' || (x.status||'pending')===filter) && (scenarioFilter==='all' || inferCaseScenario(x)===scenarioFilter));
+  const visible=casePool.filter(x=>(filter==='all' || (filter==='pending' ? !fulfillmentStatus(x) : fulfillmentStatus(x)===filter)) && (scenarioFilter==='all' || inferCaseScenario(x)===scenarioFilter));
   const page=visible.slice(0,100);
-  const more=visible.length>page.length?'<tr><td colspan="10" class="muted">仅展示前 '+page.length+' / '+visible.length+' 条；请使用场景或状态筛选缩小范围，批量执行仍会使用已选择用例。</td></tr>':'';
+  const more=visible.length>page.length?'<tr><td colspan="11" class="muted">仅展示前 '+page.length+' / '+visible.length+' 条；请使用场景或状态筛选缩小范围，批量执行仍会使用已选择用例。</td></tr>':'';
   const emptyText=casePool.length?'当前筛选未命中用例，候选区仍有 '+casePool.length+' 条；请选择“全部状态/全部场景”查看跑完后的结果。':'候选区为空，可构建 Mock 用例池或导入自定义数据集。';
-  rows.innerHTML=visible.length?page.map(x=>'<tr><td><input type="checkbox" '+(x.selected?'checked':'')+' onchange="toggleCase(\''+escapeHtml(x.id)+'\',this.checked)"></td><td>'+escapeHtml(x.id)+'</td><td>'+escapeHtml(x.source||'')+'</td><td>'+escapeHtml(inferCaseScenario(x) || '-')+'</td><td class="case-input">'+escapeHtml(inputLabel(x.input))+'<br><span class="muted">'+escapeHtml(shortText(x.input,260))+'</span></td><td class="case-output"><pre>'+escapeHtml(formatJsonCell(caseOutput(x) || outputSummary(x),1800))+'</pre></td><td class="case-reference"><pre>'+escapeHtml(formatJsonCell(caseReference(x),1800))+'</pre></td><td>'+statusPill(x.status)+'</td><td class="case-summary">'+renderCaseJudge(x)+'</td><td class="case-summary">'+renderCaseAttribute(x)+'</td></tr>').join('')+more:'<tr><td colspan="10" class="muted">'+escapeHtml(emptyText)+'</td></tr>';
+  rows.innerHTML=visible.length?page.map(x=>'<tr><td><input type="checkbox" '+(x.selected?'checked':'')+' onchange="toggleCase(\''+escapeHtml(x.id)+'\',this.checked)"></td><td>'+escapeHtml(x.id)+'</td><td>'+escapeHtml(x.source||'')+'</td><td>'+escapeHtml(runModeLabel(x))+'</td><td>'+escapeHtml(inferCaseScenario(x) || '-')+'</td><td class="case-input">'+escapeHtml(inputLabel(x.input))+'<br><span class="muted">'+escapeHtml(shortText(x.input,260))+'</span></td><td class="case-output">'+renderOutputCell(x)+'</td><td class="case-reference"><pre>'+escapeHtml(formatJsonCell(caseReference(x),1800))+'</pre></td><td>'+fulfillmentPill(fulfillmentStatus(x))+'</td><td class="case-summary">'+renderCaseJudge(x)+'</td><td class="case-summary">'+renderCaseAttribute(x)+'</td></tr>').join('')+more:'<tr><td colspan="11" class="muted">'+escapeHtml(emptyText)+'</td></tr>';
   updateStats();
 }
 function outputSummary(item){
-  const raw=item.trace?.raw_response;
+  const interaction=interactionSummary(item);
+  if(interaction){return interaction;}
   const output=item.trace?.extracted_output;
   const projectFields=item.trace?.project_fields;
-  if(!raw && !output){return '-';}
-  return {extracted_output:output, project_fields:projectFields, raw_response:raw};
+  if(!output && !projectFields){return '-';}
+  return {extracted_output:output, project_fields:projectFields};
+}
+function fulfillmentStatus(item){const fulfillment=fulfillmentPanel(item);const panel=judgePanel(item);return item.judge_summary?.fulfillment_status || item.judge_summary?.status || fulfillment.overall_fulfillment?.status || panel.display_status || panel.overall_fulfillment?.status || '';}
+function renderFulfillmentSummary(item){
+  const status=fulfillmentStatus(item);
+  const assessments=fulfillmentPanel(item).matrix || judgePanel(item).fulfillment_assessments || [];
+  const blocking=item.judge_summary?.blocking_count ?? assessments.filter(x=>x.blocking).length;
+  if(!status && !assessments.length){return '<span class="muted">无 fulfillment</span>';}
+  return '<div><b>Fulfillment：</b>'+escapeHtml(status || '-')+'</div><div class="muted">assessments='+escapeHtml(assessments.length)+' · blocking='+escapeHtml(blocking)+'</div>';
+}
+function renderAttributionSummary(item){
+  const compact=item.attribution_summary || null;
+  const attribute=attributePanel(item);
+  if(compact){
+    const nestedText=attribute.display_root_cause || attribute.incomplete_reason || attribute.root_cause_hypothesis || '';
+    const text=compact.summary_text || nestedText?'<div>'+escapeHtml(shortText(compact.summary_text || nestedText,900))+'</div>':'';
+    return renderFulfillmentSummary(item)+'<div><b>Causal：</b>'+escapeHtml(compact.causal_category || attribute.display_causal_category || '-')+'</div><div class="muted">expectation attributions='+escapeHtml(compact.attribution_count ?? attribute.attribution_count ?? 0)+' · probes='+escapeHtml(compact.probe_count ?? attribute.probe_count ?? 0)+'</div>'+text;
+  }
+  const attributions=attribute.expectation_attributions || [];
+  const causal=attribute.display_causal_category || attribute.causal_category || attribute.primary_error_type || attribute.failure_category || '';
+  return renderFulfillmentSummary(item)+'<div><b>Causal：</b>'+escapeHtml(causal || '-')+'</div><div class="muted">expectation attributions='+escapeHtml(attribute.attribution_count ?? attributions.length)+' · probes='+escapeHtml(attribute.probe_count ?? (attribute.probe_results || []).length)+'</div><div>'+escapeHtml(shortText(attribute.display_root_cause || attribute.incomplete_reason || attribute.root_cause_hypothesis || '',220))+'</div>';
 }
 function updateStats(){
   document.getElementById('stat-total').textContent=casePool.length;
   document.getElementById('stat-selected').textContent=casePool.filter(x=>x.selected).length;
-  document.getElementById('stat-correct').textContent=casePool.filter(x=>x.status==='correct').length;
-  document.getElementById('stat-incorrect').textContent=casePool.filter(x=>x.status==='incorrect').length;
+  document.getElementById('stat-fulfilled').textContent=casePool.filter(x=>fulfillmentStatus(x)==='fulfilled').length;
+  document.getElementById('stat-not-fulfilled').textContent=casePool.filter(x=>['not_fulfilled','partially_fulfilled','not_evaluable','contested'].includes(fulfillmentStatus(x))).length;
   document.getElementById('stat-clusters').textContent=(latestCluster?.clusters || []).length;
 }
 function setStatus(text){document.getElementById('progress').style.display='block';document.getElementById('progressText').textContent=text;}
@@ -348,16 +417,17 @@ function setProgress(done,total,line){
     while(log.children.length>120){log.removeChild(log.firstChild);}
   }
 }
-function runStatus(run,eventStatus){return run?.judge?.verdict || run?.status || eventStatus || (run?.error?'error':'done');}
+function stableCaseId(value){return value?.case_id || value?.id || value?.run?.case_id || value?.run?.id || '';}
+function runStatus(run,eventStatus){const terminal=run?.status&&run.status!=='done'?run.status:(eventStatus&&eventStatus!=='done'?eventStatus:'');return run?.judge_summary?.fulfillment_status || run?.judge_summary?.status || run?.judge?.overall_fulfillment?.status || terminal || run?.judge?.verdict || run?.status || eventStatus || (run?.error?'error':'done');}
 function applyRunToCase(item,run,eventStatus){
-  const next={...item,status:runStatus(run,eventStatus),trace:run.trace||null,judge:run.judge||null,attribute:run.attribute||null,frontend_view:run.frontend_view||null,check:run.check||null,cluster:run.cluster||null,error:run.error||null};
+  const next={...item,status:runStatus(run,eventStatus),output:run.trace?.extracted_output || item.output || null,trace:run.trace||null,judge:run.judge||null,attribute:run.attribute||null,frontend_view:run.frontend_view||null,check:run.check||null,cluster:run.cluster||null,error:run.error||null,execution_mode:run.execution_mode || run.trace?.project_fields?.execution_mode || null,output_source:run.output_source || run.trace?.project_fields?.output_source || null,judge_summary:run.judge_summary || null,attribution_summary:run.attribution_summary || null};
   const generatedRef=run.frontend_view?.reference_panel?.source==='judge_generated'?run.frontend_view?.reference_panel?.reference:null;
   if(!inputReference(next) && generatedRef){next.reference=generatedRef;}
   return next;
 }
 function applyBatchEvents(events){
   const latestByCase={};
-  (events||[]).forEach(event=>{if(event.case_id){latestByCase[event.case_id]=event;}});
+  (events||[]).forEach(event=>{const id=stableCaseId(event);if(id){latestByCase[id]=event;}});
   let changed=false;
   casePool=casePool.map(item=>{
     const event=latestByCase[item.id];
@@ -373,9 +443,13 @@ function applyBatchEvents(events){
   });
   if(changed){persistCasePool();renderCasePool();}
 }
+function recordBatchDiagnostic(message){setStatus('批量结果诊断：'+shortText(message,220));}
 function applyBatchRuns(runs){
   const runsByCase={};
-  (runs||[]).forEach(run=>{if(run.case_id){runsByCase[run.case_id]=run;}});
+  let missingIdentity=0;
+  (runs||[]).forEach(run=>{const id=stableCaseId(run);if(id){runsByCase[id]=run;}else{missingIdentity+=1;}});
+  const mergeableCount=Object.keys(runsByCase).length;
+  if(!mergeableCount){recordBatchDiagnostic(missingIdentity?'最终批量状态包含 '+missingIdentity+' 条缺少稳定 case_id/id 的结果，已保留现有候选区。':'最终批量状态没有返回可合并 runs，已保留现有候选区。');}
   casePool=casePool.map(item=>{
     const run=runsByCase[item.id];
     return run?applyRunToCase(item,run):item;
@@ -385,14 +459,13 @@ function applyBatchRuns(runs){
 async function runSelectedCases(){
   const selected=casePool.filter(x=>x.selected);
   if(!selected.length){setStatus('没有选择用例。');return;}
-  const mock=document.getElementById('batchMode').value==='mock';
   const concurrency=Math.max(1,Math.min(parseInt(document.getElementById('batchConcurrency').value||'4',10),8));
   const button=document.getElementById('batchRunButton');
   document.getElementById('progressLog').innerHTML='';
   button.disabled=true;
-  setProgress(0,selected.length,'统一 batch pipeline 已提交：模式='+(mock?'Mock 响应':'真实服务')+'，并发='+concurrency+'。');
+  setProgress(0,selected.length,'统一 batch pipeline 已提交：并发='+concurrency+'。');
   try{
-    const body={project:project(),cases:selected,mock,concurrency};
+    const body={project:project(),cases:selected,concurrency};
     const expected=expectedIntent();
     if(expected){body.expected_intent=expected;}
     const started=await post('/api/batch_start',body);
@@ -402,7 +475,7 @@ async function runSelectedCases(){
       const status=await post('/api/batch_status',{project:project(),job_id:started.job_id});
       const events=(status.events||[]).slice(-120);
       document.getElementById('progressLog').innerHTML=events.map(event=>{
-        const detail=event.error || event.reason || '';
+        const detail=event.judge_reason || event.error || event.reason || '';
         return '<div>完成 '+escapeHtml(event.case_id || event.index)+'：'+escapeHtml(event.status || '')+(detail?' — '+escapeHtml(shortText(detail,160)):'')+'</div>';
       }).join('');
       applyBatchEvents(events);
@@ -416,14 +489,14 @@ async function runSelectedCases(){
     latestCluster=batch.cluster||null;
     safeSetSessionJson(scopedKey('latestCluster'),latestCluster);
     const last=runs[runs.length-1];
-    if(last){renderChain(last,{skipInputGuard:true});}
-    show('cluster',latestCluster);show('check',batch.check);showCompact('batch',{case_pool_summary:{total:casePool.length,selected:casePool.filter(x=>x.selected).length},batch_summary:{project_id:batch.project_id,total:batch.total,cluster:batch.cluster,check:batch.check},execution_mode:mock?'mock':'live',concurrency,job_id:started.job_id});
+    if(last){renderChain(last,{skipInputGuard:true,preserveBatchCluster:true});}
+    show('cluster',latestCluster);show('check',batch.check);showCompact('batch',{case_pool_summary:{total:casePool.length,selected:casePool.filter(x=>x.selected).length},batch_summary:{project_id:batch.project_id,total:batch.total,cluster:batch.cluster,check:batch.check},concurrency,job_id:started.job_id});
     renderClusterSummary(latestCluster);
     setProgress(selected.length,selected.length,'完成统一批量归因：'+runs.length+' / '+selected.length+' 条。');
     updateStats();
   }catch(err){
     setProgress(0,selected.length,'批量归因失败：'+err.message);
-    show('batch',{error:err.message,execution_mode:mock?'mock':'live',concurrency});
+    show('batch',{error:err.message,concurrency});
   }finally{
     button.disabled=false;
   }
@@ -434,10 +507,10 @@ function renderClusterSummary(cluster){
   const clusters=cluster.clusters || [];
   el.innerHTML=clusters.length?clusters.map((c,i)=>'<div class="cluster-card"><b>Cluster '+(i+1)+'</b><div>'+escapeHtml(c.title || c.failure_category || c.cluster_id || '未命名聚簇')+'</div><div class="muted">代表用例：'+escapeHtml(shortText(c.representative_cases || [],160))+'</div></div>').join(''):'<div class="muted">暂无聚簇。</div>';
 }
-function chainPayload(mock){safeSetSessionJson(scopedKey('input'),document.getElementById('input').value);const body={project:project(),input:JSON.parse(document.getElementById('input').value),mock};const expected=expectedIntent();if(expected){body.expected_intent=expected;}return body;}
-function chainOutput(data){return data.trace?.extracted_output || data.judge?.actual || data.frontend_view?.run_trace_summary?.extracted_output || data.frontend_view?.judge_panel?.actual || null;}
-function chainHasStaleEmptyQuery(data,currentInput){return project()==='client_search' && hasNonEmptyQuery({input:currentInput}) && chainOutput(data)?.empty_result_reason==='empty_query';}
-async function runChain(mock){const data=await post('/api/run_chain',chainPayload(mock));safeSetSessionJson(scopedKey('lastChain'),data);renderChain(data);}
+function chainPayload(){safeSetSessionJson(scopedKey('input'),document.getElementById('input').value);const body={project:project(),input:JSON.parse(document.getElementById('input').value)};const expected=expectedIntent();if(expected){body.expected_intent=expected;}return body;}
+function chainOutput(data){return data.frontend_view?.run_trace_summary?.extracted_output || data.frontend_view?.judge_panel?.actual || data.trace?.extracted_output || data.judge?.actual || null;}
+function chainHasStaleEmptyQuery(data,currentInput){return hasNonEmptyQuery({input:currentInput}) && chainOutput(data)?.empty_result_reason==='empty_query';}
+async function runChain(){const data=await post('/api/run_chain',chainPayload());safeSetSessionJson(scopedKey('lastChain'),data);renderChain(data);}
 function loadLastChain(){
   const text=sessionStorage.getItem(scopedKey('lastChain'));
   if(!text){setStatus('没有 lastChain，可直接运行单链路或用例池批量归因。');return;}
@@ -456,20 +529,42 @@ function loadLastChain(){
   renderChain(data);
 }
 async function loadAnalysis(){show('analysis',await post('/api/analysis',{project:project()}));}
-function renderJudgeCard(judge){
-  if(!judge){return '<div class="muted">尚未评估。</div>';}
-  return '<div><b>结论：</b>'+escapeHtml(judge.verdict || '')+'</div>'+
-    '<div><b>评分：</b>'+escapeHtml(judge.score ?? '')+'</div>'+
-    '<div><b>置信度：</b>'+escapeHtml(judge.confidence ?? '')+'</div>'+
-    '<div><b>原因：</b>'+escapeHtml(judge.reasoning_summary || '')+'</div>'+
-    '<details class="accordion"><summary>完整 JudgeResult</summary><div class="accordion-body"><pre>'+escapeHtml(JSON.stringify(judge,null,2))+'</pre></div></details>';
+function renderStateMachineCard(trace, judge, attribute){
+  const history=trace?.state_history || [];
+  const gates=trace?.gate_decisions || judge?.gate_decisions || attribute?.gate_decisions || [];
+  const failed=gates.filter(g=>!g.passed);
+  const states=history.map(record=>record.state_id+' → '+(record.transition_decision?.to_state || '-')+' ['+(record.status || '-')+']');
+  return '<details class="accordion"><summary>状态机 / Gates / Subagents</summary><div class="accordion-body"><pre>'+escapeHtml(JSON.stringify({stop_reason:trace?.stop_reason || '', state_count:history.length, failed_gate_count:failed.length, states, failed_gates:failed, state_history:history},null,2))+'</pre></div></details>';
 }
-function renderAttributeCard(attribute){
-  if(!attribute){return '<div class="muted">尚未归因。</div>';}
-  return '<div><b>失败类别：</b>'+escapeHtml(attribute.failure_category || '')+'</div>'+
-    '<div><b>失败阶段：</b>'+escapeHtml(attribute.failure_stage || '')+'</div>'+
-    '<div><b>根因假设：</b>'+escapeHtml(attribute.root_cause_hypothesis || '')+'</div>'+
-    '<details class="accordion"><summary>完整 AttributeResult</summary><div class="accordion-body"><pre>'+escapeHtml(JSON.stringify(attribute,null,2))+'</pre></div></details>';
+function renderFulfillmentMatrix(panel, fulfillment){
+  fulfillment=fulfillment || {};
+  const rows=(fulfillment.matrix || []).map(item=>'<tr><td>'+escapeHtml(item.expectation_id || '')+'</td><td>'+escapeHtml(shortText(item.expected_outcome || '',180))+'</td><td>'+escapeHtml((item.required_capabilities || []).join(', '))+'</td><td>'+escapeHtml(item.status || '-')+'</td><td>'+escapeHtml(item.blocking?'是':'否')+'</td></tr>').join('');
+  const contract=fulfillment.consumer_contract || panel.consumer_contract || {};
+  const overall=fulfillment.overall_fulfillment || panel.overall_fulfillment || {};
+  return '<details class="accordion" open><summary>业务预期达成矩阵</summary><div class="accordion-body"><div><b>Consumer Contract：</b>'+escapeHtml(shortText(contract,260))+'</div><div><b>Overall：</b>'+escapeHtml(JSON.stringify(overall || {}))+'</div><table style="width:100%;border-collapse:collapse"><thead><tr><th>Expectation</th><th>Expected</th><th>Capabilities</th><th>Status</th><th>Blocking</th></tr></thead><tbody>'+(rows || '<tr><td colspan="5" class="muted">无 fulfillment assessments</td></tr>')+'</tbody></table></div></details>';
+}
+function renderExpectationAttributions(panel, attributionPanel){
+  attributionPanel=attributionPanel || {};
+  const attributions=attributionPanel.attributions || panel.expectation_attributions || [];
+  const rows=attributions.map(item=>'<tr><td>'+escapeHtml(item.expectation_id || '')+'</td><td>'+escapeHtml(item.fulfillment_status || '')+'</td><td>'+escapeHtml(item.causal_category || '')+'</td><td>'+escapeHtml(shortText(item.earliest_divergence || item.incomplete_reason || '',220))+'</td></tr>').join('');
+  return '<details class="accordion" open><summary>Expectation Attribution</summary><div class="accordion-body"><div><b>Causal Category：</b>'+escapeHtml(attributionPanel.causal_category || panel.display_causal_category || panel.causal_category || '')+'</div><div><b>Probe Results：</b>'+escapeHtml(shortText(attributionPanel.probe_results || panel.probe_results || [],300))+'</div><table style="width:100%;border-collapse:collapse"><thead><tr><th>Expectation</th><th>Fulfillment</th><th>Causal</th><th>Evidence</th></tr></thead><tbody>'+(rows || '<tr><td colspan="4" class="muted">无 expectation attribution</td></tr>')+'</tbody></table></div></details>';
+}
+function renderJudgeCard(panel, fulfillment){
+  if(!panel || !Object.keys(panel).length){return '<div class="muted">尚未评估。</div>';}
+  const status=fulfillment?.overall_fulfillment?.status || panel.display_status || panel.overall_fulfillment?.status || '-';
+  return '<div><b>Overall Fulfillment：</b>'+escapeHtml(status)+'</div>'+
+    '<div><b>评分：</b>'+escapeHtml(panel.score ?? '')+'</div>'+
+    '<div><b>置信度：</b>'+escapeHtml(panel.confidence ?? '')+'</div>'+renderFulfillmentMatrix(panel, fulfillment)+
+    '<div><b>原因：</b>'+escapeHtml(panel.display_reason || panel.reasoning_summary || '')+'</div>'+collapsedJson('缺失/错误/多余', panel.wrong_missing_extra || {missing:panel.missing || [], wrong:panel.wrong || [], extra:panel.extra || []})+
+    '<details class="accordion"><summary>Raw JudgeResult</summary><div class="accordion-body"><pre>'+escapeHtml(JSON.stringify(panel,null,2))+'</pre></div></details>';
+}
+function renderAttributeCard(panel, attributionPanel){
+  if(!panel || !Object.keys(panel).length){return '<div class="muted">尚未归因。</div>';}
+  return '<div><b>因果类别：</b>'+escapeHtml(panel.display_causal_category || '')+'</div>'+renderExpectationAttributions(panel, attributionPanel)+
+    '<div><b>根因假设：</b>'+escapeHtml(panel.display_root_cause || '')+'</div>'+ 
+    '<div><b>验证步骤：</b>'+escapeHtml(shortText(panel.display_verification_steps || [],300))+'</div>'+ 
+    '<div><b>修改方向：</b>'+escapeHtml(shortText(panel.display_patch_direction || [],300))+'</div>'+ 
+    '<details class="accordion"><summary>Raw AttributeResult</summary><div class="accordion-body"><pre>'+escapeHtml(JSON.stringify(panel,null,2))+'</pre></div></details>';
 }
 function renderChain(data,options={}){
   const currentInput=JSON.parse(document.getElementById('input').value);
@@ -480,8 +575,8 @@ function renderChain(data,options={}){
     showCompact('trace',{stale_empty_query:true,current_input:currentInput,result:chainOutput(data)});showCompact('reference',{});document.getElementById('judge').innerHTML='<div class="muted">旧 empty_query 结果已被阻止展示，请重新运行单链路。</div>';document.getElementById('attribute').innerHTML='<div class="muted">旧 empty_query 结果已被阻止展示，请重新运行单链路。</div>';showCompact('cluster',{});showCompact('check',{});showCompact('view',{});showCompact('batch',{});setStatus('旧 empty_query 结果已被阻止展示，请重新运行单链路。');return;
   }
   const trace=data.trace||{},judge=data.judge||{},attribute=data.attribute||{},cluster=data.cluster||{},check=data.check||{},view=data.frontend_view||{};
-  showCompact('trace',trace);showCompact('reference',view.reference_panel || {reference:judge.expected,source:judge.expected?'judge_generated':'missing',actual:judge.actual});document.getElementById('judge').innerHTML=renderJudgeCard(judge);document.getElementById('attribute').innerHTML=renderAttributeCard(attribute);showCompact('cluster',cluster);showCompact('check',check);showCompact('view',view);showCompact('batch',{last_chain_summary:{case_id:data.case_id,trace_id:trace.trace_id,status:trace.status,verdict:judge.verdict,score:judge.score,root_cause:attribute.root_cause_hypothesis}});
-  if(cluster.clusters){latestCluster=cluster;renderClusterSummary(cluster);updateStats();}
+  showCompact('trace',trace);showCompact('reference',view.reference_panel || {reference:judge.expected,source:judge.expected?'judge_generated':'missing',actual:judge.actual});document.getElementById('judge').innerHTML=renderJudgeCard(view.judge_panel || judge, view.fulfillment_panel || {});document.getElementById('attribute').innerHTML=renderAttributeCard(view.attribute_panel || attribute, view.expectation_attribution_panel || {})+renderStateMachineCard(trace,view.judge_panel || judge,view.attribute_panel || attribute);showCompact('cluster',cluster);showCompact('check',check);showCompact('view',view);showCompact('batch',{last_chain_summary:{case_id:data.case_id,trace_id:trace.trace_id,status:trace.status,stop_reason:trace.stop_reason,state_count:(trace.state_history||[]).length,failed_gate_count:(trace.gate_decisions||[]).filter(g=>!g.passed).length,verdict:(view.judge_panel || judge).verdict,score:(view.judge_panel || judge).score,root_cause:(view.attribute_panel || attribute).display_root_cause || attribute.root_cause_hypothesis}});
+  if(cluster.clusters && !options.preserveBatchCluster){latestCluster=cluster;renderClusterSummary(cluster);updateStats();}
 }
 initProjects();
 </script>

@@ -1,0 +1,2658 @@
+[
+  {
+    "id": "policy_dates_and_status-001",
+    "scenario": "single_condition",
+    "input": {
+      "query": "本月生日的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "birthdayMd",
+          "operator": "RANGE",
+          "value": "本月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选本月生日客户",
+      "reason": "生日经营"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-002",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "下个月生日的高温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "birthdayMd",
+          "operator": "RANGE",
+          "value": "下月"
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "高温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选下月生日且高温客户",
+      "reason": "生日经营+客温"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-003",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "未来7天生日的A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "birthdayMd",
+          "operator": "RANGE",
+          "value": "未来7天"
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选未来7天生日且A类客户",
+      "reason": "生日经营+客户价值"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-004",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "今天生日的女性客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "birthdayMd",
+          "operator": "RANGE",
+          "value": "今天"
+        },
+        {
+          "field": "clientSex",
+          "operator": "MATCH",
+          "value": "女"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选今天生日且女性客户",
+      "reason": "生日经营+性别"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-005",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "后天生日的黄金VIP客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "birthdayMd",
+          "operator": "RANGE",
+          "value": "后天"
+        },
+        {
+          "field": "vipType",
+          "operator": "CONTAINS",
+          "value": "黄金档"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选后天生日且黄金VIP客户",
+      "reason": "生日经营+VIP"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-006",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生日在3月的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "birthdayMd",
+          "operator": "RANGE",
+          "value": "03月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选3月生日客户",
+      "reason": "生日月份"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-007",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "生日在12月的A1客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "birthdayMd",
+          "operator": "RANGE",
+          "value": "12月"
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "MATCH",
+          "value": "A1"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选12月生日且A1客户",
+      "reason": "生日月份+客户价值"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-008",
+    "scenario": "single_condition",
+    "input": {
+      "query": "4月10日生日的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "birthdayMd",
+          "operator": "RANGE",
+          "value": "04-10"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选4月10日生日客户",
+      "reason": "生日具体日期"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-009",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生日在6月1日以后的人"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "birthdayMd",
+          "operator": "GTE",
+          "value": "06-02"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生日在6月1日之后客户",
+      "reason": "生日日期边界"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-010",
+    "scenario": "single_condition",
+    "input": {
+      "query": "生日在9月30日及之前的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "birthdayMd",
+          "operator": "LTE",
+          "value": "09-30"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选生日不晚于9月30日客户",
+      "reason": "生日日期边界"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-011",
+    "scenario": "single_condition",
+    "input": {
+      "query": "证件快到期的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "idValidDate",
+          "operator": "RANGE",
+          "value": "未来30天"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选近期证件到期客户",
+      "reason": "证件到期经营"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-012",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "身份证下个月到期的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "idType",
+          "operator": "MATCH",
+          "value": "身份证"
+        },
+        {
+          "field": "idValidDate",
+          "operator": "RANGE",
+          "value": "下月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选身份证下月到期客户",
+      "reason": "证件类型+到期"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-013",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "护照已经过期的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "idType",
+          "operator": "MATCH",
+          "value": "护照"
+        },
+        {
+          "field": "idValidDate",
+          "operator": "LTE",
+          "value": "今天"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选护照证件已过期客户",
+      "reason": "证件过期"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-014",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "30天内证件到期的A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "idValidDate",
+          "operator": "RANGE",
+          "value": "未来30天"
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A类"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选30天内证件到期且A类客户",
+      "reason": "证件到期+客户价值"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-015",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "本周身份证到期的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "idType",
+          "operator": "MATCH",
+          "value": "身份证"
+        },
+        {
+          "field": "idValidDate",
+          "operator": "RANGE",
+          "value": "本周"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选本周身份证到期客户",
+      "reason": "证件到期"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-016",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "下周证件过期的高价值客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "idValidDate",
+          "operator": "RANGE",
+          "value": "下周"
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "高价值"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选下周证件到期且高价值客户",
+      "reason": "证件到期+价值"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-017",
+    "scenario": "single_condition",
+    "input": {
+      "query": "2026年之前证件到期的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "idValidDate",
+          "operator": "LTE",
+          "value": "2025-12-31"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选证件到期日在2026年前客户",
+      "reason": "证件年份边界"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-018",
+    "scenario": "single_condition",
+    "input": {
+      "query": "证件有效期在2027年之后的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "idValidDate",
+          "operator": "GTE",
+          "value": "2027-01-01"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选证件有效期2027年后客户",
+      "reason": "证件年份边界"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-019",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "户口本近期过期的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "idType",
+          "operator": "MATCH",
+          "value": "户口本"
+        },
+        {
+          "field": "idValidDate",
+          "operator": "RANGE",
+          "value": "未来30天"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选户口本近期过期客户",
+      "reason": "具体证件类型"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-020",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "港澳台居住证本月到期的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "idType",
+          "operator": "MATCH",
+          "value": "港澳台居住证"
+        },
+        {
+          "field": "idValidDate",
+          "operator": "RANGE",
+          "value": "本月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选港澳台居住证本月到期客户",
+      "reason": "具体证件类型"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-021",
+    "scenario": "single_condition",
+    "input": {
+      "query": "保单周年日本月的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAnniversaryDate",
+          "operator": "RANGE",
+          "value": "本月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选本月到保单周年日客户",
+      "reason": "保单周年日"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-022",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "下个月到保单周年日的VIP客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAnniversaryDate",
+          "operator": "RANGE",
+          "value": "下月"
+        },
+        {
+          "field": "vipType",
+          "operator": "EXISTS"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选下月保单周年日且VIP客户",
+      "reason": "周年日+VIP"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-023",
+    "scenario": "single_condition",
+    "input": {
+      "query": "未来15天到保单周年日的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAnniversaryDate",
+          "operator": "RANGE",
+          "value": "未来15天"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选未来15天保单周年日客户",
+      "reason": "周年日窗口"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-024",
+    "scenario": "single_condition",
+    "input": {
+      "query": "今天到保单周年日的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAnniversaryDate",
+          "operator": "RANGE",
+          "value": "今天"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选今天保单周年日客户",
+      "reason": "周年日当天"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-025",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "明天到周年日的高温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAnniversaryDate",
+          "operator": "RANGE",
+          "value": "明天"
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "高温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选明天周年日且高温客户",
+      "reason": "周年日+客温"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-026",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "下周保单周年日且年缴保费1万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAnniversaryDate",
+          "operator": "RANGE",
+          "value": "下周"
+        },
+        {
+          "field": "annPremSegNum",
+          "operator": "GTE",
+          "value": 10000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选下周周年日且年缴保费>=1万客户",
+      "reason": "周年日+保费"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-027",
+    "scenario": "single_condition",
+    "input": {
+      "query": "保单周年日在8月的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAnniversaryDate",
+          "operator": "RANGE",
+          "value": "08月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选8月保单周年日客户",
+      "reason": "周年日月份"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-028",
+    "scenario": "single_condition",
+    "input": {
+      "query": "保单周年日是05-20的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAnniversaryDate",
+          "operator": "MATCH",
+          "value": "05-20"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选05-20保单周年日客户",
+      "reason": "周年日具体日期"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-029",
+    "scenario": "single_condition",
+    "input": {
+      "query": "下下个月保单周年日的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAnniversaryDate",
+          "operator": "RANGE",
+          "value": "下下月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选下下月保单周年日客户",
+      "reason": "周年日相对月份"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-030",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "本周到周年日且客户价值A2以上的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAnniversaryDate",
+          "operator": "RANGE",
+          "value": "本周"
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A2及以上"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选本周周年日且A2以上客户",
+      "reason": "周年日+价值"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-031",
+    "scenario": "single_condition",
+    "input": {
+      "query": "缴费期满日在本月的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAppEndDate",
+          "operator": "RANGE",
+          "value": "本月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选本月缴费期满客户",
+      "reason": "缴费期满"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-032",
+    "scenario": "single_condition",
+    "input": {
+      "query": "下个月缴费期满的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAppEndDate",
+          "operator": "RANGE",
+          "value": "下月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选下月缴费期满客户",
+      "reason": "缴费期满"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-033",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "未来30天缴费期满的高价值客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAppEndDate",
+          "operator": "RANGE",
+          "value": "未来30天"
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "高价值"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选未来30天缴费期满且高价值客户",
+      "reason": "缴费期满+价值"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-034",
+    "scenario": "single_condition",
+    "input": {
+      "query": "今年缴费期满的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAppEndDate",
+          "operator": "RANGE",
+          "value": "本年"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选今年缴费期满客户",
+      "reason": "缴费期满年份"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-035",
+    "scenario": "single_condition",
+    "input": {
+      "query": "2027年缴费期满的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAppEndDate",
+          "operator": "RANGE",
+          "value": "2027年"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选2027年缴费期满客户",
+      "reason": "缴费期满年份"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-036",
+    "scenario": "single_condition",
+    "input": {
+      "query": "缴费期满日在2025年之前的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAppEndDate",
+          "operator": "LTE",
+          "value": "2024-12-31"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选缴费期满日在2025年前客户",
+      "reason": "缴费期满边界"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-037",
+    "scenario": "single_condition",
+    "input": {
+      "query": "缴费期满日在2026年之后的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "effAppEndDate",
+          "operator": "GTE",
+          "value": "2027-01-01"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选缴费期满日在2026年后客户",
+      "reason": "缴费期满边界"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-038",
+    "scenario": "single_condition",
+    "input": {
+      "query": "保单到期日在本月的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "validSinsMatuDateTime",
+          "operator": "RANGE",
+          "value": "本月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选本月保单到期客户",
+      "reason": "保单到期"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-039",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "下个月保单到期的黄金VIP客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "validSinsMatuDateTime",
+          "operator": "RANGE",
+          "value": "下月"
+        },
+        {
+          "field": "vipType",
+          "operator": "CONTAINS",
+          "value": "黄金档"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选下月保单到期且黄金VIP客户",
+      "reason": "保单到期+VIP"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-040",
+    "scenario": "single_condition",
+    "input": {
+      "query": "未来60天寿险到期的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "validSinsMatuDateTime",
+          "operator": "RANGE",
+          "value": "未来60天"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选未来60天寿险到期客户",
+      "reason": "寿险到期窗口"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-041",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "今年保单到期且年缴保费2万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "validSinsMatuDateTime",
+          "operator": "RANGE",
+          "value": "本年"
+        },
+        {
+          "field": "annPremSegNum",
+          "operator": "GTE",
+          "value": 20000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选今年保单到期且年缴保费>=2万客户",
+      "reason": "到期+保费"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-042",
+    "scenario": "single_condition",
+    "input": {
+      "query": "保单到期日在2026年的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "validSinsMatuDateTime",
+          "operator": "RANGE",
+          "value": "2026年"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选2026年保单到期客户",
+      "reason": "到期年份"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-043",
+    "scenario": "single_condition",
+    "input": {
+      "query": "保单到期日在2025年之前的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "validSinsMatuDateTime",
+          "operator": "LTE",
+          "value": "2024-12-31"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选2025年前保单到期客户",
+      "reason": "到期边界"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-044",
+    "scenario": "single_condition",
+    "input": {
+      "query": "保单到期日在2027年之后的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "validSinsMatuDateTime",
+          "operator": "GTE",
+          "value": "2028-01-01"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选2027年后保单到期客户",
+      "reason": "到期边界"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-045",
+    "scenario": "single_condition",
+    "input": {
+      "query": "应缴日在本月的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.paytodate",
+          "operator": "RANGE",
+          "value": "本月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选本月应缴客户",
+      "reason": "应缴日"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-046",
+    "scenario": "single_condition",
+    "input": {
+      "query": "下个月应缴保费的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.paytodate",
+          "operator": "RANGE",
+          "value": "下月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选下月应缴客户",
+      "reason": "应缴日"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-047",
+    "scenario": "single_condition",
+    "input": {
+      "query": "未来10天应缴的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.paytodate",
+          "operator": "RANGE",
+          "value": "未来10天"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选未来10天应缴客户",
+      "reason": "应缴日窗口"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-048",
+    "scenario": "single_condition",
+    "input": {
+      "query": "应缴日已过期的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.paytodate",
+          "operator": "LTE",
+          "value": "今天"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选应缴日已过期客户",
+      "reason": "应缴逾期"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-049",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "应缴日下周且保单交费有效的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.paytodate",
+          "operator": "RANGE",
+          "value": "下周"
+        },
+        {
+          "field": "polNoInfo.polStatus",
+          "operator": "MATCH",
+          "value": "交费有效"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选下周应缴且交费有效保单客户",
+      "reason": "应缴+保单状态"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-050",
+    "scenario": "single_condition",
+    "input": {
+      "query": "有应缴保费的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.payamountdue",
+          "operator": "MATCH",
+          "value": "是"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选存在应缴保费客户",
+      "reason": "应缴状态"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-051",
+    "scenario": "single_condition",
+    "input": {
+      "query": "没有应缴保费的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.payamountdue",
+          "operator": "MATCH",
+          "value": "否"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选无应缴保费客户",
+      "reason": "应缴状态"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-052",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "有应缴保费且客户温度中温以上的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.payamountdue",
+          "operator": "MATCH",
+          "value": "是"
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "CONTAINS",
+          "value": "中温及以上"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选有应缴且中温及以上客户",
+      "reason": "应缴+客温"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-053",
+    "scenario": "single_condition",
+    "input": {
+      "query": "交费有效保单客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.polStatus",
+          "operator": "MATCH",
+          "value": "交费有效"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选交费有效保单客户",
+      "reason": "保单状态"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-054",
+    "scenario": "single_condition",
+    "input": {
+      "query": "停效保单客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.polStatus",
+          "operator": "MATCH",
+          "value": "停效"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选停效保单客户",
+      "reason": "保单状态"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-055",
+    "scenario": "single_condition",
+    "input": {
+      "query": "失效保单客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.polStatus",
+          "operator": "MATCH",
+          "value": "失效"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选失效保单客户",
+      "reason": "保单状态"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-056",
+    "scenario": "single_condition",
+    "input": {
+      "query": "等待续保状态的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.polStatus",
+          "operator": "MATCH",
+          "value": "等待续保"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选等待续保保单客户",
+      "reason": "保单状态"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-057",
+    "scenario": "single_condition",
+    "input": {
+      "query": "到期终止的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.polStatus",
+          "operator": "MATCH",
+          "value": "到期终止"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选到期终止保单客户",
+      "reason": "保单状态"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-058",
+    "scenario": "single_condition",
+    "input": {
+      "query": "退保状态的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.polStatus",
+          "operator": "MATCH",
+          "value": "退保"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选退保保单客户",
+      "reason": "保单状态"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-059",
+    "scenario": "single_condition",
+    "input": {
+      "query": "交清状态的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.polStatus",
+          "operator": "MATCH",
+          "value": "交清"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选交清保单客户",
+      "reason": "保单状态"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-060",
+    "scenario": "single_condition",
+    "input": {
+      "query": "保单状态是免交的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.polStatus",
+          "operator": "MATCH",
+          "value": "免交"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选免交保单客户",
+      "reason": "保单状态"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-061",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保日期在今年的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.poleffdate",
+          "operator": "RANGE",
+          "value": "本年"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选今年投保客户",
+      "reason": "保单生效日"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-062",
+    "scenario": "single_condition",
+    "input": {
+      "query": "去年投保的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.poleffdate",
+          "operator": "RANGE",
+          "value": "去年"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选去年投保客户",
+      "reason": "保单生效日"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-063",
+    "scenario": "single_condition",
+    "input": {
+      "query": "2024年投保的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.poleffdate",
+          "operator": "RANGE",
+          "value": "2024年"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选2024年投保客户",
+      "reason": "保单生效日"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-064",
+    "scenario": "single_condition",
+    "input": {
+      "query": "2025年7月投保的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.poleffdate",
+          "operator": "RANGE",
+          "value": "2025-07"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选2025年7月投保客户",
+      "reason": "保单生效月份"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-065",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保日期在2023年之前的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.poleffdate",
+          "operator": "LTE",
+          "value": "2022-12-31"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选2023年前投保客户",
+      "reason": "投保日期边界"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-066",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "投保日期在2022年之后的A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.poleffdate",
+          "operator": "GTE",
+          "value": "2023-01-01"
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A类"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选2022年后投保且A类客户",
+      "reason": "投保日期+价值"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-067",
+    "scenario": "single_condition",
+    "input": {
+      "query": "最近承保的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "latelyUndwrtSegTime",
+          "operator": "RANGE",
+          "value": "近期"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选近期承保客户",
+      "reason": "承保日期"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-068",
+    "scenario": "single_condition",
+    "input": {
+      "query": "承保日期在本月的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "latelyUndwrtSegTime",
+          "operator": "RANGE",
+          "value": "本月"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选本月承保客户",
+      "reason": "承保日期"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-069",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "去年承保且保额50万以上的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "latelyUndwrtSegTime",
+          "operator": "RANGE",
+          "value": "去年"
+        },
+        {
+          "field": "insnoSumInsSeqNum",
+          "operator": "GTE",
+          "value": 500000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选去年承保且保额>=50万客户",
+      "reason": "承保日期+保额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-070",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "今年承保的医疗保险客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "latelyUndwrtSegTime",
+          "operator": "RANGE",
+          "value": "本年"
+        },
+        {
+          "field": "pCategorys",
+          "operator": "CONTAINS",
+          "value": "医疗保险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选今年承保且持有医疗保险客户",
+      "reason": "承保日期+险种"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-071",
+    "scenario": "single_condition",
+    "input": {
+      "query": "纯存续单客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "orphanType",
+          "operator": "MATCH",
+          "value": "纯存续单客户"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选纯存续单客户",
+      "reason": "存量客户类型"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-072",
+    "scenario": "single_condition",
+    "input": {
+      "query": "非纯存续单客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "orphanType",
+          "operator": "MATCH",
+          "value": "非纯存续单客户"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选非纯存续单客户",
+      "reason": "存量客户类型"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-073",
+    "scenario": "single_condition",
+    "input": {
+      "query": "在职有效客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "orphanType",
+          "operator": "MATCH",
+          "value": "在职有效客户"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选在职有效客户",
+      "reason": "存量客户类型"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-074",
+    "scenario": "single_condition",
+    "input": {
+      "query": "保单托管的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "trusteeshipFlag",
+          "operator": "MATCH",
+          "value": "是"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单托管客户",
+      "reason": "保单托管"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-075",
+    "scenario": "single_condition",
+    "input": {
+      "query": "没有保单托管的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "trusteeshipFlag",
+          "operator": "MATCH",
+          "value": "否"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选未保单托管客户",
+      "reason": "保单托管"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-076",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "纯存续单且保单托管客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "orphanType",
+          "operator": "MATCH",
+          "value": "纯存续单客户"
+        },
+        {
+          "field": "trusteeshipFlag",
+          "operator": "MATCH",
+          "value": "是"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选纯存续单且托管客户",
+      "reason": "存量类型+托管"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-077",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "高温纯存续单客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "高温"
+        },
+        {
+          "field": "orphanType",
+          "operator": "MATCH",
+          "value": "纯存续单客户"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选高温且纯存续单客户",
+      "reason": "客温+存量类型"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-078",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "A1纯存续单客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "newValueLabel",
+          "operator": "MATCH",
+          "value": "A1"
+        },
+        {
+          "field": "orphanType",
+          "operator": "MATCH",
+          "value": "纯存续单客户"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选A1且纯存续单客户",
+      "reason": "价值+存量类型"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-079",
+    "scenario": "single_condition",
+    "input": {
+      "query": "有寿险产品的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "planAbbrNames",
+          "operator": "EXISTS"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选存在寿险产品客户",
+      "reason": "寿险持有"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-080",
+    "scenario": "single_condition",
+    "input": {
+      "query": "没有寿险产品的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "planAbbrNames",
+          "operator": "NOT_EXISTS"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选无寿险产品客户",
+      "reason": "寿险未持有"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-081",
+    "scenario": "single_condition",
+    "input": {
+      "query": "持有分红型产品的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "pTypes",
+          "operator": "CONTAINS",
+          "value": "分红型"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选持有分红型产品客户",
+      "reason": "产品类型"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-082",
+    "scenario": "single_condition",
+    "input": {
+      "query": "持有万能型保险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "pTypes",
+          "operator": "CONTAINS",
+          "value": "万能型"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选持有万能型产品客户",
+      "reason": "产品类型"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-083",
+    "scenario": "single_condition",
+    "input": {
+      "query": "没有万能型产品的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "pTypes",
+          "operator": "NOT_CONTAINS",
+          "value": "万能型"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选未持有万能型产品客户",
+      "reason": "产品类型否定"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-084",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "持有普通型产品且保额30万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "pTypes",
+          "operator": "CONTAINS",
+          "value": "普通型"
+        },
+        {
+          "field": "insnoSumInsSeqNum",
+          "operator": "GTE",
+          "value": 300000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选普通型产品且保额>=30万客户",
+      "reason": "产品类型+保额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-085",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "持有投资连结型产品的高价值客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "pTypes",
+          "operator": "CONTAINS",
+          "value": "投资连结型"
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "高价值"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投连型且高价值客户",
+      "reason": "产品类型+价值"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-086",
+    "scenario": "single_condition",
+    "input": {
+      "query": "持有年金产品的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "MATCH",
+          "value": "年金"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选持有年金产品客户",
+      "reason": "产品小类"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-087",
+    "scenario": "single_condition",
+    "input": {
+      "query": "持有两全险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "MATCH",
+          "value": "两全险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选持有两全险客户",
+      "reason": "产品小类"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-088",
+    "scenario": "single_condition",
+    "input": {
+      "query": "持有健康险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "MATCH",
+          "value": "健康险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选持有健康险客户",
+      "reason": "产品小类"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-089",
+    "scenario": "single_condition",
+    "input": {
+      "query": "持有定期险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "MATCH",
+          "value": "定期险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选持有定期险客户",
+      "reason": "产品小类"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-090",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "持有寿险且年缴保费5万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "planAbbrNames",
+          "operator": "EXISTS"
+        },
+        {
+          "field": "annPremSegNum",
+          "operator": "GTE",
+          "value": 50000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选寿险且年缴保费>=5万客户",
+      "reason": "寿险+保费"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-091",
+    "scenario": "single_condition",
+    "input": {
+      "query": "年缴保费低于3000的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "annPremSegNum",
+          "operator": "LT",
+          "value": 3000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选年缴保费<3000客户",
+      "reason": "年缴保费下限"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-092",
+    "scenario": "single_condition",
+    "input": {
+      "query": "年缴保费不超过5000的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "annPremSegNum",
+          "operator": "LTE",
+          "value": 5000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选年缴保费<=5000客户",
+      "reason": "年缴保费边界"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-093",
+    "scenario": "single_condition",
+    "input": {
+      "query": "保费在2万到5万之间的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "annPremSegNum",
+          "operator": "RANGE",
+          "value": "20000-50000"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选年缴保费2万-5万客户",
+      "reason": "保费区间"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-094",
+    "scenario": "single_condition",
+    "input": {
+      "query": "年缴保费刚好2万的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "annPremSegNum",
+          "operator": "RANGE",
+          "value": 20000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选年缴保费约等于2万客户",
+      "reason": "保费精确"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-095",
+    "scenario": "single_condition",
+    "input": {
+      "query": "总保额低于20万的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "insnoSumInsSeqNum",
+          "operator": "LT",
+          "value": 200000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选总保额<20万客户",
+      "reason": "保额下限"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-096",
+    "scenario": "single_condition",
+    "input": {
+      "query": "总保额不超过50万的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "insnoSumInsSeqNum",
+          "operator": "LTE",
+          "value": 500000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选总保额<=50万客户",
+      "reason": "保额边界"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-097",
+    "scenario": "single_condition",
+    "input": {
+      "query": "总保额在50万到100万之间的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "insnoSumInsSeqNum",
+          "operator": "RANGE",
+          "value": "500000-1000000"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选总保额50-100万客户",
+      "reason": "保额区间"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-098",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "高保额且高温客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "insnoSumInsSeqNum",
+          "operator": "GTE",
+          "value": 300000
+        },
+        {
+          "field": "clientTemperature",
+          "operator": "MATCH",
+          "value": "高温"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选高保额且高温客户",
+      "reason": "保额+客温"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-099",
+    "scenario": "single_condition",
+    "input": {
+      "query": "总保费10万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "GTE",
+          "value": 100000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选总保费>=10万客户",
+      "reason": "总保费"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_dates_and_status-100",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "总保费在5万到20万之间的A类客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "RANGE",
+          "value": "50000-200000"
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A类"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选总保费5-20万且A类客户",
+      "reason": "总保费+价值"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  }
+]

@@ -1,6 +1,6 @@
 # Attribute Protocol
 
-`AttributeResult` explains why an incorrect or suspicious output failed and what a developer should verify next.
+`AttributeResult` explains the causal chain behind each business expectation’s fulfillment status. It must bind analysis to `expectation_attributions`: fulfilled expectations can produce `no_issue` attribution, while partially fulfilled, not fulfilled, not evaluable, or contested expectations require evidence-backed causal analysis or an explicit blocked reason. Legacy `failure_category` and `failure_stage` are compatibility summaries only.
 
 Inputs:
 
@@ -12,8 +12,13 @@ Inputs:
 Fields:
 
 - `case_id`: optional case-pool identity preserved from batch/mock/uploaded datasets
-- `failure_category`
-- `failure_stage`
+- `expectation_attributions`: one attribution per relevant business expectation with `expectation_id`, `fulfillment_status`, `- `severity` — 归因严重程度（如 blocking/normal/low）
+- `primary_error_type` — 主错误类型标签
+- causal_category`, evidence, and improvement direction
+- `causal_category`: primary aggregate category such as `no_issue`, `implementation_bug`, `model_capability_gap`, `boundary_limitation`, `unclear_contract`, or `insufficient_evidence`
+- `probe_results`: deterministic or documented probes supporting the attribution, or blocked-probe reasons
+- `failure_category`: compatibility summary derived from expectation attribution when old callers need it
+- `failure_stage`: compatibility summary derived from earliest divergence when old callers need it
 - `analysis_method`: how attribution was produced, such as current-case LLM attribution, deterministic chain probe, local fallback, or incomplete because evidence is missing
 - `evidence_chain`
 - `trace_analysis`
@@ -32,7 +37,9 @@ Fields:
 
 Rules:
 
-- Attribute should run as a formal root-cause analyzer only after judge has produced a current, inspectable failure verdict. If judge is unavailable, stale, reference-only, or lacks expected-vs-actual evidence, attribution should be blocked or marked incomplete instead of inventing a root cause.
+- Attribute is a runtime script agent: after judge produces current fulfillment assessments, verifier code invokes attribution for the current case; per-case attribution must not depend on a Claude Code subagent.
+- Attribute may implement project-specific evidence collectors, trace-node mappers, local probes, and result normalization inside the attribute capability boundary; fulfillment assessment and boundary reconciliation remain owned by judge.
+- Attribute should target business expectations, not only failures. If an expectation is fulfilled, produce a minimal `no_issue` attribution when aggregation needs positive evidence. If evidence is unavailable, mark the expectation attribution incomplete instead of inventing a root cause.
 - Every attribution generated from a case-pool or batch run should preserve the originating generic case identity when available.
 - Attribute should pass a quality gate before its result is used for clustering or developer action: current query evidence, actual output, judge expected-vs-actual diff, executable/documented chain nodes, earliest divergence, and evidence-backed suspected locations or an explicit incomplete reason must be present.
 - Attribute should use the application/project boundary already attached to the trace or judge context; if an external dependency is unavailable and the boundary excludes result-set verification, attribution should focus on in-scope parser/model/config/code evidence instead of repeatedly treating that dependency as the root issue. Project adapters may omit excluded dependencies from `chain_nodes` and expose them only as boundary metadata.
@@ -46,3 +53,8 @@ Rules:
 - Do not fabricate file paths, functions, line numbers, logs, or test results.
 - Do not reuse fields, expected conditions, or fixes from unrelated historical cases.
 - If deeper code-path evidence was not collected, say so explicitly instead of inventing it.
+- Attribute normalizes each result to one status: `supported_root_cause`, `insufficient_evidence`, or `next_verification_step`.
+- Field/config/enum/label mapping claims must be grounded in the current query, expected/actual gap, project docs/config, execution trace, or local verification evidence. Without that grounding, leave `suspected_locations` empty and return a next verification step instead of a formal root cause.
+- Vague module-only root causes such as “adapter failed” are rejected unless current-case chain-node evidence supports the module/location claim.
+- Source-file catalog must be narrowed by current trace signals (failed/suspicious `execution_trace` stages, `attribution_targets`, or stage-prefix maps), not by exposing the full external repository. Adapters should publish at most ~8 ext_repo entries per case in `source_config_paths`; project documentation entries (`project_doc:source_*`) and the project adapter itself are not counted toward this cap.
+- Tool calls that fetch source content must respect a per-case aggregate byte budget (see `tool_protocol.md`). When the budget is exhausted, the attribute agent must finalise with `incomplete_reason` rather than chase additional files.

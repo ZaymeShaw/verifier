@@ -16,7 +16,9 @@ Fields:
 
 Rules:
 
+- Check is a Claude subagent-backed review workflow for independent mechanism audit after demand, protocol, project, frontend, judge, attribution, batch, persistence, or code changes; it audits runtime agents but does not replace them per case.
 - Check mechanisms, not only generated artifacts.
+- Check may implement audit helpers, validation tests, and evidence reports, but it is not the default owner of application, build, mock, judge, or attribute implementation gaps.
 - Verify source -> analysis -> run -> judge -> attribute -> cluster -> frontend consistency.
 - Flag project-specific fields, ports, paths, or cases if they appear in generic core code.
 - Flag judge results without current intent decomposition, expected-vs-actual evidence, condition assessments, semantic-equivalence reasoning when representations differ, or verdict derivation for incorrect/uncertain cases.

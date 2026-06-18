@@ -1,0 +1,2567 @@
+[
+  {
+    "id": "policy_roles_underwriting-001",
+    "scenario": "single_condition",
+    "input": {
+      "query": "保单号P966073446746215的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNo",
+          "operator": "MATCH",
+          "value": "P966073446746215"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单号P966073446746215的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-002",
+    "scenario": "single_condition",
+    "input": {
+      "query": "持有3张及以上保单的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNum",
+          "operator": "GTE",
+          "value": 3
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选持有3张及以上保单的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-003",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "保单数量超过5张的高价值客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNum",
+          "operator": "GTE",
+          "value": 6
+        },
+        {
+          "field": "newValueLabel",
+          "operator": "CONTAINS",
+          "value": "A1/A2/A3/A4/B"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单数量超过5张的高价值客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-004",
+    "scenario": "single_condition",
+    "input": {
+      "query": "只有1张保单的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNum",
+          "operator": "RANGE",
+          "value": 1
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选只有1张保单的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-005",
+    "scenario": "single_condition",
+    "input": {
+      "query": "客户是寿险投保人的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "is_life_insured",
+          "operator": "MATCH",
+          "value": "投保人"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选客户是寿险投保人的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-006",
+    "scenario": "single_condition",
+    "input": {
+      "query": "客户是寿险被保人的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "is_life_insured",
+          "operator": "MATCH",
+          "value": "被保人"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选客户是寿险被保人的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-007",
+    "scenario": "single_condition",
+    "input": {
+      "query": "既是投保人又是被保人的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "is_life_insured",
+          "operator": "CONTAINS",
+          "value": "投保人/被保人"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选既是投保人又是被保人的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-008",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名是王芳的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "王芳"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名是王芳的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-009",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人手机号尾号1234的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantphoneno",
+          "operator": "MATCH",
+          "value": 1234
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人手机号尾号1234的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-010",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名是李雷的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "李雷"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名是李雷的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-011",
+    "scenario": "single_condition",
+    "input": {
+      "query": "受益人姓名是韩梅梅的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.benefinfo.benefname",
+          "operator": "MATCH",
+          "value": "韩梅梅"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选受益人姓名是韩梅梅的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-012",
+    "scenario": "single_condition",
+    "input": {
+      "query": "保单生效日在今年的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.poleffdate",
+          "operator": "RANGE",
+          "value": "今年"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单生效日在今年的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-013",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保日期是本季度的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_insure_date",
+          "operator": "RANGE",
+          "value": "本季度"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保日期是本季度的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-014",
+    "scenario": "single_condition",
+    "input": {
+      "query": "承保日期在近90天的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "latelyUndwrtSegTime",
+          "operator": "RANGE",
+          "value": "近90天"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选承保日期在近90天的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-015",
+    "scenario": "single_condition",
+    "input": {
+      "query": "犹豫期本周截止的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "policies_cooling_off",
+          "operator": "RANGE",
+          "value": "本周"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选犹豫期本周截止的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-016",
+    "scenario": "single_condition",
+    "input": {
+      "query": "核保结论是标准体的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.wholeDecision",
+          "operator": "MATCH",
+          "value": "标准体"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选核保结论是标准体的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-017",
+    "scenario": "single_condition",
+    "input": {
+      "query": "核保结论包含加费的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.wholeDecision",
+          "operator": "MATCH",
+          "value": "加费"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选核保结论包含加费的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-018",
+    "scenario": "single_condition",
+    "input": {
+      "query": "核保延期的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.wholeDecision",
+          "operator": "MATCH",
+          "value": "延期"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选核保延期的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-019",
+    "scenario": "single_condition",
+    "input": {
+      "query": "核保拒保客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.wholeDecision",
+          "operator": "MATCH",
+          "value": "拒保"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选核保拒保客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-020",
+    "scenario": "single_condition",
+    "input": {
+      "query": "期交保费3万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "GTE",
+          "value": 30000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选期交保费3万以上客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-021",
+    "scenario": "single_condition",
+    "input": {
+      "query": "期交保费2万到4万客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "RANGE",
+          "value": "20000-40000"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选期交保费2万到4万客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-022",
+    "scenario": "single_condition",
+    "input": {
+      "query": "退保时间在今年的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.surrenderDateTime",
+          "operator": "RANGE",
+          "value": "今年"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选退保时间在今年的客户",
+      "reason": "保单角色/日期/核保"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-023",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含华的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "华"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含华的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-024",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含华的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "华"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含华的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-025",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含芳的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "芳"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含芳的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-026",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含芳的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "芳"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含芳的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-027",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含军的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "军"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含军的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-028",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含军的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "军"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含军的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-029",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含敏的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "敏"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含敏的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-030",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含敏的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "敏"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含敏的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-031",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含强的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "强"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含强的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-032",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含强的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "强"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含强的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-033",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含磊的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "磊"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含磊的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-034",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含磊的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "磊"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含磊的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-035",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含婷的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "婷"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含婷的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-036",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含婷的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "婷"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含婷的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-037",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含杰的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "杰"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含杰的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-038",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含杰的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "杰"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含杰的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-039",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含涛的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "涛"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含涛的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-040",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含涛的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "涛"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含涛的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-041",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含静的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "静"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含静的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-042",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含静的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "静"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含静的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-043",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含丽的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "丽"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含丽的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-044",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含丽的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "丽"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含丽的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-045",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含鑫的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "鑫"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含鑫的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-046",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含鑫的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "鑫"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含鑫的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-047",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含鹏的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "鹏"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含鹏的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-048",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含鹏的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "鹏"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含鹏的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-049",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含超的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "超"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含超的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-050",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含超的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "超"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含超的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-051",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含雪的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "雪"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含雪的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-052",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含雪的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "雪"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含雪的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-053",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含亮的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "亮"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含亮的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-054",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含亮的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "亮"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含亮的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-055",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含梅的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "梅"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含梅的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-056",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含梅的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "梅"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含梅的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-057",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含琳的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "琳"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含琳的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-058",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含琳的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "琳"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含琳的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-059",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含峰的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "峰"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含峰的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-060",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含峰的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "峰"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含峰的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-061",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保人姓名包含晨的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.applicantname",
+          "operator": "MATCH",
+          "value": "晨"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保人姓名包含晨的客户",
+      "reason": "投保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-062",
+    "scenario": "single_condition",
+    "input": {
+      "query": "被保人姓名包含晨的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.insname",
+          "operator": "MATCH",
+          "value": "晨"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选被保人姓名包含晨的客户",
+      "reason": "被保人"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-063",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保险种全称包含平安福的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.planfullname",
+          "operator": "MATCH",
+          "value": "平安福"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保险种全称包含平安福的客户",
+      "reason": "险种名称"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-064",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保险种全称包含福满分的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.planfullname",
+          "operator": "MATCH",
+          "value": "福满分"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保险种全称包含福满分的客户",
+      "reason": "险种名称"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-065",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保险种全称包含尊享的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.planfullname",
+          "operator": "MATCH",
+          "value": "尊享"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保险种全称包含尊享的客户",
+      "reason": "险种名称"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-066",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保险种全称包含鑫盛的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.planfullname",
+          "operator": "MATCH",
+          "value": "鑫盛"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保险种全称包含鑫盛的客户",
+      "reason": "险种名称"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-067",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保险种全称包含守护百分百的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.planfullname",
+          "operator": "MATCH",
+          "value": "守护百分百"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保险种全称包含守护百分百的客户",
+      "reason": "险种名称"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-068",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保险种全称包含智盈人生的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.planfullname",
+          "operator": "MATCH",
+          "value": "智盈人生"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保险种全称包含智盈人生的客户",
+      "reason": "险种名称"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-069",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保险种全称包含御享财富的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.planfullname",
+          "operator": "MATCH",
+          "value": "御享财富"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保险种全称包含御享财富的客户",
+      "reason": "险种名称"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-070",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保险种全称包含财富金瑞的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.planfullname",
+          "operator": "MATCH",
+          "value": "财富金瑞"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保险种全称包含财富金瑞的客户",
+      "reason": "险种名称"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-071",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保险种全称包含爱满分的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.planfullname",
+          "operator": "MATCH",
+          "value": "爱满分"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保险种全称包含爱满分的客户",
+      "reason": "险种名称"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-072",
+    "scenario": "single_condition",
+    "input": {
+      "query": "投保险种全称包含少儿平安福的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.planfullname",
+          "operator": "MATCH",
+          "value": "少儿平安福"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选投保险种全称包含少儿平安福的客户",
+      "reason": "险种名称"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-073",
+    "scenario": "single_condition",
+    "input": {
+      "query": "险种类别是两全保险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "CONTAINS",
+          "value": "两全保险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选险种类别是两全保险的客户",
+      "reason": "险种类别"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-074",
+    "scenario": "single_condition",
+    "input": {
+      "query": "没有投保两全保险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "NOT_CONTAINS",
+          "value": "两全保险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选没有投保两全保险的客户",
+      "reason": "险种缺口"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-075",
+    "scenario": "single_condition",
+    "input": {
+      "query": "险种类别是年金保险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "CONTAINS",
+          "value": "年金保险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选险种类别是年金保险的客户",
+      "reason": "险种类别"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-076",
+    "scenario": "single_condition",
+    "input": {
+      "query": "没有投保年金保险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "NOT_CONTAINS",
+          "value": "年金保险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选没有投保年金保险的客户",
+      "reason": "险种缺口"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-077",
+    "scenario": "single_condition",
+    "input": {
+      "query": "险种类别是疾病保险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "CONTAINS",
+          "value": "疾病保险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选险种类别是疾病保险的客户",
+      "reason": "险种类别"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-078",
+    "scenario": "single_condition",
+    "input": {
+      "query": "没有投保疾病保险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "NOT_CONTAINS",
+          "value": "疾病保险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选没有投保疾病保险的客户",
+      "reason": "险种缺口"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-079",
+    "scenario": "single_condition",
+    "input": {
+      "query": "险种类别是医疗保险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "CONTAINS",
+          "value": "医疗保险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选险种类别是医疗保险的客户",
+      "reason": "险种类别"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-080",
+    "scenario": "single_condition",
+    "input": {
+      "query": "没有投保医疗保险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "NOT_CONTAINS",
+          "value": "医疗保险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选没有投保医疗保险的客户",
+      "reason": "险种缺口"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-081",
+    "scenario": "single_condition",
+    "input": {
+      "query": "险种类别是意外伤害保险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "CONTAINS",
+          "value": "意外伤害保险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选险种类别是意外伤害保险的客户",
+      "reason": "险种类别"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-082",
+    "scenario": "single_condition",
+    "input": {
+      "query": "没有投保意外伤害保险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "NOT_CONTAINS",
+          "value": "意外伤害保险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选没有投保意外伤害保险的客户",
+      "reason": "险种缺口"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-083",
+    "scenario": "single_condition",
+    "input": {
+      "query": "险种类别是寿险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "CONTAINS",
+          "value": "寿险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选险种类别是寿险的客户",
+      "reason": "险种类别"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-084",
+    "scenario": "single_condition",
+    "input": {
+      "query": "没有投保寿险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "NOT_CONTAINS",
+          "value": "寿险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选没有投保寿险的客户",
+      "reason": "险种缺口"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-085",
+    "scenario": "single_condition",
+    "input": {
+      "query": "险种类别是护理保险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "CONTAINS",
+          "value": "护理保险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选险种类别是护理保险的客户",
+      "reason": "险种类别"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-086",
+    "scenario": "single_condition",
+    "input": {
+      "query": "没有投保护理保险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "NOT_CONTAINS",
+          "value": "护理保险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选没有投保护理保险的客户",
+      "reason": "险种缺口"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-087",
+    "scenario": "single_condition",
+    "input": {
+      "query": "险种类别是万能保险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "CONTAINS",
+          "value": "万能保险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选险种类别是万能保险的客户",
+      "reason": "险种类别"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-088",
+    "scenario": "single_condition",
+    "input": {
+      "query": "没有投保万能保险的客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNoInfo.plancodeinfo.plantypedesc",
+          "operator": "NOT_CONTAINS",
+          "value": "万能保险"
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选没有投保万能保险的客户",
+      "reason": "险种缺口"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-089",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "保单数量1张及以上且期交保费1万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNum",
+          "operator": "GTE",
+          "value": 1
+        },
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "GTE",
+          "value": 10000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单数量1张及以上且期交保费1万以上客户",
+      "reason": "保单数量金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-090",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "保单数量2张及以上且期交保费2万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNum",
+          "operator": "GTE",
+          "value": 2
+        },
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "GTE",
+          "value": 20000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单数量2张及以上且期交保费2万以上客户",
+      "reason": "保单数量金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-091",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "保单数量3张及以上且期交保费3万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNum",
+          "operator": "GTE",
+          "value": 3
+        },
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "GTE",
+          "value": 30000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单数量3张及以上且期交保费3万以上客户",
+      "reason": "保单数量金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-092",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "保单数量4张及以上且期交保费4万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNum",
+          "operator": "GTE",
+          "value": 4
+        },
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "GTE",
+          "value": 40000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单数量4张及以上且期交保费4万以上客户",
+      "reason": "保单数量金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-093",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "保单数量5张及以上且期交保费5万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNum",
+          "operator": "GTE",
+          "value": 5
+        },
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "GTE",
+          "value": 50000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单数量5张及以上且期交保费5万以上客户",
+      "reason": "保单数量金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-094",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "保单数量6张及以上且期交保费6万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNum",
+          "operator": "GTE",
+          "value": 6
+        },
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "GTE",
+          "value": 60000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单数量6张及以上且期交保费6万以上客户",
+      "reason": "保单数量金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-095",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "保单数量7张及以上且期交保费7万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNum",
+          "operator": "GTE",
+          "value": 7
+        },
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "GTE",
+          "value": 70000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单数量7张及以上且期交保费7万以上客户",
+      "reason": "保单数量金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-096",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "保单数量8张及以上且期交保费8万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNum",
+          "operator": "GTE",
+          "value": 8
+        },
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "GTE",
+          "value": 80000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单数量8张及以上且期交保费8万以上客户",
+      "reason": "保单数量金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-097",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "保单数量9张及以上且期交保费9万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNum",
+          "operator": "GTE",
+          "value": 9
+        },
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "GTE",
+          "value": 90000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单数量9张及以上且期交保费9万以上客户",
+      "reason": "保单数量金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-098",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "保单数量10张及以上且期交保费10万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNum",
+          "operator": "GTE",
+          "value": 10
+        },
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "GTE",
+          "value": 100000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单数量10张及以上且期交保费10万以上客户",
+      "reason": "保单数量金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-099",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "保单数量11张及以上且期交保费11万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNum",
+          "operator": "GTE",
+          "value": 11
+        },
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "GTE",
+          "value": 110000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单数量11张及以上且期交保费11万以上客户",
+      "reason": "保单数量金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  },
+  {
+    "id": "policy_roles_underwriting-100",
+    "scenario": "multi_condition_and",
+    "input": {
+      "query": "保单数量12张及以上且期交保费12万以上客户"
+    },
+    "output": {},
+    "reference": {
+      "expected_logic": "AND",
+      "expected_conditions": [
+        {
+          "field": "polNum",
+          "operator": "GTE",
+          "value": 12
+        },
+        {
+          "field": "polNoInfo.totmodalpremsum",
+          "operator": "GTE",
+          "value": 120000
+        }
+      ]
+    },
+    "metadata": {
+      "expected_intent": "筛选保单数量12张及以上且期交保费12万以上客户",
+      "reason": "保单数量金额"
+    },
+    "expected_quality": "correct",
+    "source": "data_mock_seed",
+    "status": "pending"
+  }
+]

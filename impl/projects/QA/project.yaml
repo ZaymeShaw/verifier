@@ -3,6 +3,11 @@ name: QA 评估项目
 description: 评估已产出的问答输入、输出、参考答案或上下文证据，支持样本级 scenario。
 adapter: adapter.py
 capabilities: ["live_run", "judge", "attribute", "cluster", "check", "scenario"]
+api:
+  base_url: uploaded_output_evaluation
+  endpoint: uploaded_output_evaluation
+  method: EVALUATE
+  timeout: 0
 application:
   mode: uploaded_output_evaluation
 documents:
@@ -12,11 +17,43 @@ documents:
   judge_boundary: judge_boundary.md
   attribution: attribution.md
   checklist: checklist.md
+  implementation_standard: implementation_standard.md
 frontend_extensions:
   scenarios: ["qa_gold_answer", "qa_context_faithfulness", "qa_weak_quality"]
   score_dimensions: ["correctness", "completeness", "key_point_coverage", "faithfulness", "relevance", "usefulness", "coherence", "risk_control", "clarity"]
   error_taxonomy: ["answer_incorrect", "answer_incomplete", "question_misunderstood", "irrelevant_answer", "unsupported_claim", "hallucination", "context_not_used", "insufficient_context", "context_noise", "over_refusal", "format_error", "too_vague", "contradiction", "needs_human_review", "none"]
   core_forbidden_markers: []
+  implementation_standard:
+    api:
+      shape: uploaded question, answer/output, optional contexts, optional reference/golden answer
+      source: adapter.py and application.md
+    application:
+      start_run: no external service; evaluate uploaded or provided output through adapter normalization
+      boundary: service execution is outside scope; answer quality and faithfulness are in scope
+    request_construction:
+      builder: Adapter.build_request maps uploaded QA case fields into a normalized evaluation request
+      required_inputs: [question]
+    output_extraction:
+      extractor: Adapter.extract_output normalizes provided answer/output and context evidence
+      normalized_output: answer text with optional context and quality signals
+    reference_handling:
+      source_priority: [input_reference, golden_answer, judge_generated, missing]
+      alignment: reference is normalized to the same QA answer/key-point shape as evaluated output
+    judge_boundary:
+      document: judge_boundary.md
+      gate: uploaded-output boundary separates answer-quality errors from missing external service execution
+    attribution_trace:
+      document: attribution.md
+      trace_nodes: [input_normalization, output_extraction, context_alignment, answer_quality_judge, attribution]
+    frontend_view:
+      live: render Input, Output, Reference, Judge, Attribute, and scenario fields from protocol objects
+      summary: render same QA case-pool shape with compact per-case judge and attribute summaries
+    batch_persistence:
+      case_shape: id, selected, input, output, reference, metadata, scenario, source, status, error
+      transient_results: do not persist full trace, judge, attribute, or frontend_view as durable case-pool source data
+    check_evidence:
+      documents: [application.md, mock.md, evaluation.md, judge_boundary.md, attribution.md, checklist.md]
+      tests: [tests.test_demand_check_gap]
   check_rules:
     require_scenario: true
     scenario_requirements:

@@ -33,9 +33,81 @@ documents:
   source_enhanced_rules: ../../../../llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml
   source_prompt: ../../../projects/client_search/prompt.md
   source_judge_boundary: ../../../projects/client_search/judge_boundary-template.md
+  implementation_standard: implementation_standard.md
 frontend_extensions:
   core_forbidden_markers: ["query_logic", "conditions", "matched_level", "intent_summary", "clientAge", "annPremSegNum", "clientSex"]
+  implementation_standard:
+    api:
+      shape: client search query parse POST request and normalized query/filter output
+      source: source_readme, source_config, source_prompt, and adapter.py
+    application:
+      start_run: existing parser service at api.base_url with optional downstream customer search probe
+      boundary: parser output is in scope; downstream result-set verification follows application.downstream_search availability
+    request_construction:
+      builder: Adapter.build_request converts query/user intent fields into parser request body
+      required_inputs: [query]
+    output_extraction:
+      extractor: Adapter.extract_output normalizes parser response into query logic, conditions, routing, and downstream evidence
+      normalized_output: search intent and executable customer-search condition semantics
+    reference_handling:
+      source_priority: [input_reference, expected_intent, judge_generated, missing]
+      alignment: reference conditions are compared by business/search semantics rather than raw field surface only
+    judge_boundary:
+      document: judge_boundary_protocals.md
+      gate: boundary_decision consumes downstream_search status before final verdict reconciliation
+    attribution_trace:
+      document: attribution.md
+      trace_nodes: [request_normalization, prompt_config_mapping, parser_call, adapter_extraction, downstream_search_probe, judge, attribution]
+    frontend_view:
+      live: render normalized parser output and raw project fields under protocol extension panels
+      summary: align Output and Reference as formatted JSON with equal-size table cells and compact drill-downs
+    batch_persistence:
+      case_shape: id, selected, input, output, reference, metadata, scenario, source, status, error
+      transient_results: do not persist full trace, judge, attribute, downstream payload, or frontend_view as durable case-pool source data
+    check_evidence:
+      documents: [application.md, mock.md, evaluation.md, judge_boundary_protocals.md, judge.md, attribution.md, checklist.md]
+      tests: [tests.test_demand_check_gap]
   semantic_equivalence_rules:
-    equivalent_condition_forms: [{"field":"pCategorys","operator":"MATCH","value":"疾病保险","equivalent_operator":"CONTAINS","equivalent_value":["疾病保险"],"basis":"source_value_mappings/source_field_definitions define pCategorys as list-like product category semantics; this equivalence is project-output normalization, not a historical case patch."}]
-    operator_compatibility: [{"field":"*","operator":"MATCH","equivalent_operator":"CONTAINS","condition":"same field and exactly one identical enum/list value","basis":"source_prompt and query_router normalization allow single enum value surface-form normalization when downstream executable semantics are identical."}]
+    equivalent_condition_forms: [{"field":"pCategorys","operator":"MATCH","value":"疾病保险","equivalent_operator":"CONTAINS","equivalent_value":["疾病保险"],"basis":"source_value_mappings/source_field_definitions define pCategorys as list-like product category semantics; this equivalence is project-output normalization, not a historical case patch."},{"field":"pCategorys","operator":"CONTAINS","value":["年金保险"],"equivalent_operator":"CONTAINS","equivalent_value":["年金保险"],"basis":"source_field_enums confirm pCategorys valid values include 年金保险."},{"field":"pCategorys","operator":"CONTAINS","value":["两全保险"],"equivalent_operator":"CONTAINS","equivalent_value":["两全保险"],"basis":"source_field_enums confirm pCategorys valid values include 两全保险."}]
+    operator_compatibility:
+      - field: "clientTemperature"
+        operator: "MATCH"
+        equivalent_operator: "CONTAINS"
+        condition: "same field and exactly one identical enum/list value"
+        basis: "enum field where single-value MATCH is equivalent to CONTAINS with one-element list"
+      - field: "education"
+        operator: "MATCH"
+        equivalent_operator: "CONTAINS"
+        condition: "same field and exactly one identical enum/list value"
+        basis: "enum field where single-value MATCH is equivalent to CONTAINS with one-element list"
+      - field: "jujiaClientGrade"
+        operator: "MATCH"
+        equivalent_operator: "CONTAINS"
+        condition: "same field and exactly one identical enum/list value"
+        basis: "enum field where single-value MATCH is equivalent to CONTAINS with one-element list"
+      - field: "kangyangClientGrade"
+        operator: "MATCH"
+        equivalent_operator: "CONTAINS"
+        condition: "same field and exactly one identical enum/list value"
+        basis: "enum field where single-value MATCH is equivalent to CONTAINS with one-element list"
+      - field: "pTypes"
+        operator: "MATCH"
+        equivalent_operator: "CONTAINS"
+        condition: "same field and exactly one identical enum/list value"
+        basis: "enum field where single-value MATCH is equivalent to CONTAINS with one-element list"
+      - field: "polNoInfo.plancodeinfo.abbrname"
+        operator: "MATCH"
+        equivalent_operator: "CONTAINS"
+        condition: "same field and exactly one identical enum/list value"
+        basis: "enum field where single-value MATCH is equivalent to CONTAINS with one-element list"
+      - field: "searchClientName"
+        operator: "MATCH"
+        equivalent_operator: "CONTAINS"
+        condition: "same field and exactly one identical enum/list value"
+        basis: "name field where single-value MATCH is equivalent to CONTAINS with one-element list"
+      - field: "zxjyEquityGrade"
+        operator: "MATCH"
+        equivalent_operator: "CONTAINS"
+        condition: "same field and exactly one identical enum/list value"
+        basis: "enum field where single-value MATCH is equivalent to CONTAINS with one-element list"
     equivalent_fields: [{"field":"familyInfo.familyclientage","equivalent_field":"familyInfo.familyclientbirthday","condition":"birthday date range is equivalent to the family member age boundary under the current date","basis":"source_enhanced_rules/source_config describe age-to-birthday executable conversion; judge should compare semantic boundary rather than raw field spelling."}]

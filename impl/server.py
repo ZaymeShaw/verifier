@@ -16,22 +16,157 @@ BATCH_JOBS = {}
 MAX_BATCH_EVENTS = 200
 
 
+def _compact_mapping(value):
+    if isinstance(value, list):
+        return [_compact_mapping(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    return {
+        key: _compact_mapping(item)
+        for key, item in value.items()
+        if key not in {"raw_text", "raw_response", "downstream_payload", "raw_sections", "raw_sse", "raw_cards", "raw_model_text", "frontend_view"}
+    }
+
+
+def _display_status(trace, judge, run):
+    return (judge.get("overall_fulfillment") or {}).get("status") or judge.get("verdict") or trace.get("status") or ("error" if run.get("error") else "done")
+
+
+def _short_value(value):
+    text = json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else str(value or "")
+    return text if len(text) <= 160 else text[:157] + "..."
+
+
+def _gap_reason(prefix, gaps):
+    gap = next((item for item in gaps if isinstance(item, dict)), None)
+    if not gap:
+        return ""
+    raw_error_type = gap.get("error_type") or gap.get("requirement") or gap.get("status") or gap.get("type")
+    expected = _short_value(gap.get("expected_fragment") or gap.get("expected"))
+    actual = _short_value(gap.get("actual_fragment") or gap.get("actual"))
+    # When gap has no identifying field AND no expected/actual, the bare
+    # "wrong: gap" string carries no signal — return empty so callers can
+    # fall back to richer sources like reasoning_summary.
+    if not raw_error_type and not expected and not actual:
+        return ""
+    error_type = raw_error_type or "gap"
+    detail = f"{prefix}: {error_type}"
+    if expected or actual:
+        detail += f"; expected={expected}; actual={actual}"
+    return detail
+
+
+def _judge_display_reason(trace, judge, run):
+    if run.get("error") or trace.get("error"):
+        return {"reason": run.get("error") or trace.get("error") or "", "reason_source": "execution_error", "reason_stage": "execution", "is_formal_attribution": False}
+
+    for key, source in (("wrong", "judge_wrong"), ("missing", "judge_missing"), ("extra", "judge_extra")):
+        reason = _gap_reason(key, judge.get(key) or [])
+        if reason:
+            return {"reason": reason, "reason_source": source, "reason_stage": "judge", "is_formal_attribution": True}
+
+    if judge.get("reasoning_summary"):
+        return {"reason": judge.get("reasoning_summary"), "reason_source": "judge_reasoning_summary", "reason_stage": "judge", "is_formal_attribution": True}
+
+    derivation = judge.get("verdict_derivation") or {}
+    if derivation.get("why_verdict"):
+        return {"reason": derivation.get("why_verdict"), "reason_source": "judge_verdict_derivation", "reason_stage": "judge", "is_formal_attribution": True}
+
+    primary = judge.get("primary_assessment") or {}
+    if primary.get("reasoning"):
+        return {"reason": primary.get("reasoning"), "reason_source": "judge_primary_assessment", "reason_stage": "judge", "is_formal_attribution": True}
+
+    for item in judge.get("fulfillment_assessments") or []:
+        if isinstance(item, dict) and item.get("downstream_impact"):
+            return {"reason": item.get("downstream_impact"), "reason_source": "fulfillment_assessment", "reason_stage": "judge", "is_formal_attribution": True}
+
+    return {"reason": "", "reason_source": "", "reason_stage": "", "is_formal_attribution": False}
+
+
+def _display_reason(trace, judge, attribute, run):
+    judge_reason = _judge_display_reason(trace, judge, run)
+    if judge_reason.get("reason_stage") == "execution":
+        return judge_reason
+
+    analysis_quality = attribute.get("analysis_quality") or {}
+    has_attribution = bool(attribute.get("expectation_attributions"))
+    if attribute.get("root_cause_hypothesis") and (analysis_quality.get("passed") is True or has_attribution):
+        return {"reason": attribute.get("root_cause_hypothesis"), "reason_source": "attribute_root_cause", "reason_stage": "attribute", "is_formal_attribution": True}
+
+    if judge_reason.get("reason"):
+        return judge_reason
+
+    if attribute.get("incomplete_reason"):
+        return {"reason": attribute.get("incomplete_reason"), "reason_source": "attribute_incomplete_reason", "reason_stage": "attribute", "is_formal_attribution": False}
+
+    return {"reason": attribute.get("root_cause_hypothesis") or "", "reason_source": "attribute_root_cause" if attribute.get("root_cause_hypothesis") else "", "reason_stage": "attribute" if attribute.get("root_cause_hypothesis") else "", "is_formal_attribution": False}
+
+
+def _summary_reason_text(attribute, display_reason):
+    if attribute.get("incomplete_reason"):
+        return attribute.get("incomplete_reason") or ""
+    if attribute.get("root_cause_hypothesis"):
+        return attribute.get("root_cause_hypothesis") or ""
+    return display_reason.get("reason") or ""
+
+
+def _compact_summaries(trace, judge, attribute, run, fulfillment_assessments, expectation_attributions):
+    judge_reason = _judge_display_reason(trace, judge, run)
+    display_reason = _display_reason(trace, judge, attribute, run)
+    blocking_count = len([item for item in fulfillment_assessments if isinstance(item, dict) and item.get("blocking")])
+    analysis_quality = attribute.get("analysis_quality") or {}
+    has_attribution = bool(expectation_attributions)
+    has_incomplete = bool(attribute.get("incomplete_reason"))
+    is_formal = bool(analysis_quality.get("passed") is True or has_attribution or display_reason.get("is_formal_attribution")) and not has_incomplete
+    judge_summary = {
+        "status": _display_status(trace, judge, run),
+        "fulfillment_status": (judge.get("overall_fulfillment") or {}).get("status") or "",
+        "verdict": judge.get("verdict") or "",
+        "score": judge.get("score"),
+        "reason": judge_reason.get("reason") or "",
+        "reason_source": judge_reason.get("reason_source") or "",
+        "reason_stage": judge_reason.get("reason_stage") or "",
+        "is_formal_attribution": bool(judge_reason.get("is_formal_attribution")),
+        "assessment_count": len(fulfillment_assessments),
+        "blocking_count": blocking_count,
+    }
+    attribution_summary = {
+        "causal_category": attribute.get("causal_category") or attribute.get("primary_error_type") or attribute.get("failure_category") or "",
+        "attribution_count": len(expectation_attributions),
+        "probe_count": len(attribute.get("probe_results") or []),
+        "summary_text": _summary_reason_text(attribute, display_reason),
+        "is_complete": bool(is_formal),
+        "is_formal_attribution": bool(is_formal),
+    }
+    return judge_summary, attribution_summary
+
+
 def _compact_run(run):
     trace = run.get("trace") or {}
-    judge = run.get("judge") or {}
-    attribute = run.get("attribute") or {}
+    judge = _compact_mapping(run.get("judge") or {})
+    attribute = _compact_mapping(run.get("attribute") or {})
+    frontend_view = dict(run.get("frontend_view") or {})
+    frontend_view.pop("raw_sections", None)
     compact_trace = dict(trace)
     compact_trace.pop("raw_response", None)
+    compact_trace["project_fields"] = _compact_mapping(compact_trace.get("project_fields") or {})
+    fulfillment_assessments = list(judge.get("fulfillment_assessments") or [])
+    expectation_attributions = list(attribute.get("expectation_attributions") or [])
+    judge_summary, attribution_summary = _compact_summaries(compact_trace, judge, attribute, run, fulfillment_assessments, expectation_attributions)
     return {
         "case_id": run.get("case_id"),
-        "status": judge.get("verdict") or trace.get("status") or ("error" if run.get("error") else "done"),
+        "execution_mode": run.get("execution_mode"),
+        "output_source": run.get("output_source") or trace.get("project_fields", {}).get("output_source"),
+        "status": _display_status(trace, judge, run),
         "trace_id": trace.get("trace_id"),
         "trace": compact_trace,
         "judge": judge,
         "attribute": attribute,
+        "judge_summary": judge_summary,
+        "attribution_summary": attribution_summary,
         "cluster": run.get("cluster"),
         "check": run.get("check"),
-        "frontend_view": run.get("frontend_view"),
+        "frontend_view": frontend_view,
         "error": run.get("error"),
     }
 
@@ -46,19 +181,23 @@ def _case_event(index, run):
     trace = run.get("trace") or {}
     judge = run.get("judge") or {}
     attribute = run.get("attribute") or {}
-    status = judge.get("verdict") or trace.get("status") or ("error" if run.get("error") else "done")
-    reason = run.get("error") or trace.get("error") or judge.get("reasoning_summary") or attribute.get("root_cause_hypothesis") or ""
+    status = _display_status(trace, judge, run)
+    judge_reason = _judge_display_reason(trace, judge, run)
+    display_reason = _display_reason(trace, judge, attribute, run)
     return {
         "index": index,
         "case_id": run.get("case_id"),
         "status": status,
         "error": run.get("error") or trace.get("error") or "",
-        "reason": reason,
+        **display_reason,
+        "judge_reason": judge_reason.get("reason") or "",
+        "judge_reason_source": judge_reason.get("reason_source") or "",
+        "judge_reason_stage": judge_reason.get("reason_stage") or "",
         "run": _compact_run(run),
     }
 
 
-def _run_batch_job(job_id, project, cases, mock, expected_intent, concurrency):
+def _run_batch_job(job_id, project, cases, expected_intent, concurrency):
     job = BATCH_JOBS[job_id]
     total = len(cases)
 
@@ -70,7 +209,7 @@ def _run_batch_job(job_id, project, cases, mock, expected_intent, concurrency):
 
     try:
         job["status"] = "running"
-        job["result"] = pipeline.batch_run(project, cases, mock=mock, expected_intent=expected_intent, concurrency=concurrency, on_case_done=on_case_done)
+        job["result"] = pipeline.batch_run(project, cases, expected_intent=expected_intent, concurrency=concurrency, on_case_done=on_case_done)
         job["compact_result"] = _compact_batch_result(job["result"])
         job["done"] = total
         job["status"] = "completed"
@@ -82,12 +221,15 @@ def _run_batch_job(job_id, project, cases, mock, expected_intent, concurrency):
 
 class Handler(SimpleHTTPRequestHandler):
     def translate_path(self, path):
+        frontend_aliases = {"/index.html", "/live.html", "/summary.html"}
+        if path in frontend_aliases:
+            return str(ROOT / "frontend" / path.lstrip("/"))
         if path.startswith("/frontend/"):
             return str(ROOT / path.lstrip("/"))
         return super().translate_path(path)
 
     def end_headers(self):
-        if self.path.startswith("/frontend/"):
+        if self.path.startswith("/frontend/") or self.path in {"/index.html", "/live.html", "/summary.html"}:
             self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
             self.send_header("Pragma", "no-cache")
             self.send_header("Expires", "0")
@@ -134,7 +276,7 @@ class Handler(SimpleHTTPRequestHandler):
             if self.path == "/api/analysis":
                 result = pipeline.analysis(project)
             elif self.path == "/api/live_run":
-                result = pipeline.live_run(project, data.get("input") or {}, mock=bool(data.get("mock")))
+                result = pipeline.live_run(project, data.get("input") or {})
             elif self.path == "/api/mock_cases":
                 result = {"project_id": project, "cases": pipeline.mock_cases(project)}
             elif self.path == "/api/mock_datasets":
@@ -163,16 +305,16 @@ class Handler(SimpleHTTPRequestHandler):
                     ClusterSummary(**data["cluster"]) if data.get("cluster") else None,
                 )
             elif self.path == "/api/run_chain":
-                result = pipeline.run_chain(project, data.get("input") or {}, mock=bool(data.get("mock")), expected_intent=data.get("expected_intent"))
+                result = pipeline.run_chain(project, data.get("input") or {}, expected_intent=data.get("expected_intent"))
             elif self.path == "/api/batch_run":
                 concurrency = max(1, min(int(data.get("concurrency") or 4), 8))
-                result = pipeline.batch_run(project, data.get("cases") or data.get("inputs") or [], mock=bool(data.get("mock")), expected_intent=data.get("expected_intent"), concurrency=concurrency)
+                result = pipeline.batch_run(project, data.get("cases") or data.get("inputs") or [], expected_intent=data.get("expected_intent"), concurrency=concurrency)
             elif self.path == "/api/batch_start":
                 concurrency = max(1, min(int(data.get("concurrency") or 4), 8))
                 cases = data.get("cases") or data.get("inputs") or []
                 job_id = uuid.uuid4().hex
                 BATCH_JOBS[job_id] = {"job_id": job_id, "project_id": project, "status": "pending", "total": len(cases), "done": 0, "events": [], "result": None, "compact_result": None, "error": None}
-                thread = threading.Thread(target=_run_batch_job, args=(job_id, project, cases, bool(data.get("mock")), data.get("expected_intent"), concurrency), daemon=True)
+                thread = threading.Thread(target=_run_batch_job, args=(job_id, project, cases, data.get("expected_intent"), concurrency), daemon=True)
                 thread.start()
                 result = {"job_id": job_id, "status": "pending", "total": len(cases), "done": 0}
             elif self.path == "/api/batch_status":

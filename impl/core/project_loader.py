@@ -28,26 +28,50 @@ def _parse_scalar(value: str) -> Any:
 def load_simple_yaml(path: Path) -> Dict[str, Any]:
     data: Dict[str, Any] = {}
     stack: List[tuple[int, Any]] = [(-1, data)]
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
-            continue
-        indent = len(raw_line) - len(raw_line.lstrip(" "))
-        line = raw_line.strip()
+    lines = [
+        (len(raw_line) - len(raw_line.lstrip(" ")), raw_line.strip())
+        for raw_line in path.read_text(encoding="utf-8").splitlines()
+        if raw_line.strip() and not raw_line.lstrip().startswith("#")
+    ]
+
+    for idx, (indent, line) in enumerate(lines):
         while stack and indent <= stack[-1][0]:
             stack.pop()
         parent = stack[-1][1]
+
         if line.startswith("- "):
-            item = _parse_scalar(line[2:])
-            if isinstance(parent, list):
-                parent.append(item)
+            rest = line[2:]
+            # Check if this is a list item with nested dict (e.g., "- field: value")
+            if ":" in rest:
+                # This is a dict item in a list
+                item_dict = {}
+                if isinstance(parent, list):
+                    parent.append(item_dict)
+                    stack.append((indent, item_dict))
+                # Parse the first key-value pair
+                key, value = rest.split(":", 1)
+                item_dict[key.strip()] = _parse_scalar(value.strip())
+            else:
+                # Simple scalar list item
+                item = _parse_scalar(rest)
+                if isinstance(parent, list):
+                    parent.append(item)
             continue
+
         if ":" not in line:
             continue
+
         key, value = line.split(":", 1)
         key = key.strip()
         value = value.strip()
+
         if value == "":
+            # Look ahead to determine if next line is list or dict
             next_container: Any = {}
+            if idx + 1 < len(lines):
+                next_indent, next_line = lines[idx + 1]
+                if next_indent > indent and next_line.startswith("- "):
+                    next_container = []
             if isinstance(parent, dict):
                 parent[key] = next_container
             stack.append((indent, next_container))
