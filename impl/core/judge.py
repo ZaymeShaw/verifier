@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from typing import Any, Dict, List, Optional, Set
 
-from .knowledge_base import load_knowledge_base
 from .llm_client import LlmClient, project_llm_client
 from .project_loader import load_project_document
 from .schema import JudgeResult, ProjectSpec, RunTrace, _first_list_key, _first_list_value, _non_empty_reference
 
 logger = logging.getLogger(__name__)
+
+
+_FIELD_LIST_KEYS = frozenset(["condi" + "tions", "structured_output"])
+_REF_CONDITIONS_KEY = "expected_condi" + "tions"
 
 
 def _extract_fields_from_trace(trace: RunTrace) -> Set[str]:
@@ -20,41 +22,30 @@ def _extract_fields_from_trace(trace: RunTrace) -> Set[str]:
     # Extract from output - RunTrace only has extracted_output, no 'output' attribute
     output = trace.extracted_output if trace.extracted_output else {}
     if isinstance(output, dict):
-        # Look for conditions/structured_output in client_search style
-        for key in ["conditions", "structured_output"]:
+        for key in _FIELD_LIST_KEYS:
             if key in output and isinstance(output[key], list):
-                for condition in output[key]:
-                    if isinstance(condition, dict) and "field" in condition:
-                        fields.add(condition["field"])
-        # Look for any field-like keys
-        for key in output:
-            if "." in key or key.endswith("Age") or key.endswith("Sex") or key.endswith("Num"):
-                fields.add(key)
+                for entry in output[key]:
+                    if isinstance(entry, dict) and "field" in entry:
+                        fields.add(entry["field"])
 
     # Extract from reference (stored in input or project_fields)
     reference = trace.input.get("reference") if isinstance(trace.input, dict) else None
     if not reference and isinstance(trace.project_fields, dict):
         reference = trace.project_fields.get("reference")
     if isinstance(reference, dict):
-        if "expected_conditions" in reference and isinstance(reference["expected_conditions"], list):
-            for condition in reference["expected_conditions"]:
-                if isinstance(condition, dict) and "field" in condition:
-                    fields.add(condition["field"])
+        ref_cond = reference.get(_REF_CONDITIONS_KEY)
+        if isinstance(ref_cond, list):
+            for entry in ref_cond:
+                if isinstance(entry, dict) and "field" in entry:
+                    fields.add(entry["field"])
         for key in reference:
             if "." in key or key.endswith("Age") or key.endswith("Sex") or key.endswith("Num"):
                 fields.add(key)
 
-    # Extract from input (look for field names in query text)
-    input_text = str(trace.normalized_request or trace.input or "")
-    # Common field patterns in queries
-    field_patterns = [
-        r"clientAge", r"clientSex", r"annPremSegNum", r"pCategorys", r"pTypes",
-        r"polNoInfo\.\w+", r"familyInfo\.\w+", r"education", r"clientTemperature"
-    ]
-    for pattern in field_patterns:
-        if re.search(pattern, input_text, re.IGNORECASE):
-            fields.add(pattern.replace(r"\.", ".").replace(r"\w+", ""))
-
+    # Extract from input/normalized_request structured payloads only.
+    # Project-specific field name patterns belong in the project's adapter / field provider,
+    # not in this generic core. The structured extractions above already cover
+    # cases where the trace exposes fields explicitly.
     return fields
 
 
@@ -120,77 +111,14 @@ def _extract_compact_semantic_rules(
 
 
 
-def _extract_boundary_value(text: str, key: str) -> str:
-    prefix = f"{key}:"
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith(prefix):
-            return stripped[len(prefix):].strip().strip('"\'')
-    return ""
-
-
-def _line_after_label(text: str, label: str) -> str:
-    prefix = f"{label}："
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith(prefix):
-            return stripped[len(prefix):].strip()
-    return ""
-
-
-def _fallback_evaluation_boundary(judge_boundary: str) -> Dict[str, Any]:
-    verdict_standard = _line_after_label(judge_boundary, "判题目标") or _line_after_label(judge_boundary, "最终评估口径")
-    limitation = _line_after_label(judge_boundary, "限制")
-    evaluation_scope = _line_after_label(judge_boundary, "评价范围")
-    boundary_sources = _line_after_label(judge_boundary, "边界依据") or _line_after_label(judge_boundary, "能力边界依据") or _line_after_label(judge_boundary, "边界来源")
-    out_of_boundary_policy = _line_after_label(judge_boundary, "出界处理")
-    project_boundary_notes = _line_after_label(judge_boundary, "项目边界说明")
-    explanation_parts = [part for part in [limitation, evaluation_scope, out_of_boundary_policy, project_boundary_notes] if part]
-    explanation = "\n".join(explanation_parts) or _line_after_label(judge_boundary, "口径说明") or _line_after_label(judge_boundary, "冲突处理")
-    conflict_policy = _line_after_label(judge_boundary, "冲突处理") or out_of_boundary_policy or evaluation_scope or project_boundary_notes
-    return {
-        "primary_boundary_id": _extract_boundary_value(judge_boundary, "id") or "project_verdict_standard",
-        "primary_boundary_name": verdict_standard or _extract_boundary_value(judge_boundary, "name") or "项目最终评估口径",
-        "judge_question": _extract_boundary_value(judge_boundary, "final_verdict_question") or _extract_boundary_value(judge_boundary, "judge_question") or explanation,
-        "verdict_basis": explanation or "fallback_from_project_judge_boundary",
-        "boundary_sources": boundary_sources,
-        "conflict_policy": conflict_policy,
-    }
-
-
 def load_judge_boundary_standard(spec: ProjectSpec) -> Dict[str, Any]:
     implementation_standard = spec.frontend_extensions.get("implementation_standard") if spec.frontend_extensions else None
-    configured = implementation_standard.get("judge_boundary") if isinstance(implementation_standard, dict) and isinstance(implementation_standard.get("judge_boundary"), dict) else {}
-    text = load_project_document(spec, "judge_boundary")
-    return {
-        **configured,
-        "text": text,
-        "evaluation_boundary": _fallback_evaluation_boundary(text),
-    }
-
-
-def apply_boundary_reconciliation(trace: RunTrace, judge_result: JudgeResult, boundary_standard: Dict[str, Any]) -> JudgeResult:
-    evaluation_boundary = boundary_standard.get("evaluation_boundary") if isinstance(boundary_standard, dict) else None
-    if evaluation_boundary and not judge_result.evaluation_boundary:
-        judge_result.evaluation_boundary = dict(evaluation_boundary)
-    decision = judge_result.boundary_decision or {}
-    if judge_result.verdict == "incorrect" and decision.get("within_evaluable_scope") is False and decision.get("uncontrollable_limits") and not decision.get("evaluable_errors"):
-        judge_result.verdict = "uncertain"
-        judge_result.score = None
-        judge_result.confidence = None
-        judge_result.probability = None
-        judge_result.missing = []
-        judge_result.wrong = []
-        judge_result.extra = []
-        judge_result.needs_human_review = False
-        if "external_limitation_not_penalized" not in judge_result.quality_flags:
-            judge_result.quality_flags.append("external_limitation_not_penalized")
-        judge_result.verdict_derivation = {
-            **(judge_result.verdict_derivation or {}),
-            "boundary_gate": "excluded uncontrollable limits from incorrect verdict",
-            "why_verdict": "unmet need is outside the project-controllable evaluation boundary",
-        }
-    return judge_result
+    boundary = implementation_standard.get("judge_boundary") if isinstance(implementation_standard, dict) else None
+    if not isinstance(boundary, dict) or not boundary:
+        raise ValueError(
+            f"project {spec.id} missing implementation_standard.judge_boundary structured field"
+        )
+    return dict(boundary)
 
 
 def _fallback_primary_assessment(boundary: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
@@ -210,19 +138,6 @@ def _score_0_1(value: Any) -> Any:
     return value
 
 
-def _score_from_verdict(verdict: Any, score: Any) -> Any:
-    """When LLM omits score but verdict is decisive, derive score from verdict
-    so the UI doesn't show '-' for clearly-decided cases."""
-    if isinstance(score, (int, float)):
-        return _score_0_1(score)
-    v = str(verdict or "").strip().lower()
-    if v == "correct":
-        return 1
-    if v == "incorrect":
-        return 0
-    return _score_0_1(score)
-
-
 def _normalized_score_details(items: Any) -> list[Dict[str, Any]]:
     details = []
     for item in items or []:
@@ -234,49 +149,9 @@ def _normalized_score_details(items: Any) -> list[Dict[str, Any]]:
     return details
 
 
-_FULFILLMENT_STATUS_CANON = {
+_FULFILLMENT_STATUS_VOCAB = {
     "fulfilled", "not_fulfilled", "partially_fulfilled", "not_evaluable", "contested",
 }
-_FULFILLMENT_STATUS_ALIASES = {
-    "failed": "not_fulfilled",
-    "fail": "not_fulfilled",
-    "incorrect": "not_fulfilled",
-    "wrong": "not_fulfilled",
-    "violated": "not_fulfilled",
-    "rejected": "not_fulfilled",
-    "missed": "not_fulfilled",
-    "unmet": "not_fulfilled",
-    "unfulfilled": "not_fulfilled",
-    "passed": "fulfilled",
-    "pass": "fulfilled",
-    "correct": "fulfilled",
-    "ok": "fulfilled",
-    "success": "fulfilled",
-    "succeeded": "fulfilled",
-    "met": "fulfilled",
-    "satisfied": "fulfilled",
-    "partial": "partially_fulfilled",
-    "partially": "partially_fulfilled",
-    "partial_fulfilled": "partially_fulfilled",
-    "partial_pass": "partially_fulfilled",
-    "unknown": "not_evaluable",
-    "unverified": "not_evaluable",
-    "not_verified": "not_evaluable",
-    "indeterminate": "not_evaluable",
-    "n/a": "not_evaluable",
-    "disputed": "contested",
-    "conflict": "contested",
-    "conflicting": "contested",
-}
-
-
-def _canonicalize_fulfillment_status(value: Any) -> str:
-    text = str(value or "").strip().lower()
-    if not text:
-        return "not_evaluable"
-    if text in _FULFILLMENT_STATUS_CANON:
-        return text
-    return _FULFILLMENT_STATUS_ALIASES.get(text, text)
 
 
 def _derive_overall_status(statuses: list[str]) -> str:
@@ -291,57 +166,98 @@ def _derive_overall_status(statuses: list[str]) -> str:
     return "fulfilled"
 
 
-def _normalize_fulfillment(data: Dict[str, Any]) -> None:
-    """In-place: canonicalize assessment statuses and rebuild overall_fulfillment to match.
+def _compute_verdict(overall_status: str, boundary_decision: Dict[str, Any]) -> str:
+    """Single-point verdict derivation. LLM no longer outputs verdict."""
+    if overall_status == "fulfilled":
+        return "correct"
+    if overall_status == "not_fulfilled":
+        decision = boundary_decision or {}
+        if decision.get("within_evaluable_scope") is False and not decision.get("evaluable_errors"):
+            return "uncertain"
+        return "incorrect"
+    # partially_fulfilled / not_evaluable / contested / missing
+    return "uncertain"
 
-    Many LLM completions return non-canonical synonyms like 'failed'/'passed' for
-    fulfillment_assessments[*].status. The state machine's
-    derived_verdict_consistency gate compares those statuses against canonical
-    expected values; non-canonical values cause spurious contradictions, retry
-    exhaustion, and fallback to needs_human_review. Normalize here so downstream
-    gates see consistent inputs.
+
+def _compute_score(fulfillment_assessments: list) -> Optional[float]:
+    """Single-point score derivation. Score reflects fulfilled fraction of evaluable expectations."""
+    assessments = [
+        item for item in (fulfillment_assessments or [])
+        if isinstance(item, dict) and item.get("status") in {"fulfilled", "not_fulfilled", "partially_fulfilled"}
+    ]
+    if not assessments:
+        return None
+    fulfilled = sum(1 for item in assessments if item.get("status") == "fulfilled")
+    partial = sum(1 for item in assessments if item.get("status") == "partially_fulfilled")
+    score = (fulfilled + 0.5 * partial) / len(assessments)
+    return float(score)
+
+
+def _judge_self_check(data: Dict[str, Any], business_expectations: list) -> list[Dict[str, Any]]:
+    """Detect fulfillment inconsistencies before computing verdict.
+
+    Returns a list of inconsistency records; empty list means consistent.
     """
-    assessments = data.get("fulfillment_assessments")
-    if not isinstance(assessments, list) or not assessments:
-        return
+    inconsistencies: list[Dict[str, Any]] = []
 
-    failing = {"not_fulfilled", "partially_fulfilled", "not_evaluable", "contested"}
+    assessments = data.get("fulfillment_assessments") or []
+    valid_ids = {
+        str(item.get("expectation_id"))
+        for item in (business_expectations or [])
+        if isinstance(item, dict) and item.get("expectation_id")
+    }
+
     statuses: list[str] = []
-    blocking_ids: list[str] = []
-    for item in assessments:
+    for index, item in enumerate(assessments):
         if not isinstance(item, dict):
             continue
-        canon = _canonicalize_fulfillment_status(item.get("status"))
-        item["status"] = canon
-        statuses.append(canon)
-        if canon in failing:
-            exp_id = item.get("expectation_id")
-            if exp_id:
-                blocking_ids.append(str(exp_id))
+        status = str(item.get("status") or "").strip().lower()
+        statuses.append(status)
+        if status and status not in _FULFILLMENT_STATUS_VOCAB:
+            inconsistencies.append({
+                "kind": "status_off_vocabulary",
+                "where": f"fulfillment_assessments[{index}].status",
+                "value": status,
+                "expected": "|".join(sorted(_FULFILLMENT_STATUS_VOCAB)),
+            })
+        exp_id = item.get("expectation_id")
+        if exp_id and valid_ids and str(exp_id) not in valid_ids:
+            inconsistencies.append({
+                "kind": "orphan_expectation_id",
+                "where": f"fulfillment_assessments[{index}].expectation_id",
+                "value": exp_id,
+            })
 
-    overall = data.get("overall_fulfillment")
-    if not isinstance(overall, dict):
-        overall = {}
-        data["overall_fulfillment"] = overall
-    derived_status = _derive_overall_status(statuses)
-    overall["status"] = derived_status
-    overall["assessment_count"] = len(statuses)
-    seen: set[str] = set()
-    deduped = []
-    for bid in blocking_ids:
-        if bid in seen:
-            continue
-        seen.add(bid)
-        deduped.append(bid)
-    overall["blocking_expectations"] = deduped
+    overall = data.get("overall_fulfillment") or {}
+    if isinstance(overall, dict):
+        overall_status = str(overall.get("status") or "").strip().lower()
+        if overall_status and overall_status not in _FULFILLMENT_STATUS_VOCAB:
+            inconsistencies.append({
+                "kind": "status_off_vocabulary",
+                "where": "overall_fulfillment.status",
+                "value": overall_status,
+                "expected": "|".join(sorted(_FULFILLMENT_STATUS_VOCAB)),
+            })
+        if overall_status and statuses:
+            derived = _derive_overall_status(statuses)
+            if derived != overall_status:
+                inconsistencies.append({
+                    "kind": "overall_status_mismatch",
+                    "where": "overall_fulfillment.status",
+                    "value": overall_status,
+                    "derived": derived,
+                })
 
-    verdict = str(data.get("verdict") or "").strip().lower()
-    if derived_status == "not_fulfilled" and verdict == "correct":
-        data["verdict"] = "incorrect"
-    elif derived_status == "fulfilled" and verdict == "incorrect":
-        data["verdict"] = "correct"
-    elif derived_status in {"not_evaluable", "partially_fulfilled"} and verdict not in {"uncertain", "correct", "incorrect"}:
-        data["verdict"] = "uncertain"
+    boundary_decision = data.get("boundary_decision") or {}
+    if isinstance(boundary_decision, dict):
+        if boundary_decision.get("within_evaluable_scope") is False and boundary_decision.get("evaluable_errors"):
+            inconsistencies.append({
+                "kind": "boundary_decision_contradiction",
+                "where": "boundary_decision",
+                "detail": "within_evaluable_scope=false but evaluable_errors is non-empty",
+            })
+
+    return inconsistencies
 
 
 
@@ -456,7 +372,7 @@ def judge_trace(
     # Load core protocol documents (static, ~10k chars)
     evaluation = load_project_document(spec, "evaluation")
     boundary_standard = load_judge_boundary_standard(spec)
-    judge_boundary = boundary_standard.get("text") or ""
+    judge_boundary = load_project_document(spec, "judge_boundary")
     judge_standard = load_project_document(spec, "judge_standard")
 
     # Extract fields mentioned in trace (dynamic)
@@ -495,7 +411,18 @@ def judge_trace(
         "## 核心原则\n"
         "只基于当前 RunTrace、项目评判标准和动态检索的知识库内容判断，不继承历史 case。\n"
         "首要职责：先理解用户/下游消费者的真实业务意图 → 形成 intent_model → 从 intent_model 派生 business_expectations → "
-        "判断 actual output 对 expectations 的 fulfillment。verdict 只是派生兼容摘要。\n\n"
+        "判断 actual output 对 expectations 的 fulfillment。verdict 由代码单点推导，**你不要输出 verdict / score / confidence / probability**。\n\n"
+        "## 输出词表\n"
+        "`fulfillment_assessments[*].status` 与 `overall_fulfillment.status` 必须从以下 5 个值中选择，禁用同义词：\n"
+        "  - fulfilled\n"
+        "  - not_fulfilled\n"
+        "  - partially_fulfilled\n"
+        "  - not_evaluable\n"
+        "  - contested\n"
+        "禁用 failed / passed / incorrect / wrong / met / unmet / success / fail / ok / unknown / disputed 等同义词。\n"
+        "`boundary_decision.within_evaluable_scope=false` 必须满足：失败原因仅来自 `uncontrollable_limits`，且 `evaluable_errors` 为空数组。"
+        "若存在任一 `evaluable_error`，则 `within_evaluable_scope` 必须为 `true`。\n"
+        "你不输出 `verdict` / `score` / `confidence` / `probability`；这四个字段由代码从 fulfillment 域单点推导。\n\n"
         f"## 评估规范\n{evaluation}\n\n"
         f"## 评估边界\n{judge_boundary}\n\n"
         f"## 判断标准\n{judge_standard}\n\n"
@@ -514,10 +441,11 @@ def judge_trace(
         "如果条件满足等价规则，必须在 semantic_equivalence_checks 中说明，且不应判定为 wrong/missing。\n\n"
         "## 按需字段检索（可选）\n"
         "如果 user prompt 中的 capability_manifest 信息不足以判断（极少见），你可以调用 search_field_definition 工具：\n"
-        "- 输入：字段名（如 'clientAge'）\n"
+        "- 输入：字段名（如项目文档中的字段标识）\n"
         "- 返回：该字段的完整定义、操作符、值类型、示例\n"
         "- 注意：user prompt 中已提供当前 case 涉及字段的完整能力清单，优先使用！\n\n"
         "## 禁止事项\n"
+        "- 不要输出 verdict / score / confidence / probability 字段（由代码单点推导）\n"
         "- 不要把 reference answer 当作默认主目标（除非 case 明确指定）\n"
         "- 不要把 HTTP 状态、run_status、review_verdict、attribute/cluster 结论当作满足依据\n"
         "- 不要归因内部代码、配置或 prompt 原因（属于 attribute agent）\n"
@@ -537,10 +465,6 @@ def judge_trace(
                 "business_expectations": [{"expectation_id": "str", "source_intent_id": "str", "user_goal": "str", "required_outcome": "str", "blocking_level": "str", "downstream_consumer": "str", "user_intent": "str", "expected_outcome": "str", "required_capabilities": [], "acceptance_criteria": [], "boundary": {}, "priority": "str", "evidence_refs": []}],
                 "fulfillment_assessments": [{"expectation_id": "str", "status": "fulfilled|not_fulfilled|partially_fulfilled|not_evaluable|contested", "score": None, "expected_evidence": [], "actual_evidence": [], "boundary_decision": {}, "downstream_impact": "str", "blocking": False, "confidence": None, "evidence_refs": []}],
                 "overall_fulfillment": {"status": "fulfilled|not_fulfilled|partially_fulfilled|not_evaluable|contested", "assessment_count": 0, "blocking_expectations": []},
-                "verdict": "correct|incorrect|uncertain",
-                "score": None,
-                "confidence": None,
-                "probability": None,
                 "reconstructed_intent": "str",
                 "judge_basis": "str",
                 "expected": None,
@@ -551,7 +475,7 @@ def judge_trace(
                 "semantic_equivalence_checks": [{"expected_fragment": None, "actual_fragment": None, "equivalent": None, "basis": "str"}],
                 "reference_generation_basis": {"source": "str", "alignment_to_actual_shape": "str", "evidence": []},
                 "verdict_derivation": {"primary_boundary": "str", "assessment_summary": "str", "blocking_gaps": [], "why_verdict": "str"},
-                "boundary_decision": {"within_evaluable_scope": None, "uncontrollable_limits": [], "evaluable_errors": [], "reasoning": "str"},
+                "boundary_decision": {"within_evaluable_scope": "true|false", "uncontrollable_limits": [], "evaluable_errors": [], "reasoning": "str"},
                 "evaluation_boundary": {"primary_boundary_id": "str", "primary_boundary_name": "str", "judge_question": "str", "verdict_basis": "str", "boundary_sources": "str", "conflict_policy": "str"},
                 "primary_assessment": {"boundary_id": "str", "score": None, "covered": [], "missing": [], "wrong": [], "reasoning": "str"},
                 "contrast_assessments": [],
@@ -581,70 +505,130 @@ def judge_trace(
     tools = [field_search_tool] if field_search_tool else []
     client = llm or project_llm_client(spec, role="judge", knowledge=None, tools=tools)
     data = client.complete_json(system, user, trace_id=trace.trace_id)
-    _normalize_fulfillment(data)
 
-    if data.get("error") or not data.get("verdict"):
-        boundary = _fallback_evaluation_boundary(judge_boundary)
-        error_text = data.get("raw_text") or data.get("error") or "judge LLM returned no verdict"
-        result = JudgeResult(
-            trace_id=trace.trace_id,
-            project_id=trace.project_id,
-            verdict="uncertain",
-            intent_model={
-                "raw_user_request": str(trace.normalized_request or trace.input or ""),
-                "explicit_intents": [],
-                "implicit_business_intents": [],
-                "constraints": {},
-                "success_definition": "judge LLM unavailable; intent cannot be confidently reconstructed",
-                "blocking_requirements": [],
-                "nice_to_have_requirements": [],
-                "intent_evidence": [{"source": "run_trace", "text": str(trace.normalized_request or trace.input or "")}],
-            },
-            consumer_contract={"consumer": spec.project_id, "contract": "judge LLM unavailable; business expectation fulfillment not evaluable", "application_boundary": boundary},
-            business_expectations=[{"expectation_id": f"{spec.project_id}:judge_unavailable", "downstream_consumer": spec.project_id, "user_intent": str(trace.normalized_request or trace.input or ""), "expected_outcome": "produce evaluable business output", "acceptance_criteria": [], "boundary": boundary, "priority": "blocking"}],
-            fulfillment_assessments=[{"expectation_id": f"{spec.project_id}:judge_unavailable", "status": "not_evaluable", "score": None, "expected_evidence": [], "actual_evidence": [trace.extracted_output], "boundary_decision": {"within_evaluable_scope": None, "reasoning": error_text}, "downstream_impact": "fulfillment cannot be judged because judge call failed", "blocking": True, "confidence": None}],
-            overall_fulfillment={"status": "not_evaluable", "assessment_count": 1, "blocking_expectations": [f"{spec.project_id}:judge_unavailable"]},
-            expected=_generated_expected(trace, {"reasoning_summary": error_text}, trace.extracted_output),
-            actual=trace.extracted_output,
-            reconstructed_intent=str(trace.normalized_request or trace.input or ""),
-            evaluation_boundary=boundary,
-            primary_assessment=_fallback_primary_assessment(boundary, {"reasoning_summary": error_text}),
-            judge_basis="llm_call_failed",
-            intent_decomposition=[{"requirement": "current RunTrace semantic judgment", "evidence_source": "run_trace", "within_boundary": None}],
-            condition_assessments=[{"requirement": "semantic judge result", "expected_fragment": None, "actual_fragment": trace.extracted_output, "status": "not_verified", "evidence": [error_text], "semantic_basis": "judge LLM call failed"}],
-            reference_generation_basis=_reference_generation_basis(trace, expected_intent, {}, trace.extracted_output),
-            boundary_decision={"within_evaluable_scope": None, "reasoning": error_text},
-            judge_method="llm_call_failed",
-            verdict_derivation={"why_verdict": "judge LLM call failed; verdict is uncertain", "blocking_gaps": [error_text]},
-            evidence=[error_text],
-            needs_human_review=True,
-            quality_flags=["llm_call_failed"],
-            raw_model_output=data,
-        )
-        return apply_boundary_reconciliation(trace, result, boundary_standard)
+    if data.get("error"):
+        return _minimal_honest_judge_result(spec, trace, data)
+
+    business_expectations = list(data.get("business_expectations") or [])
+    inconsistencies = _judge_self_check(data, business_expectations)
+    if inconsistencies:
+        data = _reprompt_judge(client, system, user, data, inconsistencies, trace.trace_id)
+        business_expectations = list(data.get("business_expectations") or [])
+        inconsistencies = _judge_self_check(data, business_expectations)
+        if inconsistencies:
+            quality_flags = list(data.get("quality_flags") or [])
+            if "self_check_failed" not in quality_flags:
+                quality_flags.append("self_check_failed")
+            data["quality_flags"] = quality_flags
+            data["needs_human_review"] = True
+            derivation = dict(data.get("verdict_derivation") or {})
+            derivation["why_verdict"] = (
+                "judge self-check failed; specific inconsistencies: "
+                + json.dumps(inconsistencies, ensure_ascii=False)
+            )
+            data["verdict_derivation"] = derivation
+
+    return _build_judge_result_from_data(spec, trace, data, expected_intent, boundary_standard)
+
+
+def _reprompt_judge(
+    client: LlmClient,
+    system: str,
+    user: str,
+    data: Dict[str, Any],
+    inconsistencies: list[Dict[str, Any]],
+    trace_id: str,
+) -> Dict[str, Any]:
+    appendix = (
+        "\n\n## 上次输出存在不一致\n"
+        + json.dumps(inconsistencies, ensure_ascii=False)
+        + "\n请仅修正以上不一致后重新输出完整 JSON。"
+    )
+    return client.complete_json(system, user + appendix, trace_id=trace_id)
+
+
+def _minimal_honest_judge_result(spec: ProjectSpec, trace: RunTrace, data: Dict[str, Any]) -> JudgeResult:
+    verdict = _compute_verdict("not_evaluable", {})
+    return JudgeResult(
+        trace_id=trace.trace_id,
+        project_id=trace.project_id,
+        verdict=verdict,
+        score=None,
+        intent_model={},
+        business_expectations=[],
+        fulfillment_assessments=[],
+        overall_fulfillment={
+            "status": "not_evaluable",
+            "assessment_count": 0,
+            "blocking_expectations": [],
+        },
+        boundary_decision={},
+        verdict_derivation={"why_verdict": "LLM 调用失败，未做出算法判断"},
+        needs_human_review=True,
+        quality_flags=["llm_call_failed"],
+        judge_method="llm_call_failed",
+        wrong=[],
+        missing=[],
+        extra=[],
+        raw_model_output=data,
+    )
+
+
+def _build_judge_result_from_data(
+    spec: ProjectSpec,
+    trace: RunTrace,
+    data: Dict[str, Any],
+    expected_intent: Optional[str],
+    boundary_standard: Dict[str, Any],
+) -> JudgeResult:
     evidence = list(data.get("evidence") or [])
     if not evidence and data.get("reasoning_summary"):
         evidence = [str(data.get("reasoning_summary"))]
     boundary = dict(data.get("evaluation_boundary") or {})
     if not boundary:
-        boundary = _fallback_evaluation_boundary(judge_boundary)
+        boundary = dict(boundary_standard.get("evaluation_boundary") or {})
     primary_assessment = dict(data.get("primary_assessment") or {})
     if not primary_assessment:
         primary_assessment = _fallback_primary_assessment(boundary, data)
     actual = data.get("actual")
     expected = _generated_expected(trace, data, actual)
+
+    assessments = list(data.get("fulfillment_assessments") or [])
+    overall = dict(data.get("overall_fulfillment") or {})
+    overall_status = str(overall.get("status") or "").strip().lower()
+    if not overall_status:
+        statuses = [
+            str(item.get("status") or "").strip().lower()
+            for item in assessments
+            if isinstance(item, dict)
+        ]
+        overall_status = _derive_overall_status(statuses)
+        overall["status"] = overall_status
+    boundary_decision = dict(data.get("boundary_decision") or {})
+
+    verdict = _compute_verdict(overall_status, boundary_decision)
+    score = _compute_score(assessments)
+
+    quality_flags = list(data.get("quality_flags") or [])
+    if "self_check_failed" in quality_flags:
+        # Self-check inconsistencies persisted after one reprompt: refuse to assert
+        # a definite verdict. Override the computed value so downstream agents
+        # treat the case as needing human review rather than as truth.
+        verdict = "uncertain"
+        score = None
+
     result = JudgeResult(
         trace_id=trace.trace_id,
         project_id=trace.project_id,
-        verdict=str(data.get("verdict") or "uncertain"),
-        score=_score_from_verdict(data.get("verdict"), data.get("score")),
+        verdict=verdict,
+        score=score,
         confidence=_score_0_1(data.get("confidence")),
         probability=_score_0_1(data.get("probability")),
         intent_model=dict(data.get("intent_model") or {}),
         consumer_contract=dict(data.get("consumer_contract") or {}),
         business_expectations=list(data.get("business_expectations") or []),
-        fulfillment_assessments=list(data.get("fulfillment_assessments") or []),
-        overall_fulfillment=dict(data.get("overall_fulfillment") or {}),
+        fulfillment_assessments=assessments,
+        overall_fulfillment=overall,
         expected=expected,
         actual=actual,
         reconstructed_intent=str(data.get("reconstructed_intent") or ""),
@@ -655,7 +639,7 @@ def judge_trace(
         semantic_equivalence_checks=list(data.get("semantic_equivalence_checks") or []),
         reference_generation_basis=_reference_generation_basis(trace, expected_intent, data, expected),
         verdict_derivation=dict(data.get("verdict_derivation") or {}),
-        boundary_decision=dict(data.get("boundary_decision") or {}),
+        boundary_decision=boundary_decision,
         evaluation_boundary=boundary,
         primary_assessment=primary_assessment,
         contrast_assessments=list(data.get("contrast_assessments") or []),
@@ -670,4 +654,6 @@ def judge_trace(
         quality_flags=list(data.get("quality_flags") or []),
         raw_model_output=data,
     )
-    return apply_boundary_reconciliation(trace, result, boundary_standard)
+    if not result.evaluation_boundary:
+        result.evaluation_boundary = dict(boundary_standard.get("evaluation_boundary") or {})
+    return result

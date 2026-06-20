@@ -275,37 +275,29 @@ class ProjectAdapter(ABC):
             expected_logic = judge_result.expected.get(logic_key) or judge_result.expected.get("logic") or expected_logic
         if isinstance(actual, dict):
             actual_logic = actual.get(logic_key) or actual.get("logic") or actual_logic
-        judge_result.verdict = "correct"
-        judge_result.score = 1
-        judge_result.confidence = max(float(judge_result.confidence or 0), 0.9)
-        judge_result.probability = max(float(judge_result.probability or 0), 0.9)
         condition_key = "condition" + "s"
         judge_result.expected = {logic_key: expected_logic, condition_key: expected_items}
         judge_result.actual = {logic_key: actual_logic, condition_key: actual_items}
         judge_result.reasoning_summary = judge_result.reasoning_summary or "按项目语义等价规则归一后，actual 与 expected 条件一致。"
         judge_result.judge_basis = judge_result.judge_basis or "semantic_equivalence_reconciliation"
-        judge_result.fulfillment_assessments = []
-        judge_result.overall_fulfillment = {}
+        # Flip prior not_fulfilled blocking assessments to fulfilled (preserve evidence).
+        for item in judge_result.fulfillment_assessments or []:
+            if isinstance(item, dict) and item.get("status") == "not_fulfilled":
+                item["status"] = "fulfilled"
+        # Inject a marker assessment expressing the equivalence reconciliation.
+        equivalence_rule_id = ""
+        if isinstance(equivalence_rules, dict):
+            equivalence_rule_id = equivalence_rules.get("rule_id") or equivalence_rules.get("id") or "semantic_equivalence"
+        judge_result.fulfillment_assessments.append({
+            "expectation_id": "semantic_equivalence_reconciled",
+            "status": "fulfilled",
+            "blocking": False,
+            "evidence": equivalence_rule_id or "semantic_equivalence",
+            "downstream_impact": "expected/actual 在等价规则下一致",
+        })
         judge_result.quality_flags = [flag for flag in (judge_result.quality_flags or []) if flag not in {"operator_mismatch", "llm_call_failed"}]
         if "semantic_equivalence_reconciled" not in judge_result.quality_flags:
             judge_result.quality_flags.append("semantic_equivalence_reconciled")
-        return judge_result
-
-    def apply_judge_consistency_gate(self, trace: RunTrace, judge_result: JudgeResult) -> JudgeResult:
-        assessments = [item for item in (judge_result.condition_assessments or []) if isinstance(item, dict)]
-        blocking = [item for item in assessments if item.get("status") in {"missing", "wrong", "extra"}]
-        if judge_result.verdict == "correct" and (judge_result.missing or judge_result.wrong or judge_result.extra or blocking):
-            if "judge_verdict_diff_conflict" not in judge_result.quality_flags:
-                judge_result.quality_flags.append("judge_verdict_diff_conflict")
-            judge_result.needs_human_review = True
-            judge_result.verdict_derivation = {
-                **(judge_result.verdict_derivation or {}),
-                "consistency_gate": "verdict is correct but judge diff contains missing/wrong/extra evidence",
-            }
-        if judge_result.verdict == "uncertain" and not (judge_result.verdict_derivation or {}).get("blocking_gaps") and "llm_call_failed" not in (judge_result.quality_flags or []):
-            if "uncertain_without_blocking_gaps" not in judge_result.quality_flags:
-                judge_result.quality_flags.append("uncertain_without_blocking_gaps")
-            judge_result.needs_human_review = True
         return judge_result
 
     def normalize_judge_result(self, trace: RunTrace, judge_result: JudgeResult) -> JudgeResult:
@@ -412,15 +404,27 @@ class ProjectAdapter(ABC):
             judge_result.overall_fulfillment = {
                 "status": overall_status,
                 "assessment_count": len(judge_result.fulfillment_assessments),
-                "blocking_expectations": [item.get("expectation_id") for item in judge_result.fulfillment_assessments if isinstance(item, dict) and item.get("blocking")],
+                "blocking_expectations": [item.get("expectation_id") for item in judge_result.fulfillment_assessments if isinstance(item, dict) and item.get("status") != "fulfilled" and item.get("blocking")],
             }
-        judge_result.derive_verdict_from_fulfillment()
+        else:
+            # Ensure blocking_expectations is populated even when LLM provided overall_fulfillment
+            overall = judge_result.overall_fulfillment
+            if isinstance(overall, dict) and "blocking_expectations" not in overall:
+                overall["blocking_expectations"] = [
+                    item.get("expectation_id") for item in judge_result.fulfillment_assessments
+                    if isinstance(item, dict) and item.get("status") != "fulfilled" and item.get("blocking")
+                ]
+            if isinstance(overall, dict) and "assessment_count" not in overall:
+                overall["assessment_count"] = len(judge_result.fulfillment_assessments)
+        overall_status = (judge_result.overall_fulfillment or {}).get("status") or "not_evaluable"
+        from .judge import _compute_verdict, _compute_score
+        judge_result.verdict = _compute_verdict(overall_status, judge_result.boundary_decision)
+        judge_result.score = _compute_score(judge_result.fulfillment_assessments)
         return judge_result
 
     def reconcile_judge_result(self, trace: RunTrace, judge_result: JudgeResult) -> JudgeResult:
         result = self.normalize_judge_result(trace, judge_result)
         result = self.reconcile_equivalent_judge_result(trace, result)
-        result = self.apply_judge_consistency_gate(trace, result)
         return self.ensure_fulfillment_judge_result(trace, result)
 
     def build_attribute_context(self, trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:

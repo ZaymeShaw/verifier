@@ -240,19 +240,35 @@ class Adapter(ProjectAdapter):
             failures.append({"requirement": "allow_fallback", "expected_fragment": False, "actual_fragment": fallback, "status": "wrong", "evidence": ["fallback used but reference/boundary does not allow it"]})
         if not failures:
             return judge_result
-        judge_result.verdict = "incorrect"
-        judge_result.score = min(float(judge_result.score or 0.5), 0.4)
         judge_result.actual = output
         judge_result.expected = expected or judge_result.expected
-        judge_result.condition_assessments = list(judge_result.condition_assessments or []) + failures
-        judge_result.missing = list(judge_result.missing or []) + [item for item in failures if item.get("status") == "missing"]
-        judge_result.wrong = list(judge_result.wrong or []) + [item for item in failures if item.get("status") == "wrong"]
-        judge_result.extra = list(judge_result.extra or []) + [item for item in failures if item.get("status") == "extra"]
+        for failure in failures:
+            requirement = failure.get("requirement") or "contract"
+            evidence_text = "; ".join(failure.get("evidence") or []) or failure.get("status") or "mismatch"
+            downstream_impact = self._failure_downstream_impact(requirement, failure)
+            judge_result.fulfillment_assessments.append({
+                "expectation_id": f"mp_contract:{requirement}",
+                "status": "not_fulfilled",
+                "blocking": True,
+                "evidence": evidence_text,
+                "downstream_impact": downstream_impact,
+            })
         judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), "project_deterministic_evidence": failures, "why_verdict": "marketing-planning adapter found stage/path/fallback contract mismatch."}
         judge_result.boundary_decision = {**(judge_result.boundary_decision or {}), "application_boundary": trace.project_fields.get("application_boundary") or {}}
         if "marketing_planning_contract_mismatch" not in judge_result.quality_flags:
             judge_result.quality_flags.append("marketing_planning_contract_mismatch")
         return judge_result
+
+    def _failure_downstream_impact(self, requirement, failure):
+        impacts = {
+            "expected_stage": "stage 路由错误，下游无法进入预期 planning 流程",
+            "required_events": "SSE 关键事件缺失，前端无法完整渲染结果",
+            "required_path_types": "规划卡片类型缺失，用户拿不到预期 planning action",
+            "forbidden_path_types": "出现禁用 path，超出 application boundary",
+            "allow_fallback": "fallback 在不允许的边界内触发，违反 boundary 契约",
+            "target_value_wan": "目标值单位/数值错误，规划结果不可执行",
+        }
+        return impacts.get(requirement, f"{requirement} 契约不满足")
 
     def _append_expected_quality_failures(self, trace, output, expected, failures):
         metadata = (trace.normalized_request or {}).get("metadata") or {}

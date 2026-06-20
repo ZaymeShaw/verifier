@@ -375,8 +375,6 @@ class Adapter(ProjectAdapter):
         for flag in ["estimated_quality_only", "qa_weak_quality_not_semantic_judge"]:
             if flag not in flags:
                 flags.append(flag)
-        judge_result.verdict = "uncertain"
-        judge_result.score = None
         judge_result.confidence = min(float(judge_result.confidence or 0.2), 0.4)
         judge_result.judge_basis = "qa_weak_quality_probe"
         judge_result.judge_method = "qa_weak_quality_probe"
@@ -386,9 +384,18 @@ class Adapter(ProjectAdapter):
         elif "actual_answer" not in judge_result.actual and "answer" in judge_result.actual:
             judge_result.actual = {**judge_result.actual, "actual_answer": judge_result.actual.get("answer")}
         judge_result.expected = judge_result.expected or self._generate_reference(request, str(actual.get("actual_answer") or ""), [], "qa_weak_quality")
+        judge_result.fulfillment_assessments = [{
+            "expectation_id": "QA:answer_quality",
+            "status": "not_evaluable",
+            "blocking": False,
+            "evidence": [f"data_quality_flags={data_quality_flags}"],
+            "downstream_impact": reason,
+        }]
+        judge_result.overall_fulfillment = {"status": "not_evaluable", "assessment_count": 1, "blocking_expectations": []}
+        judge_result.boundary_decision = {"within_evaluable_scope": False, "reasoning": reason}
         judge_result.condition_assessments = [{"requirement": "qa_weak_quality", "expected_fragment": judge_result.expected, "actual_fragment": judge_result.actual, "status": "not_verified", "evidence": [f"data_quality_flags={data_quality_flags}"]}]
         judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), "blocking_gaps": [reason], "why_verdict": reason}
-        judge_result.primary_assessment = {"boundary_id": "qa_weak_quality", "score": None, "covered": [], "missing": [reason], "wrong": [], "reasoning": reason}
+        judge_result.primary_assessment = {"boundary_id": "qa_weak_quality", "covered": [], "missing": [reason], "wrong": [], "reasoning": reason}
         judge_result.missing = []
         judge_result.wrong = []
         judge_result.extra = []
@@ -415,12 +422,10 @@ class Adapter(ProjectAdapter):
         return JudgeResult(
             trace_id=trace.trace_id,
             project_id=trace.project_id,
-            verdict="correct",
-            score=1.0,
             confidence=1.0,
             consumer_contract=self._default_consumer_contract(trace, judge_result),
             business_expectations=[self._default_business_expectation(trace, judge_result)],
-            fulfillment_assessments=[{"expectation_id": "QA:answer_quality", "status": "fulfilled", "score": 1.0, "expected_evidence": [reference], "actual_evidence": [actual], "boundary_decision": {"within_evaluable_scope": True, "reasoning": "actual_answer exactly matches golden_answer"}, "downstream_impact": "QA answer is acceptable for the current user", "blocking": False, "confidence": 1.0}],
+            fulfillment_assessments=[{"expectation_id": "QA:answer_quality", "status": "fulfilled", "expected_evidence": [reference], "actual_evidence": [actual], "boundary_decision": {"within_evaluable_scope": True, "reasoning": "actual_answer exactly matches golden_answer"}, "downstream_impact": "QA answer is acceptable for the current user", "blocking": False, "confidence": 1.0}],
             overall_fulfillment={"status": "fulfilled", "assessment_count": 1, "blocking_expectations": []},
             expected=reference,
             actual=actual,
@@ -479,8 +484,6 @@ class Adapter(ProjectAdapter):
         return JudgeResult(
             trace_id=trace.trace_id,
             project_id=trace.project_id,
-            verdict="uncertain",
-            score=None,
             confidence=0.2,
             expected=expected_reference,
             actual=actual,
@@ -494,7 +497,7 @@ class Adapter(ProjectAdapter):
             verdict_derivation={"primary_boundary": scenario or "qa_fallback", "assessment_summary": reason, "blocking_gaps": blocking_gaps, "why_verdict": reason},
             boundary_decision={"within_evaluable_scope": scenario != "invalid_sample", "reasoning": reason},
             evaluation_boundary={"primary_boundary_id": scenario or "qa_fallback", "primary_boundary_name": "QA semantic evaluation", "judge_question": "当前 QA 输出是否满足样本参考或场景要求", "verdict_basis": "semantic judge unavailable; local probe is not a correctness judge", "boundary_sources": "impl/projects/QA/evaluation.md", "conflict_policy": "do not infer correct/incorrect from text overlap or answer length"},
-            primary_assessment={"boundary_id": scenario or "qa_fallback", "score": None, "covered": [], "missing": blocking_gaps, "wrong": [], "reasoning": reason},
+            primary_assessment={"boundary_id": scenario or "qa_fallback", "covered": [], "missing": blocking_gaps, "wrong": [], "reasoning": reason},
             missing=blocking_gaps if data_quality_flags else [],
             wrong=[],
             extra=[],
@@ -514,43 +517,41 @@ class Adapter(ProjectAdapter):
         if scenario == "qa_weak_quality":
             return None
         error_type = str(metadata.get("expected_error_type") or "")
-        verdict = expected_quality
-        status = "fulfilled" if verdict == "correct" else "not_fulfilled"
+        is_correct = expected_quality == "correct"
+        status = "fulfilled" if is_correct else "not_fulfilled"
         evidence = [
             f"scenario={scenario or 'unknown'}",
             f"expected_quality={expected_quality}",
             f"expected_error_type={error_type or 'none'}",
             "sample_label_source=metadata.expected_quality",
         ]
-        blocking_gaps = [] if verdict == "correct" else [error_type or "qa_answer_quality_gap"]
+        blocking_gaps = [] if is_correct else [error_type or "qa_answer_quality_gap"]
         return JudgeResult(
             trace_id=trace.trace_id,
             project_id=trace.project_id,
-            verdict=verdict,
-            score=1.0 if verdict == "correct" else 0.0,
             confidence=0.9,
             consumer_contract=self._default_consumer_contract(trace, judge_result),
             business_expectations=[self._default_business_expectation(trace, judge_result)],
-            fulfillment_assessments=[{"expectation_id": "QA:answer_quality", "status": status, "score": 1.0 if verdict == "correct" else 0.0, "expected_evidence": [expected_reference], "actual_evidence": [actual], "boundary_decision": {"within_evaluable_scope": True, "reasoning": "sample label provides deterministic QA mock expectation"}, "downstream_impact": "QA answer is acceptable for the current user" if verdict == "correct" else "QA user cannot rely on the answer quality for this sample", "blocking": verdict != "correct", "confidence": 0.9}],
-            overall_fulfillment={"status": status, "assessment_count": 1, "blocking_expectations": [] if verdict == "correct" else ["QA:answer_quality"]},
+            fulfillment_assessments=[{"expectation_id": "QA:answer_quality", "status": status, "expected_evidence": [expected_reference], "actual_evidence": [actual], "boundary_decision": {"within_evaluable_scope": True, "reasoning": "sample label provides deterministic QA mock expectation"}, "downstream_impact": "QA answer is acceptable for the current user" if is_correct else "QA user cannot rely on the answer quality for this sample", "blocking": not is_correct, "confidence": 0.9}],
+            overall_fulfillment={"status": status, "assessment_count": 1, "blocking_expectations": [] if is_correct else ["QA:answer_quality"]},
             expected=expected_reference,
             actual=actual,
             reconstructed_intent=str(((trace.normalized_request or {}).get("input") or {}).get("question") or ""),
             judge_basis="qa_sample_expected_quality",
             judge_method="qa_sample_expected_quality",
             intent_decomposition=[{"requirement": str(((trace.normalized_request or {}).get("input") or {}).get("question") or scenario), "evidence_source": "current sample metadata|reference", "within_boundary": True}],
-            condition_assessments=[{"requirement": scenario or "qa_answer_quality", "expected_fragment": expected_reference, "actual_fragment": actual, "status": "covered" if verdict == "correct" else "wrong", "evidence": evidence}],
+            condition_assessments=[{"requirement": scenario or "qa_answer_quality", "expected_fragment": expected_reference, "actual_fragment": actual, "status": "covered" if is_correct else "wrong", "evidence": evidence}],
             reference_generation_basis={"source": "case_reference_and_sample_label", "alignment_to_actual_shape": "QA sample label is used only for seeded mock cases with expected_quality metadata.", "evidence": evidence},
             verdict_derivation={"primary_boundary": scenario or "qa_answer_quality", "assessment_summary": "sample expected_quality label determines seeded mock verdict when LLM judge is unavailable", "blocking_gaps": blocking_gaps, "why_verdict": "QA seeded mock sample carries expected_quality metadata."},
             boundary_decision={"within_evaluable_scope": True, "reasoning": "seeded QA mock has deterministic expected_quality metadata"},
             evaluation_boundary={"primary_boundary_id": scenario or "qa_answer_quality", "primary_boundary_name": "QA seeded mock expected quality", "judge_question": "当前 QA mock 输出是否符合样本 expected_quality", "verdict_basis": "metadata.expected_quality for seeded mock data", "boundary_sources": "impl/data/QA/mock_cases.json", "conflict_policy": "only use deterministic sample labels for seeded mock cases; weak-quality remains review-only"},
-            primary_assessment={"boundary_id": scenario or "qa_answer_quality", "score": 1.0 if verdict == "correct" else 0.0, "covered": ["QA:answer_quality"] if verdict == "correct" else [], "missing": [], "wrong": blocking_gaps, "error_type": error_type if verdict != "correct" else "none", "reasoning": "deterministic QA mock expected_quality label"},
+            primary_assessment={"boundary_id": scenario or "qa_answer_quality", "covered": ["QA:answer_quality"] if is_correct else [], "missing": [], "wrong": blocking_gaps, "error_type": error_type if not is_correct else "none", "reasoning": "deterministic QA mock expected_quality label"},
             missing=[],
-            wrong=[] if verdict == "correct" else [{"requirement": "QA:answer_quality", "error_type": error_type or "answer_incorrect"}],
+            wrong=[] if is_correct else [{"requirement": "QA:answer_quality", "error_type": error_type or "answer_incorrect"}],
             extra=[],
             evidence=evidence,
             reasoning_summary="QA seeded mock sample expected_quality label used because semantic LLM judge was unavailable.",
-            score_details=[{"dimension": str(metadata.get("quality_dimension") or "qa_answer_quality"), "score": 1.0 if verdict == "correct" else 0.0, "evidence": evidence, "status": "judged_by_sample_label"}],
+            score_details=[{"dimension": str(metadata.get("quality_dimension") or "qa_answer_quality"), "evidence": evidence, "status": "judged_by_sample_label"}],
             needs_human_review=False,
             scenario=scenario,
             quality_flags=["qa_sample_expected_quality"],

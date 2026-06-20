@@ -37,54 +37,90 @@ def _short_value(value):
     return text if len(text) <= 160 else text[:157] + "..."
 
 
-def _gap_reason(prefix, gaps):
-    gap = next((item for item in gaps if isinstance(item, dict)), None)
-    if not gap:
-        return ""
-    raw_error_type = gap.get("error_type") or gap.get("requirement") or gap.get("status") or gap.get("type")
-    expected = _short_value(gap.get("expected_fragment") or gap.get("expected"))
-    actual = _short_value(gap.get("actual_fragment") or gap.get("actual"))
-    # When gap has no identifying field AND no expected/actual, the bare
-    # "wrong: gap" string carries no signal — return empty so callers can
-    # fall back to richer sources like reasoning_summary.
-    if not raw_error_type and not expected and not actual:
-        return ""
-    error_type = raw_error_type or "gap"
-    detail = f"{prefix}: {error_type}"
-    if expected or actual:
-        detail += f"; expected={expected}; actual={actual}"
-    return detail
+_FAILURE_DIMENSION_STATUSES = {"not_fulfilled", "partially_fulfilled", "contested"}
 
 
-def _judge_display_reason(trace, judge, run):
-    if run.get("error") or trace.get("error"):
-        return {"reason": run.get("error") or trace.get("error") or "", "reason_source": "execution_error", "reason_stage": "execution", "is_formal_attribution": False}
+def _aggregate_failure_dimensions(judge: dict) -> list[dict]:
+    assessments = judge.get("fulfillment_assessments") or []
+    boundary_decision = judge.get("boundary_decision") or {}
+    within_scope = boundary_decision.get("within_evaluable_scope")
+    dimensions: list[dict] = []
+    for item in assessments:
+        if not isinstance(item, dict):
+            continue
+        status = str(item.get("status") or "").strip().lower()
+        if status not in _FAILURE_DIMENSION_STATUSES:
+            continue
+        dimensions.append({
+            "expectation_id": item.get("expectation_id") or "",
+            "status": status,
+            "blocking": bool(item.get("blocking")),
+            "downstream_impact": item.get("downstream_impact") or "",
+            "within_evaluable_scope": within_scope,
+            "evidence": item.get("evidence") or "",
+        })
+    dimensions.sort(key=lambda dim: (not dim["blocking"], dim["expectation_id"]))
+    return dimensions
 
-    for key, source in (("wrong", "judge_wrong"), ("missing", "judge_missing"), ("extra", "judge_extra")):
-        reason = _gap_reason(key, judge.get(key) or [])
-        if reason:
-            return {"reason": reason, "reason_source": source, "reason_stage": "judge", "is_formal_attribution": True}
 
-    if judge.get("reasoning_summary"):
-        return {"reason": judge.get("reasoning_summary"), "reason_source": "judge_reasoning_summary", "reason_stage": "judge", "is_formal_attribution": True}
+def _summary_from_fulfillment(judge: dict) -> dict:
+    quality_flags = judge.get("quality_flags") or []
+    degradation = ""
+    if "llm_call_failed" in quality_flags:
+        degradation = "[llm_call_failed] "
+    elif "self_check_failed" in quality_flags:
+        degradation = "[self_check_failed] "
 
+    dimensions = _aggregate_failure_dimensions(judge)
+    verdict = judge.get("verdict") or ""
+    reasoning_summary = judge.get("reasoning_summary") or ""
     derivation = judge.get("verdict_derivation") or {}
-    if derivation.get("why_verdict"):
-        return {"reason": derivation.get("why_verdict"), "reason_source": "judge_verdict_derivation", "reason_stage": "judge", "is_formal_attribution": True}
+    why_verdict = derivation.get("why_verdict") or ""
+    judge_method = judge.get("judge_method") or ""
 
-    primary = judge.get("primary_assessment") or {}
-    if primary.get("reasoning"):
-        return {"reason": primary.get("reasoning"), "reason_source": "judge_primary_assessment", "reason_stage": "judge", "is_formal_attribution": True}
+    if judge_method == "llm_call_failed":
+        reason = f"{degradation}uncertain · LLM 调用失败，未做出算法判断"
+        reason_source = "degradation_marker"
+    elif verdict == "correct":
+        assessments = judge.get("fulfillment_assessments") or []
+        count = len([item for item in assessments if isinstance(item, dict) and item.get("blocking")])
+        tail = f" · {reasoning_summary}" if reasoning_summary else ""
+        reason = f"{degradation}fulfilled · {count} blocking expectations all met{tail}"
+        reason_source = "aggregated_fulfillment"
+    elif verdict == "incorrect":
+        blocking_ids = [dim["expectation_id"] for dim in dimensions if dim["blocking"] and dim["expectation_id"]]
+        ids_text = ",".join(blocking_ids) if blocking_ids else "(none)"
+        primary_impact = next((dim["downstream_impact"] for dim in dimensions if dim["downstream_impact"]), "")
+        head = f"{degradation}not_fulfilled · blocking=[{ids_text}]"
+        reason = f"{head} · {primary_impact}" if primary_impact else head
+        reason_source = "aggregated_fulfillment"
+    else:
+        tail = why_verdict or judge_method or reasoning_summary or "unclear"
+        reason = f"{degradation}uncertain · {tail}"
+        reason_source = "degradation_marker" if degradation else "reasoning_summary"
 
-    for item in judge.get("fulfillment_assessments") or []:
-        if isinstance(item, dict) and item.get("downstream_impact"):
-            return {"reason": item.get("downstream_impact"), "reason_source": "fulfillment_assessment", "reason_stage": "judge", "is_formal_attribution": True}
+    return {
+        "reason": reason,
+        "primary_failure_dimensions": dimensions,
+        "reason_source": reason_source,
+    }
 
-    return {"reason": "", "reason_source": "", "reason_stage": "", "is_formal_attribution": False}
+
+def _judge_reason_for_run(trace, judge, run):
+    if run.get("error") or trace.get("error"):
+        return {"reason": run.get("error") or trace.get("error") or "", "reason_source": "execution_error", "reason_stage": "execution", "is_formal_attribution": False, "primary_failure_dimensions": []}
+    summary = _summary_from_fulfillment(judge)
+    return {
+        "reason": summary["reason"],
+        "reason_source": summary["reason_source"],
+        "reason_stage": "judge",
+        "is_formal_attribution": summary["reason_source"] == "aggregated_fulfillment",
+        "primary_failure_dimensions": summary["primary_failure_dimensions"],
+    }
 
 
 def _display_reason(trace, judge, attribute, run):
-    judge_reason = _judge_display_reason(trace, judge, run)
+    judge_reason = _judge_reason_for_run(trace, judge, run)
     if judge_reason.get("reason_stage") == "execution":
         return judge_reason
 
@@ -111,7 +147,7 @@ def _summary_reason_text(attribute, display_reason):
 
 
 def _compact_summaries(trace, judge, attribute, run, fulfillment_assessments, expectation_attributions):
-    judge_reason = _judge_display_reason(trace, judge, run)
+    judge_reason = _judge_reason_for_run(trace, judge, run)
     display_reason = _display_reason(trace, judge, attribute, run)
     blocking_count = len([item for item in fulfillment_assessments if isinstance(item, dict) and item.get("blocking")])
     analysis_quality = attribute.get("analysis_quality") or {}
@@ -129,6 +165,7 @@ def _compact_summaries(trace, judge, attribute, run, fulfillment_assessments, ex
         "is_formal_attribution": bool(judge_reason.get("is_formal_attribution")),
         "assessment_count": len(fulfillment_assessments),
         "blocking_count": blocking_count,
+        "primary_failure_dimensions": judge_reason.get("primary_failure_dimensions") or [],
     }
     attribution_summary = {
         "causal_category": attribute.get("causal_category") or attribute.get("primary_error_type") or attribute.get("failure_category") or "",
@@ -182,7 +219,7 @@ def _case_event(index, run):
     judge = run.get("judge") or {}
     attribute = run.get("attribute") or {}
     status = _display_status(trace, judge, run)
-    judge_reason = _judge_display_reason(trace, judge, run)
+    judge_reason = _judge_reason_for_run(trace, judge, run)
     display_reason = _display_reason(trace, judge, attribute, run)
     return {
         "index": index,

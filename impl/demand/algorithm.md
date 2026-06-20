@@ -147,11 +147,11 @@ pipeline.judge(project_id, trace)
 
 | 步骤 | 方法 | 作用 |
 |------|------|------|
-| B1 | `normalize_judge_result()` | 项目专有归一化，如 intent contract gate |
-| B2 | `reconcile_equivalent_judge_result()` | 语义等价规则反向纠偏：LLM 判 incorrect 但 actual 与 expected 经项目等效规则归一后一致 → 改为 correct |
-| B3 | `apply_judge_consistency_gate()` | 一致性门：verdict 正确但 diff 有缺失/错误 → 标记矛盾；verdict 为 uncertain 但无阻断证据 → 标记 uncertain_without_blocking_gaps |
+| B1 | `normalize_judge_result()` | 项目专有归一化与确定性合约检测：合约不满足时**注入** `fulfillment_assessments`（`status=not_fulfilled, blocking=true`），不得直接写 `verdict`/`score` |
+| B2 | `reconcile_equivalent_judge_result()` | 语义等价规则反向纠偏：LLM 判失败但 actual 与 expected 经项目等效规则归一后一致 → 把对应的 `not_fulfilled` 翻成 `fulfilled` 并附 `semantic_equivalence_reconciled` 标记 |
+| B3 | `ensure_fulfillment_judge_result()` | 单点派生：从最终的 `fulfillment_assessments` 调 `_compute_verdict(overall_status, boundary_decision)` 与 `_compute_score(fulfillment_assessments)` 写回 `verdict`、`score`、`overall_fulfillment` |
 
-### 3.2 Fulfillment 与兼容 Verdict
+### 3.2 Fulfillment 与单点派生的 Verdict
 
 Judge 的中心产物是：
 
@@ -160,14 +160,15 @@ Judge 的中心产物是：
 - `fulfillment_assessments`：每个 expectation 的 `fulfilled / partially_fulfilled / not_fulfilled / not_evaluable / contested` 状态、证据和 downstream impact
 - `overall_fulfillment`：聚合状态和 blocking expectations
 
-`verdict` 只作为兼容字段由 fulfillment 派生：`fulfilled → correct`，`not_fulfilled` 或 blocking gap → `incorrect`，`partially_fulfilled/not_evaluable/contested → uncertain`。后续 Attribute、Cluster、Frontend 的主逻辑不应再以 verdict 作为概念中心。
+`verdict` 与 `score` 由 `impl/core/judge.py` 中的 `_compute_verdict` / `_compute_score` 单点派生，LLM 不输出这两个字段。映射规则：`fulfilled → correct`；`not_fulfilled` 且 boundary 内 → `incorrect`；`partially_fulfilled / not_evaluable / contested / boundary 外` → `uncertain`。`score = (fulfilled + 0.5 * partially_fulfilled) / |evaluable assessments|`，无可评估项时为 `None`。后续 Attribute、Cluster、Frontend 的主逻辑不再以 verdict 作为概念中心。
 
 ### 3.3 边界决策
 
-在 `judge_trace` 中，LLM 输出的 `boundary_decision` 会被 `apply_boundary_reconciliation` 处理：
+在 `judge_trace` 中，LLM 输出的 `boundary_decision` 直接进入 `_compute_verdict`：
 
-- 如果 verdict=incorrect 且 boundary_decision 认为问题在不可控范围内（`within_evaluable_scope=false`）→ 降为 uncertain，不清空 miss/wrong 但标记 `external_limitation_not_penalized`
-- 边界标准从项目的 `judge_boundary-template.md` 加载，由用户填写该项目有什么不可控的外部依赖
+- 当 `overall_fulfillment.status == "not_fulfilled"` 且 `boundary_decision.within_evaluable_scope == false` 时，`_compute_verdict` 返回 `uncertain` 而非 `incorrect`。
+- 边界标准从项目的 `judge_boundary-template.md` 加载，由用户填写该项目有什么不可控的外部依赖。
+- 不再有独立的 `apply_boundary_reconciliation` 阶段——边界判定完全归一到单点派生。
 
 ### 3.3 语义等价规则
 
@@ -188,8 +189,8 @@ intent 项目的 `normalize_judge_result` 实现了确定性合约门：
 3. 检查 `allow_fallback` 约束
 4. 检查 `confidence` 是否达到 `min_confidence`
 
-- 合约失败 → 强制 `verdict=incorrect, score=0`，用确定性文本替换 reasoning
-- 合约通过 + LLM 判 uncertain → 强制改为 `verdict=correct, score=1`
+- 合约失败 → 注入 `fulfillment_assessments`（`expectation_id=intent_contract, status=not_fulfilled, blocking=true`），加 `intent_contract_gate_failed` 质量旗标与 `verdict_derivation.contract_gate` 证据；**不再** 直接写 `verdict=incorrect, score=0`，最终由 B3 单点派生给出 `incorrect / 0.0`。
+- 合约通过 → 注入 `fulfillment_assessments`（`status=fulfilled, blocking=true`），加 `intent_contract_gate_passed` 旗标；其余 expectation 的 LLM 判断仍正常计入，B3 按聚合状态派生最终 verdict/score。
 
 ### 3.5 Reference 生成
 

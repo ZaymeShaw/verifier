@@ -146,7 +146,7 @@ class ExpectationAttribution:
 class JudgeResult:
     trace_id: str
     project_id: str
-    verdict: str
+    verdict: str = ""
     score: Optional[float] = None
     confidence: Optional[float] = None
     probability: Optional[float] = None
@@ -181,93 +181,6 @@ class JudgeResult:
     gate_decisions: List[GateDecision] = field(default_factory=list)
     transition_decisions: List[TransitionDecision] = field(default_factory=list)
     raw_model_output: Any = None
-
-    def derive_verdict_from_fulfillment(self) -> str:
-        """
-        Ensure verdict consistency with fulfillment assessments.
-
-        Behavior:
-        1. If LLM provided explicit verdict → preserve it, update overall_fulfillment
-        2. If LLM verdict missing/empty → derive from fulfillment_assessments
-
-        This method acts as a fallback mechanism, not a forced override.
-        Called multiple times safely (idempotent).
-        """
-        # If LLM already provided an explicit verdict, preserve it instead of overriding
-        # This method should only derive verdict when LLM verdict is missing/empty
-        if self.verdict and self.verdict not in ("", "-", "unknown"):
-            # LLM provided explicit verdict, keep it and only update overall_fulfillment
-            statuses = [_item_value(item, "status") for item in self.fulfillment_assessments]
-            failing_statuses = {"not_fulfilled", "partially_fulfilled", "not_evaluable", "contested"}
-            blocking = [item for item in self.fulfillment_assessments if _item_value(item, "status") in failing_statuses]
-
-            # Map existing verdict to fulfillment status
-            verdict_to_status = {
-                "correct": "fulfilled",
-                "incorrect": "not_fulfilled",
-                "uncertain": "partially_fulfilled" if any(s == "partially_fulfilled" for s in statuses) else "not_evaluable",
-            }
-            overall_status = verdict_to_status.get(self.verdict, "not_evaluable")
-
-            # Always set overall_fulfillment, even if statuses is empty
-            # (e.g., after reconcile_equivalent_judge_result clears fulfillment_assessments)
-            self.overall_fulfillment = {
-                **(self.overall_fulfillment or {}),
-                "status": overall_status,
-                "assessment_count": len(statuses),
-                "blocking_expectations": [_item_value(item, "expectation_id") for item in blocking],
-            }
-            self.verdict_derivation = {
-                **(self.verdict_derivation or {}),
-                "primary_source": "llm_explicit_verdict",
-                "fulfillment_statuses": statuses,
-                "blocking_expectations": [_item_value(item, "expectation_id") for item in blocking],
-            }
-            return self.verdict
-
-        # LLM verdict missing, derive from fulfillment assessments
-        statuses = [_item_value(item, "status") for item in self.fulfillment_assessments]
-        failing_statuses = {"not_fulfilled", "partially_fulfilled", "not_evaluable", "contested"}
-        blocking = [item for item in self.fulfillment_assessments if _item_value(item, "status") in failing_statuses]
-        if not statuses:
-            non_evaluable_markers = {"LLM semantic judge unavailable; local QA probe cannot determine answer correctness.", "estimated_quality_only"}
-            concrete_missing = [item for item in self.missing if not (isinstance(item, str) and item in non_evaluable_markers)]
-            if self.wrong or self.extra or concrete_missing:
-                derived = "incorrect"
-            else:
-                derived = "uncertain"
-        elif any(status == "not_fulfilled" for status in statuses):
-            derived = "incorrect"
-        elif any(status in {"not_evaluable", "contested"} for status in statuses):
-            derived = "uncertain"
-        elif any(status == "partially_fulfilled" for status in statuses):
-            derived = "uncertain"
-        else:
-            derived = "correct"
-        if derived == "correct":
-            self.missing = []
-            self.wrong = []
-            self.extra = []
-        overall_status = {
-            "correct": "fulfilled",
-            "incorrect": "not_fulfilled",
-            "uncertain": "partially_fulfilled" if any(status == "partially_fulfilled" for status in statuses) else "not_evaluable",
-        }[derived]
-        if statuses:
-            self.overall_fulfillment = {
-                **(self.overall_fulfillment or {}),
-                "status": overall_status,
-                "assessment_count": len(statuses),
-                "blocking_expectations": [_item_value(item, "expectation_id") for item in blocking],
-            }
-        self.verdict = derived
-        self.verdict_derivation = {
-            **(self.verdict_derivation or {}),
-            "primary_source": "fulfillment_assessments",
-            "fulfillment_statuses": statuses,
-            "blocking_expectations": [_item_value(item, "expectation_id") for item in blocking],
-        }
-        return derived
 
 
 def _item_value(item: Any, key: str, default: Any = None) -> Any:

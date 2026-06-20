@@ -335,9 +335,19 @@ class Adapter(ProjectAdapter):
         judge_result.actual = judge_result.actual or output
         judge_result.expected = judge_result.expected or reference
         blocking_wrong = [item for item in wrong if isinstance(item, dict) and item.get("requirement") in {"intent", "allow_fallback", "min_confidence"}]
-        if missing or blocking_wrong:
-            judge_result.verdict = "incorrect"
-            judge_result.score = 0
+        gate_failed = bool(missing or blocking_wrong)
+        if gate_failed:
+            evidence_summary = {
+                "missing": [item.get("requirement") for item in missing if isinstance(item, dict)],
+                "blocking_wrong": [item.get("requirement") for item in blocking_wrong if isinstance(item, dict)],
+            }
+            judge_result.fulfillment_assessments.append({
+                "expectation_id": "intent_contract",
+                "status": "not_fulfilled",
+                "blocking": True,
+                "evidence": evidence_summary,
+                "downstream_impact": self._intent_contract_reasoning_summary(trace, reference, output, missing, wrong, "incorrect"),
+            })
             if "intent_contract_gate_failed" not in judge_result.quality_flags:
                 judge_result.quality_flags.append("intent_contract_gate_failed")
             judge_result.primary_assessment = {"status": "failed", "missing": missing, "wrong": wrong}
@@ -346,18 +356,17 @@ class Adapter(ProjectAdapter):
             return judge_result
         if "intent_contract_gate_passed" not in judge_result.quality_flags:
             judge_result.quality_flags.append("intent_contract_gate_passed")
-        semantic_mismatch = bool(judge_result.missing or judge_result.wrong or judge_result.extra)
+        judge_result.fulfillment_assessments.append({
+            "expectation_id": "intent_contract",
+            "status": "fulfilled",
+            "blocking": True,
+            "evidence": {"intent": actual_intent, "confidence": confidence, "min_confidence": min_confidence},
+            "downstream_impact": self._intent_contract_reasoning_summary(trace, reference, output, [], [], "correct"),
+        })
         judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), "contract_gate": "passed"}
-        if semantic_mismatch:
-            return judge_result
-        judge_result.verdict = "correct"
-        judge_result.score = 1
-        judge_result.confidence = max(float(judge_result.confidence or 0), 0.9)
-        judge_result.reasoning_summary = self._intent_contract_reasoning_summary(trace, reference, output, missing, wrong, "correct")
-        judge_result.fulfillment_assessments = []
-        judge_result.overall_fulfillment = {}
-        judge_result.quality_flags = [flag for flag in judge_result.quality_flags if flag != "llm_call_failed"]
+        judge_result.reasoning_summary = judge_result.reasoning_summary or self._intent_contract_reasoning_summary(trace, reference, output, [], [], "correct")
         judge_result.primary_assessment = {"status": "passed", "covered": ["intent_contract"]}
+        judge_result.quality_flags = [flag for flag in judge_result.quality_flags if flag != "llm_call_failed"]
         return judge_result
 
     def _intent_contract_reasoning_summary(self, trace, reference, output, missing, wrong, verdict: str) -> str:

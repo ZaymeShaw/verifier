@@ -432,8 +432,6 @@ def run_chain(project_id: str, input_data: Dict[str, Any], expected_intent: Opti
         trace = context["trace"]
         context["judge_result"] = judge(project_id, trace, expected_intent=expected_intent)
         judge_result = context["judge_result"]
-        if hasattr(judge_result, "derive_verdict_from_fulfillment") and judge_result.fulfillment_assessments:
-            judge_result.derive_verdict_from_fulfillment()
         return {
             "status": "succeeded",
             "outputs": {
@@ -445,8 +443,6 @@ def run_chain(project_id: str, input_data: Dict[str, Any], expected_intent: Opti
 
     def evaluate_fulfillment(context: Dict[str, Any]) -> Dict[str, Any]:
         judge_result = context["judge_result"]
-        if hasattr(judge_result, "derive_verdict_from_fulfillment") and judge_result.fulfillment_assessments:
-            judge_result.derive_verdict_from_fulfillment()
         return {
             "status": "succeeded",
             "outputs": {

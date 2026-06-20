@@ -5,6 +5,7 @@ import re
 from typing import Any, Iterable, Optional
 
 from .schema import AttributeResult, CheckReport, ClusterSummary, JudgeResult, ProjectSpec, RunTrace
+from .state_machine import _derived_verdict_contradictions
 
 DEFAULT_PROJECT_FIELD_MARKERS = []
 
@@ -558,12 +559,7 @@ def build_check_category_report(
             evidence_locations.extend(["RunTrace.extracted_output", "JudgeResult.actual"])
         if trace.project_id != judge.project_id:
             _add_category(categories, "split_brain_flow", "RunTrace and JudgeResult use different project_id values")
-        try:
-            from .state_machine import _derived_verdict_contradictions
-
-            judge_contradictions = _derived_verdict_contradictions(judge)
-        except Exception:
-            judge_contradictions = []
+        judge_contradictions = _derived_verdict_contradictions(judge)
         for contradiction in judge_contradictions:
             _add_category(categories, "split_brain_flow", "JudgeResult fulfillment/verdict contradiction: " + contradiction)
         if judge_contradictions:
@@ -725,25 +721,44 @@ def check_chain(
             if not _score_in_range(detail.get("score") if isinstance(detail, dict) else None):
                 protocol_gaps.append("JudgeResult score_details scores must be within 0-1.")
                 break
+        # Single-point derivation invariant: verdict and overall_fulfillment.status
+        # must agree, since both flow from fulfillment_assessments via _compute_verdict.
+        # See state_machine._derived_verdict_contradictions for the canonical mapping.
+        for contradiction in _derived_verdict_contradictions(judge):
+            consistency_gaps.append(
+                "JudgeResult single-point derivation violation: " + contradiction
+            )
         if not judge.evidence:
             protocol_gaps.append("JudgeResult missing evidence.")
         if not judge.evaluation_boundary:
             protocol_gaps.append("JudgeResult missing evaluation_boundary; verdict boundary is unclear.")
-        if not judge.primary_assessment:
-            protocol_gaps.append("JudgeResult missing primary_assessment for the selected evaluation boundary.")
-        if judge.verdict == "incorrect" and not (judge.missing or judge.wrong or judge.extra):
-            protocol_gaps.append("Incorrect JudgeResult should identify missing/wrong/extra output or explain why unavailable.")
+        # Fulfillment-first: business_expectations + fulfillment_assessments are the
+        # primary signals. primary_assessment / condition_assessments are legacy and
+        # only required when the project still depends on them and there is no
+        # fulfillment record to inspect.
+        has_fulfillment_record = bool(judge.fulfillment_assessments) or bool(judge.overall_fulfillment)
+        if not has_fulfillment_record and not judge.primary_assessment:
+            protocol_gaps.append("JudgeResult missing both fulfillment_assessments and primary_assessment for the selected evaluation boundary.")
+        if judge.verdict == "incorrect" and not judge.fulfillment_assessments and not (judge.missing or judge.wrong or judge.extra):
+            protocol_gaps.append("Incorrect JudgeResult should identify failing fulfillment_assessments or missing/wrong/extra output.")
         if judge.verdict in {"incorrect", "uncertain"}:
-            if not judge.intent_decomposition:
-                protocol_gaps.append("JudgeResult missing intent_decomposition; verdict is not tied to current-query requirements.")
-            if not judge.condition_assessments:
-                protocol_gaps.append("JudgeResult missing condition_assessments; expected-vs-actual comparison is not inspectable.")
+            if not has_fulfillment_record:
+                if not judge.intent_decomposition:
+                    protocol_gaps.append("JudgeResult missing intent_decomposition; verdict is not tied to current-query requirements.")
+                if not judge.condition_assessments:
+                    protocol_gaps.append("JudgeResult missing condition_assessments; expected-vs-actual comparison is not inspectable.")
             if not judge.verdict_derivation:
                 protocol_gaps.append("JudgeResult missing verdict_derivation; final verdict cannot be traced to comparison evidence and boundary decision.")
-            if not judge.reference_generation_basis:
+            if not judge.reference_generation_basis and not has_fulfillment_record:
                 protocol_gaps.append("JudgeResult missing reference_generation_basis; expected output source is unclear.")
-            if judge.verdict == "uncertain" and not (judge.verdict_derivation or {}).get("blocking_gaps") and "llm_call_failed" not in (judge.quality_flags or []):
-                protocol_gaps.append("Uncertain JudgeResult must identify blocking evidence gaps; use correct/incorrect when expected-vs-actual is inspectable.")
+            quality_flags = list(judge.quality_flags or [])
+            uncertain_excused = (
+                bool((judge.verdict_derivation or {}).get("blocking_gaps"))
+                or "llm_call_failed" in quality_flags
+                or "self_check_failed" in quality_flags
+            )
+            if judge.verdict == "uncertain" and not uncertain_excused:
+                protocol_gaps.append("Uncertain JudgeResult must identify blocking evidence gaps or carry self_check_failed/llm_call_failed; use correct/incorrect when expected-vs-actual is inspectable.")
             reason = (judge.reasoning_summary or "").lower()
             if judge.verdict == "incorrect" and any(marker in reason for marker in ["最终评价为正确", "整体判定为 correct", "final verdict is correct", "overall verdict is correct", "does not affect correctness", "不影响正确性"]):
                 consistency_gaps.append("JudgeResult verdict is incorrect but reasoning_summary claims the output is correct or performance is unaffected.")
