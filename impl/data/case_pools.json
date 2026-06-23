@@ -1,6 +1,1505 @@
 {
   "client_search": [
     {
+      "id": "pool-1782170972947",
+      "name": "未命名用例池 2026/6/23 07:29:32",
+      "case_count": 20,
+      "created_at": "2026-06-22T23:29:32Z",
+      "cases": [
+        {
+          "id": "family_property_claim-001",
+          "scenario": "single_condition",
+          "input": {
+            "query": "有子女的客户"
+          },
+          "output": {
+            "summary": "有子女的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有子女的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "有子女的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选有子女家庭成员客户",
+            "reason": "家庭成员关系"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 3 blocking expectations all met · 用户查询'有子女的客户'的核心意图是筛选家庭成员关系中包含子女的客户。Parser 输出的单一条件 familyInfo.familyrelation MATCH 子女 在三个关键维度上均正确：(1) 字段 familyInfo.familyrelation 是承载家庭成员关系的正确业务字段；(2) 值 '子女' 准确表达了'有孩子'的筛选需求；(3) 操作符 MATCH 虽然与 capability_manifest 中声明的 CONTAINS 存在表面差异，但项目 judge 边界协议明确声明'不要纠结 CONTAINS 和 MATCH 的问题，因为原项目会通过后处理处置'，因此在当前评估范围内视为语义等价可接受。下游搜索服务不可用，评估范围限制为 parser 条件语义评估，但不影响判断结论——条件本身已正确覆盖用户意图。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 3,
+            "blocking_count": 3,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 3,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-002",
+          "scenario": "single_condition",
+          "input": {
+            "query": "有配偶的客户"
+          },
+          "output": {
+            "summary": "有配偶的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "配偶"
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有配偶的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "有配偶的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "配偶"
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选有配偶家庭成员客户",
+            "reason": "家庭成员关系"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 3 blocking expectations all met · 用户查询'有配偶的客户'，意图筛选家庭成员中存在配偶关系的客户。parser正确解析为 familyInfo.familyrelation MATCH '配偶'，字段承载正确的业务语义，值'配偶'精确匹配用户意图。操作符使用MATCH，虽然capability_manifest中该字段仅列出CONTAINS，但项目规则明确CONTAINS与MATCH在后处理中等价，不应纠结。下游搜索不可用限制了结果集验证，但在parser_condition_semantics_only范围内，条件完全正确，无遗漏、无错误、无额外条件。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 3,
+            "blocking_count": 3,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 3,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-003",
+          "scenario": "single_condition",
+          "input": {
+            "query": "有父母信息的客户"
+          },
+          "output": {
+            "summary": "有父母的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "父母"
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有父母的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "有父母信息的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "父母"
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选有父母家庭成员客户",
+            "reason": "家庭成员关系"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 1 blocking expectations all met · 用户 query「有父母信息的客户」意图明确：筛选家庭成员关系为「父母」的客户。actual output 使用 familyInfo.familyrelation 字段、值为「父母」，完全命中用户核心意图。操作符为 MATCH 而非 capability_manifest 中的 CONTAINS，但项目 judge boundary 明确声明「不要纠结 CONTAINS 和 MATCH 的问题，因为原项目会通过后处理处置」，且 reference answer 同样使用 MATCH，因此不视为错误。下游搜索不可用，评估范围限于 parser 条件语义，在此范围内 actual output 语义正确、可执行。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 2,
+            "blocking_count": 1,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 2,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-004",
+          "scenario": "multi_condition_and",
+          "input": {
+            "query": "子女年龄小于6岁的客户"
+          },
+          "output": {
+            "summary": "有子女\n并且子女年龄<6的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              },
+              {
+                "field": "familyInfo.familyclientbirthday",
+                "operator": "GTE",
+                "value": "2020-06-24 00:00:00"
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有子女\n并且子女年龄<6的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "子女年龄小于6岁的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              },
+              {
+                "field": "familyInfo.familyclientage",
+                "operator": "LT",
+                "value": 6
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选子女年龄<6客户",
+            "reason": "子女年龄"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 3 blocking expectations all met · 用户查询「子女年龄小于6岁的客户」包含三个核心意图：(1)有子女，(2)子女年龄<6，(3)AND组合。Actual output中familyInfo.familyrelation MATCH '子女'正确覆盖(1)；familyInfo.familyclientbirthday GTE '2020-06-24'通过系统设计的年龄→生日自动转换等价覆盖(2)——基于当前时间2026-06-23，年龄<6精确等价于生日≥2020-06-24；AND逻辑覆盖(3)。虽然actual使用了birthday+GTE替代age+LT，且GTE不在familyInfo.familyclientbirthday的capability_manifest操作符列表中，但这是项目文档明确记载的自动转换行为，语义完全等价。MATCH与CONTAINS差异按项目边界规则不纠结。下游搜索不可用限制了结果集验证，但不影响条件语义等价判断。整体评估：fulfilled。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 3,
+            "blocking_count": 3,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 3,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-005",
+          "scenario": "multi_condition_and",
+          "input": {
+            "query": "子女在6到12岁之间的客户"
+          },
+          "output": {
+            "summary": "有子女\n并且子女年龄在6-12岁之间的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyclientbirthday",
+                "operator": "RANGE",
+                "value": {
+                  "min": "2013-06-24 00:00:00",
+                  "max": "2020-06-23 23:59:59"
+                }
+              },
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有子女\n并且子女年龄在6-12岁之间的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "子女在6到12岁之间的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              },
+              {
+                "field": "familyInfo.familyclientage",
+                "operator": "RANGE",
+                "value": "6-12"
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选子女6-12岁客户",
+            "reason": "子女年龄区间"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 4 blocking expectations all met · 用户query'子女在6到12岁之间的客户'的两个核心意图——(1)家庭成员为子女、(2)子女年龄6-12岁——均在parser输出中得到正确表达。实际输出使用familyInfo.familyclientbirthday RANGE日期范围替代familyInfo.familyclientage RANGE数值范围，这是系统设计文档中明确的年龄→生日自动转换行为，两种表达在ES查询语义上等价。日期边界(2013-06-24至2020-06-23)在当前时间基准下正确映射6-12岁闭区间，±1天偏差在转换容差内不造成误筛选。AND逻辑正确。操作符MATCH/CONTAINS差异按项目规范不作为评估项。下游ES不可用限制了结果集验证，但在parser条件语义层面，输出完全满足用户搜索意图。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 5,
+            "blocking_count": 4,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 5,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-006",
+          "scenario": "multi_condition_and",
+          "input": {
+            "query": "子女18岁以上的客户"
+          },
+          "output": {
+            "summary": "有子女\n并且子女年龄≥18的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyclientbirthday",
+                "operator": "LTE",
+                "value": "2008-06-23 23:59:59"
+              },
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有子女\n并且子女年龄≥18的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "子女18岁以上的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              },
+              {
+                "field": "familyInfo.familyclientage",
+                "operator": "GTE",
+                "value": 18
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选成年子女客户",
+            "reason": "子女年龄"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 3 blocking expectations all met · 用户查询'子女18岁以上的客户'的意图被正确解析为两个AND条件：(1)家庭成员关系为'子女'，(2)子女年龄≥18。实际输出中，关系条件使用familyInfo.familyrelation MATCH '子女'，正确表达了关系意图。年龄条件通过familyInfo.familyclientbirthday LTE '2008-06-23 23:59:59'等价表达，这与capability_manifest中'年龄自动转换为出生日期范围'的规则一致——出生日期在18年前当天或更早即表示年龄≥18。MATCH操作符与capability_manifest中CONTAINS的差异按项目规则由后处理处置，不视为错误。下游ES不可用限制了结果集验证，但在parser_condition_semantics_only范围内，条件语义完全等价，所有期望均fulfilled。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 3,
+            "blocking_count": 3,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 3,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-007",
+          "scenario": "multi_condition_and",
+          "input": {
+            "query": "父母年龄超过65岁的客户"
+          },
+          "output": {
+            "summary": "有父母\n并且父母年龄≥66的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "父母"
+              },
+              {
+                "field": "familyInfo.familyclientbirthday",
+                "operator": "LTE",
+                "value": "1960-06-23 23:59:59"
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有父母\n并且父母年龄≥66的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "父母年龄超过65岁的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "父母"
+              },
+              {
+                "field": "familyInfo.familyclientage",
+                "operator": "GTE",
+                "value": 66
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选父母年龄>65客户",
+            "reason": "父母年龄"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 4 blocking expectations all met · 用户输入'父母年龄超过65岁的客户'，核心意图为：(1) 客户有父母，(2) 父母年龄严格大于65岁。Parser 输出两个 AND 条件：familyInfo.familyrelation MATCH '父母' 正确标识父母关系；familyInfo.familyclientbirthday LTE '1960-06-23 23:59:59' 是年龄 >65 的等价表达（当前时间 2026-06-23，≥66岁 ↔ 出生 ≤1960-06-23，转换数学精确）。年龄→出生日期转换是系统文档化后处理行为，语义完全等价。AND 逻辑正确连接两个必须条件。字段作用对象正确（家庭成员 birthdate，非客户本人 clientAge）。不存在 missing、wrong 或 extra 条件。capability_manifest 中 familyInfo.familyclientbirthday 仅列 MATCH 操作符，但系统 prompt 明确声明年龄会'自动转换为出生日期范围'，LTE 操作符在此转换路径中为有效能力，不构成错误。MATCH vs CONTAINS 差异按 judge boundary 要求不予纠结。下游搜索不可用不影响本次条件语义等价判断。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 4,
+            "blocking_count": 4,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 4,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-008",
+          "scenario": "multi_condition_and",
+          "input": {
+            "query": "配偶是女性的客户"
+          },
+          "output": {
+            "summary": "有配偶\n并且配偶性别为女的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "配偶"
+              },
+              {
+                "field": "familyInfo.familyclientsex",
+                "operator": "MATCH",
+                "value": "女"
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有配偶\n并且配偶性别为女的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "配偶是女的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "配偶"
+              },
+              {
+                "field": "familyInfo.familyclientsex",
+                "operator": "MATCH",
+                "value": "女"
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选配偶性别女客户",
+            "reason": "家庭成员性别"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 4 blocking expectations all met · 用户查询'配偶是女性的客户'，核心意图是筛选有配偶且配偶为女性的客户。Parser 输出两个 AND 条件：familyInfo.familyrelation=配偶 + familyInfo.familyclientsex=女。字段映射完全正确——使用了家庭成员性别字段而非客户本人性别字段。familyInfo.familyrelation 使用了 MATCH 而非 capability_manifest 中的 CONTAINS，但经语义等价检查，两者在 ES 查询中对单值枚举等价，且项目明确指示后处理会统一此差异，不构成错误。下游搜索不可用仅影响结果集验证，不影响条件语义的正确性判断。四个 blocking expectation 全部 fulfilled。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 4,
+            "blocking_count": 4,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 4,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-009",
+          "scenario": "multi_condition_and",
+          "input": {
+            "query": "儿子生日在本月的客户"
+          },
+          "output": {
+            "summary": "有子女\n并且子女生日在2026年6月的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              },
+              {
+                "field": "familyInfo.familyclientbirthday",
+                "operator": "RANGE",
+                "value": {
+                  "min": "2026-06-01 00:00:00",
+                  "max": "2026-06-30 23:59:59"
+                }
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有子女\n并且子女生日在2026年6月的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "儿子生日在本月的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              },
+              {
+                "field": "familyInfo.familyclientsex",
+                "operator": "MATCH",
+                "value": "男"
+              },
+              {
+                "field": "familyInfo.familyclientbirthday",
+                "operator": "RANGE",
+                "value": "本月"
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选子女性别男且本月生日客户",
+            "reason": "子女生日"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "not_fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "not_fulfilled",
+            "fulfillment_status": "not_fulfilled",
+            "verdict": "incorrect",
+            "score": 0.75,
+            "reason": "not_fulfilled · blocking=[E2] · 缺少性别过滤，查询结果会包含有女儿本月生日的客户，无法精准匹配'儿子'的语义",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 4,
+            "blocking_count": 4,
+            "primary_failure_dimensions": [
+              {
+                "expectation_id": "E2",
+                "status": "not_fulfilled",
+                "blocking": true,
+                "downstream_impact": "缺少性别过滤，查询结果会包含有女儿本月生日的客户，无法精准匹配'儿子'的语义",
+                "within_evaluable_scope": true,
+                "evidence": ""
+              }
+            ]
+          },
+          "attribution_summary": {
+            "causal_category": "model_capability_gap",
+            "attribution_count": 4,
+            "probe_count": 0,
+            "summary_text": "LLM 在解析复合语义查询'儿子生日在本月的客户'时，成功提取了'子女关系'和'本月生日'两个显式维度，但未能将'儿子'进一步拆解为'子女关系+男性性别'两个原子条件。虽然 prompt 中已包含 familyInfo.familyclientsex 字段定义及'有儿子的客户'→AND{familyrelation:子女, familyclientsex:男}的示例，但该示例为单一维度（仅有'儿子'），LLM 未能在复合维度（'儿子'+'生日'）下保持性别条件的输出。根因是 LLM 在复合意图分解时的注意力分散——'生日在本月'作为强时间信号占据了模型的主要注意力，导致'儿子'被简化为'子女'而丢失性别语义。prompt 缺少显式的强制组合规则（如'出现儿子时必须同时输出关系和性别'）加剧了这一问题。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-010",
+          "scenario": "multi_condition_and",
+          "input": {
+            "query": "女儿下个月生日的客户"
+          },
+          "output": {
+            "summary": "有子女\n并且子女性别为女\n并且客户生日在7月的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              },
+              {
+                "field": "familyInfo.familyclientsex",
+                "operator": "MATCH",
+                "value": "女"
+              },
+              {
+                "field": "birthdayMd",
+                "operator": "RANGE",
+                "value": {
+                  "min": "07-01",
+                  "max": "07-31"
+                }
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有子女\n并且子女性别为女\n并且客户生日在7月的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "女儿下个月生日的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              },
+              {
+                "field": "familyInfo.familyclientsex",
+                "operator": "MATCH",
+                "value": "女"
+              },
+              {
+                "field": "familyInfo.familyclientbirthday",
+                "operator": "RANGE",
+                "value": "下月"
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选子女性别女且下月生日客户",
+            "reason": "子女生日"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "not_fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "not_fulfilled",
+            "fulfillment_status": "not_fulfilled",
+            "verdict": "incorrect",
+            "score": 0.8,
+            "reason": "not_fulfilled · blocking=[E3] · 搜索将返回客户本人生日在7月的客户，而非女儿生日在7月的客户——结果集完全错误",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 5,
+            "blocking_count": 5,
+            "primary_failure_dimensions": [
+              {
+                "expectation_id": "E3",
+                "status": "not_fulfilled",
+                "blocking": true,
+                "downstream_impact": "搜索将返回客户本人生日在7月的客户，而非女儿生日在7月的客户——结果集完全错误",
+                "within_evaluable_scope": true,
+                "evidence": ""
+              }
+            ]
+          },
+          "attribution_summary": {
+            "causal_category": "model_capability_gap",
+            "attribution_count": 5,
+            "probe_count": 0,
+            "summary_text": "模型在 few-shot 学习中，将查询‘下个月生日’与 birthdayMd 字段定义中的示例‘下个月生日的客户（当前2026年3月）→ birthdayMd RANGE’进行了强模式匹配，导致生日条件被映射到客户本人月日生日字段。而 familyInfo.familyclientbirthday 字段虽然语义上正确（家庭成员出生日期），但其定义中所有示例均包含具体年份（1990/1954等），没有任何相对时间（本月/下月）的 few-shot 范例；同时该字段声明的操作符 MATCH 与实际使用的日期操作符 RANGE 不一致，进一步降低了模型选择该字段的置信度。此外，birthdayMd 缺少类似 clientBirthday 的家庭成员场景反例（‘父母1956年出生的客户 → 不输出 clientBirthday’），导致没有跨字段约束阻止模型在家庭成员上下文中使用 birthdayMd。三个因素叠加——强 few-shot 匹配 + 目标字段示例缺失 + 无跨字段约束——共同导致了字段选择错误。此错误的直接后果：搜索条件从‘女儿生日在7月’偏移为‘客户本人生日在7月’，结果集完全错误。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-011",
+          "scenario": "multi_condition_and",
+          "input": {
+            "query": "父母生日在未来30天的客户"
+          },
+          "output": {
+            "summary": "有父母\n并且父母生日在2026-06-23 至 2026-07-22的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "父母"
+              },
+              {
+                "field": "familyInfo.familyclientbirthday",
+                "operator": "RANGE",
+                "value": {
+                  "min": "2026-06-23 00:00:00",
+                  "max": "2026-07-22 23:59:59"
+                }
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有父母\n并且父母生日在2026-06-23 至 2026-07-22的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "父母生日在未来30天的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "父母"
+              },
+              {
+                "field": "familyInfo.familyclientbirthday",
+                "operator": "RANGE",
+                "value": "未来30天"
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选父母未来30天生日客户",
+            "reason": "父母生日"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 4 blocking expectations all met · Parser 正确将用户查询「父母生日在未来30天的客户」解析为两个 AND 条件：1) familyInfo.familyrelation MATCH '父母' — 正确过滤家庭成员关系为父母的客户；2) familyInfo.familyclientbirthday RANGE [2026-06-23, 2026-07-22] — 正确使用家庭成员出生日期字段并计算未来30天区间。日期区间从当天6月23日起共30天至7月22日，与 prompt 示例中「未来一周含当天」的计算模式一致。所有 blocking 级别期望均 fulfilled，无 missing/wrong/extra 条件。下游搜索不可用限制了结果集验证，但不影响 parser 条件语义层面的正确性判断。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 4,
+            "blocking_count": 4,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 4,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-012",
+          "scenario": "multi_condition_and",
+          "input": {
+            "query": "配偶手机号尾号是8888的客户"
+          },
+          "output": {
+            "summary": "有配偶\n并且配偶手机号为8888的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "配偶"
+              },
+              {
+                "field": "familyInfo.familyclientmobile",
+                "operator": "MATCH",
+                "value": "8888"
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有配偶\n并且配偶手机号为8888的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "配偶手机号尾号是8888的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "配偶"
+              },
+              {
+                "field": "familyInfo.familyclientmobile",
+                "operator": "MATCH",
+                "value": 8888
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选配偶手机号尾号8888客户",
+            "reason": "家庭成员手机号"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 3 blocking expectations all met · 查询'配偶手机号尾号是8888的客户'被正确解析为两个AND条件：familyInfo.familyrelation=配偶 + familyInfo.familyclientmobile=8888。字段映射正确（配偶→familyrelation，配偶手机号→familyclientmobile而非clientMobile），值正确，逻辑正确。familyInfo.familyrelation使用了MATCH而非capability_manifest中的CONTAINS操作符，但judge boundary明确豁免此差异（后处理统一转换），语义等价。所有blocking期望全部满足，输出可正确驱动下游检索目标客户。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 4,
+            "blocking_count": 3,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 4,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-013",
+          "scenario": "multi_condition_and",
+          "input": {
+            "query": "子女姓名叫小明的客户"
+          },
+          "output": {
+            "summary": "有子女\n并且子女姓名为小明的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              },
+              {
+                "field": "familyInfo.familyclientname",
+                "operator": "MATCH",
+                "value": "小明"
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有子女\n并且子女姓名为小明的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "子女姓名叫小明的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              },
+              {
+                "field": "familyInfo.familyclientname",
+                "operator": "MATCH",
+                "value": "小明"
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选子女姓名小明客户",
+            "reason": "家庭成员姓名"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 3 blocking expectations all met · 用户 query '子女姓名叫小明的客户' 的核心意图是筛选有子女且该子女姓名为'小明'的客户。Parser 正确输出了两个 AND 条件：(1) familyInfo.familyrelation MATCH '子女' — 表达'有子女'关系；(2) familyInfo.familyclientname MATCH '小明' — 表达子女姓名。字段选择正确：未错误映射到客户本人姓名字段 searchClientName，也未遗漏 familyInfo.familyrelation 条件。值提取准确：'小明'保留完整姓名。逻辑 AND 正确。familyInfo.familyrelation 使用 MATCH 而非 CONTAINS，但项目边界明确声明此差异由后处理处置，不视为错误。下游 ES 不可用，无法验证实际结果集，但在 parser 条件语义层面，输出完全满足用户搜索意图。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 4,
+            "blocking_count": 3,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 4,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-014",
+          "scenario": "multi_condition_and",
+          "input": {
+            "query": "父母手机号以139开头的客户"
+          },
+          "output": {
+            "summary": "有父母\n并且父母手机号为139的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "父母"
+              },
+              {
+                "field": "familyInfo.familyclientmobile",
+                "operator": "MATCH",
+                "value": "139"
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有父母\n并且父母手机号为139的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "父母手机号以139开头的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "父母"
+              },
+              {
+                "field": "familyInfo.familyclientmobile",
+                "operator": "MATCH",
+                "value": 139
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选父母手机号139开头客户",
+            "reason": "家庭成员手机号"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 3 blocking expectations all met · 用户查询'父母手机号以139开头的客户'包含两个核心筛选意图：(1)家庭关系为父母，(2)父母手机号以139开头。Parser正确识别并输出了两个条件：familyInfo.familyrelation指向'父母'、familyInfo.familyclientmobile MATCH '139'前缀，以AND逻辑组合。唯一表面差异是familyInfo.familyrelation使用了MATCH而非capability_manifest规定的CONTAINS操作符，但根据项目judge_boundary的明确指示'不要纠结CONTAINS和MATCH的问题，因为原项目会通过后处理处置'，此差异不构成错误，二者语义等价。下游ES搜索不可用限制了实际结果集验证，但在parser_condition_semantics_only范围内，三个核心期望全部满足，无missing/wrong/extra条件。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 3,
+            "blocking_count": 3,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 3,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-015",
+          "scenario": "single_condition",
+          "input": {
+            "query": "有兄弟姐妹信息的客户"
+          },
+          "output": {
+            "summary": "有兄弟姐妹的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "兄弟姐妹"
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有兄弟姐妹的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "有兄弟姐妹信息的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "兄弟姐妹"
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选兄弟姐妹家庭成员客户",
+            "reason": "家庭成员关系"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 3 blocking expectations all met · 用户查询'有兄弟姐妹信息的客户'，parser 输出单条件 familyInfo.familyrelation MATCH 兄弟姐妹。字段、值均正确对应业务意图。操作符方面，capability_manifest 仅列 CONTAINS，但 judge boundary 明确指出 CONTAINS/MATCH 差异由项目后处理处置、不构成 parser 错误，且 reference expected 同样使用 MATCH。下游搜索不可用属于外部依赖限制，不影响对 parser 条件语义的判断。综合判定：所有核心期待均已满足。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 3,
+            "blocking_count": 3,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 3,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-016",
+          "scenario": "single_condition",
+          "input": {
+            "query": "有祖父母信息的客户"
+          },
+          "output": {
+            "summary": "有(外)祖父母的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "(外)祖父母"
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有(外)祖父母的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "有祖父母信息的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "(外)祖父母"
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选祖父母家庭成员客户",
+            "reason": "家庭成员关系"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 2 blocking expectations all met · 用户查询'有祖父母信息的客户'的意图被正确解析。parser 输出了 familyInfo.familyrelation 字段，值为标准枚举 '(外)祖父母'。字段和值两个 blocking 维度均正确。操作符实际输出 MATCH 而 prompt 推荐 CONTAINS，但项目 judge boundary 明确指示该项目通过后处理统一处置此差异，因此不构成错误。下游搜索不可用，但基于 parser 条件语义判断，该条件能正确表达用户搜索意图。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 3,
+            "blocking_count": 2,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 3,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-017",
+          "scenario": "single_condition",
+          "input": {
+            "query": "有孙子女信息的客户"
+          },
+          "output": {
+            "summary": "有(外)孙子女的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "(外)孙子女"
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有(外)孙子女的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "有孙子女信息的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "(外)孙子女"
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选孙子女家庭成员客户",
+            "reason": "家庭成员关系"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 3 blocking expectations all met · 用户查询'有孙子女信息的客户'，意图是筛选家庭成员中包含孙子女关系的客户。解析器正确识别了核心意图，输出单一条件：field=familyInfo.familyrelation, operator=MATCH, value=(外)孙子女。\n\n字段 familyInfo.familyrelation 是家庭成员关系的正确映射字段；枚举值 (外)孙子女 在 capability_manifest 枚举列表中且准确对应用户表达的'孙子女'。\n\n操作符方面，capability_manifest 中该字段仅列出 CONTAINS，而实际输出使用了 MATCH。但项目边界规则明确指示'不要纠结 CONTAINS 和 MATCH 的问题，因为原项目会通过后处理处置'。从 ES 查询语义看，对枚举字段执行 MATCH 单值匹配与 CONTAINS 单元素数组匹配结果等价，均能正确筛选出包含该家庭关系的客户。\n\n综上，该输出在语义上完全满足用户意图，无缺失、错误或多余条件。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 3,
+            "blocking_count": 3,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 3,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-018",
+          "scenario": "multi_condition_and",
+          "input": {
+            "query": "子女是男性且年龄小于10岁的客户"
+          },
+          "output": {
+            "summary": "有子女\n并且子女性别为男\n并且子女年龄<10的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              },
+              {
+                "field": "familyInfo.familyclientsex",
+                "operator": "MATCH",
+                "value": "男"
+              },
+              {
+                "field": "familyInfo.familyclientbirthday",
+                "operator": "GTE",
+                "value": "2016-06-24 00:00:00"
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有子女\n并且子女性别为男\n并且子女年龄<10的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "子女是男且年龄小于10岁的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              },
+              {
+                "field": "familyInfo.familyclientsex",
+                "operator": "MATCH",
+                "value": "男"
+              },
+              {
+                "field": "familyInfo.familyclientage",
+                "operator": "LT",
+                "value": 10
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选男孩且小于10岁客户",
+            "reason": "子女年龄+性别"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "not_evaluable",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "not_evaluable",
+            "fulfillment_status": "not_evaluable",
+            "verdict": "uncertain",
+            "score": null,
+            "reason": "uncertain · client_search condition comparison has no current intent/config expected conditions; reference conditions are evidence only",
+            "reason_source": "reasoning_summary",
+            "reason_stage": "judge",
+            "is_formal_attribution": false,
+            "assessment_count": 1,
+            "blocking_count": 1,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "unclear_contract",
+            "attribution_count": 1,
+            "probe_count": 0,
+            "summary_text": "adapter.py 未读取，无法确认下游是否接受 birthday 字段或存在反向转换；下游搜索不可用，无法验证条件执行结果",
+            "is_complete": false,
+            "is_formal_attribution": false
+          }
+        },
+        {
+          "id": "family_property_claim-019",
+          "scenario": "multi_condition_and",
+          "input": {
+            "query": "子女是女性且年龄在10到18岁的客户"
+          },
+          "output": {
+            "summary": "有子女\n并且子女性别为女\n并且子女年龄在10-18岁之间的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              },
+              {
+                "field": "familyInfo.familyclientsex",
+                "operator": "MATCH",
+                "value": "女"
+              },
+              {
+                "field": "familyInfo.familyclientbirthday",
+                "operator": "RANGE",
+                "value": {
+                  "min": "2007-06-24 00:00:00",
+                  "max": "2016-06-23 23:59:59"
+                }
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有子女\n并且子女性别为女\n并且子女年龄在10-18岁之间的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "子女是女且年龄在10到18岁的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              },
+              {
+                "field": "familyInfo.familyclientsex",
+                "operator": "MATCH",
+                "value": "女"
+              },
+              {
+                "field": "familyInfo.familyclientage",
+                "operator": "RANGE",
+                "value": "10-18"
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选女孩10-18岁客户",
+            "reason": "子女年龄+性别"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 4 blocking expectations all met · 用户查询'子女是女性且年龄在10到18岁的客户'包含三个核心条件：子女关系、女性性别、年龄10-18岁。实际输出正确输出了三个AND条件：familyInfo.familyrelation='子女'(子女关系)、familyInfo.familyclientsex='女'(女性)、familyInfo.familyclientbirthday RANGE 2007-06-24~2016-06-23(等价年龄10-18岁)。年龄到出生日期的转换是系统设计文档记录的自动行为，且在2026-06-23当前日期下经验证转换正确：出生在2007-06-24至2016-06-23之间的子女当前年龄为10至18岁（闭区间）。familyrelation的MATCH操作符与CONTAINS差异不构成实质问题。无缺失条件，无错误条件，无多余条件。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 4,
+            "blocking_count": 4,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 4,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        },
+        {
+          "id": "family_property_claim-020",
+          "scenario": "multi_condition_and",
+          "input": {
+            "query": "父母年龄在55到70岁之间的客户"
+          },
+          "output": {
+            "summary": "有父母\n并且父母年龄在55-70岁之间的客户",
+            "structured_output": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "父母"
+              },
+              {
+                "field": "familyInfo.familyclientbirthday",
+                "operator": "RANGE",
+                "value": {
+                  "min": "1955-06-24 00:00:00",
+                  "max": "1971-06-23 23:59:59"
+                }
+              }
+            ],
+            "logic": "AND",
+            "status_code": 0,
+            "user_visible_text": "有父母\n并且父母年龄在55-70岁之间的客户",
+            "empty_result_reason": "",
+            "is_empty_result": false,
+            "source_query": "父母年龄在55到70岁之间的客户"
+          },
+          "reference": {
+            "expected_logic": "AND",
+            "expected_conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "父母"
+              },
+              {
+                "field": "familyInfo.familyclientage",
+                "operator": "RANGE",
+                "value": "55-70"
+              }
+            ]
+          },
+          "metadata": {
+            "expected_intent": "筛选父母55-70岁客户",
+            "reason": "父母年龄区间"
+          },
+          "expected_quality": "correct",
+          "source": "data_mock_seed",
+          "status": "fulfilled",
+          "selected": true,
+          "execution_mode": "provided",
+          "output_source": "live_service",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "score": 1,
+            "reason": "fulfilled · 3 blocking expectations all met · 用户查询'父母年龄在55到70岁之间的客户'被正确解析为两个AND条件：(1)familyInfo.familyrelation='父母'识别家庭关系，(2)familyInfo.familyclientbirthday日期范围精确映射55-70岁。系统文档明确年龄自动转换为生日日期范围，换算验证无误：min=1955-06-24对应70岁，max=1971-06-23对应55岁，覆盖闭区间[55,70]。CONTAINS/MATCH差异被judge boundary豁免。下游搜索不可用但不影响条件语义评估——输出条件在ES查询语义上能够检索到目标客户。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 3,
+            "blocking_count": 3,
+            "primary_failure_dimensions": []
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 3,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          }
+        }
+      ]
+    },
+    {
       "id": "pool-1781408897383",
       "name": "selenium-uat-client-search-1781408897120",
       "case_count": 1,

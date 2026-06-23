@@ -33,7 +33,7 @@ CONFIG = {
         "marketting-planning-intent": ["mpi-required-slot-missing-1"],
         "QA": ["qa-gold-incomplete-1", "qa-context-hallucination-1"],
         "client_search": ["cs-age-gt-boundary-error-1", "cs-family-responsibility-unsupported-1"],
-        "marketting-planning": ["mp-target-unit-error-1", "mp-multiturn-field-accumulation-1"],
+        "marketting-planning": ["mp-premium-growth-plan-correct-1", "mp-target-unit-error-1", "mp-non-agent-1"],
     }
 }
 # ===================================================
@@ -191,8 +191,9 @@ def run_project(proj, case_ids=None):
             v='pending'; sc='-'
             if ok_j:
                 jl=judge.lower()
-                if 'verdict=correct' in jl or ('fulfilled' in jl and 'not_fulfilled' not in jl): v='fulfilled'
+                if 'verdict=correct' in jl or ('fulfilled' in jl and 'not_fulfilled' not in jl and 'partially_fulfilled' not in jl): v='fulfilled'
                 elif 'verdict=incorrect' in jl or 'not_fulfilled' in jl: v='not_fulfilled'
+                elif 'partially_fulfilled' in jl: v='partially_fulfilled'
                 elif 'verdict=uncertain' in jl: v='uncertain'
                 m=re.search(r'score[=:]\s*([\d.]+)',judge); sc=m.group(1) if m else '-'
             ni='no_issue' in judge.lower()

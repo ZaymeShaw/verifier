@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from .schema import AttributeResult, CheckReport, ClusterSummary, FrontendViewModel, JudgeResult, ProjectSpec, RunTrace, _first_list_key, _first_list_value, _non_empty_reference, to_dict
+from .summary import summary_from_fulfillment
 
 
 def _reference_scalar(reference: Any) -> Any:
@@ -135,10 +136,11 @@ def _judge_panel(judge: Optional[JudgeResult]) -> dict:
     panel = to_dict(judge)
     gaps = {"wrong": list(judge.wrong or []), "missing": list(judge.missing or []), "extra": list(judge.extra or [])}
     blocking = [item for item in judge.fulfillment_assessments or [] if _item_value(item, "blocking", False)]
+    summary = summary_from_fulfillment(to_dict(judge))
     panel.update(
         {
             "display_status": (judge.overall_fulfillment or {}).get("status") if isinstance(judge.overall_fulfillment, dict) else "",
-            "display_reason": judge.reasoning_summary or (judge.verdict_derivation or {}).get("why_verdict", "") or (judge.primary_assessment or {}).get("reasoning", ""),
+            "display_reason": summary["reason"],
             "wrong_missing_extra": to_dict(gaps),
             "blocked_expectations": to_dict(blocking),
         }

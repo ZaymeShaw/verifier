@@ -26,6 +26,12 @@ class ClientSearchConditionCompareTool:
             expected_conditions = reference_conditions
             expected_source = "reference_oracle"
             query_logic = reference.get("expected_logic") or reference.get("logic") or "AND"
+        elif reference_conditions:
+            # Fallback: use reference conditions even when not oracle, so condition comparison
+            # can perform semantic matching rather than returning evaluable=false.
+            expected_conditions = reference_conditions
+            expected_source = "reference_fallback"
+            query_logic = reference.get("expected_logic") or reference.get("logic") or "AND"
         else:
             expected_conditions = []
             expected_source = "reference_evidence" if reference_conditions else "not_available"
@@ -42,11 +48,16 @@ class ClientSearchConditionCompareTool:
             "conditions": (trace.extracted_output or {}).get("structured_output") or [],
         }
         equivalence_rules = (context.spec.frontend_extensions or {}).get("semantic_equivalence_rules") if context.spec else {}
+        # Include operator_compatibility from project.yaml via semantic_equivalence_rules
         wrong, missing, extra = self._compare(expected, actual, equivalence_rules) if expected_conditions else ([], [], [])
         boundary_limits = []
         if reference.get("allow_empty_conditions") and not expected["conditions"]:
             boundary_limits.append({"reason": reference.get("expected_reason") or "empty conditions allowed by project boundary"})
         status = "succeeded"
+        evaluable = bool(expected_conditions)
+        # Also evaluable when using reference_fallback (even if conditions differ, we can compare)
+        if expected_source == "reference_fallback":
+            evaluable = True
         outputs = {
             "target_population": self._query_text(trace.input, trace.normalized_request, trace.extracted_output),
             "expected": expected,
@@ -58,9 +69,12 @@ class ClientSearchConditionCompareTool:
             "boundary_limits": boundary_limits,
             "comparison_basis": "client_search wrong/missing/extra customer-search coverage",
             "expected_source": expected.get("expected_source"),
-            "evaluable": bool(expected_conditions),
+            "evaluable": evaluable,
+            "expected_source_label": expected_source,
         }
-        missing_evidence = [] if expected_conditions else [{"reason": "current intent/config expected conditions unavailable; reference expected_conditions kept as evidence only", "expected_source": expected_source}]
+        missing_evidence = [] if evaluable else [{"reason": "current intent/config expected conditions unavailable; reference expected_conditions kept as evidence only", "expected_source": expected_source}]
+        if evaluable and expected_source == "reference_fallback":
+            missing_evidence = [{"reason": "no intent/config expected conditions; using reference conditions as fallback for semantic comparison", "expected_source": expected_source}]
         evidence = [
             {"query": outputs["target_population"]},
             {"expected": expected},

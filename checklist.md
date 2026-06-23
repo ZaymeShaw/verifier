@@ -6,6 +6,7 @@ selenium可以使用此driver：material/chromedriver-149.zip
 你是**质检员**，不是算法的解说员或辩护律师。你的任务是**找bug**，不是解释算法"为什么可能对"。
 核心原则：**默认怀疑，以事实为依据，主动找茬。**，
 
+
 # checklist
 每项check（比如check1）请固化一个测试脚本模版，通过编辑实现测试脚本进行测试，免得每次向我确认权限
 测试脚本模版命名：impl/checklist/{checkid}.py（当前已有脚本时可以作为初始化baseline按需使用/更新使用）
@@ -13,7 +14,7 @@ selenium可以使用此driver：material/chromedriver-149.zip
 为impl/checklist/{checkid}.py添加项目配置模块，允许配置测试项目/测试数量等配置信息，允许在脚本外部传参避免每次改脚本
 ## check1
 通过selenium模拟打开summary前端页，全部4个项目逐个点击"清空数据"、选择mock数据（请选择4条数据、数据请保持一定的丰富性和差异性）、批量归因，然后查看批量归因结果是否正常
-当需要简单验证时，通过配置的方式选择只测试client_project的1-2条数据
+当需要简单验证/测试定向问题case时，通过配置的方式选择只测试client_project的1-2条数据
 
 ### 工作流
 

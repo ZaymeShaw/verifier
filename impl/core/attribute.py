@@ -426,8 +426,7 @@ def attribute_failure(
 - improvement_direction 必须指向产生机制，而不是泛泛建议
 - 分析文字尽量使用中文，输出 JSON。"""
 
-    user = json.dumps(
-        {
+    user_data = {
             "attribution_spec": attribution,
             "run_trace": _compact_trace(trace),
             "judge_result": _compact_judge(judge),
@@ -486,9 +485,8 @@ def attribute_failure(
                 "scenario": "string",
                 "quality_flags": [],
             },
-        },
-        ensure_ascii=False,
-    )
+        }
+    user = json.dumps(user_data, ensure_ascii=False)
     # Log prompt sizes for budget monitoring
     system_size = len(system)
     user_size = len(user)
@@ -517,7 +515,11 @@ def attribute_failure(
         compress_tool_results=True,
         max_tool_calls_from_history=ATTRIBUTE_MAX_TOOL_HISTORY,
     )
-    data = client.complete_json(system, user, trace_id=trace.trace_id)
+    try:
+        data = client.complete_json(system, user, trace_id=trace.trace_id)
+    except Exception as e:
+        logger.error(f"[attribute] LLM call failed with exception: {e}")
+        data = {"error": "llm_request_failed", "raw_text": str(e)}
     # Detect parse failure: LLM returned prose-only output (no JSON fence) so
     # extract_json fell back to {"raw_text": ...}. Without this guard, the code
     # below silently constructs an AttributeResult with empty
@@ -531,7 +533,8 @@ def attribute_failure(
     )
     if _parse_failed:
         data = {**data, "error": "attribute_parse_failed"}
-    if data.get("error") or "llm_call_failed" in (judge.quality_flags or []):
+    _llm_call_failed = data.get("error") in ("llm_request_failed", "missing_api_key", "attribute_parse_failed")
+    if _llm_call_failed or "llm_call_failed" in (judge.quality_flags or []):
         error_text = data.get("raw_text") or data.get("error") or judge.reasoning_summary or "judge LLM call failed"
         return AttributeResult(
             trace_id=trace.trace_id,
@@ -541,8 +544,8 @@ def attribute_failure(
             causal_category="insufficient_evidence",
             probe_results=[{"probe": "llm_call", "status": "failed", "evidence": [error_text]}],
             failure_category="未归因",
-            failure_stage="llm_attribute_call" if data.get("error") else "judge_llm_call",
-            analysis_method="llm_call_failed" if data.get("error") else "judge_llm_failed_blocked_attribute",
+            failure_stage="llm_attribute_call" if _llm_call_failed else "judge_llm_call",
+            analysis_method="llm_call_failed" if _llm_call_failed else "judge_llm_failed_blocked_attribute",
             evidence_chain=[error_text, *(judge.evidence or [])],
             trace_analysis=list(trace.execution_trace or []),
             chain_nodes=[{"name": "semantic judge or attribute LLM", "status": "failed", "evidence": [error_text], "reason": error_text}],

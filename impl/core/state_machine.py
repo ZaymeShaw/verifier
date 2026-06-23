@@ -80,6 +80,8 @@ class TraceStateMachineRunner:
         self._attempts: Dict[str, int] = defaultdict(int)
 
     def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        import logging as _logging
+        _log = _logging.getLogger("verifier.state_machine")
         state_id = str(self.graph.get("initial_state") or "prepare_trace")
         max_steps = int((self.graph.get("limits") or {}).get("max_steps") or 24)
         for _ in range(max_steps):
@@ -89,8 +91,18 @@ class TraceStateMachineRunner:
             result = self._execute_state(state_id, context)
             gates = result.get("gate_decisions") or self._evaluate_gates(state_id, context, result)
             transition = self._select_transition(state_id, context, gates)
+            failed_gates = [g for g in gates if not g.passed]
+            if failed_gates:
+                _log.warning("state=%s attempt=%d failed_gates=%s -> %s", state_id, self._attempts[state_id], [(g.gate_id, g.reason, g.recoverable, g.missing_evidence) for g in failed_gates], transition.to_state)
+                if state_id in ("fulfillment_critic", "evaluate_fulfillment", "build_business_expectations"):
+                    judge = context.get("judge_result")
+                    if judge:
+                        exp_ids = [getattr(e, "expectation_id", e.get("expectation_id") if isinstance(e, dict) else None) for e in (getattr(judge, "business_expectations", []) or [])]
+                        ass_ids = [getattr(a, "expectation_id", a.get("expectation_id") if isinstance(a, dict) else None) for a in (getattr(judge, "fulfillment_assessments", []) or [])]
+                        _log.warning("  judge: exp_ids=%s ass_ids=%s verdict=%s overall=%s", exp_ids, ass_ids, getattr(judge, "verdict", ""), getattr(judge, "overall_fulfillment", {}))
             if self._retry_exceeded(state_id, transition):
                 transition = TransitionDecision(from_state=state_id, to_state="incomplete_or_human_review", condition="retry_limit", reason="state retry limit exceeded", gate_ids=transition.gate_ids, retry_count=transition.retry_count, stop_reason="incomplete_retry_limit")
+                _log.warning("RETRY_EXCEEDED state=%s retry_count=%d", state_id, transition.retry_count)
             self._append_record(state_id, context, result, gates, transition)
             if transition.stop_reason:
                 context["stop_reason"] = transition.stop_reason
@@ -335,7 +347,7 @@ def _expected_fulfillment_state(judge: Any) -> tuple[str, str, list[str]]:
     assessments = list(getattr(judge, "fulfillment_assessments", []) or []) if judge else []
     statuses = [_item_value(item, "status", "") for item in assessments]
     failing_statuses = {"not_fulfilled", "partially_fulfilled", "not_evaluable", "contested"}
-    blocking_ids = [_item_value(item, "expectation_id") for item in assessments if _item_value(item, "status", "") in failing_statuses]
+    blocking_ids = [_item_value(item, "expectation_id") for item in assessments if _item_value(item, "status", "") in failing_statuses and _item_value(item, "blocking", False)]
     if not statuses:
         return "uncertain", "not_evaluable", []
     if any(status == "not_fulfilled" for status in statuses):
@@ -343,7 +355,7 @@ def _expected_fulfillment_state(judge: Any) -> tuple[str, str, list[str]]:
     if any(status in {"not_evaluable", "contested"} for status in statuses):
         return "uncertain", "not_evaluable", blocking_ids
     if any(status == "partially_fulfilled" for status in statuses):
-        return "uncertain", "partially_fulfilled", blocking_ids
+        return "partially_correct", "partially_fulfilled", blocking_ids
     return "correct", "fulfilled", []
 
 
@@ -475,6 +487,10 @@ def evaluate_gate(gate_id: str, context: Dict[str, Any], result: Dict[str, Any])
         probe_results = list(getattr(attribute, "probe_results", []) or []) if attribute else []
         local_verifications = list(getattr(attribute, "local_verifications", []) or []) if attribute else []
         incomplete_reason = getattr(attribute, "incomplete_reason", "") if attribute else ""
+        if not attribute:
+            import logging as _l; _l.getLogger("verifier.state_machine").warning(f"[gate:{gate_id}] attribute_result is None/missing in context keys={list(context.keys())}")
+        elif not incomplete_reason and not probe_results and not local_verifications:
+            import logging as _l; _l.getLogger("verifier.state_machine").warning(f"[gate:{gate_id}] attribute has no probe_results/local_verifications/incomplete_reason; failure_category={getattr(attribute,'failure_category','')}; causal_category={getattr(attribute,'causal_category','')}")
         passed = bool(probe_results or local_verifications or incomplete_reason or not _attribute_required(context))
         return GateDecision(gate_id=gate_id, gate_type="probe_evidence_or_blocked_reason", passed=passed, checked_inputs={"probe_count": len(probe_results), "local_verification_count": len(local_verifications), "has_incomplete_reason": bool(incomplete_reason)}, missing_evidence=[] if passed else ["probe_results or local_verifications or incomplete_reason"], recoverable=True, recommended_transition="run_attribution_probes", reason="probe evidence or blocked reason available" if passed else "probe evidence missing")
     if gate_id == "expectation_attribution_evidence":

@@ -134,6 +134,7 @@ class Adapter(ProjectAdapter):
             "reference_contract": trace.project_fields.get("reference") or {},
             "expected_intent": trace.project_fields.get("expected_intent"),
             "application_boundary": trace.project_fields.get("application_boundary") or {},
+            "critical_intent_dimensions": ["intent_label", "required_slots_or_entities", "confidence_threshold", "fallback_policy", "dispatch_boundary"],
         }
 
     def build_intent_frame(self, trace) -> Dict[str, Any]:
@@ -341,11 +342,12 @@ class Adapter(ProjectAdapter):
                 "missing": [item.get("requirement") for item in missing if isinstance(item, dict)],
                 "blocking_wrong": [item.get("requirement") for item in blocking_wrong if isinstance(item, dict)],
             }
+            evidence_str = f"missing={evidence_summary.get('missing')}; blocking_wrong={evidence_summary.get('blocking_wrong')}"
             judge_result.fulfillment_assessments.append({
                 "expectation_id": "intent_contract",
                 "status": "not_fulfilled",
                 "blocking": True,
-                "evidence": evidence_summary,
+                "evidence": evidence_str,
                 "downstream_impact": self._intent_contract_reasoning_summary(trace, reference, output, missing, wrong, "incorrect"),
             })
             if "intent_contract_gate_failed" not in judge_result.quality_flags:
@@ -353,6 +355,7 @@ class Adapter(ProjectAdapter):
             judge_result.primary_assessment = {"status": "failed", "missing": missing, "wrong": wrong}
             judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), "contract_gate": "failed"}
             judge_result.reasoning_summary = self._intent_contract_reasoning_summary(trace, reference, output, missing, wrong, "incorrect")
+            self.register_judge_override(judge_result, "fulfillment_assessments", [], ["intent_contract: not_fulfilled"], "contract_gate_failed", "normalize_judge_result")
             return judge_result
         if "intent_contract_gate_passed" not in judge_result.quality_flags:
             judge_result.quality_flags.append("intent_contract_gate_passed")
@@ -360,7 +363,7 @@ class Adapter(ProjectAdapter):
             "expectation_id": "intent_contract",
             "status": "fulfilled",
             "blocking": True,
-            "evidence": {"intent": actual_intent, "confidence": confidence, "min_confidence": min_confidence},
+            "evidence": f"intent={actual_intent}; confidence={confidence}; min_confidence={min_confidence}",
             "downstream_impact": self._intent_contract_reasoning_summary(trace, reference, output, [], [], "correct"),
         })
         judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), "contract_gate": "passed"}

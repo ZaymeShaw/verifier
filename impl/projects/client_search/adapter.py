@@ -96,6 +96,32 @@ class Adapter(ProjectAdapter):
         except Exception:
             return {}
 
+    def _value_mappings(self) -> dict:
+        """Load field-specific spoken-to-standard enum value mappings from source YAML."""
+        try:
+            config_paths = self._source_config_paths()
+            path = config_paths.get('source_value_mappings')
+            if not path or not Path(path).exists():
+                return {}
+            with open(path) as f:
+                data = _yaml.safe_load(f)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
+    def _enhanced_rules(self) -> dict:
+        """Load L2 regex matching rules from source YAML."""
+        try:
+            config_paths = self._source_config_paths()
+            path = config_paths.get('source_enhanced_rules')
+            if not path or not Path(path).exists():
+                return {}
+            with open(path) as f:
+                data = _yaml.safe_load(f)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
     def protocol_tools(self) -> ToolRegistry:
         registry = ToolRegistry()
         registry.register(ClientSearchConditionCompareTool())
@@ -386,6 +412,16 @@ class Adapter(ProjectAdapter):
         missing = list(comparison.get("missing") or [])
         extra = list(comparison.get("extra") or [])
         if wrong or missing or extra:
+            # Save LLM original gaps before replacing
+            derivation = dict(judge_result.verdict_derivation or {})
+            derivation["llm_original_gaps"] = {
+                "wrong": list(judge_result.wrong or []),
+                "missing": list(judge_result.missing or []),
+                "extra": list(judge_result.extra or []),
+            }
+            judge_result.verdict_derivation = derivation
+            if "condition_comparison_overrode_llm_gaps" not in (judge_result.quality_flags or []):
+                judge_result.quality_flags = list(judge_result.quality_flags or []) + ["condition_comparison_overrode_llm_gaps"]
             judge_result.wrong = wrong
             judge_result.missing = missing
             judge_result.extra = extra
@@ -409,6 +445,11 @@ class Adapter(ProjectAdapter):
             derivation = dict(judge_result.verdict_derivation or {})
             derivation.setdefault("why_verdict", "client_search condition comparison has no current intent/config expected conditions; reference conditions are evidence only")
             derivation.setdefault("missing_evidence", ["current intent/config expected conditions"])
+            judge_result.verdict_derivation = derivation
+        elif comparison.get("expected_source_label") == "reference_fallback" and not wrong and not missing and not extra:
+            # reference_fallback with no gaps → semantically equivalent, clear the uncertain path
+            derivation = dict(judge_result.verdict_derivation or {})
+            derivation.setdefault("why_verdict", "client_search condition comparison matched reference conditions (fallback); conditions are semantically equivalent")
             judge_result.verdict_derivation = derivation
         elif wrong or missing or extra:
             derivation = dict(judge_result.verdict_derivation or {})
@@ -457,6 +498,9 @@ class Adapter(ProjectAdapter):
         gaps = list(comparison.get("wrong") or []) + list(comparison.get("missing") or []) + list(comparison.get("extra") or [])
         if comparison and comparison.get("evaluable") is False:
             status = "not_evaluable"
+        elif comparison and comparison.get("expected_source_label") == "reference_fallback" and not gaps:
+            # reference_fallback conditions matched — semantically equivalent
+            status = "fulfilled"
         elif comparison:
             status = "not_fulfilled" if gaps else "fulfilled"
         else:
@@ -489,6 +533,8 @@ class Adapter(ProjectAdapter):
             "boundary_usage": "application adapter has already decided whether result-set verification is in scope; judge should evaluate only within application_boundary.judge_scope.",
             "external_boundary_sources": trace.project_fields.get("external_boundary_sources") if isinstance(trace.project_fields, dict) else {},
             "capability_manifest": self._capability_manifest(),
+            "value_mappings": self._value_mappings(),
+            "enhanced_rules": self._enhanced_rules(),
         }
 
     def build_intent_frame(self, trace: RunTrace) -> Dict[str, Any]:

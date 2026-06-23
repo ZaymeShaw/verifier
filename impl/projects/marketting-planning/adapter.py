@@ -891,8 +891,29 @@ class Adapter(ProjectAdapter):
             unique.append(card)
         return unique
 
+    _CARD_CODE_PATH_TYPE_MAP: Dict[str, str] = {
+        "TEAM_PROFILE_ANALYSIS": "premium_growth",
+        "TEAM_REACH_MEASUREMENT": "premium_growth",
+        "CUSTOMER_PROFILE_ANALYSIS": "customer_growth",
+        "CUSTOMER_REACH_MEASUREMEN": "customer_growth",
+        "PRODUCT_PROFILE_ANALYSIS": "product_mix",
+        "PRODUCT_REACH_MEASUREMENT": "product_mix",
+    }
+
     def _card_summary(self, card: Dict[str, Any]) -> Dict[str, Any]:
-        return {"path_type": str(card.get("path_type") or card.get("type") or "unknown"), "card_code": str(card.get("card_code") or card.get("code") or ""), "card_name": str(card.get("card_name") or card.get("name") or ""), "fallback": bool(card.get("fallback")), "forecast_value": card.get("forecast_value"), "achievement_rate": card.get("achievement_rate")}
+        explicit = card.get("path_type") or card.get("type")
+        if not explicit:
+            card_code = str(card.get("card_code") or card.get("code") or "")
+            explicit = self._CARD_CODE_PATH_TYPE_MAP.get(card_code)
+        if not explicit:
+            desc = str(card.get("card_desc") or "")
+            if "队伍" in desc or "premium" in desc.lower():
+                explicit = "premium_growth"
+            elif "客户" in desc or "customer" in desc.lower():
+                explicit = "customer_growth"
+            elif "产品" in desc or "product" in desc.lower():
+                explicit = "product_mix"
+        return {"path_type": str(explicit or "unknown"), "card_code": str(card.get("card_code") or card.get("code") or ""), "card_name": str(card.get("card_name") or card.get("name") or ""), "fallback": bool(card.get("fallback")), "forecast_value": card.get("forecast_value"), "achievement_rate": card.get("achievement_rate")}
 
     def _card_result(self, payload: Any) -> Dict[str, Any]:
         if not isinstance(payload, dict):
@@ -911,13 +932,22 @@ class Adapter(ProjectAdapter):
         names = [str(event.get("event") or event.get("name") or "") for event in events]
         joined = " ".join(names).lower()
         card_codes = {str(card.get("card_code") or "") for card in cards}
+        intent_values = set()
+        for event in events:
+            payload = event.get("data") if isinstance(event, dict) else None
+            if isinstance(payload, dict):
+                inner_data = payload.get("data") if isinstance(payload.get("data"), dict) else payload
+                extras = inner_data.get("extra_output_params") if isinstance(inner_data.get("extra_output_params"), dict) else {}
+                intent_val = str(inner_data.get("intent") or extras.get("intent") or "")
+                if intent_val:
+                    intent_values.add(intent_val)
         if card_codes & {"ASK_TARGET_VALUE", "ACHIEVE_PATH_TYPE_QUESTION"}:
             return "clarification"
         if "clarification" in joined or "clarify" in joined:
             return "clarification"
-        if "non_agent" in joined or "reject" in joined:
+        if "non_agent" in joined or "reject" in joined or intent_values & {"4001"}:
             return "non_agent"
-        if "fallback" in joined:
+        if "fallback" in joined or intent_values & {"nbev_planning_fallback"}:
             return "fallback"
         if cards or "planning" in joined or "card" in joined:
             return "planning"

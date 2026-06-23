@@ -110,6 +110,70 @@ def _extract_compact_semantic_rules(
     return compact
 
 
+def _extract_compact_value_mappings(
+    project_judge_context: Optional[Dict[str, Any]],
+    trace_fields: Set[str]
+) -> Dict[str, Any]:
+    """Extract only value_mappings entries for fields in trace."""
+    if not project_judge_context or "value_mappings" not in project_judge_context:
+        return {}
+
+    full_mappings = project_judge_context["value_mappings"]
+    if not isinstance(full_mappings, dict):
+        return {}
+
+    compact = {}
+    for field in trace_fields:
+        if field in full_mappings:
+            compact[field] = full_mappings[field]
+    return compact
+
+
+def _extract_compact_enhanced_rules(
+    project_judge_context: Optional[Dict[str, Any]],
+    trace_fields: Set[str]
+) -> Dict[str, Any]:
+    """Extract only enhanced_rules entries for fields in trace.
+
+    Returns the full rule list for matching fields. For very large rule sets
+    (e.g., 330KB source), this aggressively limits per-field rules to the first
+    20 entries to stay within prompt budget. Composite rules (no field key) are
+    included as-is since they represent cross-field patterns.
+    """
+    if not project_judge_context or "enhanced_rules" not in project_judge_context:
+        return {}
+
+    full_rules = project_judge_context["enhanced_rules"]
+    if not isinstance(full_rules, dict):
+        return {}
+
+    compact = {}
+    # Filter rules by trace_fields
+    for rule_key in ("rules", "composite_rules", "bare_value_weak_match"):
+        raw = full_rules.get(rule_key)
+        if not isinstance(raw, list):
+            continue
+        if rule_key == "composite_rules":
+            # Composite rules reference fields indirectly; include them
+            compact[rule_key] = raw[:20]
+            if len(raw) > 20:
+                compact[f"{rule_key}_truncated"] = True
+        else:
+            filtered = [r for r in raw if isinstance(r, dict) and r.get("field") in trace_fields]
+            if filtered:
+                if len(filtered) > 20:
+                    compact[rule_key] = filtered[:20]
+                    compact[f"{rule_key}_truncated"] = True
+                else:
+                    compact[rule_key] = filtered
+
+    # Include negation_words (always useful, small)
+    negation = full_rules.get("negation_words")
+    if isinstance(negation, list):
+        compact["negation_words"] = negation
+    return compact
+
+
 
 def load_judge_boundary_standard(spec: ProjectSpec) -> Dict[str, Any]:
     implementation_standard = spec.frontend_extensions.get("implementation_standard") if spec.frontend_extensions else None
@@ -175,7 +239,9 @@ def _compute_verdict(overall_status: str, boundary_decision: Dict[str, Any]) -> 
         if decision.get("within_evaluable_scope") is False and not decision.get("evaluable_errors"):
             return "uncertain"
         return "incorrect"
-    # partially_fulfilled / not_evaluable / contested / missing
+    if overall_status == "partially_fulfilled":
+        return "partially_correct"
+    # not_evaluable / contested / missing
     return "uncertain"
 
 
@@ -382,9 +448,13 @@ def judge_trace(
     # Build compact context: only capability/rules for trace fields
     compact_capability = _extract_compact_capability_manifest(project_judge_context, trace_fields)
     compact_semantic_rules = _extract_compact_semantic_rules(project_judge_context, trace_fields)
+    compact_value_mappings = _extract_compact_value_mappings(project_judge_context, trace_fields)
+    compact_enhanced_rules = _extract_compact_enhanced_rules(project_judge_context, trace_fields)
 
     logger.info(f"[judge] Compact capability_manifest: {len(compact_capability)} fields")
     logger.info(f"[judge] Compact semantic_rules: {sum(len(v) if isinstance(v, list) else 0 for v in compact_semantic_rules.values())} rules")
+    logger.info(f"[judge] Compact value_mappings: {len(compact_value_mappings)} fields")
+    logger.info(f"[judge] Compact enhanced_rules: {len(compact_enhanced_rules)} fields")
 
     # Create field definition search tool (项目专属 provider + 通用协议)
     from impl.tools.field_retrieval import create_field_search_tool
@@ -412,13 +482,23 @@ def judge_trace(
         "只基于当前 RunTrace、项目评判标准和动态检索的知识库内容判断，不继承历史 case。\n"
         "首要职责：先理解用户/下游消费者的真实业务意图 → 形成 intent_model → 从 intent_model 派生 business_expectations → "
         "判断 actual output 对 expectations 的 fulfillment。verdict 由代码单点推导，**你不要输出 verdict / score / confidence / probability**。\n\n"
+        "## expectation 拆分原则（关键！影响判断精度）\n"
+        "business_expectations 的粒度直接决定判断精度。每个 expectation 必须是**原子可判定**的——即仅凭 actual output 就能明确判定 fulfilled 或 not_fulfilled，无需再拆分。\n"
+        "拆分规则：\n"
+        "- 一个 expectation 只描述一个可独立验证的结果维度（如：一个字段的值、一个操作符的使用、一个业务规则的满足）\n"
+        "- 如果用户意图涉及多个字段/操作符/规则，必须拆成多个 expectation，每个 expectation 对应一个维度\n"
+        "- 拆分后的每个 expectation 必须有明确的 acceptance_criteria（可判定的通过/失败条件）\n"
+        "- blocking_level 根据该维度对用户意图的必要性设定：核心需求=blocking，辅助需求=non-blocking\n"
+        "反例（禁止）：一个 expectation 同时要求'字段A值正确且操作符B正确'——应拆为两个 expectation\n"
+        "正例：expectation_1='字段A的值符合预期'，expectation_2='操作符B的使用符合预期'\n\n"
         "## 输出词表\n"
-        "`fulfillment_assessments[*].status` 与 `overall_fulfillment.status` 必须从以下 5 个值中选择，禁用同义词：\n"
-        "  - fulfilled\n"
-        "  - not_fulfilled\n"
-        "  - partially_fulfilled\n"
-        "  - not_evaluable\n"
-        "  - contested\n"
+        "`fulfillment_assessments[*].status` 与 `overall_fulfillment.status` 必须从以下 5 个值中选择：\n"
+        "  - fulfilled：该 expectation 完全满足\n"
+        "  - not_fulfilled：该 expectation 未满足\n"
+        "  - partially_fulfilled：该 expectation 部分满足（仅当 expectation 可拆分为多个独立维度、且部分维度满足部分不满足时使用；优先拆分为多个 expectation 逐项判定，仅在无法合理拆分时使用此状态）\n"
+        "  - not_evaluable：当前无法评估\n"
+        "  - contested：评估结论存在争议\n"
+        "**优先拆分**：如果一个 expectation 涉及多个可独立评估的维度（如操作符错误但值正确、值正确但单位错误），必须拆成多个 expectation 逐项独立判定为 fulfilled 或 not_fulfilled，而不是使用 partially_fulfilled。\n"
         "禁用 failed / passed / incorrect / wrong / met / unmet / success / fail / ok / unknown / disputed 等同义词。\n"
         "`boundary_decision.within_evaluable_scope=false` 必须满足：失败原因仅来自 `uncontrollable_limits`，且 `evaluable_errors` 为空数组。"
         "若存在任一 `evaluable_error`，则 `within_evaluable_scope` 必须为 `true`。\n"
@@ -439,6 +519,11 @@ def judge_trace(
         "- operator_compatibility：在某些条件下互相兼容的操作符\n"
         "- equivalent_fields：表示同一业务含义的不同字段名\n"
         "如果条件满足等价规则，必须在 semantic_equivalence_checks 中说明，且不应判定为 wrong/missing。\n\n"
+        "## 口语映射规则（如提供）\n"
+        "user prompt 中的 value_mappings 包含用户口语别名到系统标准枚举值的映射关系（如'男性'→'男'、'重疾险'→'疾病保险'）。"
+        "如果 actual output 使用了标准枚举值而非用户的口语表达，应视为正确映射，不应判 wrong 或 missing。\n\n"
+        "## 增强正则规则（如提供）\n"
+        "user prompt 中的 enhanced_rules 包含当前字段的 L2 正则匹配规则定义。如果 actual output 的条件符合 enhanced_rules 中的某个 pattern/operator/value_type 绑定，应视为与项目规则一致。\n\n"
         "## 按需字段检索（可选）\n"
         "如果 user prompt 中的 capability_manifest 信息不足以判断（极少见），你可以调用 search_field_definition 工具：\n"
         "- 输入：字段名（如项目文档中的字段标识）\n"
@@ -457,6 +542,8 @@ def judge_trace(
         {
             "capability_manifest": compact_capability,  # Only fields in trace
             "semantic_equivalence_rules": compact_semantic_rules,  # Only fields in trace
+            "value_mappings": compact_value_mappings,  # Only fields in trace
+            "enhanced_rules": compact_enhanced_rules,  # Only fields in trace, limited per field
             "expected_intent": expected_intent,
             "run_trace": trace.__dict__,
             "required_output": {

@@ -143,6 +143,17 @@ class ExpectationAttribution:
 
 
 @dataclass
+class GapItem:
+    kind: str = ""           # "wrong" | "missing" | "extra"
+    error_type: str = ""     # e.g. "field_mismatch", "operator_mismatch", "value_type_mismatch"
+    expected: Any = None     # expected value
+    actual: Any = None       # actual value
+    evidence_ref: str = ""   # source reference
+    raw: Any = None          # original LLM output (for traceability)
+    incomplete: bool = False  # True if LLM returned bare string or dict missing key fields
+
+
+@dataclass
 class JudgeResult:
     trace_id: str
     project_id: str
@@ -181,6 +192,7 @@ class JudgeResult:
     gate_decisions: List[GateDecision] = field(default_factory=list)
     transition_decisions: List[TransitionDecision] = field(default_factory=list)
     raw_model_output: Any = None
+    overrides: List[Dict[str, Any]] = field(default_factory=list)
 
 
 def _item_value(item: Any, key: str, default: Any = None) -> Any:
