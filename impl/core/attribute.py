@@ -457,25 +457,40 @@ def attribute_failure(
 5. suspected_locations 只能使用 source_file_catalog 中真实存在的路径/配置/文档证据；不能编造路径、函数名或历史 case
 6. 如果 probe/source evidence 不足，必须设置 incomplete_reason 和 blocked-probe reason，不能伪造正式归因
 
-按需读取源码文件（核心能力！这是本工具存在的价值）：
-- user prompt 中的 source_file_catalog 列出所有可用源码文件（key、path、size_chars、description）
-- **必须调用 search_source_file(file_key) 工具读取关键文件内容**，不能仅凭文件名推测
-- 对于 external LLM service（如 intent recognition），**必须读取 prompt 文件**（如 intent_prompt.py）来确认：
-  * LLM prompt 是否包含当前 intent 的定义和示例
-  * Few-shot examples 是否覆盖当前 query 的语义模式
-  * Intent 映射规则是否完整
-- 对于配置错误，**必须读取 config 文件**（如 config.py, intent.py）来确认枚举值、阈值等
-- 只调用你需要的文件，优先读取 catalog 中名称包含 "prompt"、"config"、"intent" 的文件
-- suspected_locations 中的路径必须来自 source_file_catalog 中实际存在的文件
-- **禁止说"无法访问 prompt 文件"或"prompt 内容不可见"** —— catalog 中的文件都可以通过 tool 读取
+分析优先级和策略：
+1. **优先分析 execution_trace**（运行时实际发生了什么）：
+   - 检查 run_trace.execution_trace 中的每个 step
+   - 定位第一个 status="failed"/"diverged"/"error" 的 step
+   - 记录该 step 的 expected vs actual，这是最直接的分歧证据
+   - 基于分歧点的 stage/node 名称，推断对应的函数/模块
+
+2. **然后按需读取源码文件**（验证假设，核心能力！）：
+   - user prompt 中的 source_file_catalog 列出所有可用源码文件（key、path、size_chars、description）
+   - **必须调用 search_source_file(file_key) 工具读取关键文件内容**，不能仅凭文件名推测
+   - 对于 external LLM service（如 intent recognition），优先级：
+     * 如果 trace 中有 LLM 的实际输出（如 raw_intent="4001"），先分析输出为何被判定为错误
+     * 然后读取 **config 文件**（如 intent.py, config.py）确认映射规则是否完整
+     * 最后才考虑读取 **prompt 文件**（如 intent_prompt.py）确认 LLM prompt 内容
+   - 对于配置错误，直接读取 **config 文件**确认枚举值、阈值等
+   - 只调用你需要的文件，优先读取与分歧点相关的文件
+   - suspected_locations 中的路径必须来自 source_file_catalog 中实际存在的文件
+   - **禁止说"无法访问 prompt 文件"或"prompt 内容不可见"** —— catalog 中的文件都可以通过 tool 读取
+
+3. **Tool 使用效率**：
+   - 优先读取小文件（config、mapping）而不是大文件（完整 prompt）
+   - 基于 trace 中的具体值（如 raw_intent="4001"）直接检查映射表，而不是读取整个 prompt 去理解 LLM 应该输出什么
+   - 每个 probe 应该有明确目标：验证某个具体假设（如"4001 是否映射到 nbev_planning"）
 
 关键规则：
 - causal_category 使用 implementation_bug、model_capability_gap、boundary_limitation、unclear_contract、insufficient_evidence、no_issue 等
 - fulfilled 也可以被解释为 no_issue，但不需要失败归因
 - improvement_direction 必须指向产生机制，而不是泛泛建议
 - 分析文字必须使用中文，包括 root_cause_hypothesis、verification_steps、patch_direction、business_impact 等所有文本字段。禁止使用英文撰写归因内容。
-- **必须执行至少 1-2 个 probe**（调用 search_source_file 读取源码文件）来支撑归因结论，不能仅凭 LLM 推理或文件名推测得出根因。
-- 如果 catalog 中有 prompt/config 文件但未读取，归因质量判定为 insufficient_evidence。"""
+- **必须执行至少 1 个 probe**（调用 search_source_file 读取源码文件）来支撑归因结论，除非 execution_trace 已经提供了充分的分歧证据
+- **Tool call 预算有限（最多 {tool_call_limit} 次）**，优先读取与分歧点直接相关的小文件（config、mapping），而不是完整的大文件（prompt）
+- 如果 execution_trace 中已经有具体的错误值（如 raw_intent="4001", mapped="other"），直接检查映射规则，不需要读取完整 prompt
+- 如果 tool call 预算用尽且归因不完整，必须设置 incomplete_reason="tool_call_budget_exhausted: 已读取 N 个文件，但仍需读取 [file_list] 来完成归因"
+- 如果 catalog 中有关键文件但因预算限制未读取，在 incomplete_reason 中明确说明，不要说"文件不在 catalog"或"无法访问"。"""
 
     user_data = {
             "attribution_spec": attribution,
