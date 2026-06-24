@@ -9,6 +9,7 @@ from .knowledge_base import load_knowledge_base
 from .llm_client import LlmClient, project_llm_client
 from .project_loader import load_project_document
 from .schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace
+from .trace_analysis import analyze_execution_trace, map_trace_node_to_source
 
 logger = logging.getLogger(__name__)
 
@@ -450,6 +451,10 @@ def attribute_failure(
 - 如必须使用 ``` 代码块包裹，仅允许一个 ```json ... ``` 代码块包裹完整 JSON，且代码块外不得有其他散文。
 
 核心流程：
+0. **优先使用 trace_analysis**（Issue #3 新增）：
+   - user prompt 中的 `trace_analysis` 字段包含预处理的调用链路分析结果
+   - 包括：first_failed_node（第一个失败节点）、divergence_chain（分歧链路）、runtime_values（运行时实际值）、suggested_probes（建议的验证方向）、source_mapping（失败节点对应的源码位置）
+   - **优先基于这些预处理结果进行归因**，避免花费大量 tool call 去读源码理解调用链路
 1. 从 attribution_targets 选择需要归因的 expectation；这些 target 已由 judge 的 intent_model/business_expectations/fulfillment_assessments 产生，不要独立重建用户意图
 2. 对每个 expectation 重建 expected behavior、actual behavior、gap 或 contested fulfillment reason
 3. 在 execution_trace、project_attribute_context.chain_nodes_to_check 和按需读取的源码文件中定位最早分歧
@@ -492,7 +497,24 @@ def attribute_failure(
 - 如果 tool call 预算用尽且归因不完整，必须设置 incomplete_reason="tool_call_budget_exhausted: 已读取 N 个文件，但仍需读取 [file_list] 来完成归因"
 - 如果 catalog 中有关键文件但因预算限制未读取，在 incomplete_reason 中明确说明，不要说"文件不在 catalog"或"无法访问"。"""
 
+    # Issue #3: 在 user prompt 中提供预处理的调用链路分析结果
+    # 这样 agent 可以"直接引用系统原函数"，而不需要读大量源码文件去推测
+    trace_analysis_result = None
+    if trace.execution_trace:
+        try:
+            trace_analysis_result = analyze_execution_trace(trace.execution_trace)
+            # 如果找到了分歧点，映射到源码位置
+            if trace_analysis_result.get("first_failed_node"):
+                node_name = trace_analysis_result["first_failed_node"]["name"]
+                project_name = spec.name if spec else "unknown"
+                source_mapping = map_trace_node_to_source(node_name, project_name)
+                trace_analysis_result["source_mapping"] = source_mapping
+        except Exception as e:
+            logger.warning(f"Trace analysis failed: {e}")
+            trace_analysis_result = {"error": str(e)}
+
     user_data = {
+            "trace_analysis": trace_analysis_result,  # Issue #3: 预处理的调用链路分析
             "attribution_spec": attribution,
             "run_trace": _compact_trace(trace),
             "judge_result": _compact_judge(judge),
