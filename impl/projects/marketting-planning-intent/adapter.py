@@ -12,19 +12,21 @@ from impl.core.adapter import ProjectAdapter
 
 # Stage→ext_repo path-prefix map. Narrows the source-file catalog by current
 # trace failure signals so the attribute agent doesn't see the entire repo.
+# Prefixes use exact file paths (with .py) — intent_recognition is a module
+# file, not a directory, so a trailing-slash prefix would never match it.
 STAGE_FILE_PREFIXES: Dict[str, tuple] = {
     "request_normalization": ("app/api/", "app/schemas/request", "app/main.py"),
     "intent_api_call": (
-        "app/workflow/steps/intent_recognition",
-        "app/workflow/prompts/intent_",
-        "app/schemas/intent",
+        "app/workflow/steps/intent_recognition.py",
+        "app/workflow/prompts/intent_prompt.py",
+        "app/schemas/intent.py",
         "app/config.py",
-        "app/utils/llm_client",
+        "app/utils/llm_client.py",
     ),
     "adapter_extraction": (),  # adapter.py is added separately by source_retrieval
     "label_mapping": (
-        "app/workflow/steps/intent_recognition",
-        "app/schemas/intent",
+        "app/workflow/steps/intent_recognition.py",
+        "app/schemas/intent.py",
         "app/config.py",
     ),
 }
@@ -37,7 +39,7 @@ class Adapter(ProjectAdapter):
         nested = input_data.get("input") if isinstance(input_data.get("input"), dict) else {}
         query = input_data.get("query") or input_data.get("user_text") or input_data.get("user_query") or nested.get("query") or nested.get("user_text") or ""
         reference = input_data.get("reference") or nested.get("reference") or {}
-        expected_intent = input_data.get("expected_intent") or nested.get("expected_intent") or reference.get("intent") if isinstance(reference, dict) else None
+        expected_intent = input_data.get("expected_intent") or nested.get("expected_intent") or (reference.get("intent") if isinstance(reference, dict) else None)
         session_id = str(input_data.get("session_id") or nested.get("session_id") or f"eval-{input_data.get('case_id') or input_data.get('id') or int(time.time() * 1000)}")
         return {
             "case_id": str(input_data.get("case_id") or input_data.get("id") or f"intent-case-{int(time.time() * 1000)}"),

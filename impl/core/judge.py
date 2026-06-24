@@ -174,6 +174,23 @@ def _extract_compact_enhanced_rules(
     return compact
 
 
+def _extract_compact_field(
+    project_judge_context: Optional[Dict[str, Any]],
+    field_name: str,
+) -> Any:
+    """Extract a top-level field from project_judge_context."""
+    if not project_judge_context:
+        return None
+    value = project_judge_context.get(field_name)
+    if value is not None:
+        return value
+    # Fallback: check inside intent_frame
+    intent_frame = project_judge_context.get("intent_frame")
+    if isinstance(intent_frame, dict):
+        return intent_frame.get(field_name)
+    return None
+
+
 
 def load_judge_boundary_standard(spec: ProjectSpec) -> Dict[str, Any]:
     implementation_standard = spec.frontend_extensions.get("implementation_standard") if spec.frontend_extensions else None
@@ -450,6 +467,15 @@ def judge_trace(
     compact_semantic_rules = _extract_compact_semantic_rules(project_judge_context, trace_fields)
     compact_value_mappings = _extract_compact_value_mappings(project_judge_context, trace_fields)
     compact_enhanced_rules = _extract_compact_enhanced_rules(project_judge_context, trace_fields)
+    compact_critical_intent_dimensions = _extract_compact_field(project_judge_context, "critical_intent_dimensions")
+
+    # Fallback: if pipeline-extracted expected_intent is None, try project_judge_context
+    if not expected_intent and project_judge_context:
+        expected_intent = project_judge_context.get("expected_intent") or (
+            project_judge_context.get("intent_frame", {}).get("expected_intent")
+            if isinstance(project_judge_context.get("intent_frame"), dict)
+            else None
+        )
 
     logger.info(f"[judge] Compact capability_manifest: {len(compact_capability)} fields")
     logger.info(f"[judge] Compact semantic_rules: {sum(len(v) if isinstance(v, list) else 0 for v in compact_semantic_rules.values())} rules")
@@ -489,6 +515,10 @@ def judge_trace(
         "- 如果用户意图涉及多个字段/操作符/规则，必须拆成多个 expectation，每个 expectation 对应一个维度\n"
         "- 拆分后的每个 expectation 必须有明确的 acceptance_criteria（可判定的通过/失败条件）\n"
         "- blocking_level 根据该维度对用户意图的必要性设定：核心需求=blocking，辅助需求=non-blocking\n"
+        "- **每个 expectation 的 expectation_id 必须是描述性的中文短语**（如'意图标签正确性'、'免赔额数值有材料支持'、'回答完整性'），禁止使用 E1/E2/exp_01 等占位符 ID\n"
+        "- **condition_assessments 中的 requirement 字段必须是描述性中文**（如'actual_answer 与 golden_answer 一致'、'回答未包含意外事故例外'），禁止使用占位符\n"
+        "- **blocking_gaps 中的每项必须是描述性中文**，禁止出现 E1/E2/exp_01/exp-01 等占位符\n"
+        "- **reasoning_summary / why_verdict 必须是中文写成的判断依据**，说明具体满足了/未满足哪些业务期望\n"
         "反例（禁止）：一个 expectation 同时要求'字段A值正确且操作符B正确'——应拆为两个 expectation\n"
         "正例：expectation_1='字段A的值符合预期'，expectation_2='操作符B的使用符合预期'\n\n"
         "## 输出词表\n"
@@ -524,6 +554,9 @@ def judge_trace(
         "如果 actual output 使用了标准枚举值而非用户的口语表达，应视为正确映射，不应判 wrong 或 missing。\n\n"
         "## 增强正则规则（如提供）\n"
         "user prompt 中的 enhanced_rules 包含当前字段的 L2 正则匹配规则定义。如果 actual output 的条件符合 enhanced_rules 中的某个 pattern/operator/value_type 绑定，应视为与项目规则一致。\n\n"
+        "## 意图关键维度（如提供）\n"
+        "user prompt 中的 critical_intent_dimensions 定义了当前项目 judge 的评估维度轴，如 intent_label/required_slots/confidence_threshold/fallback_policy。"
+        "请将这些维度作为分解 business_expectations 的骨架：每个维度拆为 1 个或多个 expectations，逐个评估。\n\n"
         "## 按需字段检索（可选）\n"
         "如果 user prompt 中的 capability_manifest 信息不足以判断（极少见），你可以调用 search_field_definition 工具：\n"
         "- 输入：字段名（如项目文档中的字段标识）\n"
@@ -534,16 +567,16 @@ def judge_trace(
         "- 不要把 reference answer 当作默认主目标（除非 case 明确指定）\n"
         "- 不要把 HTTP 状态、run_status、review_verdict、attribute/cluster 结论当作满足依据\n"
         "- 不要归因内部代码、配置或 prompt 原因（属于 attribute agent）\n"
-        "- 分析文字尽量使用中文，输出 JSON。"
+        "- 分析文字必须使用中文，包括 reasoning_summary、why_verdict、blocking_gaps 等所有文本字段。禁止使用英文撰写分析内容。\n"
+        "- 输出 JSON。"
     )
-    
-    # User prompt: runtime data + compact context (~30k chars)
     user = json.dumps(
         {
-            "capability_manifest": compact_capability,  # Only fields in trace
-            "semantic_equivalence_rules": compact_semantic_rules,  # Only fields in trace
-            "value_mappings": compact_value_mappings,  # Only fields in trace
-            "enhanced_rules": compact_enhanced_rules,  # Only fields in trace, limited per field
+            "capability_manifest": compact_capability,
+            "semantic_equivalence_rules": compact_semantic_rules,
+            "value_mappings": compact_value_mappings,
+            "enhanced_rules": compact_enhanced_rules,
+            "critical_intent_dimensions": compact_critical_intent_dimensions,
             "expected_intent": expected_intent,
             "run_trace": trace.__dict__,
             "required_output": {

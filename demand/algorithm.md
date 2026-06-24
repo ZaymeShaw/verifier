@@ -28,7 +28,7 @@
 
 结论：评估当前上下文工程是否合理，是否应该填补某上下文或者去掉冗余上下文，从业务角度说明
 
-输出报告放在info-dense/{timestamp}-{agent_name}.md
+输出报告放在report/info-dense/{timestamp}-{agent_name}.md
 
 
 # review

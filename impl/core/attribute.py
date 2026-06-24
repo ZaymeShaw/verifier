@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 MAX_SOURCE_FILE_BYTES = 64000
 SOURCE_READABLE_SUFFIXES = {".py", ".yaml", ".yml", ".md", ".json", ".txt", ".cfg", ".toml", ".prompt"}
 AGGREGATE_TOOL_BUDGET = 192_000
-ATTRIBUTE_TOOL_CALL_LIMIT = 4  # Cap search_source_file calls per case; bounded catalog + 4 reads is enough
-ATTRIBUTE_MAX_TOOL_HISTORY = 2  # Prune old tool messages so multi-turn prompts stop growing
+ATTRIBUTE_TOOL_CALL_LIMIT = 6  # Cap search_source_file calls per case; allow more probes for thorough attribution
+ATTRIBUTE_MAX_TOOL_HISTORY = 3  # Keep more tool context for multi-step attribution
 
 
 # Per-field size caps for compact view (chars). Keep loose so attribution still has signal,
@@ -195,6 +195,43 @@ def _has_chain_evidence(result: AttributeResult) -> bool:
     return bool(result.earliest_divergence.get("evidence") if isinstance(result.earliest_divergence, dict) else False)
 
 
+# FIX P3: Build meaningful incomplete_reason instead of empty template
+def _build_incomplete_reason(result: AttributeResult, spec: ProjectSpec, trace: RunTrace, judge: JudgeResult) -> str:
+    """根据 judge 和 trace 证据，生成有信息量的 incomplete_reason，而非空模板。"""
+    # 收集关键信息
+    query = ""
+    if isinstance(trace.input, dict):
+        query = trace.input.get("query") or trace.input.get("question") or trace.input.get("user_text") or ""
+    actual = trace.extracted_output or {}
+    expected = judge.expected or {}
+    verdict = judge.verdict or "unknown"
+    missing_reqs = [item.get("requirement") for item in (judge.missing or []) if isinstance(item, dict)]
+    wrong_reqs = [item.get("requirement") for item in (judge.wrong or []) if isinstance(item, dict)]
+
+    # 根据 verdict 和证据生成描述
+    reason_parts = []
+    if verdict == "incorrect":
+        reason_parts.append(f"判定结果为 incorrect")
+        if missing_reqs:
+            reason_parts.append(f"缺失项：{missing_reqs}")
+        if wrong_reqs:
+            reason_parts.append(f"错误项：{wrong_reqs}")
+        # 添加实际 vs 期望的关键差异
+        if isinstance(actual, dict) and isinstance(expected, dict):
+            diff_keys = [k for k in expected if k in actual and actual[k] != expected[k]]
+            if diff_keys:
+                reason_parts.append(f"关键差异字段：{diff_keys[:3]}")
+    elif verdict == "uncertain":
+        reason_parts.append(f"判定结果为 uncertain，证据不足以做出确定性判断")
+    else:
+        reason_parts.append(f"判定结果为 {verdict}")
+
+    reason_parts.append("attribute agent 未能获取足够的源码/配置证据来支撑正式根因定位。")
+    reason_parts.append("建议：检查 source_file_catalog 是否包含相关 prompt 文件和 adapter 源码。")
+
+    return "；".join(reason_parts) + "。"
+
+
 def normalize_attribute_trace_result(spec: ProjectSpec, trace: RunTrace, judge: JudgeResult, result: AttributeResult) -> AttributeResult:
     coverage = result.evidence_coverage or {}
     unsupported = _unsupported_claims(result)
@@ -202,9 +239,6 @@ def normalize_attribute_trace_result(spec: ProjectSpec, trace: RunTrace, judge: 
     has_current_gap = _coverage(coverage, "query") and _coverage(coverage, "actual") and _coverage(coverage, "expected")
     has_chain = _coverage(coverage, "execution_trace") and _has_chain_evidence(result)
     has_location_evidence = _coverage(coverage, "project_docs") or _coverage(coverage, "code_or_config")
-    # Evaluated up-front so it can suppress the strict "suspected_locations without evidence_coverage flag"
-    # gate. LLM frequently forgets to mark evidence_coverage.code_or_config=true even after using
-    # search_source_file; if its attribution is otherwise valid, that omission alone shouldn't void it.
     taxonomy = _taxonomy(spec)
     has_valid_llm_attribution = (
         bool(result.expectation_attributions)
@@ -215,6 +249,11 @@ def normalize_attribute_trace_result(spec: ProjectSpec, trace: RunTrace, judge: 
     blocked_by_unsupported = bool(unsupported)
     blocked_by_locations = bool(result.suspected_locations) and not has_location_evidence and not has_valid_llm_attribution
     blocked_by_hypothesis = bool(result.root_cause_hypothesis) and not result.verification_steps and not (has_current_gap and has_chain) and not has_valid_llm_attribution
+    has_probe_evidence = bool(result.probe_results) and any(
+        isinstance(p, dict) and p.get("status") == "passed" for p in result.probe_results
+    )
+    if blocked_by_locations and has_probe_evidence:
+        blocked_by_locations = False
     if blocked_by_unsupported or blocked_by_locations or blocked_by_hypothesis:
         result.suspected_locations = []
         result.analysis_quality = {
@@ -223,7 +262,7 @@ def normalize_attribute_trace_result(spec: ProjectSpec, trace: RunTrace, judge: 
             "status": "insufficient_evidence",
             "missing": sorted(set([*missing, "supported root-cause evidence"])),
         }
-        result.incomplete_reason = result.incomplete_reason or "unsupported root-cause evidence: current case evidence does not support suspected locations or patch direction."
+        result.incomplete_reason = result.incomplete_reason or _build_incomplete_reason(result, spec, trace, judge)
         if "ungrounded_root_cause" not in result.quality_flags:
             result.quality_flags.append("ungrounded_root_cause")
         return result
@@ -246,6 +285,10 @@ def normalize_attribute_trace_result(spec: ProjectSpec, trace: RunTrace, judge: 
     }
     if not result.incomplete_reason:
         result.incomplete_reason = "归因需要下一步验证：" + "、".join(str(item) for item in result.analysis_quality["missing"])
+    else:
+        reason = str(result.incomplete_reason)
+        if not reason or "supported root-cause evidence" in reason or "unsupported root-cause evidence" in reason:
+            result.incomplete_reason = _build_incomplete_reason(result, spec, trace, judge)
     return result
 
 
@@ -414,17 +457,25 @@ def attribute_failure(
 5. suspected_locations 只能使用 source_file_catalog 中真实存在的路径/配置/文档证据；不能编造路径、函数名或历史 case
 6. 如果 probe/source evidence 不足，必须设置 incomplete_reason 和 blocked-probe reason，不能伪造正式归因
 
-按需读取源码文件（重要！）：
+按需读取源码文件（核心能力！这是本工具存在的价值）：
 - user prompt 中的 source_file_catalog 列出所有可用源码文件（key、path、size_chars、description）
-- 如需查看某个文件的具体内容（如 prompt、config、adapter 代码），调用 search_source_file(file_key) 工具
-- 只调用你需要的文件，不要一次性拉取所有文件
+- **必须调用 search_source_file(file_key) 工具读取关键文件内容**，不能仅凭文件名推测
+- 对于 external LLM service（如 intent recognition），**必须读取 prompt 文件**（如 intent_prompt.py）来确认：
+  * LLM prompt 是否包含当前 intent 的定义和示例
+  * Few-shot examples 是否覆盖当前 query 的语义模式
+  * Intent 映射规则是否完整
+- 对于配置错误，**必须读取 config 文件**（如 config.py, intent.py）来确认枚举值、阈值等
+- 只调用你需要的文件，优先读取 catalog 中名称包含 "prompt"、"config"、"intent" 的文件
 - suspected_locations 中的路径必须来自 source_file_catalog 中实际存在的文件
+- **禁止说"无法访问 prompt 文件"或"prompt 内容不可见"** —— catalog 中的文件都可以通过 tool 读取
 
 关键规则：
 - causal_category 使用 implementation_bug、model_capability_gap、boundary_limitation、unclear_contract、insufficient_evidence、no_issue 等
 - fulfilled 也可以被解释为 no_issue，但不需要失败归因
 - improvement_direction 必须指向产生机制，而不是泛泛建议
-- 分析文字尽量使用中文，输出 JSON。"""
+- 分析文字必须使用中文，包括 root_cause_hypothesis、verification_steps、patch_direction、business_impact 等所有文本字段。禁止使用英文撰写归因内容。
+- **必须执行至少 1-2 个 probe**（调用 search_source_file 读取源码文件）来支撑归因结论，不能仅凭 LLM 推理或文件名推测得出根因。
+- 如果 catalog 中有 prompt/config 文件但未读取，归因质量判定为 insufficient_evidence。"""
 
     user_data = {
             "attribution_spec": attribution,

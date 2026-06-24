@@ -24,16 +24,26 @@ from datetime import datetime
 # }
 
 # Full test configuration (4 projects)
+# CONFIG = {
+#     "projects": ["marketting-planning-intent", "QA", "client_search", "marketting-planning"],
+#     "case_counts": {
+#         "client_search": 20,  # More cases for client_search (most are fulfilled)
+#     },
+#     "required_cases": {
+#         "marketting-planning-intent": ["mpi-required-slot-missing-1"],
+#         "QA": ["qa-gold-incomplete-1", "qa-context-hallucination-1"],
+#         "client_search": ["cs-age-gt-boundary-error-1", "cs-family-responsibility-unsupported-1"],
+#         "marketting-planning": ["mp-premium-growth-plan-correct-1", "mp-target-unit-error-1", "mp-non-agent-1"],
+#     }
+# }
+
+# Minimal test: QA + marketplan-intent only (2 cases each) for fix validation
 CONFIG = {
-    "projects": ["marketting-planning-intent", "QA", "client_search", "marketting-planning"],
-    "case_counts": {
-        "client_search": 20,  # More cases for client_search (most are fulfilled)
-    },
+    "projects": ["marketting-planning-intent", "QA"],
+    "case_counts": {"marketting-planning-intent": 4, "QA": 4},
     "required_cases": {
-        "marketting-planning-intent": ["mpi-required-slot-missing-1"],
+        "marketting-planning-intent": ["mpi-required-slot-missing-1", "mpi-premium-growth-exact-1"],
         "QA": ["qa-gold-incomplete-1", "qa-context-hallucination-1"],
-        "client_search": ["cs-age-gt-boundary-error-1", "cs-family-responsibility-unsupported-1"],
-        "marketting-planning": ["mp-premium-growth-plan-correct-1", "mp-target-unit-error-1", "mp-non-agent-1"],
     }
 }
 # ===================================================

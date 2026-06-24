@@ -74,10 +74,18 @@ class ProjectSourceFileProvider:
                 if not p.exists() and project_root:
                     p = project_root / path_str
                 if p.exists() and p.suffix in SOURCE_READABLE_SUFFIXES:
+                    # Enhanced description to highlight file type
+                    desc = f"adapter source config: {key}"
+                    if "prompt" in p.name.lower():
+                        desc = f"🔍 LLM PROMPT FILE: {key} - contains prompt templates and few-shot examples"
+                    elif "config" in p.name.lower() or "constant" in p.name.lower():
+                        desc = f"⚙️ CONFIG FILE: {key} - contains enums, mappings, and thresholds"
+                    elif "intent" in p.name.lower() and p.suffix == ".py":
+                        desc = f"📋 INTENT DEFINITION: {key} - contains intent schemas and types"
                     entries[f"config:{key}"] = {
                         "key": f"config:{key}",
                         "path": str(p),
-                        "description": f"adapter source config: {key}",
+                        "description": desc,
                     }
 
         # 2. project documents (source_* prefixed)
