@@ -21,7 +21,7 @@ def main():
     branch = f"claude-agent-{suffix}"
     worktree_path = worktrees_dir / branch
     run(["git", "-C", str(root), "worktree", "add", "-b", branch, str(worktree_path), "HEAD"])
-    print(json.dumps({"hookSpecificOutput": {"hookEventName": "WorktreeCreate", "worktreePath": str(worktree_path)}}))
+    print(str(worktree_path))
 
 
 if __name__ == "__main__":

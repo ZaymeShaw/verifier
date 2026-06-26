@@ -1,134 +1,195 @@
-"""运行时配置查询工具 - Issue #3 正确实施
+"""通用分歧分析工具：编排 trace、expected/actual 与项目 runtime checks。
 
-用户诉求："直接引用系统原函数"
-真正含义：工具直接调用系统代码返回答案，不让 agent 读文件推测
+核心设计理念（来自 Issue #3 / Issue #6）：
+- 共享工具只做通用编排，不导入项目代码、不写项目名分支。
+- 项目特有的“直接引用系统原函数/配置”由 adapter.get_runtime_checks 提供。
+- attribute agent 获取结构化答案后，优先基于 system_check/root_cause 归因，
+  不再为了已闭合根因去读取 prompt 猜测。
 """
+from __future__ import annotations
 
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
+__all__ = ["analyze_divergence", "extract_runtime_values"]
 
 
-def get_intent_mapping_result(raw_intent: str, project_name: str) -> Dict[str, Any]:
-    """直接返回 intent 映射结果
+def extract_runtime_values(trace: list, actual: Any = None) -> dict:
+    """从 trace steps 与 actual 输出中提取运行时实际值。"""
+    values: dict[str, Any] = {}
+    for step in trace or []:
+        if not isinstance(step, dict):
+            continue
+        output = step.get("output") or step.get("evidence") or step.get("result") or step.get("actual")
+        if isinstance(output, dict):
+            _merge_first(values, output)
+            data = output.get("data")
+            if isinstance(data, dict):
+                _merge_first(values, data)
+    if isinstance(actual, dict):
+        _merge_first(values, actual)
+    return values
 
-    用户场景：
-    - Agent 看到 raw_intent="4001"，actual="other"，expected="nbev_planning"
-    - Agent 不需要读 intent.py 文件去查映射表
-    - 工具直接告诉它："4001 映射到 other，但应该是 nbev_planning，原因是配置缺失"
 
-    Returns:
-        {
-            "raw_intent": "4001",
-            "actual_mapping": "other",
-            "expected_mapping": "nbev_planning",
-            "is_correct": False,
-            "root_cause": "4001 not in INTENT_MAPPING, fallback to 'other'",
-            "fix_suggestion": "Add '4001': 'nbev_planning' to INTENT_MAPPING"
+def _merge_first(target: dict, source: dict) -> None:
+    for key, value in source.items():
+        if key not in target and value is not None:
+            target[key] = value
+
+
+def _find_first_failed(trace: list) -> Optional[dict]:
+    """找到 trace 中第一个失败/可疑/分歧节点。"""
+    for step in trace or []:
+        if not isinstance(step, dict):
+            continue
+        status = str(step.get("status", "")).lower()
+        if status in ("failed", "diverged", "error", "rejected", "suspicious"):
+            return step
+        evidence = str(step.get("evidence", step.get("reason", "")))
+        if any(kw in evidence for kw in ["失败", "错误", "error", "不符合", "缺失", "differs"]):
+            return step
+    return None
+
+
+def _compare_values(expected: Any, actual: Any) -> dict:
+    """比较 expected vs actual，找出不一致字段。"""
+    if not isinstance(expected, dict) or not isinstance(actual, dict):
+        if expected != actual:
+            return {"$value": {"expected": expected, "actual": actual}}
+        return {}
+    gaps = {}
+    all_keys = set(expected.keys()) | set(actual.keys())
+    for key in all_keys:
+        exp_val = expected.get(key)
+        act_val = actual.get(key)
+        if exp_val != act_val:
+            gaps[key] = {"expected": exp_val, "actual": act_val}
+    return gaps
+
+
+def _normalize_runtime_checks(runtime_checks: Any) -> dict:
+    if isinstance(runtime_checks, dict):
+        return runtime_checks
+    if isinstance(runtime_checks, list):
+        return {"checks": runtime_checks}
+    if runtime_checks:
+        return {"value": runtime_checks}
+    return {}
+
+
+def _evidence_list(value: Any) -> list:
+    if value is None or value == "":
+        return []
+    if isinstance(value, list):
+        return value
+    return [value]
+
+
+def _root_cause_from_system_check(system_check: dict) -> Optional[dict]:
+    """从标准化 runtime check 输出中提取根因，不理解项目语义。"""
+    if not system_check:
+        return None
+
+    direct = system_check.get("root_cause")
+    if isinstance(direct, dict):
+        return {
+            "category": direct.get("category") or system_check.get("causal_category") or "implementation_bug",
+            "summary": direct.get("summary") or direct.get("reason") or direct.get("root_cause") or str(direct),
+            "evidence": _evidence_list(direct.get("evidence") or system_check.get("evidence")),
+            "confidence": direct.get("confidence") or system_check.get("confidence") or "high",
+            "fix_suggestion": direct.get("fix_suggestion") or system_check.get("fix_suggestion") or "",
         }
-    """
-    # 直接从项目 adapter 导入配置
-    if project_name == "marketting-planning-intent":
-        try:
-            import sys
-            from pathlib import Path
-            sys.path.insert(0, str(Path(__file__).parent.parent.parent / "projects" / "marketting-planning-intent"))
-
-            # 导入实际的映射配置
-            from intent import INTENT_MAPPING, IntentType
-
-            # 检查映射
-            actual_mapping = INTENT_MAPPING.get(raw_intent, "other")
-            is_in_mapping = raw_intent in INTENT_MAPPING
-
-            return {
-                "raw_intent": raw_intent,
-                "is_in_mapping": is_in_mapping,
-                "actual_mapping": actual_mapping,
-                "available_intents": list(INTENT_MAPPING.keys())[:20],
-                "total_mappings": len(INTENT_MAPPING),
-                "root_cause": None if is_in_mapping else f"'{raw_intent}' not defined in INTENT_MAPPING, system fallback to 'other'",
-                "enum_check": {
-                    "in_IntentType_enum": raw_intent in [e.value for e in IntentType],
-                    "enum_values": [e.value for e in IntentType][:10]
-                }
-            }
-        except Exception as e:
-            return {
-                "error": str(e),
-                "raw_intent": raw_intent,
-                "note": "Failed to load project config"
-            }
-
-    return {"error": "Unknown project", "raw_intent": raw_intent}
-
-
-def get_divergence_analysis(trace: list, expected: dict, actual: dict, project_name: str) -> Dict[str, Any]:
-    """结合系统配置分析分歧，直接返回根因
-
-    用户场景：
-    - Agent 看到 trace 中某个 stage failed
-    - Agent 不需要读一堆文件去理解为什么
-    - 工具直接调用系统函数，返回"为什么失败"的完整答案
-
-    Returns:
-        {
-            "divergence_point": "intent_mapping",
-            "expected_value": {"intent": "nbev_planning"},
-            "actual_value": {"intent": "other"},
-            "system_check_results": {
-                "raw_intent": "4001",
-                "mapping_check": "4001 not in INTENT_MAPPING",
-                "fallback_behavior": "defaults to 'other'"
-            },
-            "root_cause": "implementation_bug: missing mapping entry",
-            "confidence": "high",
-            "evidence": ["INTENT_MAPPING loaded from intent.py", "4001 not found in keys"],
-            "fix": "Add mapping: '4001': 'nbev_planning'"
+    if isinstance(direct, str) and direct.strip():
+        return {
+            "category": system_check.get("causal_category") or "implementation_bug",
+            "summary": direct,
+            "evidence": _evidence_list(system_check.get("evidence")),
+            "confidence": system_check.get("confidence") or "high",
+            "fix_suggestion": system_check.get("fix_suggestion") or "",
         }
-    """
-    # 从 trace 找分歧点
-    first_failed = None
-    for step in trace:
-        if step.get("status") in ["failed", "diverged", "error"]:
-            first_failed = step
-            break
 
-    if not first_failed:
-        return {"note": "No failed step in trace"}
+    checks = system_check.get("checks") if isinstance(system_check.get("checks"), list) else []
+    for item in checks:
+        if not isinstance(item, dict):
+            continue
+        cause = _root_cause_from_system_check(item)
+        if cause:
+            return cause
 
-    # 提取运行时值
-    runtime_values = {}
-    for step in trace:
-        if step.get("output") and isinstance(step["output"], dict):
-            runtime_values.update(step["output"])
+    if str(system_check.get("status") or "").lower() == "failed":
+        evidence = _evidence_list(system_check.get("evidence"))
+        summary = system_check.get("summary") or system_check.get("reason") or "; ".join(str(x) for x in evidence) or "runtime check failed"
+        return {
+            "category": system_check.get("causal_category") or "implementation_bug",
+            "summary": str(summary),
+            "evidence": evidence,
+            "confidence": system_check.get("confidence") or "high",
+            "fix_suggestion": system_check.get("fix_suggestion") or "",
+        }
+    return None
 
-    # 如果涉及 intent，直接查询映射
-    if "raw_intent" in runtime_values or "intent" in actual:
-        raw_intent = runtime_values.get("raw_intent") or actual.get("raw_intent")
-        if raw_intent:
-            mapping_result = get_intent_mapping_result(raw_intent, project_name)
 
-            expected_intent = expected.get("intent")
-            actual_intent = actual.get("intent")
+def _infer_generic_root_cause(gaps: dict, runtime_values: dict, failed_step: Optional[dict]) -> Optional[dict]:
+    if gaps:
+        evidence = [
+            f"{key}: expected={value.get('expected')} actual={value.get('actual')}"
+            for key, value in gaps.items()
+            if isinstance(value, dict)
+        ]
+        return {
+            "category": "implementation_bug",
+            "summary": "当前运行输出与期望存在字段级差异，需结合项目 runtime check 或源码证据确认根因。",
+            "evidence": evidence,
+            "confidence": "medium" if failed_step else "low",
+            "fix_suggestion": "检查最早分歧节点对应的实现、配置或映射规则。",
+        }
+    if failed_step:
+        stage = failed_step.get("stage") or failed_step.get("name") or failed_step.get("node") or "unknown"
+        return {
+            "category": "implementation_bug",
+            "summary": f"调用链路中 {stage} 阶段出现失败或可疑状态。",
+            "evidence": _evidence_list(failed_step.get("evidence") or failed_step.get("reason")),
+            "confidence": "medium",
+            "fix_suggestion": f"检查 {stage} 阶段的项目实现或运行时配置。",
+        }
+    return None
 
-            return {
-                "divergence_point": first_failed.get("stage", "unknown"),
-                "expected_value": expected,
-                "actual_value": actual,
-                "system_check": mapping_result,
-                "root_cause": mapping_result.get("root_cause") or "mapping mismatch",
-                "confidence": "high" if not mapping_result.get("error") else "medium",
-                "evidence": [
-                    f"raw_intent={raw_intent}",
-                    f"actual_mapping={mapping_result.get('actual_mapping')}",
-                    f"expected={expected_intent}",
-                    f"is_in_mapping={mapping_result.get('is_in_mapping')}"
-                ],
-                "fix_suggestion": f"Add '{raw_intent}': '{expected_intent}' to INTENT_MAPPING" if expected_intent else "Check mapping rules"
-            }
 
-    return {
-        "divergence_point": first_failed.get("stage", "unknown"),
-        "expected_value": expected,
-        "actual_value": actual,
-        "note": "No runtime value extraction available"
+def analyze_divergence(
+    trace: list,
+    expected: Any,
+    actual: Any,
+    project_name: Optional[str] = None,
+    runtime_checks: Any = None,
+) -> Dict[str, Any]:
+    """通用分歧分析：核心层编排，不包含项目特定逻辑。"""
+    runtime_values = extract_runtime_values(trace, actual)
+    first_failed = _find_first_failed(trace)
+    gaps = _compare_values(expected or {}, actual or {})
+    system_check = _normalize_runtime_checks(runtime_checks)
+
+    root_cause = _root_cause_from_system_check(system_check) or _infer_generic_root_cause(gaps, runtime_values, first_failed)
+    causal_category = (root_cause or {}).get("category") or "unknown"
+    root_cause_hypothesis = (root_cause or {}).get("summary") or ""
+    fix_suggestion = (root_cause or {}).get("fix_suggestion") or ""
+
+    result = {
+        "divergence_point": {
+            "stage": first_failed.get("stage", first_failed.get("name", first_failed.get("node", "unknown"))) if first_failed else "unknown",
+            "status": first_failed.get("status", "unknown") if first_failed else "unknown",
+            "evidence": first_failed.get("evidence") if first_failed else None,
+            "runtime_values_at_divergence": runtime_values,
+        },
+        "gaps": gaps,
+        "system_check": system_check,
+        "root_cause": root_cause,
+        "causal_category": causal_category,
+        "root_cause_hypothesis": root_cause_hypothesis,
+        "fix_suggestion": fix_suggestion,
+        "root_cause_category": causal_category,
+        "root_cause_reasoning": root_cause_hypothesis,
+        "analysis_method": "trace_runtime_analysis_with_project_checks" if system_check else "trace_runtime_analysis",
+        "evidence_source": "execution_trace + adapter_runtime_checks" if system_check else "execution_trace runtime data",
+        "project_name": project_name,
+        "note": "共享工具仅编排通用 trace/gap/runtime_check；项目特有检查由 adapter 提供。",
     }
+    return result

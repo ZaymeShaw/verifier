@@ -1,0 +1,39 @@
+# Issue-Solved Hook 配置
+# 所有可配置项统一在此文件管理
+# hook 脚本 (stop-hook.sh) 通过 yq 或 grep 解析此文件
+
+issue:
+  # issue 文件存放目录（相对于项目根目录）
+  dir: issue
+  # 匹配 issue 文件的 glob 模式
+  file_pattern: "issue*.md"
+
+status:
+  # frontmatter 中的状态字段名（大小写敏感，yaml 字段名一般为小写）
+  field_name: "status:"
+  # 表示"已关闭"的值（大小写不敏感，脚本会转为小写比较）
+  closed_value: "closed"
+  # 表示"打开"的值（大小写不敏感）
+  open_value: "open"
+
+audit:
+  # 审核结果存放目录（相对于项目根目录）
+  dir: issue/audit
+  # 审核文件名模板，{issue_id} 会被替换为从 issue 文件名提取的编号
+  # 例如 issue3-xxx.md → issue_id=3 → 文件名=issue3.txt
+  file_pattern: "{issue_id}.txt"
+
+verdict:
+  # 审核文件中的判定字段标识（grep 用，区分大小写）
+  verdict_field: "审核 verdict:"
+  # 审核通过的值（大小写敏感，grep 精确匹配）
+  approved_value: "APPROVED"
+  # 审核不通过的值
+  rejected_value: "REJECTED"
+  # 审核文件中的理由字段标识
+  reason_field: "理由："
+
+paths:
+  # 不再使用：审核 prompt 模板路径
+  # Claude 通过 Read 工具按需加载
+  audit_prompt_file: ""

@@ -10,7 +10,7 @@ from .llm_client import LlmClient, project_llm_client
 from .project_loader import load_project_document
 from .schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace
 from .trace_analysis import analyze_execution_trace, map_trace_node_to_source
-from .runtime_query_tools import get_divergence_analysis  # Issue #3: 答案查询工具
+from .runtime_query_tools import analyze_divergence  # Issue #3: 通用分歧分析
 
 logger = logging.getLogger(__name__)
 
@@ -455,10 +455,10 @@ def attribute_failure(
 0. **优先使用 divergence_analysis**（Issue #3 最新）：
    - user prompt 中的 `divergence_analysis` 字段包含完整的分歧分析结果
    - **这是直接调用系统原函数得到的答案**，包括：分歧点、运行时配置检查结果、根因、修复建议
-   - **Agent 不需要读 prompt 或 config 文件**，直接使用这个答案即可
-   - 例如：`divergence_analysis.root_cause` 直接说明了"4001 not in INTENT_MAPPING"
-   - 例如：`divergence_analysis.system_check` 包含了实际的映射检查结果
-   - **这避免了 agent 去读文件推测**，而是直接获得确定的答案
+   - **如果 divergence_analysis.root_cause 非空，必须采纳该根因作为正式归因结论**，包括其 causal_category、root_cause_hypothesis、fix_suggestion 字段，不能重新分类为 model_capability_gap 或其他类别
+   - divergence_analysis.system_check 已进行了配置查询（如映射表检查），**不需要再次读取源码文件验证**——这些是系统函数的直接输出，不是推测
+   - **如果 divergence_analysis.root_cause 非空，可以不执行 probe**（答案已由系统函数提供）；仅在 divergence_analysis 为空时需执行 probe 查源码
+   - **禁止**在归因中说"prompt 文件不在 catalog 中"、"无法审查 LLM prompt"或"无法验证 LLM 行为"——divergence_analysis 已提供完整答案，prompt 缺失不影响结论
 1. 备用：如果 divergence_analysis 为空，使用 `trace_analysis`（调用链路分析）
 2. 从 attribution_targets 选择需要归因的 expectation；这些 target 已由 judge 的 intent_model/business_expectations/fulfillment_assessments 产生，不要独立重建用户意图
 2. 对每个 expectation 重建 expected behavior、actual behavior、gap 或 contested fulfillment reason
@@ -474,30 +474,24 @@ def attribute_failure(
    - 记录该 step 的 expected vs actual，这是最直接的分歧证据
    - 基于分歧点的 stage/node 名称，推断对应的函数/模块
 
-2. **然后按需读取源码文件**（验证假设，核心能力！）：
-   - user prompt 中的 source_file_catalog 列出所有可用源码文件（key、path、size_chars、description）
-   - **必须调用 search_source_file(file_key) 工具读取关键文件内容**，不能仅凭文件名推测
-   - 对于 external LLM service（如 intent recognition），优先级：
-     * 如果 trace 中有 LLM 的实际输出（如 raw_intent="4001"），先分析输出为何被判定为错误
-     * 然后读取 **config 文件**（如 intent.py, config.py）确认映射规则是否完整
-     * 最后才考虑读取 **prompt 文件**（如 intent_prompt.py）确认 LLM prompt 内容
-   - 对于配置错误，直接读取 **config 文件**确认枚举值、阈值等
-   - 只调用你需要的文件，优先读取与分歧点相关的文件
-   - suspected_locations 中的路径必须来自 source_file_catalog 中实际存在的文件
-   - **禁止说"无法访问 prompt 文件"或"prompt 内容不可见"** —— catalog 中的文件都可以通过 tool 读取
+2. **然后使用 divergence_analysis 中的答案**（这是直接调用系统原函数获得的结果）：
+   - divergence_analysis 已经包含了分歧点、根因分类、修复建议
+   - **不需要调用 search_source_file 读取源码文件**——divergence_analysis 已提供完整答案
+   - 直接基于 divergence_analysis 的结果填空即可
 
-3. **Tool 使用效率**：
-   - 优先读取小文件（config、mapping）而不是大文件（完整 prompt）
-   - 基于 trace 中的具体值（如 raw_intent="4001"）直接检查映射表，而不是读取整个 prompt 去理解 LLM 应该输出什么
-   - 每个 probe 应该有明确目标：验证某个具体假设（如"4001 是否映射到 nbev_planning"）
+3. **使用 source_file_catalog 仅作引用**：
+   - suspected_locations 中的路径必须来自 source_file_catalog 中实际存在的文件
+   - **禁止**在归因中说"prompt 文件不在 catalog 中"、"prompt 内容不可见"、"无法审查 LLM prompt"或"无法验证 LLM 行为"——这些说法是 Issue #3 用户明确禁止的
+   - **禁止调用 search_source_file 工具**——所有答案已由 divergence_analysis 提供
 
 关键规则：
 - causal_category 使用 implementation_bug、model_capability_gap、boundary_limitation、unclear_contract、insufficient_evidence、no_issue 等
 - fulfilled 也可以被解释为 no_issue，但不需要失败归因
 - improvement_direction 必须指向产生机制，而不是泛泛建议
 - 分析文字必须使用中文，包括 root_cause_hypothesis、verification_steps、patch_direction、business_impact 等所有文本字段。禁止使用英文撰写归因内容。
-- **必须执行至少 1 个 probe**（调用 search_source_file 读取源码文件）来支撑归因结论，除非 execution_trace 已经提供了充分的分歧证据
-- **Tool call 预算有限（最多 {tool_call_limit} 次）**，优先读取与分歧点直接相关的小文件（config、mapping），而不是完整的大文件（prompt）
+- **`divergence_analysis` 包含系统直接调用的答案**，如果该字段存在且提供了完整的分歧证据（divergence_point + root_cause + system_check），则**不需要再执行任何 probe 读取源码文件**。直接基于 divergence_analysis 的结果完成归因即可。
+- 只有在 divergence_analysis 为空或信息不足时，才需要执行 probe（调用 search_source_file 读取源码文件）来补充证据。
+- Tool call 预算有限（最多 {tool_call_limit} 次），仅在 divergence_analysis 不充分时才使用。
 - 如果 execution_trace 中已经有具体的错误值（如 raw_intent="4001", mapped="other"），直接检查映射规则，不需要读取完整 prompt
 - 如果 tool call 预算用尽且归因不完整，必须设置 incomplete_reason="tool_call_budget_exhausted: 已读取 N 个文件，但仍需读取 [file_list] 来完成归因"
 - 如果 catalog 中有关键文件但因预算限制未读取，在 incomplete_reason 中明确说明，不要说"文件不在 catalog"或"无法访问"。"""
@@ -527,11 +521,12 @@ def attribute_failure(
                         expected = target["expected"]
                         break
 
-                divergence_analysis_result = get_divergence_analysis(
+                divergence_analysis_result = analyze_divergence(
                     trace.execution_trace,
                     expected,
                     actual,
-                    spec.name if spec else "unknown"
+                    spec.name if spec else "unknown",
+                    runtime_checks=(project_attribute_context or {}).get("runtime_checks"),
                 )
 
         except Exception as e:

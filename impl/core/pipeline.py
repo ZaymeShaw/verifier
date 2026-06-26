@@ -12,6 +12,7 @@ from .frontend_view import build_frontend_view
 from .interaction_protocol import normalize_case_interaction
 from .judge import judge_trace
 from .project_loader import load_adapter, load_project
+from .runtime_query_tools import extract_runtime_values
 from .schema import AttributeResult, BatchRunResult, CheckReport, ClusterSummary, FrontendViewModel, JudgeResult, ProjectAnalysis, RunTrace
 from .state_machine import TraceStateMachineRunner, flatten_gate_decisions, flatten_transition_decisions
 
@@ -78,7 +79,22 @@ def judge(project_id: str, trace: RunTrace, expected_intent: Optional[str] = Non
 def attribute(project_id: str, trace: RunTrace, judge_result: JudgeResult) -> AttributeResult:
     spec = load_project(project_id)
     adapter = load_adapter(spec)
-    result = attribute_failure(spec, trace, judge_result, project_attribute_context=adapter.build_attribute_context(trace, judge_result))
+    project_attribute_context = adapter.build_attribute_context(trace, judge_result)
+    project_attribute_context = dict(project_attribute_context or {})
+    actual = judge_result.actual or trace.extracted_output or {}
+    expected = judge_result.expected or (trace.project_fields or {}).get("reference") or {}
+    runtime_context = {
+        "expected": expected,
+        "actual": actual,
+        "reference": (trace.project_fields or {}).get("reference") or {},
+        "wrong": list(judge_result.wrong or []),
+        "missing": list(judge_result.missing or []),
+        "trace_id": trace.trace_id,
+        "project_id": trace.project_id,
+    }
+    runtime_values = extract_runtime_values(trace.execution_trace or [], actual)
+    project_attribute_context["runtime_checks"] = adapter.get_runtime_checks(runtime_values, runtime_context)
+    result = attribute_failure(spec, trace, judge_result, project_attribute_context=project_attribute_context)
     result = adapter.apply_attribution_probes(trace, judge_result, result)
     return adapter.normalize_attribute_result(trace, judge_result, result)
 

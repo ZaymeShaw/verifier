@@ -99,6 +99,22 @@ class ProjectAdapter(ABC):
             status="ok",
         )
 
+    def get_runtime_checks(self, runtime_values: Dict[str, Any], context: Dict[str, Any] | None = None) -> Dict[str, Any]:
+        """返回项目运行时检查结果（如映射规则检查、枚举值检查等）。
+
+        这是通用协议扩展点：核心层只传入运行时值和通用上下文，
+        项目特有检查由具体 adapter 实现，避免在共享 tool 中硬编码项目逻辑。
+        """
+        return {}
+
+    def build_attribute_tools(self) -> list:
+        """返回归因过程中可用的项目特有工具函数列表。
+
+        默认返回空列表 — 通用工具（search_source_file）会自动注入。
+        如果项目有专门的运行时查询工具，在此返回工具函数，由 attribute agent 直接调用。
+        """
+        return []
+
     def protocol_tools(self) -> ToolRegistry:
         return ToolRegistry()
 

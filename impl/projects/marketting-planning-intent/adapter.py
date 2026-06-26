@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import time
 import urllib.error
@@ -484,6 +485,75 @@ class Adapter(ProjectAdapter):
         attribute_result.verification_steps = ["复查当前 query、reference 与 normalized intent evidence 是否一致。"]
         attribute_result.patch_direction = ["优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"]
         return attribute_result
+
+    def get_runtime_checks(self, runtime_values: Dict[str, Any], context: Dict[str, Any] | None = None) -> Dict[str, Any]:
+        context = context or {}
+        raw_intent = runtime_values.get("raw_intent") or runtime_values.get("raw_output")
+        actual_intent = runtime_values.get("intent") or (context.get("actual") if isinstance(context.get("actual"), str) else None)
+        actual = context.get("actual") if isinstance(context.get("actual"), dict) else {}
+        expected = context.get("expected") if isinstance(context.get("expected"), dict) else {}
+        reference = context.get("reference") if isinstance(context.get("reference"), dict) else {}
+        actual_intent = actual_intent or actual.get("intent")
+        expected_intent = expected.get("intent") or reference.get("intent") or context.get("expected_intent")
+        if not raw_intent and not actual_intent and not expected_intent:
+            return {"tool_type": "runtime_check", "check_type": "intent_mapping", "status": "not_applicable", "evidence": ["当前 trace 未提供 intent 映射检查所需的 raw_intent/intent/reference。"]}
+
+        mapping, enum_values, source = self._load_intent_mapping_source()
+        actual_mapping = mapping.get(str(raw_intent)) if raw_intent is not None else actual_intent
+        if actual_mapping is None:
+            actual_mapping = actual_intent or "other"
+        is_in_mapping = str(raw_intent) in mapping if raw_intent is not None else False
+        is_expected_mapping = bool(expected_intent) and actual_mapping == expected_intent
+        status = "passed" if (not expected_intent or is_expected_mapping) else "failed"
+        evidence = [
+            f"raw_intent={raw_intent}",
+            f"actual_mapping={actual_mapping}",
+            f"actual_intent={actual_intent}",
+            f"expected_intent={expected_intent}",
+            f"mapping_source={source}",
+        ]
+        root_cause = None
+        fix_suggestion = ""
+        if status == "failed":
+            root_cause = {
+                "category": "implementation_bug",
+                "summary": f"运行时 raw_intent={raw_intent} 经项目映射得到 {actual_mapping}，但当前 reference contract 期望 {expected_intent}。",
+                "evidence": evidence,
+                "confidence": "high",
+                "fix_suggestion": f"在项目意图映射源头校准 raw_intent={raw_intent} 的映射，或修正上游意图识别使其输出与 reference contract 一致的编码。",
+            }
+            fix_suggestion = root_cause["fix_suggestion"]
+        return {
+            "tool_type": "runtime_check",
+            "check_type": "intent_mapping",
+            "status": status,
+            "raw_intent": raw_intent,
+            "actual_mapping": actual_mapping,
+            "actual_intent": actual_intent,
+            "expected_intent": expected_intent,
+            "is_in_mapping": is_in_mapping,
+            "is_expected_mapping": is_expected_mapping,
+            "available_mapping_count": len(mapping),
+            "enum_values": enum_values,
+            "evidence": evidence,
+            "source": source,
+            "root_cause": root_cause,
+            "fix_suggestion": fix_suggestion,
+            "confidence": "high" if status in {"passed", "failed"} else "low",
+        }
+
+    def _load_intent_mapping_source(self) -> tuple[Dict[str, str], List[str], str]:
+        source_path = Path(__file__).resolve().parents[3] / "projects" / "marketting-planning-intent" / "intent.py"
+        source = "projects/marketting-planning-intent/intent.py:INTENT_MAPPING"
+        spec = importlib.util.spec_from_file_location("marketting_planning_intent_runtime_source", source_path)
+        if spec is None or spec.loader is None:
+            return {}, [], source
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        mapping = dict(getattr(module, "INTENT_MAPPING", {}) or {})
+        intent_type = getattr(module, "IntentType", None)
+        enum_values = [item.value for item in intent_type] if intent_type else []
+        return mapping, enum_values, source
 
     def build_mock_cases(self) -> list[Dict[str, Any]]:
         path = Path(__file__).resolve().parents[2] / "data" / "marketting-planning-intent" / "mock_cases.json"

@@ -221,7 +221,7 @@ function shortText(value, limit=180){
   return text.length>limit?text.slice(0,limit)+'…':text;
 }
 function inputLabel(input){if(!input || typeof input!=='object'){return shortText(input);}if(input.user_intent && typeof input.user_intent==='object' && input.user_intent.goal){return String(input.user_intent.goal);}const values=Object.values(input).filter(v=>['string','number','boolean'].includes(typeof v));return values.length?String(values[0]):shortText(input);}
-function caseFromInput(input,index,source){return {id:'case-'+Date.now()+'-'+index,selected:true,input,expected_intent:'',source,status:'pending',judge:null,attribute:null,trace:null};}
+function caseFromInput(input,index,source){const expected_intent=input?.expected_intent||(input?.reference?.intent)||'';return {id:'case-'+Date.now()+'-'+index,selected:true,input,expected_intent,source,status:'pending',judge:null,attribute:null,trace:null};}
 function clearCaseResult(item,status='pending'){return {...item,status,trace:null,judge:null,attribute:null,frontend_view:null,cluster:null,check:null};}
 function comparableInput(input){
   if(!input || typeof input!=='object'){return input;}
