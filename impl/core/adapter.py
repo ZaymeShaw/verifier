@@ -135,19 +135,13 @@ class ProjectAdapter(ABC):
         return {"simulated_nodes": [], "diverged_nodes": []}
 
     def build_attribute_tools(self) -> list:
-        """返回归因**第二层**工具函数列表（LLM 在第一层结论上做深化分析时调用）。
+        """返回归因**第二层**工具函数列表。
 
         分层设计：
-        - 第一层（get_runtime_checks）：pipeline 预执行，确定性校验"哪里坏了"，结果注入
-          user prompt 的 divergence_analysis，LLM 不调用、不重复验证。
-        - 第二层（本方法）：LLM 自主调用，做"为什么坏了"+"怎么修"的深入分析。
-
-        第二层 tool 应比第一层更深入，建议覆盖以下类型（项目按需实现）：
-        - 调用链路级：用 trace 节点的输入跑完整业务函数，返回模拟输出 + 与 actual 的差异
-        - 源码证据级：定位到具体函数/行号，说明该函数做了什么判断、为什么导致当前输出
-        - 交叉验证：用多种方法验证同一结论
-        - 根因链：从分歧点往前追溯上游哪个模块/函数最先产生异常数据
-        - 修复建议：结合业务系统配置/代码结构，给出可执行的修复方向
+        - 第一层：工作流驱动（get_runtime_checks / simulate_trace_nodes），pipeline 预执行，
+          固定流程获取信息，结果注入 user prompt。适合"每个 case 都需要、可枚举的"信息。
+        - 第二层（本方法）：LLM 动态决策，按需调用工具获取信息。适合工作流不好覆盖的场景：
+          上下文过多需要抽取局部信息、信息组合方式 case 间不同、需要 LLM 先判断缺什么再查什么。
 
         默认返回空列表 — 通用工具（search_source_file）会自动注入。
         """
