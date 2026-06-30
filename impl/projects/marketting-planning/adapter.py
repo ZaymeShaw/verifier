@@ -624,15 +624,11 @@ class Adapter(ProjectAdapter):
         return attribute_result
 
     def _contract_fallback_attribute_result(self, trace, judge_result, attribute_result):
-        text = " ".join(str(item) for item in [
-            attribute_result.incomplete_reason,
-            attribute_result.root_cause_hypothesis,
-            attribute_result.business_impact,
-            attribute_result.verification_steps,
-            attribute_result.patch_direction,
-        ] if item)
-        stale_markers = ("source_file_catalog", "prompt 文件", "源码/配置证据", "未能获取足够", "无法完成正式归因")
-        if not any(marker in text for marker in stale_markers) and not (judge_result.wrong or judge_result.missing):
+        # _enforce_divergence_root_cause 已将 runtime root_cause 写入 root_cause_hypothesis/patch_direction，
+        # 这里只在 runtime 无闭合根因 + judge 有 wrong/missing 时兜底填充 contract 证据。
+        if attribute_result.analysis_quality.get("passed") is True and attribute_result.root_cause_hypothesis:
+            return None
+        if not (judge_result.wrong or judge_result.missing):
             return None
         failed = next((node for node in trace.execution_trace or [] if isinstance(node, dict) and node.get("status") in {"failed", "suspicious"}), {})
         failed_requirement = next((item for item in list(judge_result.wrong or []) + list(judge_result.missing or []) if isinstance(item, dict)), {})

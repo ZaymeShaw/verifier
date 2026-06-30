@@ -594,6 +594,12 @@ class Adapter(ProjectAdapter):
         ])
 
     def _semantic_judge_attribute_result(self, trace, judge_result, attribute_result):
+        """LLM 失败兜底路径：复用 _qa_failure_root_cause 生成细粒度根因。
+
+        normalize_attribute_result 已把 incorrect 短路到 _build_runtime_attribute_result，
+        本方法仅在少数兜底场景（attribute LLM 失败 + judge 仍给出 correct/incorrect）触发。
+        根因生成逻辑统一复用 _qa_failure_root_cause，避免维护两套 error_type→root_cause 映射。
+        """
         if judge_result.verdict not in {"correct", "incorrect"}:
             return None
         status = (judge_result.overall_fulfillment or {}).get("status") or ("fulfilled" if judge_result.verdict == "correct" else "not_fulfilled")
@@ -609,6 +615,12 @@ class Adapter(ProjectAdapter):
         if not evidence:
             return None
         expectation_id = "QA:answer_quality"
+        actual_answer = str((actual or {}).get("actual_answer") or "")
+        golden_answer = str((expected or {}).get("golden_answer") or "")
+        question = str((trace.normalized_request or {}).get("input", {}).get("question") or "")
+        contexts = list((trace.normalized_request or {}).get("input", {}).get("contexts") or [])
+        scenario = self._infer_scenario(question, actual_answer, golden_answer, self._normalize_contexts(contexts) if contexts else [])
+        overlap_ratio = self._text_overlap_ratio(actual_answer, golden_answer) if actual_answer and golden_answer else None
         primary_error_type = (judge_result.primary_assessment or {}).get("error_type") or self._qa_taxonomy_error_type(judge_result, expected, actual, list(self.spec.frontend_extensions.get("error_taxonomy") or []))
         if status == "fulfilled":
             causal_category = "no_issue"
@@ -618,101 +630,13 @@ class Adapter(ProjectAdapter):
             patch_direction = []
             verification_steps = ["核对当前 question、actual_answer 与 reference/golden_answer 的 semantic judge 证据。"]
         else:
-            causal_category = "model_capability_gap"
+            # 复用 _qa_failure_root_cause，根因生成逻辑与 runtime 路径保持单一来源
+            causal_category, root_cause, patch_suggestion = self._qa_failure_root_cause(
+                scenario, actual_answer, golden_answer, contexts, overlap_ratio, primary_error_type or "answer_incorrect",
+            )
             primary_error_type = primary_error_type or "answer_incorrect"
             error_types = [primary_error_type]
-            # 根据 judge 的 error_type 和 actual vs expected 特征，生成差异化根因
-            actual_text = str((actual or {}).get("actual_answer") or "")
-            expected_text = str((expected or {}).get("golden_answer") or "")
-            scenario = str(trace.project_fields.get("scenario") or (trace.normalized_request or {}).get("scenario") or "")
-            question = str((trace.normalized_request or {}).get("input", {}).get("question") or "")
-            judge_reasoning = str(judge_result.reasoning_summary or "")
-            # 从 judge 的 blocking gaps 中提取具体失败原因
-            blocking_gaps = []
-            if isinstance(judge_result.verdict_derivation, dict):
-                bg = judge_result.verdict_derivation.get("blocking_gaps") or []
-                blocking_gaps = list(bg) if isinstance(bg, list) else [str(bg)]
-            if not blocking_gaps:
-                for wrong_item in (judge_result.wrong or []):
-                    if isinstance(wrong_item, dict):
-                        blocking_gaps.append(str(wrong_item.get("requirement") or wrong_item.get("detail") or ""))
-                    elif isinstance(wrong_item, str):
-                        blocking_gaps.append(wrong_item)
-            # 基于 error_type 区分根因描述
-            if primary_error_type == "answer_incomplete":
-                root_cause = (
-                    f"QA 回答不完整（error_type=answer_incomplete）："
-                    f"actual_answer=\"{actual_text[:200]}\" 遗漏了 golden_answer 中的关键信息。"
-                    f"golden_answer=\"{expected_text[:200]}\" 包含了 actual_answer 缺失的例外情况或补充说明。"
-                    + (f" judge 识别到的阻塞问题：{'; '.join(blocking_gaps[:3])}。" if blocking_gaps else "")
-                    + " 上游回答生成系统未完整覆盖 reference 要求的全部语义维度。"
-                )
-                patch_direction = [
-                    "修复上游 QA 回答生成逻辑，确保回答完整覆盖 golden_answer 中所有关键条件（如例外情况、补充说明等），而非仅给出部分结论。"
-                ]
-            elif primary_error_type == "unsupported_claim":
-                root_cause = (
-                    f"QA 回答包含无依据的声明（error_type=unsupported_claim/hallucination）："
-                    f"actual_answer=\"{actual_text[:200]}\" 编造了材料中不存在的具体数值或结论。"
-                    + (f" 材料/contexts 中未提供该信息。" if "未提及" in expected_text else "")
-                    + (f" judge 识别到的阻塞问题：{'; '.join(blocking_gaps[:3])}。" if blocking_gaps else "")
-                    + " 上游回答生成系统在给定 contexts 中无对应证据时不应编造具体数值。"
-                )
-                patch_direction = [
-                    "修复上游 QA 回答生成逻辑，当给定 contexts 中缺少某信息时，应明确告知用户该信息不存在而非编造。"
-                ]
-            elif primary_error_type == "contradiction":
-                root_cause = (
-                    f"QA 回答与材料矛盾（error_type=contradiction）："
-                    f"actual_answer=\"{actual_text[:200]}\" 与材料/contexts 中的事实相反。"
-                    + (f" judge 识别到的阻塞问题：{'; '.join(blocking_gaps[:3])}。" if blocking_gaps else "")
-                    + " 上游回答生成系统未正确理解或尊重材料中的事实陈述。"
-                )
-                patch_direction = [
-                    "修复上游 QA 回答生成逻辑，确保回答基于材料事实，不产生与材料矛盾的内容。"
-                ]
-            elif primary_error_type == "over_refusal":
-                root_cause = (
-                    f"QA 回答过度拒答（error_type=over_refusal）："
-                    f"actual_answer=\"{actual_text[:200]}\" 在材料已提供足够信息时仍拒绝回答。"
-                    + (f" judge 识别到的阻塞问题：{'; '.join(blocking_gaps[:3])}。" if blocking_gaps else "")
-                    + " 上游回答生成系统在给定 contexts 足够时应直接给出答案。"
-                )
-                patch_direction = [
-                    "修复上游 QA 回答生成逻辑，当 contexts 包含足够信息时不应拒绝回答。"
-                ]
-            elif primary_error_type == "too_vague":
-                root_cause = (
-                    f"QA 回答过于模糊（error_type=too_vague）："
-                    f"actual_answer=\"{actual_text[:200]}\" 未提供具体可操作的信息。"
-                    + (f" judge 识别到的阻塞问题：{'; '.join(blocking_gaps[:3])}。" if blocking_gaps else "")
-                    + " 上游回答生成系统应产出更具体、可操作的答案。"
-                )
-                patch_direction = [
-                    "修复上游 QA 回答生成逻辑，确保回答具体、可操作，避免泛泛而谈。"
-                ]
-            elif primary_error_type == "format_error":
-                root_cause = (
-                    f"QA 回答格式错误（error_type=format_error）："
-                    f"actual_answer=\"{actual_text[:200]}\" 不符合预期的输出格式要求。"
-                    + (f" judge 识别到的阻塞问题：{'; '.join(blocking_gaps[:3])}。" if blocking_gaps else "")
-                    + " 上游回答生成系统应遵循指定的输出格式。"
-                )
-                patch_direction = [
-                    "修复上游 QA 回答生成逻辑，确保输出符合预期格式。"
-                ]
-            else:
-                # answer_incorrect 等通用类型
-                root_cause = (
-                    f"QA 回答不正确（error_type={primary_error_type}）："
-                    f"actual_answer=\"{actual_text[:200]}\" 与 golden_answer 不一致。"
-                    + (f" golden_answer=\"{expected_text[:200]}\"。" if expected_text else "")
-                    + (f" judge 识别到的阻塞问题：{'; '.join(blocking_gaps[:3])}。" if blocking_gaps else "")
-                    + " 上游回答生成系统产出了与当前 reference 不一致的答案。"
-                )
-                patch_direction = [
-                    "修复上游 QA 回答生成逻辑，使其基于当前 contexts/reference 作答；不要只修改评测展示结果。"
-                ]
+            patch_direction = [patch_suggestion]
             verification_steps = [
                 "核对 normalized_request.input.question、input.contexts、reference.golden_answer 与 extracted_output.actual_answer。",
                 "复跑当前 QA case，确认 semantic judge 的 blocking expectations 全部满足。",

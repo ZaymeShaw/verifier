@@ -520,95 +520,28 @@ class Adapter(ProjectAdapter):
             attribute_result.verification_steps = []
             attribute_result.patch_direction = []
             return attribute_result
-        if "divergence_analysis_root_cause" in (attribute_result.quality_flags or []):
-            root_cause = None
-            for item in attribute_result.evidence_chain or []:
-                if not isinstance(item, dict):
-                    continue
-                divergence = item.get("divergence_analysis")
-                if isinstance(divergence, dict) and isinstance(divergence.get("root_cause"), dict):
-                    root_cause = divergence["root_cause"]
-                    break
-            if root_cause:
-                summary = str(root_cause.get("summary") or "")
-                fix_suggestion = str(root_cause.get("fix_suggestion") or "")
-                if summary:
-                    attribute_result.root_cause_hypothesis = summary
-                if fix_suggestion:
-                    attribute_result.patch_direction = [fix_suggestion]
-            first_failed = next((node for node in trace.execution_trace or [] if isinstance(node, dict) and node.get("status") in {"failed", "suspicious"}), {})
-            expected = judge_result.expected or trace.project_fields.get("reference") or {}
-            actual = judge_result.actual or trace.extracted_output or {}
-            stage = first_failed.get("stage") or "intent_contract_gate"
-            stale_text = " ".join(str(item) for item in [
-                attribute_result.incomplete_reason,
-                attribute_result.root_cause_hypothesis,
-                attribute_result.business_impact,
-                attribute_result.verification_steps,
-                attribute_result.patch_direction,
-            ] if item)
-            if any(marker in stale_text for marker in (
-                "source_file_catalog",
-                "prompt 文件",
-                "INTENT_RECOGNITION_PROMPT",
-                "intent_prompt.py",
-                "prompt层面",
-                "LLM prompt",
-                "工具调用预算用尽",
-                "未能读取",
-            )):
-                attribute_result.incomplete_reason = ""
-                attribute_result.suspected_locations = []
-                attribute_result.verification_steps = []
-                if not attribute_result.root_cause_hypothesis:
-                    attribute_result.root_cause_hypothesis = f"当前 case 期望 intent/slots 为 {expected}，实际 normalized intent evidence 为 {actual}，最早差异位于 {stage}。"
-                if not attribute_result.verification_steps:
-                    attribute_result.verification_steps = ["复查当前 query、reference 与 normalized intent evidence 是否一致。"]
-                if not attribute_result.patch_direction:
-                    attribute_result.patch_direction = ["优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"]
-            attribute_result.analysis_quality = {**(attribute_result.analysis_quality or {}), "passed": True, "status": "supported_root_cause"}
-            attribute_result.failure_category = attribute_result.failure_category or "intent_recognition"
-            attribute_result.failure_stage = attribute_result.failure_stage or "runtime_check"
-            attribute_result.analysis_method = attribute_result.analysis_method or "trace_runtime_analysis_with_project_checks"
-            return attribute_result
+        # incorrect 路径：divergence_analysis_root_cause 已由 _enforce_divergence_root_cause
+        # 写入 root_cause_hypothesis/patch_direction（runtime_check 产出闭合根因时）。
+        # 这里只补全结构字段 + 兜底（无 runtime 根因时用 expected/actual 拼接）。
         first_failed = next((node for node in trace.execution_trace or [] if isinstance(node, dict) and node.get("status") in {"failed", "suspicious"}), {})
         expected = judge_result.expected or trace.project_fields.get("reference") or {}
         actual = judge_result.actual or trace.extracted_output or {}
         stage = first_failed.get("stage") or "intent_contract_gate"
-        existing_incomplete = str(attribute_result.incomplete_reason or "")
-        stale_markers = (
-            "source_file_catalog",
-            "prompt 文件",
-            "INTENT_RECOGNITION_PROMPT",
-            "intent_prompt.py",
-            "prompt层面",
-            "LLM prompt",
-        )
-        if any(marker in existing_incomplete for marker in stale_markers):
-            existing_incomplete = ""
-        missing_quality = list((attribute_result.analysis_quality or {}).get("missing") or []) if isinstance(attribute_result.analysis_quality, dict) else []
-        quality_passed = not existing_incomplete
-        quality_missing = missing_quality if existing_incomplete else []
-        if existing_incomplete and "intent_recognition_internal_evidence" not in quality_missing:
-            quality_missing.append("intent_recognition_internal_evidence")
-        attribute_result.failure_category = "intent_recognition"
-        attribute_result.failure_stage = stage
-        attribute_result.analysis_method = "current_case_intent_contract_trace"
-        attribute_result.evidence_chain = [
-            {"query": trace.input.get("query") or trace.input.get("user_text")},
-            {"expected": expected},
-            {"actual": actual},
-            {"missing": judge_result.missing, "wrong": judge_result.wrong},
-        ]
+        attribute_result.failure_category = attribute_result.failure_category or "intent_recognition"
+        attribute_result.failure_stage = attribute_result.failure_stage or stage
+        attribute_result.analysis_method = attribute_result.analysis_method or "trace_runtime_analysis_with_project_checks"
         attribute_result.trace_analysis = list(trace.execution_trace or [])
         attribute_result.chain_nodes = list(trace.execution_trace or [])
-        attribute_result.earliest_divergence = {"node": stage, "expected": expected, "actual": actual, "evidence": [first_failed.get("evidence") or judge_result.missing or judge_result.wrong], "confidence": "medium"}
+        if not attribute_result.earliest_divergence:
+            attribute_result.earliest_divergence = {"node": stage, "expected": expected, "actual": actual, "evidence": [first_failed.get("evidence") or judge_result.missing or judge_result.wrong], "confidence": "medium"}
         attribute_result.evidence_coverage = {"query": bool(trace.input), "actual": bool(actual), "expected": bool(expected), "execution_trace": bool(trace.execution_trace), "unsupported_claims": []}
-        attribute_result.analysis_quality = {"passed": quality_passed, "status": "supported_root_cause" if quality_passed else "next_verification_step", "missing": quality_missing}
-        attribute_result.incomplete_reason = existing_incomplete
-        attribute_result.root_cause_hypothesis = f"当前 case 期望 intent/slots 为 {expected}，实际 normalized intent evidence 为 {actual}，最早差异位于 {stage}。"
-        attribute_result.verification_steps = ["复查当前 query、reference 与 normalized intent evidence 是否一致。"]
-        attribute_result.patch_direction = ["优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"]
+        if not attribute_result.root_cause_hypothesis:
+            attribute_result.root_cause_hypothesis = f"当前 case 期望 intent/slots 为 {expected}，实际 normalized intent evidence 为 {actual}，最早差异位于 {stage}。"
+            attribute_result.verification_steps = attribute_result.verification_steps or ["复查当前 query、reference 与 normalized intent evidence 是否一致。"]
+            attribute_result.patch_direction = attribute_result.patch_direction or ["优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"]
+            attribute_result.analysis_quality = {"passed": False, "status": "next_verification_step", "missing": ["runtime_root_cause"]}
+        else:
+            attribute_result.analysis_quality = {**(attribute_result.analysis_quality or {}), "passed": True, "status": "supported_root_cause"}
         return attribute_result
 
     def get_runtime_checks(self, runtime_values: Dict[str, Any], context: Dict[str, Any] | None = None) -> Dict[str, Any]:
