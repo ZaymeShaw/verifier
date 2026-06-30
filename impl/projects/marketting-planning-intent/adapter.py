@@ -698,86 +698,33 @@ class Adapter(ProjectAdapter):
         return mapping, enum_values, source
 
     def build_attribute_tools(self) -> list:
-        """归因第二层 tool：在第一层 divergence_analysis（已给出"哪里坏了"——具体字段/值/函数）
-        基础上，让 attribute agent 深挖"为什么坏了"+"怎么修"。
+        """归因第二层 tool：直接暴露业务系统原函数给 attribute agent 调用。
+        LLM 自己决定调哪个、怎么分析。
 
-        mpi 的第二层 tool 聚焦于：intent 映射错误的根因链追溯（为什么 raw_intent 映射到
-        错误 intent）、源码级证据定位（INTENT_MAPPING 哪条规则/哪个配置文件导致）、
-        可执行修复方向。
+        原函数来自 projects/marketting-planning-intent/intent.py（INTENT_MAPPING 查表）
+        和外部仓库 app/workflow/steps/intent_recognition.py（规则识别），原样返回结果。
         """
         adapter = self
 
-        def trace_intent_mapping_root_cause(raw_intent: str, expected_intent: str, actual_intent: str) -> dict:
-            """源码证据级 + 根因链 tool：追溯 intent 映射错误的根因。
-
-            1) 查 INTENT_MAPPING 中 raw_intent 的实际映射
-            2) 查 INTENT_MAPPING 中是否有 expected_intent 对应的 raw_intent 编码
-            3) 给出根因链（是映射表缺条目、NLU 输出编码错误、还是 adapter 解析错误）
-            4) 给出可执行修复方向
+        def run_intent_mapping_lookup(raw_intent: str) -> dict:
+            """直接运行 INTENT_MAPPING 查表（原函数级，非包装）。
 
             Args:
                 raw_intent: 原始 intent 编码（如 "4001"）
-                expected_intent: 期望的 intent 标签（如 "nbev_planning"）
-                actual_intent: 实际的 intent 标签（如 "other"）
-
-            Returns:
-                包含 root_cause_chain、fix_direction、source 的字典
             """
             mapping, enum_values, source = adapter._load_intent_mapping_source()
             key = str(raw_intent)
-            actual_mapped = mapping.get(key)
-            # 反向查：expected_intent 对应的编码
-            matching_codes = [k for k, v in mapping.items() if v == expected_intent]
-            # 根因分析
-            if actual_mapped is None:
-                chain = f"raw_intent={raw_intent} 未在 INTENT_MAPPING 中定义（共 {len(mapping)} 条映射），NLU 输出编码可能来自非标准接口"
-                fix = f"在 INTENT_MAPPING 中补充 raw_intent={raw_intent} 的映射条目，或修正上游 NLU 使其输出映射表中已定义的编码"
-            elif actual_mapped != expected_intent:
-                chain = f"raw_intent={raw_intent} 在 INTENT_MAPPING 中映射到 {actual_mapped}，而 reference 期望 {expected_intent}。INTENT_MAPPING 中 {expected_intent} 对应的编码为 {matching_codes}"
-                fix = f"修正 INTENT_MAPPING 中 raw_intent={raw_intent} 的映射，或修正上游 NLU 使其输出 {matching_codes} 而非 {raw_intent}"
-            else:
-                chain = f"intent 映射正确（{raw_intent}→{actual_mapped}），但 reference 期望 {expected_intent}，上游 NLU 或 adapter 可能选错了 reference"
-                fix = "检查 adapter 的 extract_output 是否正确解析了服务返回的 intent 字段，或修正 reference 的 expected_intent"
             return {
-                "raw_intent": key,
-                "actual_mapped": actual_mapped,
-                "expected_intent": expected_intent,
-                "matching_codes_for_expected": matching_codes,
-                "total_mapping_entries": len(mapping),
-                "root_cause_chain": chain,
-                "fix_direction": fix,
+                "input": key,
+                "mapped_label": mapping.get(key),
+                "is_in_mapping": key in mapping,
+                "total_entries": len(mapping),
+                "enum_values": enum_values,
                 "source": source,
             }
 
-        def check_required_slot_extraction(slot_name: str, expected_value_hint: str) -> dict:
-            """源码证据级 tool：检查 required_slot 的提取逻辑问题。
-
-            分析指定 slot 的值是否是占位符/无效值，并给出为什么该 slot 没有被
-            正确提取的根因分析。
-
-            Args:
-                slot_name: 槽位名（如 "year"）
-                expected_value_hint: 期望值的描述（如 "从 query 中提取的年份"）
-
-            Returns:
-                包含 slot_status、validation、root_cause_chain、fix_direction 的字典
-            """
-            PLACEHOLDER = ("mock_value", "mock_", "placeholder", "unknown", "null", "undefined")
-            return {
-                "slot_name": slot_name,
-                "expected_value_hint": expected_value_hint,
-                "validation": {
-                    "placeholder_patterns": list(PLACEHOLDER),
-                    "description": "如果 slot 值匹配上述占位符模式，说明 NLU 槽位提取层未从 query 真实抽取该字段",
-                },
-                "root_cause_chain": f"NLU 槽位提取层未从 query 真实抽取 {slot_name} 字段，返回占位值。上游 intent recognition 的 slot extraction 或 NLU 模块缺少从 query 提取 {slot_name} 的能力",
-                "fix_direction": f"修正 NLU 槽位提取逻辑，使其从 query 中真实抽取 {slot_name} 字段（如从'明年'解析出年份），或当无法抽取时明确标记为 slot_error 而非返回占位值",
-                "source": "impl/projects/marketting-planning-intent/adapter.py:get_runtime_checks",
-            }
-
-        trace_intent_mapping_root_cause.__name__ = "trace_intent_mapping_root_cause"
-        check_required_slot_extraction.__name__ = "check_required_slot_extraction"
-        return [trace_intent_mapping_root_cause, check_required_slot_extraction]
+        run_intent_mapping_lookup.__name__ = "run_intent_mapping_lookup"
+        return [run_intent_mapping_lookup]
 
     def simulate_trace_nodes(self, trace, judge_result) -> Dict[str, Any]:
         """Issue #3: 沿 trace 逐节点调业务系统函数复现，定位最早分歧。

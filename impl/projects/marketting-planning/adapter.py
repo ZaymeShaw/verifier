@@ -1074,99 +1074,55 @@ class Adapter(ProjectAdapter):
             return {}
 
     def build_attribute_tools(self) -> list:
-        """归因第二层 tool：在第一层 divergence_analysis（已给出"哪里坏了"——具体 path/stage/target_value）
-        基础上，让 attribute agent 深挖"为什么坏了"+"怎么修"。
+        """归因第二层 tool：直接暴露业务系统原函数给 attribute agent 调用。
+        LLM 自己决定调哪个、怎么调、怎么分析结果。
 
-        mp 的第二层 tool 聚焦于：路径派发错误的根因链、目标值单位转换错误的源码级定位、
-        SSE 事件缺失的修复方向。
+        原函数来自 app/workflow/path_types.py 和 app/workflow/steps/intent_recognition.py，
+        通过 importlib 直接加载，结果原样返回。
         """
         adapter = self
 
-        def trace_target_value_unit_root_cause(query: str, expected_wan: int, actual_wan) -> dict:
-            """源码证据级 + 根因链 tool：追溯目标值单位转换错误的根因。
+        def run_normalize_path_types(path_types: list) -> dict:
+            """直接运行业务系统 app/workflow/path_types.py 的 normalize_path_types 原函数。
 
-            1) 用业务系统 extract_target_value_from_text 解析 query 中的目标值
-            2) 对比 expected/actual，判断是"亿→万"转换错、还是单位未解析、还是缺失
-            3) 给出根因链（请求归一化阶段哪个环节出错）和可执行修复方向
-
-            Args:
-                query: 用户查询文本（如 "NBEV达成路径规划，目标值120亿"）
-                expected_wan: 期望的目标值（万）
-                actual_wan: 实际链路使用的目标值（万，或 "missing"/None）
-
-            Returns:
-                包含 business_parsed、root_cause_chain、fix_direction 的字典
-            """
-            path_module = adapter._load_business_path_types_module()
-            extract_fn = path_module.get("extract_target_value_from_text") if path_module else None
-            business_parsed = extract_fn(query) if extract_fn else None
-            source = "app/workflow/path_types.py:extract_target_value_from_text"
-            if actual_wan in (None, "missing", "缺失") or actual_wan == "missing":
-                chain = f"query 含目标值，业务系统 extract_target_value_from_text 解析为 {business_parsed} 万，但实际链路未产出 targetNbev 字段——请求归一化阶段丢失了目标值"
-                fix = "修正请求归一化逻辑，确保 extract_target_value_from_text 的解析结果被写入 targetNbev 字段并传递到 planning 阶段"
-            elif isinstance(actual_wan, (int, float)) and isinstance(expected_wan, (int, float)) and int(actual_wan) != int(expected_wan):
-                chain = f"业务系统解析为 {business_parsed} 万（应=期望 {expected_wan}），但实际链路使用 {actual_wan} 万——'亿'→'万'单位转换逻辑出错（应 ×10000）"
-                fix = "修正单位转换逻辑：'亿'转换为内部单位'万'时必须乘以 10000，检查 request_normalization/目标值解析函数"
-            else:
-                chain = f"目标值单位转换正常（实际 {actual_wan} 万=期望 {expected_wan} 万），需检查其他失败维度"
-                fix = "目标值无问题，检查 path_type/stage/sse 等其他第一层已识别的失败点"
-            return {
-                "query": query,
-                "business_parsed_wan": business_parsed,
-                "expected_wan": expected_wan,
-                "actual_wan": actual_wan,
-                "root_cause_chain": chain,
-                "fix_direction": fix,
-                "source": source,
-            }
-
-        def trace_path_dispatch_root_cause(required_paths: list, actual_paths: list) -> dict:
-            """源码证据级 + 根因链 tool：追溯路径派发错误的根因。
-
-            1) 用业务系统 normalize_path_types 归一化 actual_paths
-            2) 与 required_paths 对比，定位缺失/多余路径
-            3) 给出根因链（path_planning/nbev_workflow 的派发逻辑问题）和修复方向
+            返回归一化后的路径类型列表（去重、去无效、保序）。
+            这是原函数，不是包装——输入什么输出什么，LLM 自己分析结果。
 
             Args:
-                required_paths: 期望的路径类型列表（英文）
-                actual_paths: 实际产出的路径类型列表（英文）
-
-            Returns:
-                包含 missing_paths、extra_paths、root_cause_chain、fix_direction 的字典
+                path_types: 路径类型列表（中文，如 ["队伍", "客户"]）
             """
             path_module = adapter._load_business_path_types_module()
-            valid = list(path_module.get("VALID_PATH_TYPES", ())) if path_module else ()
-            normalize_fn = path_module.get("normalize_path_types") if path_module else None
-            EN_TO_ZH = {"premium_growth": "队伍", "customer_growth": "客户", "product_mix": "产品", "activity": "活动", "unknown": "未知"}
-            ZH_TO_EN = {v: k for k, v in EN_TO_ZH.items()}
-            actual_zh = [EN_TO_ZH.get(p, p) for p in actual_paths]
-            normalized_zh = list(normalize_fn(actual_zh)) if (normalize_fn and actual_zh) else actual_zh
-            normalized_actual = [ZH_TO_EN.get(p, p) for p in normalized_zh]
-            missing = [p for p in required_paths if p not in normalized_actual]
-            extra = [p for p in normalized_actual if p not in required_paths]
-            if missing:
-                chain = f"业务系统 normalize_path_types 归一化后 actual={normalized_actual}，缺少 required={missing}。path_planning/nbev_workflow 的派发逻辑未对 query 中的意图产出对应路径卡片"
-                fix = f"修正 path_planning 派发逻辑，确保对 query 意图产出 {missing} 路径卡片；检查 normalize_path_types 的有效集合 {valid}"
-            elif extra:
-                chain = f"actual 出现了不在 required 中的路径 {extra}，path_planning 派发了多余路径"
-                fix = f"修正 path_planning 派发逻辑，移除不应出现的路径 {extra}"
-            else:
-                chain = "路径派发正确，需检查其他失败维度"
-                fix = "路径无问题，检查 stage/sse/target_value 等其他第一层已识别的失败点"
+            fn = path_module.get("normalize_path_types") if path_module else None
+            result = fn(path_types) if fn else None
             return {
-                "required_paths": required_paths,
-                "normalized_actual_paths": normalized_actual,
-                "missing_paths": missing,
-                "extra_paths": extra,
-                "valid_path_types_zh": valid,
-                "root_cause_chain": chain,
-                "fix_direction": fix,
+                "input": path_types,
+                "normalized": result,
+                "valid_path_types": list(path_module.get("VALID_PATH_TYPES", ())) if path_module else [],
+                "aliases": dict(path_module.get("PATH_TYPE_ALIASES", {})) if path_module else {},
                 "source": "app/workflow/path_types.py:normalize_path_types",
             }
 
-        trace_target_value_unit_root_cause.__name__ = "trace_target_value_unit_root_cause"
-        trace_path_dispatch_root_cause.__name__ = "trace_path_dispatch_root_cause"
-        return [trace_target_value_unit_root_cause, trace_path_dispatch_root_cause]
+        def run_extract_target_value(query: str) -> dict:
+            """直接运行业务系统 app/workflow/path_types.py 的 extract_target_value_from_text 原函数。
+
+            从 query 文本中提取 NBEV 目标值。这是原函数，LLM 自己分析结果。
+
+            Args:
+                query: 用户查询文本（如 "NBEV达成路径规划，目标值120亿"）
+            """
+            path_module = adapter._load_business_path_types_module()
+            fn = path_module.get("extract_target_value_from_text") if path_module else None
+            result = fn(query) if fn else None
+            return {
+                "query": query,
+                "extracted_value": result,
+                "unit": "万（函数内部不转换单位，'亿'需外部 ×10000）",
+                "source": "app/workflow/path_types.py:extract_target_value_from_text",
+            }
+
+        run_normalize_path_types.__name__ = "run_normalize_path_types"
+        run_extract_target_value.__name__ = "run_extract_target_value"
+        return [run_normalize_path_types, run_extract_target_value]
 
     def simulate_trace_nodes(self, trace, judge_result) -> Dict[str, Any]:
         """Issue #3: 沿 trace 逐节点调业务系统函数复现，定位最早分歧。
