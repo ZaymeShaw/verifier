@@ -1,32 +1,32 @@
-# Config Alignment Design
+# 配置对齐设计
 
-Date: 2026-06-30
+日期：2026-06-30
 
-## Goal
+## 目标
 
-Unify this project's runtime configuration so server startup, Python execution, LLM settings, and UAT/E2E ports are read from a single project-level configuration path with predictable overrides.
+统一本项目的运行时配置，让服务启动、Python 执行环境、LLM 设置、UAT/E2E 端口都从一个项目级配置入口读取，并且具备清晰、可预期的覆盖规则。
 
-The first implementation will use the minimal方案 A:
+第一版采用最小改造的方案 A：
 
-- Add `impl/config.yaml` as the canonical non-secret runtime config file.
-- Add `impl/core/config.py` as the only runtime config loading layer.
-- Keep API keys and other secrets in environment variables.
-- Preserve current behavior where possible, including existing DeepSeek env names and `env.md` fallback.
+- 新增 `impl/config.yaml`，作为非敏感运行配置的统一默认值来源。
+- 新增 `impl/core/config.py`，作为唯一的运行配置加载层。
+- API key 等敏感信息仍然只从环境变量读取。
+- 尽量保持现有行为兼容，包括现有 DeepSeek 环境变量名和 `env.md` fallback。
 
-## Non-goals
+## 非目标
 
-This design intentionally does not include:
+本设计第一版不包含：
 
-- Profile support such as `local` / `uat` / `ci` sections.
-- Moving or redesigning `impl/projects/*/project.yaml`.
-- Storing API keys or secrets in `impl/config.yaml`.
-- Docker, CI, or deployment pipeline redesign.
-- Full adapter/business-service configuration migration.
-- Removing the existing `env.md` compatibility path.
+- `local` / `uat` / `ci` 这类 profile 机制。
+- 迁移或重设计 `impl/projects/*/project.yaml`。
+- 在 `impl/config.yaml` 中保存 API key 或其他 secret。
+- Docker、CI、部署流水线重构。
+- 完整迁移 adapter / 被测业务服务配置。
+- 移除现有 `env.md` 兼容路径。
 
-## Configuration file
+## 配置文件
 
-Create `impl/config.yaml`:
+新增 `impl/config.yaml`：
 
 ```yaml
 python:
@@ -49,17 +49,17 @@ llm:
     - LLM_API_KEY
 ```
 
-`impl/config.yaml` contains only non-sensitive defaults. It may name environment variables where secrets should be read from, but it must not contain actual secret values.
+`impl/config.yaml` 只保存非敏感默认值。它可以声明 secret 应该从哪些环境变量读取，但不能保存真实 secret 值。
 
-## Override order
+## 覆盖优先级
 
-Runtime values resolve in this order:
+运行时配置按以下顺序解析：
 
 ```text
-CLI arguments > environment variables > impl/config.yaml > code defaults
+CLI 参数 > 环境变量 > impl/config.yaml > 代码默认值
 ```
 
-Supported environment overrides for the first version:
+第一版支持这些环境变量覆盖：
 
 ```text
 PYTHON_EXECUTABLE
@@ -75,15 +75,15 @@ DEEPSEEK_API_KEY
 LLM_API_KEY
 ```
 
-LLM API key lookup uses `llm.api_key_env` order from `impl/config.yaml`, defaulting to:
+LLM API key 按 `impl/config.yaml` 中的 `llm.api_key_env` 顺序读取，默认顺序是：
 
 ```text
 DEEPSEEK_API_KEY > LLM_API_KEY > env.md fallback
 ```
 
-## New config module
+## 新增配置模块
 
-Add `impl/core/config.py` with a small typed API:
+新增 `impl/core/config.py`，提供轻量 typed API：
 
 ```python
 get_runtime_config()
@@ -93,59 +93,59 @@ get_uat_config()
 get_llm_config()
 ```
 
-The module is responsible for:
+该模块负责：
 
-- Loading `impl/config.yaml`.
-- Applying code defaults if the file or individual keys are missing.
-- Applying supported environment variable overrides.
-- Converting port strings to integers.
-- Validating host/port shape.
-- Resolving LLM API key from the configured env var order.
-- Providing clear error messages for malformed YAML or invalid values.
+- 加载 `impl/config.yaml`。
+- 当配置文件或某些配置项缺失时，应用代码默认值。
+- 应用支持的环境变量覆盖。
+- 将端口字符串转换为整数。
+- 校验 host / port 的基本形态。
+- 按配置声明的环境变量顺序解析 LLM API key。
+- 对 YAML 格式错误、非法配置值给出清晰错误信息。
 
-The implementation should keep this layer lightweight. It does not need a heavy schema framework in the first version.
+第一版保持轻量，不引入重型 schema 框架。
 
-## Server startup
+## 服务启动
 
-`impl/server.py` currently has hardcoded parser defaults:
+`impl/server.py` 当前有硬编码 parser 默认值：
 
 ```python
 parser.add_argument("--port", type=int, default=8020)
 parser.add_argument("--host", default="127.0.0.1")
 ```
 
-Change this to read defaults from `get_server_config()`:
+改为从 `get_server_config()` 读取默认值：
 
 ```text
 impl/config.yaml
-  -> env overrides VERIFIER_HOST / VERIFIER_PORT
-  -> CLI overrides --host / --port
+  -> 环境变量覆盖 VERIFIER_HOST / VERIFIER_PORT
+  -> CLI 参数覆盖 --host / --port
   -> uvicorn.run(...)
 ```
 
-Expected behavior:
+期望行为：
 
 ```bash
 python -m impl.server
 ```
 
-starts on `server.host` and `server.port` from config unless environment variables override them.
+默认使用配置里的 `server.host` 和 `server.port` 启动，除非环境变量覆盖它们。
 
 ```bash
 VERIFIER_PORT=8022 python -m impl.server
 ```
 
-uses port `8022`.
+使用端口 `8022`。
 
 ```bash
 python -m impl.server --port 8023
 ```
 
-uses port `8023`, overriding env and config.
+使用端口 `8023`，覆盖环境变量和配置文件。
 
-## Python startup
+## Python 启动环境
 
-`start_server.sh` currently hardcodes a local Conda Python path. Replace it with a portable launcher:
+`start_server.sh` 当前硬编码了本机 Conda Python 路径。改为可移植启动脚本：
 
 ```bash
 #!/bin/bash
@@ -155,19 +155,19 @@ PYTHON_BIN="${PYTHON_EXECUTABLE:-python}"
 exec "$PYTHON_BIN" -m impl.server "$@"
 ```
 
-This keeps shell startup simple and portable. The shell script does not parse YAML. If a user needs a custom interpreter locally, they set `PYTHON_EXECUTABLE`:
+这样 shell 启动保持简单、可移植。脚本本身不解析 YAML。如果用户本地需要指定 Python 解释器，通过 `PYTHON_EXECUTABLE` 覆盖：
 
 ```bash
 PYTHON_EXECUTABLE=/path/to/python ./start_server.sh
 ```
 
-`python.executable` remains documented in `impl/config.yaml` for Python-side tooling and future launch helpers, but the first shell launcher uses the environment variable for portability.
+`impl/config.yaml` 中的 `python.executable` 保留为 Python 侧工具和未来启动 helper 的配置项；第一版 shell launcher 为了可移植性只直接读取环境变量。
 
-## LLM configuration
+## LLM 配置
 
-`impl/core/llm_client.py` currently owns model/base URL defaults and reads env vars directly. Move runtime default resolution into `impl/core/config.py`.
+`impl/core/llm_client.py` 当前自己维护 model/base URL 默认值，并直接读取环境变量。改造后，运行时默认值解析统一放到 `impl/core/config.py`。
 
-`LlmClient()` should receive defaults equivalent to:
+`LlmClient()` 默认值等价于：
 
 ```text
 model = get_llm_config().model
@@ -175,41 +175,41 @@ base_url = get_llm_config().base_url
 api_key = get_llm_config().api_key
 ```
 
-The following compatibility behavior stays intact:
+以下兼容行为保持不变：
 
-- `DEEPSEEK_API_KEY` and `LLM_API_KEY` continue to work.
-- `DEEPSEEK_BASE_URL` and `LLM_BASE_URL` continue to work.
-- `env.md` fallback remains for local compatibility.
-- The Agno/OpenAI compatibility bridge remains, but should be isolated behind a clear helper such as `ensure_openai_compat_api_key(api_key)`.
+- `DEEPSEEK_API_KEY` 和 `LLM_API_KEY` 继续可用。
+- `DEEPSEEK_BASE_URL` 和 `LLM_BASE_URL` 继续可用。
+- `env.md` fallback 保留，用于兼容本地旧用法。
+- Agno/OpenAI 兼容桥保留，但应收敛到清晰的 helper，例如 `ensure_openai_compat_api_key(api_key)`。
 
-Missing key behavior should remain non-crashing and return a structured missing-key response. The message may be generalized to mention configured key env names.
+缺少 key 时仍不让进程崩溃，而是返回结构化 missing-key 结果。错误文案可以泛化为提示当前配置支持的 key 环境变量名。
 
-## UAT and E2E ports
+## UAT 和 E2E 端口
 
-Separate runtime server port from UAT/E2E target port:
+将运行服务端口和 UAT/E2E 目标端口分开：
 
-- `server.port`: default verifier UI/backend server port.
-- `uat.port`: default UAT/E2E target port.
+- `server.port`：verifier UI/backend 的默认启动端口。
+- `uat.port`：UAT/E2E 测试默认访问的目标端口。
 
-Existing tests or smoke checks that hardcode `8020` should instead build URLs from `get_uat_config()` and allow `VERIFIER_UAT_PORT` to override.
+现有硬编码 `8020` 的测试或 smoke check，应改为从 `get_uat_config()` 构造 URL，并允许 `VERIFIER_UAT_PORT` 覆盖。
 
-If an existing test assumes the server is already running, that assumption remains unchanged in the first version. Only the target URL construction changes.
+如果现有测试假设 server 已经提前启动，第一版保持该假设不变。第一版只改目标 URL 的构造方式。
 
-## Documentation updates
+## 文档更新
 
-Update `README.md` to show the standard startup path:
+更新 `README.md`，标准启动方式改为：
 
 ```bash
 python -m impl.server
 ```
 
-Document that defaults are in:
+说明默认值位置：
 
 ```text
 impl/config.yaml
 ```
 
-Document common overrides:
+说明常见覆盖方式：
 
 ```bash
 VERIFIER_PORT=8022 python -m impl.server
@@ -217,58 +217,58 @@ python -m impl.server --port 8023
 export DEEPSEEK_API_KEY="..."
 ```
 
-Remove or replace examples that imply a machine-specific Python path is the standard launch method.
+删除或替换暗示“机器特定 Python 路径是标准启动方式”的示例。
 
-## Error handling
+## 错误处理
 
-The config layer should raise clear configuration errors for invalid local setup:
+配置层对本地配置问题给出清晰错误：
 
-- Malformed YAML: include `impl/config.yaml` and the parser error.
-- Missing PyYAML: explain that runtime config requires `pyyaml` in the project environment.
-- Invalid port: identify the exact field and require `1..65535`.
-- Invalid `api_key_env`: require a list of non-empty strings.
+- YAML 格式错误：提示 `impl/config.yaml` 和解析错误。
+- 缺少 PyYAML：说明运行配置需要项目环境安装 `pyyaml`。
+- 非法端口：指出具体字段，并要求取值在 `1..65535`。
+- 非法 `api_key_env`：要求它是非空字符串列表。
 
-LLM missing-key behavior remains a runtime LLM response, not a process-level crash.
+LLM 缺少 key 仍保持为运行时 LLM 结果，不作为进程级崩溃处理。
 
-## Testing
+## 测试
 
-Add or update tests for these behaviors:
+新增或更新测试覆盖这些行为：
 
-1. Config loading
-   - Defaults load from `impl/config.yaml`.
-   - Missing config keys fall back to code defaults.
-   - Env vars override YAML values.
-   - Invalid port values fail clearly.
-   - LLM key resolution follows `api_key_env` order.
+1. 配置加载
+   - 默认值从 `impl/config.yaml` 加载。
+   - 配置文件缺少部分字段时回退到代码默认值。
+   - 环境变量覆盖 YAML 值。
+   - 非法端口值给出清晰失败。
+   - LLM key 解析遵循 `api_key_env` 顺序。
 
-2. Server startup
-   - Default host/port come from config.
-   - `VERIFIER_PORT` overrides config.
-   - CLI `--port` overrides env/config.
-   - `uvicorn.run` can be monkeypatched so the test does not start a real server.
+2. 服务启动
+   - 默认 host/port 来自 config。
+   - `VERIFIER_PORT` 覆盖 config。
+   - CLI `--port` 覆盖 env/config。
+   - 通过 monkeypatch `uvicorn.run` 避免测试中真正启动 server。
 
 3. LLM client
-   - Default model/base URL come from config.
-   - `DEEPSEEK_BASE_URL` / `LLM_BASE_URL` override config.
-   - Missing key returns the existing structured error.
-   - OpenAI compatibility env bridge still sets the request API key as expected.
+   - 默认 model/base URL 来自 config。
+   - `DEEPSEEK_BASE_URL` / `LLM_BASE_URL` 覆盖 config。
+   - 缺少 key 返回现有结构化错误。
+   - OpenAI 兼容环境变量桥仍按预期设置请求 API key。
 
-4. UAT URL construction
-   - URLs use `uat.host` / `uat.port`.
-   - `VERIFIER_UAT_PORT` overrides config.
+4. UAT URL 构造
+   - URL 使用 `uat.host` / `uat.port`。
+   - `VERIFIER_UAT_PORT` 覆盖 config。
 
-## Migration impact
+## 迁移影响
 
-Existing users can still run:
+现有用户仍可运行：
 
 ```bash
 python -m impl.server --port 8020
 ```
 
-Existing LLM env vars still work. The main visible change is that plain startup:
+现有 LLM 环境变量继续可用。主要可见变化是，直接运行：
 
 ```bash
 python -m impl.server
 ```
 
-now gets its default host and port from `impl/config.yaml`, and `start_server.sh` no longer assumes a developer-specific Conda path.
+会从 `impl/config.yaml` 获取默认 host 和 port；`start_server.sh` 不再假设某个开发者本机的 Conda 路径。
