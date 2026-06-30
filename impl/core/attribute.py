@@ -639,49 +639,48 @@ def attribute_failure(
 - 如需引用代码片段，必须放入 JSON 字符串字段（如 evidence_chain、local_verifications）。
 - 如必须使用 ``` 代码块包裹，仅允许一个 ```json ... ``` 代码块包裹完整 JSON，且代码块外不得有其他散文。
 
-核心流程：
-0. **优先使用 divergence_analysis**（Issue #3 最新）：
-   - user prompt 中的 `divergence_analysis` 字段包含完整的分歧分析结果
-   - **这是直接调用系统原函数得到的答案**，包括：分歧点、运行时配置检查结果、根因、修复建议
-   - **如果 divergence_analysis.root_cause 非空，必须采纳该根因作为正式归因结论**，包括其 causal_category、root_cause_hypothesis、fix_suggestion 字段，不能重新分类为 model_capability_gap 或其他类别
-   - divergence_analysis.system_check 已进行了配置查询（如映射表检查），**不需要再次读取源码文件验证**——这些是系统函数的直接输出，不是推测
-   - **如果 divergence_analysis.root_cause 非空，可以不执行 probe**（答案已由系统函数提供）；仅在 divergence_analysis 为空时需执行 probe 查源码
-   - **禁止**在归因中说"prompt 文件不在 catalog 中"、"无法审查 LLM prompt"或"无法验证 LLM 行为"——divergence_analysis 已提供完整答案，prompt 缺失不影响结论
-1. 备用：如果 divergence_analysis 为空，使用 `trace_analysis`（调用链路分析）
-2. 从 attribution_targets 选择需要归因的 expectation；这些 target 已由 judge 的 intent_model/business_expectations/fulfillment_assessments 产生，不要独立重建用户意图
-2. 对每个 expectation 重建 expected behavior、actual behavior、gap 或 contested fulfillment reason
-3. 在 execution_trace、project_attribute_context.chain_nodes_to_check 和按需读取的源码文件中定位最早分歧
-4. 产出 expectation_attributions，包含 expectation_id、fulfillment_status、causal_category、earliest_divergence、causal_chain、local_verifications、suspected_locations、improvement_direction
-5. suspected_locations 只能使用 source_file_catalog 中真实存在的路径/配置/文档证据；不能编造路径、函数名或历史 case
-6. 如果 probe/source evidence 不足，必须设置 incomplete_reason 和 blocked-probe reason，不能伪造正式归因
+核心流程（两层归因，缺一不可）：
+
+本 agent 采用**分层归因**设计，必须产出两层结论：
+
+**第一层（已由 pipeline 预执行，直接读取 user prompt 中的字段）**：
+- `divergence_analysis`：直接调用业务系统原函数得到的**"哪里坏了"**——分歧点、具体字段/函数/值、root_cause、fix_suggestion
+- 这是确定性校验结果，已摆在 prompt 里，**不要重复调用 tool 去验证它已确认的事**（如不要再用 tool 查同一个字段、同一个映射值）
+
+**第二层（你用 tool 主动深挖，产出"为什么坏了"+"怎么修"）**：
+在第一层基础上，调用项目级 tool 做深化分析，目标是：
+- **源码级根因链**：为什么这个字段/函数会产生错误值？追溯到上游哪个模块/函数最先产生了异常数据
+- **可执行修复方向**：结合业务系统的配置/代码结构，给出能直接落地的修复点（具体到函数/行/配置项），而不是"修正上游逻辑"这种泛话
+
+第二层 tool 使用原则：
+- 第一层已给出"哪里坏了"，你的增量价值是"为什么"和"怎么修"——用 tool 跑更深的分析（完整复现节点、定位源码函数、交叉验证、根因链追溯、生成修复建议）
+- 不要为了用 tool 而用 tool：如果第二层 tool 能给出比第一层更深的信息才调用
+- 只有当第一层 divergence_analysis 为空时，才需要从零开始用 tool 探查"哪里坏了"
+
+**采纳规则**：
+- 如果 divergence_analysis.root_cause 非空，**采纳**其 causal_category/root_cause_hypothesis/fix_suggestion 作为归因结论的核心，不要重新分类为 model_capability_gap 或其他类别
+- 但你**必须**在此基础上用第二层 tool 补充源码级证据链和可执行修复方向，把 root_cause_hypothesis 从"哪里坏了"升级为"为什么坏了+怎么修"的完整结论
+
+**禁止**：
+- 禁止说"prompt 文件不在 catalog 中"、"无法审查 LLM prompt"、"无法验证 LLM 行为"——这些是用户明确禁止的
+- 禁止把第二层 tool 用来重复验证第一层已确认的结论
+
+从 attribution_targets 选择需要归因的 expectation（已由 judge 的 intent_model/business_expectations/fulfillment_assessments 产生，不要独立重建用户意图）；对每个 expectation 重建 expected/actual/gap；在 execution_trace、chain_nodes_to_check 和第二层 tool 结果中定位最早分歧；产出 expectation_attributions（expectation_id、fulfillment_status、causal_category、earliest_divergence、causal_chain、local_verifications、suspected_locations、improvement_direction）；suspected_locations 只能用真实存在的路径/配置/文档证据；证据不足时必须设 incomplete_reason，不能伪造归因。
 
 分析优先级和策略：
-1. **优先分析 execution_trace**（运行时实际发生了什么）：
-   - 检查 run_trace.execution_trace 中的每个 step
-   - 定位第一个 status="failed"/"diverged"/"error" 的 step
-   - 记录该 step 的 expected vs actual，这是最直接的分歧证据
-   - 基于分歧点的 stage/node 名称，推断对应的函数/模块
-
-2. **然后使用 divergence_analysis 中的答案**（这是直接调用系统原函数获得的结果）：
-   - divergence_analysis 已经包含了分歧点、根因分类、修复建议
-   - **不需要调用 search_source_file 读取源码文件**——divergence_analysis 已提供完整答案
-   - 直接基于 divergence_analysis 的结果填空即可
-
-3. **使用 source_file_catalog 仅作引用**：
-   - suspected_locations 中的路径必须来自 source_file_catalog 中实际存在的文件
-   - **禁止**在归因中说"prompt 文件不在 catalog 中"、"prompt 内容不可见"、"无法审查 LLM prompt"或"无法验证 LLM 行为"——这些说法是 Issue #3 用户明确禁止的
-   - 如果 divergence_analysis 不完整且需要补充证据，可以调用 search_source_file；读取目标必须来自 source_file_catalog，且必须围绕当前 trace 的最早分歧节点。
+1. **先读 divergence_analysis**（第一层，已由系统函数直接产出"哪里坏了"）：采纳其 root_cause 作为结论核心，不要重复验证它已确认的字段/值。
+2. **再用第二层 tool 深挖"为什么坏了"+"怎么修"**：调用项目级 tool 做源码级根因链追溯、完整节点复现、交叉验证、可执行修复方向生成。这才是你的增量价值。
+3. **source_file_catalog 仅作引用**：suspected_locations 中的路径必须来自 catalog 中真实存在的文件。禁止说"prompt 文件不在 catalog""无法审查 LLM prompt""无法验证 LLM 行为"。第一层不完整时可用 search_source_file 补充，围绕最早分歧节点。
 
 关键规则：
 - causal_category 使用 implementation_bug、model_capability_gap、boundary_limitation、unclear_contract、insufficient_evidence、no_issue 等
 - fulfilled 也可以被解释为 no_issue，但不需要失败归因
 - improvement_direction 必须指向产生机制，而不是泛泛建议
 - 分析文字必须使用中文，包括 root_cause_hypothesis、verification_steps、patch_direction、business_impact 等所有文本字段。禁止使用英文撰写归因内容。
-- **`divergence_analysis` 包含系统直接调用的答案**，如果该字段存在且提供了完整的分歧证据（divergence_point + root_cause + system_check），则**不需要再执行任何 probe 读取源码文件**。直接基于 divergence_analysis 的结果完成归因即可。
-- 只有在 divergence_analysis 为空或信息不足时，才需要执行 probe（调用 search_source_file 读取源码文件）来补充证据。
-- Tool call 预算有限（最多 {tool_call_limit} 次），仅在 divergence_analysis 不充分时才使用。
-- 如果 execution_trace 中已经有具体的错误值（如 raw_intent="4001", mapped="other"），直接检查映射规则，不需要读取完整 prompt
-- 如果 tool call 预算用尽且归因不完整，必须设置 incomplete_reason="tool_call_budget_exhausted: 已读取 N 个文件但运行时检查仍未闭合；必须明确下一步需要哪一个系统函数/adapter 协议工具来验证"
+- **`divergence_analysis` 是第一层结论**（系统函数直接产出的"哪里坏了"），采纳其 root_cause；但必须用第二层 tool 补充"为什么坏了"（源码级根因链）和"怎么修"（可执行修复方向），不要止步于第一层。
+- Tool call 预算有限（最多 {tool_call_limit} 次），优先用于第二层深挖（根因链/源码定位/交叉验证/修复建议），不要用于重复验证第一层已确认的结论。
+- 如果 execution_trace 中已经有具体的错误值（如 raw_intent="4001", mapped="other"），这是第一层已确认的，用第二层 tool 追溯为什么产生了这个值，而非重新查值。
+- 如果 tool call 预算用尽且归因不完整，必须设置 incomplete_reason="tool_call_budget_exhausted: 已读取 N 个文件但根因链仍未闭合；必须明确下一步需要哪一个系统函数/adapter 协议工具来验证"
 - 如果 catalog 中有关键文件但因预算限制未读取，在 incomplete_reason 中明确说明，不要说"文件不在 catalog"或"无法访问"。"""
 
     # Issue #3: 在 user prompt 中提供预处理的调用链路分析结果
@@ -801,16 +800,12 @@ def attribute_failure(
 
     # CRITICAL: Do NOT pass knowledge to avoid JsonDb creation
     # knowledge = load_knowledge_base(spec)
-    has_complete_runtime_root_cause = False
-    if isinstance(divergence_analysis_result, dict) and isinstance(divergence_analysis_result.get("root_cause"), dict):
-        system_check = divergence_analysis_result.get("system_check")
-        root_cause = divergence_analysis_result.get("root_cause") or {}
-        has_complete_runtime_root_cause = bool(
-            root_cause
-            and isinstance(system_check, dict)
-            and str(system_check.get("status") or "").lower() == "failed"
-        )
-    tools_for_client = [] if has_complete_runtime_root_cause else tools
+    # Issue #3 分层设计：
+    # 第一层（get_runtime_checks）已给出"哪里坏了"（具体字段/函数/值/fix_suggestion）。
+    # 第二层 tool（build_attribute_tools）应让 LLM 做"为什么坏了"（源码级根因链）
+    # + "怎么修"（可执行修复方向）。即使第一层已闭合，仍把 tool 传给 LLM
+    # 让它在此基础上深化，而不是清空 tools 跳过 LLM 调用。
+    tools_for_client = tools
     client = llm or project_llm_client(
         spec, role="attribute", knowledge=None, tools=tools_for_client,
         tool_call_limit=ATTRIBUTE_TOOL_CALL_LIMIT,

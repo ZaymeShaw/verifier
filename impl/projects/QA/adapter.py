@@ -1086,37 +1086,67 @@ class Adapter(ProjectAdapter):
         return len(expected_chars & actual_chars) / len(expected_chars)
 
     def build_attribute_tools(self) -> list:
-        """Issue #3: 暴露项目级 runtime tool 给 attribute agent 调用（Agno 兼容函数）。
+        """归因第二层 tool：在第一层 divergence_analysis（已给出"哪里坏了"）基础上，
+        让 attribute agent 深挖"为什么坏了"+"怎么修"。
 
-        闭包函数直接调用 QA adapter 业务判定函数 _infer_scenario / _text_overlap_ratio，
-        让 attribute agent 通过 tool call 复现 QA 质量判定。
+        QA 的第二层 tool 聚焦于：actual_answer 与 golden_answer 的语义差异分析、
+        遗漏内容定位、以及针对该失败模式的可执行修复方向生成。
         """
         adapter = self
 
-        def check_qa_answer_quality(actual_answer: str, golden_answer: str) -> dict:
-            """用业务系统 _text_overlap_ratio 和精确匹配判定 QA 答案质量。
+        def analyze_qa_semantic_gap(actual_answer: str, golden_answer: str) -> dict:
+            """源码证据级 + 根因链 tool：定位 actual_answer 遗漏/编造/矛盾了 golden_answer 的哪些具体内容，
+            并给出该失败模式对应的上游生成逻辑修复方向。
 
             Args:
                 actual_answer: 实际回答文本
                 golden_answer: 黄金参考答案文本
 
             Returns:
-                包含 exact_match、overlap_ratio、scenario、source 的字典
+                包含 failure_mode、missing_phrases、extra_phrases（actual 编造的）、
+                overlap_ratio、root_cause_chain、fix_direction 的字典
             """
-            exact = actual_answer.strip() == golden_answer.strip() if (actual_answer and golden_answer) else None
-            overlap = adapter._text_overlap_ratio(actual_answer, golden_answer) if (actual_answer and golden_answer) else None
-            scenario = adapter._infer_scenario("", actual_answer, golden_answer, [])
+            actual_text = str(actual_answer or "")
+            golden_text = str(golden_answer or "")
+            overlap = adapter._text_overlap_ratio(actual_text, golden_text) if (actual_text and golden_text) else None
+            hallucination_markers = ["未提及", "不能给出", "不能编造", "不应编造", "材料未提供", "未提供"]
+            is_hallucination = bool(actual_text) and any(m in golden_text for m in hallucination_markers)
+            # 遗漏：golden 中有、actual 没有的关键短语
+            key_phrases = ["例外", "但", "另外", "合同另有约定", "意外事故", "续保", "审核", "保证续保", "等待期", "免赔额"]
+            missing_phrases = [p for p in key_phrases if p in golden_text and p not in actual_text]
+            # 编造：actual 中出现的具体数值/结论，但 golden 中没有
+            import re as _re
+            actual_numbers = set(_re.findall(r"\d+", actual_text))
+            golden_numbers = set(_re.findall(r"\d+", golden_text))
+            extra_numbers = sorted(actual_numbers - golden_numbers) if actual_numbers else []
+            if is_hallucination:
+                failure_mode = "hallucination"
+                root_cause_chain = "上游 QA 回答生成在 contexts 缺少该信息时未触发'信息缺失'分支，反而走'生成具体数值'分支"
+                fix_direction = "回答生成阶段增加证据回溯：输出具体数值前校验 contexts 是否含该数值，无则改为告知用户信息缺失"
+            elif missing_phrases:
+                failure_mode = "incomplete"
+                root_cause_chain = f"上游 QA 回答生成未覆盖 golden_answer 的全部语义维度，遗漏 {missing_phrases}"
+                fix_direction = "回答生成阶段增加覆盖完整性校验：对照 reference 的关键条件逐一确认是否输出"
+            elif extra_numbers:
+                failure_mode = "unsupported_claim"
+                root_cause_chain = f"上游 QA 回答生成输出了 contexts 中不存在的数值 {extra_numbers}"
+                fix_direction = "回答生成阶段对每个具体数值做来源校验"
+            else:
+                failure_mode = "incorrect"
+                root_cause_chain = "上游 QA 回答生成产出了与 golden_answer 不一致的答案"
+                fix_direction = "修复回答生成逻辑使其基于 contexts/reference 作答"
             return {
-                "actual_answer": actual_answer[:200],
-                "golden_answer": golden_answer[:200],
-                "exact_match": exact,
+                "failure_mode": failure_mode,
+                "missing_phrases": missing_phrases,
+                "extra_numbers_in_actual": extra_numbers,
                 "overlap_ratio": round(overlap, 3) if overlap is not None else None,
-                "scenario": scenario,
-                "source": "impl/projects/QA/adapter.py:_text_overlap_ratio/_infer_scenario",
+                "root_cause_chain": root_cause_chain,
+                "fix_direction": fix_direction,
+                "source": "impl/projects/QA/adapter.py:_qa_failure_root_cause 逻辑",
             }
 
-        check_qa_answer_quality.__name__ = "check_qa_answer_quality"
-        return [check_qa_answer_quality]
+        analyze_qa_semantic_gap.__name__ = "analyze_qa_semantic_gap"
+        return [analyze_qa_semantic_gap]
 
     def simulate_trace_nodes(self, trace, judge_result) -> Dict[str, Any]:
         """Issue #3: 沿 trace 逐节点调业务系统函数复现，定位最早分歧。

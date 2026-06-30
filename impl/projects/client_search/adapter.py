@@ -764,75 +764,77 @@ class Adapter(ProjectAdapter):
         }
 
     def build_attribute_tools(self) -> list:
-        """Issue #3: 暴露项目级 runtime tool 给 attribute agent 调用（Agno 兼容函数）。
+        """归因第二层 tool：在第一层 divergence_analysis（已给出"哪里坏了"——具体字段/操作符/枚举值）
+        基础上，让 attribute agent 深挖"为什么坏了"+"怎么修"。
 
-        闭包函数直接调用业务系统 _capability_manifest / _value_mappings / _enhanced_rules，
-        让 attribute agent 通过 tool call 查询字段定义和校验条件。
+        cs 的第二层 tool 聚焦于：条件解析错误的根因链追溯（为什么该字段/操作符/值错误）、
+        枚举值映射偏差的源码级定位、可执行修复方向。
         """
         adapter = self
 
-        def search_field_definition(field_name: str) -> dict:
-            """查询 client_search 业务系统字段定义的 operators、value_types、enums。
+        def trace_condition_root_cause(field: str, expected_operator: str, expected_value, actual_operator: str, actual_value) -> dict:
+            """源码证据级 + 根因链 tool：追溯搜索条件解析错误的根因。
 
-            Args:
-                field_name: 字段名（如 "clientAge", "annPremSegNum"）
-
-            Returns:
-                包含 operators、value_types、enums、unit、field_count(总字段数) 的字典
-            """
-            manifest = adapter._capability_manifest()
-            field = manifest.get(field_name)
-            if field:
-                return {
-                    "field": field_name,
-                    "operators": field.get("operators", []),
-                    "value_types": field.get("value_types", []),
-                    "enums": field.get("enums", []),
-                    "unit": field.get("unit", ""),
-                    "description": field.get("description", ""),
-                    "source": "source_field_definitions.yaml",
-                }
-            return {
-                "field": field_name,
-                "found": False,
-                "field_count": len(manifest),
-                "sample_fields": sorted(list(manifest.keys())[:10]),
-                "source": "source_field_definitions.yaml",
-            }
-
-        def validate_search_condition(field: str, operator: str, value: str) -> dict:
-            """校验搜索条件中的字段、操作符、值是否在业务系统能力范围内。
+            1) 查 field 的 capability_manifest 定义（允许操作符/枚举/单位）
+            2) 查 value_mappings 看是否有别名映射
+            3) 定位是"操作符选错""值单位转换错""枚举值无效"还是"字段不存在"
+            4) 给出根因链和可执行修复方向
 
             Args:
                 field: 字段名
-                operator: 操作符（如 GTE, MATCH, EQ）
-                value: 值
+                expected_operator: 期望操作符
+                expected_value: 期望值
+                actual_operator: 实际操作符
+                actual_value: 实际值
 
             Returns:
-                包含 valid、issues、suggestions 的字典
+                包含 failure_mode、root_cause_chain、fix_direction 的字典
             """
             manifest = adapter._capability_manifest()
             value_mappings = adapter._value_mappings()
-            field_def = manifest.get(field)
-            issues = []
+            field_def = manifest.get(field, {})
+            allowed_ops = field_def.get("operators", [])
+            enums = field_def.get("enums", [])
+            unit = field_def.get("unit", "")
+            # 判断失败模式
             if not field_def:
-                issues.append(f"字段 {field} 不在 capability_manifest 中（共 {len(manifest)} 个字段）")
+                mode = "unknown_field"
+                chain = f"字段 {field} 不在 capability_manifest 中（共 {len(manifest)} 字段），parser 输出了不存在的字段"
+                fix = f"修正 parser 的字段映射逻辑，使 {field} 映射到 manifest 中已定义的合法字段；参考 manifest 的字段集合"
+            elif actual_operator != expected_operator and expected_operator:
+                mode = "operator_error"
+                chain = f"字段 {field} 操作符错误：实际 {actual_operator}，期望 {expected_operator}。允许的操作符为 {allowed_ops}。parser 的操作符选择逻辑未正确表达用户语义（如'大于'应为 GT 而非 GTE）"
+                fix = f"修正 parser 的操作符映射规则，使'{field}'字段的语义映射到正确的操作符 {expected_operator}"
+            elif actual_value != expected_value and expected_value is not None:
+                # 值错误：检查是否单位转换或枚举映射
+                if isinstance(actual_value, (int, float)) and isinstance(expected_value, (int, float)):
+                    ratio = expected_value / actual_value if actual_value else None
+                    mode = "value_unit_error"
+                    chain = f"字段 {field} 值错误：实际 {actual_value}，期望 {expected_value}（比值 {ratio}）。单位转换逻辑出错（如'万'未 ×10000、'亿'未 ×10000）"
+                    fix = f"修正 parser 的数值单位转换逻辑，确保 {field} 的值按 {unit or '正确单位'} 换算"
+                elif enums:
+                    mode = "enum_mapping_error"
+                    chain = f"字段 {field} 枚举值错误：实际 {actual_value}，期望 {expected_value}。该字段有效枚举为 {enums}。parser 未正确将口语别名映射到标准枚举"
+                    fix = f"修正 value_mappings，使口语别名映射到标准枚举 {expected_value}；检查别名映射规则"
+                else:
+                    mode = "value_error"
+                    chain = f"字段 {field} 值错误：实际 {actual_value}，期望 {expected_value}"
+                    fix = f"修正 parser 的值抽取逻辑，使 {field} 抽取到正确值"
             else:
-                allowed_ops = field_def.get("operators", [])
-                if operator not in allowed_ops:
-                    issues.append(f"操作符 {operator} 不在允许列表中 {allowed_ops}")
+                mode = "unknown"
+                chain = "条件解析错误模式未明确，需结合 trace 进一步分析"
+                fix = "检查 parser 的字段选择/操作符/值/逻辑生成源头"
             return {
                 "field": field,
-                "operator": operator,
-                "value": value,
-                "valid": len(issues) == 0,
-                "issues": issues,
-                "source": "source_field_definitions.yaml / source_value_mappings.yaml",
+                "failure_mode": mode,
+                "field_definition": {"allowed_operators": allowed_ops, "enums": enums, "unit": unit},
+                "root_cause_chain": chain,
+                "fix_direction": fix,
+                "source": "impl/projects/client_search/adapter.py:_capability_manifest/_value_mappings",
             }
 
-        search_field_definition.__name__ = "search_field_definition"
-        validate_search_condition.__name__ = "validate_search_condition"
-        return [search_field_definition, validate_search_condition]
+        trace_condition_root_cause.__name__ = "trace_condition_root_cause"
+        return [trace_condition_root_cause]
 
     def simulate_trace_nodes(self, trace, judge_result) -> Dict[str, Any]:
         """Issue #3: 沿 trace 逐节点调业务系统函数复现，定位最早分歧。
