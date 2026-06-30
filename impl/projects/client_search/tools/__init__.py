@@ -1,3 +1,4 @@
+from .field_definition_search import ClientSearchFieldDefinitionSearchTool
 from .search_condition_compare import ClientSearchConditionCompareTool
 
-__all__ = ["ClientSearchConditionCompareTool"]
+__all__ = ["ClientSearchConditionCompareTool", "ClientSearchFieldDefinitionSearchTool"]

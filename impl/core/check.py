@@ -332,7 +332,15 @@ def _field_values(value: Any) -> set[str]:
         for item in value:
             fields.update(_field_values(item))
     elif isinstance(value, str):
-        fields.update(re.findall(r"\b[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*)*\b", value))
+        # Only extract field-like tokens (dot-separated paths or single camelCase /
+        # PascalCase identifiers that look like schema field names), not every English
+        # word in narrative text. This prevents false cross-check failures when the attr
+        # result includes natural-language reasoning (e.g. "LLM", "because", "contexts").
+        tokens = re.findall(r"\b[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*)+\b", value)
+        tokens.extend(re.findall(r"\b[A-Z][a-z]+(?:[A-Z][A-Za-z0-9]*)+\b", value))
+        # Filter out common English words that survive the camelCase pattern by accident.
+        stop = {"LLM", "QA", "API", "JSON", "SSE"}
+        fields.update(t for t in tokens if t not in stop)
     return fields
 
 

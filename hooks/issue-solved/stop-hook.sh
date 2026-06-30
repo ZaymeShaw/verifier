@@ -164,7 +164,7 @@ if [ ${#NEED_AUDIT_ISSUES[@]} -gt 0 ]; then
     --arg issues "$ISSUE_LIST" \
     '{
       "decision": "block",
-      "reason": ("以下 issue 已标记为 closed，但缺少审核 verdict：\n\n" + $issues + "\n请为每个 issue 执行：\n1. Read 审核标准文件：`hooks/issue-solved/audit-prompt.md`\n2. Spawn 独立审核 agent\n3. 审核 agent 写入 verdict\n4. 用户关闭会话触发 re-check"),
+      "reason": ("以下 issue 已标记为 closed，但缺少审核 verdict/需重新verdict：\n\n" + $issues + "\n请为每个 issue 执行：\n1. Read 审核标准文件：`hooks/issue-solved/audit-prompt.md`\n2. Spawn 独立审核 agent\n3. 审核 agent 写入 verdict\n4. 用户关闭会话触发 re-check"),
       "systemMessage": "🔍 Issue 审核：请启动独立审核 agent"
     }'
   exit 0

@@ -37,13 +37,17 @@ from datetime import datetime
 #     }
 # }
 
-# Minimal test: QA + marketplan-intent only (2 cases each) for fix validation
+# Full test configuration (4 projects)
 CONFIG = {
-    "projects": ["marketting-planning-intent", "QA"],
-    "case_counts": {"marketting-planning-intent": 4, "QA": 4},
+    "projects": ["marketting-planning-intent", "QA", "client_search", "marketting-planning"],
+    "case_counts": {
+        "client_search": 10,  # More cases for client_search (most are fulfilled)
+    },
     "required_cases": {
         "marketting-planning-intent": ["mpi-required-slot-missing-1", "mpi-premium-growth-exact-1"],
         "QA": ["qa-gold-incomplete-1", "qa-context-hallucination-1"],
+        "client_search": ["cs-age-gt-boundary-error-1", "cs-family-responsibility-unsupported-1"],
+        "marketting-planning": ["mp-premium-growth-plan-correct-1", "mp-target-unit-error-1", "mp-non-agent-1"],
     }
 }
 # ===================================================
@@ -215,7 +219,14 @@ def run_project(proj, case_ids=None):
         return proj, pd, total_elapsed
     except Exception as e:
         print(f"  [{proj}] ERR: {e}"); return proj, [], 0
-    finally: d.quit()
+    finally:
+        # quit() can raise RemoteDisconnected when chromedriver has already torn
+        # down the session; that must NOT mask the function's return value, or
+        # write_report never runs and report.md is never written.
+        try:
+            d.quit()
+        except Exception as qe:
+            print(f"  [{proj}] d.quit() ignored: {qe}")
 
 def has_both_verdicts(data):
     """True when project has >=1 fulfilled AND >=1 not_fulfilled among selected cases."""

@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from impl.core.adapter import ProjectAdapter
+from impl.tools import ToolRegistry
 from impl.core.schema import AttributeResult, JudgeResult
 
 
@@ -61,8 +63,30 @@ STAGE_FILE_PREFIXES: Dict[str, tuple] = {
 ATTRIBUTE_CATALOG_FILE_CAP = 8
 
 
+def _load_local_tool_class(module_file: str, class_name: str):
+    module_path = Path(__file__).resolve().parent / "tools" / module_file
+    module_name = f"{__name__}_{module_file.replace('.py', '')}"
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load project tool: {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return getattr(module, class_name)
+
+
+MarketingPlanningContractTool = _load_local_tool_class("planning_contract.py", "MarketingPlanningContractTool")
+
+
 class Adapter(ProjectAdapter):
     stages = {"intent", "clarification", "planning", "non_agent", "fallback", "unknown"}
+
+    def protocol_tools(self) -> ToolRegistry:
+        registry = ToolRegistry()
+        registry.register(MarketingPlanningContractTool())
+        return registry
+
+    def _project_contract_tool_results(self, trace, purpose: str) -> list[Dict[str, Any]]:
+        return [result.__dict__ for result in self.run_protocol_tools(trace, purpose=purpose, tool_type="project_contract")]
 
     def build_request(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         nested_input = input_data.get("input") if isinstance(input_data.get("input"), dict) else {}
@@ -190,6 +214,7 @@ class Adapter(ProjectAdapter):
             "expected_stage": trace.project_fields.get("expected_stage"),
             "expected_path_types": trace.project_fields.get("expected_path_types") or [],
             "expected_cards": trace.project_fields.get("expected_cards") or [],
+            "protocol_tool_results": self._project_contract_tool_results(trace, purpose="judge"),
             "stage_rules": {
                 "clarification": "缺字段时澄清是正确方向，规划卡片通常是可疑证据。",
                 "planning": "规划场景必须检查 path_types、card identity、fallback 和 SSE completion。",
@@ -210,6 +235,19 @@ class Adapter(ProjectAdapter):
             "expected_cards": context.get("expected_cards") or [],
             "output_semantics": "route the current marketing demand to the proper stage and produce actionable planning cards/events within the project boundary",
         }
+
+    def pre_judge_result(self, trace, expected_intent=None):
+        """Do NOT short-circuit the LLM judge.
+
+        Returning a JudgeResult here skips the core LLM judge call (see
+        pipeline.judge), producing a deterministic template reasoning summary
+        and 0 LLM judge calls. Returning None lets the LLM judge run and
+        produce a detailed per-requirement analysis; the deterministic
+        contract checks (stage, required_paths, forbidden_paths, events,
+        fallback) are then applied via normalize_judge_result which runs
+        inside reconcile_judge_result AFTER the LLM judge.
+        """
+        return None
 
     def normalize_judge_result(self, trace, judge_result):
         output = trace.extracted_output or {}
@@ -239,9 +277,22 @@ class Adapter(ProjectAdapter):
         if fallback.get("used") and not allow_fallback:
             failures.append({"requirement": "allow_fallback", "expected_fragment": False, "actual_fragment": fallback, "status": "wrong", "evidence": ["fallback used but reference/boundary does not allow it"]})
         if not failures:
+            if not judge_result.fulfillment_assessments:
+                judge_result.fulfillment_assessments = [{
+                    "expectation_id": "mp_contract:planning_output_contract",
+                    "status": "fulfilled",
+                    "blocking": False,
+                    "evidence": "planning output contract satisfied by deterministic adapter checks",
+                    "downstream_impact": "planning user can proceed with the generated plan",
+                }]
+            judge_result.verdict = "correct"
+            judge_result.score = 1
             return judge_result
         judge_result.actual = output
         judge_result.expected = expected or judge_result.expected
+        judge_result.wrong = [failure for failure in failures if failure.get("status") in {"wrong", "extra"}]
+        judge_result.missing = [failure for failure in failures if failure.get("status") == "missing"]
+        judge_result.fulfillment_assessments = []
         for failure in failures:
             requirement = failure.get("requirement") or "contract"
             evidence_text = "; ".join(failure.get("evidence") or []) or failure.get("status") or "mismatch"
@@ -253,6 +304,8 @@ class Adapter(ProjectAdapter):
                 "evidence": evidence_text,
                 "downstream_impact": downstream_impact,
             })
+        judge_result.verdict = "incorrect"
+        judge_result.score = 0
         judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), "project_deterministic_evidence": failures, "why_verdict": "marketing-planning adapter found stage/path/fallback contract mismatch."}
         judge_result.boundary_decision = {**(judge_result.boundary_decision or {}), "application_boundary": trace.project_fields.get("application_boundary") or {}}
         if "marketing_planning_contract_mismatch" not in judge_result.quality_flags:
@@ -279,7 +332,13 @@ class Adapter(ProjectAdapter):
             return
         expected_target = expected.get("target_value_wan")
         actual_target = self._find_target_nbev_wan(output)
-        if expected_target is None or actual_target is None or int(actual_target) == int(expected_target):
+        if expected_target is None:
+            return
+        actual_target = self._find_target_nbev_wan(output)
+        if actual_target is None:
+            failures.append({"requirement": "target_value_wan", "expected_fragment": expected_target, "actual_fragment": "targetNbev missing from planning output", "status": "wrong", "error_type": error_type, "evidence": ["seeded mock expected target_value_unit_error but output did not expose a verifiable targetNbev"]})
+            return
+        if int(actual_target) == int(expected_target):
             return
         failures.append({"requirement": "target_value_wan", "expected_fragment": expected_target, "actual_fragment": actual_target, "status": "wrong", "error_type": error_type, "evidence": ["seeded mock reference target_value_wan differs from output targetNbev"]})
 
@@ -442,6 +501,7 @@ class Adapter(ProjectAdapter):
             "reference_contract": trace.project_fields.get("reference") or {},
             "output_summary": trace.extracted_output,
             "source_config_paths": source_config_paths,
+            "protocol_tool_results": self._project_contract_tool_results(trace, purpose="attribute"),
             "attribute_standard": "Only attribute failures grounded in current RunTrace/JudgeResult/project docs; no historical-case field carryover. Use source_code_evidence to locate exact code/config responsible for the error.",
         }
 
@@ -486,7 +546,33 @@ class Adapter(ProjectAdapter):
         return [target_probe] if target_probe else []
 
     def normalize_attribute_result(self, trace, judge_result, attribute_result):
-        if judge_result.verdict == "correct":
+        # judge 判定为 uncertain 时，attr 不应产出确定性 implementation_bug 根因。
+        # 此时表明 judge 无法确认输出是否正确，attr 应反映这种不确定性而非强行归类。
+        if judge_result.verdict == "uncertain":
+            reason = "judge 判定为 uncertain，当前规划输出无法被明确判定为正确或错误，归因不能给出确定性根因。"
+            if "self_check_failed" in (judge_result.quality_flags or []):
+                reason = "judge self-check 失败，判定为 uncertain，当前规划输出无法被确认满足或不满足契约，归因不能给出确定性根因。"
+            attribute_result.causal_category = "insufficient_evidence"
+            attribute_result.failure_category = "insufficient_evidence"
+            attribute_result.failure_stage = "judge_uncertain"
+            attribute_result.analysis_method = "judge_uncertain_blocked_attribute"
+            attribute_result.evidence_chain = list(judge_result.evidence or [reason])
+            attribute_result.trace_analysis = list(trace.execution_trace or [])
+            attribute_result.chain_nodes = list(trace.execution_trace or [])
+            attribute_result.earliest_divergence = {}
+            attribute_result.evidence_coverage = {"query": bool(trace.input), "actual": bool(judge_result.actual), "expected": bool(judge_result.expected), "execution_trace": bool(trace.execution_trace), "unsupported_claims": []}
+            attribute_result.analysis_quality = {"passed": False, "status": "insufficient_evidence", "missing": ["deterministic_judge_verdict"], "standard": "judge uncertain 时不能产出确定性归因，需人工复核或补充 judge 证据。"}
+            attribute_result.incomplete_reason = reason
+            attribute_result.suspected_locations = []
+            attribute_result.root_cause_hypothesis = f"当前 judge 无法确定 planning 输出是否满足契约要求（verdict=uncertain），建议人工复核后重新判定。"
+            attribute_result.verification_steps = ["复核 judge 的 self_check 和 overall_fulfillment，确认哪些维度无法评估。", "补充缺失的评估维度证据后重新运行 judge。"]
+            attribute_result.patch_direction = ["在 judge 给出确定性 verdict 之前，不应基于不确定的判定修改业务代码。"]
+            attribute_result.business_impact = "当前 case 无法进入正式根因聚簇，需人工复核 judge 的 uncertain 结论。"
+            attribute_result.needs_human_review = True
+            attribute_result.primary_error_type = "needs_human_review"
+            attribute_result.error_types = ["needs_human_review"]
+            return attribute_result
+        if judge_result.verdict == "correct" and not self._target_value_unit_probe(trace, judge_result):
             if not attribute_result.expectation_attributions:
                 expectation_id = "marketting-planning:planning_output_contract"
                 if judge_result.business_expectations:
@@ -527,12 +613,79 @@ class Adapter(ProjectAdapter):
             attribute_result.verification_steps = ["复核当前 query 中的金额单位与 extracted_output/card_data 中 targetNbev 的单位转换。"]
             attribute_result.patch_direction = ["修正 marketing-planning 服务请求归一化或目标值单位转换逻辑，确保“亿”转换为内部单位“万”时乘以 10000。"]
             return attribute_result
+        contract_fallback = self._contract_fallback_attribute_result(trace, judge_result, attribute_result)
+        if contract_fallback:
+            return contract_fallback
         if not attribute_result.earliest_divergence:
             failed = next((node for node in trace.execution_trace if node.get("status") in {"failed", "suspicious"}), None)
             if failed:
                 attribute_result.earliest_divergence = {"node": failed.get("stage"), "evidence": [failed.get("evidence")], "confidence": "medium"}
                 attribute_result.failure_stage = str(failed.get("stage") or attribute_result.failure_stage)
         return attribute_result
+
+    def _contract_fallback_attribute_result(self, trace, judge_result, attribute_result):
+        text = " ".join(str(item) for item in [
+            attribute_result.incomplete_reason,
+            attribute_result.root_cause_hypothesis,
+            attribute_result.business_impact,
+            attribute_result.verification_steps,
+            attribute_result.patch_direction,
+        ] if item)
+        stale_markers = ("source_file_catalog", "prompt 文件", "源码/配置证据", "未能获取足够", "无法完成正式归因")
+        if not any(marker in text for marker in stale_markers) and not (judge_result.wrong or judge_result.missing):
+            return None
+        failed = next((node for node in trace.execution_trace or [] if isinstance(node, dict) and node.get("status") in {"failed", "suspicious"}), {})
+        failed_requirement = next((item for item in list(judge_result.wrong or []) + list(judge_result.missing or []) if isinstance(item, dict)), {})
+        requirement = failed_requirement.get("requirement") or "planning_contract"
+        expected = failed_requirement.get("expected_fragment") or judge_result.expected or (trace.project_fields or {}).get("reference") or {}
+        actual = failed_requirement.get("actual_fragment") or judge_result.actual or trace.extracted_output or {}
+        evidence = [judge_result.reasoning_summary] if judge_result.reasoning_summary else []
+        evidence.extend(str(item) for item in judge_result.evidence or [])
+        if failed_requirement:
+            evidence.append(json.dumps(failed_requirement, ensure_ascii=False))
+        if failed:
+            evidence.append(json.dumps(failed.get("evidence") or {}, ensure_ascii=False))
+        if not evidence:
+            return None
+        stage = str(failed.get("stage") or self._stage_for_requirement(requirement))
+        attribute_result.causal_category = "implementation_bug"
+        attribute_result.failure_category = str(requirement)
+        attribute_result.failure_stage = stage
+        attribute_result.analysis_method = "marketing_planning_contract_evidence_fallback"
+        attribute_result.evidence_chain = evidence
+        attribute_result.trace_analysis = list(trace.execution_trace or [])
+        attribute_result.chain_nodes = list(trace.execution_trace or [])
+        attribute_result.local_verifications = list(attribute_result.local_verifications or []) + [{"method": "planning_contract_judge_evidence", "target": requirement, "result": "not_fulfilled", "evidence": evidence}]
+        attribute_result.earliest_divergence = {"node": stage, "expected": expected, "actual": actual, "evidence": evidence, "confidence": "high"}
+        attribute_result.evidence_coverage = {"query": bool(trace.input), "actual": bool(actual), "expected": bool(expected), "execution_trace": bool(trace.execution_trace), "project_contract": True, "unsupported_claims": []}
+        attribute_result.analysis_quality = {"passed": True, "status": "supported_root_cause", "missing": [], "standard": "planning attribution must use current contract/judge evidence instead of stale catalog fallback."}
+        attribute_result.incomplete_reason = ""
+        attribute_result.root_cause_hypothesis = f"当前 planning 输出未满足 {requirement} 契约：expected={expected}，actual={actual}，最早差异位于 {stage}。"
+        attribute_result.verification_steps = ["复核当前 trace.execution_trace、reference_contract 与 extracted_output 中的规划阶段/事件/卡片证据。"]
+        attribute_result.patch_direction = ["修正 marketing-planning 服务中产生该规划阶段、SSE 事件或卡片字段的源头逻辑；不要只修改评测展示结果。"]
+        return attribute_result
+
+    def _stage_for_requirement(self, requirement: str) -> str:
+        mapping = {
+            "required_events": "sse_generation",
+            "expected_stage": "intent_recognition",
+            "required_path_types": "path_dispatch",
+            "forbidden_path_types": "path_dispatch",
+            "allow_fallback": "result_assembly",
+        }
+        return mapping.get(str(requirement), "planning_output_contract")
+
+    def _infer_target_nbev_from_query(self, trace) -> Any:
+        trace_input = trace.input or {}
+        nested_input = trace_input.get("input") if isinstance(trace_input.get("input"), dict) else {}
+        query = str(trace_input.get("query") or trace_input.get("user_intent") or nested_input.get("query") or nested_input.get("user_intent") or "")
+        amount_match = re.search(r"(\d+(?:\.\d+)?)\s*亿", query)
+        if amount_match:
+            return int(float(amount_match.group(1)) * 10000)
+        amount_match = re.search(r"(\d+(?:\.\d+)?)\s*万", query)
+        if amount_match:
+            return int(float(amount_match.group(1)))
+        return None
 
     def _target_value_unit_probe(self, trace, judge_result) -> Dict[str, Any]:
         evidence_text = self._target_value_error_evidence(judge_result)
@@ -545,6 +698,16 @@ class Adapter(ProjectAdapter):
         if not amount_match:
             return {}
         expected = int(float(amount_match.group(1)) * 10000)
+        evidence_text = self._target_value_error_evidence(judge_result)
+        if "targetNbev missing" in evidence_text or "未暴露" in evidence_text:
+            return {
+                "method": "target_value_unit_probe",
+                "source_amount": amount_match.group(0),
+                "expected_target_nbev_wan": expected,
+                "actual_target_nbev_wan": "missing",
+                "result": "mismatch reproduced",
+                "evidence": [f"query contains {amount_match.group(0)}", f"expected {expected} 万", "actual targetNbev missing from output", evidence_text],
+            }
         actual = self._find_target_nbev_wan(judge_result.actual)
         if actual is None:
             actual = self._find_target_nbev_wan(judge_result.condition_assessments)
@@ -552,6 +715,8 @@ class Adapter(ProjectAdapter):
             actual = self._find_target_nbev_wan(judge_result.wrong)
         if actual is None:
             actual = self._find_target_nbev_wan(trace.extracted_output)
+        if actual is None:
+            actual = self._infer_target_nbev_from_query(trace)
         if actual is None or actual == expected:
             return {}
         return {
@@ -604,6 +769,432 @@ class Adapter(ProjectAdapter):
             "path_types": self.spec.frontend_extensions.get("path_types") or [],
             "output_summary_shape": ["stage", "event_summary", "card_summary", "session_summary", "fallback", "errors"],
         }
+
+    def get_runtime_checks(self, runtime_values: Dict[str, Any], context: Dict[str, Any] | None = None) -> Dict[str, Any]:
+        """直接引用营销规划业务系统原函数，校验 stage/path_type/fallback 是否符合预期。
+
+        这是 Issue #3 用户诉求（"直接引用业务系统原函数"）的市场规划落地：
+        不再让 attribute agent 读源码/prompt 猜测，而是从业务系统仓库直接加载
+        `app/workflow/path_types.py` 的 normalize_path_types / extract_target_value_from_text
+        以及 `app/configs/config_dev.json` 的 PATH_ORDER / CARD_METADATA / SSE_EVENTS，
+        对当前 trace 的 actual_stage / actual_path_types / fallback / target_value
+        做运行时校验，直接产出闭合根因。
+        """
+        context = context or {}
+        checks: list[Dict[str, Any]] = []
+        source_files: list[str] = []
+        path_module = self._load_business_path_types_module()
+        config = self._load_business_config()
+        expected = context.get("expected") if isinstance(context.get("expected"), dict) else {}
+        reference = context.get("reference") if isinstance(context.get("reference"), dict) else {}
+        actual = context.get("actual") if isinstance(context.get("actual"), dict) else {}
+        actual = actual or self._runtime_actual_from_values(runtime_values)
+        wrong = list(context.get("wrong") or [])
+
+        valid_path_types = tuple(path_module.get("VALID_PATH_TYPES", ())) if path_module else ()
+        path_aliases = dict(path_module.get("PATH_TYPE_ALIASES", {})) if path_module else {}
+        normalize_fn = path_module.get("normalize_path_types") if path_module else None
+        extract_target_fn = path_module.get("extract_target_value_from_text") if path_module else None
+        path_order = list(config.get("PATH_ORDER", [])) if config else []
+        card_metadata = config.get("CARD_METADATA", {}) if config else {}
+        sse_events = config.get("SSE_EVENTS", {}) if config else {}
+        if valid_path_types:
+            source_files.append("app/workflow/path_types.py:VALID_PATH_TYPES/normalize_path_types")
+        if path_order:
+            source_files.append("app/configs/config_dev.json:PATH_ORDER")
+        if card_metadata:
+            source_files.append("app/configs/config_dev.json:CARD_METADATA")
+        if sse_events:
+            source_files.append("app/configs/config_dev.json:SSE_EVENTS")
+
+        # 适配器 path_type 英文名 → 业务系统中文名的映射
+        # 基于 _CARD_CODE_PATH_TYPE_MAP 和 adapter 阶段路由约定
+        EN_TO_ZH_PATH = {
+            "premium_growth": "队伍",
+            "customer_growth": "客户",
+            "product_mix": "产品",
+            "activity": "活动",
+            "unknown": "未知",
+        }
+        ZH_TO_EN_PATH = {v: k for k, v in EN_TO_ZH_PATH.items()}
+
+        # 1) path_type 校验：用业务系统原函数 normalize 后比对 expected/forbidden
+        required_paths = self._list(reference.get("required_path_types") or expected.get("required_path_types"))
+        forbidden_paths = self._list(reference.get("forbidden_path_types") or expected.get("forbidden_path_types"))
+        actual_paths = [card.get("path_type") for card in (actual.get("card_summary") or []) if isinstance(card, dict) and card.get("path_type")]
+        # 将 adapter 英文 path_type 映射为业务系统中文名，传给 normalize_path_types
+        actual_zh = [EN_TO_ZH_PATH.get(p, p) for p in actual_paths]
+        normalized_zh = []
+        if normalize_fn and actual_zh:
+            res = normalize_fn(actual_zh)
+            normalized_zh = list(res) if isinstance(res, list) else []
+        else:
+            normalized_zh = list(actual_zh)
+        # 映射回英文用于 comparision
+        normalized_actual = [ZH_TO_EN_PATH.get(p, p) for p in normalized_zh]
+        # expected/forbidden 也映射为中文传给 normalize
+        required_zh = [EN_TO_ZH_PATH.get(p, p) for p in required_paths]
+        normalized_required_zh = []
+        if normalize_fn and required_zh:
+            nr = normalize_fn(required_zh)
+            normalized_required_zh = list(nr) if isinstance(nr, list) else []
+        else:
+            normalized_required_zh = list(required_zh)
+        normalized_required = [ZH_TO_EN_PATH.get(p, p) for p in normalized_required_zh]
+        forbidden_zh = [EN_TO_ZH_PATH.get(p, p) for p in forbidden_paths]
+        missing_paths = [p for p in normalized_required if p not in normalized_actual]
+        extra_forbidden = [p for p in normalized_actual if p in forbidden_paths]
+        path_status = "passed" if not (missing_paths or extra_forbidden) else "failed"
+        path_evidence = [
+            f"required_path_types={required_paths}",
+            f"forbidden_path_types={forbidden_paths}",
+            f"actual_path_types={normalized_actual}",
+            f"valid_path_types(zh)={list(valid_path_types)}",
+            f"path_order={path_order}",
+            f"path_aliases={path_aliases}",
+            f"missing_paths={missing_paths}",
+            f"extra_forbidden={extra_forbidden}",
+            f"en_to_zh_mapping={EN_TO_ZH_PATH}",
+        ]
+        path_root_cause = None
+        if path_status == "failed":
+            detail = []
+            if missing_paths:
+                detail.append(f"缺少必要路径 {missing_paths}（业务系统 normalize_path_types 仅保留 {list(valid_path_types)}）")
+            if extra_forbidden:
+                detail.append(f"出现禁用路径 {extra_forbidden}（reference/forbidden_path_types 不允许）")
+            path_root_cause = {
+                "category": "implementation_bug",
+                "summary": "营销规划服务未按业务系统 path_types 约定产出规划路径：" + "；".join(detail) + "，最早分歧位于 path_dispatch。",
+                "evidence": path_evidence,
+                "confidence": "high",
+                "fix_suggestion": "修正 marketing-planning 服务中 path_planning/nbev_workflow 的路径派发逻辑，使其按 app/workflow/path_types.py:normalize_path_types 的有效集合与 app/configs/config_dev.json:PATH_ORDER 顺序产出 card_summary。",
+            }
+        checks.append({
+            "tool_type": "runtime_check",
+            "check_type": "path_type_validation",
+            "status": path_status,
+            "required_path_types": required_paths,
+            "forbidden_path_types": forbidden_paths,
+            "actual_path_types": normalized_actual,
+            "missing_paths": missing_paths,
+            "extra_forbidden": extra_forbidden,
+            "valid_path_types": list(valid_path_types),
+            "path_order": path_order,
+            "evidence": path_evidence,
+            "source": "; ".join(source_files) or "marketing-planning business system",
+            "root_cause": path_root_cause,
+            "confidence": "high" if path_status in {"passed", "failed"} else "low",
+        })
+
+        # 2) stage 校验：用业务系统 stages 约定比对 expected_stage
+        expected_stage = reference.get("expected_stage") or expected.get("expected_stage")
+        actual_stage = actual.get("stage")
+        stage_status = "passed" if (not expected_stage or expected_stage == actual_stage) else "failed"
+        stage_evidence = [
+            f"expected_stage={expected_stage}",
+            f"actual_stage={actual_stage}",
+            f"adapter_stages={list(self.stages)}",
+        ]
+        stage_root_cause = None
+        if stage_status == "failed":
+            stage_root_cause = {
+                "category": "implementation_bug",
+                "summary": f"营销规划服务 stage 路由错误：业务系统约定 expected_stage={expected_stage}，实际 actual_stage={actual_stage}，最早分歧位于 intent_recognition/stage routing。",
+                "evidence": stage_evidence,
+                "confidence": "high",
+                "fix_suggestion": "修正 marketing-planning 服务 app/workflow/steps 的 stage 判定/路由逻辑，使 stage 与 reference.expected_stage 一致。",
+            }
+        checks.append({
+            "tool_type": "runtime_check",
+            "check_type": "stage_routing",
+            "status": stage_status,
+            "expected_stage": expected_stage,
+            "actual_stage": actual_stage,
+            "evidence": stage_evidence,
+            "source": "app/configs/config_dev.json:INTENT_MAPPING + adapter.stages",
+            "root_cause": stage_root_cause,
+            "confidence": "high" if stage_status in {"passed", "failed"} else "low",
+        })
+
+        # 3) target_value 单位校验：直接调用业务系统 extract_target_value_from_text
+        target_evidence = []
+        target_root_cause = None
+        target_status = "not_applicable"
+        if extract_target_fn:
+            query = str((runtime_values.get("query")) or (context.get("query")) or "")
+            source_amount = self._target_amount_in_query(query)
+            if source_amount and reference.get("target_value_wan") is not None:
+                expected_wan = int(reference.get("target_value_wan"))
+                actual_target = self._find_target_nbev_wan(actual)
+                parsed = extract_target_fn(query)
+                target_status = "failed"
+                if actual_target is None:
+                    target_evidence = [f"query={query}", f"source_amount={source_amount}", f"expected={expected_wan} 万", "actual targetNbev missing from output", f"business extract_target_value_from_text -> {parsed}"]
+                    target_root_cause = {
+                        "category": "implementation_bug",
+                        "summary": f"当前 query 含 {source_amount}，业务系统 extract_target_value_from_text 解析为 {parsed} 万，但实际链路未产出可核验 targetNbev，最早分歧位于 request_normalization/目标值单位转换。",
+                        "evidence": target_evidence,
+                        "confidence": "high",
+                        "fix_suggestion": "修正 marketing-planning 服务请求归一化或目标值单位转换逻辑，确保“亿”转换为内部单位“万”时乘以 10000。",
+                    }
+                elif int(actual_target) != expected_wan:
+                    target_evidence = [f"query={query}", f"source_amount={source_amount}", f"expected={expected_wan} 万", f"actual={actual_target} 万", f"business extract_target_value_from_text -> {parsed}"]
+                    target_status = "failed"
+                    target_root_cause = {
+                        "category": "implementation_bug",
+                        "summary": f"当前 query 含 {source_amount}，按业务系统单位应为 {expected_wan} 万，实际链路使用 {actual_target} 万，最早差异位于 request_normalization/目标值单位转换。",
+                        "evidence": target_evidence,
+                        "confidence": "high",
+                        "fix_suggestion": "修正 marketing-planning 服务请求归一化或目标值单位转换逻辑，确保“亿”转换为内部单位“万”时乘以 10000。",
+                    }
+                else:
+                    target_status = "passed"
+                    target_evidence = [f"query={query}", f"expected={expected_wan} 万", f"actual={actual_target} 万"]
+                checks.append({
+                    "tool_type": "runtime_check",
+                    "check_type": "target_value_unit",
+                    "status": target_status,
+                    "expected_target_nbev_wan": expected_wan,
+                    "actual_target_nbev_wan": actual_target,
+                    "source_amount": source_amount,
+                    "business_parsed": parsed,
+                    "evidence": target_evidence,
+                    "source": "app/workflow/path_types.py:extract_target_value_from_text",
+                    "root_cause": target_root_cause,
+                    "confidence": "high" if target_status in {"passed", "failed"} else "low",
+                })
+
+        # 4) fallback / SSE 校验：用业务系统 config 的 SSE_EVENTS 集合判定 completion
+        fallback = actual.get("fallback") or {}
+        allow_fallback = bool(reference.get("allow_fallback") or expected.get("allow_fallback"))
+        event_summary = actual.get("event_summary") or {}
+        event_names = list(event_summary.get("canonical_names") or event_summary.get("names") or [])
+        completed = bool(event_summary.get("completed"))
+        required_events = self._list(reference.get("required_events") or expected.get("required_events"))
+        missing_events = [e for e in required_events if e not in event_names]
+        fallback_status = "passed" if (not fallback.get("used") or allow_fallback) else "failed"
+        sse_status = "passed" if not missing_events and completed else ("failed" if missing_events else "passed")
+        fb_evidence = [
+            f"fallback_used={fallback.get('used')}",
+            f"allow_fallback={allow_fallback}",
+            f"required_events={required_events}",
+            f"actual_events={event_names}",
+            f"missing_events={missing_events}",
+            f"completed={completed}",
+            f"sse_event_catalog_count={len(sse_events)}",
+        ]
+        fb_root_cause = None
+        if fallback_status == "failed" or sse_status == "failed":
+            detail = []
+            if fallback.get("used") and not allow_fallback:
+                detail.append("fallback 在不允许的 boundary 内触发，违反业务系统 boundary 契约")
+            if missing_events:
+                detail.append(f"缺少必要 SSE 事件 {missing_events}（业务系统 SSE_EVENTS 目录已定义这些事件）")
+            fb_root_cause = {
+                "category": "implementation_bug",
+                "summary": "营销规划服务 SSE/fallback 不符合业务系统约定：" + "；".join(detail) + "，最早分歧位于 result_assembly/sse_generation。",
+                "evidence": fb_evidence,
+                "confidence": "high",
+                "fix_suggestion": "修正 marketing-planning 服务 result_assembly/sse_generation 与 fallback 控制逻辑，使其按 app/configs/config_dev.json:SSE_EVENTS 产出事件并遵守 boundary.allow_fallback。",
+            }
+        checks.append({
+            "tool_type": "runtime_check",
+            "check_type": "fallback_sse",
+            "status": "failed" if (fallback_status == "failed" or sse_status == "failed") else "passed",
+            "fallback_used": bool(fallback.get("used")),
+            "allow_fallback": allow_fallback,
+            "missing_events": missing_events,
+            "completed": completed,
+            "card_metadata_keys": list(card_metadata.keys())[:20] if isinstance(card_metadata, dict) else [],
+            "evidence": fb_evidence,
+            "source": "app/configs/config_dev.json:SSE_EVENTS/CARD_METADATA + adapter boundary",
+            "root_cause": fb_root_cause,
+            "confidence": "high",
+        })
+
+        failed = [c for c in checks if c.get("root_cause")]
+        primary = failed[0].get("root_cause") if failed else None
+        return {
+            "tool_type": "runtime_check",
+            "check_type": "marketing_planning_contract",
+            "status": "failed" if failed else "passed",
+            "checks": checks,
+            "source": "; ".join(source_files) or "marketing-planning business system path_types.py + config_dev.json",
+            "evidence": [e for c in checks for e in (c.get("evidence") or [])],
+            "root_cause": primary,
+            "fix_suggestion": primary.get("fix_suggestion") if primary else "",
+            "confidence": "high" if failed else "medium",
+            "note": "直接调用业务系统 app/workflow/path_types.py 与 app/configs/config_dev.json 校验 stage/path/fallback/target_value，不读 prompt 推测。",
+        }
+
+    def _runtime_actual_from_values(self, runtime_values: Dict[str, Any]) -> Dict[str, Any]:
+        actual = {}
+        for key in ("stage", "card_summary", "fallback", "event_summary"):
+            if key in runtime_values:
+                actual[key] = runtime_values[key]
+        return actual
+
+    def _target_amount_in_query(self, query: str) -> Optional[str]:
+        match = re.search(r"(\d+(?:\.\d+)?)\s*亿", query or "")
+        return match.group(0) if match else None
+
+    def _load_business_path_types_module(self) -> Dict[str, Any]:
+        """直接加载业务系统 app/workflow/path_types.py 的原函数。"""
+        ext_repo = self.spec.application.get("external_repo") if isinstance(self.spec.application, dict) else None
+        if not ext_repo:
+            return {}
+        source_path = Path(ext_repo) / "app" / "workflow" / "path_types.py"
+        if not source_path.exists():
+            return {}
+        try:
+            spec = importlib.util.spec_from_file_location("marketing_planning_runtime_path_types", source_path)
+            if spec is None or spec.loader is None:
+                return {}
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return {
+                "VALID_PATH_TYPES": getattr(module, "VALID_PATH_TYPES", ()),
+                "PATH_TYPE_ALIASES": getattr(module, "PATH_TYPE_ALIASES", {}),
+                "normalize_path_types": getattr(module, "normalize_path_types", None),
+                "extract_target_value_from_text": getattr(module, "extract_target_value_from_text", None),
+            }
+        except Exception:
+            return {}
+
+    def _load_business_config(self) -> Dict[str, Any]:
+        """直接加载业务系统 app/configs/config_dev.json 的运行时配置。"""
+        ext_repo = self.spec.application.get("external_repo") if isinstance(self.spec.application, dict) else None
+        if not ext_repo:
+            return {}
+        config_path = Path(ext_repo) / "app" / "configs" / "config_dev.json"
+        if not config_path.exists():
+            return {}
+        try:
+            with open(config_path, encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
+    def build_attribute_tools(self) -> list:
+        """Issue #3: 暴露项目级 runtime tool 给 attribute agent 调用（Agno 兼容函数）。
+
+        闭包函数直接调用业务系统原函数 normalize_path_types / extract_target_value_from_text，
+        让 attribute agent 通过 tool call 复现 trace 节点行为。
+        """
+        adapter = self
+
+        def validate_path_types(path_types: list) -> dict:
+            """用业务系统 normalize_path_types 校验路径类型是否合法并归一化。
+
+            Args:
+                path_types: 路径类型列表（英文，如 ["premium_growth", "customer_growth"]）
+
+            Returns:
+                包含 normalized、valid_path_types、source 的字典
+            """
+            path_module = adapter._load_business_path_types_module()
+            valid = list(path_module.get("VALID_PATH_TYPES", ())) if path_module else ()
+            normalize_fn = path_module.get("normalize_path_types") if path_module else None
+            # adapter 英文 path → 业务系统中文名
+            EN_TO_ZH = {"premium_growth": "队伍", "customer_growth": "客户", "product_mix": "产品", "activity": "活动", "unknown": "未知"}
+            zh_input = [EN_TO_ZH.get(p, p) for p in path_types]
+            normalized_zh = list(normalize_fn(zh_input)) if (normalize_fn and zh_input) else zh_input
+            ZH_TO_EN = {v: k for k, v in EN_TO_ZH.items()}
+            normalized_en = [ZH_TO_EN.get(p, p) for p in normalized_zh]
+            return {
+                "input_path_types": path_types,
+                "normalized_path_types": normalized_en,
+                "valid_path_types_zh": valid,
+                "source": "app/workflow/path_types.py:normalize_path_types",
+            }
+
+        def extract_target_value(query: str) -> dict:
+            """用业务系统 extract_target_value_from_text 从 query 解析目标值（万）。
+
+            Args:
+                query: 用户查询文本（如 "NBEV达成路径规划，目标值120亿"）
+
+            Returns:
+                包含 parsed_target_wan、source 的字典
+            """
+            path_module = adapter._load_business_path_types_module()
+            extract_fn = path_module.get("extract_target_value_from_text") if path_module else None
+            parsed = extract_fn(query) if extract_fn else None
+            return {
+                "query": query,
+                "parsed_target_wan": parsed,
+                "source": "app/workflow/path_types.py:extract_target_value_from_text",
+            }
+
+        validate_path_types.__name__ = "validate_path_types"
+        extract_target_value.__name__ = "extract_target_value"
+        return [validate_path_types, extract_target_value]
+
+    def simulate_trace_nodes(self, trace, judge_result) -> Dict[str, Any]:
+        """Issue #3: 沿 trace 逐节点调业务系统函数复现，定位最早分歧。
+
+        对 path_dispatch 节点调 normalize_path_types，对 request_normalization 节点调
+        extract_target_value_from_text，比较模拟输出与 trace actual。
+        """
+        path_module = self._load_business_path_types_module()
+        config = self._load_business_config()
+        normalize_fn = path_module.get("normalize_path_types") if path_module else None
+        extract_target_fn = path_module.get("extract_target_value_from_text") if path_module else None
+        valid_path_types = list(path_module.get("VALID_PATH_TYPES", ())) if path_module else ()
+        EN_TO_ZH = {"premium_growth": "队伍", "customer_growth": "客户", "product_mix": "产品", "activity": "活动", "unknown": "未知"}
+        ZH_TO_EN = {v: k for k, v in EN_TO_ZH.items()}
+        source_path = "app/workflow/path_types.py:normalize_path_types/extract_target_value_from_text"
+        simulated_nodes: list[Dict[str, Any]] = []
+        diverged_nodes: list[Dict[str, Any]] = []
+        for node in (trace.execution_trace or []):
+            if not isinstance(node, dict):
+                continue
+            stage = str(node.get("stage") or node.get("node") or "")
+            evidence = node.get("evidence") if isinstance(node.get("evidence"), dict) else {}
+            entry = None
+            if stage == "path_dispatch" and normalize_fn:
+                actual_paths = evidence.get("actual_path_types") or evidence.get("actual_paths") or []
+                expected_paths = evidence.get("expected_path_types") or evidence.get("expected_paths") or []
+                zh_input = [EN_TO_ZH.get(p, p) for p in actual_paths]
+                normalized_zh = list(normalize_fn(zh_input)) if zh_input else []
+                normalized_en = [ZH_TO_EN.get(p, p) for p in normalized_zh]
+                # 模拟：expected_paths 经 normalize 后应等于 normalized actual
+                zh_expected = [EN_TO_ZH.get(p, p) for p in expected_paths]
+                norm_expected = list(normalize_fn(zh_expected)) if zh_expected else []
+                # 检查 required paths 是否都在 normalized actual 中
+                missing = [p for p in (ZH_TO_EN.get(p, p) for p in norm_expected) if p not in normalized_en]
+                status = "passed" if not missing else "diverged"
+                entry = {
+                    "stage": stage,
+                    "input_used": {"actual_path_types": actual_paths, "expected_path_types": expected_paths},
+                    "simulated_output": {"normalized_actual": normalized_en, "normalized_expected": [ZH_TO_EN.get(p, p) for p in norm_expected]},
+                    "trace_actual": {"actual_path_types": actual_paths},
+                    "status": status,
+                    "function_called": "normalize_path_types",
+                    "source_file": source_path,
+                    "missing_paths": missing,
+                }
+            elif stage == "request_normalization" and extract_target_fn:
+                query = str(evidence.get("query") or (trace.normalized_request or {}).get("query") or (trace.input or {}).get("query") or "")
+                parsed = extract_target_fn(query) if query else None
+                trace_target = evidence.get("target_value") or evidence.get("target_nbev_wan")
+                status = "passed" if (trace_target is None or parsed == trace_target) else "diverged"
+                entry = {
+                    "stage": stage,
+                    "input_used": {"query": query},
+                    "simulated_output": {"parsed_target_wan": parsed},
+                    "trace_actual": {"target_value": trace_target},
+                    "status": status,
+                    "function_called": "extract_target_value_from_text",
+                    "source_file": source_path,
+                }
+            if entry:
+                simulated_nodes.append(entry)
+                if entry["status"] == "diverged":
+                    diverged_nodes.append(entry)
+        return {"simulated_nodes": simulated_nodes, "diverged_nodes": diverged_nodes, "source": source_path, "valid_path_types": valid_path_types}
 
     def build_mock_cases(self) -> list[Dict[str, Any]]:
         path = Path(__file__).resolve().parents[2] / "data" / "marketting-planning" / "mock_cases.json"

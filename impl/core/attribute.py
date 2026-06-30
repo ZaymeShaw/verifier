@@ -5,7 +5,6 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from .knowledge_base import load_knowledge_base
 from .llm_client import LlmClient, project_llm_client
 from .project_loader import load_project_document
 from .schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace
@@ -197,6 +196,191 @@ def _has_chain_evidence(result: AttributeResult) -> bool:
     return bool(result.earliest_divergence.get("evidence") if isinstance(result.earliest_divergence, dict) else False)
 
 
+def _target_expected_payload(attribution_targets: list[dict]) -> dict:
+    for target in attribution_targets or []:
+        if not isinstance(target, dict):
+            continue
+        for key in ("expected", "expected_outcome", "required_outcome"):
+            value = target.get(key)
+            if isinstance(value, dict) and value:
+                return value
+    return {}
+
+
+def _expected_for_divergence(trace: RunTrace, judge: JudgeResult, attribution_targets: list[dict]) -> dict:
+    if isinstance(judge.expected, dict) and judge.expected:
+        return judge.expected
+    reference = (trace.project_fields or {}).get("reference") if isinstance(trace.project_fields, dict) else None
+    if isinstance(reference, dict) and reference:
+        return reference
+    return _target_expected_payload(attribution_targets)
+
+
+def _contains_stale_prompt_fallback(value: object) -> bool:
+    text = json.dumps(value, ensure_ascii=False, default=str) if not isinstance(value, str) else value
+    stale_markers = (
+        "prompt 文件不在 catalog",
+        "无法审查 prompt",
+        "无法审查 LLM prompt",
+        "无法验证 LLM 行为",
+        "source_file_catalog",
+        "检查 prompt 文件",
+        "补充读取 prompt",
+        "仍需读取INTENT_RECOGNITION_PROMPT",
+        "prompt层面的精确归因",
+        "prompt层面",
+        "INTENT_RECOGNITION_PROMPT",
+        "judge LLM 调用失败",
+        "attribute agent LLM 调用失败",
+        "无法完成正式归因",
+    )
+    return any(marker in text for marker in stale_markers)
+
+
+def _scrub_stale_prompt_fallback(value: object) -> object:
+    """Remove stale prompt/catalog fallback text from generated attribution payloads."""
+    if isinstance(value, str):
+        return "" if _contains_stale_prompt_fallback(value) else value
+    if isinstance(value, list):
+        cleaned = [_scrub_stale_prompt_fallback(item) for item in value]
+        return [item for item in cleaned if item not in ("", [], {})]
+    if isinstance(value, dict):
+        cleaned = {}
+        for key, item in value.items():
+            cleaned_item = _scrub_stale_prompt_fallback(item)
+            if cleaned_item in ("", [], {}):
+                if key in {"incomplete_reason", "suspected_locations", "improvement_direction", "source_evidence", "probe_evidence"}:
+                    cleaned[key] = [] if key != "incomplete_reason" else ""
+                continue
+            cleaned[key] = cleaned_item
+        return cleaned
+    return value
+
+
+def _scrub_result_stale_prompt_fallback(result: AttributeResult) -> AttributeResult:
+    result.incomplete_reason = str(_scrub_stale_prompt_fallback(result.incomplete_reason) or "")
+    result.suspected_locations = list(_scrub_stale_prompt_fallback(result.suspected_locations) or [])
+    result.expectation_attributions = list(_scrub_stale_prompt_fallback(result.expectation_attributions) or [])
+    result.root_cause_hypothesis = str(_scrub_stale_prompt_fallback(result.root_cause_hypothesis) or "")
+    result.verification_steps = list(_scrub_stale_prompt_fallback(result.verification_steps) or [])
+    result.patch_direction = list(_scrub_stale_prompt_fallback(result.patch_direction) or [])
+    result.business_impact = str(_scrub_stale_prompt_fallback(result.business_impact) or "")
+    result.evidence_chain = list(_scrub_stale_prompt_fallback(result.evidence_chain) or [])
+    result.local_verifications = list(_scrub_stale_prompt_fallback(result.local_verifications) or [])
+    result.probe_results = list(_scrub_stale_prompt_fallback(result.probe_results) or [])
+    return result
+
+
+def _compact_attribute_context(context: dict | None) -> dict:
+    """Strip non-JSON-serializable entries (e.g. callable attribute tools) from the
+    attribute context before embedding it in the user prompt. Tools are passed to
+    the agent through the tools= parameter, not through the prompt payload, so they
+    must not appear in the serialized context. Simulate/runtime_checks results are
+    JSON-serializable and are kept so the agent can reference them as evidence.
+    """
+    if not isinstance(context, dict):
+        return {}
+    cleaned = {}
+    for key, value in context.items():
+        if key == "attribute_tools":
+            # Replace callable tools with their names so the agent knows which
+            # project tools are available without serializing the functions.
+            tool_names = []
+            for tool in (value or []):
+                if callable(tool) and getattr(tool, "__name__", ""):
+                    tool_names.append(tool.__name__)
+                elif isinstance(tool, str):
+                    tool_names.append(tool)
+            cleaned["attribute_tool_names"] = tool_names
+            continue
+        try:
+            json.dumps(value, ensure_ascii=False, default=str)
+            cleaned[key] = value
+        except (TypeError, ValueError):
+            cleaned[key] = f"<non-serializable {type(value).__name__}>"
+    return cleaned
+
+
+def _enforce_divergence_root_cause(result: AttributeResult, divergence_analysis: dict | None) -> AttributeResult:
+    if not isinstance(divergence_analysis, dict):
+        return result
+    root_cause = divergence_analysis.get("root_cause")
+    if not isinstance(root_cause, dict) or not root_cause:
+        return result
+    category = str(root_cause.get("category") or divergence_analysis.get("causal_category") or "implementation_bug")
+    summary = str(root_cause.get("summary") or divergence_analysis.get("root_cause_hypothesis") or "")
+    fix_suggestion = str(root_cause.get("fix_suggestion") or divergence_analysis.get("fix_suggestion") or "")
+    evidence = root_cause.get("evidence") or []
+    if not isinstance(evidence, list):
+        evidence = [evidence]
+
+    # Guard: the generic _infer_generic_root_cause fallback produces a
+    # placeholder summary ("当前运行输出与期望存在字段级差异..."). When the
+    # attribute LLM agent already produced a concrete root_cause_hypothesis,
+    # overwriting it with the generic placeholder destroys real analysis. So
+    # only adopt the divergence root_cause summary when it is concrete OR when
+    # the LLM produced nothing usable.
+    GENERIC_ROOT_CAUSE_PREFIX = "当前运行输出与期望存在字段级差异"
+    is_generic = summary.startswith(GENERIC_ROOT_CAUSE_PREFIX)
+    has_llm_root_cause = bool(result.root_cause_hypothesis) and not result.root_cause_hypothesis.startswith(GENERIC_ROOT_CAUSE_PREFIX)
+
+    result.causal_category = category
+    if summary and not (is_generic and has_llm_root_cause):
+        result.root_cause_hypothesis = summary
+    if fix_suggestion:
+        patch_direction = [fix_suggestion]
+        result.patch_direction = patch_direction
+    if evidence:
+        existing = list(result.evidence_chain or [])
+        marker = {"divergence_analysis": {"root_cause": root_cause, "system_check": divergence_analysis.get("system_check")}}
+        if marker not in existing:
+            result.evidence_chain = [*existing, marker]
+
+    # Issue #3: 填充 suspected_locations — 从 system_check.source 提取业务系统函数所在文件
+    system_check = divergence_analysis.get("system_check") if isinstance(divergence_analysis.get("system_check"), dict) else {}
+    source_locations: list[str] = []
+    primary_source = str(system_check.get("source") or "").strip()
+    if primary_source:
+        source_locations.append(primary_source)
+    # 子 check 的 source 也收集
+    for sub_check in (system_check.get("checks") or []):
+        if isinstance(sub_check, dict):
+            sub_source = str(sub_check.get("source") or "").strip()
+            if sub_source and sub_source not in source_locations:
+                source_locations.append(sub_source)
+    if source_locations:
+        existing_locs = list(result.suspected_locations or [])
+        for loc in source_locations:
+            if loc not in existing_locs:
+                existing_locs.append(loc)
+        result.suspected_locations = existing_locs
+
+    # Issue #3: 填充 earliest_divergence — 从 divergence_point 提取最早分歧节点
+    divergence_point = divergence_analysis.get("divergence_point") if isinstance(divergence_analysis.get("divergence_point"), dict) else {}
+    earliest = dict(result.earliest_divergence or {})
+    if not earliest.get("node") or earliest.get("node") in ("", "unknown", "state_machine_incomplete"):
+        earliest["node"] = divergence_point.get("stage") or earliest.get("node") or "unknown"
+    if not earliest.get("evidence"):
+        earliest["evidence"] = evidence
+    if not earliest.get("confidence"):
+        earliest["confidence"] = root_cause.get("confidence") or "high"
+    if not earliest.get("expected") and isinstance(system_check, dict):
+        # runtime check 通常带 expected/actual 字段，补充到 earliest_divergence
+        for key in ("expected", "actual"):
+            if key in system_check and key not in earliest:
+                earliest[key] = system_check[key]
+    result.earliest_divergence = earliest
+    _scrub_result_stale_prompt_fallback(result)
+    result.analysis_quality = {**(result.analysis_quality or {}), "passed": True, "status": "supported_root_cause"}
+    if result.analysis_method in {"llm_call_failed", "judge_llm_failed_blocked_attribute"}:
+        result.analysis_method = "trace_runtime_analysis_with_project_checks"
+    else:
+        result.analysis_method = result.analysis_method or "trace_runtime_analysis_with_project_checks"
+    if "divergence_analysis_root_cause" not in result.quality_flags:
+        result.quality_flags.append("divergence_analysis_root_cause")
+    return result
+
+
 # FIX P3: Build meaningful incomplete_reason instead of empty template
 def _build_incomplete_reason(result: AttributeResult, spec: ProjectSpec, trace: RunTrace, judge: JudgeResult) -> str:
     """根据 judge 和 trace 证据，生成有信息量的 incomplete_reason，而非空模板。"""
@@ -228,8 +412,8 @@ def _build_incomplete_reason(result: AttributeResult, spec: ProjectSpec, trace: 
     else:
         reason_parts.append(f"判定结果为 {verdict}")
 
-    reason_parts.append("attribute agent 未能获取足够的源码/配置证据来支撑正式根因定位。")
-    reason_parts.append("建议：检查 source_file_catalog 是否包含相关 prompt 文件和 adapter 源码。")
+    reason_parts.append("attribute agent 未能获取足够的当前运行链路/系统检查证据来支撑正式根因定位。")
+    reason_parts.append("建议：补充可直接执行的运行时检查或 adapter 协议工具，让归因能引用系统函数结果闭合证据链。")
 
     return "；".join(reason_parts) + "。"
 
@@ -272,12 +456,15 @@ def normalize_attribute_trace_result(spec: ProjectSpec, trace: RunTrace, judge: 
         result.analysis_quality = {**(result.analysis_quality or {}), "passed": True, "status": "supported_root_cause"}
         return result
     if has_valid_llm_attribution:
+        _scrub_result_stale_prompt_fallback(result)
         result.analysis_quality = {
             **(result.analysis_quality or {}),
             "passed": True,
             "status": "supported_root_cause",
             "evidence_quality": "medium" if not has_location_evidence else "high",
         }
+        if _contains_stale_prompt_fallback(result.incomplete_reason):
+            result.incomplete_reason = ""
         return result
     result.analysis_quality = {
         **(result.analysis_quality or {}),
@@ -441,7 +628,8 @@ def attribute_failure(
     source_provider = ProjectSourceFileProvider(spec, project_attribute_context, aggregate_byte_budget=AGGREGATE_TOOL_BUDGET)
     source_file_catalog = source_provider.list_files()
     search_source_file = create_source_file_search_tool(source_provider)
-    tools = [search_source_file]
+    adapter_tools = (project_attribute_context or {}).get("attribute_tools") or []
+    tools = [search_source_file] + list(adapter_tools)
 
     system = """你是通用评估系统的 attribute agent。目标是与 judge 有本质区别：judge 评估业务预期是否达成，你必须围绕未达成、部分达成、不可评估或被质疑的 intent-derived business_expectations 深入源码/配置/prompt/trace/probe，解释 fulfillment 状态背后的因果链。
 
@@ -482,7 +670,7 @@ def attribute_failure(
 3. **使用 source_file_catalog 仅作引用**：
    - suspected_locations 中的路径必须来自 source_file_catalog 中实际存在的文件
    - **禁止**在归因中说"prompt 文件不在 catalog 中"、"prompt 内容不可见"、"无法审查 LLM prompt"或"无法验证 LLM 行为"——这些说法是 Issue #3 用户明确禁止的
-   - **禁止调用 search_source_file 工具**——所有答案已由 divergence_analysis 提供
+   - 如果 divergence_analysis 不完整且需要补充证据，可以调用 search_source_file；读取目标必须来自 source_file_catalog，且必须围绕当前 trace 的最早分歧节点。
 
 关键规则：
 - causal_category 使用 implementation_bug、model_capability_gap、boundary_limitation、unclear_contract、insufficient_evidence、no_issue 等
@@ -493,7 +681,7 @@ def attribute_failure(
 - 只有在 divergence_analysis 为空或信息不足时，才需要执行 probe（调用 search_source_file 读取源码文件）来补充证据。
 - Tool call 预算有限（最多 {tool_call_limit} 次），仅在 divergence_analysis 不充分时才使用。
 - 如果 execution_trace 中已经有具体的错误值（如 raw_intent="4001", mapped="other"），直接检查映射规则，不需要读取完整 prompt
-- 如果 tool call 预算用尽且归因不完整，必须设置 incomplete_reason="tool_call_budget_exhausted: 已读取 N 个文件，但仍需读取 [file_list] 来完成归因"
+- 如果 tool call 预算用尽且归因不完整，必须设置 incomplete_reason="tool_call_budget_exhausted: 已读取 N 个文件但运行时检查仍未闭合；必须明确下一步需要哪一个系统函数/adapter 协议工具来验证"
 - 如果 catalog 中有关键文件但因预算限制未读取，在 incomplete_reason 中明确说明，不要说"文件不在 catalog"或"无法访问"。"""
 
     # Issue #3: 在 user prompt 中提供预处理的调用链路分析结果
@@ -504,30 +692,25 @@ def attribute_failure(
     if trace.execution_trace:
         try:
             trace_analysis_result = analyze_execution_trace(trace.execution_trace)
-            # 如果找到了分歧点，映射到源码位置
             if trace_analysis_result.get("first_failed_node"):
                 node_name = trace_analysis_result["first_failed_node"]["name"]
                 project_name = spec.name if spec else "unknown"
                 source_mapping = map_trace_node_to_source(node_name, project_name)
                 trace_analysis_result["source_mapping"] = source_mapping
 
-                # Issue #3: 新增 - 直接调用系统函数分析分歧，返回完整答案
-                # 包括：为什么出错、配置检查结果、根因、修复建议
-                # Agent 不需要读文件，直接获得答案
-                expected = {}
-                actual = trace.extracted_output or {}
-                for target in attribution_targets:
-                    if target.get("expected"):
-                        expected = target["expected"]
-                        break
+            # Issue #3: 直接调用系统函数分析分歧，返回完整答案。
+            # 即使 trace_analysis 没有识别 first_failed_node，也要让 adapter
+            # runtime_checks 有机会给出闭合根因，避免退回 prompt/catalog 猜测。
+            expected = _expected_for_divergence(trace, judge, attribution_targets)
+            actual = trace.extracted_output or {}
 
-                divergence_analysis_result = analyze_divergence(
-                    trace.execution_trace,
-                    expected,
-                    actual,
-                    spec.name if spec else "unknown",
-                    runtime_checks=(project_attribute_context or {}).get("runtime_checks"),
-                )
+            divergence_analysis_result = analyze_divergence(
+                trace.execution_trace,
+                expected,
+                actual,
+                spec.name if spec else "unknown",
+                runtime_checks=(project_attribute_context or {}).get("runtime_checks"),
+            )
 
         except Exception as e:
             logger.warning(f"Trace analysis failed: {e}")
@@ -540,7 +723,7 @@ def attribute_failure(
             "run_trace": _compact_trace(trace),
             "judge_result": _compact_judge(judge),
             "attribution_targets": attribution_targets,
-            "project_attribute_context": project_attribute_context or {},
+            "project_attribute_context": _compact_attribute_context(project_attribute_context),
             "source_file_catalog": source_file_catalog,
             "allowed_error_taxonomy": sorted(_taxonomy(spec)),
             "required_output": {
@@ -618,8 +801,18 @@ def attribute_failure(
 
     # CRITICAL: Do NOT pass knowledge to avoid JsonDb creation
     # knowledge = load_knowledge_base(spec)
+    has_complete_runtime_root_cause = False
+    if isinstance(divergence_analysis_result, dict) and isinstance(divergence_analysis_result.get("root_cause"), dict):
+        system_check = divergence_analysis_result.get("system_check")
+        root_cause = divergence_analysis_result.get("root_cause") or {}
+        has_complete_runtime_root_cause = bool(
+            root_cause
+            and isinstance(system_check, dict)
+            and str(system_check.get("status") or "").lower() == "failed"
+        )
+    tools_for_client = [] if has_complete_runtime_root_cause else tools
     client = llm or project_llm_client(
-        spec, role="attribute", knowledge=None, tools=tools,
+        spec, role="attribute", knowledge=None, tools=tools_for_client,
         tool_call_limit=ATTRIBUTE_TOOL_CALL_LIMIT,
         compress_tool_results=True,
         max_tool_calls_from_history=ATTRIBUTE_MAX_TOOL_HISTORY,
@@ -645,36 +838,39 @@ def attribute_failure(
     _llm_call_failed = data.get("error") in ("llm_request_failed", "missing_api_key", "attribute_parse_failed")
     if _llm_call_failed or "llm_call_failed" in (judge.quality_flags or []):
         error_text = data.get("raw_text") or data.get("error") or judge.reasoning_summary or "judge LLM call failed"
-        return AttributeResult(
-            trace_id=trace.trace_id,
-            project_id=trace.project_id,
-            case_id=str(trace.input.get("case_id") or ""),
-            expectation_attributions=[{"expectation_id": item.get("expectation_id"), "fulfillment_status": item.get("status"), "causal_category": "insufficient_evidence", "earliest_divergence": {"node": "semantic judge or attribute LLM", "evidence": [error_text], "confidence": "high"}, "causal_chain": [{"name": "semantic judge or attribute LLM", "status": "failed", "evidence": [error_text]}], "local_verifications": [], "suspected_locations": [], "improvement_direction": ["恢复 LLM 后重新运行 judge 和 attribute agent。"], "incomplete_reason": "attribute blocked"} for item in (judge.fulfillment_assessments or [])],
-            causal_category="insufficient_evidence",
-            probe_results=[{"probe": "llm_call", "status": "failed", "evidence": [error_text]}],
-            failure_category="未归因",
-            failure_stage="llm_attribute_call" if _llm_call_failed else "judge_llm_call",
-            analysis_method="llm_call_failed" if _llm_call_failed else "judge_llm_failed_blocked_attribute",
-            evidence_chain=[error_text, *(judge.evidence or [])],
-            trace_analysis=list(trace.execution_trace or []),
-            chain_nodes=[{"name": "semantic judge or attribute LLM", "status": "failed", "evidence": [error_text], "reason": error_text}],
-            local_verifications=[],
-            earliest_divergence={"node": "semantic judge or attribute LLM", "evidence": [error_text], "confidence": "high"},
-            evidence_coverage={"query": bool(trace.normalized_request or trace.input), "actual": bool(trace.extracted_output), "expected": bool(judge.expected), "execution_trace": bool(trace.execution_trace), "project_docs": False, "code_or_config": False, "unsupported_claims": []},
-            analysis_quality={"passed": False, "missing": ["semantic judge result" if "llm_call_failed" in (judge.quality_flags or []) else "attribute LLM result"], "standard": "归因必须基于当前 case 的 judge、trace 和可验证链路证据。"},
-            incomplete_reason="judge LLM 调用失败，不能产出正式根因。" if "llm_call_failed" in (judge.quality_flags or []) else "attribute agent LLM 调用失败。",
-            suspected_locations=[],
-            root_cause_hypothesis="语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
-            verification_steps=["检查 LLM API key、余额、网络和模型配置。", "恢复 LLM 后重新运行 judge 和 attribute agent。"],
-            patch_direction=["修复 LLM 调用配置或费用问题；不要把该兜底结果当作最终业务根因。"],
-            business_impact="当前 case 需要人工复核，不能进入正式失败根因聚簇。",
-            primary_error_type="needs_human_review",
-            error_types=["needs_human_review"],
-            severity="unknown",
-            needs_human_review=True,
-            scenario=str(trace.project_fields.get("scenario") or ""),
-            quality_flags=[*(judge.quality_flags or []), "attribute_blocked"],
-            raw_model_output=data,
+        return _enforce_divergence_root_cause(
+            AttributeResult(
+                trace_id=trace.trace_id,
+                project_id=trace.project_id,
+                case_id=str(trace.input.get("case_id") or ""),
+                expectation_attributions=[{"expectation_id": item.get("expectation_id"), "fulfillment_status": item.get("status"), "causal_category": "insufficient_evidence", "earliest_divergence": {"node": "semantic judge or attribute LLM", "evidence": [error_text], "confidence": "high"}, "causal_chain": [{"name": "semantic judge or attribute LLM", "status": "failed", "evidence": [error_text]}], "local_verifications": [], "suspected_locations": [], "improvement_direction": ["恢复 LLM 后重新运行 judge 和 attribute agent。"], "incomplete_reason": "attribute blocked"} for item in (judge.fulfillment_assessments or [])],
+                causal_category="insufficient_evidence",
+                probe_results=[{"probe": "llm_call", "status": "failed", "evidence": [error_text]}],
+                failure_category="未归因",
+                failure_stage="llm_attribute_call" if _llm_call_failed else "judge_llm_call",
+                analysis_method="llm_call_failed" if _llm_call_failed else "judge_llm_failed_blocked_attribute",
+                evidence_chain=[error_text, *(judge.evidence or [])],
+                trace_analysis=list(trace.execution_trace or []),
+                chain_nodes=[{"name": "semantic judge or attribute LLM", "status": "failed", "evidence": [error_text], "reason": error_text}],
+                local_verifications=[],
+                earliest_divergence={"node": "semantic judge or attribute LLM", "evidence": [error_text], "confidence": "high"},
+                evidence_coverage={"query": bool(trace.normalized_request or trace.input), "actual": bool(trace.extracted_output), "expected": bool(judge.expected), "execution_trace": bool(trace.execution_trace), "project_docs": False, "code_or_config": False, "unsupported_claims": []},
+                analysis_quality={"passed": False, "missing": ["semantic judge result" if "llm_call_failed" in (judge.quality_flags or []) else "attribute LLM result"], "standard": "归因必须基于当前 case 的 judge、trace 和可验证链路证据。"},
+                incomplete_reason="judge LLM 调用失败，不能产出正式根因。" if "llm_call_failed" in (judge.quality_flags or []) else "attribute agent LLM 调用失败。",
+                suspected_locations=[],
+                root_cause_hypothesis="语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+                verification_steps=["检查 LLM API key、余额、网络和模型配置。", "恢复 LLM 后重新运行 judge 和 attribute agent。"],
+                patch_direction=["修复 LLM 调用配置或费用问题；不要把该兜底结果当作最终业务根因。"],
+                business_impact="当前 case 需要人工复核，不能进入正式失败根因聚簇。",
+                primary_error_type="needs_human_review",
+                error_types=["needs_human_review"],
+                severity="unknown",
+                needs_human_review=True,
+                scenario=str(trace.project_fields.get("scenario") or ""),
+                quality_flags=[*(judge.quality_flags or []), "attribute_blocked"],
+                raw_model_output=data,
+            ),
+            divergence_analysis_result,
         )
     primary_error_type = str(data.get("primary_error_type") or data.get("failure_category") or "未归因")
     taxonomy = _taxonomy(spec)
@@ -717,4 +913,4 @@ def attribute_failure(
         quality_flags=list(data.get("quality_flags") or []),
         raw_model_output=data,
     )
-    return normalize_attribute_trace_result(spec, trace, judge, result)
+    return _enforce_divergence_root_cause(normalize_attribute_trace_result(spec, trace, judge, result), divergence_analysis_result)

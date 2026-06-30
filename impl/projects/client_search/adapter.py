@@ -11,7 +11,7 @@ from urllib.parse import urljoin
 
 from impl.core.adapter import ProjectAdapter
 from impl.core.schema import AttributeResult, JudgeResult, RunTrace
-from impl.projects.client_search.tools import ClientSearchConditionCompareTool
+from impl.projects.client_search.tools import ClientSearchConditionCompareTool, ClientSearchFieldDefinitionSearchTool
 from impl.tools import ToolContext, ToolRegistry
 
 import yaml as _yaml
@@ -125,6 +125,7 @@ class Adapter(ProjectAdapter):
     def protocol_tools(self) -> ToolRegistry:
         registry = ToolRegistry()
         registry.register(ClientSearchConditionCompareTool())
+        registry.register(ClientSearchFieldDefinitionSearchTool())
         return registry
 
     def _source_config_paths(self) -> Dict[str, str]:
@@ -518,6 +519,30 @@ class Adapter(ProjectAdapter):
             "evidence_refs": list(getattr(trace, "evidence_refs", []) or []),
         }
 
+    def _field_definition_search_tool(self, trace: RunTrace):
+        tool = ClientSearchFieldDefinitionSearchTool()
+
+        def search_field_definition(field_name: str) -> str:
+            """Search client_search field definition by project-local protocol tool."""
+            result = self.protocol_tools().run(
+                tool.tool_id,
+                ToolContext(
+                    project_id=self.spec.project_id,
+                    purpose="judge",
+                    spec=self.spec,
+                    trace=trace,
+                    inputs={"field_name": field_name},
+                ),
+            )
+            return tool.format_for_llm(result, field_name)
+
+        search_field_definition.__name__ = "search_field_definition"
+        search_field_definition.__doc__ = (
+            "Search for a client_search field definition, operators, value types, and examples. "
+            "Use only when capability_manifest is insufficient for the current field."
+        )
+        return search_field_definition
+
     def build_judge_context(self, trace: RunTrace) -> Dict[str, Any]:
         downstream = trace.project_fields.get("downstream_search") if isinstance(trace.project_fields, dict) else {}
         application_boundary = trace.project_fields.get("application_boundary") if isinstance(trace.project_fields, dict) else None
@@ -529,6 +554,7 @@ class Adapter(ProjectAdapter):
             "judge_governance": self._judge_governance(),
             "condition_comparison": condition_comparison,
             "protocol_tool_results": [condition_comparison],
+            "judge_agno_tools": [self._field_definition_search_tool(trace)],
             "client_search_judge_basis": "wrong/missing/extra customer-search condition coverage within current field/config boundary",
             "boundary_usage": "application adapter has already decided whether result-set verification is in scope; judge should evaluate only within application_boundary.judge_scope.",
             "external_boundary_sources": trace.project_fields.get("external_boundary_sources") if isinstance(trace.project_fields, dict) else {},
@@ -560,6 +586,302 @@ class Adapter(ProjectAdapter):
             },
         }
 
+    def get_runtime_checks(self, runtime_values: Dict[str, Any], context: Dict[str, Any] | None = None) -> Dict[str, Any]:
+        """直接引用 client_search 业务系统原函数，校验条件搜索契约。
+
+        这是 Issue #3 用户诉求（"直接引用业务系统原函数"）的 client_search 落地：
+        不再让 attribute agent 读源码/prompt 猜测，而是直接调用 adapter 的
+        _capability_manifest（加载 source_field_definitions YAML）、_value_mappings、
+        _enhanced_rules、_condition_comparison 等业务判定函数，
+        对当前 trace 的 conditions / field definitions / query_logic 做运行时校验，直接产出闭合根因。
+        """
+        context = context or {}
+        expected = context.get("expected") if isinstance(context.get("expected"), dict) else {}
+        reference = context.get("reference") if isinstance(context.get("reference"), dict) else {}
+        actual = context.get("actual") if isinstance(context.get("actual"), dict) else {}
+        actual = actual or runtime_values
+        wrong = list(context.get("wrong") or [])
+        missing = list(context.get("missing") or [])
+
+        # 1) 直接加载业务系统配置（field definitions / value mappings / enhanced rules）
+        capability_manifest = self._capability_manifest()
+        value_mappings = self._value_mappings()
+        enhanced_rules = self._enhanced_rules()
+
+        field_count = len(capability_manifest)
+        value_mapping_field_count = len(value_mappings)
+        enhanced_rule_count = len(enhanced_rules)
+
+        # 2) 条件校验：比较 expected vs actual conditions
+        expected_conditions = list(expected.get("conditions") or reference.get("expected_conditions") or [])
+        actual_conditions = list(actual.get("conditions") or actual.get("structured_output") or runtime_values.get("structured_output") or [])
+        actual_logic = actual.get("logic") or actual.get("query_logic") or runtime_values.get("query_logic") or "AND"
+        expected_logic = expected.get("query_logic") or expected.get("logic") or reference.get("expected_logic") or "AND"
+
+        # 3) 字段级校验：检查 actual conditions 中的字段是否在 capability_manifest 中
+        unknown_fields = []
+        field_mismatches = []
+        for cond in actual_conditions:
+            if not isinstance(cond, dict):
+                continue
+            field = cond.get("field")
+            if field and field not in capability_manifest and field not in self.field_patterns:
+                unknown_fields.append(field)
+            elif field and field in capability_manifest:
+                manifest = capability_manifest[field]
+                allowed_operators = set(manifest.get("operators", []))
+                actual_operator = cond.get("operator")
+                if actual_operator and allowed_operators and actual_operator not in allowed_operators:
+                    field_mismatches.append({
+                        "field": field,
+                        "operator": actual_operator,
+                        "allowed_operators": sorted(allowed_operators),
+                    })
+
+        condition_status = "passed"
+        gap_counts = {"wrong": len(wrong), "missing": len(missing), "extra": 0}
+        gap_evidence = [
+            f"expected_conditions_count={len(expected_conditions)}",
+            f"actual_conditions_count={len(actual_conditions)}",
+            f"expected_logic={expected_logic}",
+            f"actual_logic={actual_logic}",
+            f"wrong_count={len(wrong)}",
+            f"missing_count={len(missing)}",
+            f"unknown_fields={unknown_fields}",
+            f"operator_mismatches={len(field_mismatches)}",
+        ]
+        if wrong or missing or unknown_fields or field_mismatches:
+            condition_status = "failed"
+
+        root_cause = None
+        if condition_status == "failed":
+            details = []
+            gap_details = []
+            # 把 wrong/missing 的具体条目嵌入 summary，让不同 case 的归因区分开来
+            for item in wrong:
+                if isinstance(item, dict):
+                    field = item.get("expected_fragment", {}).get("field") or item.get("actual_fragment", {}).get("field") or ""
+                    exp_op = item.get("expected_fragment", {}).get("operator") or ""
+                    exp_val = item.get("expected_fragment", {}).get("value")
+                    act_op = item.get("actual_fragment", {}).get("operator") or ""
+                    act_val = item.get("actual_fragment", {}).get("value")
+                    reason = item.get("reason", "")
+                    if reason:
+                        gap_details.append(f"{field} 字段错误：{reason}")
+                    elif exp_op != act_op:
+                        gap_details.append(f"{field} 操作符错误：期望 {exp_op}，实际 {act_op}")
+                    elif exp_val != act_val:
+                        gap_details.append(f"{field} 值错误：期望 {json.dumps(exp_val, ensure_ascii=False)}，实际 {json.dumps(act_val, ensure_ascii=False)}")
+                    else:
+                        gap_details.append(f"{field} 条件不匹配")
+                else:
+                    gap_details.append(str(item))
+            for item in missing:
+                if isinstance(item, dict):
+                    field = item.get("expected_fragment", {}).get("field") or "unknown"
+                    op = item.get("expected_fragment", {}).get("operator") or ""
+                    val = item.get("expected_fragment", {}).get("value")
+                    gap_details.append(f"缺失 {field} 条件（期望 {op} {json.dumps(val, ensure_ascii=False)}）")
+                else:
+                    gap_details.append(str(item))
+            if unknown_fields:
+                gap_details.append(f"未知字段 {unknown_fields}（不在 capability_manifest 中）")
+            if field_mismatches:
+                for fm in field_mismatches:
+                    gap_details.append(f"{fm['field']} 操作符 {fm['operator']} 不在允许列表中 {fm['allowed_operators']}")
+            if not gap_details:
+                gap_details = [f"条件错误 {len(wrong)} 项，条件缺失 {len(missing)} 项"]
+            # 构建区分不同 case 的根因 summary：按 error type 分类
+            # 值错误类（如单位转换、数值错误）
+            has_value_error = any("值错误" in d or "值或枚举值错误" in d for d in gap_details)
+            # 操作符错误类（如 GTE 不是 GT）
+            has_operator_error = any("操作符错误" in d for d in gap_details)
+            # 枚举值/字段定义错误类（如寿险不是有效枚举）
+            has_enum_error = any("枚举值" in d or "value_mappings" in d or "有效枚举" in d for d in gap_details)
+            if has_value_error:
+                prefix = "client_search 数值解析错误："
+            elif has_operator_error:
+                prefix = "client_search 操作符选择错误："
+            elif has_enum_error:
+                prefix = "client_search 枚举值/字段定义错误："
+            else:
+                prefix = "client_search 条件解析与业务系统字段定义/映射规则不一致："
+            root_cause = {
+                "category": "implementation_bug",
+                "summary": prefix + "；".join(gap_details),
+                "evidence": gap_evidence + gap_details,
+                "confidence": "high",
+                "fix_suggestion": "修正客户搜索 parser 的字段选择、值抽取、操作符或布尔逻辑生成源头，使其与 capability_manifest 的字段定义和操作符集合一致。",
+            }
+
+        checks = [
+            {
+                "tool_type": "runtime_check",
+                "check_type": "field_definition_manifest",
+                "status": "passed",
+                "field_count": field_count,
+                "value_mapping_field_count": value_mapping_field_count,
+                "enhanced_rule_count": enhanced_rule_count,
+                "sample_fields": sorted(list(capability_manifest.keys())[:10]) if capability_manifest else [],
+                "evidence": [
+                    f"capability_manifest_fields={field_count}",
+                    f"value_mappings_fields={value_mapping_field_count}",
+                    f"enhanced_rules_entries={enhanced_rule_count}",
+                ],
+                "source": "source_field_definitions.yaml + source_value_mappings.yaml + source_enhanced_rules.yaml",
+                "confidence": "high",
+            },
+            {
+                "tool_type": "runtime_check",
+                "check_type": "condition_validation",
+                "status": condition_status,
+                "expected_conditions_count": len(expected_conditions),
+                "actual_conditions_count": len(actual_conditions),
+                "expected_logic": expected_logic,
+                "actual_logic": actual_logic,
+                "wrong_count": len(wrong),
+                "missing_count": len(missing),
+                "unknown_fields": unknown_fields,
+                "operator_mismatches": field_mismatches,
+                "evidence": gap_evidence,
+                "source": "impl/projects/client_search/adapter.py:_capability_manifest/_value_mappings/_enhanced_rules",
+                "root_cause": root_cause,
+                "confidence": "high" if condition_status in {"passed", "failed"} else "low",
+            },
+        ]
+
+        return {
+            "tool_type": "runtime_check",
+            "check_type": "client_search_condition_contract",
+            "status": "failed" if condition_status == "failed" else "passed",
+            "checks": checks,
+            "source": "impl/projects/client_search/adapter.py:_capability_manifest/_value_mappings/_enhanced_rules",
+            "evidence": [e for c in checks for e in (c.get("evidence") or [])],
+            "root_cause": root_cause,
+            "fix_suggestion": root_cause.get("fix_suggestion") if root_cause else "",
+            "confidence": "high" if condition_status == "failed" else "medium",
+            "note": "直接加载业务系统 field_definitions.yaml / value_mappings.yaml / enhanced_rules.yaml 校验条件，不读 prompt 推测。",
+        }
+
+    def build_attribute_tools(self) -> list:
+        """Issue #3: 暴露项目级 runtime tool 给 attribute agent 调用（Agno 兼容函数）。
+
+        闭包函数直接调用业务系统 _capability_manifest / _value_mappings / _enhanced_rules，
+        让 attribute agent 通过 tool call 查询字段定义和校验条件。
+        """
+        adapter = self
+
+        def search_field_definition(field_name: str) -> dict:
+            """查询 client_search 业务系统字段定义的 operators、value_types、enums。
+
+            Args:
+                field_name: 字段名（如 "clientAge", "annPremSegNum"）
+
+            Returns:
+                包含 operators、value_types、enums、unit、field_count(总字段数) 的字典
+            """
+            manifest = adapter._capability_manifest()
+            field = manifest.get(field_name)
+            if field:
+                return {
+                    "field": field_name,
+                    "operators": field.get("operators", []),
+                    "value_types": field.get("value_types", []),
+                    "enums": field.get("enums", []),
+                    "unit": field.get("unit", ""),
+                    "description": field.get("description", ""),
+                    "source": "source_field_definitions.yaml",
+                }
+            return {
+                "field": field_name,
+                "found": False,
+                "field_count": len(manifest),
+                "sample_fields": sorted(list(manifest.keys())[:10]),
+                "source": "source_field_definitions.yaml",
+            }
+
+        def validate_search_condition(field: str, operator: str, value: str) -> dict:
+            """校验搜索条件中的字段、操作符、值是否在业务系统能力范围内。
+
+            Args:
+                field: 字段名
+                operator: 操作符（如 GTE, MATCH, EQ）
+                value: 值
+
+            Returns:
+                包含 valid、issues、suggestions 的字典
+            """
+            manifest = adapter._capability_manifest()
+            value_mappings = adapter._value_mappings()
+            field_def = manifest.get(field)
+            issues = []
+            if not field_def:
+                issues.append(f"字段 {field} 不在 capability_manifest 中（共 {len(manifest)} 个字段）")
+            else:
+                allowed_ops = field_def.get("operators", [])
+                if operator not in allowed_ops:
+                    issues.append(f"操作符 {operator} 不在允许列表中 {allowed_ops}")
+            return {
+                "field": field,
+                "operator": operator,
+                "value": value,
+                "valid": len(issues) == 0,
+                "issues": issues,
+                "source": "source_field_definitions.yaml / source_value_mappings.yaml",
+            }
+
+        search_field_definition.__name__ = "search_field_definition"
+        validate_search_condition.__name__ = "validate_search_condition"
+        return [search_field_definition, validate_search_condition]
+
+    def simulate_trace_nodes(self, trace, judge_result) -> Dict[str, Any]:
+        """Issue #3: 沿 trace 逐节点调业务系统函数复现，定位最早分歧。
+
+        对 client_search.routing / adapter.extract_output 节点，用 _capability_manifest 校验
+        实际 conditions 中的字段是否合法，比较模拟输出与 trace actual。
+        """
+        manifest = self._capability_manifest()
+        actual_conditions = list((trace.extracted_output or {}).get("structured_output") or
+                                  (trace.project_fields or {}).get("conditions") or [])
+        if not manifest:
+            return {"simulated_nodes": [], "diverged_nodes": [], "note": "capability_manifest 不可加载"}
+        source = "impl/projects/client_search/adapter.py:_capability_manifest"
+        simulated_nodes: list[Dict[str, Any]] = []
+        diverged_nodes: list[Dict[str, Any]] = []
+        for node in (trace.execution_trace or []):
+            if not isinstance(node, dict):
+                continue
+            stage = str(node.get("stage") or node.get("node") or "")
+            if stage not in ("client_search.routing", "adapter.extract_output", "client_search.api"):
+                continue
+            if not actual_conditions:
+                continue
+            unknown_fields = []
+            valid_count = 0
+            for cond in actual_conditions:
+                if not isinstance(cond, dict):
+                    continue
+                f = cond.get("field")
+                if f and f not in manifest and f not in self.field_patterns:
+                    unknown_fields.append(f)
+                elif f and f in manifest:
+                    valid_count += 1
+            status = "passed" if not unknown_fields else "diverged"
+            node_evidence = node.get("evidence") if isinstance(node.get("evidence"), dict) else {}
+            entry = {
+                "stage": stage,
+                "input_used": {"conditions": actual_conditions[:3], "condition_count": len(actual_conditions)},
+                "simulated_output": {"valid_field_count": valid_count, "unknown_fields": unknown_fields, "manifest_field_count": len(manifest)},
+                "trace_actual": {"condition_count": node_evidence.get("condition_count")},
+                "status": status,
+                "function_called": "_capability_manifest",
+                "source_file": source,
+            }
+            simulated_nodes.append(entry)
+            if status == "diverged":
+                diverged_nodes.append(entry)
+        return {"simulated_nodes": simulated_nodes, "diverged_nodes": diverged_nodes, "source": source}
+
     def build_attribute_context(self, trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:
         project_fields = trace.project_fields if isinstance(trace.project_fields, dict) else {}
         application_boundary = project_fields.get("application_boundary") or self._application_boundary(project_fields.get("downstream_search"))
@@ -582,6 +904,101 @@ class Adapter(ProjectAdapter):
             "source_config_paths": self._source_config_paths(),
             "attribute_instruction": "application_boundary 由 application adapter 在归因前判定；当 judge_scope=parser_condition_semantics_only 时，下游结果集验证不属于本次归因链路，归因只分析 query、parse 条件、matched_patterns、execution_trace 和项目文档中的可控解析问题；无法定位代码/配置时应标记 incomplete_reason。",
         }
+
+    def normalize_attribute_result(self, trace: RunTrace, judge_result: JudgeResult, attribute_result: AttributeResult) -> AttributeResult:
+        # Issue #3: 只在 attribute LLM 真正失败时才用 condition_gap 兜底。
+        # 之前无条件在 verdict==incorrect 时覆盖，导致 attribute LLM 连同
+        # runtime_checks / simulate_trace_nodes 的细粒度根因（具体字段/操作符/
+        # earliest_divergence.node / suspected_locations）被硬编码模板替换成同一句套话，
+        # 三个根因不同的 case 输出字面相同，违背 issue3「定位到具体函数/模块」诉求。
+        if self._attribute_llm_failed(attribute_result) and judge_result.verdict == "incorrect":
+            return self._condition_gap_attribute_result(trace, judge_result, attribute_result)
+        # judge 判定为 uncertain 时，attr 不应产出确定性 implementation_bug 根因。
+        if judge_result.verdict == "uncertain":
+            reason = "judge 判定为 uncertain，当前搜索条件输出无法被明确判定为正确或错误，归因不能给出确定性根因。"
+            attribute_result.causal_category = "insufficient_evidence"
+            attribute_result.failure_category = "insufficient_evidence"
+            attribute_result.failure_stage = "judge_uncertain"
+            attribute_result.analysis_method = "judge_uncertain_blocked_attribute"
+            attribute_result.evidence_chain = list(judge_result.evidence or [reason])
+            attribute_result.incomplete_reason = reason
+            attribute_result.suspected_locations = []
+            attribute_result.root_cause_hypothesis = "当前 judge 无法确定 client_search 输出是否满足搜索条件契约（verdict=uncertain），建议人工复核后重新判定。"
+            attribute_result.analysis_quality = {"passed": False, "status": "insufficient_evidence", "missing": ["deterministic_judge_verdict"], "standard": "judge uncertain 时不能产出确定性归因。"}
+            attribute_result.needs_human_review = True
+            attribute_result.primary_error_type = "needs_human_review"
+            attribute_result.error_types = ["needs_human_review"]
+            return attribute_result
+        return attribute_result
+
+    def _attribute_llm_failed(self, attribute_result: AttributeResult) -> bool:
+        markers = [attribute_result.analysis_method, attribute_result.incomplete_reason, attribute_result.root_cause_hypothesis]
+        return (
+            "attribute_blocked" in (attribute_result.quality_flags or [])
+            or any("attribute agent LLM 调用失败" in str(item) for item in markers if item)
+            or any("llm_call_failed" == str(item) for item in markers if item)
+        )
+
+    def _condition_gap_attribute_result(self, trace: RunTrace, judge_result: JudgeResult, attribute_result: AttributeResult) -> AttributeResult:
+        expected = judge_result.expected or self._intent_expected_conditions(trace) or {}
+        actual = judge_result.actual or {"conditions": trace.project_fields.get("conditions") or trace.extracted_output.get("structured_output") or []}
+        gaps = list(judge_result.missing or []) + list(judge_result.wrong or []) + list(judge_result.extra or [])
+        evidence = [
+            {"query": trace.input.get("query") or trace.normalized_request.get("user_text")},
+            {"expected": expected},
+            {"actual": actual},
+            {"wrong_missing_extra": gaps},
+        ]
+        if judge_result.reasoning_summary:
+            evidence.append(judge_result.reasoning_summary)
+        stage = "client_search_parse"
+        return AttributeResult(
+            trace_id=trace.trace_id,
+            project_id=trace.project_id,
+            case_id=str(trace.input.get("case_id") or trace.input.get("id") or ""),
+            expectation_attributions=[{
+                "expectation_id": "client_search:search_condition_contract",
+                "fulfillment_status": "not_fulfilled",
+                "causal_category": "implementation_bug",
+                "earliest_divergence": {"node": stage, "expected": expected, "actual": actual, "evidence": evidence, "confidence": "high"},
+                "causal_chain": [
+                    {"name": "adapter.build_request", "status": "succeeded", "evidence": [trace.normalized_request or trace.input]},
+                    {"name": stage, "status": "failed", "evidence": evidence},
+                    {"name": "client_search.condition_compare", "status": "failed", "evidence": gaps or [judge_result.reasoning_summary]},
+                ],
+                "local_verifications": [{"method": "judge_wrong_missing_extra", "target": "judge_result", "result": "not_fulfilled", "evidence": evidence}],
+                "suspected_locations": [],
+                "improvement_direction": ["修正当前 query 对应的字段、操作符、值或逻辑生成链路，不要只改前端展示。"],
+                "source_evidence": evidence,
+                "probe_evidence": evidence,
+                "incomplete_reason": "",
+            }],
+            causal_category="implementation_bug",
+            probe_results=[{"probe": "client_search_condition_gap", "status": "passed", "evidence": evidence}],
+            failure_category="client_search_condition_gap",
+            failure_stage=stage,
+            analysis_method="client_search_condition_gap_attribution_after_attribute_llm_failure",
+            evidence_chain=evidence,
+            trace_analysis=list(trace.execution_trace or []),
+            chain_nodes=[{"name": stage, "status": "failed", "evidence": evidence, "reason": judge_result.reasoning_summary}],
+            local_verifications=[{"method": "judge_wrong_missing_extra", "target": "judge_result", "result": "not_fulfilled", "evidence": evidence}],
+            earliest_divergence={"node": stage, "expected": expected, "actual": actual, "evidence": evidence, "confidence": "high"},
+            evidence_coverage={"query": bool(trace.input or trace.normalized_request), "actual": bool(actual), "expected": bool(expected), "execution_trace": bool(trace.execution_trace), "project_docs": True, "code_or_config": True, "unsupported_claims": []},
+            analysis_quality={"passed": True, "missing": [], "status": "supported_root_cause", "standard": "client_search attribution may reuse condition comparison gaps when only the attribute LLM call failed."},
+            incomplete_reason="",
+            suspected_locations=[],
+            root_cause_hypothesis="client_search condition comparison 已判定当前 parser 输出未满足目标客户搜索条件：actual conditions 与 expected conditions 存在 wrong/missing/extra 差异，最早分歧位于客户搜索条件生成链路。",
+            verification_steps=["核对当前 query、expected conditions、actual structured_output 与 wrong/missing/extra 差异。", "复跑当前 client_search case，确认条件比较无差异。"],
+            patch_direction=["修正客户搜索 parser 的字段选择、值抽取、操作符或布尔逻辑生成源头。"],
+            business_impact=judge_result.reasoning_summary or "错误的客户搜索条件会改变目标客户人群。",
+            primary_error_type="client_search_condition_gap",
+            error_types=["client_search_condition_gap"],
+            severity="medium",
+            needs_human_review=False,
+            scenario=str(trace.project_fields.get("scenario") or ""),
+            quality_flags=[flag for flag in list(attribute_result.quality_flags or []) if flag != "attribute_blocked"],
+            raw_model_output=attribute_result.raw_model_output,
+        )
 
     def trace_state_graph(self) -> Dict[str, Any]:
         return self.extend_default_trace_graph("collect_evidence", ["client_search_boundary_evidence"])
@@ -626,6 +1043,22 @@ class Adapter(ProjectAdapter):
             "result_set_verified": False,
             "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics.",
         }
+
+    def pre_judge_result(self, trace: RunTrace, expected_intent: Optional[str] = None) -> Optional[JudgeResult]:
+        """client_search pre-judge: do NOT short-circuit the LLM judge.
+
+        Returning a JudgeResult here skips the core LLM judge call (see
+        pipeline.judge), which produces a deterministic template reasoning
+        summary and 0 LLM judge calls — the client_search judge column then
+        lacks the per-item semantic analysis that QA has. The deterministic
+        condition comparison is instead merged into the LLM judge result via
+        reconcile_judge_result -> _apply_condition_comparison (gaps, expected,
+        actual are retained and an llm_original_gaps snapshot is kept).
+        Returning None lets the LLM judge run and produce the detailed
+        per-requirement analysis; the deterministic comparison still augments
+        the result afterwards.
+        """
+        return None
 
     def reconcile_judge_result(self, trace: RunTrace, judge_result: JudgeResult) -> JudgeResult:
         self._apply_condition_comparison(trace, judge_result)
@@ -681,7 +1114,22 @@ class Adapter(ProjectAdapter):
                     all_cases.extend(file_cases)
             except Exception:
                 pass
-        return all_cases
+        # 3. Drop cases whose `output` is empty/missing. Without a real provided
+        # output, has_provided_output() is False and the case tries to call the
+        # live external service, which is unavailable in offline/mock mode and
+        # yields an empty result (crosssell_* cases run like this). Such cases
+        # cannot produce judge/attribute evidence offline and only pollute the
+        # batch with `uncertain`/`output missing` rows, so exclude them from
+        # the mock pool. They remain usable once a live service is connected.
+        kept: list[Dict[str, Any]] = []
+        for case in all_cases:
+            if not isinstance(case, dict):
+                continue
+            output = case.get("output")
+            if output is None or output == {} or output == "":
+                continue
+            kept.append(case)
+        return kept
 
     def build_mock_datasets(self) -> list[Dict[str, Any]]:
         index_path = Path(__file__).resolve().parents[3] / "data" / "client_search" / "index.json"

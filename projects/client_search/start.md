@@ -1,7 +1,7 @@
 # 用户编写，非ai编写
 
 启动服务流程
-1. 启动项目业务服务，对应8000端口
+1. 启动项目业务服务，对应8000端口（在/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search上）
 2. 启动前端分析界面，对应8020端口
 3. 确保es正常可用，按以下更新es数据
 

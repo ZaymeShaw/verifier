@@ -34,12 +34,25 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, List
 
+try:
+    import pytest
+except ImportError:  # pragma: no cover - direct runner does not require pytest
+    pytest = None
+
+
+class _DefaultArgs:
+    verbose = False
+
+
+args = _DefaultArgs()
+
 # ---------- paths ----------
 HOOK_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = HOOK_DIR.parent.parent  # verifier/
 CONFIG_FILE = HOOK_DIR / "config.yaml"
 HOOK_SCRIPT = HOOK_DIR / "stop-hook.sh"
 AUDIT_PROMPT = HOOK_DIR / "audit-prompt.md"
+README_FILE = HOOK_DIR / "README.md"
 ISSUE_DIR = PROJECT_ROOT / "issue"
 AUDIT_DIR = PROJECT_ROOT / "issue" / "audit"
 SETTINGS_FILE = PROJECT_ROOT / ".claude" / "settings.json"
@@ -165,7 +178,7 @@ atexit.register(_cleanup_temp_files)
 
 # ---------- test runner ----------
 
-class TestResult:
+class HookTestResult:
     def __init__(self, suite_name: str):
         self.suite_name = suite_name
         self.passed: List[str] = []
@@ -208,11 +221,18 @@ class TestResult:
         return len(self.failed) == 0
 
 
+if pytest is not None:
+    @pytest.fixture
+    def result(request):
+        """Provide HookTestResult to legacy runner-style tests when collected by pytest."""
+        return HookTestResult(request.node.name)
+
+
 # ====================================================================
 # TS01 — 命名规范
 # ====================================================================
 
-def test_naming(result: TestResult):
+def test_naming(result: HookTestResult):
     print(heading(1, "命名规范 — Naming Conventions"))
     print("检查：issue 文件名、审核 verdict 文件名、字段名的一致性")
 
@@ -272,7 +292,7 @@ def test_naming(result: TestResult):
 # TS02 — 审核结果格式规范
 # ====================================================================
 
-def test_verdict_format(result: TestResult):
+def test_verdict_format(result: HookTestResult):
     print(heading(2, "审核结果格式规范 — Verdict Format"))
     print("检查：verdict 文件的内容格式是否符合 config.yaml 定义")
 
@@ -343,7 +363,7 @@ def test_verdict_format(result: TestResult):
 # TS03 — 无限循环预防
 # ====================================================================
 
-def test_loop_prevention(result: TestResult):
+def test_loop_prevention(result: HookTestResult):
     print(heading(3, "无限循环预防 — Loop Prevention"))
     print("检查：mtime 比较逻辑、REJECTED 退出路径、无审核文件时的行为")
 
@@ -442,7 +462,7 @@ def test_loop_prevention(result: TestResult):
 # TS04 — 准入（正确识别 closed 并启动审核）
 # ====================================================================
 
-def test_entry(result: TestResult):
+def test_entry(result: HookTestResult):
     print(heading(4, "准入 — Entry（检测 closed → 启动审核）"))
     print("检查：是否能正确识别 closed issue，并在无审核时触发 block")
 
@@ -506,7 +526,7 @@ def test_entry(result: TestResult):
 # TS05 — 再入（修复 → 重新 close → 重新审核）
 # ====================================================================
 
-def test_reentry(result: TestResult):
+def test_reentry(result: HookTestResult):
     print(heading(5, "再入 — Re-entry（REJECTED → 修复 → 重新审核）"))
     print("检查：最关键的循环路径 — 从 REJECTED 到重新审核的完整闭环")
 
@@ -587,7 +607,7 @@ def test_reentry(result: TestResult):
 # TS06 — 一致性
 # ====================================================================
 
-def test_consistency(result: TestResult):
+def test_consistency(result: HookTestResult):
     print(heading(6, "一致性 — Consistency（config ↔ audit-prompt ↔ hook）"))
     print("检查：三方文件的关键字段名是否完全匹配")
 
@@ -596,6 +616,7 @@ def test_consistency(result: TestResult):
     with open(str(CONFIG_FILE)) as f:
         cfg = yaml.safe_load(f)
     prompt_text = AUDIT_PROMPT.read_text("utf-8")
+    readme_text = README_FILE.read_text("utf-8") if README_FILE.exists() else ""
     hook_text = HOOK_SCRIPT.read_text("utf-8")
 
     fields = {
@@ -641,6 +662,81 @@ def test_consistency(result: TestResult):
             result.ok(f"配置项 {key} = '{obj}' ✓")
     if all_keys_present:
         result.ok("config.yaml 所有必要字段完整 ✓")
+
+    # 6.7b audit-prompt 原子诉求审核语义
+    print(subheading("6.7b audit-prompt 原子诉求审核语义"))
+    required_prompt_phrases = [
+        "Dialog ID",
+        "Requirement ID",
+        "U1.S1",
+        "逐句",
+        "逐 bullet",
+        "第二句、第三句",
+        "原子诉求审核表",
+        "用户原话片段",
+        "缺失证据",
+        "需求抽取完整性自检",
+        "已覆盖 Dialog ID",
+        "未覆盖 Dialog ID",
+        "任意 Requirement ID 无证据或只有代码证据",
+        "强制防漏词检查",
+    ]
+    for phrase in required_prompt_phrases:
+        if phrase in prompt_text:
+            result.ok(f"audit-prompt 包含语义要求：{phrase} ✓")
+        else:
+            result.fail(f"audit-prompt 缺少语义要求：{phrase}")
+
+    leak_guard_terms = [
+        "直接引用",
+        "原函数",
+        "不是",
+        "不只是",
+        "抽取",
+        "项目级 tool",
+        "模拟调用",
+        "trace",
+        "不符合预期",
+        "最开始",
+        "时间点",
+        "函数",
+        "模块",
+        "证据",
+    ]
+    for term in leak_guard_terms:
+        if term in prompt_text:
+            result.ok(f"audit-prompt 防漏词包含：{term} ✓")
+        else:
+            result.fail(f"audit-prompt 防漏词缺失：{term}")
+
+    evidence_terms = [
+        "单元/函数测试",
+        "回归测试",
+        "case 分析",
+        "端到端/UAT",
+        "算法/系统效果分析",
+        "不能只有代码证据",
+    ]
+    for term in evidence_terms:
+        if term in prompt_text:
+            result.ok(f"audit-prompt 多维证据包含：{term} ✓")
+        else:
+            result.fail(f"audit-prompt 多维证据缺失：{term}")
+
+    project_specific_terms = [
+        "judge",
+        "attr",
+        "fullfill",
+        "fulfill",
+        "not_fulfilled",
+        "fulfilled",
+        "归因",
+    ]
+    for term in project_specific_terms:
+        if term in prompt_text or term in readme_text:
+            result.fail(f"通用 hook 文档不应包含项目特定词：{term}")
+        else:
+            result.ok(f"通用 hook 文档未包含项目特定词：{term} ✓")
 
     # 6.8 stop-hook.sh 变量
     print(subheading("6.8 stop-hook.sh 变量定义验证"))
@@ -740,8 +836,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Need global result for stderr logging in run_hook
-    global result
-    result = TestResult("_global")
+    result = HookTestResult("_global")
 
     print(color(f"\n{'#'*60}", 94))
     print(color(f"# Issue-Solved Hook 测试套件", 94))
@@ -775,37 +870,37 @@ if __name__ == "__main__":
     all_ok = True
 
     # TS01 — 命名规范
-    r1 = TestResult("TS01 命名")
+    r1 = HookTestResult("TS01 命名")
     test_naming(r1)
     r1.summary()
     all_ok = all_ok and r1.all_ok
 
     # TS02 — 审核结果格式规范
-    r2 = TestResult("TS02 审核格式")
+    r2 = HookTestResult("TS02 审核格式")
     test_verdict_format(r2)
     r2.summary()
     all_ok = all_ok and r2.all_ok
 
     # TS03 — 无限循环预防
-    r3 = TestResult("TS03 循环预防")
+    r3 = HookTestResult("TS03 循环预防")
     test_loop_prevention(r3)
     r3.summary()
     all_ok = all_ok and r3.all_ok
 
     # TS04 — 准入
-    r4 = TestResult("TS04 准入")
+    r4 = HookTestResult("TS04 准入")
     test_entry(r4)
     r4.summary()
     all_ok = all_ok and r4.all_ok
 
     # TS05 — 再入
-    r5 = TestResult("TS05 再入")
+    r5 = HookTestResult("TS05 再入")
     test_reentry(r5)
     r5.summary()
     all_ok = all_ok and r5.all_ok
 
     # TS06 — 一致性
-    r6 = TestResult("TS06 一致性")
+    r6 = HookTestResult("TS06 一致性")
     test_consistency(r6)
     r6.summary()
     all_ok = all_ok and r6.all_ok

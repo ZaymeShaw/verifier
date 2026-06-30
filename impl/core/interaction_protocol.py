@@ -48,6 +48,9 @@ def normalize_case_interaction(project_id: str, case: Dict[str, Any], index: int
 def _execution_input(case: Dict[str, Any], case_id: str, mode: str) -> Dict[str, Any]:
     if any(key in case for key in ("input", "output", "reference", "metadata", "scenario")):
         result = {key: case[key] for key in ("input", "output", "reference", "metadata", "scenario") if key in case}
+        for key in ("source", "expected_quality", "expected_error_type", "quality_dimension", "boundary", "expected_stage", "expected_path_types", "expected_cards", "turns", "user_intent"):
+            if key in case and key not in result:
+                result[key] = case[key]
     else:
         result = {
             key: value

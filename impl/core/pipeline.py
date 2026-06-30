@@ -94,6 +94,10 @@ def attribute(project_id: str, trace: RunTrace, judge_result: JudgeResult) -> At
     }
     runtime_values = extract_runtime_values(trace.execution_trace or [], actual)
     project_attribute_context["runtime_checks"] = adapter.get_runtime_checks(runtime_values, runtime_context)
+    # Issue #3: 项目级 tool 通过 build_attribute_tools 暴露给 attribute agent 调用
+    project_attribute_context["attribute_tools"] = adapter.build_attribute_tools()
+    # Issue #3: 沿 trace 逐节点模拟调用业务系统函数，复现并定位最早分歧
+    project_attribute_context["simulate_trace_nodes"] = adapter.simulate_trace_nodes(trace, judge_result)
     result = attribute_failure(spec, trace, judge_result, project_attribute_context=project_attribute_context)
     result = adapter.apply_attribution_probes(trace, judge_result, result)
     return adapter.normalize_attribute_result(trace, judge_result, result)
@@ -373,20 +377,27 @@ def batch_run(
     runs = [runs_by_index[index] for index in range(len(case_list))]
     attributes = [AttributeResult(**run["attribute"]) for run in runs if run.get("attribute")]
     cluster_summary = cluster(project_id, attributes)
-    # Select representative run: prefer not_fulfilled, else first non-error
+    # Select representative run: prefer non-fulfilled backend judge state, else first non-error.
     representative = None
-    for priority_status in ("not_fulfilled", "partially_fulfilled", "not_evaluable"):
+    for priority_status in ("not_fulfilled", "partially_fulfilled", "not_evaluable", "contested"):
         for run in (runs or []):
-            if not isinstance(run, dict): continue
-            js = run.get("judge_summary") or run.get("judge") or {}
-            if js.get("fulfillment_status") == priority_status or js.get("verdict") == "incorrect":
-                representative = run; break
-        if representative: break
+            if not isinstance(run, dict):
+                continue
+            judge_payload = run.get("judge") if isinstance(run.get("judge"), dict) else {}
+            summary_payload = run.get("judge_summary") if isinstance(run.get("judge_summary"), dict) else {}
+            fulfillment = (judge_payload.get("overall_fulfillment") or {}).get("status") if isinstance(judge_payload.get("overall_fulfillment"), dict) else None
+            fulfillment = fulfillment or summary_payload.get("fulfillment_status")
+            if fulfillment == priority_status or (priority_status == "not_fulfilled" and judge_payload.get("verdict") == "incorrect"):
+                representative = run
+                break
+        if representative:
+            break
     if not representative and runs:
         representative = next((r for r in runs if isinstance(r, dict) and not r.get("error")), runs[-1])
     trace = RunTrace(**representative["trace"]) if representative and representative.get("trace") else None
     judge_result = JudgeResult(**representative["judge"]) if representative and representative.get("judge") else None
-    attribute_result = AttributeResult(**runs[-1]["attribute"]) if runs and runs[-1].get("attribute") else None
+    attribute_payload = representative.get("attribute") if representative else None
+    attribute_result = AttributeResult(**attribute_payload) if isinstance(attribute_payload, dict) else None
     check_report = check(project_id, trace, judge_result, attribute_result, cluster_summary)
     failed_run_checks = [run.get("check") for run in runs if isinstance(run.get("check"), dict) and not run["check"].get("passed", True)]
     if failed_run_checks:

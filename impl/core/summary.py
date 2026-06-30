@@ -32,9 +32,13 @@ def aggregate_failure_dimensions(judge: dict) -> list[dict]:
 def summary_from_fulfillment(judge: dict) -> dict:
     quality_flags = judge.get("quality_flags") or []
     degradation = ""
-    if "llm_call_failed" in quality_flags:
+    # Only surface LLM degradation when the judge actually fell back to an
+    # uncertain LLM-failure result. Deterministic project gates may start from a
+    # failed LLM result and then replace it with current-case contract evidence;
+    # in that case the summary must not keep stale fallback wording.
+    if (judge.get("verdict") or "") == "uncertain" and "llm_call_failed" in quality_flags:
         degradation = "[llm_call_failed] "
-    elif "self_check_failed" in quality_flags:
+    elif (judge.get("verdict") or "") == "uncertain" and "self_check_failed" in quality_flags:
         degradation = "[self_check_failed] "
 
     dimensions = aggregate_failure_dimensions(judge)

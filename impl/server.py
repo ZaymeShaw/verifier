@@ -73,6 +73,10 @@ def _display_reason(trace, judge, attribute, run):
 
 
 def _summary_reason_text(attribute, display_reason):
+    analysis_quality = attribute.get("analysis_quality") or {}
+    has_formal_root_cause = bool(attribute.get("root_cause_hypothesis") and (analysis_quality.get("passed") is True or display_reason.get("is_formal_attribution")))
+    if has_formal_root_cause:
+        return attribute.get("root_cause_hypothesis") or ""
     if attribute.get("incomplete_reason"):
         return attribute.get("incomplete_reason") or ""
     if attribute.get("root_cause_hypothesis"):
@@ -87,7 +91,8 @@ def _compact_summaries(trace, judge, attribute, run, fulfillment_assessments, ex
     analysis_quality = attribute.get("analysis_quality") or {}
     has_attribution = bool(expectation_attributions)
     has_incomplete = bool(attribute.get("incomplete_reason"))
-    is_formal = bool(analysis_quality.get("passed") is True or has_attribution or display_reason.get("is_formal_attribution")) and not has_incomplete
+    has_formal_root_cause = bool(attribute.get("root_cause_hypothesis") and analysis_quality.get("passed") is True)
+    is_formal = bool(analysis_quality.get("passed") is True or has_attribution or display_reason.get("is_formal_attribution")) and (not has_incomplete or has_formal_root_cause)
     judge_summary = {
         "status": _display_status(trace, judge, run),
         "fulfillment_status": (judge.get("overall_fulfillment") or {}).get("status") or "",

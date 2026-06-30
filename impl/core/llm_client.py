@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import time
+
+logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[2]
 MODEL_DEFAULT = "deepseek-v4-pro"
@@ -41,8 +44,22 @@ if _deepseek_key and not os.environ.get("OPENAI_API_KEY"):
     os.environ["OPENAI_API_KEY"] = _deepseek_key
 
 from agno.agent import Agent
-from agno.db.json import JsonDb
-from agno.memory.manager import MemoryManager
+try:  # agno 1.x
+    from agno.db.json import JsonDb
+except ModuleNotFoundError:  # agno 2.x removed JsonDb
+    class JsonDb:  # pragma: no cover - compatibility shim for legacy tests only
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+
+try:  # agno 1.x
+    from agno.memory.manager import MemoryManager
+except ModuleNotFoundError:  # agno 2.x compatibility
+    class MemoryManager:  # pragma: no cover - compatibility shim for legacy tests only
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+
 from agno.models.deepseek import DeepSeek
 
 
@@ -86,6 +103,61 @@ def _response_content(result: Any) -> str:
     if isinstance(content, (dict, list)):
         return json.dumps(content, ensure_ascii=False)
     return str(content or "")
+
+
+# Substrings that indicate the upstream provider returned an error message
+# instead of a JSON model payload. Agno 2.x surfaces these as plain content.
+_PROVIDER_ERROR_MARKERS = (
+    "insufficient balance",
+    "insufficient_quota",
+    "rate limit",
+    "rate_limit",
+    "exceeded your current quota",
+    "incorrect api key",
+    "authentication",
+    "unauthorized",
+    "401",
+    "402",
+    "429",
+    "service unavailable",
+    "internal server error",
+    "gateway timeout",
+)
+
+
+def _detect_response_failure(content: str, parsed: Any) -> str:
+    """Return a human-readable failure reason when the response is clearly not
+    a usable JSON payload produced by the model.
+
+    Returns an empty string when the response looks like a legitimate (possibly
+    partial) structured payload so we never reject real judging/attribution
+    output.
+    """
+    text = (content or "").strip()
+    lower = text.lower()
+
+    # 1) Provider error strings surfaced verbatim instead of JSON.
+    if text and lower in {m.strip() for m in _PROVIDER_ERROR_MARKERS}:
+        return f"provider error: {text}"
+
+    # 2) extract_json wraps a non-JSON string in {"raw_text": ...}. When that
+    #    is the only key (no judging/attribution fields), the model did not
+    #    produce structured output.
+    if isinstance(parsed, dict):
+        keys = set(parsed.keys()) - {"raw_text", "raw_model_response", "value"}
+        if not keys:
+            raw_text = str(parsed.get("raw_text") or parsed.get("value") or text)
+            if any(marker in raw_text.lower() for marker in _PROVIDER_ERROR_MARKERS):
+                return f"provider error: {raw_text}"
+            if raw_text and raw_text.strip() and "content" not in parsed:
+                # Non-empty, non-JSON prose: the call did not yield structured JSON.
+                return f"non-json response: {raw_text[:200]}"
+
+    # 3) Empty content entirely.
+    if not text:
+        return "empty response"
+
+    return ""
 
 
 def _raw_response(result: Any) -> Any:
@@ -203,19 +275,6 @@ class LlmClient:
             trace_id: Optional trace ID for session isolation. If provided, creates a unique
                      session for this specific case/trace, preventing cross-case contamination.
         """
-        # DEBUG: Log the actual trace_id received with call stack
-        import traceback
-        print(f"\n{'='*80}")
-        print(f"[DEBUG] complete_json called:")
-        print(f"  trace_id: {trace_id!r}")
-        print(f"  type: {type(trace_id).__name__}")
-        print(f"  len: {len(str(trace_id)) if trace_id else 0}")
-        print(f"  user_id: {self.user_id!r}")
-        print(f"\n[STACK]")
-        for line in traceback.format_stack()[-5:-1]:  # Show last 4 frames
-            print(line.rstrip())
-        print(f"{'='*80}\n")
-
         if not self.api_key:
             return {"error": "missing_api_key", "raw_text": "No DeepSeek API key configured."}
 
@@ -241,51 +300,62 @@ class LlmClient:
             # Each trace gets unique session, prevents cross-case contamination
             effective_session_id = f"{trace_id}:{SESSION_START_TIME}"
 
-            # Debug: log session ID and context sizes
-            print(f"[SESSION] Creating Agent with:")
-            print(f"  user_id: {self.user_id}")
-            print(f"  session_id: {effective_session_id}")
-            print(f"  Final (Agno will prepend user_id): {self.user_id}:{effective_session_id}")
-            print(f"[CONTEXT] Prompt sizes:")
-            print(f"  system: {len(system):,} chars (~{len(system)//4:,} tokens)")
-            print(f"  user: {len(user):,} chars (~{len(user)//4:,} tokens)")
-            print(f"  knowledge: {'enabled' if self.knowledge else 'disabled'}")
-            print(f"  tools: {len(self.tools)} tools")
-            print(f"  user_memories: {'enabled' if self.memory_manager else 'disabled'}")
-
             # Retry once on transient LLM failure (network/timeout/rate-limit).
             # Without this, a single hiccup yields verdict=uncertain for the case.
             last_exc: Optional[Exception] = None
             result = None
             for attempt in range(2):
                 try:
-                    agent = Agent(
-                        model=model,
-                        system_message=system,
-                        use_json_mode=True,
-                        tools=self.tools,
-                        memory_manager=None,
-                        db=None,
-                        knowledge=None,
-                        knowledge_retriever=None,
-                        user_id=self.user_id,
-                        session_id=f"{effective_session_id}:retry{attempt}" if attempt else effective_session_id,
-                        enable_user_memories=False,
-                        add_memories_to_context=False,
-                        add_knowledge_to_context=False,
-                        add_history_to_context=False,
-                        num_history_runs=0,
-                        num_history_messages=0,
-                        tool_call_limit=self.tool_call_limit,
-                        compress_tool_results=self.compress_tool_results,
-                        max_tool_calls_from_history=self.max_tool_calls_from_history,
-                    )
+                    try:
+                        agent = Agent(
+                            model=model,
+                            system_message=system,
+                            use_json_mode=True,
+                            tools=self.tools,
+                            memory_manager=None,
+                            db=None,
+                            knowledge=None,
+                            knowledge_retriever=None,
+                            user_id=self.user_id,
+                            session_id=f"{effective_session_id}:retry{attempt}" if attempt else effective_session_id,
+                            enable_user_memories=False,
+                            add_memories_to_context=False,
+                            add_knowledge_to_context=False,
+                            add_history_to_context=False,
+                            num_history_runs=0,
+                            num_history_messages=0,
+                            tool_call_limit=self.tool_call_limit,
+                            compress_tool_results=self.compress_tool_results,
+                            max_tool_calls_from_history=self.max_tool_calls_from_history,
+                        )
+                    except TypeError as exc:
+                        if "unexpected keyword" not in str(exc):
+                            raise
+                        agent = Agent(
+                            model=model,
+                            system_message=system,
+                            use_json_mode=True,
+                            tools=self.tools,
+                            memory=None,
+                            storage=None,
+                            knowledge=None,
+                            retriever=None,
+                            user_id=self.user_id,
+                            session_id=f"{effective_session_id}:retry{attempt}" if attempt else effective_session_id,
+                            enable_user_memories=False,
+                            add_memory_references=False,
+                            add_references=False,
+                            add_history_to_messages=False,
+                            num_history_runs=0,
+                            num_history_responses=0,
+                            tool_call_limit=self.tool_call_limit,
+                        )
                     result = agent.run(user)
                     last_exc = None
                     break
                 except Exception as exc:
                     last_exc = exc
-                    print(f"[LLM retry] attempt {attempt + 1} failed: {exc}")
+                    logger.warning("LLM retry attempt %s failed: %s", attempt + 1, exc)
                     if attempt == 0:
                         time.sleep(2)
             if last_exc is not None:
@@ -303,7 +373,13 @@ class LlmClient:
                     "reasoning_tokens": getattr(metrics, "reasoning_tokens", 0),
                     "total_tokens": getattr(metrics, "total_tokens", 0),
                 }
-                print(f"[Token usage] {token_metrics['input_tokens']:,} in + {token_metrics['output_tokens']:,} out + {token_metrics['cache_read_tokens']:,} cache = {token_metrics['total_tokens']:,} total")
+                logger.debug(
+                    "Token usage: %s in + %s out + %s cache = %s total",
+                    token_metrics["input_tokens"],
+                    token_metrics["output_tokens"],
+                    token_metrics["cache_read_tokens"],
+                    token_metrics["total_tokens"],
+                )
         except Exception as exc:
             # Restore original OPENAI_API_KEY on error
             if original_openai_key is None:
@@ -326,6 +402,17 @@ class LlmClient:
         if token_metrics:
             if isinstance(raw_response, dict):
                 raw_response["metrics"] = token_metrics
+
+        # Detect provider-level failures. Agno 2.x (unlike 1.x) does not raise
+        # on HTTP errors such as 402 Insufficient Balance / 429 / auth errors;
+        # it returns a RunResponse whose content is the bare error string. Such
+        # a payload carries no judging/attribution fields, so flag it as a failed
+        # request rather than letting callers treat the error string as a
+        # (garbage) verdict and silently fall through to non-deterministic paths.
+        failure_reason = _detect_response_failure(content, parsed)
+        if failure_reason:
+            logger.warning("LLM response treated as failure: %s", failure_reason)
+            return {"error": "llm_request_failed", "raw_text": failure_reason, "raw_model_response": raw_response}
 
         if isinstance(parsed, dict):
             parsed.setdefault("raw_model_response", raw_response)

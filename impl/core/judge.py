@@ -38,9 +38,6 @@ def _extract_fields_from_trace(trace: RunTrace) -> Set[str]:
             for entry in ref_cond:
                 if isinstance(entry, dict) and "field" in entry:
                     fields.add(entry["field"])
-        for key in reference:
-            if "." in key or key.endswith("Age") or key.endswith("Sex") or key.endswith("Num"):
-                fields.add(key)
 
     # Extract from input/normalized_request structured payloads only.
     # Project-specific field name patterns belong in the project's adapter / field provider,
@@ -197,7 +194,7 @@ def load_judge_boundary_standard(spec: ProjectSpec) -> Dict[str, Any]:
     boundary = implementation_standard.get("judge_boundary") if isinstance(implementation_standard, dict) else None
     if not isinstance(boundary, dict) or not boundary:
         raise ValueError(
-            f"project {spec.id} missing implementation_standard.judge_boundary structured field"
+            f"project {spec.project_id} missing implementation_standard.judge_boundary structured field"
         )
     return dict(boundary)
 
@@ -482,24 +479,14 @@ def judge_trace(
     logger.info(f"[judge] Compact value_mappings: {len(compact_value_mappings)} fields")
     logger.info(f"[judge] Compact enhanced_rules: {len(compact_enhanced_rules)} fields")
 
-    # Create field definition search tool (项目专属 provider + 通用协议)
-    from impl.tools.field_retrieval import create_field_search_tool
-
-    # Load project-specific field provider
-    field_provider = None
-    try:
-        if spec.project_id == 'client_search':
-            from impl.projects.client_search.field_provider import ClientSearchFieldDefinitionProvider
-            field_provider = ClientSearchFieldDefinitionProvider(spec)
-        # Add other projects here as needed
-        # elif spec.project_id == 'QA':
-        #     from impl.projects.QA.field_provider import QAFieldDefinitionProvider
-        #     field_provider = QAFieldDefinitionProvider(spec)
-    except Exception as e:
-        logger.warning(f"[judge] Failed to load field provider for {spec.project_id}: {e}")
-
-    # Create tool if provider available
-    field_search_tool = create_field_search_tool(field_provider) if field_provider else None
+    # Project-specific judge tools must be provided by adapters through
+    # project_judge_context. Core judge must not import project tool classes or
+    # branch on project_id; see impl/protocols/tool_protocol.md.
+    judge_tools = []
+    if isinstance(project_judge_context, dict):
+        configured_tools = project_judge_context.get("judge_agno_tools") or []
+        if isinstance(configured_tools, list):
+            judge_tools = [tool for tool in configured_tools if callable(tool)]
 
     # System prompt: core protocol only (~10k chars)
     system = (
@@ -622,8 +609,7 @@ def judge_trace(
     logger.info(f"[judge] Compact context sizes: capability={compact_capability_size:,} chars, semantic={compact_semantic_size:,} chars")
 
     # Create LLM client (no knowledge base to avoid auto-loading 168k tokens)
-    tools = [field_search_tool] if field_search_tool else []
-    client = llm or project_llm_client(spec, role="judge", knowledge=None, tools=tools)
+    client = llm or project_llm_client(spec, role="judge", knowledge=None, tools=judge_tools)
     data = client.complete_json(system, user, trace_id=trace.trace_id)
 
     if data.get("error"):

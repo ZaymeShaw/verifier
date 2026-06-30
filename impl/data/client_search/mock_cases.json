@@ -59,7 +59,31 @@
     },
     "expected_quality": "correct",
     "source": "data_mock_seed",
-    "status": "pending"
+    "status": "pending",
+    "output": {
+      "logic": "AND",
+      "conditions": [
+        {
+          "field": "clientAge",
+          "operator": "RANGE",
+          "value": {
+            "min": 45,
+            "max": 45
+          }
+        },
+        {
+          "field": "clientSex",
+          "operator": "MATCH",
+          "value": "女"
+        },
+        {
+          "field": "annPremSegNum",
+          "operator": "GTE",
+          "value": 100000
+        }
+      ],
+      "summary": "45岁女性且年缴保费10万以上客户"
+    }
   },
   {
     "id": "cs-survival-benefit-correct-1",
@@ -95,7 +119,18 @@
     },
     "expected_quality": "correct",
     "source": "data_mock_seed",
-    "status": "pending"
+    "status": "pending",
+    "output": {
+      "logic": "AND",
+      "conditions": [
+        {
+          "field": "polNoInfo.payamountdue",
+          "operator": "MATCH",
+          "value": "是"
+        }
+      ],
+      "summary": "存在未领取生存金客户"
+    }
   },
   {
     "id": "cs-premium-unit-error-1",
@@ -131,7 +166,18 @@
     },
     "expected_quality": "incorrect",
     "source": "data_mock_seed",
-    "status": "pending"
+    "status": "pending",
+    "output": {
+      "logic": "AND",
+      "conditions": [
+        {
+          "field": "annPremSegNum",
+          "operator": "GTE",
+          "value": 1
+        }
+      ],
+      "summary": "年缴保费一万以上客户"
+    }
   },
   {
     "id": "cs-age-boundary-correct-1",
@@ -177,7 +223,23 @@
     },
     "expected_quality": "correct",
     "source": "data_mock_seed",
-    "status": "pending"
+    "status": "pending",
+    "output": {
+      "logic": "AND",
+      "conditions": [
+        {
+          "field": "clientAge",
+          "operator": "GTE",
+          "value": 45
+        },
+        {
+          "field": "clientSex",
+          "operator": "MATCH",
+          "value": "女"
+        }
+      ],
+      "summary": "45岁以上女性客户"
+    }
   },
   {
     "id": "cs-product-or-correct-1",
@@ -231,7 +293,27 @@
     },
     "expected_quality": "correct",
     "source": "data_mock_seed",
-    "status": "pending"
+    "status": "pending",
+    "output": {
+      "logic": "OR",
+      "conditions": [
+        {
+          "field": "pCategorys",
+          "operator": "CONTAINS",
+          "value": [
+            "年金保险"
+          ]
+        },
+        {
+          "field": "pCategorys",
+          "operator": "CONTAINS",
+          "value": [
+            "两全保险"
+          ]
+        }
+      ],
+      "summary": "购买年金险或两全险客户"
+    }
   },
   {
     "id": "cs-age-gt-boundary-error-1",
@@ -267,7 +349,18 @@
     },
     "expected_quality": "incorrect",
     "source": "data_mock_seed",
-    "status": "pending"
+    "status": "pending",
+    "output": {
+      "logic": "AND",
+      "conditions": [
+        {
+          "field": "clientAge",
+          "operator": "GTE",
+          "value": 50
+        }
+      ],
+      "summary": "50岁及以上客户"
+    }
   },
   {
     "id": "cs-critical-illness-only-1",
@@ -331,7 +424,32 @@
     },
     "expected_quality": "incorrect",
     "source": "data_mock_seed",
-    "status": "pending"
+    "status": "pending",
+    "output": {
+      "logic": "AND",
+      "conditions": [
+        {
+          "field": "pCategorys",
+          "operator": "CONTAINS",
+          "value": [
+            "疾病保险"
+          ]
+        },
+        {
+          "field": "pCategorys",
+          "operator": "NOT_CONTAINS",
+          "value": [
+            "年金保险",
+            "两全保险",
+            "医疗保险",
+            "意外保险",
+            "寿险",
+            "护理保险"
+          ]
+        }
+      ],
+      "summary": "仅购买重疾险客户"
+    }
   },
   {
     "id": "cs-family-responsibility-unsupported-1",
@@ -357,6 +475,11 @@
     },
     "expected_quality": "incorrect",
     "source": "data_mock_seed",
-    "status": "pending"
+    "status": "pending",
+    "output": {
+      "logic": "AND",
+      "conditions": [],
+      "summary": "未能映射到可执行客户搜索条件"
+    }
   }
 ]

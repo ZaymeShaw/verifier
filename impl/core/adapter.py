@@ -107,6 +107,33 @@ class ProjectAdapter(ABC):
         """
         return {}
 
+    def simulate_trace_nodes(self, trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:
+        """沿 trace.execution_trace 逐节点重新执行业务系统函数，返回模拟调用结果。
+
+        这是 Issue #3 用户核心诉求（"对整个业务系统 trace 进行模拟调用"）的协议扩展点。
+        各 adapter 重写此方法，对每个 trace 节点调用对应的业务系统原函数（如 normalize_path_types、
+        INTENT_MAPPING 查表、_text_overlap_ratio 等），比较模拟输出与 trace 记录的 actual，
+        标记不符合预期的节点。
+
+        返回结构:
+        {
+            "simulated_nodes": [
+                {
+                    "stage": "label_mapping",
+                    "simulated_output": {"mapped": "other"},
+                    "trace_actual": {"intent": "other", "raw_intent": "4001"},
+                    "status": "passed" | "diverged",
+                    "function_called": "INTENT_MAPPING.get",
+                    "source_file": "projects/marketting-planning-intent/intent.py:INTENT_MAPPING",
+                    "input_used": {"raw_intent": "4001"},
+                },
+                ...
+            ],
+            "diverged_nodes": [...],  # 仅 status=diverged 的节点
+        }
+        """
+        return {"simulated_nodes": [], "diverged_nodes": []}
+
     def build_attribute_tools(self) -> list:
         """返回归因过程中可用的项目特有工具函数列表。
 

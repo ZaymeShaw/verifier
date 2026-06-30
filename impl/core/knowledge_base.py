@@ -15,7 +15,7 @@ except ImportError:  # pragma: no cover - optional in test env
     dashscope = None
 import yaml
 from agno.knowledge.document import Document
-from agno.knowledge.embedder import Embedder
+from agno.embedder import Embedder
 from agno.vectordb.base import VectorDb
 
 ROOT = Path(__file__).resolve().parents[2]

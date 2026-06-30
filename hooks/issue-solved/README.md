@@ -96,6 +96,8 @@ hook 通过 block + reason 通知 Claude：
 - 只评估**用户核心诉求**是否通过实质性工作解决
 - 挑剔地评估 AI 的进度，不接受空洞声明
 - 必须有代码改动 + 验证证据才算解决
+- 审核时必须先按用户对话框顺序生成 `Dialog ID`（`U1`、`U2`...），再把每个用户对话框逐句/逐 bullet 拆成原子诉求（`U1.S1`、`U1.S2`...）；最终 verdict 以每个原子诉求是否满足为准，不能只按一条对话框摘要判定。
+- 审核证据不能只有代码改动；还需要按诉求性质给出测试、回归、case 分析、端到端/UAT、算法或系统效果分析等证据，证明用户路径和实际效果确实变好。
 - 通过：追加审核对话框到 issue 文件 + frontmatter 改为 `status: closed` + 写入 verdict
 - 不通过：追加审核对话框到 issue 文件 + frontmatter 改为 `status: open` + 写入 verdict
 
@@ -189,3 +191,36 @@ Stop hook 再次触发 → 读取 verdict
 ```
 
 也可以直接复制 `hooks.json` 的内容到 settings.json 的 hooks 字段中。
+
+
+
+
+
+
+
+# issue-solved hook
+
+## hook创建工作流
+
+1. 创建一个独立的审核agent
+2. hook通过agent的方式实现
+3. 该用来判断issue是否解决，判断原则上面有写
+4. 请不要将hook直接放在.claude中，将所有文件信息放在verifier/hooks/issue-solved，我需要的时候会自己使用以及配置
+5. hook的构建依赖 `hooks/issue-solved/config.yaml`，所有可配置项统一在该文件管理。核心路径映射：
+
+   | 配置路径 | 用途 |
+   |---------|------|
+   | `status.field_name` | frontmatter 中的状态字段名（hook 通过此字段判断 issue 是否 closed） |
+   | `status.closed_value` / `status.open_value` | 状态字段的值，hook 按忽略大小写比较 |
+   | `issue.dir` / `issue.file_pattern` | issue 文件存放目录和匹配模式 |
+   | `audit.dir` / `audit.file_pattern` | 审核结果目录和文件名模板（`{issue_id}.txt`） |
+   | `verdict.verdict_field` / `verdict.approved_value` / `verdict.rejected_value` / `verdict.reason_field` | 审核文件中判定字段的标识和通过/不通过的值 |
+   | `paths.audit_prompt_file` | 审核 agent prompt 模板路径 |
+
+6. 当审核完成时，将审核分析情况同步通过对话形式写入到issue/{issueid}.md中，更新问题open/close状态到issue/{issueid}.md中，并更新审核状态到issue/audit/{issueid}.txt中
+
+## 判断是否解决的原则（按此构建审核agent的上下文）
+
+- 只评估是否解决了issue中用户本身的核心述求为核心
+- 将所有ai（如claude）写的进度进行挑剔的评估，从用户诉求的角度出发指出ai的问题
+
