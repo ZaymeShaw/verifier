@@ -11,32 +11,6 @@ import time, json, os, re, sys, shutil
 from datetime import datetime
 
 # ============== CONFIGURATION MODULE ==============
-# Configure which projects to test and how many cases per project
-
-# Minimal test for context optimization validation (1 case per project)
-# CONFIG = {
-#     "projects": ["QA", "client_search"],
-#     "case_counts": {"QA": 1, "client_search": 1},
-#     "required_cases": {
-#         "QA": ["qa-gold-incomplete-1"],
-#         "client_search": ["cs-age-sex-premium-correct-1"]
-#     },
-# }
-
-# Full test configuration (4 projects)
-# CONFIG = {
-#     "projects": ["marketting-planning-intent", "QA", "client_search", "marketting-planning"],
-#     "case_counts": {
-#         "client_search": 20,  # More cases for client_search (most are fulfilled)
-#     },
-#     "required_cases": {
-#         "marketting-planning-intent": ["mpi-required-slot-missing-1"],
-#         "QA": ["qa-gold-incomplete-1", "qa-context-hallucination-1"],
-#         "client_search": ["cs-age-gt-boundary-error-1", "cs-family-responsibility-unsupported-1"],
-#         "marketting-planning": ["mp-premium-growth-plan-correct-1", "mp-target-unit-error-1", "mp-non-agent-1"],
-#     }
-# }
-
 # Full test configuration (4 projects)
 CONFIG = {
     "projects": ["marketting-planning-intent", "QA", "client_search", "marketting-planning"],
