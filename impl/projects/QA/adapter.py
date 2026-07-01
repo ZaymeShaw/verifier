@@ -1086,90 +1086,241 @@ class Adapter(ProjectAdapter):
         return len(expected_chars & actual_chars) / len(expected_chars)
 
     def build_attribute_tools(self) -> list:
-        """归因第二层 tool：直接暴露业务系统原函数给 attribute agent 调用。
-        LLM 自己决定调哪个、怎么分析。
+        """归因工具（LLM 动态按需调用层）。
 
-        QA 的第二层 tool 直接运行 _text_overlap_ratio / _infer_scenario 原函数，
-        原样返回结果。
+        与第一层（get_runtime_checks / simulate_trace_nodes，工作流固定流程产出、注入 prompt）的区别
+        在于获取信息的方式：本方法返回的 tool 由 LLM 根据当前 case 上下文动态决定调哪个、传什么参数、
+        怎么组合——同一类数据两层都可能查，第一层是自动化管线，第二层是 LLM 按需探查。
+
+        第一层 get_runtime_checks 已做全量校验（scenario/infer_scenario/overlap/golden_match/taxonomy），
+        simulate_trace_nodes 已对 trace 节点跑过 _text_overlap_ratio + _infer_scenario 复现。
+        第二层提供第一层没覆盖的能力：
+        - run_qa_failure_root_cause：按回答特征分类失败模式（幻觉/矛盾/不完整/不正确）
+        - run_qa_taxonomy_error_type：按 verdict 和 evidence 分类错误类型
+        - run_gold_answer_exact_match：精确匹配 actual vs golden answer
+        - run_qa_taxonomy：返回 QA 错误分类全量列表
+        - run_qa_quality_flags：按 scenario 返回数据质量标志
+        - run_qa_score_dimensions：返回 QA 评分维度全量列表
         """
         adapter = self
 
-        def run_text_overlap_ratio(actual_answer: str, golden_answer: str) -> dict:
-            """直接运行业务系统 _text_overlap_ratio 原函数。
+        def run_qa_failure_root_cause(scenario: str, actual_answer: str, golden_answer: str, contexts: str, overlap_ratio: float, error_type: str) -> dict:
+            """复现业务系统 _qa_failure_root_cause 原函数。
+
+            按 actual_answer vs golden_answer 的具体特征区分失败模式：
+            幻觉（无依据声明）、矛盾（与材料相反）、不完整（遗漏关键条件）、不正确。
 
             Args:
+                scenario: 场景（qa_gold_answer / qa_context_faithfulness / qa_weak_quality）
                 actual_answer: 实际回答文本
                 golden_answer: 黄金参考答案文本
+                contexts: 上下文文本
+                overlap_ratio: 字符重叠率（0-1）
+                error_type: 错误类型（answer_incorrect / answer_incomplete / unsupported_claim / hallucination / contradiction）
             """
-            actual_text = str(actual_answer or "")
-            golden_text = str(golden_answer or "")
-            overlap = adapter._text_overlap_ratio(actual_text, golden_text) if (actual_text and golden_text) else None
+            category, summary, fix_suggestion = adapter._qa_failure_root_cause(
+                scenario, actual_answer, golden_answer,
+                [contexts] if contexts else [],
+                overlap_ratio, error_type
+            )
             return {
-                "input_actual": actual_text[:300],
-                "input_golden": golden_text[:300],
-                "overlap_ratio": round(overlap, 3) if overlap is not None else None,
+                "causal_category": category,
+                "summary": summary,
+                "fix_suggestion": fix_suggestion,
+                "source": "impl/projects/QA/adapter.py:_qa_failure_root_cause",
+            }
+
+        def run_qa_taxonomy_error_type(verdict: str, actual_answer: str, golden_answer: str, wrong_text: str = "") -> dict:
+            """复现业务系统 _qa_taxonomy_error_type 原函数。
+
+            按 verdict 和 evidence 判定错误类型：none / needs_human_review / answer_incomplete / answer_incorrect。
+
+            Args:
+                verdict: judge 判定结果（correct / incorrect / uncertain）
+                actual_answer: 实际回答
+                golden_answer: 黄金答案
+                wrong_text: wrong 字段文本
+            """
+            taxonomy = list(adapter.spec.frontend_extensions.get("error_taxonomy") or [])
+            from impl.core.schema import JudgeResult
+            # 模拟一个简化 judge_result 来调用 _qa_taxonomy_error_type
+            class FakeJudge:
+                pass
+            fake = FakeJudge()
+            fake.verdict = verdict
+            fake.wrong = [wrong_text] if wrong_text else []
+            fake.expected = None
+            fake.actual = None
+            ref = {"golden_answer": golden_answer}
+            act = {"actual_answer": actual_answer}
+            error_type = adapter._qa_taxonomy_error_type(fake, ref, act, taxonomy)
+            return {
+                "error_type": error_type,
+                "verdict": verdict,
+                "actual_length": len(str(actual_answer or "")),
+                "golden_length": len(str(golden_answer or "")),
+                "source": "impl/projects/QA/adapter.py:_qa_taxonomy_error_type",
+            }
+
+        def run_gold_answer_exact_match(actual_answer: str, golden_answer: str) -> dict:
+            """精确匹配 actual_answer 与 golden_answer（strip 后逐字符比较）。
+
+            第一层 simulate_trace_nodes 已对每个 trace 节点跑过此比较，本 tool 让 LLM 按需
+            对非 trace 中的 answer pair 做精确匹配。
+
+            Args:
+                actual_answer: 实际回答
+                golden_answer: 黄金答案
+            """
+            actual = str(actual_answer or "").strip()
+            golden = str(golden_answer or "").strip()
+            exact = actual == golden if actual and golden else False
+            overlap = adapter._text_overlap_ratio(actual, golden) if (actual and golden) else 0.0
+            return {
+                "exact_match": exact,
+                "overlap_ratio": round(overlap, 3),
+                "actual_length": len(actual),
+                "golden_length": len(golden),
                 "source": "impl/projects/QA/adapter.py:_text_overlap_ratio",
             }
 
-        def run_infer_scenario(question: str, actual_answer: str, golden_answer: str, contexts: list) -> dict:
-            """直接运行业务系统 _infer_scenario 原函数。
-
-            Args:
-                question: 问题文本
-                actual_answer: 实际回答
-                golden_answer: 黄金答案
-                contexts: 上下文列表
-            """
-            scenario = adapter._infer_scenario(question, actual_answer, golden_answer, adapter._normalize_contexts(contexts) if contexts else [])
+        def run_qa_taxonomy() -> dict:
+            """返回 QA 错误分类全量列表（15 种）。"""
+            taxonomy = list(adapter.spec.frontend_extensions.get("error_taxonomy") or [])
             return {
-                "input_question": str(question or "")[:200],
-                "scenario": scenario,
-                "source": "impl/projects/QA/adapter.py:_infer_scenario",
+                "error_taxonomy": taxonomy,
+                "total_types": len(taxonomy),
+                "source": "project.yaml:frontend_extensions.error_taxonomy",
             }
 
-        run_text_overlap_ratio.__name__ = "run_text_overlap_ratio"
-        run_infer_scenario.__name__ = "run_infer_scenario"
-        return [run_text_overlap_ratio, run_infer_scenario]
+        def run_qa_quality_flags(scenario: str = "") -> dict:
+            """返回 QA 质量标志定义（检查 sample 数据是否缺失关键字段）。
+
+            Args:
+                scenario: 场景名。不传则返回全量标志定义。
+            """
+            # scenario 列表
+            scenarios = adapter.spec.frontend_extensions.get("scenarios") or []
+            # quality_flags 语义说明（来自 _normalize_sample / data_quality_flags 字段）
+            quality_flags = {
+                "missing_question": "question 为空或缺失",
+                "missing_actual_answer": "actual_answer 为空或缺失",
+                "missing_golden_answer": "golden_answer 为空或缺失",
+                "missing_contexts": "contexts 为空或缺失",
+                "estimated_quality_only": "只能评估 QA 质量上限，无法做精确判断",
+                "invalid_sample": "样本无效",
+            }
+            return {
+                "scenarios": scenarios,
+                "quality_flags": quality_flags,
+                "source": "impl/projects/QA/adapter.py + project.yaml",
+            }
+
+        def run_qa_score_dimensions() -> dict:
+            """返回 QA 评分维度全量列表（9 个维度）。"""
+            dims = adapter.spec.frontend_extensions.get("score_dimensions") or []
+            return {
+                "score_dimensions": dims,
+                "total_dimensions": len(dims),
+                "source": "project.yaml:frontend_extensions.score_dimensions",
+            }
+
+        run_qa_failure_root_cause.__name__ = "run_qa_failure_root_cause"
+        run_qa_taxonomy_error_type.__name__ = "run_qa_taxonomy_error_type"
+        run_gold_answer_exact_match.__name__ = "run_gold_answer_exact_match"
+        run_qa_taxonomy.__name__ = "run_qa_taxonomy"
+        run_qa_quality_flags.__name__ = "run_qa_quality_flags"
+        run_qa_score_dimensions.__name__ = "run_qa_score_dimensions"
+        return [run_qa_failure_root_cause, run_qa_taxonomy_error_type, run_gold_answer_exact_match, run_qa_taxonomy, run_qa_quality_flags, run_qa_score_dimensions]
 
     def simulate_trace_nodes(self, trace, judge_result) -> Dict[str, Any]:
-        """Issue #3: 沿 trace 逐节点调业务系统函数复现，定位最早分歧。
+        """沿 trace 逐局部链路复现业务系统函数，定位最早分歧。
 
-        对 qa.output.read / adapter.extract_output 节点，用 _text_overlap_ratio 复现
-        actual_answer 与 golden_answer 的匹配度，比较模拟输出与 trace actual。
+        链路拆解（3 段）：
+        1. qa.sample.normalize — 重放 _infer_scenario + _quality_flags，判断样本质量和场景
+        2. qa.output.read — 重放 _gold_answer_exact_probe + _text_overlap_ratio
+        3. adapter.extract_output — 复现 extract_output 的 actual_answer_present 判定
+
+        每段标记 passed/diverged，最早 diverged 段即分歧起点。
         """
         actual_answer = str((trace.extracted_output or {}).get("actual_answer") or "")
         golden_answer = str(((trace.project_fields or {}).get("reference") or {}).get("golden_answer") or "")
-        source = "impl/projects/QA/adapter.py:_text_overlap_ratio/_infer_scenario"
+        question = str((trace.input or {}).get("question") or (trace.normalized_request or {}).get("question") or "")
+        contexts = ((trace.project_fields or {}).get("reference") or {}).get("contexts") or []
+        source = "impl/projects/QA/adapter.py"
+
         simulated_nodes: list[Dict[str, Any]] = []
         diverged_nodes: list[Dict[str, Any]] = []
+
         for node in (trace.execution_trace or []):
             if not isinstance(node, dict):
                 continue
             stage = str(node.get("stage") or node.get("node") or "")
-            if stage not in ("qa.output.read", "adapter.extract_output", "qa.sample.normalize"):
-                continue
             evidence = node.get("evidence") if isinstance(node.get("evidence"), dict) else {}
-            if not (actual_answer and golden_answer):
-                continue
-            overlap = self._text_overlap_ratio(actual_answer, golden_answer)
-            exact = actual_answer.strip() == golden_answer.strip()
-            scenario = self._infer_scenario("", actual_answer, golden_answer, [])
-            trace_actual_present = bool(evidence.get("actual_answer_present"))
-            # 分歧判定：若 trace 显示 answer present 但模拟 exact_match=False，则 diverged
-            status = "passed" if exact else "diverged"
-            entry = {
-                "stage": stage,
-                "input_used": {"actual_answer": actual_answer[:100], "golden_answer": golden_answer[:100]},
-                "simulated_output": {"exact_match": exact, "overlap_ratio": round(overlap, 3), "scenario": scenario},
-                "trace_actual": {"actual_answer_present": trace_actual_present},
-                "status": status,
-                "function_called": "_text_overlap_ratio",
-                "source_file": source,
-            }
-            simulated_nodes.append(entry)
-            if status == "diverged":
-                diverged_nodes.append(entry)
-        return {"simulated_nodes": simulated_nodes, "diverged_nodes": diverged_nodes, "source": source}
+            entry = None
+
+            # --- 段 1: qa.sample.normalize（重放 scenario 推断） ---
+            if stage == "qa.sample.normalize":
+                scenario = self._infer_scenario(question, actual_answer, golden_answer, self._normalize_contexts(contexts))
+                # data_quality_flags 来自 trace.evidence，不是函数
+                trace_flags = evidence.get("flags") or []
+                status = "passed" if scenario != "invalid_sample" else "diverged"
+                entry = {
+                    "stage": stage,
+                    "input_used": {"question": question[:100], "has_actual_answer": bool(actual_answer), "has_golden_answer": bool(golden_answer)},
+                    "simulated_output": {"scenario": scenario, "data_quality_flags": trace_flags},
+                    "trace_actual": {"scenario": evidence.get("scenario"), "flags": trace_flags},
+                    "status": status,
+                    "function_called": "_infer_scenario",
+                    "source_file": source,
+                }
+
+            # --- 段 2: qa.output.read（重放 exact_match + overlap） ---
+            elif stage == "qa.output.read":
+                if actual_answer and golden_answer:
+                    exact = actual_answer.strip() == golden_answer.strip()
+                    overlap = self._text_overlap_ratio(actual_answer, golden_answer)
+                else:
+                    exact = False
+                    overlap = 0.0
+                status = "passed" if exact else "diverged"
+                entry = {
+                    "stage": stage,
+                    "input_used": {"actual_answer": actual_answer[:100], "golden_answer": golden_answer[:100]},
+                    "simulated_output": {"exact_match": exact, "overlap_ratio": round(overlap, 3)},
+                    "trace_actual": {"actual_answer_present": bool(actual_answer)},
+                    "status": status,
+                    "function_called": "_text_overlap_ratio + _gold_answer_exact_probe",
+                    "source_file": source,
+                }
+
+            # --- 段 3: adapter.extract_output（复现 actual_answer_present 判定） ---
+            elif stage == "adapter.extract_output":
+                actual_answer_present = bool(actual_answer)
+                status = "passed" if actual_answer_present else "diverged"
+                entry = {
+                    "stage": stage,
+                    "input_used": {},
+                    "simulated_output": {"actual_answer_present": actual_answer_present},
+                    "trace_actual": {"actual_answer_present": evidence.get("actual_answer_present")},
+                    "status": status,
+                    "function_called": "extract_output",
+                    "source_file": source,
+                }
+
+            if entry:
+                simulated_nodes.append(entry)
+                if entry["status"] == "diverged":
+                    diverged_nodes.append(entry)
+
+        earliest = diverged_nodes[0] if diverged_nodes else None
+        return {
+            "simulated_nodes": simulated_nodes,
+            "diverged_nodes": diverged_nodes,
+            "earliest_divergence": earliest,
+            "source": source,
+            "segment_count": len(simulated_nodes),
+        }
 
     def get_runtime_checks(self, runtime_values: Dict[str, Any], context: Dict[str, Any] | None = None) -> Dict[str, Any]:
         """直接引用 QA 业务系统关键函数，校验 scenario/golden_answer/contexts 契约。

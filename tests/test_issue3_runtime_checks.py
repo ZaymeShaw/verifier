@@ -410,7 +410,7 @@ def test_build_attribute_tools_returns_callable_functions():
 
 
 def test_simulate_trace_nodes_mpi_label_mapping():
-    """marketting-planning-intent 的 simulate_trace_nodes 对 label_mapping 节点模拟调用 INTENT_MAPPING"""
+    """marketting-planning-intent 的 simulate_trace_nodes 沿局部链路复现，定位最早分歧"""
     spec = load_project("marketting-planning-intent")
     adapter = load_adapter(spec)
     trace = _mpi_trace()
@@ -424,7 +424,9 @@ def test_simulate_trace_nodes_mpi_label_mapping():
     assert "simulated_nodes" in result
     assert "diverged_nodes" in result
     assert "source" in result
-    assert len(result["simulated_nodes"]) > 0, "应对 label_mapping/adapter_extraction 节点产出模拟结果"
+    assert "earliest_divergence" in result
+    assert "segment_count" in result
+    assert len(result["simulated_nodes"]) > 0, "应沿 trace 局部链路产出模拟结果"
     # 每个模拟节点应包含关键字段
     for node in result["simulated_nodes"]:
         assert "stage" in node
@@ -433,12 +435,14 @@ def test_simulate_trace_nodes_mpi_label_mapping():
         assert "status" in node
         assert "function_called" in node
         assert "source_file" in node
-        assert node["function_called"] == "INTENT_MAPPING.get"
-        assert "intent.py" in node["source_file"]
+    # label_mapping 段应调用 INTENT_MAPPING
+    label_nodes = [n for n in result["simulated_nodes"] if n["stage"] == "label_mapping"]
+    if label_nodes:
+        assert "INTENT_MAPPING" in label_nodes[0]["function_called"]
 
 
 def test_simulate_trace_nodes_mp_path_dispatch():
-    """marketting-planning 的 simulate_trace_nodes 对 path_dispatch 节点模拟调用 normalize_path_types"""
+    """marketting-planning 的 simulate_trace_nodes 沿局部链路复现 path_dispatch 段"""
     spec = load_project("marketting-planning")
     adapter = load_adapter(spec)
     trace = _mp_trace()
@@ -447,17 +451,17 @@ def test_simulate_trace_nodes_mp_path_dispatch():
 
     assert "simulated_nodes" in result
     assert "diverged_nodes" in result
-    # path_dispatch 节点应被模拟
+    assert "earliest_divergence" in result
+    # path_dispatch 段应被模拟
     path_nodes = [n for n in result["simulated_nodes"] if n["stage"] == "path_dispatch"]
     if path_nodes:
         node = path_nodes[0]
-        assert node["function_called"] == "normalize_path_types"
-        assert "path_types.py" in node["source_file"]
+        assert "normalize_path_types" in node["function_called"]
         assert "normalized_actual" in node["simulated_output"]
 
 
 def test_simulate_trace_nodes_qa_answer_quality():
-    """QA 的 simulate_trace_nodes 对 qa.output.read 节点模拟调用 _text_overlap_ratio"""
+    """QA 的 simulate_trace_nodes 沿局部链路复现 qa.output.read 段"""
     spec = load_project("QA")
     adapter = load_adapter(spec)
     trace = _qa_trace()
@@ -466,16 +470,19 @@ def test_simulate_trace_nodes_qa_answer_quality():
 
     assert "simulated_nodes" in result
     assert "diverged_nodes" in result
+    assert "earliest_divergence" in result
     assert len(result["simulated_nodes"]) > 0
-    for node in result["simulated_nodes"]:
-        assert node["function_called"] == "_text_overlap_ratio"
-        assert "QA/adapter.py" in node["source_file"]
+    # qa.output.read 段应复现 _text_overlap_ratio
+    output_nodes = [n for n in result["simulated_nodes"] if n["stage"] == "qa.output.read"]
+    if output_nodes:
+        node = output_nodes[0]
+        assert "_text_overlap_ratio" in node["function_called"]
         assert "overlap_ratio" in node["simulated_output"]
         assert "exact_match" in node["simulated_output"]
 
 
 def test_simulate_trace_nodes_cs_field_validation():
-    """client_search 的 simulate_trace_nodes 对 routing 节点模拟调用 _capability_manifest 校验字段"""
+    """client_search 的 simulate_trace_nodes 沿局部链路复现 routing 段"""
     spec = load_project("client_search")
     adapter = load_adapter(spec)
     trace = _cs_trace()
@@ -484,8 +491,12 @@ def test_simulate_trace_nodes_cs_field_validation():
 
     assert "simulated_nodes" in result
     assert "diverged_nodes" in result
+    assert "earliest_divergence" in result
     assert len(result["simulated_nodes"]) > 0
-    for node in result["simulated_nodes"]:
-        assert node["function_called"] == "_capability_manifest"
+    # routing 段应调 _capability_manifest
+    routing_nodes = [n for n in result["simulated_nodes"] if n["stage"] == "client_search.routing"]
+    if routing_nodes:
+        node = routing_nodes[0]
+        assert "_capability_manifest" in node["function_called"]
         assert "valid_field_count" in node["simulated_output"]
         assert "unknown_fields" in node["simulated_output"]

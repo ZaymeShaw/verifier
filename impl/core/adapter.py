@@ -135,13 +135,25 @@ class ProjectAdapter(ABC):
         return {"simulated_nodes": [], "diverged_nodes": []}
 
     def build_attribute_tools(self) -> list:
-        """返回归因**第二层**工具函数列表。
+        """返回归因工具函数列表，供 LLM **动态按需调用**。
 
-        分层设计：
-        - 第一层：工作流驱动（get_runtime_checks / simulate_trace_nodes），pipeline 预执行，
-          固定流程获取信息，结果注入 user prompt。适合"每个 case 都需要、可枚举的"信息。
-        - 第二层（本方法）：LLM 动态决策，按需调用工具获取信息。适合工作流不好覆盖的场景：
-          上下文过多需要抽取局部信息、信息组合方式 case 间不同、需要 LLM 先判断缺什么再查什么。
+        分层设计（按获取信息的方式划分，不是按内容复杂度）：
+
+        **第一层 — 工作流驱动（pipeline 预执行）**：
+        - get_runtime_checks / simulate_trace_nodes
+        - pipeline 用**固定流程**调用业务系统原函数（查表、校验、逐节点复现）
+        - 结果注入 user prompt，case 间差异只体现在数值上
+        - 适合：每个 case 都需要的、可枚举的信息获取
+
+        **第二层 — LLM 动态决策（本方法返回的工具）**：
+        - 信息获取方式从"工作流"变成"动态决策"
+        - LLM 根据当前 case 上下文自主决定调哪个 tool、传什么参数、怎么组合
+        - 适合：上下文太多需要按需查局部信息、信息组合方式 case 间不同、
+          需要先判断缺什么再查什么
+        - tool 返回业务系统原函数的原始输出，**结论判断由 LLM 做**
+
+        两层的区别是获取信息的方式，不是内容分工——同一类数据两个层面都可能获取，
+        只是第一层是自动化管线，第二层是 LLM 按需探查。
 
         默认返回空列表 — 通用工具（search_source_file）会自动注入。
         """

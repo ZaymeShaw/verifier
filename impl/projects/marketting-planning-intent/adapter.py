@@ -684,6 +684,79 @@ class Adapter(ProjectAdapter):
             "confidence": "high" if failed else "medium",
         }
 
+    def _load_business_intent_recognition_module(self):
+        """加载业务系统 app/workflow/steps/intent_recognition.py 的规则层函数。
+
+        只取不调 LLM 的规则层（try_rule_based_intent / try_homepage_intent /
+        _is_target_adjustment_message 等判定谓词），不取 recognize_intent（它要 LLM）。
+        """
+        ext_repo = self.spec.application.get("external_repo") if isinstance(self.spec.application, dict) else None
+        if not ext_repo:
+            return {}, ""
+        source_path = Path(ext_repo) / "app" / "workflow" / "steps" / "intent_recognition.py"
+        if not source_path.exists():
+            return {}, str(source_path)
+        try:
+            spec = importlib.util.spec_from_file_location("marketing_planning_intent_recognition_runtime", source_path)
+            if spec is None or spec.loader is None:
+                return {}, str(source_path)
+            module = importlib.util.module_from_spec(spec)
+            # 业务系统 import 链需要 app 包可见，把 ext_repo 加入 sys.path
+            import sys
+            ext_root = str(Path(ext_repo))
+            if ext_root not in sys.path:
+                sys.path.insert(0, ext_root)
+            spec.loader.exec_module(module)
+            return {
+                "try_rule_based_intent": getattr(module, "try_rule_based_intent", None),
+                "try_homepage_intent": getattr(module, "try_homepage_intent", None),
+                "INTENT_RECOGNITION_PROMPT": getattr(module, "INTENT_RECOGNITION_PROMPT", None) if hasattr(module, "INTENT_RECOGNITION_PROMPT") else None,
+            }, str(source_path)
+        except Exception:
+            return {}, str(source_path)
+
+    def _load_business_intent_prompt(self) -> tuple[str, str]:
+        """加载业务系统 app/workflow/prompts/intent_prompt.py:INTENT_RECOGNITION_PROMPT。"""
+        ext_repo = self.spec.application.get("external_repo") if isinstance(self.spec.application, dict) else None
+        if not ext_repo:
+            return "", ""
+        source_path = Path(ext_repo) / "app" / "workflow" / "prompts" / "intent_prompt.py"
+        if not source_path.exists():
+            return "", ""
+        try:
+            spec = importlib.util.spec_from_file_location("marketing_planning_intent_prompt_runtime", source_path)
+            if spec is None or spec.loader is None:
+                return "", ""
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return str(getattr(module, "INTENT_RECOGNITION_PROMPT", "") or ""), str(source_path)
+        except Exception:
+            return "", ""
+
+    def _load_business_path_types_module(self) -> Dict[str, Any]:
+        """加载业务系统 app/workflow/path_types.py 的纯函数（无 LLM 依赖）。"""
+        ext_repo = self.spec.application.get("external_repo") if isinstance(self.spec.application, dict) else None
+        if not ext_repo:
+            return {}
+        source_path = Path(ext_repo) / "app" / "workflow" / "path_types.py"
+        if not source_path.exists():
+            return {}
+        try:
+            spec = importlib.util.spec_from_file_location("marketing_planning_intent_path_types_runtime", source_path)
+            if spec is None or spec.loader is None:
+                return {}
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return {
+                "normalize_path_types": getattr(module, "normalize_path_types", None),
+                "extract_target_value_from_text": getattr(module, "extract_target_value_from_text", None),
+                "extract_path_types_from_text": getattr(module, "extract_path_types_from_text", None),
+                "VALID_PATH_TYPES": getattr(module, "VALID_PATH_TYPES", ()),
+                "PATH_TYPE_ALIASES": getattr(module, "PATH_TYPE_ALIASES", {}),
+            }, str(source_path)
+        except Exception:
+            return {}
+
     def _load_intent_mapping_source(self) -> tuple[Dict[str, str], List[str], str]:
         source_path = Path(__file__).resolve().parents[3] / "projects" / "marketting-planning-intent" / "intent.py"
         source = "projects/marketting-planning-intent/intent.py:INTENT_MAPPING"
@@ -698,16 +771,66 @@ class Adapter(ProjectAdapter):
         return mapping, enum_values, source
 
     def build_attribute_tools(self) -> list:
-        """归因第二层 tool：直接暴露业务系统原函数给 attribute agent 调用。
-        LLM 自己决定调哪个、怎么分析。
+        """归因工具（LLM 动态按需调用层）。
 
-        原函数来自 projects/marketting-planning-intent/intent.py（INTENT_MAPPING 查表）
-        和外部仓库 app/workflow/steps/intent_recognition.py（规则识别），原样返回结果。
+        与第一层（get_runtime_checks / simulate_trace_nodes，工作流固定流程产出、注入 prompt）的区别
+        在于获取信息的方式：本方法返回的 tool 由 LLM 根据当前 case 上下文动态决定调哪个、传什么参数、
+        怎么组合——同一类数据两层都可能查，第一层是自动化管线，第二层是 LLM 按需探查。
+
+        本 tool 暴露业务系统原函数，原样返回结果，结论由 LLM 做。
+
+        第一层 simulate_trace_nodes 已对 trace 节点跑过 INTENT_MAPPING 查表（全量固定流程）。
+        第二层提供：
+        - run_intent_recognition_rules：重放业务系统规则管线（Tier 0~3），判断 LLM 是否应该被调用
+        - run_intent_mapping_lookup：参数化查表（第一层没覆盖的相邻 raw_intent 编码）
+        - run_intent_recognition_prompt：查看 LLM 使用的提示词原文
+        - run_extract_path_types：从文本提取路径类型
+        - run_normalize_path_types：归一化路径类型
         """
         adapter = self
 
+        def run_intent_recognition_rules(query: str, contexts: str = "") -> dict:
+            """重放业务系统 intent 规则管线（Tier 0~3），不调 LLM。
+
+            直接调用业务系统 app/workflow/steps/intent_recognition.py 的
+            try_rule_based_intent（含 try_homepage_intent），返回规则层判断结果。
+            用于判断：LLM 被调用时，是否规则层已经能给出确定结果？
+
+            Args:
+                query: 用户查询文本
+                contexts: 对话上下文文本（可选，多轮场景）
+            """
+            module, source = adapter._load_business_intent_recognition_module()
+            fn = module.get("try_rule_based_intent") if module else None
+            if not fn:
+                return {"error": "无法加载业务系统 intent_recognition 规则层", "source": source}
+            # 构造 ContextItem 列表
+            from app.schemas.request import ContextItem as _Ctx
+            ctx_list = []
+            if contexts.strip():
+                ctx_list = [_Ctx(query=contexts, answer="")]
+            result = fn(query, ctx_list or None)
+            if result is not None:
+                return {
+                    "rule_matched": True,
+                    "intent": str(result.intent.value) if hasattr(result.intent, "value") else str(result.intent),
+                    "confidence": result.confidence,
+                    "target_value": result.target_value,
+                    "path_types": result.path_types,
+                    "source": source,
+                }
+            return {
+                "rule_matched": False,
+                "note": "规则层未匹配，意图识别会走 LLM",
+                "source": source,
+            }
+
         def run_intent_mapping_lookup(raw_intent: str) -> dict:
             """直接运行 INTENT_MAPPING 查表（原函数级，非包装）。
+
+            第一层 simulate_trace_nodes 已对 trace 节点跑过 INTENT_MAPPING 查表并注入 prompt。
+            本 tool 用于：第一层没覆盖的相邻查询（如某个 raw_intent 不在 trace 节点里、需要按需查它
+            在映射表中的位置和相邻规则）。结论判断由 LLM 做。
 
             Args:
                 raw_intent: 原始 intent 编码（如 "4001"）
@@ -723,48 +846,233 @@ class Adapter(ProjectAdapter):
                 "source": source,
             }
 
+        def run_intent_recognition_prompt() -> dict:
+            """返回业务系统 LLM 意图识别使用的 system prompt 原文。
+
+            用于判断：LLM 的分类规则是否与 prompt 定义一致？prompt 是否覆盖了当前 query 类型？
+            """
+            prompt_text, source = adapter._load_business_intent_prompt()
+            return {
+                "prompt": prompt_text,
+                "source": source,
+                "length": len(prompt_text),
+            }
+
+        def run_extract_path_types(query: str) -> dict:
+            """从 query 文本中提取路径类型（业务系统原函数 extract_path_types_from_text）。
+
+            第一层 get_runtime_checks 未单独暴露此函数。用于 LLM 按需判断：
+            query 是否包含路径类型信息？规则层是否能提取到？
+
+            Args:
+                query: 用户查询文本
+            """
+            path_module, source = adapter._load_business_path_types_module()
+            if not path_module:
+                return {"error": "无法加载 path_types 模块", "source": source}
+            fn = path_module.get("extract_path_types_from_text")
+            result = fn(query) if fn else None
+            return {
+                "query": query[:200],
+                "extracted_path_types": result,
+                "valid_path_types": list(path_module.get("VALID_PATH_TYPES", ())),
+                "aliases": dict(path_module.get("PATH_TYPE_ALIASES", {})),
+                "source": source,
+            }
+
+        def run_normalize_path_types(path_types: list) -> dict:
+            """归一化路径类型列表（去重、去无效、保序）。业务系统原函数 normalize_path_types。
+
+            Args:
+                path_types: 路径类型列表（中文，如 ["队伍", "客户"]）
+            """
+            path_module, source = adapter._load_business_path_types_module()
+            if not path_module:
+                return {"error": "无法加载 path_types 模块", "source": source}
+            fn = path_module.get("normalize_path_types")
+            result = fn(path_types) if fn else None
+            return {
+                "input": path_types,
+                "normalized": result,
+                "valid_path_types": list(path_module.get("VALID_PATH_TYPES", ())),
+                "aliases": dict(path_module.get("PATH_TYPE_ALIASES", {})),
+                "source": source,
+            }
+
+        run_intent_recognition_rules.__name__ = "run_intent_recognition_rules"
         run_intent_mapping_lookup.__name__ = "run_intent_mapping_lookup"
-        return [run_intent_mapping_lookup]
+        run_intent_recognition_prompt.__name__ = "run_intent_recognition_prompt"
+        run_extract_path_types.__name__ = "run_extract_path_types"
+        run_normalize_path_types.__name__ = "run_normalize_path_types"
+        return [run_intent_recognition_rules, run_intent_mapping_lookup, run_intent_recognition_prompt, run_extract_path_types, run_normalize_path_types]
 
     def simulate_trace_nodes(self, trace, judge_result) -> Dict[str, Any]:
-        """Issue #3: 沿 trace 逐节点调业务系统函数复现，定位最早分歧。
+        """沿 trace 逐局部链路复现业务系统函数，定位最早分歧。
 
-        对每个可模拟节点调用 INTENT_MAPPING 查表，比较模拟输出与 trace actual。
+        链路拆解（4 段）：
+        1. request_normalization — 重放 build_request 得到 query/expected_intent/reference
+        2. intent_api_call — 重放规则管线 try_rule_based_intent（不调 LLM），判断规则层是否已能确定
+        3. label_mapping — 重放 INTENT_MAPPING.get 查表，比对 trace actual
+        4. adapter_extraction — 复现 extract_output 解析逻辑，比对 slots/confidence/fallback
+
+        每段标记 passed/diverged，最早 diverged 的段即为分歧起点。
         """
-        mapping, _, source = self._load_intent_mapping_source()
-        if not mapping:
-            return {"simulated_nodes": [], "diverged_nodes": [], "note": "INTENT_MAPPING 不可加载，无法模拟"}
+        mapping, _, mapping_source = self._load_intent_mapping_source()
+        intent_module, intent_source = self._load_business_intent_recognition_module()
+        path_module, path_source = self._load_business_path_types_module()
+        try_rule_based_intent = intent_module.get("try_rule_based_intent") if intent_module else None
+        try_homepage_intent = intent_module.get("try_homepage_intent") if intent_module else None
+
         simulated_nodes: list[Dict[str, Any]] = []
         diverged_nodes: list[Dict[str, Any]] = []
+
         for node in (trace.execution_trace or []):
             if not isinstance(node, dict):
                 continue
             stage = str(node.get("stage") or node.get("node") or "")
             evidence = node.get("evidence") if isinstance(node.get("evidence"), dict) else {}
-            raw_intent = str(evidence.get("raw_intent") or "").strip()
-            # 仅对带 raw_intent 的节点（label_mapping / adapter_extraction / intent_api_call）模拟
-            if not raw_intent:
-                continue
-            simulated_mapped = mapping.get(raw_intent)
-            trace_actual = {"intent": evidence.get("intent"), "raw_intent": raw_intent}
-            simulated_output = {"mapped_intent": simulated_mapped if simulated_mapped is not None else "other"}
-            # 判断是否一致：trace 的 intent 应等于模拟映射结果
-            trace_intent = str(evidence.get("intent") or "").strip()
-            sim_intent = str(simulated_output["mapped_intent"])
-            status = "passed" if (not trace_intent or trace_intent == sim_intent) else "diverged"
-            entry = {
-                "stage": stage,
-                "input_used": {"raw_intent": raw_intent},
-                "simulated_output": simulated_output,
-                "trace_actual": trace_actual,
-                "status": status,
-                "function_called": "INTENT_MAPPING.get",
-                "source_file": source,
-            }
-            simulated_nodes.append(entry)
-            if status == "diverged":
-                diverged_nodes.append(entry)
-        return {"simulated_nodes": simulated_nodes, "diverged_nodes": diverged_nodes, "source": source}
+            entry = None
+
+            # --- 段 1: request_normalization ---
+            if stage == "request_normalization":
+                trace_query = str(evidence.get("query") or "")
+                entry = {
+                    "stage": stage,
+                    "input_used": {"query": trace_query},
+                    "simulated_output": {"query_present": bool(trace_query)},
+                    "trace_actual": {"query": trace_query},
+                    "status": "passed" if trace_query else "diverged",
+                    "function_called": "build_request.query",
+                    "source_file": "adapter.build_request",
+                }
+
+            # --- 段 2: intent_api_call（规则层重放） ---
+            elif stage == "intent_api_call":
+                # 从上一段或 trace 获取 query
+                query_for_rule = str(
+                    (trace.normalized_request or {}).get("query")
+                    or (trace.input or {}).get("query")
+                    or evidence.get("query") or ""
+                )
+                rule_result = None
+                if try_rule_based_intent and query_for_rule:
+                    rule_result = try_rule_based_intent(query_for_rule)
+                rule_intent = str(rule_result.intent.value) if rule_result and hasattr(rule_result, "intent") and hasattr(rule_result.intent, "value") else (str(rule_result.intent) if rule_result and hasattr(rule_result, "intent") else None)
+                rule_confidence = rule_result.confidence if rule_result and hasattr(rule_result, "confidence") else None
+                # 关键分歧判定：规则层命中且置信度=1.0 时，trace actual intent 应等于规则层结果；
+                # 不一致即为 diverged（业务系统不应再调 LLM 推翻规则层结论）。
+                # 规则层未命中（None）→ 走 LLM 是合理的，标记 indeterminate。
+                actual_intent_for_compare = ""
+                for n in (trace.execution_trace or []):
+                    if isinstance(n, dict) and n.get("stage") == "adapter_extraction":
+                        ev = n.get("evidence") if isinstance(n.get("evidence"), dict) else {}
+                        actual_intent_for_compare = str(ev.get("intent") or "").strip()
+                        break
+                if rule_result is None:
+                    status = "indeterminate"
+                elif rule_confidence == 1.0 and actual_intent_for_compare and rule_intent and actual_intent_for_compare != rule_intent:
+                    status = "diverged"
+                else:
+                    status = "passed"
+                entry = {
+                    "stage": stage,
+                    "input_used": {"query": query_for_rule[:200]},
+                    "simulated_output": {
+                        "rule_matched": rule_result is not None,
+                        "rule_intent": rule_intent,
+                        "rule_confidence": rule_confidence,
+                        "actual_intent_from_trace": actual_intent_for_compare,
+                    },
+                    "trace_actual": {"endpoint": evidence.get("endpoint"), "actual_intent": actual_intent_for_compare},
+                    "status": status,
+                    "function_called": "try_rule_based_intent",
+                    "source_file": intent_source,
+                    "note": "规则层 confidence=1.0 命中时，trace actual_intent 必须等于规则层结果；不一致即为分歧",
+                }
+
+            # --- 段 3: label_mapping（INTENT_MAPPING 查表复现） ---
+            elif stage == "label_mapping":
+                # 从 adapter_extraction 段获取 raw_intent
+                raw_intent = ""
+                for n in (trace.execution_trace or []):
+                    if isinstance(n, dict) and n.get("stage") == "adapter_extraction":
+                        ev = n.get("evidence") if isinstance(n.get("evidence"), dict) else {}
+                        raw_intent = str(ev.get("raw_intent") or "").strip()
+                        break
+                trace_intent = str(evidence.get("intent") or "").strip()
+                if raw_intent and mapping:
+                    simulated_mapped = mapping.get(raw_intent)
+                    sim_intent = str(simulated_mapped if simulated_mapped is not None else "other")
+                    # 关键：raw_intent 可能是数值编码（如 "4001"，在 INTENT_MAPPING 中能查到）
+                    # 也可能是已被 adapter extract_output 归一化后的 intent 名（如 "nbev_planning"，在 values 中）。
+                    # 如果 raw_intent 已经是 intent 名（在 mapping values 中），说明此节点的"映射"步骤已被 adapter 跳过，
+                    # 不应再用数值编码查表比较——直接 indeterminate。
+                    is_already_label = raw_intent in mapping.values() or raw_intent in set(self._load_intent_mapping_source()[1] or [])
+                    if is_already_label:
+                        status = "indeterminate"
+                        sim_intent = raw_intent  # raw_intent 本身就是 label
+                    elif trace_intent == sim_intent:
+                        status = "passed"
+                    else:
+                        status = "diverged"
+                else:
+                    sim_intent = "unknown"
+                    status = "passed" if not trace_intent else "indeterminate"
+                entry = {
+                    "stage": stage,
+                    "input_used": {"raw_intent": raw_intent},
+                    "simulated_output": {"mapped_intent": sim_intent},
+                    "trace_actual": {"intent": trace_intent},
+                    "status": status,
+                    "function_called": "INTENT_MAPPING.get",
+                    "source_file": mapping_source,
+                }
+
+            # --- 段 4: adapter_extraction（复现 extract_output） ---
+            elif stage == "adapter_extraction":
+                trace_intent = str(evidence.get("intent") or "")
+                raw_intent = str(evidence.get("raw_intent") or "")
+                confidence = evidence.get("confidence")
+                fallback = evidence.get("fallback")
+                slots = evidence.get("slots") or {}
+                # 模拟：如果 raw_intent 在 mapping 中能找到
+                mapped_label = mapping.get(raw_intent) if raw_intent and mapping else None
+                status = "passed" if trace_intent and trace_intent != "unknown" else "diverged"
+                entry = {
+                    "stage": stage,
+                    "input_used": {"raw_intent": raw_intent},
+                    "simulated_output": {
+                        "mapped_label": mapped_label,
+                        "intent_present": bool(trace_intent),
+                        "confidence_present": confidence is not None,
+                        "fallback_detected": bool(fallback),
+                        "slot_count": len(slots) if isinstance(slots, dict) else 0,
+                    },
+                    "trace_actual": {
+                        "intent": trace_intent,
+                        "raw_intent": raw_intent,
+                        "confidence": confidence,
+                        "fallback": fallback,
+                    },
+                    "status": status,
+                    "function_called": "extract_output + INTENT_MAPPING",
+                    "source_file": mapping_source,
+                }
+
+            if entry:
+                simulated_nodes.append(entry)
+                if entry["status"] == "diverged":
+                    diverged_nodes.append(entry)
+
+        # 定位最早分歧
+        earliest = diverged_nodes[0] if diverged_nodes else None
+        return {
+            "simulated_nodes": simulated_nodes,
+            "diverged_nodes": diverged_nodes,
+            "earliest_divergence": earliest,
+            "source": mapping_source,
+            "segment_count": len(simulated_nodes),
+        }
 
     def build_mock_cases(self) -> list[Dict[str, Any]]:
         path = Path(__file__).resolve().parents[2] / "data" / "marketting-planning-intent" / "mock_cases.json"

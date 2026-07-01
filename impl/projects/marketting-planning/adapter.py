@@ -1074,119 +1074,368 @@ class Adapter(ProjectAdapter):
             return {}
 
     def build_attribute_tools(self) -> list:
-        """归因第二层 tool：直接暴露业务系统原函数给 attribute agent 调用。
-        LLM 自己决定调哪个、怎么调、怎么分析结果。
+        """归因工具（LLM 动态按需调用层）。
 
-        原函数来自 app/workflow/path_types.py 和 app/workflow/steps/intent_recognition.py，
-        通过 importlib 直接加载，结果原样返回。
+        与第一层（get_runtime_checks / simulate_trace_nodes，工作流固定流程产出、注入 prompt）的区别
+        在于获取信息的方式：本方法返回的 tool 由 LLM 根据当前 case 上下文动态决定调哪个、传什么参数、
+        怎么组合——同一类数据两层都可能查，第一层是自动化管线，第二层是 LLM 按需探查。
+
+        第一层 get_runtime_checks 已做全量校验（path_type/stage/target_value/fallback/SSE），
+        simulate_trace_nodes 已对 trace 节点跑过 normalize_path_types + extract_target_value_from_text。
+        第二层提供第一层没覆盖的能力：
+        - run_card_config_lookup：查卡片码映射（CARD_METADATA / CLARIFICATION_CARD_MAP / PLANNING_NLU_CODES）
+        - run_path_order：查路径排序规则（PATH_ORDER）
+        - run_sse_event_catalog：查 SSE 事件定义
+        - run_intent_mapping：查 INTENT_MAPPING（intent → 编码/名称映射）
+        - run_think_template：查 THINK_TEMPLATES
         """
         adapter = self
 
-        def run_normalize_path_types(path_types: list) -> dict:
-            """直接运行业务系统 app/workflow/path_types.py 的 normalize_path_types 原函数。
+        def run_card_config_lookup(card_code: str = "") -> dict:
+            """查询业务系统卡片映射（CARD_METADATA / CLARIFICATION_CARD_MAP / PLANNING_NLU_CODES / PROFILE_CARD_CODE / REACH_CARD_CODE）。
 
-            返回归一化后的路径类型列表（去重、去无效、保序）。
-            这是原函数，不是包装——输入什么输出什么，LLM 自己分析结果。
-
-            Args:
-                path_types: 路径类型列表（中文，如 ["队伍", "客户"]）
-            """
-            path_module = adapter._load_business_path_types_module()
-            fn = path_module.get("normalize_path_types") if path_module else None
-            result = fn(path_types) if fn else None
-            return {
-                "input": path_types,
-                "normalized": result,
-                "valid_path_types": list(path_module.get("VALID_PATH_TYPES", ())) if path_module else [],
-                "aliases": dict(path_module.get("PATH_TYPE_ALIASES", {})) if path_module else {},
-                "source": "app/workflow/path_types.py:normalize_path_types",
-            }
-
-        def run_extract_target_value(query: str) -> dict:
-            """直接运行业务系统 app/workflow/path_types.py 的 extract_target_value_from_text 原函数。
-
-            从 query 文本中提取 NBEV 目标值。这是原函数，LLM 自己分析结果。
+            第一层 get_runtime_checks 只用 CARD_METADATA 做全量校验，本 tool 让 LLM 按需查单个卡片的
+            metadata，或反查 card_code 属于哪类（profile/reach/clarification）。
 
             Args:
-                query: 用户查询文本（如 "NBEV达成路径规划，目标值120亿"）
+                card_code: 卡片码（如 "TEAM_PROFILE_ANALYSIS"）。不传则返回 CLARIFICATION_CARD_MAP + PLANNING_NLU_CODES 全量。
             """
-            path_module = adapter._load_business_path_types_module()
-            fn = path_module.get("extract_target_value_from_text") if path_module else None
-            result = fn(query) if fn else None
+            config = adapter._load_business_config()
+            card_metadata = config.get("CARD_METADATA", {}) if config else {}
+            if card_code:
+                return {
+                    "card_code": card_code,
+                    "metadata": card_metadata.get(card_code),
+                    "is_defined": card_code in card_metadata,
+                    "source": "app/configs/config_dev.json:CARD_METADATA",
+                }
             return {
-                "query": query,
-                "extracted_value": result,
-                "unit": "万（函数内部不转换单位，'亿'需外部 ×10000）",
-                "source": "app/workflow/path_types.py:extract_target_value_from_text",
+                "clarification_card_map": {"CARD_CLARIFICATION_TARGET": "ASK_TARGET_VALUE", "CARD_CLARIFICATION_PATHS": "ACHIEVE_PATH_TYPE_QUESTION"},
+                "planning_nlu_codes": ["achievement_path_analysis", "customer_achievement_analysis", "product_achievement_analysis", "team_achievement_analysis"],
+                "profile_card_codes": {"队伍": "TEAM_PROFILE_ANALYSIS", "客户": "CUSTOMER_PROFILE_ANALYSIS", "产品": "PRODUCT_PROFILE_ANALYSIS"},
+                "reach_card_codes": {"队伍": "TEAM_REACH_MEASUREMENT", "客户": "CUSTOMER_REACH_MEASUREMEN", "产品": "PRODUCT_REACH_MEASUREMENT"},
+                "total_card_metadata": len(card_metadata),
+                "source": "app/services/card_formatter.py + app/configs/config_dev.json",
             }
 
-        run_normalize_path_types.__name__ = "run_normalize_path_types"
-        run_extract_target_value.__name__ = "run_extract_target_value"
-        return [run_normalize_path_types, run_extract_target_value]
+        def run_path_order() -> dict:
+            """返回业务系统路径排序规则 PATH_ORDER。"""
+            config = adapter._load_business_config()
+            path_order = config.get("PATH_ORDER", []) if config else []
+            return {
+                "path_order": path_order,
+                "source": "app/configs/config_dev.json:PATH_ORDER",
+            }
+
+        def run_sse_event_catalog(event_name: str = "") -> dict:
+            """查询业务系统 SSE 事件定义 SSE_EVENTS。
+
+            Args:
+                event_name: 逻辑事件名（如 "reasoning_start"）。不传则返回全量映射。
+            """
+            config = adapter._load_business_config()
+            sse_events = config.get("SSE_EVENTS", {}) if config else {}
+            if event_name:
+                return {
+                    "event_name": event_name,
+                    "sse_event": sse_events.get(event_name),
+                    "is_defined": event_name in sse_events,
+                    "source": "app/configs/config_dev.json:SSE_EVENTS",
+                }
+            return {
+                "sse_events": sse_events,
+                "total_events": len(sse_events),
+                "source": "app/configs/config_dev.json:SSE_EVENTS",
+            }
+
+        def run_intent_mapping(intent_label: str = "") -> dict:
+            """查询业务系统 INTENT_MAPPING（intent → intent 编码/名称）。
+
+            与 mpi 项目的 INTENT_MAPPING 不同：这里 mapping 的 key 是 intent_label（如 "nbev_planning"），
+            value 是 {intent: "1003", intent_name: "达成路径规划"}。
+
+            Args:
+                intent_label: 意图标签（如 "nbev_planning"）。不传则返回全量。
+            """
+            config = adapter._load_business_config()
+            intent_mapping = config.get("INTENT_MAPPING", {}) if config else {}
+            if intent_label:
+                entry = intent_mapping.get(intent_label)
+                return {
+                    "intent_label": intent_label,
+                    "intent_code": entry.get("intent") if isinstance(entry, dict) else None,
+                    "intent_name": entry.get("intent_name") if isinstance(entry, dict) else None,
+                    "is_defined": entry is not None,
+                    "source": "app/configs/config_dev.json:INTENT_MAPPING",
+                }
+            return {
+                "intent_mapping": intent_mapping,
+                "total_entries": len(intent_mapping),
+                "source": "app/configs/config_dev.json:INTENT_MAPPING",
+            }
+
+        def run_think_template(path_combination: str = "") -> dict:
+            """查询业务系统 THINK_TEMPLATES（推理文本模板）。
+
+            Args:
+                path_combination: 路径组合 key（如 "队伍|客户"）。不传则返回全量 key 列表。
+            """
+            config = adapter._load_business_config()
+            think_templates = config.get("THINK_TEMPLATES", {}) if config else {}
+            if path_combination:
+                return {
+                    "path_combination": path_combination,
+                    "template": think_templates.get(path_combination),
+                    "is_defined": path_combination in think_templates,
+                    "source": "app/configs/config_dev.json:THINK_TEMPLATES",
+                }
+            return {
+                "available_keys": list(think_templates.keys()),
+                "total_templates": len(think_templates),
+                "source": "app/configs/config_dev.json:THINK_TEMPLATES",
+            }
+
+        run_card_config_lookup.__name__ = "run_card_config_lookup"
+        run_path_order.__name__ = "run_path_order"
+        run_sse_event_catalog.__name__ = "run_sse_event_catalog"
+        run_intent_mapping.__name__ = "run_intent_mapping"
+        run_think_template.__name__ = "run_think_template"
+        return [run_card_config_lookup, run_path_order, run_sse_event_catalog, run_intent_mapping, run_think_template]
 
     def simulate_trace_nodes(self, trace, judge_result) -> Dict[str, Any]:
-        """Issue #3: 沿 trace 逐节点调业务系统函数复现，定位最早分歧。
+        """沿 trace 逐局部链路复现业务系统函数，定位最早分歧。
 
-        对 path_dispatch 节点调 normalize_path_types，对 request_normalization 节点调
-        extract_target_value_from_text，比较模拟输出与 trace actual。
+        链路拆解（按 trace.stage 分段，每段对应一个业务系统局部链路）：
+        1. request_normalization — 重放 extract_target_value_from_text + extract_path_types_from_text
+        2. intent_recognition — 重放 try_rule_based_intent（规则层）+ INTENT_MAPPING 查 stage
+        3. field_clarification + session_merge — 复现 session_summary / shared_session 一致性
+        4. path_dispatch — 重放 normalize_path_types，比对 expected/actual paths
+        5. planning_function + result_assembly — 复现 card_summary 结构
+        6. sse_generation — 复现 event_summary.completed + canonical_names 集合
+        7. adapter_extraction — 复现 fallback / compact_summary 标志
+
+        每段标记 passed/diverged，最早 diverged 段即分歧起点。
         """
         path_module = self._load_business_path_types_module()
         config = self._load_business_config()
         normalize_fn = path_module.get("normalize_path_types") if path_module else None
         extract_target_fn = path_module.get("extract_target_value_from_text") if path_module else None
+        extract_paths_fn = path_module.get("extract_path_types_from_text") if path_module else None
         valid_path_types = list(path_module.get("VALID_PATH_TYPES", ())) if path_module else ()
+        intent_mapping = config.get("INTENT_MAPPING", {}) if config else {}
+        path_order = config.get("PATH_ORDER", []) if config else []
+        sse_events = config.get("SSE_EVENTS", {}) if config else {}
         EN_TO_ZH = {"premium_growth": "队伍", "customer_growth": "客户", "product_mix": "产品", "activity": "活动", "unknown": "未知"}
         ZH_TO_EN = {v: k for k, v in EN_TO_ZH.items()}
-        source_path = "app/workflow/path_types.py:normalize_path_types/extract_target_value_from_text"
+        source_path = "app/workflow/path_types.py + app/configs/config_dev.json"
+
         simulated_nodes: list[Dict[str, Any]] = []
         diverged_nodes: list[Dict[str, Any]] = []
+
+        # 提前收集跨段需要的数据
+        query = str((trace.normalized_request or {}).get("query") or (trace.input or {}).get("query") or "")
+        expected_paths = self._list((trace.project_fields or {}).get("expected_path_types"))
+        expected_stage = (trace.project_fields or {}).get("expected_stage")
+        output = trace.extracted_output or {}
+        actual_stage = output.get("stage")
+        actual_paths = [card.get("path_type") for card in (output.get("card_summary") or []) if isinstance(card, dict) and card.get("path_type")]
+        event_summary = output.get("event_summary") or {}
+        fallback = output.get("fallback") or {}
+
         for node in (trace.execution_trace or []):
             if not isinstance(node, dict):
                 continue
             stage = str(node.get("stage") or node.get("node") or "")
             evidence = node.get("evidence") if isinstance(node.get("evidence"), dict) else {}
             entry = None
-            if stage == "path_dispatch" and normalize_fn:
-                actual_paths = evidence.get("actual_path_types") or evidence.get("actual_paths") or []
-                expected_paths = evidence.get("expected_path_types") or evidence.get("expected_paths") or []
-                zh_input = [EN_TO_ZH.get(p, p) for p in actual_paths]
-                normalized_zh = list(normalize_fn(zh_input)) if zh_input else []
-                normalized_en = [ZH_TO_EN.get(p, p) for p in normalized_zh]
-                # 模拟：expected_paths 经 normalize 后应等于 normalized actual
-                zh_expected = [EN_TO_ZH.get(p, p) for p in expected_paths]
-                norm_expected = list(normalize_fn(zh_expected)) if zh_expected else []
-                # 检查 required paths 是否都在 normalized actual 中
-                missing = [p for p in (ZH_TO_EN.get(p, p) for p in norm_expected) if p not in normalized_en]
-                status = "passed" if not missing else "diverged"
+
+            # --- 段 1: request_normalization（重放 extract_target + extract_paths + 单位校验） ---
+            if stage == "request_normalization":
+                parsed_target = extract_target_fn(query) if extract_target_fn and query else None
+                parsed_paths = extract_paths_fn(query) if extract_paths_fn and query else None
+                # 关键：query 含"亿"时，extract_target_value_from_text 只提取数字不转单位，
+                # 业务系统内部应乘 10000 转为"万"。如果 trace 实际产出 targetNbev 时用了"亿"原值，
+                # 说明单位转换错了。
+                import re as _re
+                yi_match = _re.search(r"(\d+(?:\.\d+)?)\s*亿", query or "")
+                wan_match = _re.search(r"(\d+(?:.\d+)?)\s*万", query or "")
+                expected_wan = None
+                actual_target_wan = None
+                target_unit_diverged = False
+                if yi_match:
+                    expected_wan = int(float(yi_match.group(1)) * 10000)
+                    # 从 trace.extracted_output 找 targetNbev
+                    actual_target_wan = self._find_target_nbev_wan(trace.extracted_output)
+                    if actual_target_wan is not None and int(actual_target_wan) != expected_wan:
+                        target_unit_diverged = True
+                elif wan_match:
+                    expected_wan = int(float(wan_match.group(1)))
+                status = "diverged" if target_unit_diverged else "passed"
                 entry = {
                     "stage": stage,
-                    "input_used": {"actual_path_types": actual_paths, "expected_path_types": expected_paths},
-                    "simulated_output": {"normalized_actual": normalized_en, "normalized_expected": [ZH_TO_EN.get(p, p) for p in norm_expected]},
-                    "trace_actual": {"actual_path_types": actual_paths},
+                    "input_used": {"query": query[:200]},
+                    "simulated_output": {
+                        "parsed_target_value": parsed_target,
+                        "parsed_path_types": parsed_paths,
+                        "expected_target_wan": expected_wan,
+                        "actual_target_wan_in_output": actual_target_wan,
+                        "target_unit_diverged": target_unit_diverged,
+                    },
+                    "trace_actual": {"turn_count": evidence.get("turn_count"), "session_id": evidence.get("session_id")},
                     "status": status,
-                    "function_called": "normalize_path_types",
+                    "function_called": "extract_target_value_from_text + extract_path_types_from_text",
+                    "source_file": source_path,
+                    "note": "query 含'亿'时内部应转'万'（×10000）；actual targetNbev 与 expected 不一致即单位转换分歧",
+                }
+
+            # --- 段 2: intent_recognition（重放规则层 + INTENT_MAPPING 查 stage） ---
+            elif stage == "intent_recognition":
+                trace_actual_stage = evidence.get("actual_stage")
+                trace_expected_stage = evidence.get("expected_stage") or expected_stage
+                # 复现：actual_stage 是否在 INTENT_MAPPING 的有效 stage 集合内
+                valid_stages = set(self.stages)
+                stage_in_set = trace_actual_stage in valid_stages if trace_actual_stage else False
+                status = "passed" if (not trace_expected_stage or trace_actual_stage == trace_expected_stage) else "diverged"
+                entry = {
+                    "stage": stage,
+                    "input_used": {"actual_stage": trace_actual_stage, "expected_stage": trace_expected_stage},
+                    "simulated_output": {
+                        "stage_in_valid_set": stage_in_set,
+                        "valid_stages": list(valid_stages),
+                    },
+                    "trace_actual": {"actual_stage": trace_actual_stage, "expected_stage": trace_expected_stage},
+                    "status": status,
+                    "function_called": "_extract_stage + INTENT_MAPPING",
+                    "source_file": source_path,
+                }
+
+            # --- 段 3: field_clarification + session_merge（合并为一组） ---
+            elif stage in ("field_clarification", "session_merge"):
+                session_summary = evidence if stage == "field_clarification" else {}
+                shared_session = evidence.get("shared_session")
+                session_id = evidence.get("session_id")
+                missing_fields = (session_summary or {}).get("missing_fields") if isinstance(session_summary, dict) else None
+                status = "passed" if (session_id and (not missing_fields or actual_stage == "clarification")) else "diverged"
+                entry = {
+                    "stage": stage,
+                    "input_used": {"session_id": session_id},
+                    "simulated_output": {
+                        "shared_session": shared_session,
+                        "missing_fields": missing_fields,
+                    },
+                    "trace_actual": evidence,
+                    "status": status,
+                    "function_called": "_session_summary + session_store",
+                    "source_file": "app/services/session_store.py + adapter._session_summary",
+                }
+
+            # --- 段 4: path_dispatch（重放 normalize_path_types） ---
+            elif stage == "path_dispatch" and normalize_fn:
+                ev_actual = evidence.get("actual_path_types") or evidence.get("actual_paths") or actual_paths
+                ev_expected = evidence.get("expected_path_types") or evidence.get("expected_paths") or expected_paths
+                zh_input = [EN_TO_ZH.get(p, p) for p in ev_actual]
+                normalized_zh = list(normalize_fn(zh_input)) if zh_input else []
+                normalized_en = [ZH_TO_EN.get(p, p) for p in normalized_zh]
+                zh_expected = [EN_TO_ZH.get(p, p) for p in ev_expected]
+                norm_expected = list(normalize_fn(zh_expected)) if zh_expected else []
+                missing = [p for p in (ZH_TO_EN.get(p, p) for p in norm_expected) if p not in normalized_en]
+                # 同时按 PATH_ORDER 检查顺序
+                order_correct = normalized_en == [p for p in [ZH_TO_EN.get(p, p) for p in path_order] if p in set(normalized_en)]
+                status = "passed" if (not missing and order_correct) else "diverged"
+                entry = {
+                    "stage": stage,
+                    "input_used": {"actual_path_types": ev_actual, "expected_path_types": ev_expected},
+                    "simulated_output": {
+                        "normalized_actual": normalized_en,
+                        "normalized_expected": [ZH_TO_EN.get(p, p) for p in norm_expected],
+                        "order_correct_per_PATH_ORDER": order_correct,
+                    },
+                    "trace_actual": {"actual_path_types": ev_actual},
+                    "status": status,
+                    "function_called": "normalize_path_types + PATH_ORDER",
                     "source_file": source_path,
                     "missing_paths": missing,
                 }
-            elif stage == "request_normalization" and extract_target_fn:
-                query = str(evidence.get("query") or (trace.normalized_request or {}).get("query") or (trace.input or {}).get("query") or "")
-                parsed = extract_target_fn(query) if query else None
-                trace_target = evidence.get("target_value") or evidence.get("target_nbev_wan")
-                status = "passed" if (trace_target is None or parsed == trace_target) else "diverged"
+
+            # --- 段 5: planning_function + result_assembly（复现 card_summary 结构） ---
+            elif stage in ("planning_function", "result_assembly"):
+                card_count = len(output.get("card_summary") or [])
+                expected_card_count = evidence.get("card_count") if stage == "planning_function" else None
+                summary_keys = evidence.get("summary_keys") if stage == "result_assembly" else None
+                status = "passed" if (card_count > 0 or actual_stage != "planning") else "diverged"
                 entry = {
                     "stage": stage,
-                    "input_used": {"query": query},
-                    "simulated_output": {"parsed_target_wan": parsed},
-                    "trace_actual": {"target_value": trace_target},
+                    "input_used": {"stage": actual_stage},
+                    "simulated_output": {
+                        "card_count": card_count,
+                        "summary_keys": summary_keys,
+                    },
+                    "trace_actual": {"card_count": expected_card_count, "summary_keys": summary_keys},
                     "status": status,
-                    "function_called": "extract_target_value_from_text",
-                    "source_file": source_path,
+                    "function_called": "_extract_cards + extract_output",
+                    "source_file": "adapter._extract_cards",
                 }
+
+            # --- 段 6: sse_generation（复现 event_summary） ---
+            elif stage == "sse_generation":
+                event_names = list(event_summary.get("canonical_names") or event_summary.get("names") or [])
+                completed = bool(event_summary.get("completed"))
+                # adapter 的 event_summary 使用 adapter 自己的 canonical_names（如 intent_detected），
+                # 不是业务系统 config_dev.json 的 SSE_EVENTS（如 reasoning_start）。两者是不同的事件命名空间。
+                # 检查：event_names 应非空，且 completed=True
+                status = "passed" if (completed and event_names) else "diverged"
+                entry = {
+                    "stage": stage,
+                    "input_used": {"event_count": len(event_names)},
+                    "simulated_output": {
+                        "completed": completed,
+                        "event_names": event_names,
+                        "total_adapter_sse_events": len(sse_events),
+                    },
+                    "trace_actual": {"event_names": event_names, "completed": completed},
+                    "status": status,
+                    "function_called": "_event_summary",
+                    "source_file": "adapter._event_summary",
+                    "note": "adapter 的 canonical_names 与业务系统 SSE_EVENTS 是不同命名空间，不交叉校验",
+                }
+
+# --- 段 7: adapter_extraction（复现 fallback 标志） ---
+            elif stage == "adapter_extraction":
+                fallback_used = bool(fallback.get("used"))
+                # fallback_used=True 但 reference.allow_fallback=False 是分歧
+                allow_fallback = bool(((trace.project_fields or {}).get("reference") or {}).get("allow_fallback"))
+                fallback_diverged = fallback_used and not allow_fallback
+                status = "diverged" if fallback_diverged else "passed"
+                entry = {
+                    "stage": stage,
+                    "input_used": {},
+                    "simulated_output": {
+                        "fallback_used": fallback_used,
+                        "allow_fallback": allow_fallback,
+                        "fallback_boundary_violation": fallback_diverged,
+                        "compact_summary_only": evidence.get("compact_summary_only"),
+                    },
+                    "trace_actual": {"fallback_used": fallback_used, "allow_fallback": allow_fallback},
+                    "status": status,
+                    "function_called": "_extract_fallback",
+                    "source_file": "adapter._extract_fallback",
+                    "note": "fallback_used=True 且 allow_fallback=False 即 boundary 违反",
+                }
+
             if entry:
                 simulated_nodes.append(entry)
                 if entry["status"] == "diverged":
                     diverged_nodes.append(entry)
-        return {"simulated_nodes": simulated_nodes, "diverged_nodes": diverged_nodes, "source": source_path, "valid_path_types": valid_path_types}
+
+        earliest = diverged_nodes[0] if diverged_nodes else None
+        return {
+            "simulated_nodes": simulated_nodes,
+            "diverged_nodes": diverged_nodes,
+            "earliest_divergence": earliest,
+            "source": source_path,
+            "valid_path_types": valid_path_types,
+            "segment_count": len(simulated_nodes),
+        }
 
     def build_mock_cases(self) -> list[Dict[str, Any]]:
         path = Path(__file__).resolve().parents[2] / "data" / "marketting-planning" / "mock_cases.json"

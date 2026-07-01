@@ -638,6 +638,12 @@ class Adapter(ProjectAdapter):
                         "allowed_operators": sorted(allowed_operators),
                     })
 
+        # 4) 空结果校验：如果 actual_conditions 为空但 query 非空，说明 parser 没能产出条件
+        # 这是比字段校验更早的分歧——条件解析本身失败了
+        is_empty_result = not actual_conditions
+        query = runtime_values.get("query") or runtime_values.get("user_text") or ""
+        empty_result_reason = actual.get("empty_result_reason") or runtime_values.get("empty_result_reason") or ""
+
         condition_status = "passed"
         gap_counts = {"wrong": len(wrong), "missing": len(missing), "extra": 0}
         gap_evidence = [
@@ -649,14 +655,19 @@ class Adapter(ProjectAdapter):
             f"missing_count={len(missing)}",
             f"unknown_fields={unknown_fields}",
             f"operator_mismatches={len(field_mismatches)}",
+            f"is_empty_result={is_empty_result}",
+            f"empty_result_reason={empty_result_reason}",
         ]
-        if wrong or missing or unknown_fields or field_mismatches:
+        if wrong or missing or unknown_fields or field_mismatches or is_empty_result:
             condition_status = "failed"
 
         root_cause = None
         if condition_status == "failed":
             details = []
             gap_details = []
+            # 空结果优先：条件解析失败通常比字段/operator 错更早
+            if is_empty_result and query:
+                gap_details.append(f"parser 未能从 query「{query[:100]}」产出任何条件（empty_result_reason={empty_result_reason or 'unknown'}）")
             # 把 wrong/missing 的具体条目嵌入 summary，让不同 case 的归因区分开来
             for item in wrong:
                 if isinstance(item, dict):
@@ -764,11 +775,21 @@ class Adapter(ProjectAdapter):
         }
 
     def build_attribute_tools(self) -> list:
-        """归因第二层 tool：直接暴露业务系统原函数给 attribute agent 调用。
-        LLM 自己决定调哪个、怎么分析。
+        """归因工具（LLM 动态按需调用层）。
 
-        原函数来自 source_field_definitions.yaml / source_value_mappings.yaml /
-        source_enhanced_rules.yaml（业务系统字段定义），原样返回结果。
+        与第一层（get_runtime_checks / simulate_trace_nodes，工作流固定流程产出、注入 prompt）的区别
+        在于获取信息的方式：本方法返回的 tool 由 LLM 根据当前 case 上下文动态决定调哪个、传什么参数、
+        怎么组合——同一类数据两层都可能查，第一层是自动化管线，第二层是 LLM 按需探查。
+
+        第一层 get_runtime_checks 已做全量校验（字段合法性、operator 匹配、条件对比），
+        simulate_trace_nodes 已对 trace 节点跑过 _capability_manifest 字段校验。
+        第二层提供第一层没覆盖的能力：
+        - run_capability_manifest：按字段名查字段定义（参数化，第一层是全量校验）
+        - run_value_mappings_lookup：按别名/字段名查口语别名→标准枚举映射
+        - run_enhanced_rules_lookup：按规则名/字段名查 L2 增强规则定义
+        - run_field_enums：按字段名查枚举值列表
+        - run_supported_operators：按字段名查支持的 operator 集合
+        - run_matched_level_info：返回 matched_level 含义说明
         """
         adapter = self
 
@@ -818,57 +839,278 @@ class Adapter(ProjectAdapter):
                 "source": "source_value_mappings.yaml",
             }
 
+        def run_enhanced_rules_lookup(rule_name: str = "", field_name: str = "") -> dict:
+            """按规则名或字段名查询 L2 增强规则定义。
+
+            Args:
+                rule_name: 规则名（如 "pCategorys_contains"）。不传则返回全量规则 key 列表。
+                field_name: 字段名（如 "pCategorys"）。传此参数时返回所有匹配该字段的规则。
+            """
+            rules = adapter._enhanced_rules()
+            if not rules:
+                return {"rules": {}, "source": "source_enhanced_rules.yaml", "note": "enhanced_rules 不可加载"}
+            if rule_name:
+                # 规则名可能是嵌套 key（如 rules.some_name）
+                rule_list = rules.get("rules", []) if isinstance(rules, dict) else []
+                match = None
+                for r in rule_list:
+                    if isinstance(r, dict) and r.get("name") == rule_name:
+                        match = r
+                        break
+                return {
+                    "rule_name": rule_name,
+                    "definition": match,
+                    "is_defined": match is not None,
+                    "total_rules": len(rule_list) if isinstance(rule_list, list) else 0,
+                    "source": "source_enhanced_rules.yaml",
+                }
+            if field_name:
+                rule_list = rules.get("rules", []) if isinstance(rules, dict) else []
+                matched = []
+                for r in rule_list:
+                    if isinstance(r, dict) and r.get("field") == field_name:
+                        matched.append(r)
+                return {
+                    "field_name": field_name,
+                    "matched_rules": matched,
+                    "match_count": len(matched),
+                    "source": "source_enhanced_rules.yaml",
+                }
+            rule_list = rules.get("rules", []) if isinstance(rules, dict) else []
+            return {
+                "rule_names": [r.get("name") for r in rule_list if isinstance(r, dict) and r.get("name")],
+                "composite_rule_count": len(rules.get("composite_rules", []) or []) if isinstance(rules, dict) else 0,
+                "total_rules": len(rule_list) if isinstance(rule_list, list) else 0,
+                "source": "source_enhanced_rules.yaml",
+            }
+
+        def run_field_enums(field_name: str) -> dict:
+            """按字段名查枚举值列表。
+
+            Args:
+                field_name: 字段名（如 "clientSex"）
+            """
+            manifest = adapter._capability_manifest()
+            field_def = manifest.get(field_name)
+            if not field_def:
+                return {
+                    "field": field_name,
+                    "enums": [],
+                    "is_defined": False,
+                    "source": "source_field_definitions.yaml",
+                }
+            return {
+                "field": field_name,
+                "enums": field_def.get("enums") or [],
+                "is_defined": True,
+                "source": "source_field_definitions.yaml",
+            }
+
+        def run_supported_operators(field_name: str) -> dict:
+            """按字段名查支持的 operator 集合。
+
+            Args:
+                field_name: 字段名
+            """
+            manifest = adapter._capability_manifest()
+            field_def = manifest.get(field_name)
+            if not field_def:
+                return {
+                    "field": field_name,
+                    "operators": [],
+                    "is_defined": False,
+                    "source": "source_field_definitions.yaml",
+                }
+            return {
+                "field": field_name,
+                "operators": field_def.get("operators") or [],
+                "is_defined": True,
+                "source": "source_field_definitions.yaml",
+            }
+
+        def run_matched_level_info() -> dict:
+            """返回 matched_level 含义说明（1=规则, 2=模板, 3=缓存, 4=LLM）。"""
+            return {
+                "matched_level_meanings": {
+                    1: "规则匹配（L1 正则/ID号/人名提取）",
+                    2: "模板匹配（L2 增强规则正则 fullmatch）",
+                    3: "缓存命中",
+                    4: "LLM 解析（L4）",
+                },
+                "source": "impl/projects/client_search/adapter.py + business system query_router",
+            }
+
         run_capability_manifest.__name__ = "run_capability_manifest"
         run_value_mappings_lookup.__name__ = "run_value_mappings_lookup"
-        return [run_capability_manifest, run_value_mappings_lookup]
+        run_enhanced_rules_lookup.__name__ = "run_enhanced_rules_lookup"
+        run_field_enums.__name__ = "run_field_enums"
+        run_supported_operators.__name__ = "run_supported_operators"
+        run_matched_level_info.__name__ = "run_matched_level_info"
+        return [run_capability_manifest, run_value_mappings_lookup, run_enhanced_rules_lookup, run_field_enums, run_supported_operators, run_matched_level_info]
 
     def simulate_trace_nodes(self, trace, judge_result) -> Dict[str, Any]:
-        """Issue #3: 沿 trace 逐节点调业务系统函数复现，定位最早分歧。
+        """沿 trace 逐局部链路复现业务系统函数，定位最早分歧。
 
-        对 client_search.routing / adapter.extract_output 节点，用 _capability_manifest 校验
-        实际 conditions 中的字段是否合法，比较模拟输出与 trace actual。
+        链路拆解（5 段）：
+        1. adapter.build_request — 复现 build_request，检查 user_text 提取
+        2. client_search.api — 复现 HTTP 调用状态（code=0 表示成功）
+        3. client_search.routing — 重放 _capability_manifest 字段校验，比对 conditions 中字段合法性
+        4. client_search.downstream_search — 复现下游搜索 status（如可用）
+        5. adapter.extract_output — 复现 extract_output，检查 empty_result_reason
+
+        每段标记 passed/diverged，最早 diverged 段即分歧起点。
         """
         manifest = self._capability_manifest()
         actual_conditions = list((trace.extracted_output or {}).get("structured_output") or
                                   (trace.project_fields or {}).get("conditions") or [])
-        if not manifest:
-            return {"simulated_nodes": [], "diverged_nodes": [], "note": "capability_manifest 不可加载"}
-        source = "impl/projects/client_search/adapter.py:_capability_manifest"
+        matched_level = (trace.project_fields or {}).get("matched_level")
+        empty_reason = (trace.extracted_output or {}).get("empty_result_reason")
+        is_empty = bool(empty_reason)
+        source = "impl/projects/client_search/adapter.py + source_field_definitions.yaml"
         simulated_nodes: list[Dict[str, Any]] = []
         diverged_nodes: list[Dict[str, Any]] = []
+
         for node in (trace.execution_trace or []):
             if not isinstance(node, dict):
                 continue
             stage = str(node.get("stage") or node.get("node") or "")
-            if stage not in ("client_search.routing", "adapter.extract_output", "client_search.api"):
-                continue
-            if not actual_conditions:
-                continue
-            unknown_fields = []
-            valid_count = 0
-            for cond in actual_conditions:
-                if not isinstance(cond, dict):
-                    continue
-                f = cond.get("field")
-                if f and f not in manifest and f not in self.field_patterns:
-                    unknown_fields.append(f)
-                elif f and f in manifest:
-                    valid_count += 1
-            status = "passed" if not unknown_fields else "diverged"
-            node_evidence = node.get("evidence") if isinstance(node.get("evidence"), dict) else {}
-            entry = {
-                "stage": stage,
-                "input_used": {"conditions": actual_conditions[:3], "condition_count": len(actual_conditions)},
-                "simulated_output": {"valid_field_count": valid_count, "unknown_fields": unknown_fields, "manifest_field_count": len(manifest)},
-                "trace_actual": {"condition_count": node_evidence.get("condition_count")},
-                "status": status,
-                "function_called": "_capability_manifest",
-                "source_file": source,
-            }
-            simulated_nodes.append(entry)
-            if status == "diverged":
-                diverged_nodes.append(entry)
-        return {"simulated_nodes": simulated_nodes, "diverged_nodes": diverged_nodes, "source": source}
+            evidence = node.get("evidence") if isinstance(node.get("evidence"), dict) else {}
+            entry = None
+
+            # --- 段 1: adapter.build_request（复现 build_request） ---
+            if stage == "adapter.build_request":
+                user_text = evidence.get("user_text")
+                status = "passed" if user_text else "diverged"
+                entry = {
+                    "stage": stage,
+                    "input_used": {"user_text": str(user_text or "")[:100]},
+                    "simulated_output": {"user_text_present": bool(user_text)},
+                    "trace_actual": {"user_text": user_text, "source": evidence.get("source")},
+                    "status": status,
+                    "function_called": "build_request",
+                    "source_file": "adapter.build_request",
+                }
+
+            # --- 段 2: client_search.api（复现 HTTP 调用状态） ---
+            elif stage == "client_search.api":
+                code = evidence.get("code")
+                # code 是 None 表示上游未真正调用业务系统（provided_output 模式）。
+                # 此时不应该把 api 段标 diverged，否则会误判"api 失败"为最早分歧，掩盖真实根因。
+                # 只有当 code 是非 0 的具体值（业务系统返回错误码）时才 diverged。
+                if code is None:
+                    status = "indeterminate"
+                    api_success = None
+                else:
+                    api_success = code == 0
+                    status = "passed" if api_success else "diverged"
+                entry = {
+                    "stage": stage,
+                    "input_used": {},
+                    "simulated_output": {"code": code, "api_success": api_success},
+                    "trace_actual": {"code": code},
+                    "status": status,
+                    "function_called": "call_or_prepare",
+                    "source_file": "adapter.call_or_prepare",
+                    "note": "code=None 表示 provided_output 模式未真实调用业务系统，标 indeterminate；非 0 错误码才是 diverged",
+                }
+
+            # --- 段 3: client_search.routing（重放 _capability_manifest 字段校验） ---
+            elif stage == "client_search.routing":
+                if not manifest:
+                    status = "indeterminate"
+                    unknown_fields = []
+                    valid_count = 0
+                else:
+                    unknown_fields = []
+                    valid_count = 0
+                    for cond in actual_conditions:
+                        if not isinstance(cond, dict):
+                            continue
+                        f = cond.get("field")
+                        if f and f not in manifest and f not in self.field_patterns:
+                            unknown_fields.append(f)
+                        elif f and f in manifest:
+                            valid_count += 1
+                    # matched_level 缺失也是分歧
+                    no_matched_level = matched_level is None
+                    status = "passed" if (not unknown_fields and not no_matched_level and not is_empty) else "diverged"
+                entry = {
+                    "stage": stage,
+                    "input_used": {"condition_count": len(actual_conditions), "conditions_sample": actual_conditions[:3]},
+                    "simulated_output": {
+                        "valid_field_count": valid_count,
+                        "unknown_fields": unknown_fields,
+                        "manifest_field_count": len(manifest),
+                        "matched_level": matched_level,
+                        "is_empty_result": is_empty,
+                    },
+                    "trace_actual": {"matched_level": matched_level, "matched_patterns": evidence.get("matched_patterns")},
+                    "status": status,
+                    "function_called": "_capability_manifest + extract_output",
+                    "source_file": source,
+                    "unknown_fields": unknown_fields,
+                }
+
+            # --- 段 4: client_search.downstream_search（复现下游搜索 status） ---
+            elif stage == "client_search.downstream_search":
+                ds_status = evidence.get("status") or "not_verified"
+                # "skipped" 表示下游搜索被有意跳过（如 parse 返回空条件），不是失败
+                # "not_verified" 表示 adapter 没有运行下游探针，不应标 diverged
+                if ds_status in ("skipped", "not_verified"):
+                    status = "indeterminate"
+                elif ds_status in ("ok", "passed", "success"):
+                    status = "passed"
+                else:
+                    status = "diverged"
+                entry = {
+                    "stage": stage,
+                    "input_used": {},
+                    "simulated_output": {"downstream_status": ds_status},
+                    "trace_actual": {"status": ds_status, "url": evidence.get("url"), "reason": evidence.get("reason")},
+                    "status": status,
+                    "function_called": "_probe_downstream_search",
+                    "source_file": "adapter._probe_downstream_search",
+                    "note": "skipped=有意跳过；not_verified=未运行探针；非这两者且非 ok 才是 diverged",
+                }
+
+            # --- 段 5: adapter.extract_output（复现 extract_output empty_result） ---
+            elif stage == "adapter.extract_output":
+                logic = evidence.get("logic")
+                condition_count = evidence.get("condition_count")
+                empty_reason = evidence.get("empty_result_reason")
+                # 判定分歧：empty_result_reason 不为空且不是 "正常空结果" 才 diverged；
+                # condition_count=0 但无 empty_reason 不能直接 diverged（可能是 query 本身没字段需求）
+                is_abnormal_empty = bool(empty_reason) and empty_reason not in ("normal_empty", "no_conditions_required")
+                status = "diverged" if is_abnormal_empty else "passed"
+                entry = {
+                    "stage": stage,
+                    "input_used": {},
+                    "simulated_output": {
+                        "logic": logic,
+                        "condition_count": condition_count,
+                        "is_empty_result": bool(empty_reason),
+                        "empty_result_reason": empty_reason,
+                    },
+                    "trace_actual": {"logic": logic, "condition_count": condition_count, "empty_result_reason": empty_reason},
+                    "status": status,
+                    "function_called": "extract_output",
+                    "source_file": "adapter.extract_output",
+                    "note": "empty_result_reason 为空或正常空结果才 passed；异常空结果（如 empty_query）才 diverged",
+                }
+
+            if entry:
+                simulated_nodes.append(entry)
+                if entry["status"] == "diverged":
+                    diverged_nodes.append(entry)
+
+        earliest = diverged_nodes[0] if diverged_nodes else None
+        return {
+            "simulated_nodes": simulated_nodes,
+            "diverged_nodes": diverged_nodes,
+            "earliest_divergence": earliest,
+            "source": source,
+            "segment_count": len(simulated_nodes),
+        }
 
     def build_attribute_context(self, trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:
         project_fields = trace.project_fields if isinstance(trace.project_fields, dict) else {}
