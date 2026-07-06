@@ -1,0 +1,92 @@
+{
+  "trace_id": "1f231a39-ce05-44b9-a0ab-d0ea9b4eb8e8",
+  "project_id": "client_search",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "年龄字段使用clientAge",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "年龄值为精确45",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "年龄使用RANGE操作符",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "性别字段使用clientSex",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "性别值为枚举'女'",
+      "causal_category": "no_issue"
+    }
+  ],
+  "causal_category": "no_issue",
+  "earliest_divergence": {
+    "node": "",
+    "confidence": "unknown"
+  },
+  "chain_nodes": [
+    {
+      "status": "not_verified",
+      "evidence": [
+        "normalized_request.user_text 为 '45岁女性保费10万以上'，无变形"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "extracted_output.is_empty_result=false",
+        "extracted_output.logic='AND'",
+        "extracted_output.matched_level=4",
+        "fulfillment_assessments 所有已评估期望均为 fulfilled"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "matched_level=4 表明模式匹配成功"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "judge verdict 为 'uncertain'，但所有 fulfillments 为 'fulfilled'",
+        "application_boundary.judge_scope='parser_condition_semantics_only'，下游结果集不在本次归因范围"
+      ]
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": true,
+    "execution_trace": false,
+    "project_docs": true,
+    "code_or_config": false,
+    "unsupported_claims": [
+      "execution_trace 为空，无法验证运行时各阶段详细行为",
+      "divergence_analysis 为空，无系统自动分歧分析结果",
+      "judge 仅展示 5/10 条评估结果，剩余 5 条（预计包含保费相关期望）未在 fulfillment_assessments 中展示"
+    ]
+  },
+  "root_cause_hypothesis": "当前查询'45岁女性保费10万以上'的解析在年龄和性别维度完全符合预期：clientAge 使用 RANGE 操作符输出精确值 {min:45,max:45}，clientSex 使用 MATCH 操作符输出枚举值'女'。judge 对这两类期望均判定 fulfilled。若保费维度（annPremSegNum）也存在但未在可见评估中暴露问题，则整体解析链路无错误。",
+  "verification_steps": [
+    "确认 extracted_output 中是否包含 annPremSegNum 条件（GTE 操作符，值 100000），与 prompt 规则'保费超过5万→GTE 50000'对照",
+    "检查 judge 剩余 5 条未展示的 fulfillment_assessments 是否涉及保费相关期望及状态",
+    "验证 matched_level=4 的含义——确认该级别是否代表完全匹配成功",
+    "如有下游 ES 查询结果集，验证搜索结果是否确实返回了 45 岁女性且年缴保费≥10 万的客户"
+  ],
+  "needs_human_review": false,
+  "scenario": "当前查询在年龄和性别维度完全正确解析，judge 所有可见期望均为 fulfilled。保费维度（'保费10万以上'→annPremSegNum GTE 100000）的评估结果未在可见 fulfillment_assessments 中展示。",
+  "summary": {
+    "causal_category": "no_issue",
+    "attribution_count": 5,
+    "probe_count": 0,
+    "summary_text": "judge 显示 assessment_count=10 但仅给出 5 条 fulfillment_assessments（均为年龄和性别相关）；剩余 5 条（预计包含'保费10万以上'相关的字段映射、操作符、数值转换等期望）未暴露，无法确认其状态。但由于 attribution_targets 为空且所有可见期望均已 fulfilled，当前无失败归因需求。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  }
+}

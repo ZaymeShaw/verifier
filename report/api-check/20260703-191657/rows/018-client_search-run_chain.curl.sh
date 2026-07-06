@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+curl -sS -X POST 'http://127.0.0.1:8021/api/run_chain' -H 'Content-Type: application/json' --data-raw '{"input": {"expected_intent": "", "id": "mock-agent-client_search-3e94b273", "input": {"extra_input_params": {"conditions": [{"field": "clientSex", "value": "男"}, {"field": "annPremSegNum", "operator": ">", "value": 20000}]}, "metrics": {"cache_read_tokens": 256, "cache_write_tokens": 0, "input_tokens": 345, "output_tokens": 552, "reasoning_tokens": 420, "total_tokens": 897}, "session_id": "session_xyz_67890", "source": "web", "trace_id": "trace_abc_12345", "user_id": "user_10001", "user_text": "帮我找一下那些每年交保费超过两万块的男性客户吧"}, "metadata": {"live_request_mapped": true, "schema_ok": false, "source": "mock_agent_llm"}, "scenario": "single_condition", "source": "mock_agent_llm", "status": "pending"}, "project": "client_search"}' --write-out '
+__HTTP_STATUS__:%{http_code}'

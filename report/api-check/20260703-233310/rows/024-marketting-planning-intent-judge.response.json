@@ -1,0 +1,278 @@
+{
+  "trace_id": "ae705b18-b49a-452a-8d5a-5e80058ff4bf",
+  "project_id": "marketting-planning-intent",
+  "verdict": "incorrect",
+  "score": 0.0,
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签为客户画像",
+      "downstream_consumer": "营销规划任务调度",
+      "user_intent": "",
+      "expected_outcome": "",
+      "acceptance_criteria": [
+        "intent 标签为 customer_portrait 或中文客户画像"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "提取必要实体槽位",
+      "downstream_consumer": "数据分析执行模块",
+      "user_intent": "",
+      "expected_outcome": "",
+      "acceptance_criteria": [
+        "输出包含 slots/entities 字段，且至少包含时间、产品、分析维度信息"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "置信度满足阈值",
+      "downstream_consumer": "置信度过滤/兜底路由",
+      "user_intent": "",
+      "expected_outcome": "",
+      "acceptance_criteria": [
+        "confidence >= 0.8"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "未触发兜底策略",
+      "downstream_consumer": "路由模块",
+      "user_intent": "",
+      "expected_outcome": "",
+      "acceptance_criteria": [
+        "fallback == false"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "意图在可调度范围内",
+      "downstream_consumer": "调度中心",
+      "user_intent": "",
+      "expected_outcome": "",
+      "acceptance_criteria": [
+        "intent 字段为已知意图，raw_intent 不为空"
+      ],
+      "priority": "high"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签为客户画像",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "intent 标签为 customer_portrait 或语义等价"
+      ],
+      "actual_evidence": [
+        "extracted_output.intent = 'customer_portrait'"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": ""
+      },
+      "downstream_impact": "下游可正确路由到客户画像分析服务",
+      "blocking": true
+    },
+    {
+      "expectation_id": "提取必要实体槽位",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "输出中包含时间、产品、分析维度等实体槽位"
+      ],
+      "actual_evidence": [
+        "extracted_output 中不包含任何槽位字段，仅有 intent、confidence、fallback"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": ""
+      },
+      "downstream_impact": "下游无法直接获取分析条件，需要额外解析或多次对话收集，降低自动化程度和用户体验",
+      "blocking": true
+    },
+    {
+      "expectation_id": "置信度满足阈值",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "confidence >= 0.8"
+      ],
+      "actual_evidence": [
+        "extracted_output.confidence = 1.0"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": ""
+      },
+      "downstream_impact": "高置信度增强下游信任，无需进入低置信度兜底",
+      "blocking": true
+    },
+    {
+      "expectation_id": "未触发兜底策略",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "fallback == false"
+      ],
+      "actual_evidence": [
+        "extracted_output.fallback = false"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": ""
+      },
+      "downstream_impact": "正常进入意图对应的执行路径，避免中断或转人工",
+      "blocking": true
+    },
+    {
+      "expectation_id": "意图在可调度范围内",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "intent 为已知意图，raw_intent 有效"
+      ],
+      "actual_evidence": [
+        "extracted_output.intent = 'customer_portrait'，raw_intent = '1001'"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": ""
+      },
+      "downstream_impact": "可以被调度到对应的客户画像分析服务",
+      "blocking": true
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "not_fulfilled",
+      "downstream_impact": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=None，confidence=None，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "blocking_expectations": [
+      "提取必要实体槽位",
+      "intent_contract"
+    ],
+    "assessment_count": 6
+  },
+  "expected": {
+    "intent": "意图为客户画像分析（customer_portrait），置信度 1.0，未触发兜底，但缺少结构化的分析条件（时间、产品、维度）"
+  },
+  "actual": {
+    "ambiguous": false,
+    "confidence": 1.0,
+    "fallback": false,
+    "intent": "customer_portrait",
+    "raw_intent": "1001"
+  },
+  "reasoning_summary": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=None，confidence=None，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+  "judge_basis": "基于用户请求和给定的 critical_intent_dimensions 维度（意图标签、必要实体/槽位、置信度阈值、兜底策略、调度边界）分解业务期望，对比实际输出来逐项判定满足度",
+  "judge_method": "从用户业务意图反推预期意图识别结果，沿五个关键维度拆分为原子期望，逐一验证实际输出中的证据，最终综合判断整体满足度",
+  "verdict_derivation": {
+    "primary_boundary": "单轮意图识别评估，包括意图标签、实体槽位、置信度、兜底策略、调度边界",
+    "assessment_summary": "意图标签识别正确，置信度高，未触发兜底，且意图在已知调度范围内；但未提取必要的实体槽位（时间、产品、分析维度），导致下游无法直接获取分析条件，整体未满足核心业务需求。",
+    "blocking_gaps": [
+      "未提取必要实体槽位如时间、产品、分析维度"
+    ],
+    "why_verdict": "尽管多个辅助维度满足要求，但核心期望“提取必要实体槽位”未满足。用户请求中的关键分析条件丢失，下游无法直接执行精准分析，因此整体不满足。",
+    "contract_gate": "failed"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "实体槽位（时间、产品、分析维度）",
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    "实际输出仅包含 intent 标签、置信度、fallback 标志，没有任何槽位信息"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "uncontrollable_limits": [
+      "项目未提供 capability_manifest，无法确认该意图识别接口设计上是否要求返回实体槽位。评估基于通用意图识别预期进行，可能存在项目实际边界差异。"
+    ],
+    "reasoning": "当前评估在给定的五个维度内进行，所有期望均有明确的判定标准，故评估本身可行。实体槽位缺失的判断基于用户请求的必要条件，属于可评估范畴。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "single_turn_intent_recognition",
+    "primary_boundary_name": "单轮意图识别评估",
+    "judge_question": "意图识别接口是否准确将用户请求映射到客户画像意图，并提取必要信息？",
+    "verdict_basis": "意图标签正确，但未提取实体槽位，导致关键分析条件缺失",
+    "boundary_sources": "user provided critical_intent_dimensions",
+    "conflict_policy": "无"
+  },
+  "consumer_contract": {
+    "consumer": "营销规划下游模块（如人群包生成、数据分析引擎）",
+    "contract": "期望获得意图标签及结构化分析条件（时间、产品、维度等）"
+  },
+  "intent_model": {
+    "raw_user_request": "我想了解一下去年买过我们年金险的客户，他们的大致年龄分布和家庭结构是什么样的？",
+    "explicit_intents": [
+      "客户画像分析"
+    ],
+    "implicit_business_intents": [
+      "客户细分",
+      "针对性营销策略",
+      "历史客户数据分析"
+    ],
+    "constraints": {
+      "time": "去年",
+      "product": "年金险",
+      "analysis_dimensions": [
+        "年龄分布",
+        "家庭结构"
+      ]
+    },
+    "success_definition": "识别意图为客户画像分析，并提取时间、产品、分析维度等关键条件，供下游直接执行分析",
+    "blocking_requirements": [
+      "意图标签正确",
+      "提取必要的时间、产品、分析维度实体"
+    ],
+    "nice_to_have_requirements": [
+      "置信度足够高",
+      "实体粒度精确"
+    ],
+    "intent_evidence": [
+      "用户明确询问去年购买年金险客户的年龄分布和家庭结构，属于典型的客户特征洞察请求"
+    ]
+  },
+  "reconstructed_intent": "意图为客户画像分析（customer_portrait），置信度 1.0，未触发兜底，但缺少结构化的分析条件（时间、产品、维度）",
+  "semantic_equivalence_checks": [
+    {
+      "expected_fragment": "客户画像",
+      "actual_fragment": "customer_portrait",
+      "equivalent": true,
+      "basis": "customer_portrait 是客户画像的英文表达，在营销规划意图体系中指代客户特征分析"
+    }
+  ],
+  "reference_generation_basis": {
+    "source": "judge_generated_from_user_query_and_project_critical_dimensions",
+    "alignment_to_actual_shape": "参照实际输出的字段结构构建期望，但根据用户请求补充了必要的实体槽位期望",
+    "evidence": [
+      "用户 query 明确包含时间、产品和分析维度",
+      "critical_intent_dimensions 要求评估 required_slots_or_entities"
+    ]
+  },
+  "scenario": "intent_recognition",
+  "needs_human_review": false,
+  "quality_flags": [
+    "intent_contract_gate_failed"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[提取必要实体槽位] · 下游无法直接获取分析条件，需要额外解析或多次对话收集，降低自动化程度和用户体验",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "提取必要实体槽位",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "下游无法直接获取分析条件，需要额外解析或多次对话收集，降低自动化程度和用户体验",
+        "within_evaluable_scope": true,
+        "evidence": "extracted_output 中不包含任何槽位字段，仅有 intent、confidence、fallback | 输出中包含时间、产品、分析维度等实体槽位"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 5,
+    "is_formal_attribution": true
+  }
+}

@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
 from .knowledge_base import load_knowledge_base
 from .llm_client import LlmClient, project_llm_client
 from .project_loader import load_project_document
-from .schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace
+from .schema import AttributeLLMOutput, AttributeResult, ChainNode, ExpectationAttribution, JudgeResult, ProjectSpec, RunTrace, judge_expected_actual_gaps, judge_primary_signal, normalize_attribute_result, normalize_chain_node, normalize_expectation_attribution, normalize_probe_result, to_dict, trace_execution_trace, trace_extracted_output, trace_input, trace_normalized_request, trace_project_fields
+from .structured_output import StructuredOutputSpec
+from .summary import summary_from_attribution
 from .trace_analysis import analyze_execution_trace, map_trace_node_to_source
 from .runtime_query_tools import analyze_divergence  # Issue #3: 通用分歧分析
 
@@ -19,6 +22,17 @@ SOURCE_READABLE_SUFFIXES = {".py", ".yaml", ".yml", ".md", ".json", ".txt", ".cf
 AGGREGATE_TOOL_BUDGET = 192_000
 ATTRIBUTE_TOOL_CALL_LIMIT = 6  # Cap search_source_file calls per case; allow more probes for thorough attribution
 ATTRIBUTE_MAX_TOOL_HISTORY = 3  # Keep more tool context for multi-step attribution
+
+
+# spec/struct_output.md：attribute 输出形状迁移到 AttributeLLMOutput dataclass，
+# 由 StructuredOutputSpec 提取 JSON Schema。旧占位符 dict 已删除。
+# 注：attribute 不直接产 expected/actual（那些由 judge 产出），但 root_cause_hypothesis 等
+# Any 字段无固定子结构，故 attribute 不注入项目 live_schema 嵌套约束。
+_ATTRIBUTE_OUTPUT_SPEC = StructuredOutputSpec.from_dataclass(
+    AttributeLLMOutput,
+    required_nonempty=["expectation_attributions", "causal_category", "root_cause_hypothesis"],
+    description="attribute 归因分析输出",
+)
 
 
 # Per-field size caps for compact view (chars). Keep loose so attribution still has signal,
@@ -37,6 +51,7 @@ def _compact_obj(obj, max_str_chars: int, max_list_items: int | None = None):
 
     Preserves structure so the LLM can still reason about each item.
     """
+    obj = to_dict(obj)
     if isinstance(obj, str):
         if len(obj) > max_str_chars:
             return obj[:max_str_chars] + f"...[truncated {len(obj) - max_str_chars:,} chars]"
@@ -69,12 +84,12 @@ def _compact_trace(trace: RunTrace) -> dict:
         "trace_id": trace.trace_id,
         "project_id": trace.project_id,
         "input": _compact_obj(trace.input, MAX_FIELD_CHARS_SMALL),
-        "normalized_request": _compact_obj(trace.normalized_request, MAX_FIELD_CHARS_SMALL),
-        "extracted_output": _compact_blob(trace.extracted_output, MAX_FIELD_CHARS_LARGE),
-        "project_fields": _compact_obj(trace.project_fields, MAX_FIELD_CHARS_SMALL),
+        "normalized_request": _compact_obj(trace_normalized_request(trace), MAX_FIELD_CHARS_SMALL),
+        "extracted_output": _compact_blob(trace_extracted_output(trace), MAX_FIELD_CHARS_LARGE),
+        "schema_protocol_extensions": _compact_obj(trace_project_fields(trace), MAX_FIELD_CHARS_SMALL),
         "runtime_logs": _compact_obj(trace.runtime_logs, MAX_FIELD_CHARS_SMALL, MAX_RUNTIME_LOG_ENTRIES),
         "evidence_refs": _compact_obj(trace.evidence_refs, MAX_FIELD_CHARS_SMALL, MAX_EVIDENCE_REFS),
-        "execution_trace": _compact_obj(trace.execution_trace, MAX_FIELD_CHARS_MEDIUM, MAX_EXEC_TRACE_ITEMS),
+        "execution_trace": _compact_obj(trace_execution_trace(trace), MAX_FIELD_CHARS_MEDIUM, MAX_EXEC_TRACE_ITEMS),
         "status": trace.status,
         "error": _compact_obj(trace.error, MAX_FIELD_CHARS_SMALL),
     }
@@ -84,8 +99,10 @@ def _compact_judge(judge: JudgeResult) -> dict:
     """Compact view of JudgeResult for attribute prompt.
 
     Drops raw_model_output (often huge — it's the full LLM response payload)
-    and score_details. Caps per-field size to keep prompt under 80k budget.
+    and debug payloads. Caps per-field size to keep prompt under 80k budget.
     """
+    primary_signal = judge_primary_signal(judge)
+    gaps = judge_expected_actual_gaps(judge)
     return {
         "trace_id": judge.trace_id,
         "project_id": judge.project_id,
@@ -94,22 +111,19 @@ def _compact_judge(judge: JudgeResult) -> dict:
         "confidence": judge.confidence,
         "intent_model": _compact_obj(judge.intent_model, MAX_FIELD_CHARS_SMALL),
         "consumer_contract": _compact_obj(judge.consumer_contract, MAX_FIELD_CHARS_SMALL),
-        "business_expectations": _compact_obj(judge.business_expectations, MAX_FIELD_CHARS_MEDIUM, MAX_LIST_ITEMS),
-        "fulfillment_assessments": _compact_obj(judge.fulfillment_assessments, MAX_FIELD_CHARS_MEDIUM, MAX_LIST_ITEMS),
-        "overall_fulfillment": _compact_obj(judge.overall_fulfillment, MAX_FIELD_CHARS_SMALL),
+        "business_expectations": _compact_obj(primary_signal.get("business_expectations"), MAX_FIELD_CHARS_MEDIUM, MAX_LIST_ITEMS),
+        "fulfillment_assessments": _compact_obj(primary_signal.get("fulfillment_assessments"), MAX_FIELD_CHARS_MEDIUM, MAX_LIST_ITEMS),
+        "overall_fulfillment": _compact_obj(primary_signal.get("overall_fulfillment"), MAX_FIELD_CHARS_SMALL),
         "reconstructed_intent": _compact_obj(judge.reconstructed_intent, MAX_FIELD_CHARS_SMALL),
         "judge_basis": _compact_obj(judge.judge_basis, MAX_FIELD_CHARS_SMALL),
         "judge_method": _compact_obj(judge.judge_method, MAX_FIELD_CHARS_SMALL),
-        "intent_decomposition": _compact_obj(getattr(judge, "intent_decomposition", None) or [], MAX_FIELD_CHARS_SMALL, MAX_LIST_ITEMS),
-        "condition_assessments": _compact_obj(getattr(judge, "condition_assessments", None) or [], MAX_FIELD_CHARS_SMALL, MAX_LIST_ITEMS),
         "semantic_equivalence_checks": _compact_obj(getattr(judge, "semantic_equivalence_checks", None) or [], MAX_FIELD_CHARS_SMALL, MAX_LIST_ITEMS),
         "verdict_derivation": _compact_obj(getattr(judge, "verdict_derivation", None) or "", MAX_FIELD_CHARS_SMALL),
         "boundary_decision": _compact_obj(getattr(judge, "boundary_decision", None) or "", MAX_FIELD_CHARS_SMALL),
         "evaluation_boundary": _compact_obj(getattr(judge, "evaluation_boundary", None) or "", MAX_FIELD_CHARS_SMALL),
-        "primary_assessment": _compact_obj(getattr(judge, "primary_assessment", None) or "", MAX_FIELD_CHARS_SMALL),
-        "missing": _compact_obj(getattr(judge, "missing", None) or [], MAX_FIELD_CHARS_SMALL, MAX_LIST_ITEMS),
-        "wrong": _compact_obj(getattr(judge, "wrong", None) or [], MAX_FIELD_CHARS_SMALL, MAX_LIST_ITEMS),
-        "extra": _compact_obj(getattr(judge, "extra", None) or [], MAX_FIELD_CHARS_SMALL, MAX_LIST_ITEMS),
+        "missing": _compact_obj(gaps.get("missing"), MAX_FIELD_CHARS_SMALL, MAX_LIST_ITEMS),
+        "wrong": _compact_obj(gaps.get("wrong"), MAX_FIELD_CHARS_SMALL, MAX_LIST_ITEMS),
+        "extra": _compact_obj(gaps.get("extra"), MAX_FIELD_CHARS_SMALL, MAX_LIST_ITEMS),
         "evidence": _compact_obj(getattr(judge, "evidence", None) or [], MAX_FIELD_CHARS_SMALL, MAX_LIST_ITEMS),
         "reasoning_summary": _compact_obj(getattr(judge, "reasoning_summary", None) or "", MAX_FIELD_CHARS_MEDIUM),
         "needs_human_review": getattr(judge, "needs_human_review", None),
@@ -119,7 +133,15 @@ def _compact_judge(judge: JudgeResult) -> dict:
 
 
 def _load_source_code_evidence(spec: ProjectSpec, project_attribute_context: dict | None) -> dict[str, str]:
-    """读取项目源码/配置/文档，作为归因的代码级证据。"""
+    """读取项目源码/配置/文档，作为归因的代码级证据。
+
+    覆盖范围：
+    - source_config_paths（adapter 提供）
+    - source_* 文档（支持绝对路径直读）
+    - adapter.py（测评侧归一化层，非原业务系统根因落点）
+    - application.external_repo（原业务系统仓库根）
+    - endpoint_discovery.source_roots（原业务系统源码入口根）
+    """
     source_files: dict[str, str] = {}
     project_root = Path(spec.root) if spec.root else None
 
@@ -134,14 +156,20 @@ def _load_source_code_evidence(spec: ProjectSpec, project_attribute_context: dic
                 try:
                     content = p.read_text(encoding="utf-8", errors="ignore")
                     source_files[str(p)] = content[:MAX_SOURCE_FILE_BYTES]
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"[attribute] failed to read source {p}: {e}")
 
-    # 2. project documents (source_* prefixed)
+    # 2. project documents (source_* prefixed) — 支持绝对路径
     for doc_key, doc_rel in (spec.documents or {}).items():
         if not doc_key.startswith("source_"):
             continue
-        p = Path(project_root or ".") / str(doc_rel)
+        doc_path = Path(str(doc_rel))
+        if doc_path.is_absolute():
+            p = doc_path
+        elif project_root:
+            p = project_root / str(doc_rel)
+        else:
+            p = doc_path
         if not p.exists():
             continue
         if p.suffix not in SOURCE_READABLE_SUFFIXES:
@@ -149,8 +177,8 @@ def _load_source_code_evidence(spec: ProjectSpec, project_attribute_context: dic
         try:
             content = p.read_text(encoding="utf-8", errors="ignore")
             source_files[f"project_doc:{doc_key}"] = content[:MAX_SOURCE_FILE_BYTES]
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[attribute] failed to read project doc {p}: {e}")
 
     # 3. adapter.py itself
     if spec.adapter and project_root:
@@ -158,10 +186,93 @@ def _load_source_code_evidence(spec: ProjectSpec, project_attribute_context: dic
         if adapter_path.exists():
             try:
                 source_files[f"project_adapter:{spec.adapter}"] = adapter_path.read_text(encoding="utf-8", errors="ignore")[:MAX_SOURCE_FILE_BYTES]
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"[attribute] failed to read adapter source {adapter_path}: {e}")
+
+    # 4. 原业务系统：application.external_repo — 关键文件（配置/字段/prompt）优先预加载
+    import os as _os
+    application = dict(getattr(spec, "application", None) or {})
+    external_repo = application.get("external_repo")
+    if external_repo and Path(external_repo).exists():
+        _load_priority_business_files(Path(external_repo), source_files, "ext_repo")
+
+    # 5. 原业务系统：endpoint_discovery.source_roots — 关键文件预加载
+    endpoint_cfg = dict(getattr(spec, "endpoint_discovery", None) or {})
+    source_roots = endpoint_cfg.get("source_roots") or []
+    for i, rel in enumerate(source_roots):
+        p = Path(str(rel))
+        if not p.is_absolute() and project_root:
+            p = (project_root / p).resolve()
+        if p.exists():
+            _load_priority_business_files(p, source_files, f"endpoint_src_{i}")
 
     return source_files
+
+
+# 预加载预算：原业务系统 walk 受限，避免 prompt 爆炸
+_PRELOAD_MAX_FILES = 15
+_PRELOAD_MAX_DEPTH = 4
+_PRELOAD_EXCLUDE_DIRS = {
+    "__pycache__", "node_modules", ".git", "venv", ".venv", "env", "dist", "build",
+    "logs", "docs", "test", "tests", "migrations", ".claude", "docs_BAK", "archive",
+    "backup", "fixtures", "data", "assets", "static", ".mypy_cache", ".pytest_cache",
+    ".ruff_cache", "egg-info", ".eggs", "tmp", "temp", "output", "result", "checkpoint",
+    "bin", "obj", "target", "vendor", "third_party", "thirdparty",
+}
+# 预加载优先关键词：命中文件名优先预加载（配置/字段/prompt/规则/路由类）
+_PRELOAD_PRIORITY_KEYWORDS = {
+    "prompt", "config", "constant", "field_definition", "field_definitions",
+    "field_enum", "field_enums", "value_mapping", "value_mappings",
+    "enhanced_rule", "enhanced_rules", "enum", "mapping", "route", "router",
+    "intent", "dispatch", "orchestrat", "planning", "planner", "sse", "stream",
+    "session", "clarify", "search", "query", "parser", "filter", "condition",
+    "judge", "evaluate", "agent", "template", "schema", "contract", "boundary",
+}
+
+
+def _load_priority_business_files(root: Path, source_files: dict[str, str], prefix: str, depth: int = 0) -> None:
+    """受控 walk 原业务系统根目录，优先预加载配置/字段/prompt/规则类关键文件。
+
+    与 ProjectSourceFileProvider._walk_business_repo 互补：
+    - provider 负责完整 catalog（agent 按需 read_file）
+    - 本函数负责把高价值关键文件预加载进 user prompt，agent 不用先 call tool 就能拿到核心证据
+    """
+    if depth > _PRELOAD_MAX_DEPTH or len(source_files) >= _PRELOAD_MAX_FILES:
+        return
+    try:
+        items = list(os.scandir(root))
+    except (PermissionError, OSError):
+        return
+
+    files = [i for i in items if i.is_file()]
+    dirs = [i for i in items if i.is_dir()]
+
+    # 先收关键文件
+    for f in files:
+        if len(source_files) >= _PRELOAD_MAX_FILES:
+            return
+        if not f.name.endswith(tuple(SOURCE_READABLE_SUFFIXES)):
+            continue
+        if f.name.startswith("."):
+            continue
+        name_lower = f.name.lower()
+        if not any(kw in name_lower for kw in _PRELOAD_PRIORITY_KEYWORDS):
+            continue
+        key = f"{prefix}:{f.name}"
+        if key in source_files:
+            continue
+        try:
+            content = Path(f.path).read_text(encoding="utf-8", errors="ignore")
+            source_files[key] = content[:MAX_SOURCE_FILE_BYTES]
+        except Exception as e:
+            logger.warning(f"[attribute] failed to preload business file {f.path}: {e}")
+
+    # 再递归子目录（优先业务目录）
+    priority_dirs = [d for d in dirs if d.name not in _PRELOAD_EXCLUDE_DIRS and not d.name.startswith(".")]
+    for d in priority_dirs:
+        if len(source_files) >= _PRELOAD_MAX_FILES:
+            return
+        _load_priority_business_files(Path(d.path), source_files, f"{prefix}/{d.name}", depth + 1)
 
 
 def _taxonomy(spec: ProjectSpec) -> set[str]:
@@ -204,11 +315,12 @@ def _build_incomplete_reason(result: AttributeResult, spec: ProjectSpec, trace: 
     query = ""
     if isinstance(trace.input, dict):
         query = trace.input.get("query") or trace.input.get("question") or trace.input.get("user_text") or ""
-    actual = trace.extracted_output or {}
+    actual = trace_extracted_output(trace) or {}
     expected = judge.expected or {}
     verdict = judge.verdict or "unknown"
-    missing_reqs = [item.get("requirement") for item in (judge.missing or []) if isinstance(item, dict)]
-    wrong_reqs = [item.get("requirement") for item in (judge.wrong or []) if isinstance(item, dict)]
+    gaps = judge_expected_actual_gaps(judge)
+    missing_reqs = [item.get("requirement") for item in (gaps.get("missing") or []) if isinstance(item, dict)]
+    wrong_reqs = [item.get("requirement") for item in (gaps.get("wrong") or []) if isinstance(item, dict)]
 
     # 根据 verdict 和证据生成描述
     reason_parts = []
@@ -246,7 +358,7 @@ def normalize_attribute_trace_result(spec: ProjectSpec, trace: RunTrace, judge: 
         bool(result.expectation_attributions)
         and bool(result.causal_category)
         and result.causal_category != "needs_human_review"
-        and (not taxonomy or result.causal_category in taxonomy or result.primary_error_type in taxonomy)
+        and (not taxonomy or result.causal_category in taxonomy)
     )
     blocked_by_unsupported = bool(unsupported)
     blocked_by_locations = bool(result.suspected_locations) and not has_location_evidence and not has_valid_llm_attribution
@@ -308,8 +420,8 @@ def _judge_fulfillment_status(judge: JudgeResult) -> str:
         return "not_evaluable"
     if any(item == "not_fulfilled" for item in statuses):
         return "not_fulfilled"
-    if any(item in {"partially_fulfilled", "not_evaluable", "contested"} for item in statuses):
-        return next(item for item in statuses if item in {"partially_fulfilled", "not_evaluable", "contested"})
+    if any(item == "not_evaluable" for item in statuses):
+        return "not_evaluable"
     return "fulfilled"
 
 
@@ -332,7 +444,7 @@ def _attribution_targets(judge: JudgeResult) -> list[dict]:
         if expectation_id:
             expectations[expectation_id] = item
     targets = []
-    failing_statuses = {"not_fulfilled", "partially_fulfilled", "not_evaluable", "contested"}
+    failing_statuses = {"not_fulfilled", "not_evaluable"}
     for assessment in judge.fulfillment_assessments or []:
         expectation_id = _expectation_id(assessment)
         status = str(_item_value(assessment, "status", ""))
@@ -376,20 +488,21 @@ def _fulfilled_attribute_result(trace: RunTrace, judge: JudgeResult) -> Attribut
     if not expectation_ids:
         expectation_ids = ["primary_business_expectation"]
     evidence = list(judge.evidence or [judge.reasoning_summary or "business expectations are fulfilled"])
-    attributions = [
-        {
-            "expectation_id": expectation_id,
-            "fulfillment_status": fulfillment_status,
-            "causal_category": "no_issue",
-            "earliest_divergence": {"node": "fulfillment_assessment", "evidence": evidence, "confidence": "high"},
-            "causal_chain": [{"name": "fulfillment_assessment", "status": "succeeded", "evidence": evidence}],
-            "local_verifications": [],
-            "suspected_locations": [],
-            "improvement_direction": [],
-            "source_evidence": [],
-            "probe_evidence": evidence,
-            "incomplete_reason": "",
-        }
+    attributions: list[ExpectationAttribution] = [
+        normalize_expectation_attribution(
+            {
+                "expectation_id": expectation_id,
+                "fulfillment_status": fulfillment_status,
+                "causal_category": "no_issue",
+                "earliest_divergence": {"node": "fulfillment_assessment", "evidence": evidence, "confidence": "high"},
+                "causal_chain": [{"name": "fulfillment_assessment", "status": "succeeded", "evidence": evidence}],
+                "suspected_locations": [],
+                "improvement_direction": [],
+                "source_evidence": [],
+                "probe_evidence": evidence,
+                "incomplete_reason": "",
+            }
+        )
         for expectation_id in expectation_ids
     ]
     return AttributeResult(
@@ -398,29 +511,28 @@ def _fulfilled_attribute_result(trace: RunTrace, judge: JudgeResult) -> Attribut
         case_id=str(trace.input.get("case_id") or ""),
         expectation_attributions=attributions,
         causal_category="no_issue",
-        probe_results=[{"probe": "fulfillment_assessment", "status": "passed", "evidence": evidence}],
-        failure_category="fulfilled_expectation",
-        failure_stage="fulfilled_expectation",
+        probe_results=[normalize_probe_result({"probe_id": "fulfillment_assessment", "status": "passed", "evidence": evidence})],
         analysis_method="fulfilled_expectation_attribution",
-        evidence_chain=evidence,
-        trace_analysis=list(trace.execution_trace or []),
-        chain_nodes=[{"name": "fulfillment_assessment", "status": "succeeded", "evidence": evidence, "reason": "business expectations fulfilled"}],
-        local_verifications=[],
+        chain_nodes=[ChainNode(name="fulfillment_assessment", status="succeeded", evidence=evidence, reason="business expectations fulfilled")],
         earliest_divergence={"node": "fulfillment_assessment", "evidence": evidence, "confidence": "high"},
-        evidence_coverage={"judge_evidence": bool(evidence), "execution_trace": bool(trace.execution_trace)},
+        evidence_coverage={"judge_evidence": bool(evidence), "execution_trace": bool(trace_execution_trace(trace))},
         analysis_quality={"passed": True, "missing": []},
         incomplete_reason="",
         suspected_locations=[],
         root_cause_hypothesis="业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
         verification_steps=["复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"],
-        patch_direction=["无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"],
-        business_impact="当前输出满足业务预期，可作为 fulfilled 聚合证据。",
-        primary_error_type="no_issue",
-        error_types=[],
-        severity="none",
+        patch_direction=["无需修改业务实现；若后续出现 not_evaluable 或 not_fulfilled evidence，再按对应 expectation 重新归因。"],
         needs_human_review=False,
-        scenario=str(trace.project_fields.get("scenario") or ""),
+        scenario=str(trace.scenario or ""),
         quality_flags=[],
+        summary={
+            "causal_category": "no_issue",
+            "attribution_count": len(attributions),
+            "probe_count": 1,
+            "summary_text": "业务预期已达成",
+            "is_complete": True,
+            "is_formal_attribution": True,
+        },
     )
 
 
@@ -431,7 +543,7 @@ def attribute_failure(
     llm: Optional[LlmClient] = None,
     project_attribute_context: Optional[dict] = None,
 ) -> AttributeResult:
-    if _judge_fulfillment_status(judge) == "fulfilled" and judge.verdict == "correct":
+    if _judge_fulfillment_status(judge) == "fulfilled":
         return _fulfilled_attribute_result(trace, judge)
     attribution = load_project_document(spec, "attribution")
     attribution_targets = _attribution_targets(judge)
@@ -441,88 +553,125 @@ def attribute_failure(
     source_provider = ProjectSourceFileProvider(spec, project_attribute_context, aggregate_byte_budget=AGGREGATE_TOOL_BUDGET)
     source_file_catalog = source_provider.list_files()
     search_source_file = create_source_file_search_tool(source_provider)
+    # 1) common tool：通用辅助 tool（源码检索），所有项目都有。
+    # search_source_file 签名 (file_key: str) -> str，agno validate_call 能正确处理，
+    # 无需 Function 包装。VerifiableTool 下面统一用 Function 包一层。
     tools = [search_source_file]
+
+    # spec/tool2.md: 加载项目 adapter 的 VerifiableTool 可执行验证 tool 集合
+    # 所有 VerifiableTool（project tool + api-discovered tool）统一按 VerifiableTool schema 构建。
+    # 关键：用 agno.tools.Function 包一层，直接传 VerifiableTool.parameters（手工 JSON schema），
+    # 跳过 agno 的 get_type_hints/get_json_schema 自动解析 —— 否则 execute_fn 的
+    # `**kwargs: Any` 注解里 Any 是 _SpecialForm 没有 __name__，agno 的
+    # json_schema.py:183 会撞 `'_SpecialForm' object has no attribute '__name__'`，
+    # tool schema 被降级成空 object，LLM 拿不到参数定义会乱编参数。
+    # 注：execute_fn 已统一改成 `def execute(**kwargs)` 接收 LLM 按 schema 传的 kwargs，
+    # 避免 pydantic validate_call 校验 `params: Dict` 单参数签名时报 missing_argument。
+    try:
+        from impl.core.project_loader import load_adapter
+        from agno.tools import Function as AgnoFunction
+        adapter = load_adapter(spec)
+        verifiable_tools = getattr(adapter, "get_verifiable_tools", lambda: [])()
+        for vt in verifiable_tools:
+            if vt.execute_fn is None:
+                continue
+            _fn = vt.execute_fn
+            _fn.__name__ = vt.tool_id.replace(".", "_")
+            if not getattr(_fn, "__doc__", None):
+                _fn.__doc__ = vt.description
+            # vt.parameters 已经是 agno/OpenAI function-calling 格式的 JSON schema。
+            # 用 skip_entrypoint_processing=True 让 agno 完全跳过 get_type_hints/get_json_schema
+            # 自动解析 —— 否则 execute_fn 的 `**kwargs: Any` 里 Any 是 _SpecialForm 没有
+            # __name__，agno 的 json_schema.py:183 会撞
+            # `'_SpecialForm' object has no attribute '__name__'` 把 schema 降级。
+            _params = vt.parameters or {"type": "object", "properties": {}, "required": []}
+            tools.append(AgnoFunction(
+                name=_fn.__name__,
+                description=vt.description,
+                entrypoint=_fn,
+                parameters=_params,
+                skip_entrypoint_processing=True,
+            ))
+        if verifiable_tools:
+            logger.info(
+                f"[attribute] loaded {len(verifiable_tools)} verifiable tools "
+                f"(executable={sum(1 for vt in verifiable_tools if vt.execute_fn is not None)}); "
+                f"exposed to agno: {[getattr(t, 'name', getattr(t, '__name__', '?')) for t in tools[1:]]}"
+            )
+    except Exception as e:
+        logger.warning(f"[attribute] failed to load verifiable tools from adapter: {e}")
 
     system = """你是通用评估系统的 attribute agent。目标是与 judge 有本质区别：judge 评估业务预期是否达成，你必须围绕未达成、部分达成、不可评估或被质疑的 intent-derived business_expectations 深入源码/配置/prompt/trace/probe，解释 fulfillment 状态背后的因果链。
 
 【输出格式硬性要求】
-- 最终输出必须是单个合法 JSON 对象，以 `{` 起始、以 `}` 结尾。
+- 最终输出必须是单个合法 JSON 对象，以花括号起始、以花括号结尾。
 - 禁止 markdown 散文、章节标题、列表、自然语言说明或思维链作为最终回答。
-- 如需引用代码片段，必须放入 JSON 字符串字段（如 evidence_chain、local_verifications）。
+- 如需引用代码片段，必须放入 JSON 字符串字段（如 chain_nodes、probe_results）。
 - 如必须使用 ``` 代码块包裹，仅允许一个 ```json ... ``` 代码块包裹完整 JSON，且代码块外不得有其他散文。
 
 核心流程：
-0. **优先使用 divergence_analysis**（Issue #3 最新）：
-   - user prompt 中的 `divergence_analysis` 字段包含完整的分歧分析结果
-   - **这是直接调用系统原函数得到的答案**，包括：分歧点、运行时配置检查结果、根因、修复建议
-   - **如果 divergence_analysis.root_cause 非空，必须采纳该根因作为正式归因结论**，包括其 causal_category、root_cause_hypothesis、fix_suggestion 字段，不能重新分类为 model_capability_gap 或其他类别
-   - divergence_analysis.system_check 已进行了配置查询（如映射表检查），**不需要再次读取源码文件验证**——这些是系统函数的直接输出，不是推测
-   - **如果 divergence_analysis.root_cause 非空，可以不执行 probe**（答案已由系统函数提供）；仅在 divergence_analysis 为空时需执行 probe 查源码
-   - **禁止**在归因中说"prompt 文件不在 catalog 中"、"无法审查 LLM prompt"或"无法验证 LLM 行为"——divergence_analysis 已提供完整答案，prompt 缺失不影响结论
-1. 备用：如果 divergence_analysis 为空，使用 `trace_analysis`（调用链路分析）
-2. 从 attribution_targets 选择需要归因的 expectation；这些 target 已由 judge 的 intent_model/business_expectations/fulfillment_assessments 产生，不要独立重建用户意图
-2. 对每个 expectation 重建 expected behavior、actual behavior、gap 或 contested fulfillment reason
+0. **优先使用 divergence_analysis**：user prompt 中的 `divergence_analysis` 字段是系统函数直接输出的分歧分析（含分歧点、根因分类、修复建议）。**如果 divergence_analysis.root_cause 非空，必须采纳该根因作为正式归因结论，直接基于它填空，不需要再读源码文件**。仅在 divergence_analysis 为空或信息不足时，才执行 probe（调用 search_source_file 或可执行验证 tool）。
+1. 从 attribution_targets 选择需要归因的 expectation（已由 judge 的 intent_model/business_expectations/fulfillment_assessments 产生，不要独立重建用户意图）
+2. 对每个 expectation 重建 expected behavior、actual behavior、gap 或 disputed fulfillment reason
 3. 在 execution_trace、project_attribute_context.chain_nodes_to_check 和按需读取的源码文件中定位最早分歧
-4. 产出 expectation_attributions，包含 expectation_id、fulfillment_status、causal_category、earliest_divergence、causal_chain、local_verifications、suspected_locations、improvement_direction
+4. 产出 expectation_attributions，包含 expectation_id、fulfillment_status、causal_category、earliest_divergence、causal_chain、suspected_locations、improvement_direction
 5. suspected_locations 只能使用 source_file_catalog 中真实存在的路径/配置/文档证据；不能编造路径、函数名或历史 case
 6. 如果 probe/source evidence 不足，必须设置 incomplete_reason 和 blocked-probe reason，不能伪造正式归因
 
+可执行验证 tool（spec/tool2.md）：
+- 项目 adapter 提供的可执行验证 tool（如 client_search.search_api / field_capability / rule_verify）能真跑业务系统函数/API，产出 actual 作为证据
+- 归因不是"全知判断对错"，而是"信息不全时拿能拿到的信息做最可能正确的判断，并用执行验证来证明"
+- 优先调可执行验证 tool 拿 actual 做证据，再读源码文件补全理解；不要只靠读文件推测
+- tool 返回的 actual 是事实（机器产出），LLM 用它做交叉对照（actual vs trace、actual vs actual）支撑归因判断
+
 分析优先级和策略：
-1. **优先分析 execution_trace**（运行时实际发生了什么）：
-   - 检查 run_trace.execution_trace 中的每个 step
-   - 定位第一个 status="failed"/"diverged"/"error" 的 step
-   - 记录该 step 的 expected vs actual，这是最直接的分歧证据
-   - 基于分歧点的 stage/node 名称，推断对应的函数/模块
-
-2. **然后使用 divergence_analysis 中的答案**（这是直接调用系统原函数获得的结果）：
-   - divergence_analysis 已经包含了分歧点、根因分类、修复建议
-   - **不需要调用 search_source_file 读取源码文件**——divergence_analysis 已提供完整答案
-   - 直接基于 divergence_analysis 的结果填空即可
-
-3. **使用 source_file_catalog 仅作引用**：
-   - suspected_locations 中的路径必须来自 source_file_catalog 中实际存在的文件
-   - **禁止**在归因中说"prompt 文件不在 catalog 中"、"prompt 内容不可见"、"无法审查 LLM prompt"或"无法验证 LLM 行为"——这些说法是 Issue #3 用户明确禁止的
-   - **禁止调用 search_source_file 工具**——所有答案已由 divergence_analysis 提供
+1. 优先分析 execution_trace（运行时实际发生了什么，定位第一个 failed/diverged/error step）
+2. 然后使用 divergence_analysis 中的答案（系统原函数直接输出）
+3. source_file_catalog 仅作引用：suspected_locations 路径必须来自 catalog
 
 关键规则：
 - causal_category 使用 implementation_bug、model_capability_gap、boundary_limitation、unclear_contract、insufficient_evidence、no_issue 等
 - fulfilled 也可以被解释为 no_issue，但不需要失败归因
 - improvement_direction 必须指向产生机制，而不是泛泛建议
-- 分析文字必须使用中文，包括 root_cause_hypothesis、verification_steps、patch_direction、business_impact 等所有文本字段。禁止使用英文撰写归因内容。
-- **`divergence_analysis` 包含系统直接调用的答案**，如果该字段存在且提供了完整的分歧证据（divergence_point + root_cause + system_check），则**不需要再执行任何 probe 读取源码文件**。直接基于 divergence_analysis 的结果完成归因即可。
-- 只有在 divergence_analysis 为空或信息不足时，才需要执行 probe（调用 search_source_file 读取源码文件）来补充证据。
-- Tool call 预算有限（最多 {tool_call_limit} 次），仅在 divergence_analysis 不充分时才使用。
-- 如果 execution_trace 中已经有具体的错误值（如 raw_intent="4001", mapped="other"），直接检查映射规则，不需要读取完整 prompt
+- 分析文字必须使用中文，包括 root_cause_hypothesis、verification_steps、patch_direction 等所有文本字段
+- Tool call 预算有限（最多 {tool_call_limit} 次），仅在 divergence_analysis 不充分时才使用
 - 如果 tool call 预算用尽且归因不完整，必须设置 incomplete_reason="tool_call_budget_exhausted: 已读取 N 个文件，但仍需读取 [file_list] 来完成归因"
-- 如果 catalog 中有关键文件但因预算限制未读取，在 incomplete_reason 中明确说明，不要说"文件不在 catalog"或"无法访问"。"""
+- 如果 catalog 中有关键文件但因预算限制未读取，在 incomplete_reason 中明确说明，不要说"文件不在 catalog"或"无法访问"。
 
-    # Issue #3: 在 user prompt 中提供预处理的调用链路分析结果
+【原业务系统 vs 适配器区分 ⭐】
+source_file_catalog 包含三类来源：adapter（测评侧归一化层）、source_* 文档（契约/需求）、原业务系统源码（application.external_repo / endpoint_discovery.source_roots 指向的真实业务仓库）。
+- **suspected_locations 应优先指向原业务系统源码文件**（路径含 ext_repo: / endpoint_src: 前缀），因为根因发生在业务系统内部（prompt / intent / 路由 / 规划 / parser / 搜索 / 会话合并等环节）。
+- **adapter.py 仅作测评侧归一化层，不应作为根因落点**。adapter 不是被测对象，它的输出差异是被测对象的副作用，不是原因。
+- 预加载的原业务系统关键文件（配置/字段定义/prompt/规则类）已放入 user prompt 的 source_evidence 字段，优先查阅。"""
+    system = system.format(tool_call_limit=ATTRIBUTE_TOOL_CALL_LIMIT)
+
+    # Issue #3: 在 user prompt 中提供预处理的 execution trace analysis 结果
     # 这样 agent 可以"直接引用系统原函数"，而不需要读大量源码文件去推测
-    trace_analysis_result = None
+    execution_trace_analysis_result = None
     divergence_analysis_result = None  # Issue #3: 完整的分歧分析（含系统配置查询）
 
-    if trace.execution_trace:
+    if trace_execution_trace(trace):
         try:
-            trace_analysis_result = analyze_execution_trace(trace.execution_trace)
+            execution_trace_analysis_result = analyze_execution_trace(trace_execution_trace(trace))
             # 如果找到了分歧点，映射到源码位置
-            if trace_analysis_result.get("first_failed_node"):
-                node_name = trace_analysis_result["first_failed_node"]["name"]
+            if execution_trace_analysis_result.get("first_failed_node"):
+                node_name = execution_trace_analysis_result["first_failed_node"]["name"]
                 project_name = spec.name if spec else "unknown"
                 source_mapping = map_trace_node_to_source(node_name, project_name)
-                trace_analysis_result["source_mapping"] = source_mapping
+                execution_trace_analysis_result["source_mapping"] = source_mapping
 
                 # Issue #3: 新增 - 直接调用系统函数分析分歧，返回完整答案
                 # 包括：为什么出错、配置检查结果、根因、修复建议
                 # Agent 不需要读文件，直接获得答案
                 expected = {}
-                actual = trace.extracted_output or {}
+                actual = trace_extracted_output(trace) or {}
                 for target in attribution_targets:
                     if target.get("expected"):
                         expected = target["expected"]
                         break
 
                 divergence_analysis_result = analyze_divergence(
-                    trace.execution_trace,
+                    trace_execution_trace(trace),
                     expected,
                     actual,
                     spec.name if spec else "unknown",
@@ -531,10 +680,10 @@ def attribute_failure(
 
         except Exception as e:
             logger.warning(f"Trace analysis failed: {e}")
-            trace_analysis_result = {"error": str(e)}
+            execution_trace_analysis_result = {"error": str(e)}
 
     user_data = {
-            "trace_analysis": trace_analysis_result,  # Issue #3: 预处理的调用链路分析
+            "execution_trace_analysis": execution_trace_analysis_result,  # Issue #3: 预处理的调用链路分析
             "divergence_analysis": divergence_analysis_result,  # Issue #3: 完整的分歧分析（含配置查询）
             "attribution_spec": attribution,
             "run_trace": _compact_trace(trace),
@@ -543,59 +692,8 @@ def attribute_failure(
             "project_attribute_context": project_attribute_context or {},
             "source_file_catalog": source_file_catalog,
             "allowed_error_taxonomy": sorted(_taxonomy(spec)),
-            "required_output": {
-                "expectation_attributions": [
-                    {"expectation_id": "string", "fulfillment_status": "fulfilled|partially_fulfilled|not_fulfilled|not_evaluable|contested", "causal_category": "implementation_bug|model_capability_gap|boundary_limitation|unclear_contract|insufficient_evidence|no_issue", "earliest_divergence": {}, "causal_chain": [], "local_verifications": [], "suspected_locations": [], "improvement_direction": [], "source_evidence": [], "probe_evidence": [], "incomplete_reason": "string"}
-                ],
-                "causal_category": "implementation_bug|model_capability_gap|boundary_limitation|unclear_contract|insufficient_evidence|no_issue",
-                "probe_results": [],
-                "failure_category": "string",
-                "failure_stage": "string",
-                "analysis_method": "string",
-                "evidence_chain": [],
-                "trace_analysis": [],
-                "chain_nodes": [
-                    {"name": "string", "status": "normal|suspicious|failed|not_verified", "evidence": [], "reason": "string"}
-                ],
-                "local_verifications": [
-                    {"method": "string", "target": "string", "result": "string", "evidence": []}
-                ],
-                "earliest_divergence": {
-                    "node": "string",
-                    "expected": "object|string|null",
-                    "actual": "object|string|null",
-                    "evidence": [],
-                    "confidence": "high|medium|low|unknown"
-                },
-                "evidence_coverage": {
-                    "query": "boolean",
-                    "actual": "boolean",
-                    "expected": "boolean",
-                    "execution_trace": "boolean",
-                    "project_docs": "boolean",
-                    "code_or_config": "boolean",
-                    "unsupported_claims": []
-                },
-                "analysis_quality": {
-                    "passed": "boolean",
-                    "missing": [],
-                    "standard": "string"
-                },
-                "incomplete_reason": "string",
-                "suspected_locations": [],
-                "root_cause_hypothesis": "string",
-                "verification_steps": [],
-                "patch_direction": [],
-                "business_impact": "string",
-                "primary_error_type": "string",
-                "error_types": [],
-                "severity": "string",
-                "needs_human_review": "boolean|null",
-                "scenario": "string",
-                "quality_flags": [],
-            },
         }
-    user = json.dumps(user_data, ensure_ascii=False)
+    user = json.dumps(to_dict(user_data), ensure_ascii=False)
     # Log prompt sizes for budget monitoring
     system_size = len(system)
     user_size = len(user)
@@ -622,10 +720,10 @@ def attribute_failure(
         spec, role="attribute", knowledge=None, tools=tools,
         tool_call_limit=ATTRIBUTE_TOOL_CALL_LIMIT,
         compress_tool_results=True,
-        max_tool_calls_from_history=ATTRIBUTE_MAX_TOOL_HISTORY,
+        max_tool_calls_from_history=3,
     )
     try:
-        data = client.complete_json(system, user, trace_id=trace.trace_id)
+        data = client.complete_json(system, user, trace_id=trace.trace_id, output_spec=_ATTRIBUTE_OUTPUT_SPEC)
     except Exception as e:
         logger.error(f"[attribute] LLM call failed with exception: {e}")
         data = {"error": "llm_request_failed", "raw_text": str(e)}
@@ -637,7 +735,6 @@ def attribute_failure(
         not data.get("error")
         and not data.get("expectation_attributions")
         and not data.get("causal_category")
-        and not data.get("failure_category")
         and bool(data.get("raw_text"))
     )
     if _parse_failed:
@@ -645,62 +742,63 @@ def attribute_failure(
     _llm_call_failed = data.get("error") in ("llm_request_failed", "missing_api_key", "attribute_parse_failed")
     if _llm_call_failed or "llm_call_failed" in (judge.quality_flags or []):
         error_text = data.get("raw_text") or data.get("error") or judge.reasoning_summary or "judge LLM call failed"
-        return AttributeResult(
+        result = AttributeResult(
             trace_id=trace.trace_id,
             project_id=trace.project_id,
             case_id=str(trace.input.get("case_id") or ""),
-            expectation_attributions=[{"expectation_id": item.get("expectation_id"), "fulfillment_status": item.get("status"), "causal_category": "insufficient_evidence", "earliest_divergence": {"node": "semantic judge or attribute LLM", "evidence": [error_text], "confidence": "high"}, "causal_chain": [{"name": "semantic judge or attribute LLM", "status": "failed", "evidence": [error_text]}], "local_verifications": [], "suspected_locations": [], "improvement_direction": ["恢复 LLM 后重新运行 judge 和 attribute agent。"], "incomplete_reason": "attribute blocked"} for item in (judge.fulfillment_assessments or [])],
+            expectation_attributions=[
+                normalize_expectation_attribution(
+                    {
+                        "expectation_id": _expectation_id(item),
+                        "fulfillment_status": str(_item_value(item, "status", "not_evaluable")),
+                        "causal_category": "insufficient_evidence",
+                        "earliest_divergence": {"node": "semantic judge or attribute LLM", "evidence": [error_text], "confidence": "high"},
+                        "causal_chain": [{"name": "semantic judge or attribute LLM", "status": "failed", "evidence": [error_text]}],
+                        "suspected_locations": [],
+                        "improvement_direction": ["恢复 LLM 后重新运行 judge 和 attribute agent。"],
+                        "incomplete_reason": "attribute blocked",
+                    }
+                )
+                for item in (judge.fulfillment_assessments or [])
+            ],
             causal_category="insufficient_evidence",
-            probe_results=[{"probe": "llm_call", "status": "failed", "evidence": [error_text]}],
-            failure_category="未归因",
-            failure_stage="llm_attribute_call" if _llm_call_failed else "judge_llm_call",
+            probe_results=[normalize_probe_result({"probe_id": "llm_call", "status": "failed", "evidence": [error_text]})],
             analysis_method="llm_call_failed" if _llm_call_failed else "judge_llm_failed_blocked_attribute",
-            evidence_chain=[error_text, *(judge.evidence or [])],
-            trace_analysis=list(trace.execution_trace or []),
-            chain_nodes=[{"name": "semantic judge or attribute LLM", "status": "failed", "evidence": [error_text], "reason": error_text}],
-            local_verifications=[],
+            chain_nodes=[ChainNode(name="semantic judge or attribute LLM", status="failed", evidence=[error_text, *(judge.evidence or [])], reason=error_text)],
             earliest_divergence={"node": "semantic judge or attribute LLM", "evidence": [error_text], "confidence": "high"},
-            evidence_coverage={"query": bool(trace.normalized_request or trace.input), "actual": bool(trace.extracted_output), "expected": bool(judge.expected), "execution_trace": bool(trace.execution_trace), "project_docs": False, "code_or_config": False, "unsupported_claims": []},
+            evidence_coverage={"query": bool(trace_normalized_request(trace) or trace_input(trace)), "actual": bool(trace_extracted_output(trace)), "expected": bool(judge.expected), "execution_trace": bool(trace_execution_trace(trace)), "project_docs": False, "code_or_config": False, "unsupported_claims": []},
             analysis_quality={"passed": False, "missing": ["semantic judge result" if "llm_call_failed" in (judge.quality_flags or []) else "attribute LLM result"], "standard": "归因必须基于当前 case 的 judge、trace 和可验证链路证据。"},
             incomplete_reason="judge LLM 调用失败，不能产出正式根因。" if "llm_call_failed" in (judge.quality_flags or []) else "attribute agent LLM 调用失败。",
             suspected_locations=[],
             root_cause_hypothesis="语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
             verification_steps=["检查 LLM API key、余额、网络和模型配置。", "恢复 LLM 后重新运行 judge 和 attribute agent。"],
             patch_direction=["修复 LLM 调用配置或费用问题；不要把该兜底结果当作最终业务根因。"],
-            business_impact="当前 case 需要人工复核，不能进入正式失败根因聚簇。",
-            primary_error_type="needs_human_review",
-            error_types=["needs_human_review"],
-            severity="unknown",
             needs_human_review=True,
-            scenario=str(trace.project_fields.get("scenario") or ""),
+            scenario=str(trace.scenario or ""),
             quality_flags=[*(judge.quality_flags or []), "attribute_blocked"],
             raw_model_output=data,
         )
-    primary_error_type = str(data.get("primary_error_type") or data.get("failure_category") or "未归因")
+        result = normalize_attribute_result(result) or result
+        result.summary = summary_from_attribution(to_dict(result))
+        return result
     taxonomy = _taxonomy(spec)
-    if taxonomy and primary_error_type not in taxonomy:
-        primary_error_type = "needs_human_review" if "needs_human_review" in taxonomy else primary_error_type
-    error_types = [str(item) for item in list(data.get("error_types") or [])]
-    if taxonomy:
-        error_types = [item for item in error_types if item in taxonomy]
-    if primary_error_type and primary_error_type != "none" and primary_error_type not in error_types:
-        error_types.append(primary_error_type)
+    causal_category = str(data.get("causal_category") or "")
+    if taxonomy and causal_category and causal_category not in taxonomy:
+        causal_category = "needs_human_review" if "needs_human_review" in taxonomy else causal_category
     incomplete_reason = _normalize_incomplete_reason(data)
+    expectation_attributions: list[ExpectationAttribution] = [item for item in (normalize_expectation_attribution(item) for item in list(data.get("expectation_attributions") or [])) if item is not None]
+    chain_nodes: list[ChainNode] = [item for item in (normalize_chain_node(item) for item in list(data.get("chain_nodes") or [])) if item is not None]
+    earliest_divergence = dict(data.get("earliest_divergence") or {})
     result = AttributeResult(
         trace_id=trace.trace_id,
         project_id=trace.project_id,
         case_id=str(trace.input.get("case_id") or ""),
-        expectation_attributions=list(data.get("expectation_attributions") or []),
-        causal_category=str(data.get("causal_category") or primary_error_type or ""),
-        probe_results=list(data.get("probe_results") or []),
-        failure_category=str(data.get("failure_category") or "未归因"),
-        failure_stage=str(data.get("failure_stage") or "不确定"),
+        expectation_attributions=expectation_attributions,
+        causal_category=causal_category,
+        probe_results=[item for item in (normalize_probe_result(item) for item in list(data.get("probe_results") or [])) if item is not None],
         analysis_method=str(data.get("analysis_method") or "current_case_llm_attribute"),
-        evidence_chain=list(data.get("evidence_chain") or []),
-        trace_analysis=list(data.get("trace_analysis") or trace.execution_trace or []),
-        chain_nodes=list(data.get("chain_nodes") or []),
-        local_verifications=list(data.get("local_verifications") or []),
-        earliest_divergence=dict(data.get("earliest_divergence") or {}),
+        chain_nodes=chain_nodes,
+        earliest_divergence=earliest_divergence,
         evidence_coverage=dict(data.get("evidence_coverage") or {}),
         analysis_quality=dict(data.get("analysis_quality") or {}),
         incomplete_reason=incomplete_reason,
@@ -708,13 +806,12 @@ def attribute_failure(
         root_cause_hypothesis=str(data.get("root_cause_hypothesis") or ""),
         verification_steps=list(data.get("verification_steps") or []),
         patch_direction=list(data.get("patch_direction") or []),
-        business_impact=str(data.get("business_impact") or ""),
-        primary_error_type=primary_error_type,
-        error_types=error_types,
-        severity=str(data.get("severity") or ""),
         needs_human_review=data.get("needs_human_review"),
-        scenario=str(data.get("scenario") or trace.project_fields.get("scenario") or ""),
+        scenario=str(data.get("scenario") or trace.scenario or ""),
         quality_flags=list(data.get("quality_flags") or []),
         raw_model_output=data,
+        # spec/tool2.md: 从 agno RunOutput 提取的 tool 调用记录，证明归因基于执行证据
+        tool_call_log=data.get("_tool_call_log") or [],
     )
-    return normalize_attribute_trace_result(spec, trace, judge, result)
+    result.summary = summary_from_attribution(to_dict(result))
+    return normalize_attribute_trace_result(spec, trace, judge, normalize_attribute_result(result) or result)

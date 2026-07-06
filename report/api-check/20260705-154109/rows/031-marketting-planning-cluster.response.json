@@ -1,0 +1,63 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图阶段路由正确",
+        "业务指标 NBEV 识别",
+        "目标缺口澄清",
+        "规划维度覆盖",
+        "规划可操作性",
+        "SSE 完成且有内容"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "6ae4e699-a6fb-4a49-aa75-d25095eebe51"
+      ],
+      "representative_traces": [
+        "6ae4e699-a6fb-4a49-aa75-d25095eebe51"
+      ],
+      "common_root_cause": "意图识别模块存在双重缺陷导致查询误分类：(1) 规则层 Tier 3 关键词集合过于狭窄，仅覆盖'达成/规划/路径/测算/分析'五词，未包含'补上''补足''补齐''补缺口'等 NBEV 目标缺口补足场景的常见口语化表述，导致规则匹配落空；(2) LLM 回退层的 prompt 中 nbev_planning 的定义偏向显式'规划/测算'措辞，few-shot 示例中缺少'缺口补足'类查询的正例，使得 Qwen 模型将'通过增加理财师或优化产品方案来补上NBEV目标缺口'这一本质上属于 NBEV 路径规划的用户意图误判为 other。两个缺陷的叠加效应是：规则未能提前拦截 → LLM 也未能纠正 → 意图分类为 other → 全链路短路。",
+      "shared_failure_pattern": "意图识别模块存在双重缺陷导致查询误分类：(1) 规则层 Tier 3 关键词集合过于狭窄，仅覆盖'达成/规划/路径/测算/分析'五词，未包含'补上''补足''补齐''补缺口'等 NBEV 目标缺口补足场景的常见口语化表述，导致规则匹配落空；(2) LLM 回退层的 prompt 中 nbev_planning 的定义偏向显式'规划/测算'措辞，few-shot 示例中缺少'缺口补足'类查询的正例，使得 Qwen 模型将'通过增加理财师或优化产品方案来补上NBEV目标缺口'这一本质上属于 NBEV 路径规划的用户意图误判为 other。两个缺陷的叠加效应是：规则未能提前拦截 → LLM 也未能纠正 → 意图分类为 other → 全链路短路。",
+      "representative_diffs": [
+        {
+          "case_id": "6ae4e699-a6fb-4a49-aa75-d25095eebe51",
+          "expected": "意图识别为 nbev_planning（约 code 4002），路由至 planning 或 clarification 阶段",
+          "actual": "意图识别为 other（code 4001），路由至 non_agent 阶段",
+          "evidence": {
+            "execution_trace.intent_recognition.actual_stage": "non_agent",
+            "extracted_output.intent": "4001",
+            "extracted_output.intent_name": "其他意图",
+            "user_query": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？"
+          }
+        }
+      ],
+      "minimal_fix_direction": [
+        "在 intent_recognition.py 的 Tier 3 关键词集合中扩展缺口补足类动词：['补上','补足','补齐','补缺口','补差','追上','赶上','填平']，使规则能覆盖更多自然语言变体",
+        "新增 Tier 2.5 规则：当检测到 'NBEV' + 路径类型关键词（队伍/理财师/客户/产品）时，即使无明确 target_value 也按 nbev_planning 处理（conf 0.9），将数值缺失交由 field_clarification 阶段追问",
+        "在 intent_prompt.py 的 few-shot 示例中增加 2-3 条'缺口补足'类正例，如：'NBEV还差200万，怎么通过队伍增员补上' → nbev_planning, target_value='200', path_types=['队伍']",
+        "考虑在 prompt 中增加一条规则：'任何明确提及 NBEV 目标且讨论如何达成/补足/改善的查询，均应归为 nbev_planning，除非用户明确要求其他类型分析'"
+      ],
+      "verification_cases": [
+        "6ae4e699-a6fb-4a49-aa75-d25095eebe51"
+      ],
+      "next_actions": [
+        "使用 curl 或 adapter 对相同 query 调用 /api/v1/marketing-planning/stream，观察 intent_recognition 返回的 intent code 是否为 4001",
+        "在 intent_recognition.py 的 Tier 3 关键词列表中临时加入'补上'，重新运行相同 query，验证是否命中 nbev_planning（conf 0.95）",
+        "检查 LLM 原始响应日志（如有），确认模型输出 intent 为 other 的具体推理过程",
+        "对比：将 query 改写为'我们团队今年的NBEV目标还差不少，帮我做一下NBEV达成路径规划'后再次测试，验证加入'规划'关键词后是否能正确路由"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模块存在双重缺陷导致查询误分类：(1) 规则层 Tier 3 关键词集合过于狭窄，仅覆盖'达成/规划/路径/测算/分析'五词，未包含'补上''补足''补齐''补缺口'等 NBEV 目标缺口补足场景的常见口语化表述，导致规则匹配落空；(2) LLM 回退层的 prompt 中 nbev_planning 的定义偏向显式'规划/测算'措辞，few-shot 示例中缺少'缺口补足'类查询的正例，使得 Qwen 模型将'通过增加理财师或优化产品方案来补上NBEV目标缺口'这一本质上属于 NBEV 路径规划的用户意图误判为 other。两个缺陷的叠加效应是：规则未能提前拦截 → LLM 也未能纠正 → 意图分类为 other → 全链路短路。",
+  "impact": "",
+  "priority": "high"
+}

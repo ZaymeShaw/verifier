@@ -1,0 +1,46 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "91f9df97-1096-435c-b45b-176b57e84917"
+      ],
+      "representative_traces": [
+        "91f9df97-1096-435c-b45b-176b57e84917"
+      ],
+      "common_root_cause": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "shared_failure_pattern": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "representative_diffs": [
+        {
+          "case_id": "91f9df97-1096-435c-b45b-176b57e84917",
+          "node": "state_machine",
+          "evidence": [
+            "该样本被标记为缺失问题、实际答案和黄金答案，属于严重数据不完整。评估系统无法获取任何实际回答或参考标准来验证用户意图“如何更改收货地址”是否被满足，因此整体评估结果为不可评估，建议人工核实数据采集流程。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=False",
+            "golden_answer_present=False"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+      ],
+      "verification_cases": [
+        "91f9df97-1096-435c-b45b-176b57e84917"
+      ],
+      "next_actions": [
+        "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+      ]
+    }
+  ],
+  "common_root_cause": "",
+  "impact": "",
+  "priority": ""
+}

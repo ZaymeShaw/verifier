@@ -1,0 +1,58 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "needs_human_review::not_evaluable",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "明确说明是否需要先经过社保报销",
+        "包含以保险条款为准等免责声明"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "52ed9e22-ea57-47bc-be4b-93737ac2257e"
+      ],
+      "representative_traces": [
+        "52ed9e22-ea57-47bc-be4b-93737ac2257e"
+      ],
+      "common_root_cause": "LLM/mock_agent 在生成 QA 样本回答时存在两个模型能力缺陷：(1) 对用户的是否问题（'需要先经过社保报销吗？'），模型仅通过描述反面情况（未经过社保按60%赔付）间接暗示答案，未能给出'通常需要先经过社保报销'的直接肯定回应，反映出指令遵循或问答完整性方面的不足；(2) 未在保险咨询场景下附加标准免责声明'具体以保险条款为准'，反映出领域合规话术的生成欠缺。pipeline 各节点（normalize → output.read → extract_output）均正常工作，纯粹透传了不完整的回答内容。",
+      "shared_failure_pattern": "LLM/mock_agent 在生成 QA 样本回答时存在两个模型能力缺陷：(1) 对用户的是否问题（'需要先经过社保报销吗？'），模型仅通过描述反面情况（未经过社保按60%赔付）间接暗示答案，未能给出'通常需要先经过社保报销'的直接肯定回应，反映出指令遵循或问答完整性方面的不足；(2) 未在保险咨询场景下附加标准免责声明'具体以保险条款为准'，反映出领域合规话术的生成欠缺。pipeline 各节点（normalize → output.read → extract_output）均正常工作，纯粹透传了不完整的回答内容。",
+      "representative_diffs": [
+        {
+          "case_id": "52ed9e22-ea57-47bc-be4b-93737ac2257e",
+          "node": "mock_agent_llm 内容生成阶段",
+          "expected": "回答应包含：(1) 报销比例100%；(2) 质子重离子保障；(3) 明确肯定需要先经过社保报销；(4) 未经过社保按60%赔付；(5) 免责声明",
+          "actual": "回答包含：(1)(2)(4)，缺失(3)正面肯定和(5)免责声明",
+          "evidence": [
+            "judge semantic_equivalence_checks 共5项：3项 equivalent=true，2项 equivalent=false",
+            "blocking_gaps: ['明确说明是否需要先经过社保报销']",
+            "missing: ['需要先经过社保报销的明确肯定性表述', '免责声明']"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "在 LLM prompt 中增加：'当用户提问包含是/否问题时，回答的第一句必须给出明确的是或否判断，然后展开说明'",
+        "在 LLM prompt 中增加：'所有涉及保险条款、赔付比例、保障范围的回答，末尾必须附加具体以保险条款为准'",
+        "考虑在 QA mock_agent 输出后增加后处理校验：检测回答是否覆盖用户问题中的所有子问题，对遗漏项标记或自动补全"
+      ],
+      "verification_cases": [
+        "52ed9e22-ea57-47bc-be4b-93737ac2257e"
+      ],
+      "next_actions": [
+        "检查 mock_agent_llm 的 system prompt 是否包含'必须直接回答用户的是否问题'的指令",
+        "检查 mock_agent_llm 的 prompt 是否包含'保险咨询回答必须以免责声明结尾'的合规要求",
+        "用相同 prompt 重新生成该样本的回答，观察是否稳定复现两个缺失",
+        "若可复现，在 prompt 中补充明确指令后再次生成，验证回答完整性是否提升"
+      ]
+    }
+  ],
+  "common_root_cause": "LLM/mock_agent 在生成 QA 样本回答时存在两个模型能力缺陷：(1) 对用户的是否问题（'需要先经过社保报销吗？'），模型仅通过描述反面情况（未经过社保按60%赔付）间接暗示答案，未能给出'通常需要先经过社保报销'的直接肯定回应，反映出指令遵循或问答完整性方面的不足；(2) 未在保险咨询场景下附加标准免责声明'具体以保险条款为准'，反映出领域合规话术的生成欠缺。pipeline 各节点（normalize → output.read → extract_output）均正常工作，纯粹透传了不完整的回答内容。",
+  "impact": "",
+  "priority": "high"
+}

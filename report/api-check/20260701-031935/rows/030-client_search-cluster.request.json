@@ -1,0 +1,118 @@
+{
+  "project": "client_search",
+  "attributes": [
+    {
+      "trace_id": "55aa09f2-1be4-468f-815f-40311970049a",
+      "project_id": "client_search",
+      "case_id": "",
+      "expectation_attributions": [
+        {
+          "expectation_id": "年龄字段选择正确性",
+          "causal_category": "no_issue"
+        },
+        {
+          "expectation_id": "年龄精确值正确性",
+          "causal_category": "no_issue"
+        },
+        {
+          "expectation_id": "年龄操作符正确性",
+          "causal_category": "no_issue"
+        },
+        {
+          "expectation_id": "性别字段选择正确性",
+          "causal_category": "no_issue"
+        },
+        {
+          "expectation_id": "性别值映射正确性",
+          "causal_category": "no_issue"
+        },
+        {
+          "expectation_id": "性别操作符正确性",
+          "causal_category": "no_issue"
+        },
+        {
+          "expectation_id": "保费字段选择正确性",
+          "causal_category": "no_issue"
+        },
+        {
+          "expectation_id": "保费单位换算正确性",
+          "causal_category": "no_issue"
+        },
+        {
+          "expectation_id": "保费操作符正确性",
+          "causal_category": "no_issue"
+        },
+        {
+          "expectation_id": "布尔逻辑正确性",
+          "causal_category": "no_issue"
+        },
+        {
+          "expectation_id": "回答完整性",
+          "causal_category": "no_issue"
+        }
+      ],
+      "causal_category": "no_issue",
+      "earliest_divergence": {
+        "node": "fulfillment_assessment",
+        "evidence": [
+          "query: '45岁女性保费10万以上'",
+          "actual条件1: {\"field\":\"clientAge\",\"operator\":\"RANGE\",\"value\":{\"min\":45,\"max\":45}}",
+          "actual条件2: {\"field\":\"clientSex\",\"operator\":\"MATCH\",\"value\":\"女\"}",
+          "actual条件3: {\"field\":\"annPremSegNum\",\"operator\":\"GTE\",\"value\":100000}",
+          "actual逻辑: AND",
+          "prompt规则: 精确年龄用RANGE {min:x,max:x}",
+          "prompt规则: clientSex枚举['男','女']，操作符MATCH",
+          "prompt规则: annPremSegNum操作符GTE，万=×10000",
+          "prompt示例: '保费超过5万的客户' → annPremSegNum GTE 50000"
+        ],
+        "confidence": "high"
+      },
+      "chain_nodes": [
+        {
+          "status": "verified",
+          "evidence": [
+            "query: '45岁女性保费10万以上'",
+            "actual条件1: {\"field\":\"clientAge\",\"operator\":\"RANGE\",\"value\":{\"min\":45,\"max\":45}}",
+            "actual条件2: {\"field\":\"clientSex\",\"operator\":\"MATCH\",\"value\":\"女\"}",
+            "actual条件3: {\"field\":\"annPremSegNum\",\"operator\":\"GTE\",\"value\":100000}",
+            "actual逻辑: AND",
+            "prompt规则: 精确年龄用RANGE {min:x,max:x}",
+            "prompt规则: clientSex枚举['男','女']，操作符MATCH",
+            "prompt规则: annPremSegNum操作符GTE，万=×10000",
+            "prompt示例: '保费超过5万的客户' → annPremSegNum GTE 50000"
+          ]
+        }
+      ],
+      "probe_results": [
+        {
+          "probe_id": "fulfillment_assessment",
+          "status": "not_verified",
+          "evidence": [
+            "query: '45岁女性保费10万以上'",
+            "actual条件1: {\"field\":\"clientAge\",\"operator\":\"RANGE\",\"value\":{\"min\":45,\"max\":45}}",
+            "actual条件2: {\"field\":\"clientSex\",\"operator\":\"MATCH\",\"value\":\"女\"}",
+            "actual条件3: {\"field\":\"annPremSegNum\",\"operator\":\"GTE\",\"value\":100000}",
+            "actual逻辑: AND",
+            "prompt规则: 精确年龄用RANGE {min:x,max:x}",
+            "prompt规则: clientSex枚举['男','女']，操作符MATCH",
+            "prompt规则: annPremSegNum操作符GTE，万=×10000",
+            "prompt示例: '保费超过5万的客户' → annPremSegNum GTE 50000"
+          ]
+        }
+      ],
+      "evidence_coverage": {
+        "judge_evidence": true,
+        "execution_trace": true
+      },
+      "root_cause_hypothesis": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+      "verification_steps": [
+        "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+      ],
+      "patch_direction": [
+        "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+      ],
+      "needs_human_review": false,
+      "scenario": ""
+    }
+  ]
+}

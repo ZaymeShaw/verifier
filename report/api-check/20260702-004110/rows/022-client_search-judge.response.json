@@ -1,0 +1,38 @@
+{
+  "trace_id": "c19657f6-0ef3-4bd3-ad40-b4420c01a21b",
+  "project_id": "client_search",
+  "business_expectations": [
+    {},
+    {}
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "识别北京为地理位置筛选意图",
+      "status": "not_evaluable"
+    },
+    {
+      "expectation_id": "将北京映射到可用ES字段",
+      "status": "not_evaluable"
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_evaluable",
+    "assessment_count": 2
+  },
+  "expected": {
+    "query_logic": "AND",
+    "expected_source": "not_available",
+    "reference_is_oracle": false
+  },
+  "actual": {
+    "query_logic": "AND"
+  },
+  "summary": {
+    "reason": "uncertain · parser 的空条件输出在当前系统边界下是正确的：ES 数据库不存在城市/地理位置字段，无法将'北京'映射为可执行的 ES 查询条件。此限制来自上游数据能力（uncontrollable limit），不属于当前系统可优化的范围。若强行输出一个不存在的字段条件，反而会导致下游查询错误。因此 parser 返回空条件是合理且正确的行为。",
+    "reason_source": "reasoning_summary",
+    "fulfillment_status": "not_evaluable",
+    "assessment_count": 2,
+    "blocking_count": 0,
+    "is_formal_attribution": false
+  }
+}

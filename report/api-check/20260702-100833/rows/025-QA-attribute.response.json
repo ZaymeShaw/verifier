@@ -1,0 +1,118 @@
+{
+  "trace_id": "27a71b88-4e5a-435f-a2a2-0bcd96aaf20f",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "回答提供修改密码的方法",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "回答与黄金答案一致",
+      "causal_category": "insufficient_evidence"
+    }
+  ],
+  "causal_category": "需人工复核",
+  "earliest_divergence": {
+    "node": "qa.sample.normalize",
+    "expected": "样本提供可评估的最小字段集合（question 或 actual_answer 或 golden_answer 至少其一）",
+    "actual": "question、actual_answer、golden_answer 三者全空，data_quality_flags 记录三个缺失",
+    "evidence": [
+      "normalized_request.input.question=''",
+      "normalized_request.output.actual_answer=''",
+      "normalized_request.reference={}",
+      "normalized_request.scenario='qa_gold_answer'",
+      "data_quality_flags=['missing_question', 'missing_actual_answer', 'missing_golden_answer']"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "suspicious",
+      "evidence": [
+        "data_quality_flags=['missing_question', 'missing_actual_answer', 'missing_golden_answer']",
+        "scenario='qa_gold_answer'（由原始数据携带，非推断结果）"
+      ]
+    },
+    {
+      "status": "suspicious",
+      "evidence": [
+        "extracted_output.actual_answer=''"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "返回 {'actual_answer': ''}，无异常"
+      ]
+    },
+    {
+      "status": "failed",
+      "evidence": [
+        "question_present=false",
+        "actual_answer_present=false",
+        "reference_present=false",
+        "unrecoverable_missing=['actual_answer_present']"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "verdict=uncertain",
+        "两个 fulfillment_assessment 均为 not_evaluable"
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "skipped"
+    }
+  ],
+  "evidence_coverage": {
+    "query": false,
+    "actual": false,
+    "expected": false,
+    "execution_trace": true,
+    "project_docs": false,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "输入样本在数据管道上游即已损坏：question、actual_answer、golden_answer 三个评估核心字段全部为空。adapter._normalize_sample 在原始数据已携带 scenario='qa_gold_answer' 时，不会触发 _infer_scenario 的 fallback（该 fallback 本应在 golden_answer 为空时返回 'invalid_sample'）。因此空样本仍以 qa_gold_answer 场景进入 judge 流程，而 judge 在所有数据缺失的情况下只能产出 not_evaluable。根本原因不是 judge 逻辑错误，而是数据入口缺少对 scenario 与数据完整性一致性的校验，导致不可评估样本未被提前拦截。",
+  "verification_steps": [
+    "检查当前 case 的原始输入数据来源（mock_cases.json 或前端上传），确认 question、actual_answer、golden_answer 为何全部为空",
+    "在 adapter._normalize_sample 中添加日志：当 scenario='qa_gold_answer' 但 golden_answer 为空时打印 warning",
+    "使用一个正常 qa_gold_answer 样本（含非空 question/actual_answer/golden_answer）重新运行 QA 流程，验证 judge 和 attribute 是否恢复正常",
+    "检查 mock_agent 或数据生成链路是否在特定条件下产出了空字段样本"
+  ],
+  "patch_direction": [
+    "在 _normalize_sample 末尾增加 scenario 一致性校验：若 scenario='qa_gold_answer' 但 reference.golden_answer 为空，将 scenario 降级为 'invalid_sample' 并在 data_quality_flags 中加入 'scenario_mismatch'",
+    "在 build_execution_trace 中，qa.sample.normalize 的 status 判定条件改为：scenario != 'invalid_sample' and not data_quality_flags 才标记 ok",
+    "在 _gold_answer_exact_probe 中，当 golden_answer 缺失时返回一个 verdict='uncertain'、fulfillment_assessments=[{status:'not_evaluable'}] 的 judge_result，避免上游继续走 _enrich_semantic_judge 路径"
+  ],
+  "needs_human_review": true,
+  "scenario": "qa_gold_answer",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 2,
+    "probe_count": 5,
+    "summary_text": "输入样本在数据管道上游即已损坏：question、actual_answer、golden_answer 三个评估核心字段全部为空。adapter._normalize_sample 在原始数据已携带 scenario='qa_gold_answer' 时，不会触发 _infer_scenario 的 fallback（该 fallback 本应在 golden_answer 为空时返回 'invalid_sample'）。因此空样本仍以 qa_gold_answer 场景进入 judge 流程，而 judge 在所有数据缺失的情况下只能产出 not_evaluable。根本原因不是 judge 逻辑错误，而是数据入口缺少对 scenario 与数据完整性一致性的校验，导致不可评估样本未被提前拦截。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

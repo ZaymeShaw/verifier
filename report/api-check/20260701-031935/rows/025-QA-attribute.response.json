@@ -1,0 +1,96 @@
+{
+  "trace_id": "7ce79142-b6cc-4ce1-8e4c-4864fa3ca4d2",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "回答非空且提供实质内容",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "回答主题相关性",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "回答信息准确性",
+      "causal_category": "insufficient_evidence"
+    }
+  ],
+  "causal_category": "需人工复核",
+  "earliest_divergence": {
+    "node": "qa.sample.normalize",
+    "expected": "样本包含 question 和 actual_answer 两个必要字段",
+    "actual": "样本仅包含 question=\"什么是保险合同犹豫期？\"，actual_answer 为空字符串",
+    "evidence": [
+      "run_trace.normalized_request.input.question=什么是保险合同犹豫期？",
+      "run_trace.normalized_request.output.actual_answer=\"\"",
+      "run_trace.normalized_request.data_quality_flags=[\"missing_actual_answer\"]",
+      "run_trace.normalized_request.scenario=invalid_sample"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "suspicious",
+      "evidence": [
+        "scenario=invalid_sample",
+        "data_quality_flags=[\"missing_actual_answer\"]"
+      ]
+    },
+    {
+      "status": "suspicious",
+      "evidence": [
+        "extracted_output.actual_answer=\"\""
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "actual_answer_present=false"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "verdict=uncertain",
+        "所有 fulfillment_assessments 状态为 not_evaluable"
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": false,
+    "expected": true,
+    "execution_trace": true,
+    "project_docs": true,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "样本数据本身缺少 actual_answer，属于输入数据不完整导致的边界限制。适配器代码逻辑正确：_infer_scenario 按规则推断为 invalid_sample，_quality_flags 正确标记 missing_actual_answer，judge 在无评估对象时合理返回 not_evaluable。整个处理链路行为符合设计预期，根因定位在上游数据构造或传输环节，非代码缺陷。",
+  "verification_steps": [
+    "检查该 case 的来源数据文件（如 mock_cases.json 或上游数据集），确认对应条目的 output.actual_answer 为何为空",
+    "确认数据管道是否存在 bug 导致 actual_answer 字段在传输或序列化过程中丢失",
+    "如果该 case 由外部系统提交，检查提交时的请求体是否包含 actual_answer 字段",
+    "在数据入口增加校验：如果 actual_answer 为空且 scenario 被推断为 invalid_sample，记录告警并拒绝该样本进入评估流程"
+  ],
+  "patch_direction": [
+    "修复上游数据源：确保\"什么是保险合同犹豫期？\"对应的样本包含非空 actual_answer",
+    "如果无法修复数据源，可在数据加载阶段增加过滤逻辑，预先剔除 invalid_sample 避免无意义的 judge 调用",
+    "长期方案：在样本协议中明确 actual_answer 为必填字段，在适配器入口增加 schema 校验"
+  ],
+  "needs_human_review": false,
+  "scenario": "invalid_sample"
+}

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+curl -sS -X POST 'http://127.0.0.1:8021/api/run_chain' -H 'Content-Type: application/json' --data-raw '{"input": {"expected_intent": "", "id": "mock-agent-QA-02a290c0", "input": {"input": {"answer": "本产品对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。但需注意，若未经过社保报销，则按60%比例赔付。", "query": "这款百万医疗险对癌症治疗能报销多少？需要先经过社保报销吗？"}, "metadata": {"session_id": "sess_qa_12345", "trace_id": "trace_qa_67890", "user_id": "user_001"}, "scenario": "qa_gold_answer"}, "metadata": {"live_request_mapped": true, "project_id": "QA", "ready": ["output", "reference"], "schema_ok": false, "source": "mock_agent_llm"}, "output": {"actual_answer": "本产品对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。但需注意，若未经过社保报销，则按60%比例赔付。"}, "reference": {"actual_answer": "该百万医疗险对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。通常需要先经过社保报销；若未经社保报销，则按60%比例赔付。具体以保险条款为准。"}, "scenario": "qa_gold_answer", "source": "mock_agent_llm", "status": "pending"}, "project": "QA"}' --write-out '
+__HTTP_STATUS__:%{http_code}'

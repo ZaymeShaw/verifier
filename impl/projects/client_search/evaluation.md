@@ -9,7 +9,7 @@ Judge the current client_search API output by reconstructing expected-vs-actual 
 - `projects/client_search/readme.md`: 标准答案的答案结果由于数据库字段已经过时、跟 API 返回结果不一致，所以标准答案只能作为参考；judge 需要根据最新项目资料和当前运行证据进行实时标注。
 - `projects/client_search/config.md`: 原始字段定义、枚举、值映射和规则配置是 ES/search 能力边界的重要来源；静态摘要本身只是辅助指针，不是绝对标准。
 - `projects/client_search/prompt.md`: 当前 prompt 规则用于理解 parser 预期，但等价的 ES/search 结果仍然可接受。
-- `RunTrace.project_fields.downstream_search`: 下游客户搜索探测结果。
+- `RunTrace.extracted_output.downstream_search`: 下游客户搜索探测结果。
 
 ## Quality requirements
 

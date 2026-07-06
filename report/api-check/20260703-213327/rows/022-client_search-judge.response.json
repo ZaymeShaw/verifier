@@ -1,0 +1,167 @@
+{
+  "trace_id": "c76d5c8e-7e36-4f7c-a825-32c178375125",
+  "project_id": "client_search",
+  "verdict": "correct",
+  "score": 1.0,
+  "business_expectations": [
+    {
+      "expectation_id": "client_search:search_condition_contract",
+      "downstream_consumer": "downstream client search",
+      "user_intent": "{'extra_input_params': {'vip_level': 'high'}, 'session_id': 'session_20260514_001', 'source': 'agent_portal', 'trace_id': 'trace_20260514_001', 'user_id': 'user_001', 'user_text': '帮我找出所有VIP等级比较高的客户信息'}",
+      "expected_outcome": "actual search conditions should cover the target customer population without wrong, missing, or extra conditions",
+      "required_capabilities": [
+        "field_operator_value_logic",
+        "semantic_equivalence",
+        "downstream_search_executability"
+      ],
+      "boundary": {
+        "downstream_result_set_available": false,
+        "downstream_status": "not_verified",
+        "judge_scope": "parser_condition_semantics_only",
+        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics.",
+        "result_set_verified": false
+      },
+      "priority": "normal",
+      "evidence_refs": [
+        {
+          "ref_id": "",
+          "source": "",
+          "kind": "",
+          "stage": "",
+          "summary": "",
+          "location": ""
+        }
+      ]
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "client_search:search_condition_contract",
+      "status": "fulfilled",
+      "expected_evidence": [
+        {
+          "query_logic": "AND",
+          "expected_source": "not_available",
+          "reference_is_oracle": false
+        }
+      ],
+      "actual_evidence": [
+        {
+          "query_logic": "AND"
+        }
+      ],
+      "downstream_impact": "search conditions cover the target customer population",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "fulfilled",
+    "assessment_count": 1
+  },
+  "expected": {
+    "query_logic": "AND",
+    "expected_source": "not_available",
+    "reference_is_oracle": false
+  },
+  "actual": {
+    "query_logic": "AND"
+  },
+  "reasoning_summary": "",
+  "judge_basis": "",
+  "judge_method": "llm_call_failed",
+  "verdict_derivation": {
+    "why_verdict": "LLM 调用失败，未做出算法判断",
+    "missing_evidence": [
+      "current intent/config expected conditions"
+    ]
+  },
+  "consumer_contract": {
+    "consumer": "downstream client search",
+    "contract": "parsed field/operator/value conditions and query logic must be executable for downstream client search within the active application boundary",
+    "reference_contract": {
+      "clientAge": {
+        "field": "clientAge",
+        "operator": "RANGE/GTE/LTE/MATCH",
+        "value_type": "number",
+        "definition": "客户年龄字段，用于年龄精确值或边界条件筛选。",
+        "examples": [
+          "45岁女性保费10万以上",
+          "大于50岁的客户"
+        ]
+      },
+      "clientSex": {
+        "field": "clientSex",
+        "operator": "MATCH",
+        "value_type": "enum",
+        "enums": [
+          "男",
+          "女"
+        ],
+        "definition": "客户性别字段。",
+        "examples": [
+          "45岁女性保费10万以上"
+        ]
+      },
+      "annPremSegNum": {
+        "field": "annPremSegNum",
+        "operator": "GTE/LTE/RANGE/MATCH",
+        "value_type": "number",
+        "definition": "年缴保费金额字段，中文金额单位需要换算成数值。",
+        "examples": [
+          "45岁女性保费10万以上",
+          "年缴保费一万以上的客户"
+        ]
+      },
+      "polNoInfo.payamountdue": {
+        "field": "polNoInfo.payamountdue",
+        "operator": "MATCH",
+        "value_type": "enum",
+        "enums": [
+          "是",
+          "否"
+        ],
+        "definition": "生存金未领取金额是否大于0；是表示存在未领取生存金。",
+        "examples": [
+          "有未领生存金的",
+          "有生存金未领取的客户"
+        ]
+      },
+      "pCategorys": {
+        "field": "pCategorys",
+        "operator": "CONTAINS/NOT_CONTAINS",
+        "value_type": "list",
+        "definition": "险种大类字段，用于年金险、两全险、重疾险等保险类别筛选。",
+        "examples": [
+          "买了年金险或两全险的客户",
+          "只有重疾险的客户"
+        ]
+      }
+    },
+    "application_boundary": {
+      "downstream_result_set_available": false,
+      "downstream_status": "not_verified",
+      "judge_scope": "parser_condition_semantics_only",
+      "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics.",
+      "result_set_verified": false
+    }
+  },
+  "reconstructed_intent": "",
+  "reference_generation_basis": {
+    "source": "not_available",
+    "comparison_basis": "client_search wrong/missing/extra customer-search coverage",
+    "expected_source": "not_available"
+  },
+  "scenario": "",
+  "needs_human_review": true,
+  "quality_flags": [
+    "llm_call_failed"
+  ],
+  "summary": {
+    "reason": "[llm_call_failed] uncertain · LLM 调用失败，未做出算法判断",
+    "reason_source": "degradation_marker",
+    "fulfillment_status": "not_evaluable",
+    "assessment_count": 0,
+    "blocking_count": 0,
+    "is_formal_attribution": false
+  }
+}

@@ -1,0 +1,348 @@
+{
+  "trace_id": "c260b933-cb70-496f-b6a4-a5b797d68a27",
+  "project_id": "QA",
+  "case_id": "mock-agent-QA-f8906092",
+  "live_result": {
+    "project_id": "QA",
+    "case_id": "mock-agent-QA-f8906092",
+    "session_id": "",
+    "raw_input": {
+      "input": {
+        "query": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+        "user_text": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+      },
+      "metadata": {
+        "channel": "在线客服",
+        "product_type": "重疾险",
+        "session_id": "sess_123456",
+        "timestamp": "2025-03-28T10:15:00Z",
+        "trace_id": "trace_qa_001",
+        "user_id": "user_98765"
+      },
+      "scenario": "qa_gold_answer"
+    },
+    "normalized_request": {
+      "input": {
+        "question": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+      },
+      "metadata": {
+        "live_request_mapped": true,
+        "ready": [
+          "output",
+          "reference"
+        ],
+        "schema_ok": true,
+        "source": "mock_agent_llm"
+      },
+      "output": {
+        "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+      },
+      "reference": {
+        "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+      },
+      "scenario": "qa_gold_answer"
+    },
+    "call_status": "succeeded",
+    "extracted_output": {
+      "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+    },
+    "output_source": "provided_output",
+    "interaction_mode": "single_turn"
+  },
+  "status": "ok",
+  "state_history": [
+    {
+      "attempt": 1,
+      "started_at": "2026-07-04T04:31:06.634856+00:00",
+      "status": "skipped"
+    },
+    {
+      "attempt": 1,
+      "started_at": "2026-07-04T04:31:06.634870+00:00",
+      "status": "skipped"
+    },
+    {
+      "attempt": 1,
+      "started_at": "2026-07-04T04:31:06.636842+00:00",
+      "status": "succeeded"
+    },
+    {
+      "attempt": 1,
+      "started_at": "2026-07-04T04:31:06.636863+00:00",
+      "status": "succeeded"
+    },
+    {
+      "attempt": 1,
+      "started_at": "2026-07-04T04:36:31.243914+00:00",
+      "status": "succeeded"
+    },
+    {
+      "attempt": 1,
+      "started_at": "2026-07-04T04:36:31.243995+00:00",
+      "status": "succeeded"
+    },
+    {
+      "attempt": 1,
+      "started_at": "2026-07-04T04:36:31.244044+00:00",
+      "status": "skipped"
+    },
+    {
+      "attempt": 1,
+      "started_at": "2026-07-04T04:37:43.830334+00:00",
+      "status": "succeeded"
+    },
+    {
+      "attempt": 1,
+      "started_at": "2026-07-04T04:39:24.901627+00:00",
+      "status": "succeeded"
+    },
+    {
+      "attempt": 1,
+      "started_at": "2026-07-04T04:39:24.901707+00:00",
+      "status": "skipped"
+    },
+    {
+      "attempt": 1,
+      "started_at": "2026-07-04T04:39:24.922971+00:00",
+      "status": "succeeded"
+    }
+  ],
+  "gate_decisions": [
+    {
+      "gate_id": "trace_available",
+      "gate_type": "required_evidence",
+      "passed": true,
+      "reason": "trace exists",
+      "recommended_transition": "",
+      "recoverable": false
+    },
+    {
+      "gate_id": "consumer_contract_present",
+      "gate_type": "consumer_contract_present",
+      "passed": true,
+      "reason": "consumer contract available",
+      "recommended_transition": "build_business_expectations",
+      "recoverable": true
+    },
+    {
+      "gate_id": "business_expectation_coverage",
+      "gate_type": "business_expectation_coverage",
+      "passed": true,
+      "reason": "business expectations available",
+      "recommended_transition": "build_business_expectations",
+      "recoverable": true
+    },
+    {
+      "gate_id": "fulfillment_assessment_coverage",
+      "gate_type": "fulfillment_assessment_coverage",
+      "passed": true,
+      "reason": "fulfillment assessments cover expectations",
+      "recommended_transition": "evaluate_fulfillment",
+      "recoverable": true
+    },
+    {
+      "gate_id": "boundary_decision_present",
+      "gate_type": "boundary_decision_present",
+      "passed": true,
+      "reason": "fulfillment boundary available",
+      "recommended_transition": "",
+      "recoverable": false
+    },
+    {
+      "gate_id": "derived_verdict_consistency",
+      "gate_type": "derived_verdict_consistency",
+      "passed": true,
+      "reason": "derived verdict matches fulfillment state",
+      "recommended_transition": "evaluate_fulfillment",
+      "recoverable": true
+    },
+    {
+      "gate_id": "contradiction_free",
+      "gate_type": "contradiction_free",
+      "passed": true,
+      "reason": "no contradictions",
+      "recommended_transition": "collect_evidence",
+      "recoverable": true
+    },
+    {
+      "gate_id": "unsupported_claims_absent",
+      "gate_type": "unsupported_claims_absent",
+      "passed": true,
+      "reason": "no unsupported claims",
+      "recommended_transition": "collect_evidence",
+      "recoverable": true
+    },
+    {
+      "gate_id": "fulfillment_assessment_coverage",
+      "gate_type": "fulfillment_assessment_coverage",
+      "passed": true,
+      "reason": "fulfillment assessments cover expectations",
+      "recommended_transition": "evaluate_fulfillment",
+      "recoverable": true
+    },
+    {
+      "gate_id": "attribute_targets_expectation_gap",
+      "gate_type": "attribute_targets_expectation_gap",
+      "passed": true,
+      "reason": "attribute targets fulfillment gaps",
+      "recommended_transition": "finalize",
+      "recoverable": false
+    },
+    {
+      "gate_id": "probe_evidence_or_blocked_reason",
+      "gate_type": "probe_evidence_or_blocked_reason",
+      "passed": true,
+      "reason": "probe evidence or blocked reason available",
+      "recommended_transition": "run_attribution_probes",
+      "recoverable": true
+    },
+    {
+      "gate_id": "expectation_attribution_evidence",
+      "gate_type": "expectation_attribution_evidence",
+      "passed": true,
+      "reason": "expectation attribution evidence available",
+      "recommended_transition": "run_attribution_probes",
+      "recoverable": false
+    },
+    {
+      "gate_id": "causal_category_support",
+      "gate_type": "causal_category_support",
+      "passed": true,
+      "reason": "causal category supported",
+      "recommended_transition": "run_attribution_probes",
+      "recoverable": true
+    },
+    {
+      "gate_id": "improvement_direction_support",
+      "gate_type": "improvement_direction_support",
+      "passed": true,
+      "reason": "improvement direction available",
+      "recommended_transition": "run_attribution_probes",
+      "recoverable": true
+    },
+    {
+      "gate_id": "finalization_ready",
+      "gate_type": "finalization_ready",
+      "passed": true,
+      "reason": "finalization ready",
+      "recommended_transition": "",
+      "recoverable": false
+    },
+    {
+      "gate_id": "contradiction_free",
+      "gate_type": "contradiction_free",
+      "passed": true,
+      "reason": "no contradictions",
+      "recommended_transition": "collect_evidence",
+      "recoverable": true
+    },
+    {
+      "gate_id": "unsupported_claims_absent",
+      "gate_type": "unsupported_claims_absent",
+      "passed": true,
+      "reason": "no unsupported claims",
+      "recommended_transition": "collect_evidence",
+      "recoverable": true
+    }
+  ],
+  "transition_decisions": [
+    {
+      "condition": "always",
+      "from_state": "prepare_trace",
+      "reason": "always",
+      "retry_count": 0,
+      "stop_reason": "",
+      "to_state": "mock_or_input"
+    },
+    {
+      "condition": "always",
+      "from_state": "mock_or_input",
+      "reason": "always",
+      "retry_count": 0,
+      "stop_reason": "",
+      "to_state": "execute_or_capture"
+    },
+    {
+      "condition": "always",
+      "from_state": "execute_or_capture",
+      "reason": "always",
+      "retry_count": 0,
+      "stop_reason": "",
+      "to_state": "collect_evidence"
+    },
+    {
+      "condition": "always",
+      "from_state": "collect_evidence",
+      "reason": "always",
+      "retry_count": 0,
+      "stop_reason": "",
+      "to_state": "build_business_expectations"
+    },
+    {
+      "condition": "always",
+      "from_state": "build_business_expectations",
+      "reason": "always",
+      "retry_count": 0,
+      "stop_reason": "",
+      "to_state": "evaluate_fulfillment"
+    },
+    {
+      "condition": "always",
+      "from_state": "evaluate_fulfillment",
+      "reason": "always",
+      "retry_count": 0,
+      "stop_reason": "",
+      "to_state": "fulfillment_critic"
+    },
+    {
+      "condition": "fulfillment_requires_attribute",
+      "from_state": "fulfillment_critic",
+      "reason": "fulfillment_requires_attribute",
+      "retry_count": 0,
+      "stop_reason": "",
+      "to_state": "attribute_expectations"
+    },
+    {
+      "condition": "always",
+      "from_state": "attribute_expectations",
+      "reason": "always",
+      "retry_count": 0,
+      "stop_reason": "",
+      "to_state": "run_attribution_probes"
+    },
+    {
+      "condition": "always",
+      "from_state": "run_attribution_probes",
+      "reason": "always",
+      "retry_count": 0,
+      "stop_reason": "",
+      "to_state": "attribution_critic"
+    },
+    {
+      "condition": "always",
+      "from_state": "attribution_critic",
+      "reason": "always",
+      "retry_count": 0,
+      "stop_reason": "",
+      "to_state": "finalize"
+    },
+    {
+      "condition": "stop",
+      "from_state": "finalize",
+      "reason": "stop",
+      "retry_count": 0,
+      "stop_reason": "completed",
+      "to_state": "completed"
+    }
+  ],
+  "evidence_refs": [
+    {
+      "source": "",
+      "summary": ""
+    }
+  ],
+  "scenario": "qa_gold_answer",
+  "interaction_mode": "single_turn",
+  "session_id": "",
+  "created_at": "2026-07-04T04:31:06.636816+00:00"
+}

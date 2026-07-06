@@ -1,0 +1,126 @@
+{
+  "project_id": "marketting-planning-intent",
+  "cases": [
+    {
+      "id": "mock-agent-marketting-planning-intent-03d1c9cd",
+      "input": {
+        "session_id": "default_session",
+        "trace_id": "default_trace",
+        "org_id": "default_org",
+        "user_text": "帮我看看上个月我们团队的业绩表现怎么样，特别是各个业务员的达成情况",
+        "extra_input_params": {
+          "agent_args": {
+            "conversation_id": "default_conversation",
+            "message": {
+              "content": "帮我看看上个月我们团队的业绩表现怎么样，特别是各个业务员的达成情况",
+              "content_type": "text"
+            }
+          },
+          "args": {}
+        }
+      },
+      "scenario": "intent_recognition",
+      "expected_intent": "team_portrait",
+      "reference": {
+        "intent": "team_portrait",
+        "confidence": 0.95,
+        "target_value": "达成率",
+        "path_types": [
+          "team",
+          "member"
+        ],
+        "subIntent": "member_achievement"
+      },
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "ready": [
+          "reference"
+        ],
+        "project_id": "marketting-planning-intent",
+        "live_request_mapped": true,
+        "schema_ok": true
+      }
+    },
+    {
+      "id": "mock-agent-marketting-planning-intent-43170582",
+      "input": {
+        "session_id": "default_session_001",
+        "trace_id": "trace_12345",
+        "org_id": "org_001",
+        "user_text": "我想看看去年买了年金险的客户里，有多少是35岁以上的？",
+        "extra_input_params": {
+          "agent_args": {
+            "conversation_id": "conv_001",
+            "message": {
+              "content": "我想看看去年买了年金险的客户里，有多少是35岁以上的？",
+              "content_type": "text"
+            }
+          },
+          "args": {}
+        }
+      },
+      "scenario": "non_agent_intent",
+      "expected_intent": "customer_portrait",
+      "reference": {
+        "intent": "customer_portrait",
+        "confidence": 0.95,
+        "target_value": "35岁以上",
+        "path_types": [
+          "product",
+          "age"
+        ],
+        "subIntent": "count"
+      },
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "ready": [
+          "reference"
+        ],
+        "project_id": "marketting-planning-intent",
+        "live_request_mapped": true,
+        "schema_ok": true
+      }
+    },
+    {
+      "id": "mock-agent-marketting-planning-intent-4b1a41cb",
+      "input": {
+        "session_id": "default_session_123",
+        "trace_id": "trace_fallback_unknown_001",
+        "org_id": "org_insure_001",
+        "user_text": "最近有啥新办法可以多卖点年金险不？",
+        "extra_input_params": {
+          "agent_args": {
+            "conversation_id": "conv_fallback_001",
+            "message": {
+              "content": "最近有啥新办法可以多卖点年金险不？",
+              "content_type": "text"
+            }
+          },
+          "args": {}
+        }
+      },
+      "scenario": "fallback_unknown",
+      "expected_intent": "other",
+      "reference": {
+        "intent": "marketing_planning",
+        "confidence": 0.9,
+        "subIntent": "sales_strategy_inquiry"
+      },
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "ready": [
+          "reference"
+        ],
+        "project_id": "marketting-planning-intent",
+        "live_request_mapped": true,
+        "schema_ok": true
+      }
+    }
+  ]
+}

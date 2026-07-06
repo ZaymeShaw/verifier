@@ -1,0 +1,76 @@
+{
+  "trace_id": "a33b9c13-a3aa-41f3-ad17-d2093f4022e9",
+  "project_id": "marketting-planning",
+  "case_id": "",
+  "causal_category": "needs_human_review",
+  "earliest_divergence": {
+    "node": "service_endpoint",
+    "expected": "服务正常接受 TCP 连接并返回 HTTP 响应",
+    "actual": "urlopen error [Errno 61] Connection refused — 目标端口无进程监听",
+    "evidence": [
+      "run_trace.error 明确记录 'Connection refused'",
+      "run_trace.execution_trace 为空数组，确认无任何阶段执行",
+      "run_trace.extracted_output 为 '{}'，确认无任何输出产生"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "failed",
+      "evidence": [
+        "run_trace.status='error'",
+        "run_trace.error='marketing-planning service unavailable: <urlopen error [Errno 61] Connection refused>'"
+      ]
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": true,
+    "execution_trace": true,
+    "project_docs": false,
+    "code_or_config": false
+  },
+  "root_cause_hypothesis": "marketing-planning 服务在评估执行时未处于运行状态，导致客户端在尝试建立 TCP 连接时收到操作系统的 Connection refused（Errno 61）响应。这不是代码逻辑缺陷、模型能力不足或业务契约模糊所致，而是纯粹的运行时环境问题：服务进程未启动、已崩溃、或监听的端口与评估框架配置的端口不一致。由于连接在传输层即被拒绝，流水线的九个阶段（request_normalization 至 adapter_extraction）均未获得执行机会，无法产生任何可供 judge 评估的输出，导致 judge 判为 uncertain 且无法生成 business_expectations。",
+  "verification_steps": [
+    "在目标环境中执行 `ps aux | grep marketing-planning` 或 `docker ps` 确认服务进程是否存在",
+    "检查服务配置中的监听端口（如 config_dev.json 或环境变量），确认与评估框架调用的端口一致",
+    "检查服务日志（logs/marketing-planning.log）确认最后一次正常启动记录及是否有崩溃堆栈",
+    "在评估机器上执行 `nc -zv <host> <port>` 验证端口可达性",
+    "检查防火墙规则（如 macOS pfctl 或 Linux iptables）是否阻止了本地回环连接"
+  ],
+  "patch_direction": [
+    "启动 marketing-planning 服务进程，确保其正常监听预期端口",
+    "在自动化评估流水线中增加服务可用性预检步骤（health check），在服务不可达时提前终止并给出明确诊断，而非将连接拒绝错误暴露为业务评估结果",
+    "如服务部署在容器中，确认容器网络配置使端口可被宿主机或评估客户端访问"
+  ],
+  "needs_human_review": true,
+  "scenario": "execution_planning"
+}

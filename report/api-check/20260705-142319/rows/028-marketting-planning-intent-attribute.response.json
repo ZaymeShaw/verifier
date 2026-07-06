@@ -1,0 +1,103 @@
+{
+  "trace_id": "627755ab-24d8-4883-bb75-67ef8abb1f56",
+  "project_id": "marketting-planning-intent",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "intent_contract",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "marketting-planning-intent:intent_contract",
+      "causal_category": "insufficient_evidence"
+    }
+  ],
+  "causal_category": "implementation_bug",
+  "earliest_divergence": {
+    "node": "intent_contract_gate",
+    "expected": {
+      "confidence": 0.5,
+      "intent": "other",
+      "subIntent": "其他意图"
+    },
+    "actual": {
+      "confidence": 0.5,
+      "intent": "other",
+      "subIntent": "其他意图"
+    },
+    "evidence": [
+      []
+    ],
+    "confidence": "medium"
+  },
+  "chain_nodes": [
+    {
+      "status": "failed",
+      "evidence": [
+        {},
+        {
+          "expected": {
+            "confidence": 0.5,
+            "intent": "other",
+            "subIntent": "其他意图"
+          }
+        },
+        {
+          "actual": {
+            "confidence": 0.5,
+            "intent": "other",
+            "subIntent": "其他意图"
+          }
+        },
+        {}
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "llm_call",
+      "status": "failed",
+      "evidence": [
+        "[attribute] LLM 产出不符合结构化输出约束，已阻断（不放行假货）：\n  - 必填字段缺失：expectation_attributions\n  - 必填字段缺失：causal_category\n  - 必填字段缺失：probe_results\n  - 必填字段缺失：analysis_method\n  - 必填字段缺失：chain_nodes\n  - 必填字段缺失：earliest_divergence\n  - 必填字段缺失：evidence_coverage\n  - 必填字段缺失：analysis_quality\n  - 必填字段缺失：incomplete_reason\n  - 必填字段缺失：suspected_locations\n  - 必填字段缺失：root_cause_hypothesis\n  - 必填字段缺失：verification_steps\n  - 必填字段缺失：patch_direction\n  - 必填字段缺失：scenario\n  - 必填字段缺失：quality_flags\n产出预览：{\"raw_text\": \"Insufficient Balance\"}"
+      ]
+    }
+  ],
+  "evidence_coverage": {
+    "query": false,
+    "actual": true,
+    "expected": true,
+    "execution_trace": false
+  },
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'confidence': 0.5, 'intent': 'other', 'subIntent': '其他意图'}，实际 normalized intent evidence 为 {'confidence': 0.5, 'intent': 'other', 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+  "verification_steps": [
+    "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+  ],
+  "patch_direction": [
+    "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+  ],
+  "needs_human_review": true,
+  "scenario": "intent_recognition",
+  "summary": {
+    "causal_category": "insufficient_evidence",
+    "attribution_count": 2,
+    "probe_count": 1,
+    "summary_text": "attribute agent LLM 调用失败。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  },
+  "analysis_method": "current_case_intent_contract_trace",
+  "analysis_quality": {
+    "passed": false,
+    "status": "next_verification_step",
+    "missing": [
+      "attribute LLM result",
+      "intent_recognition_internal_evidence"
+    ]
+  },
+  "incomplete_reason": "attribute agent LLM 调用失败。",
+  "quality_flags": [
+    "llm_output_validation_failed",
+    "intent_contract_gate_passed",
+    "attribute_blocked"
+  ]
+}

@@ -9,6 +9,7 @@ from selenium.webdriver.chrome.service import Service
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time, json, os, re, sys, shutil
 from datetime import datetime
+from impl.core.config import get_uat_base_url
 
 # ============== CONFIGURATION MODULE ==============
 # Configure which projects to test and how many cases per project
@@ -39,11 +40,11 @@ from datetime import datetime
 
 # Minimal test: QA + marketplan-intent only (2 cases each) for fix validation
 CONFIG = {
-    "projects": ["marketting-planning-intent", "QA"],
-    "case_counts": {"marketting-planning-intent": 4, "QA": 4},
+    "projects": ["marketting-planning-intent", "QA","client_search"],
+    "case_counts": {"marketting-planning-intent": 4, "QA": 4,"client_search":10},
     "required_cases": {
-        "marketting-planning-intent": ["mpi-required-slot-missing-1", "mpi-premium-growth-exact-1"],
-        "QA": ["qa-gold-incomplete-1", "qa-context-hallucination-1"],
+        # mock_agent 产出的 case ID 是动态的，不再用旧 seed ID。
+        # required_cases 留空，全部走 balanced 选取逻辑。
     }
 }
 # ===================================================
@@ -82,7 +83,7 @@ def run_project(proj, case_ids=None):
     t_start = time.time()
     limit = proj_count(proj)
     try:
-        d.get('http://127.0.0.1:8020/frontend/summary.html')
+        d.get(f'{get_uat_base_url()}/frontend/summary.html')
         time.sleep(2)
         d.execute_script(f"document.getElementById('project').value='{proj}';document.getElementById('project').dispatchEvent(new Event('change'))")
         time.sleep(1.5)
@@ -95,6 +96,9 @@ def run_project(proj, case_ids=None):
 
         # Always include REQUIRED_CASES first (error-boundary cases), then fill with diverse
         required = json.dumps(REQUIRED_CASES.get(proj, []))
+        # If required_cases specified but empty dict or all empty, skip force-select step
+        if not required or required == '[]' or required == '{}':
+            required = '[]'
         if case_ids:
             ids_json = json.dumps(case_ids)
             d.execute_script(f"""
@@ -201,9 +205,8 @@ def run_project(proj, case_ids=None):
             v='pending'; sc='-'
             if ok_j:
                 jl=judge.lower()
-                if 'verdict=correct' in jl or ('fulfilled' in jl and 'not_fulfilled' not in jl and 'partially_fulfilled' not in jl): v='fulfilled'
+                if 'verdict=correct' in jl or ('fulfilled' in jl and 'not_fulfilled' not in jl): v='fulfilled'
                 elif 'verdict=incorrect' in jl or 'not_fulfilled' in jl: v='not_fulfilled'
-                elif 'partially_fulfilled' in jl: v='partially_fulfilled'
                 elif 'verdict=uncertain' in jl: v='uncertain'
                 m=re.search(r'score[=:]\s*([\d.]+)',judge); sc=m.group(1) if m else '-'
             ni='no_issue' in judge.lower()
@@ -324,11 +327,12 @@ def write_report(ALL, TOTAL_TIME, final=False):
     projects_with_both = sum(1 for p in PROJECTS if has_both_verdicts(ALL.get(p, [])))
     projects_with_failures = sum(1 for p in PROJECTS if any(x['verdict']=='not_fulfilled' for x in ALL.get(p,[]) if x['sel']))
 
+    num_projects = len(PROJECTS)
     R.append(f"\n## Evaluation")
-    R.append(f"- Parallel: ✅ 4 projects, 0 conflicts")
+    R.append(f"- Parallel: ✅ {num_projects} projects, 0 conflicts")
     R.append(f"- Complete: {done}/{total_sel} (output + judge present)")
-    R.append(f"- Attr triggered+not: {projects_with_both}/4 projects (>=1 fulfilled + >=1 not_fulfilled)")
-    R.append(f"- Not_fulfilled coverage: {projects_with_failures}/4 projects")
+    R.append(f"- Attr triggered+not: {projects_with_both}/{num_projects} projects (>=1 fulfilled + >=1 not_fulfilled)")
+    R.append(f"- Not_fulfilled coverage: {projects_with_failures}/{num_projects} projects")
     R.append(f"- Judge no_issue occurrences: {ni_count}")
     R.append(f"- Bugs: {len(all_bugs)}")
     for b in all_bugs: R.append(f"  - {b}")

@@ -1,0 +1,111 @@
+{
+  "trace_id": "491913bc-5b79-4c1d-9ea6-024bc375da03",
+  "project_id": "marketting-planning-intent",
+  "business_expectations": [
+    {},
+    {},
+    {},
+    {},
+    {}
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签正确性",
+      "status": "not_fulfilled"
+    },
+    {
+      "expectation_id": "关键实体提取",
+      "status": "not_fulfilled"
+    },
+    {
+      "expectation_id": "置信度合理性",
+      "status": "not_fulfilled"
+    },
+    {
+      "expectation_id": "回退策略触发",
+      "status": "not_fulfilled"
+    },
+    {
+      "expectation_id": "分发边界正确性",
+      "status": "not_fulfilled"
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "fulfilled"
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "assessment_count": 6,
+    "blocking_expectations": [
+      "意图标签正确性",
+      "关键实体提取",
+      "回退策略触发",
+      "分发边界正确性"
+    ]
+  },
+  "expected": {
+    "intent": "adjust_sales_target 或类似调整意图",
+    "slots": {
+      "year": "今年",
+      "target": "销售目标"
+    },
+    "confidence": ">=0.7",
+    "fallback": false
+  },
+  "actual": {
+    "intent": "other",
+    "confidence": 0.5,
+    "fallback": false
+  },
+  "summary": {
+    "reason": "not_fulfilled · blocking=[关键实体提取,分发边界正确性,回退策略触发,意图标签正确性] · 下游缺少必要参数，无法执行调整",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "关键实体提取",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "下游缺少必要参数，无法执行调整",
+        "within_evaluable_scope": true,
+        "evidence": ""
+      },
+      {
+        "expectation_id": "分发边界正确性",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "other 意图被路由到默认模块，无法满足用户调整需求",
+        "within_evaluable_scope": true,
+        "evidence": ""
+      },
+      {
+        "expectation_id": "回退策略触发",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "系统未启动兜底机制，用户可能收到无法处理的响应",
+        "within_evaluable_scope": true,
+        "evidence": ""
+      },
+      {
+        "expectation_id": "意图标签正确性",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "下游无法启动销售目标调整流程，用户请求被忽略或错误处理",
+        "within_evaluable_scope": true,
+        "evidence": ""
+      },
+      {
+        "expectation_id": "置信度合理性",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "低置信度但未处理，增加错误决策风险",
+        "within_evaluable_scope": true,
+        "evidence": ""
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 4,
+    "is_formal_attribution": true
+  }
+}

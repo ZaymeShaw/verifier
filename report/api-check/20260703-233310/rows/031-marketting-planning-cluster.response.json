@@ -1,0 +1,89 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "needs_human_review::not_evaluable",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "正确识别用户请求为营销规划意图",
+        "提取业务指标NBEV",
+        "识别时间范围今年",
+        "识别目标方向提高",
+        "识别分解维度销售人员",
+        "在信息缺失时触发澄清流程",
+        "路由至澄清或规划阶段而非终止",
+        "SSE事件流输出有意义内容"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "7d604837-d5ba-4f51-ba1b-82ec6134f86e"
+      ],
+      "representative_traces": [
+        "7d604837-d5ba-4f51-ba1b-82ec6134f86e"
+      ],
+      "common_root_cause": "意图识别模块在规则层（try_rule_based_intent）的 Tier 3 关键词启发式中，has_planning_intent 仅匹配 ('达成','规划','路径','测算','分析') 五个关键词，未覆盖 NBEV 规划场景中用户常用的 '提高'、'提升'、'怎么'、'如何' 等动词与疑问词。用户输入 '我想知道怎么提高今年的NBEV' 中的 '提高' 和 '怎么' 均不在此列表中，导致规则层返回 None。降级到 LLM（qwen3-next-80b-a3b-instruct）后，模型虽有 prompt 中 'NBEV目标怎么达成' 的明确示例，仍将语义高度相似的查询误判为 other（code 4001）。这是关键词列表覆盖不全（实现缺陷）与 LLM 语义泛化不足（模型能力缺口）的叠加问题，其中规则层关键词缺失是可直接修复的主要根因。",
+      "shared_failure_pattern": "意图识别模块在规则层（try_rule_based_intent）的 Tier 3 关键词启发式中，has_planning_intent 仅匹配 ('达成','规划','路径','测算','分析') 五个关键词，未覆盖 NBEV 规划场景中用户常用的 '提高'、'提升'、'怎么'、'如何' 等动词与疑问词。用户输入 '我想知道怎么提高今年的NBEV' 中的 '提高' 和 '怎么' 均不在此列表中，导致规则层返回 None。降级到 LLM（qwen3-next-80b-a3b-instruct）后，模型虽有 prompt 中 'NBEV目标怎么达成' 的明确示例，仍将语义高度相似的查询误判为 other（code 4001）。这是关键词列表覆盖不全（实现缺陷）与 LLM 语义泛化不足（模型能力缺口）的叠加问题，其中规则层关键词缺失是可直接修复的主要根因。",
+      "representative_diffs": [
+        {
+          "case_id": "7d604837-d5ba-4f51-ba1b-82ec6134f86e",
+          "node": "intent_recognition",
+          "expected": "IntentType.nbev_planning，stage 进入 clarification 或 planning",
+          "actual": "IntentType.other（code 4001），stage=non_agent",
+          "evidence": [
+            "raw_response 中 intent='4001'，intent_name='其他意图'",
+            "execution_trace intent_recognition 阶段 actual_stage='non_agent'",
+            "extracted_output.stage='non_agent'",
+            "源码 try_rule_based_intent L127-L134：has_planning_intent 关键词列表不含 '提高'/'怎么'，导致规则层未命中",
+            "源码 INTENT_RECOGNITION_PROMPT L16-L21：prompt 定义与示例应覆盖 '怎么提高NBEV'，但 LLM 仍误判"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        {
+          "change": "L131: 将 has_planning_intent 关键词元组从 ('达成','规划','路径','测算','分析') 扩展为 ('达成','规划','路径','测算','分析','提高','提升','怎么','如何','增长','增加','改善')",
+          "file": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/steps/intent_recognition.py",
+          "risk": "低——关键词扩展仅增加命中范围，不会导致误判（NBEV + 非规划动词组合极罕见）"
+        },
+        {
+          "change": "L32: 将正则 r'怎么达成.*NBEV.*目标' 改为 r'怎么(?:达成|提高|提升|增长|改善).*NBEV'",
+          "file": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/steps/intent_recognition.py",
+          "risk": "低——正则更宽松但仍有 NBEV 锚定，不会误匹配其他意图"
+        },
+        {
+          "change": "在 nbev_planning 示例中增加 '怎么提高NBEV'、'如何提升NBEV目标' 等 few-shot，并在注意事项中强化：NBEV + 提高/提升/增长类动词应判定为 nbev_planning 而非 other",
+          "file": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/prompts/intent_prompt.py",
+          "risk": "低——仅增强 prompt 信号强度，不改变输出 schema"
+        }
+      ],
+      "verification_cases": [
+        "7d604837-d5ba-4f51-ba1b-82ec6134f86e"
+      ],
+      "next_actions": [
+        {
+          "action": "在 has_planning_intent 关键词列表中追加 '提高'、'提升'、'怎么'、'如何'、'增长'、'增加'、'改善'",
+          "expected": "同一查询 '我想知道怎么提高今年的NBEV，能不能从多招些销售人员入手？' 应被 Tier 3 命中，返回 IntentType.nbev_planning",
+          "step": 1
+        },
+        {
+          "action": "修改 _HOMEPAGE_RULES 中正则 '怎么达成.*NBEV.*目标' 为 '怎么(?:达成|提高|提升|增长|改善).*NBEV'",
+          "expected": "同类查询可被 Tier 0 首页规则直接命中",
+          "step": 2
+        },
+        {
+          "action": "使用修改后的代码重新运行同一 case，验证 execution_trace 中 intent_recognition 阶段 actual_stage 变为 clarification 或 planning",
+          "expected": "stage 非 non_agent，field_clarification 检测到 target_value 缺失并触发澄清，或直接进入 planning_function",
+          "step": 3
+        }
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模块在规则层（try_rule_based_intent）的 Tier 3 关键词启发式中，has_planning_intent 仅匹配 ('达成','规划','路径','测算','分析') 五个关键词，未覆盖 NBEV 规划场景中用户常用的 '提高'、'提升'、'怎么'、'如何' 等动词与疑问词。用户输入 '我想知道怎么提高今年的NBEV' 中的 '提高' 和 '怎么' 均不在此列表中，导致规则层返回 None。降级到 LLM（qwen3-next-80b-a3b-instruct）后，模型虽有 prompt 中 'NBEV目标怎么达成' 的明确示例，仍将语义高度相似的查询误判为 other（code 4001）。这是关键词列表覆盖不全（实现缺陷）与 LLM 语义泛化不足（模型能力缺口）的叠加问题，其中规则层关键词缺失是可直接修复的主要根因。",
+  "impact": "",
+  "priority": "high"
+}

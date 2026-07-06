@@ -4,9 +4,9 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable, Dict, Optional
 
-from .schema import GateDecision, SubagentResult, TraceStateRecord, TransitionDecision, now_iso
+from .schema import GateDecision, SubagentResult, TraceExecutionContext, TraceStateRecord, TransitionDecision, attribute_causal_category, attribute_probe_evidence, judge_primary_signal, now_iso, to_dict
 
-StateExecutor = Callable[[Dict[str, Any]], Dict[str, Any]]
+StateExecutor = Callable[[TraceExecutionContext], Dict[str, Any]]
 
 
 DEFAULT_TRACE_GRAPH: Dict[str, Any] = {
@@ -79,7 +79,7 @@ class TraceStateMachineRunner:
         self.executors = executors or {}
         self._attempts: Dict[str, int] = defaultdict(int)
 
-    def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def run(self, context: TraceExecutionContext) -> TraceExecutionContext:
         import logging as _logging
         _log = _logging.getLogger("verifier.state_machine")
         state_id = str(self.graph.get("initial_state") or "prepare_trace")
@@ -111,7 +111,7 @@ class TraceStateMachineRunner:
         self._append_incomplete_record(context, "state machine exceeded max_steps")
         return context
 
-    def _execute_state(self, state_id: str, context: Dict[str, Any]) -> Dict[str, Any]:
+    def _execute_state(self, state_id: str, context: TraceExecutionContext) -> Dict[str, Any]:
         declaration = (self.graph.get("states") or {}).get(state_id, {})
         executor_refs = list(declaration.get("executor_refs") or [])
         if executor_refs:
@@ -120,18 +120,23 @@ class TraceStateMachineRunner:
         if not executor:
             return {"status": "skipped", "outputs": {}}
         try:
-            return executor(context) or {"status": "succeeded", "outputs": {}}
+            output = executor(context)
+            if output is None:
+                output = {}
+            if not isinstance(output, dict):
+                output = {"status": "succeeded", "outputs": {"schema_result_type": type(output).__name__}}
+            return output
         except Exception as exc:
             return {"status": "failed", "outputs": {}, "errors": [str(exc)]}
 
-    def _execute_refs(self, state_id: str, context: Dict[str, Any], executor_refs: list[Dict[str, Any]], merge_policy: str) -> Dict[str, Any]:
+    def _execute_refs(self, state_id: str, context: TraceExecutionContext, executor_refs: list[Dict[str, Any]], merge_policy: str) -> Dict[str, Any]:
         if merge_policy == "parallel_agreement":
             results = self._execute_refs_parallel(context, executor_refs)
         else:
             results = self._execute_refs_sequential(context, executor_refs)
         return self._merge_results(state_id, executor_refs, results, merge_policy)
 
-    def _execute_refs_sequential(self, context: Dict[str, Any], executor_refs: list[Dict[str, Any]]) -> list[SubagentResult]:
+    def _execute_refs_sequential(self, context: TraceExecutionContext, executor_refs: list[Dict[str, Any]]) -> list[SubagentResult]:
         results = []
         for reference in executor_refs:
             result = self._execute_ref(context, reference)
@@ -139,7 +144,7 @@ class TraceStateMachineRunner:
             context.setdefault("executor_outputs", {})[result.executor_id] = result.output
         return results
 
-    def _execute_refs_parallel(self, context: Dict[str, Any], executor_refs: list[Dict[str, Any]]) -> list[SubagentResult]:
+    def _execute_refs_parallel(self, context: TraceExecutionContext, executor_refs: list[Dict[str, Any]]) -> list[SubagentResult]:
         results = []
         with ThreadPoolExecutor(max_workers=max(1, len(executor_refs))) as executor:
             futures = {executor.submit(self._execute_ref, context, reference): reference for reference in executor_refs}
@@ -149,7 +154,7 @@ class TraceStateMachineRunner:
                 context.setdefault("executor_outputs", {})[result.executor_id] = result.output
         return results
 
-    def _execute_ref(self, context: Dict[str, Any], reference: Dict[str, Any]) -> SubagentResult:
+    def _execute_ref(self, context: TraceExecutionContext, reference: Dict[str, Any]) -> SubagentResult:
         executor_id = str(reference.get("executor_id") or reference.get("id") or reference.get("role") or "executor")
         role = str(reference.get("role") or executor_id)
         executor = self.executors.get(executor_id)
@@ -192,13 +197,13 @@ class TraceStateMachineRunner:
                 return bool(reference.get("required", True))
         return True
 
-    def _evaluate_gates(self, state_id: str, context: Dict[str, Any], result: Dict[str, Any]) -> list[GateDecision]:
+    def _evaluate_gates(self, state_id: str, context: TraceExecutionContext, result: Dict[str, Any]) -> list[GateDecision]:
         gates = []
         for gate_id in (self.graph.get("states", {}).get(state_id, {}).get("gates") or []):
             gates.append(evaluate_gate(str(gate_id), context, result))
         return gates
 
-    def _select_transition(self, state_id: str, context: Dict[str, Any], gates: list[GateDecision]) -> TransitionDecision:
+    def _select_transition(self, state_id: str, context: TraceExecutionContext, gates: list[GateDecision]) -> TransitionDecision:
         transitions = (self.graph.get("transitions") or {}).get(state_id, [])
         for transition in transitions:
             condition = str(transition.get("condition") or "always")
@@ -218,7 +223,7 @@ class TraceStateMachineRunner:
                 )
         return TransitionDecision(from_state=state_id, to_state="incomplete_or_human_review", condition="no_transition", reason="no matching transition", stop_reason="incomplete_gate_failed")
 
-    def _condition_matches(self, condition: str, context: Dict[str, Any], gates: list[GateDecision]) -> bool:
+    def _condition_matches(self, condition: str, context: TraceExecutionContext, gates: list[GateDecision]) -> bool:
         failed = [gate for gate in gates if not gate.passed]
         if condition == "always":
             return True
@@ -245,7 +250,7 @@ class TraceStateMachineRunner:
             return "；".join(failed)
         return condition
 
-    def _append_record(self, state_id: str, context: Dict[str, Any], result: Dict[str, Any], gates: list[GateDecision], transition: TransitionDecision) -> None:
+    def _append_record(self, state_id: str, context: TraceExecutionContext, result: Dict[str, Any], gates: list[GateDecision], transition: TransitionDecision) -> None:
         history = context.setdefault("state_history", [])
         history.append(
             TraceStateRecord(
@@ -265,12 +270,12 @@ class TraceStateMachineRunner:
             )
         )
 
-    def _append_incomplete_record(self, context: Dict[str, Any], reason: str) -> None:
+    def _append_incomplete_record(self, context: TraceExecutionContext, reason: str) -> None:
         transition = TransitionDecision(from_state="max_steps", to_state="completed", condition="max_steps", reason=reason, stop_reason="incomplete_retry_limit")
         self._append_record("incomplete_or_human_review", context, {"status": "blocked", "errors": [reason]}, [], transition)
 
 
-def _context_subagent_results(context: Dict[str, Any]) -> list[SubagentResult]:
+def _context_subagent_results(context: TraceExecutionContext) -> list[SubagentResult]:
     history = list(context.get("state_history") or [])
     return [result for record in history for result in getattr(record, "subagent_results", [])]
 
@@ -279,14 +284,14 @@ def _result_subagent_results(result: Dict[str, Any]) -> list[SubagentResult]:
     return list(result.get("subagent_results") or [])
 
 
-def _context_contradictions(context: Dict[str, Any], result: Dict[str, Any]) -> list[Any]:
+def _context_contradictions(context: TraceExecutionContext, result: Dict[str, Any]) -> list[Any]:
     contradictions = list(result.get("contradictions") or [])
     for subagent in _result_subagent_results(result) + _context_subagent_results(context):
         contradictions.extend(list(getattr(subagent, "contradictions", []) or []))
     return contradictions
 
 
-def _context_unsupported_claims(context: Dict[str, Any], result: Dict[str, Any]) -> list[Any]:
+def _context_unsupported_claims(context: TraceExecutionContext, result: Dict[str, Any]) -> list[Any]:
     unsupported = list(result.get("unsupported_claims") or [])
     for subagent in _result_subagent_results(result) + _context_subagent_results(context):
         unsupported.extend(list(getattr(subagent, "missing_evidence", []) or []))
@@ -308,7 +313,8 @@ def _item_value(item: Any, key: str, default: Any = None) -> Any:
 
 
 def _judge_has_intent(judge: Any) -> bool:
-    return bool(judge and (_has_value(getattr(judge, "reconstructed_intent", "")) or _has_value(getattr(judge, "intent_decomposition", [])) or _has_value(getattr(judge, "expected", None))))
+    primary_signal = judge_primary_signal(judge)
+    return bool(judge and (_has_value(primary_signal.get("business_expectations")) or _has_value(getattr(judge, "reconstructed_intent", "")) or _has_value(getattr(judge, "expected", None))))
 
 
 def _judge_has_comparison(judge: Any) -> bool:
@@ -319,20 +325,20 @@ def _judge_has_derivation(judge: Any) -> bool:
     return bool(judge and (_has_value(getattr(judge, "verdict_derivation", {})) or _has_value(getattr(judge, "reasoning_summary", "")) or _has_value(getattr(judge, "judge_basis", ""))))
 
 
-def _attribute_required(context: Dict[str, Any]) -> bool:
+def _attribute_required(context: TraceExecutionContext) -> bool:
     judge = context.get("judge_result")
     if not judge:
         return False
     assessments = list(getattr(judge, "fulfillment_assessments", []) or [])
     for assessment in assessments:
         status = _item_value(assessment, "status", "")
-        if status in {"partially_fulfilled", "not_fulfilled", "not_evaluable", "contested"}:
+        if status in {"not_fulfilled", "not_evaluable"}:
             return True
         if _item_value(assessment, "blocking", False):
             return True
     overall = getattr(judge, "overall_fulfillment", {}) or {}
     overall_status = _item_value(overall, "status", "")
-    if overall_status in {"partially_fulfilled", "not_fulfilled", "not_evaluable", "contested"}:
+    if overall_status in {"not_fulfilled", "not_evaluable"}:
         return True
     if assessments:
         return False
@@ -346,16 +352,14 @@ def _judge_has_fulfillment(judge: Any) -> bool:
 def _expected_fulfillment_state(judge: Any) -> tuple[str, str, list[str]]:
     assessments = list(getattr(judge, "fulfillment_assessments", []) or []) if judge else []
     statuses = [_item_value(item, "status", "") for item in assessments]
-    failing_statuses = {"not_fulfilled", "partially_fulfilled", "not_evaluable", "contested"}
+    failing_statuses = {"not_fulfilled", "not_evaluable"}
     blocking_ids = [_item_value(item, "expectation_id") for item in assessments if _item_value(item, "status", "") in failing_statuses and _item_value(item, "blocking", False)]
     if not statuses:
         return "uncertain", "not_evaluable", []
     if any(status == "not_fulfilled" for status in statuses):
         return "incorrect", "not_fulfilled", blocking_ids
-    if any(status in {"not_evaluable", "contested"} for status in statuses):
+    if any(status == "not_evaluable" for status in statuses):
         return "uncertain", "not_evaluable", blocking_ids
-    if any(status == "partially_fulfilled" for status in statuses):
-        return "partially_correct", "partially_fulfilled", blocking_ids
     return "correct", "fulfilled", []
 
 
@@ -376,7 +380,7 @@ def _derived_verdict_contradictions(judge: Any) -> list[str]:
     return contradictions
 
 
-def evaluate_gate(gate_id: str, context: Dict[str, Any], result: Dict[str, Any]) -> GateDecision:
+def evaluate_gate(gate_id: str, context: TraceExecutionContext, result: Dict[str, Any]) -> GateDecision:
     if gate_id == "trace_available":
         trace = context.get("trace")
         passed = bool(trace and getattr(trace, "status", "ok") != "error")
@@ -439,10 +443,10 @@ def evaluate_gate(gate_id: str, context: Dict[str, Any], result: Dict[str, Any])
         return GateDecision(gate_id=gate_id, gate_type="required_evidence", passed=required, checked_inputs={"judge_requires_attribute": required}, missing_evidence=[] if required else ["incorrect_or_uncertain_judge_gap"], recoverable=False, recommended_transition="finalize", reason="attribute has inspectable judge gap" if required else "attribute not required by judge verdict")
     if gate_id == "probe_available_or_incomplete":
         attribute = context.get("attribute_result")
-        local_verifications = list(getattr(attribute, "local_verifications", []) or []) if attribute else []
+        probe_evidence = attribute_probe_evidence(attribute) if attribute else []
         incomplete_reason = getattr(attribute, "incomplete_reason", "") if attribute else ""
-        passed = bool(local_verifications or incomplete_reason or not _attribute_required(context))
-        return GateDecision(gate_id=gate_id, gate_type="probe_available_or_incomplete", passed=passed, checked_inputs={"local_verification_count": len(local_verifications), "has_incomplete_reason": bool(incomplete_reason)}, missing_evidence=[] if passed else ["local_verifications or incomplete_reason"], recoverable=True, recommended_transition="attribute_probe", reason="probe evidence or incomplete marker available" if passed else "probe evidence missing")
+        passed = bool(probe_evidence or incomplete_reason or not _attribute_required(context))
+        return GateDecision(gate_id=gate_id, gate_type="probe_available_or_incomplete", passed=passed, checked_inputs={"probe_evidence_count": len(probe_evidence), "has_incomplete_reason": bool(incomplete_reason)}, missing_evidence=[] if passed else ["probe_evidence or incomplete_reason"], recoverable=True, recommended_transition="attribute_probe", reason="probe evidence or incomplete marker available" if passed else "probe evidence missing")
     if gate_id == "attribute_evidence":
         attribute = context.get("attribute_result")
         if not attribute:
@@ -484,15 +488,14 @@ def evaluate_gate(gate_id: str, context: Dict[str, Any], result: Dict[str, Any])
         return GateDecision(gate_id=gate_id, gate_type="attribute_targets_expectation_gap", passed=passed, checked_inputs={"fulfillment_requires_attribute": required, "target_count": len(targets)}, missing_evidence=[] if passed else ["expectation_attributions"], recoverable=False, recommended_transition="finalize", reason="attribute targets fulfillment gaps" if required else "attribute not required by fulfillment")
     if gate_id == "probe_evidence_or_blocked_reason":
         attribute = context.get("attribute_result")
-        probe_results = list(getattr(attribute, "probe_results", []) or []) if attribute else []
-        local_verifications = list(getattr(attribute, "local_verifications", []) or []) if attribute else []
+        probe_evidence = attribute_probe_evidence(attribute) if attribute else []
         incomplete_reason = getattr(attribute, "incomplete_reason", "") if attribute else ""
         if not attribute:
             import logging as _l; _l.getLogger("verifier.state_machine").warning(f"[gate:{gate_id}] attribute_result is None/missing in context keys={list(context.keys())}")
-        elif not incomplete_reason and not probe_results and not local_verifications:
-            import logging as _l; _l.getLogger("verifier.state_machine").warning(f"[gate:{gate_id}] attribute has no probe_results/local_verifications/incomplete_reason; failure_category={getattr(attribute,'failure_category','')}; causal_category={getattr(attribute,'causal_category','')}")
-        passed = bool(probe_results or local_verifications or incomplete_reason or not _attribute_required(context))
-        return GateDecision(gate_id=gate_id, gate_type="probe_evidence_or_blocked_reason", passed=passed, checked_inputs={"probe_count": len(probe_results), "local_verification_count": len(local_verifications), "has_incomplete_reason": bool(incomplete_reason)}, missing_evidence=[] if passed else ["probe_results or local_verifications or incomplete_reason"], recoverable=True, recommended_transition="run_attribution_probes", reason="probe evidence or blocked reason available" if passed else "probe evidence missing")
+        elif not incomplete_reason and not probe_evidence:
+            import logging as _l; _l.getLogger("verifier.state_machine").warning(f"[gate:{gate_id}] attribute has no probe evidence/incomplete_reason; causal_category={attribute_causal_category(attribute)}")
+        passed = bool(probe_evidence or incomplete_reason or not _attribute_required(context))
+        return GateDecision(gate_id=gate_id, gate_type="probe_evidence_or_blocked_reason", passed=passed, checked_inputs={"probe_evidence_count": len(probe_evidence), "has_incomplete_reason": bool(incomplete_reason)}, missing_evidence=[] if passed else ["probe_evidence or incomplete_reason"], recoverable=True, recommended_transition="run_attribution_probes", reason="probe evidence or blocked reason available" if passed else "probe evidence missing")
     if gate_id == "expectation_attribution_evidence":
         attribute = context.get("attribute_result")
         if not attribute and not _attribute_required(context):
@@ -503,7 +506,7 @@ def evaluate_gate(gate_id: str, context: Dict[str, Any], result: Dict[str, Any])
     if gate_id == "causal_category_support":
         attribute = context.get("attribute_result")
         attributions = list(getattr(attribute, "expectation_attributions", []) or []) if attribute else []
-        supported = bool(getattr(attribute, "causal_category", "") if attribute else "") or any(_has_value(_item_value(item, "causal_category", "")) for item in attributions)
+        supported = bool(attribute_causal_category(attribute) if attribute else "") or any(_has_value(_item_value(item, "causal_category", "")) for item in attributions)
         incomplete = bool(getattr(attribute, "incomplete_reason", "") if attribute else "")
         passed = bool(supported or incomplete or not _attribute_required(context))
         return GateDecision(gate_id=gate_id, gate_type="causal_category_support", passed=passed, checked_inputs={"has_causal_category": supported, "has_incomplete_reason": incomplete}, missing_evidence=[] if passed else ["causal_category"], recoverable=True, recommended_transition="run_attribution_probes", reason="causal category supported" if passed else "causal category missing")

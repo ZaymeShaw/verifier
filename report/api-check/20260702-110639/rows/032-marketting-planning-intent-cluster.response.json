@@ -1,0 +1,71 @@
+{
+  "project_id": "marketting-planning-intent",
+  "clusters": [
+    {
+      "cluster_id": "expectation::implementation_bug::not_evaluable",
+      "mechanism": "implementation_bug::not_evaluable",
+      "causal_category": "implementation_bug",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图标签为客群分析而非其他意图",
+        "时间范围槽位被正确提取",
+        "目标对象槽位被正确提取",
+        "置信度反映意图确定性且达到阈值",
+        "不确定意图触发回退而非给出其他兜底",
+        "意图分派边界适配客户分析场景",
+        "intent_contract"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "2a9b8dbe-016b-4e6f-a50a-9fc6fd2318d8"
+      ],
+      "representative_traces": [
+        "2a9b8dbe-016b-4e6f-a50a-9fc6fd2318d8"
+      ],
+      "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': '客户群分析 (customer_audience_analysis)'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+      "shared_failure_pattern": "当前 case 期望 intent/slots 为 {'intent': '客户群分析 (customer_audience_analysis)'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+      "representative_diffs": [
+        {
+          "case_id": "2a9b8dbe-016b-4e6f-a50a-9fc6fd2318d8",
+          "node": "intent_contract_gate",
+          "expected": {
+            "intent": "客户群分析 (customer_audience_analysis)"
+          },
+          "actual": {
+            "ambiguous": false,
+            "confidence": 0.5,
+            "fallback": false,
+            "intent": "other",
+            "raw_intent": "4001"
+          },
+          "evidence": [
+            [
+              {
+                "kind": "missing"
+              },
+              {
+                "kind": "missing"
+              }
+            ]
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "verification_cases": [
+        "2a9b8dbe-016b-4e6f-a50a-9fc6fd2318d8"
+      ],
+      "next_actions": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ]
+    }
+  ],
+  "common_root_cause": "",
+  "impact": "",
+  "priority": ""
+}

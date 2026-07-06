@@ -1,0 +1,96 @@
+{
+  "trace_id": "e2b8d493-21b1-485e-af15-847ddf48733e",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "样本提供非空回答内容",
+      "causal_category": "boundary_limitation"
+    },
+    {
+      "expectation_id": "回答正确解释保险合同犹豫期",
+      "causal_category": "insufficient_evidence"
+    }
+  ],
+  "causal_category": "needs_human_review",
+  "earliest_divergence": {
+    "node": "qa.sample.normalize",
+    "expected": "样本 output 包含非空 actual_answer 字段",
+    "actual": "样本 output.actual_answer 为空，所有提取路径均无有效值",
+    "evidence": [
+      "adapter._normalize_sample: actual_answer 提取链 data.actual_answer→data.answer→output_part.actual_answer→output_part.answer→input_part.actual_answer→input_part.answer→''",
+      "adapter._infer_scenario: 返回 'invalid_sample'",
+      "adapter._quality_flags: 添加 'missing_actual_answer'"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "suspicious",
+      "evidence": [
+        "scenario='invalid_sample'",
+        "data_quality_flags=['missing_actual_answer']"
+      ]
+    },
+    {
+      "status": "suspicious",
+      "evidence": [
+        "extracted_output.actual_answer=''"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "actual_answer_present=false"
+      ]
+    },
+    {
+      "status": "failed",
+      "evidence": [
+        "actual_answer_present=False 被标记为 unrecoverable_missing"
+      ]
+    },
+    {
+      "status": "suspicious",
+      "evidence": [
+        "'样本提供非空回答内容' → not_fulfilled",
+        "'回答正确解释保险合同犹豫期' → not_evaluable"
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": true,
+    "execution_trace": true,
+    "project_docs": false,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "样本数据在进入 QA 评估流程前，output.actual_answer 字段为空或缺失。适配器 _normalize_sample 在所有可能的数据字段（data.actual_answer、data.answer、output.actual_answer、output.answer、input.actual_answer、input.answer）中均未找到有效回答内容，最终返回空字符串。_infer_scenario 因缺少 golden_answer、contexts 和 actual_answer 将场景推断为 invalid_sample，_quality_flags 正确标记 missing_actual_answer。根因位于数据准备或采样阶段——该样本本应包含对'什么是保险合同犹豫期？'的回答，但实际数据中未提供。代码逻辑无缺陷，属于输入数据边界问题。",
+  "verification_steps": [
+    "检查原始数据源（如 mock_cases.json 或数据采样管道），确认该样本的 output.actual_answer 是否确实为空",
+    "追溯数据采样流程，确认 actual_answer 字段为何未被填充——可能是采样时遗漏、上游服务未返回或数据清洗时误删",
+    "如有对应的上游 LLM 调用记录，确认是否实际生成了回答但因序列化问题丢失"
+  ],
+  "patch_direction": [
+    "在数据采样/准备阶段增加非空校验：对 output.actual_answer 为空的样本进行过滤或标记，避免进入正式评估流程",
+    "如果该样本预期应有回答，修复数据管道中 actual_answer 的提取或填充逻辑",
+    "在 mock_cases.json 中审查所有 invalid_sample 场景的样本，确保其数据质量标记与预期行为一致"
+  ],
+  "needs_human_review": false,
+  "scenario": "invalid_sample",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 2,
+    "probe_count": 1,
+    "summary_text": "样本数据在进入 QA 评估流程前，output.actual_answer 字段为空或缺失。适配器 _normalize_sample 在所有可能的数据字段（data.actual_answer、data.answer、output.actual_answer、output.answer、input.actual_answer、input.answer）中均未找到有效回答内容，最终返回空字符串。_infer_scenario 因缺少 golden_answer、contexts 和 actual_answer 将场景推断为 invalid_sample，_quality_flags 正确标记 missing_actual_answer。根因位于数据准备或采样阶段——该样本本应包含对'什么是保险合同犹豫期？'的回答，但实际数据中未提供。代码逻辑无缺陷，属于输入数据边界问题。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "trace_id": "42a02b76-6337-4817-894b-2ce636e5a2ec",
+  "project_id": "QA",
+  "case_id": "",
+  "causal_category": "需人工复核",
+  "earliest_divergence": {
+    "node": "qa.sample.normalize",
+    "expected": "样本应包含非空 question、actual_answer 及与场景匹配的 reference（qa_gold_answer 场景需要 golden_answer）",
+    "actual": "question=''、actual_answer=''、reference 中无有效 golden_answer",
+    "evidence": [
+      "data_quality_flags=['missing_question', 'missing_actual_answer', 'missing_golden_answer']",
+      "scenario=qa_gold_answer",
+      "normalized_request.input.question=''",
+      "extracted_output.actual_answer=''"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "suspicious"
+    },
+    {
+      "status": "suspicious"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": false,
+    "actual": false,
+    "expected": false,
+    "execution_trace": true,
+    "project_docs": true,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "当前 QA 样本的三个核心字段（question、actual_answer、golden_answer）全部为空。adapter._normalize_sample 正确检测并标记了 data_quality_flags=['missing_question','missing_actual_answer','missing_golden_answer']，scenario 被推断为 'qa_gold_answer'（因为 reference 字段存在但内容为空结构）。由于没有任何可评估内容，judge 返回 verdict=uncertain 且 business_expectations/fulfillment_assessments 为空，导致 attribution 无目标可归因。根因在数据源：该样本在进入 pipeline 之前就已缺失所有必要字段。",
+  "verification_steps": [
+    "检查 mock_cases.json 或数据源中该 case（trace_id=42a02b76-6337-4817-894b-2ce636e5a2ec）的原始数据，确认 question、actual_answer、golden_answer 是否在源头即为空。",
+    "如果是 mock_cases.json 中种子数据，定位对应条目并补充缺失字段或移除无效条目。",
+    "如果是外部上传样本，在上传侧增加前端校验：question 和 actual_answer 不得为空。",
+    "重新运行该 case 的 judge + attribute 流程，确认 judge 能产出有效的 business_expectations。"
+  ],
+  "patch_direction": [
+    "数据源修复：在 mock_cases.json 或数据录入侧确保每个样本的 input.question、output.actual_answer 非空；qa_gold_answer 场景必须提供 reference.golden_answer。",
+    "防御性过滤：在 adapter._normalize_sample 或 pipeline 入口处，对 question 和 actual_answer 均为空的样本直接标记为 invalid_sample 并跳过 judge/attribute，避免产生无意义的 uncertain 判定。"
+  ],
+  "needs_human_review": true,
+  "scenario": "qa_gold_answer",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 0,
+    "probe_count": 0,
+    "summary_text": "样本数据完整性不足：question、actual_answer、golden_answer 均为空。judge 无法产出 business_expectations 与 fulfillment_assessments，attribution_targets 为空，归因无法执行。这不是代码缺陷或模型能力问题，而是输入样本本身不具备可评估性。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  }
+}

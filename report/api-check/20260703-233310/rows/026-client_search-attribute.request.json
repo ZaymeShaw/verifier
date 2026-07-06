@@ -1,0 +1,629 @@
+{
+  "project": "client_search",
+  "trace": {
+    "trace_id": "ab09d934-cd68-4c65-a491-9a53b43bf567",
+    "project_id": "client_search",
+    "case_id": "mock-agent-client_search-348911af",
+    "live_result": {
+      "project_id": "client_search",
+      "case_id": "mock-agent-client_search-348911af",
+      "session_id": "session_20260514_001",
+      "raw_input": {
+        "extra_input_params": {
+          "vip_level": "high"
+        },
+        "session_id": "session_20260514_001",
+        "source": "agent_portal",
+        "trace_id": "trace_20260514_001",
+        "user_id": "user_001",
+        "user_text": "帮我找出所有VIP等级比较高的客户信息"
+      },
+      "normalized_request": {
+        "user_text": "帮我找出所有VIP等级比较高的客户信息",
+        "user_id": "user_001",
+        "trace_id": "trace_20260514_001",
+        "session_id": "session_20260514_001",
+        "source": "agent_portal",
+        "extra_input_params": {
+          "vip_level": "high"
+        }
+      },
+      "call_status": "succeeded",
+      "runtime_ms": 1151,
+      "extracted_output": {
+        "summary": "有客户VIP等级的客户",
+        "structured_output": [
+          {
+            "field": "vipType",
+            "operator": "EXISTS",
+            "value": ""
+          }
+        ],
+        "logic": "AND",
+        "status_code": 0,
+        "user_visible_text": "有客户VIP等级的客户",
+        "empty_result_reason": "",
+        "is_empty_result": false,
+        "source_query": "帮我找出所有VIP等级比较高的客户信息",
+        "matched_level": 4,
+        "matched_patterns": "### 当前时间\n2026-07-03 23:33:12 (Asia/Shanghai)\n### 今天星期\n周五\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **vipType** | 操作符: CONTAINS | 值类型: enum | 枚举: ['白银1', '白银2', '白银3', '黄金V1', '黄金V2', '黄金V3', '原黄金VIP', '铂金V1', '铂金V2', '原铂金VIP', '钻石VIP', '金钻VIP', '黑钻VIP'] | 定义: 表示寿险VIP等级标签，不表示是否持有会员权益的开通时间或其他权益体系等级 | 说明: 口语映射：黄金会员→原黄金VIP、黄金V1、黄金V2、黄金V3；铂金会员→铂金V1、铂金V2, 原铂金VIP；白银会员->白银1、白银2、白银3。排序：白银1<白银2<白银3<黄金V1<黄金V2<黄金V3<原黄金VIP<铂金V1<铂金V2<原铂金VIP<钻石VIP<金钻VIP<黑钻VIP；当问句明确出现“客户价值”“价值等级”等语境时，应优先考虑 newValueLabel，而不是本字段。\n\n  示例: \"铂金客户\" → {\"field\": \"vipType\", \"operator\": \"CONTAINS\", \"value\": [\"铂金V1\", \"铂金V2\", \"原铂金VIP\"]}\n\n  示例: \"黄金客户\" → {\"field\": \"vipType\", \"operator\": \"CONTAINS\", \"value\": [\"原黄金VIP\", \"黄金V1\", \"黄金V2\", \"黄金V3\"]}\n\n  示例: \"白银客户\" → {\"field\": \"vipType\", \"operator\": \"CONTAINS\", \"value\": [\"白银1\", \"白银2\", \"白银3\"]}\n\n  示例: \"铂金客户\" → {\"field\": \"vipType\", \"operator\": \"CONTAINS\", \"value\": [\"铂金V1\", \"铂金V2\"]}\n\n  反例: \"VIP开通时间在2024年的客户\" → 不输出该字段；原因: 这是开通时间，不是 VIP 等级\n\n  反例: \"客户价值黄金档客户\" → 不输出该字段；原因: 这里是客户价值语境，应优先映射到 newValueLabel，而不是 vipType\n\n- **clientBirthday** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户存在出生日期信息，不要求具体日期值\n\n  示例: \"有生日信息的客户\" → {\"field\": \"clientBirthday\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"有出生日期的客户\" → {\"field\": \"clientBirthday\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"有父母生日信息的客户\" → 不输出该字段；原因: 这是家庭成员出生日期，应映射到 familyInfo.familyclientbirthday 并组合 familyInfo.familyrelation\n\n- **clientSex** | 操作符: EXISTS | 值类型: exists | 枚举: ['男', '女'] | 定义: 表示客户存在性别信息，不要求具体是男或女\n\n  示例: \"有性别信息的客户\" → {\"field\": \"clientSex\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"性别不为空的客户\" → {\"field\": \"clientSex\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n- **vipType** | 操作符: EXISTS | 值类型: exists | 枚举: ['白银1', '白银2', '白银3', '黄金V1', '黄金V2', '黄金V3', '原黄金VIP', '铂金V1', '铂金V2', '原铂金VIP', '钻石VIP', '金钻VIP', '黑钻VIP'] | 定义: 表示客户属于任意寿险VIP等级，不要求具体VIP档位\n\n  示例: \"寿险VIP客户\" → {\"field\": \"vipType\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n- **clientSex** | 操作符: NOT_EXISTS | 值类型: not_exists | 枚举: ['男', '女'] | 定义: 表示客户不存在性别信息，不要求具体枚举值\n\n  示例: \"没有性别信息的客户\" → {\"field\": \"clientSex\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"性别为空的客户\" → {\"field\": \"clientSex\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **jujiaClientGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['居家潜客', 'v0.5', 'v1', 'v1.5', 'v2', 'v2.5', 'v3'] | 定义: 表示居家等级范围；“以上/以下”不含当前值，“及以上/及以下”含边界 | 说明: 居家潜客不属于居家会员客户；等级排序：居家潜客<v0.5<v1<v1.5<v2<v2.5<v3\n\n  示例: \"居家达标客户\" → {\"field\": \"jujiaClientGrade\", \"operator\": \"CONTAINS\", \"value\": [\"v0.5\", \"v1\", \"v1.5\", \"v2\", \"v2.5\", \"v3\"]}\n\n  示例: \"居家会员客户\" → {\"field\": \"jujiaClientGrade\", \"operator\": \"CONTAINS\", \"value\": [\"v0.5\", \"v1\", \"v1.5\", \"v2\", \"v2.5\", \"v3\"]}\n\n  示例: \"居家v2以上的客户\" → {\"field\": \"jujiaClientGrade\", \"operator\": \"CONTAINS\", \"value\": [\"v2.5\", \"v3\"]}\n\n  示例: \"居家v2及以上的客户\" → {\"field\": \"jujiaClientGrade\", \"operator\": \"CONTAINS\", \"value\": [\"v2\", \"v2.5\", \"v3\"]}\n\n  反例: \"居家权益开通时间在今年的客户\" → 不输出该字段；原因: 这是开通时间，不是居家等级范围\n\n- **kangyangClientGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['康养预达标会员', '逸享会员', '逸享PLUS会员', '颐享家会员', '臻享会员V1', '臻享会员V2', '臻享会员V3'] | 定义: 表示康养等级范围；“以上/以下”不含边界，“及以上/及以下”含边界 | 说明: 康养预达标会员不属于康养客户；康养客户包括逸享会员、逸享PLUS会员、颐享家会员、臻享会员V1、臻享会员V2、臻享会员V3；等级排序：康养预达标会员<逸享会员<逸享PLUS会员<颐享家会员<臻享会员V1<臻享会员V2<臻享会员V3\n\n  示例: \"逸享PLUS以上康养等级客户\" → {\"field\": \"kangyangClientGrade\", \"operator\": \"CONTAINS\", \"value\": [\"颐享家会员\", \"臻享会员V1\", \"臻享会员V2\", \"臻享会员V3\"]}\n\n  示例: \"逸享PLUS及以上康养等级客户\" → {\"field\": \"kangyangClientGrade\", \"operator\": \"CONTAINS\", \"value\": [\"逸享PLUS会员\", \"颐享家会员\", \"臻享会员V1\", \"臻享会员V2\", \"臻享会员V3\"]}\n\n  示例: \"康养会员客户\" → {\"field\": \"kangyangClientGrade\", \"operator\": \"CONTAINS\", \"value\": [\"逸享会员\", \"逸享PLUS会员\", \"颐享家会员\", \"臻享会员V1\", \"臻享会员V2\", \"臻享会员V3\"]}\n\n  示例: \"康养达标客户\" → {\"field\": \"kangyangClientGrade\", \"operator\": \"CONTAINS\", \"value\": [\"逸享会员\", \"逸享PLUS会员\", \"颐享家会员\", \"臻享会员V1\", \"臻享会员V2\", \"臻享会员V3\"]}\n\n  反例: \"康养权益开通时间在今年的客户\" → 不输出该字段；原因: 这是开通时间，不是康养等级范围\n\n- **jujiaClientGrade** | 操作符: MATCH | 值类型: enum | 枚举: ['居家潜客', 'v0.5', 'v1', 'v1.5', 'v2', 'v2.5', 'v3'] | 定义: 表示居家客户的单个等级标签，不表示会员范围，也不表示开通时间 | 说明: 居家潜客不属于居家会员客户；居家客户包括v0.5、v1、v1.5、v2、v2.5、v3；等级排序：居家潜客<v0.5<v1<v1.5<v2<v2.5<v3。用户说“居家达标为/居家达标等级为/居家等级为+具体等级”时是单个等级，输出 MATCH，不要输出范围。预达标/已达标属于泛状态词，不能脱离居家语境单独映射到本字段。居家意向=居家潜客\n\n  示例: \"居家v1等级的客户\" → {\"field\": \"jujiaClientGrade\", \"operator\": \"MATCH\", \"value\": \"v1\"}\n\n  示例: \"居家潜客\" → {\"field\": \"jujiaClientGrade\", \"operator\": \"MATCH\", \"value\": \"居家潜客\"}\n\n  示例: \"居家V1优享客户\" → {\"field\": \"jujiaClientGrade\", \"operator\": \"MATCH\", \"value\": \"v1.5\"}\n\n  示例: \"居家意向客户\" → {\"field\": \"jujiaClientGrade\", \"operator\": \"MATCH\", \"value\": \"居家潜客\"}\n\n  示例: \"居家达标为V2的客户\" → {\"field\": \"searchJujiaClientGrade\", \"operator\": \"MATCH\", \"value\": \"v2\"}\n\n  示例: \"居家达标等级为V2的客户\" → {\"field\": \"searchJujiaClientGrade\", \"operator\": \"MATCH\", \"value\": \"v2\"}\n\n  反例: \"居家权益开通时间在今年的客户\" → 不输出该字段；原因: 这是开通时间，不是居家等级\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n### 用户查询\n帮我找出所有VIP等级比较高的客户信息",
+        "external_boundary_sources": {
+          "config_paths": {
+            "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+            "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+            "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+            "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+          }
+        }
+      },
+      "output_source": "live_service",
+      "application_boundary": {
+        "downstream_result_set_available": false,
+        "downstream_status": "not_verified",
+        "judge_scope": "parser_condition_semantics_only",
+        "result_set_verified": false,
+        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+      },
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T15:33:12.019037+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T15:33:12.019052+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T15:33:13.178289+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T15:33:13.178310+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T15:35:01.312001+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T15:35:01.312130+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T15:35:01.312187+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T15:37:17.541867+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T15:39:25.813221+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T15:39:25.813288+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T15:39:25.839847+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence or blocked reason available"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "",
+    "interaction_mode": "single_turn",
+    "session_id": "session_20260514_001",
+    "created_at": "2026-07-03T15:33:13.178240+00:00"
+  },
+  "judge": {
+    "trace_id": "ab09d934-cd68-4c65-a491-9a53b43bf567",
+    "project_id": "client_search",
+    "verdict": "incorrect",
+    "business_expectations": [
+      {
+        "expectation_id": "vipType字段被正确识别并使用",
+        "downstream_consumer": "ES搜索引擎",
+        "user_intent": "用户明确提到VIP等级，parser应识别出vipType是目标字段",
+        "expected_outcome": "条件中使用vipType字段",
+        "required_capabilities": [
+          "vipType字段支持CONTAINS或EXISTS操作符"
+        ],
+        "acceptance_criteria": [
+          "actual output中conditions数组包含field为vipType的条件"
+        ],
+        "priority": "critical"
+      },
+      {
+        "expectation_id": "比较高语义被正确理解为等级过滤而非存在性判断",
+        "downstream_consumer": "ES搜索引擎",
+        "user_intent": "'比较高'是等级修饰语，表达的是值过滤而非存在性判断；类似'黄金及以上'的语义",
+        "expected_outcome": "使用CONTAINS操作符，value为高等级VIP枚举值列表（至少包含黄金V1及以上等级），而非使用EXISTS",
+        "required_capabilities": [
+          "vipType支持CONTAINS操作符配合enum值类型"
+        ],
+        "acceptance_criteria": [
+          "actual output中vipType条件的operator为CONTAINS而非EXISTS",
+          "value包含高等级VIP枚举值，至少排除白银1-3等低等级"
+        ],
+        "priority": "critical"
+      },
+      {
+        "expectation_id": "高等级VIP枚举值覆盖合理的高等级范围",
+        "downstream_consumer": "ES搜索引擎",
+        "user_intent": "比较高意味着至少是中等偏上等级，在VIP五档体系中至少应从黄金开始",
+        "expected_outcome": "value至少包含：黄金V1、黄金V2、黄金V3、原黄金VIP、铂金V1、铂金V2、原铂金VIP、钻石VIP、金钻VIP、黑钻VIP（黄金及以上）",
+        "required_capabilities": [
+          "vipType枚举值包含上述所有值"
+        ],
+        "acceptance_criteria": [
+          "value列表包含黄金及以上等级枚举值",
+          "value列表不包含白银1、白银2、白银3等低等级"
+        ],
+        "priority": "critical"
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "vipType字段被正确识别并使用",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "条件中field为vipType"
+        ],
+        "actual_evidence": [
+          "actual output中conditions[0].field = 'vipType'"
+        ],
+        "downstream_impact": "字段正确，但操作符和值不足以表达用户意图",
+        "blocking": true
+      },
+      {
+        "expectation_id": "比较高语义被正确理解为等级过滤而非存在性判断",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "operator应为CONTAINS",
+          "value应为高等级VIP枚举值列表"
+        ],
+        "actual_evidence": [
+          "actual output中conditions[0].operator = 'EXISTS'",
+          "actual output中conditions[0].value = ''（空值）"
+        ],
+        "downstream_impact": "EXISTS会返回所有有VIP等级的客户（包括白银1-3等低等级），无法满足用户对'比较高'的筛选需求",
+        "blocking": true
+      },
+      {
+        "expectation_id": "高等级VIP枚举值覆盖合理的高等级范围",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "value包含黄金V1、黄金V2、黄金V3、原黄金VIP、铂金V1、铂金V2、原铂金VIP、钻石VIP、金钻VIP、黑钻VIP等"
+        ],
+        "actual_evidence": [
+          "actual output中value为空字符串，未提供任何枚举值"
+        ],
+        "downstream_impact": "由于operator为EXISTS且value为空，实际查询无法区分高等级和低等级VIP客户",
+        "blocking": true
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "not_fulfilled",
+      "assessment_count": 3,
+      "blocking_expectations": [
+        "比较高语义被正确理解为等级过滤而非存在性判断",
+        "高等级VIP枚举值覆盖合理的高等级范围"
+      ]
+    },
+    "expected": {
+      "query_logic": "AND",
+      "expected_source": "not_available",
+      "reference_is_oracle": false
+    },
+    "actual": {
+      "query_logic": "AND",
+      "conditions": [
+        {
+          "field": "vipType",
+          "operator": "EXISTS",
+          "value": ""
+        }
+      ]
+    },
+    "reasoning_summary": "用户query'帮我找出所有VIP等级比较高的客户信息'的核心意图是筛选VIP等级处于较高梯队的客户。'比较高'是关键修饰语，要求对vipType做等级值过滤。然而解析器输出vipType EXISTS，语义为'存在任意VIP等级'，会返回从最低白银1到最高黑钻VIP的所有客户——这与用户对'比较高'的诉求严重不符。系统具备表达等级过滤的能力（vipType支持CONTAINS+enum），enhanced_rules中也存在黄金及以上等过滤模式，因此问题出在解析器的语义理解层面。字段识别正确（vipType），但操作符和值的错误导致整体条件无法满足用户意图。",
+    "judge_basis": "基于用户query语义、vipType字段能力清单（支持CONTAINS和EXISTS操作符）、VIP等级排序定义（白银1<白银2<白银3<黄金V1<黄金V2<黄金V3<原黄金VIP<铂金V1<铂金V2<原铂金VIP<钻石VIP<金钻VIP<黑钻VIP）以及enhanced_rules中的等级过滤规则进行判断",
+    "judge_method": "parser_condition_semantics_only（下游搜索不可用，仅基于解析器输出条件语义与用户意图对比判断）",
+    "verdict_derivation": {
+      "primary_boundary": "parser_condition_semantics_only",
+      "assessment_summary": "三个业务期望中，字段识别已满足（vipType被正确使用），但核心语义期望未满足：'比较高'被错误地解析为存在性判断（EXISTS）而非等级值过滤（CONTAINS配合高等级枚举值），导致输出条件会返回所有VIP等级客户（含白银1-3等低等级），与用户意图严重偏离。",
+      "blocking_gaps": [
+        "解析器将'比较高'的等级过滤意图错误映射为EXISTS存在性判断，丢失了核心筛选条件",
+        "输出未包含任何高等级VIP枚举值，无法反映用户对'比较高'的诉求",
+        "intent_summary显示为'有客户VIP等级的客户'，完全忽略了'比较高'修饰语"
+      ],
+      "why_verdict": "用户query'帮我找出所有VIP等级比较高的客户信息'的核心意图是筛选VIP等级处于较高梯队的客户，关键修饰语'比较高'要求对vipType做值过滤而非存在性判断。actual output使用了EXISTS操作符，语义为'存在任意VIP等级'，会返回包括白银1-3等最低等级在内的所有VIP客户，与用户意图严重不符。正确的做法应使用CONTAINS操作符配合黄金及以上枚举值列表。由于下游搜索不可用，本次评估基于解析器条件语义判断，确认actual output未能满足用户的等级过滤需求。",
+      "missing_evidence": [
+        "current intent/config expected conditions"
+      ]
+    },
+    "missing": [
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "CONTAINS操作符（actual使用了EXISTS）",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "高等级VIP枚举值列表（黄金V1及以上等，actual value为空）",
+        "incomplete": false
+      }
+    ],
+    "wrong": [
+      {
+        "kind": "wrong",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "操作符：使用了EXISTS而非CONTAINS，EXISTS无法表达等级过滤语义",
+        "incomplete": false
+      },
+      {
+        "kind": "wrong",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "值：value为空字符串，未提供任何等级过滤条件",
+        "incomplete": false
+      }
+    ],
+    "evidence": [
+      "用户query原文：'帮我找出所有VIP等级比较高的客户信息'",
+      "actual output：vipType EXISTS value=''",
+      "capability_manifest：vipType支持CONTAINS和EXISTS两种操作符",
+      "VIP等级排序：白银1<白银2<白银3<黄金V1<...<黑钻VIP",
+      "enhanced_rules中包含'黄金及以上'等规则（priority 10），确认系统具备表达等级范围查询的能力",
+      "intent_summary显示：'有客户VIP等级的客户'，证明解析器丢失了'比较高'修饰语"
+    ],
+    "boundary_decision": {
+      "within_evaluable_scope": true,
+      "evaluable_errors": [
+        "解析器未能理解'比较高'的等级过滤语义，错误地将需要值过滤的意图映射为EXISTS存在性判断",
+        "intent_summary仅识别出'有客户VIP等级的客户'，丢失了'比较高'这一关键修饰语"
+      ],
+      "reasoning": "vipType字段完全支持CONTAINS操作符配合枚举值进行等级过滤，enhanced_rules中也存在黄金及以上、铂金及以上等过滤规则。系统具备表达'高等级VIP'查询的能力，问题出在解析器对'比较高'语义的理解层面，属于可评价的系统内部问题。"
+    },
+    "evaluation_boundary": {
+      "primary_boundary_id": "parser_condition_semantics_only",
+      "primary_boundary_name": "仅评估解析器条件语义",
+      "judge_question": "解析器输出的vipType EXISTS条件是否在语义上等价于用户表达的'VIP等级比较高的客户'？",
+      "verdict_basis": "语义不等价：EXISTS=有任意VIP等级（含最低白银），'比较高'=VIP等级处于中高梯队",
+      "boundary_sources": "application_boundary.judge_scope + vipType字段能力清单 + VIP等级排序定义",
+      "conflict_policy": "当下游不可用时，基于parser条件、ES查询语法、字段语义、操作符语义和业务意图判断语义等价性"
+    },
+    "consumer_contract": {
+      "consumer": "下游ES客户搜索引擎",
+      "contract": "输出结构化搜索条件供下游ES查询客户数据",
+      "application_boundary": {
+        "judge_scope": "parser_condition_semantics_only",
+        "result_set_verified": false,
+        "downstream_status": "not_verified"
+      }
+    },
+    "intent_model": {
+      "raw_user_request": "帮我找出所有VIP等级比较高的客户信息",
+      "explicit_intents": [
+        "查找VIP等级较高的客户",
+        "返回客户信息列表"
+      ],
+      "implicit_business_intents": [
+        "用户需要筛选出寿险VIP等级处于中高梯队的客户，而非仅判断客户是否有VIP等级",
+        "比较高的语义意味着需要对VIP等级枚举值做范围过滤，排除低等级（如白银1-3）"
+      ],
+      "constraints": {
+        "field": "vipType（寿险VIP等级标签）",
+        "hierarchy": "白银1<白银2<白银3<黄金V1<黄金V2<黄金V3<原黄金VIP<铂金V1<铂金V2<原铂金VIP<钻石VIP<金钻VIP<黑钻VIP"
+      },
+      "success_definition": "解析器输出的条件能过滤出VIP等级处于中高梯队的客户（至少排除最低的白银等级），而非简单判断客户是否有任意VIP等级",
+      "blocking_requirements": [
+        "必须使用vipType字段",
+        "必须对vipType的值做高等级过滤（使用CONTAINS操作符配合具体枚举值），不能仅使用EXISTS判断是否有VIP等级"
+      ],
+      "intent_evidence": [
+        "用户query明确包含'VIP等级比较高'，其中'比较高'是关键的修饰语，表达了等级过滤意图",
+        "extra_input_params中vip_level为high，进一步佐证了用户对高等级的诉求"
+      ]
+    },
+    "reconstructed_intent": "用户希望找出寿险VIP等级处于较高梯队的客户。'比较高'是关键的等级修饰语，在VIP五档体系中（白银/黄金/铂金/钻石金钻黑钻），合理理解为黄金及以上等级。解析器应输出vipType字段配合CONTAINS操作符，value为黄金V1及以上所有枚举值的列表，以过滤出高等级VIP客户。",
+    "semantic_equivalence_checks": [
+      {
+        "expected_fragment": "CONTAINS + 黄金及以上枚举值列表",
+        "actual_fragment": "EXISTS + 空值",
+        "equivalent": false,
+        "basis": "EXISTS表示存在任意VIP等级（包括最低的白银1-3），而'比较高'要求排除低等级、仅保留中高等级。两者在ES查询语义上不等价：EXISTS返回所有vipType非空的客户，CONTAINS配合具体枚举值仅返回匹配的客户子集。"
+      }
+    ],
+    "reference_generation_basis": {
+      "source": "当前case的query语义 + vipType能力清单 + VIP等级排序定义 + enhanced_rules",
+      "alignment_to_actual_shape": "expected沿用actual的单条件AND结构，但修正operator为CONTAINS并填充高等级枚举值",
+      "comparison_basis": "client_search wrong/missing/extra customer-search coverage",
+      "expected_source": "not_available"
+    },
+    "scenario": "parser_condition_semantics_only",
+    "quality_flags": [
+      "downstream_result_set_unavailable",
+      "qualitative_intent_misinterpreted_as_existence_check",
+      "key_modifier_ignored"
+    ],
+    "summary": {
+      "reason": "not_fulfilled · blocking=[比较高语义被正确理解为等级过滤而非存在性判断,高等级VIP枚举值覆盖合理的高等级范围] · EXISTS会返回所有有VIP等级的客户（包括白银1-3等低等级），无法满足用户对'比较高'的筛选需求",
+      "primary_failure_dimensions": [
+        {
+          "expectation_id": "比较高语义被正确理解为等级过滤而非存在性判断",
+          "status": "not_fulfilled",
+          "blocking": true,
+          "downstream_impact": "EXISTS会返回所有有VIP等级的客户（包括白银1-3等低等级），无法满足用户对'比较高'的筛选需求",
+          "within_evaluable_scope": true,
+          "evidence": "actual output中conditions[0].operator = 'EXISTS' | actual output中conditions[0].value = ''（空值） | operator应为CONTAINS | value应为高等级VIP枚举值列表"
+        },
+        {
+          "expectation_id": "高等级VIP枚举值覆盖合理的高等级范围",
+          "status": "not_fulfilled",
+          "blocking": true,
+          "downstream_impact": "由于operator为EXISTS且value为空，实际查询无法区分高等级和低等级VIP客户",
+          "within_evaluable_scope": true,
+          "evidence": "actual output中value为空字符串，未提供任何枚举值 | value包含黄金V1、黄金V2、黄金V3、原黄金VIP、铂金V1、铂金V2、原铂金VIP、钻石VIP、金钻VIP、黑钻VIP等"
+        }
+      ],
+      "reason_source": "aggregated_fulfillment",
+      "fulfillment_status": "not_fulfilled",
+      "assessment_count": 3,
+      "blocking_count": 3,
+      "is_formal_attribution": true
+    }
+  }
+}

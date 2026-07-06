@@ -21,9 +21,256 @@ status: open
 
 agent的结构，然后前后端对齐、算法对齐等等。你先看demand/*下面的东西后理解当前项目后，在做判断
 
-我不建议做具体的代码约束，你只做数据产出层的结构约束，比如pydantic格式、config格式，并且你的格式应该跟当前代码实现对齐，也要所有满足demand/*的需求（同步检验当前代码是否会存在多重标准的情况），配套对应的格式校验代码
+我不建议做具体的代码约束，你只做数据产出层的结构约束，比如数据schema格式、config格式，并且你的格式应该跟当前代码实现对齐，也要所有满足demand/*的需求（同步检验当前代码是否会存在多重标准的情况），配套对应的格式校验代码
 
-judge/attribute/live（实时业务系统请求）/mock/view/trace/前端表格view。至少这几个的types(pydantic)和config，并且考虑demand/*和当前代码以及多轮的适配，关于多轮，你参考下最新的issue4
+judge/attribute/live（实时业务系统请求）/mock/view/trace/前端表格view。至少这几个的types(schema)和config，并且考虑demand/*和当前代码以及多轮的适配，关于多轮，你参考下最新的issue4
+
+
+---
+
+### 💬 此般浅薄 · 2026-06-29 20:38
+
+> **标记**：`提出者` · `验证者`
+
+python -m impl.core.schema.fixture.show_fixture_flow
+
+通过运行这个函数，我发现当前schema中有很多schema/schema中的字段疑似是冗余/重复/过时的，可能因为兼容历史实现/满足用户局部需求/ai设计不妥当等原因产生
+
+我需要你对当前schema构建进行检视，仅从测评系统本身设计触发，思考从奥卡姆剃刀的角度，相关的schema如何设计才是最优雅及合适的
+
+对于冗余/重复/过时的schema而言，我现在也没完全想好，我们先一起讨论下，出一个审核报告。我建议几种处理方式：
+
+1. 检查是否只是历史兼容问题，是否可以通过去除无用历史代码优化相关无用代码
+2. 检查是否有输出必要，如果有必要说明其必要性
+
+上述需求的分析。请以精简化schema以及其其中的过时/冗余/重复字段为目标进行优化，参照verifier/report/schema-audit-occam.md的方案，持续进行优化
+现在每个schema、api，感觉没用/过时/冗余/错误的字段都很多，api/schema请按照奥卡姆剃刀的原则进行约束
+
+> config整体的对齐，项目对齐config配置，从统一位置获取env信息启动
+- 项目启动python env对齐
+- 相关llm 调用key和base_url
+- 项目标准化启动端口，端到端uat测试启动端口（这两端口可以设置为不同）
+
+---
+
+### 💬 此般浅薄 · 2026-06-30 08:49
+
+> **标记**：`提出者` · `验证者`
+
+不变量方面，还需要固化后端api服务，根据verifier/demand/api.md的方案实现
+
+
+
+
+---
+
+### 💬 此般浅薄 · 2026-06-30 22:00
+
+关于不同项目project.yaml的统一问题
+
+会有坑点，而且你现在关注的是对的：**project.yaml 本身不是问题，问题是它容易变成“看起来统一、实际混乱”的协议文件**。当前方案如果不收敛，会有这些坑。
+
+## 主要坑点
+
+### 1. 把历史字段误当成通用协议
+
+现有 `impl/projects/*/project.yaml` 里的字段很多是为了某个项目临时加的，比如：
+
+- `frontend_extensions.semantic_equivalence_rules`
+- `frontend_extensions.event_aliases`
+- `frontend_extensions.score_dimensions`
+- `application.downstream_search`
+- `documents.source_field_definitions`
+
+这些不是所有项目都通用。  
+如果直接把现有字段整理成模板，会导致新项目被迫填很多无意义配置。
+
+**规避方式：**  
+通用模板只保留最小公共层：
+
+```yaml
+project_id
+name
+description
+
+common:
+  source.repo
+  api.base_url
+  api.endpoint
+  api.method
+  api.timeout
+  start.command
+
+extra: {}
+```
+
+其他全部先算项目特有。
+
+---
+
+### 2. 配置项重复，导致不知道谁是准的
+
+现在已有类似重复：
+
+```yaml
+api.base_url
+application.api_base
+```
+
+以及：
+
+```yaml
+api.endpoint
+application.primary_path
+```
+
+如果两个地方值不一致，就会出现“看哪个代码路径读哪个值”的问题。
+
+**规避方式：**  
+统一规定：
+
+```yaml
+common.api.base_url
+common.api.endpoint
+```
+
+是主调用接口的唯一权威字段。旧字段只做 fallback，不继续鼓励使用。
+
+---
+
+### 3. 人写配置和 AI 实现配置混在一起
+
+你提的这一点很重要。
+
+如果人确认的项目事实、AI 推断的实现细节、运行时扩展规则都放在同一个 `impl/projects/<project>/project.yaml`，会有风险：
+
+- AI 可能误改业务事实
+- 用户不知道哪些字段需要自己确认
+- verifier 可能依赖一个其实没人确认过的字段
+
+**规避方式：**
+
+```text
+projects/<project>/project.yaml          # 人写，权威事实
+impl/projects/<project>/project.yaml     # AI/实现侧补充
+```
+
+人写层放：
+
+```yaml
+project_id
+name
+description
+common.source.repo
+common.api
+common.start.command
+```
+
+impl 层放：
+
+```yaml
+extra
+documents/source_docs
+judge/check/frontend/semantic rules
+```
+
+---
+
+### 4. 固定约定还放进配置，增加无效心智负担
+
+比如：
+
+```yaml
+adapter: adapter.py
+documents:
+  application: application.md
+```
+
+如果路径本来固定，就不该每个项目都写一遍。否则用户会以为这是需要理解和维护的协议字段。
+
+**规避方式：**
+
+固定约定不进公共模板：
+
+```text
+impl/projects/<project>/adapter.py
+impl/projects/<project>/application.md
+impl/projects/<project>/evaluation.md
+...
+```
+
+只有非标准路径或额外资料才配置。
+
+---
+
+### 5. 字段被实际代码依赖，不能随便迁移
+
+虽然有些字段不该进入新模板，但当前代码已经依赖旧字段，比如：
+
+- `api.*` 影响 live_run
+- `documents.*` 影响 judge / attribute / check / knowledge
+- `frontend_extensions.implementation_standard` 影响 judge boundary
+- `frontend_extensions.semantic_equivalence_rules` 影响 client_search verdict 修正
+- `frontend_extensions.event_aliases` / `terminal_events` 影响 marketing SSE 解析
+- `application.downstream_search` 影响 client_search 下游探测
+
+所以不能简单“删旧字段、改新字段”。
+
+**规避方式：**
+
+做兼容迁移：
+
+```text
+新字段优先
+旧字段 fallback
+现有项目不一次性大改
+```
+
+---
+
+### 6. YAML 解析器能力有限
+
+当前项目读取 `project.yaml` 的逻辑不是完整 PyYAML，而是一个简单 parser。  
+所以复杂 YAML 写法可能静默解析错。
+
+比如要避免：
+
+- 多行字符串 `|`
+- anchor / alias
+- 太复杂的 list-of-dict
+- 非 JSON 风格复杂 inline object
+
+**规避方式：**
+
+模板保持简单，结构不要太深。  
+这也支持你现在说的：不要搞复杂 project.yaml。
+
+---
+
+## 最终判断
+
+这个方案可以做，但要守住边界：
+
+```text
+project.yaml 不是万能配置中心
+project.yaml 只放项目接入协议
+```
+
+最稳的做法是：
+
+1. **人写配置**放 `projects/<project>/project.yaml`
+2. **AI/实现配置**放 `impl/projects/<project>/project.yaml`
+3. 公共模板只保留：
+   - 项目身份
+   - 原项目代码位置
+   - 主调用接口
+   - 启动命令
+4. 固定路径不配置
+5. 项目特有内容放 `extra`
+6. 旧字段只兼容，不继续扩散
+
+所以你想解决的坑，本质是：  
+**防止 project.yaml 从“最小接入协议”膨胀成“项目所有杂项的大垃圾桶”。**
 
 ---
 
@@ -696,4 +943,6 @@ judge/attribute/live（实时业务系统请求）/mock/view/trace/前端表格v
   attribute / view / 表格）都有对应的类型约束和 config 格式，并且每个层都考虑了多轮适配。
 
   需要我深入到具体字段级别的 JSON Schema 定义，还是开始实现代码？
+
+
 

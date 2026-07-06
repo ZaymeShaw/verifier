@@ -1,0 +1,61 @@
+{
+  "id": "cs-age-sex-premium-correct-1",
+  "input": "45岁女性保费10万以上",
+  "scenario": "",
+  "output_summary": "{\"empty_result_reason\": \"\", \"external_boundary_sources\": {\"config_paths\": {\"source_enhanced_rules\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-…",
+  "reference_summary": "{\"empty_result_reason\": \"\", \"external_boundary_sources\": {\"config_paths\": {\"source_enhanced_rules\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-…",
+  "status": "fulfilled",
+  "execution_mode": "",
+  "output_source": "live_service",
+  "verdict": "uncertain",
+  "fulfillment_status": "fulfilled",
+  "judge_summary": {
+    "status": "fulfilled",
+    "fulfillment_status": "fulfilled",
+    "verdict": "uncertain",
+    "reason": "fulfilled · 8 blocking expectations all met · 用户查询'45岁女性保费10万以上'包含三个核心筛选意图。actual output完整解析为：（1）clientAge字段使用RANGE操作符，min=max=45，精确匹配45岁；（2）clientSex字段使用MATCH操作符，值为'女'，将口语'女性'正确映射为标准枚举值；（3）annPremSegNum字段使用GTE操作符，值为100000，将'10万'按规则（万=×10000）正确换算，'以上'正确映射为GTE。三个条件以AND逻辑组合，同时满足用户的所有筛选要求。无遗漏、无错误、无多余条件。下游ES搜索不可用但不影响parser条件语义的正确性判定，所有条件均在系统能力边界内且语义等价于用户意图。",
+    "reason_source": "aggregated_fulfillment",
+    "reason_stage": "judge",
+    "is_formal_attribution": true,
+    "assessment_count": 9,
+    "blocking_count": 8
+  },
+  "attribution_summary": {
+    "attribution_count": 9,
+    "causal_category": "no_issue",
+    "is_complete": true,
+    "is_formal_attribution": true,
+    "probe_count": 0,
+    "summary_text": "业务预期已达成"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 6,
+    "protocol_gap_count": 4,
+    "consistency_gap_count": 0,
+    "recommended_fix_count": 2,
+    "issues": [
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "client_search source document is missing: source_enhanced_rules -> ../../../../llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml",
+      "client_search source document is missing: source_field_definitions -> ../../../../llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+      "client_search source document is missing: source_field_enums -> ../../../../llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+      "client_search source document is missing: source_value_mappings -> ../../../../llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml"
+    ]
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": false,
+  "check_passed": false,
+  "issue_count": 10,
+  "fallback_count": 0,
+  "causal_category": "no_issue",
+  "divergence_stage": "fulfillment_assessment",
+  "root_cause_summary": "业务预期已达成",
+  "created_at": "2026-07-01T03:38:26.311823+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "30260fc9-3024-47d4-a2d2-79bf2cbbac73"
+}

@@ -1,0 +1,42 @@
+{
+  "project_id": "marketting-planning-intent",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "245f0740-4739-4b80-8ec2-6c93fa6ec8d3"
+      ],
+      "representative_traces": [
+        "245f0740-4739-4b80-8ec2-6c93fa6ec8d3"
+      ],
+      "common_root_cause": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "shared_failure_pattern": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "representative_diffs": [
+        {
+          "case_id": "245f0740-4739-4b80-8ec2-6c93fa6ec8d3",
+          "node": "state_machine",
+          "evidence": [
+            "incomplete_retry_limit"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+      ],
+      "verification_cases": [
+        "245f0740-4739-4b80-8ec2-6c93fa6ec8d3"
+      ],
+      "next_actions": [
+        "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+      ]
+    }
+  ],
+  "common_root_cause": "",
+  "impact": "",
+  "priority": ""
+}

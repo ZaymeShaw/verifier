@@ -1,0 +1,114 @@
+{
+  "trace_id": "65ff9405-3073-499e-a4da-43efcf2347d7",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "问题针对性",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "上下文/参考依赖处理",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "事实准确性",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "忠实度",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "矛盾风险控制",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "答案有用性",
+      "causal_category": "insufficient_evidence"
+    }
+  ],
+  "causal_category": "需人工复核",
+  "earliest_divergence": {
+    "node": "qa.sample.normalize",
+    "expected": "样本应提供非空 actual_answer 以进入正常评估流程（scenario 为 qa_gold_answer / qa_context_faithfulness / qa_weak_quality 之一）",
+    "actual": "样本 actual_answer 为空，scenario 被推断为 invalid_sample，data_quality_flags 标记 missing_actual_answer",
+    "evidence": [
+      "input.question='什么是保险合同犹豫期？'",
+      "output.actual_answer=''",
+      "reference={}",
+      "contexts=[]",
+      "scenario=invalid_sample",
+      "data_quality_flags=['missing_actual_answer']"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "suspicious",
+      "evidence": [
+        "scenario=invalid_sample",
+        "data_quality_flags=['missing_actual_answer']"
+      ]
+    },
+    {
+      "status": "suspicious"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "语义 judge 不可用",
+        "qa_local_evidence_probe 只能记录证据完整性"
+      ]
+    },
+    {
+      "status": "not_verified"
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": false,
+    "expected": false,
+    "execution_trace": true,
+    "project_docs": true,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "样本数据缺失 actual_answer：输入问题'什么是保险合同犹豫期？'的对应回答为空字符串。适配器 _infer_scenario 正确推断为 invalid_sample，_quality_flags 正确标记 missing_actual_answer。由于语义 judge 不可用且样本无实际回答内容，fallback judge 将所有业务预期设为 not_evaluable，attribute 流程被 blocked 为 insufficient_evidence。这不是代码缺陷——适配器对 invalid_sample 的处理逻辑完整且正确。根因在上游数据管道：该样本在传入 QA 流水线时未提供非空的 output.actual_answer。",
+  "verification_steps": [
+    "检查该样本的来源数据集或上游生成流程，确认为何 actual_answer 为空——可能是生成失败、数据抽取遗漏或人为上传时不完整。",
+    "如果该样本属于设计中的边界用例（预期回答缺失），应在 metadata 中明确标注 expected_quality 或通过 scenario='invalid_sample' 显式传入，而非依赖推断。",
+    "确认语义 judge 服务是否可用——若可用，重新运行 QA judge 流程可能得到更丰富的判定（但前提仍是 actual_answer 非空）。"
+  ],
+  "patch_direction": [
+    "在上游数据管线中增加 actual_answer 非空校验，缺失时在进入 QA 评估前提前拒绝或标记为 incomplete。",
+    "若该样本确实无回答（如模拟生成失败的回归测试），应显式设置 scenario='invalid_sample' 并补充 metadata 说明预期行为，避免触发语义评估流程。",
+    "不需要修改适配器代码——当前 invalid_sample 处理逻辑已经正确完备。"
+  ],
+  "needs_human_review": false,
+  "scenario": "invalid_sample"
+}

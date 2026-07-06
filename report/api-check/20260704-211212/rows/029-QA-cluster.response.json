@@ -1,0 +1,43 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::insufficient_evidence",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "insufficient_evidence",
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "952e9ae8-ec65-45fb-ba2f-8223a4dfc9e4"
+      ],
+      "representative_traces": [
+        "952e9ae8-ec65-45fb-ba2f-8223a4dfc9e4"
+      ],
+      "common_root_cause": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+      "shared_failure_pattern": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+      "representative_diffs": [
+        {
+          "case_id": "952e9ae8-ec65-45fb-ba2f-8223a4dfc9e4",
+          "node": "semantic judge or attribute LLM",
+          "evidence": [
+            "Circular reference detected"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "修复 LLM 调用配置或费用问题；不要把该兜底结果当作最终业务根因。"
+      ],
+      "verification_cases": [
+        "952e9ae8-ec65-45fb-ba2f-8223a4dfc9e4"
+      ],
+      "next_actions": [
+        "检查 LLM API key、余额、网络和模型配置。",
+        "恢复 LLM 后重新运行 judge 和 attribute agent。"
+      ]
+    }
+  ],
+  "common_root_cause": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+  "impact": "",
+  "priority": "high"
+}

@@ -1,0 +1,82 @@
+{
+  "project": "marketting-planning",
+  "attributes": [
+    {
+      "trace_id": "181a2ff8-b57e-4827-b392-f136fc1e1c2e",
+      "project_id": "marketting-planning",
+      "case_id": "",
+      "expectation_attributions": [
+        {
+          "expectation_id": "意图识别并路由至规划阶段",
+          "causal_category": "no_issue"
+        },
+        {
+          "expectation_id": "完成队伍维度的达成路径规划",
+          "causal_category": "no_issue"
+        },
+        {
+          "expectation_id": "完成客户维度的达成路径规划",
+          "causal_category": "no_issue"
+        },
+        {
+          "expectation_id": "正确解析并使用NBEV目标值1200000万",
+          "causal_category": "no_issue"
+        },
+        {
+          "expectation_id": "SSE事件流完整结束",
+          "causal_category": "no_issue"
+        },
+        {
+          "expectation_id": "提供可执行的规划建议和下一步操作",
+          "causal_category": "no_issue"
+        }
+      ],
+      "causal_category": "no_issue",
+      "earliest_divergence": {
+        "node": "fulfillment_assessment",
+        "evidence": [
+          "系统正确识别意图进入planning阶段，生成了队伍达成测算（TEAM_REACH_MEASUREMENT）和客户达成测算（CUSTOMER_REACH_MEASUREMEN）卡片，目标值1200000万在推理和卡片数据中保持一致，SSE事件流以done事件结束，并附带了AI研判和下一步操作推荐，满足所有阻塞和非阻塞期望。"
+        ],
+        "confidence": "high"
+      },
+      "chain_nodes": [
+        {
+          "status": "verified",
+          "evidence": [
+            "系统正确识别意图进入planning阶段，生成了队伍达成测算（TEAM_REACH_MEASUREMENT）和客户达成测算（CUSTOMER_REACH_MEASUREMEN）卡片，目标值1200000万在推理和卡片数据中保持一致，SSE事件流以done事件结束，并附带了AI研判和下一步操作推荐，满足所有阻塞和非阻塞期望。"
+          ]
+        }
+      ],
+      "probe_results": [
+        {
+          "probe_id": "fulfillment_assessment",
+          "status": "not_verified",
+          "evidence": [
+            "系统正确识别意图进入planning阶段，生成了队伍达成测算（TEAM_REACH_MEASUREMENT）和客户达成测算（CUSTOMER_REACH_MEASUREMEN）卡片，目标值1200000万在推理和卡片数据中保持一致，SSE事件流以done事件结束，并附带了AI研判和下一步操作推荐，满足所有阻塞和非阻塞期望。"
+          ]
+        }
+      ],
+      "evidence_coverage": {
+        "judge_evidence": true,
+        "execution_trace": true
+      },
+      "root_cause_hypothesis": "当前 planning 输出满足业务预期，归因结论为 no_issue。",
+      "verification_steps": [
+        "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+      ],
+      "patch_direction": [
+        "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+      ],
+      "needs_human_review": false,
+      "scenario": "execution_planning",
+      "summary": {
+        "causal_category": "no_issue",
+        "attribution_count": 6,
+        "probe_count": 1,
+        "summary_text": "业务预期已达成",
+        "is_complete": true,
+        "is_formal_attribution": true
+      }
+    }
+  ]
+}

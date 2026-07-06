@@ -1,0 +1,350 @@
+{
+  "trace_id": "6a91aa20-aa71-4969-9550-1dce3d4502dc",
+  "project_id": "marketting-planning",
+  "verdict": "incorrect",
+  "business_expectations": [
+    {
+      "expectation_id": "意图识别为NBEV指标规划",
+      "downstream_consumer": "规划引擎",
+      "user_intent": "提高下个季度NBEV目标",
+      "expected_outcome": "意图被正确归类为营销规划（NBEV指标）",
+      "required_capabilities": [
+        "意图识别",
+        "指标提取"
+      ],
+      "acceptance_criteria": [
+        "事件流中出现intent_detected事件",
+        "intent_detected事件的payload中包含NBEV或等效业务指标"
+      ],
+      "priority": "high",
+      "evidence_refs": [
+        "evt_intent_detected"
+      ]
+    },
+    {
+      "expectation_id": "时间范围识别为下个季度",
+      "downstream_consumer": "规划引擎",
+      "user_intent": "基于下个季度进行规划",
+      "expected_outcome": "时间维度被准确捕获",
+      "required_capabilities": [
+        "时间解析"
+      ],
+      "acceptance_criteria": [
+        "规划上下文或卡片内容中体现了'下个季度'时间范围"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "缺失目标值触发澄清",
+      "downstream_consumer": "规划引擎",
+      "user_intent": "提高NBEV目标但未说具体值",
+      "expected_outcome": "触发澄清流程，阻塞规划直至目标值提供",
+      "required_capabilities": [
+        "字段校验",
+        "缺失识别",
+        "澄清生成"
+      ],
+      "acceptance_criteria": [
+        "事件流中存在澄清类事件（例如 ask_user、clarification_needed 或包含询问目标值的消息）",
+        "在补充具体数值前，planning_started 不出现"
+      ],
+      "priority": "high",
+      "evidence_refs": [
+        "evt_planning_absent_before_clarification"
+      ]
+    },
+    {
+      "expectation_id": "规划阶段不提前执行",
+      "downstream_consumer": "用户",
+      "user_intent": "得到基于具体目标的规划建议",
+      "expected_outcome": "无 planning_started 事件，或有澄清事件在前",
+      "required_capabilities": [
+        "阶段控制",
+        "门禁校验"
+      ],
+      "acceptance_criteria": [
+        "事件流中 planning_started 仅在所有必要字段（包括目标值）已提供后出现",
+        "或 planning_started 完全不出现（停留在澄清阶段）"
+      ],
+      "priority": "high",
+      "evidence_refs": [
+        "evt_planning_started_sequence"
+      ]
+    },
+    {
+      "expectation_id": "SSE事件流完整且正常结束",
+      "downstream_consumer": "前端交互层",
+      "user_intent": "正常完成一次对话",
+      "expected_outcome": "事件名序列完整，final_event为done，无错误事件",
+      "required_capabilities": [
+        "SSE生命周期管理"
+      ],
+      "acceptance_criteria": [
+        "event_summary.completed为true",
+        "event_summary.final_event为done",
+        "无错误事件或异常终止"
+      ],
+      "priority": "medium",
+      "evidence_refs": [
+        "evt_sse_summary"
+      ]
+    },
+    {
+      "expectation_id": "未使用fallback",
+      "downstream_consumer": "系统可靠性",
+      "user_intent": "获取准确回复",
+      "expected_outcome": "fallback.used=false",
+      "required_capabilities": [
+        "fallback控制"
+      ],
+      "acceptance_criteria": [
+        "extracted_output.fallback.used为false"
+      ],
+      "priority": "low",
+      "evidence_refs": [
+        "evt_fallback"
+      ]
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图识别为NBEV指标规划",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "intent_detected事件内容包含NBEV"
+      ],
+      "actual_evidence": [
+        "事件流中存在intent_detected事件名，但未暴露具体payload内容"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "evaluable_errors": [
+          "无法获取事件payload，不能验证具体意图标签"
+        ],
+        "reasoning": "事件名表明进行了意图检测，但缺少内容证据，无法判定是否准确识别了NBEV指标。"
+      },
+      "downstream_impact": "无法确认下游规划引擎收到的意图是否正确",
+      "blocking": false,
+      "evidence_refs": [
+        "evt_intent_detected"
+      ]
+    },
+    {
+      "expectation_id": "时间范围识别为下个季度",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "规划卡片或上下文中出现'下个季度'"
+      ],
+      "actual_evidence": [
+        "只有事件名，无卡片内容数据"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "evaluable_errors": [
+          "无法获取card_message_content文本"
+        ],
+        "reasoning": "缺乏卡片内容证据，无法评估时间范围是否被正确使用。"
+      },
+      "downstream_impact": "无影响（非阻塞）",
+      "blocking": false
+    },
+    {
+      "expectation_id": "缺失目标值触发澄清",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "澄清事件或询问目标值的消息"
+      ],
+      "actual_evidence": [
+        "事件序列中仅有reasoning和card事件，无ask_user或clarification_needed事件；planning_started在无澄清的情况下出现"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "基于可获取的事件名称和顺序，可直接判定：缺失目标值，但系统未触发澄清。"
+      },
+      "downstream_impact": "可能导致生成的计划无具体目标基准，降低可执行性",
+      "blocking": true,
+      "evidence_refs": [
+        "evt_planning_absent_before_clarification"
+      ]
+    },
+    {
+      "expectation_id": "规划阶段不提前执行",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "planning_started不出现，或出现前有澄清事件"
+      ],
+      "actual_evidence": [
+        "planning_started事件出现于事件流中，且前方无澄清事件；card_delta亦已生成"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "事件顺序明确显示系统直接进入规划阶段，违反了门禁校验要求。"
+      },
+      "downstream_impact": "用户收到一份基于不完整输入的规划卡片，可能需重新交互",
+      "blocking": true,
+      "evidence_refs": [
+        "evt_planning_started_sequence"
+      ]
+    },
+    {
+      "expectation_id": "SSE事件流完整且正常结束",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "completed=true, final_event=done"
+      ],
+      "actual_evidence": [
+        "event_summary.completed为true，final_event为done"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "事件流以done正常结束，未出现错误。"
+      },
+      "downstream_impact": "前端可正常处理交互结束",
+      "blocking": false,
+      "evidence_refs": [
+        "evt_sse_summary"
+      ]
+    },
+    {
+      "expectation_id": "未使用fallback",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "fallback.used=false"
+      ],
+      "actual_evidence": [
+        "extracted_output.fallback.used=false"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "fallback未被触发，符合边界约束。"
+      },
+      "downstream_impact": "无",
+      "blocking": false,
+      "evidence_refs": [
+        "evt_fallback"
+      ]
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "assessment_count": 6,
+    "blocking_expectations": [
+      "缺失目标值触发澄清",
+      "规划阶段不提前执行"
+    ]
+  },
+  "reasoning_summary": "根据营销规划系统的责任边界，当用户提出提高NBEV目标但未给出具体数值时，系统必须识别缺失字段并触发澄清，而不能直接进入规划。实际事件流显示，系统在发射 intent_detected 后直接进入 reasoning 和 planning_started，并生成了卡片，全程未出现澄清询问。这违反了核心阻塞期望“缺失目标值触发澄清”和“规划阶段不提前执行”。虽然SSE事件流正常结束且未使用fallback，但这不能弥补流程缺失带来的负面影响。因此，整体评估为未满足用户业务意图。",
+  "judge_basis": "基于营销规划 agent 的评估规范及当前 RunTrace 中的事件序列、阶段标记和 fallback 状态，参考 critical_intent_dimensions 进行判定。",
+  "judge_method": "intent-to-expectation fulfillment assessment",
+  "verdict_derivation": {
+    "primary_boundary": "system_responsibility_with_declared_external_boundary",
+    "assessment_summary": "两个阻塞性期望未满足：1）缺失目标值时未触发澄清；2）在必要参数未补齐时提前进入规划阶段生成卡片。非阻塞期望中，SSE完成和fallback控制满足，意图内容及时间识别因证据不足不可评估。",
+    "blocking_gaps": [
+      "缺失目标值未触发澄清，导致规划基于不完整输入",
+      "规划阶段被提前执行，违反门禁校验"
+    ],
+    "why_verdict": "用户未提供具体NBEV目标值，系统应暂停并询问。然而实际运行中系统跳过了澄清环节，直接进入 planning_started 并生成了卡片，导致输出无法保证基于准确目标。这违反了核心业务期望，因此整体判定为未满足。"
+  },
+  "evidence": [
+    "event_summary 中 planning_started 在无澄清事件的情况下出现",
+    "event_summary 中包含 card_delta，证明卡片已生成",
+    "extracted_output.stage 被标记为 non_agent（可能与评估器自身判定有关，但此处作为参考）"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "evaluable_errors": [
+      "无法获取 intent_detected 事件的具体 payload 以验证意图内容",
+      "无法获取 card_message_content 文本以评估时间范围和维度识别"
+    ],
+    "reasoning": "部分期望因缺少内容证据而不可评估，但澄清与阶段控制期望可直接基于事件序列判定，且它们构成阻塞点，因此整体仍处于可评估范围。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "marketting-planning-judge-boundary",
+    "primary_boundary_name": "营销规划系统责任边界",
+    "judge_question": "在依赖可用且不允许 fallback 的情况下，系统是否在缺失必要参数时遵守了澄清→规划的流程？",
+    "verdict_basis": "系统事件顺序表明其跳过了澄清步骤，直接生成了规划卡片，构成流程违规。",
+    "boundary_sources": "application_boundary",
+    "conflict_policy": "当外部依赖不可用与内部阶段缺失同时存在时，以内部阶段缺失为错误基础；此处外部依赖可用，故错误完全由内部阶段控制失败导致。"
+  },
+  "consumer_contract": {
+    "consumer": "营销规划下游模块（规划执行引擎、卡片渲染器）",
+    "contract": "需要明确的意图标签和完整的指标参数才能执行规划；若参数不完整，应停留在意图识别或澄清阶段，不触发规划事件。",
+    "application_boundary": {
+      "allow_fallback": false,
+      "dependency_status": "available",
+      "fallback_used": false,
+      "judge_scope": "system_responsibility_with_declared_external_boundary"
+    }
+  },
+  "intent_model": {
+    "raw_user_request": "下个季度我想把NBEV目标再提一提，能不能帮我看看从哪些方面入手，比如增加队伍还是多找客户，或者调整产品策略？",
+    "explicit_intents": [
+      "提高NBEV目标",
+      "探索执行方向"
+    ],
+    "implicit_business_intents": [
+      "NBEV目标分解",
+      "生成营销执行计划",
+      "评估不同策略方向"
+    ],
+    "constraints": {
+      "time_range": "下个季度",
+      "metric": "NBEV",
+      "decomposition_dimensions": [
+        "增加队伍",
+        "多找客户",
+        "调整产品策略"
+      ],
+      "target_value": "未提供具体数值"
+    },
+    "success_definition": "系统正确识别意图为NBEV规划，在缺失具体目标值时触发澄清，补齐后基于用户提供的维度生成可执行的分解计划。",
+    "blocking_requirements": [
+      "识别缺失字段并触发澄清",
+      "在必要参数未补齐前不提前执行规划"
+    ],
+    "nice_to_have_requirements": [
+      "识别用户提到的具体分解维度"
+    ],
+    "intent_evidence": [
+      "用户消息中明确提到'NBEV目标'、'下个季度'、'增加队伍'、'多找客户'、'调整产品策略'"
+    ]
+  },
+  "reconstructed_intent": "用户希望在下一个季度提升NBEV指标，并希望系统从增加队伍、多找客户、调整产品策略等维度分析入手点，但未给出具体提升数值。系统应识别该意图为NBEV规划，在缺失目标值时暂停并请求补充，然后基于完整信息提供可执行的分解计划。",
+  "reference_generation_basis": {
+    "source": "judge-generated",
+    "alignment_to_live_schema": "基于营销规划 agent 的评估边界和 critical_intent_dimensions 推导期望行为",
+    "evidence": [
+      "用户输入中明确提及 NBEV、下个季度、增加队伍、多找客户、调整产品策略",
+      "应用边界 allow_fallback=false 且 dependency_status=available",
+      "营销规划标准流程要求澄清缺失的必要参数"
+    ]
+  },
+  "scenario": "intent_recognition",
+  "needs_human_review": false,
+  "summary": {
+    "reason": "not_fulfilled · blocking=[缺失目标值触发澄清,规划阶段不提前执行] · 可能导致生成的计划无具体目标基准，降低可执行性",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "缺失目标值触发澄清",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "可能导致生成的计划无具体目标基准，降低可执行性",
+        "within_evaluable_scope": true,
+        "evidence": "事件序列中仅有reasoning和card事件，无ask_user或clarification_needed事件；planning_started在无澄清的情况下出现 | 澄清事件或询问目标值的消息 | evt_planning_absent_before_clarification"
+      },
+      {
+        "expectation_id": "规划阶段不提前执行",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "用户收到一份基于不完整输入的规划卡片，可能需重新交互",
+        "within_evaluable_scope": true,
+        "evidence": "planning_started事件出现于事件流中，且前方无澄清事件；card_delta亦已生成 | planning_started不出现，或出现前有澄清事件 | evt_planning_started_sequence"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 6,
+    "blocking_count": 2,
+    "is_formal_attribution": true
+  }
+}

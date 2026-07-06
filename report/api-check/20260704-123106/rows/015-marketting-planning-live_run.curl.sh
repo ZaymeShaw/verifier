@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+curl -sS -X POST 'http://127.0.0.1:8021/api/live_run' -H 'Content-Type: application/json' --data-raw '{"input": {"expected_intent": "", "id": "mock-agent-marketting-planning-ce129a44", "input": {"extra_input_params": {"agent_args": {"conversation_id": "conv_001", "message": {"content": "我想知道怎么提高今年的NBEV，能不能从多招些销售人员入手？", "content_type": "text"}}, "args": {}}, "metrics": {"cache_read_tokens": 0, "cache_write_tokens": 0, "input_tokens": 383, "output_tokens": 251, "reasoning_tokens": 107, "total_tokens": 634}, "org_id": "org_001", "session_id": "sess_001", "trace_id": "trace_001", "user_text": "我想知道怎么提高今年的NBEV，能不能从多招些销售人员入手？"}, "metadata": {"live_request_mapped": true, "schema_ok": false, "source": "mock_agent_llm"}, "scenario": "intent_recognition", "source": "mock_agent_llm", "status": "pending"}, "project": "marketting-planning"}' --write-out '
+__HTTP_STATUS__:%{http_code}'

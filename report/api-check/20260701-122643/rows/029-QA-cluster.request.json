@@ -1,0 +1,57 @@
+{
+  "project": "QA",
+  "attributes": [
+    {
+      "trace_id": "b0a55895-e74e-41a5-b8be-b3ac289ecd47",
+      "project_id": "QA",
+      "case_id": "",
+      "causal_category": "needs_human_review",
+      "earliest_divergence": {
+        "node": "state_machine",
+        "evidence": [
+          "实际回答为空，无法满足用户获取保险犹豫期定义的需求，因此核心期望未满足。由于回答缺失，内容正确性无法评估。",
+          "scenario=invalid_sample",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "confidence": "unknown"
+      },
+      "chain_nodes": [
+        {
+          "status": "not_verified",
+          "evidence": [
+            "实际回答为空，无法满足用户获取保险犹豫期定义的需求，因此核心期望未满足。由于回答缺失，内容正确性无法评估。",
+            "scenario=invalid_sample",
+            "question_present=True",
+            "actual_answer_present=False",
+            "golden_answer_present=False"
+          ]
+        }
+      ],
+      "evidence_coverage": {
+        "query": true,
+        "actual": true,
+        "expected": true,
+        "execution_trace": true
+      },
+      "root_cause_hypothesis": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "verification_steps": [
+        "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+      ],
+      "patch_direction": [
+        "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+      ],
+      "needs_human_review": true,
+      "scenario": "invalid_sample",
+      "summary": {
+        "causal_category": "needs_human_review",
+        "attribution_count": 0,
+        "probe_count": 0,
+        "summary_text": "incomplete_retry_limit",
+        "is_complete": false,
+        "is_formal_attribution": false
+      }
+    }
+  ]
+}

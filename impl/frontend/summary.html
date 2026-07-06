@@ -82,10 +82,8 @@
               <option value="all">全部达成状态</option>
               <option value="pending">pending</option>
               <option value="fulfilled">fulfilled</option>
-              <option value="partially_fulfilled">partially_fulfilled</option>
               <option value="not_fulfilled">not_fulfilled</option>
               <option value="not_evaluable">not_evaluable</option>
-              <option value="contested">contested</option>
             </select>
           </div>
         </div>
@@ -127,24 +125,26 @@ let casePool=[];
 let mockDatasets=[];
 let poolLibrary=[];
 let latestCluster=null;
+function tableRow(item){return item.table_row || item.frontend_view?.table_row || item;}
 function lightCase(item){
-  const keep={id:item.id,selected:item.selected,input:item.input,output:item.output,reference:item.reference,metadata:item.metadata,scenario:item.scenario,dataset_id:item.dataset_id,dimension_type:item.dimension_type,dataset_name:item.dataset_name,source:item.source,status:item.status,error:item.error,execution_mode:item.execution_mode,output_source:item.output_source,conversation_summary:conversationSummary(item),turn_traces:compactTurnTraces(item),judge_summary:item.judge_summary,attribution_summary:item.attribution_summary};
+  const keep={id:item.id,selected:item.selected,input:item.input,output:item.output,reference:item.reference,metadata:item.metadata,scenario:item.scenario,dataset_id:item.dataset_id,dimension_type:item.dimension_type,dataset_name:item.dataset_name,source:item.source,status:item.status,error:item.error,execution_mode:item.execution_mode,output_source:item.output_source,table_row:item.table_row,conversation_summary:conversationSummary(item),conversation_detail:conversationDetail(item),judge:item.judge,attribute:item.attribute};
   const generatedRef=item.frontend_view?.reference_panel?.source==='judge_generated'?item.frontend_view?.reference_panel?.reference:null;
   if(!keep.reference && generatedRef){keep.reference=generatedRef;}
   Object.keys(keep).forEach(key=>keep[key]===undefined && delete keep[key]);
   return keep;
 }
-function compactTurnTraces(item){
-  const turns=item.turn_traces || item.trace?.project_fields?.turn_traces || [];
-  return (turns || []).map(turn=>{const keep={turn_index:turn.turn_index,user_input:turn.user_input,stage:turn.stage,missing_fields:turn.missing_fields,path_evidence:turn.path_evidence,card_evidence:turn.card_evidence,judge_verdict:turn.judge_verdict,error_summary:turn.error_summary};Object.keys(keep).forEach(key=>keep[key]===undefined && delete keep[key]);return keep;});
+function conversationDetail(item){
+  const row=tableRow(item);
+  const detail=row.conversation_detail || item.conversation_detail || [];
+  return (detail || []).map((turn,index)=>{const keep={turn_index:turn.turn_index || turn.turn || index+1,role:turn.role || 'unknown',content:turn.content || '',stage:turn.stage || '',extracted_summary:turn.extracted_summary || ''};Object.keys(keep).forEach(key=>keep[key]===undefined && delete keep[key]);return keep;});
 }
-function conversationSummary(item){return item.conversation_summary || item.trace?.project_fields?.conversation_summary || null;}
-function interactionSummary(item){const summary=conversationSummary(item);if(!summary){return null;}return {intent:item.input?.user_intent?.goal || item.user_intent?.goal || inputLabel(item.input),conversation_summary:summary,turn_traces:compactTurnTraces(item)};}
+function conversationSummary(item){const row=tableRow(item);return row.conversation_summary || item.conversation_summary || null;}
+function interactionSummary(item){const detail=conversationDetail(item);const summary=conversationSummary(item);if(!summary && !detail.length){return null;}return {intent:item.input?.user_intent?.goal || item.user_intent?.goal || inputLabel(item.input),conversation_summary:summary || {},conversation_detail:detail};}
 function renderInteractiveOutput(item){
   const interaction=interactionSummary(item);
   if(!interaction){return null;}
   const summary=interaction.conversation_summary || {};
-  const turns=(interaction.turn_traces || []).map(turn=>'<div class="muted">第 '+escapeHtml(turn.turn_index || '')+' 轮 · 用户输入：'+escapeHtml(turn.user_input?.query || '')+' · 阶段：'+escapeHtml(turn.stage || '-')+(turn.missing_fields?.length?' · 缺失字段：'+escapeHtml(turn.missing_fields.join(', ')):'')+(turn.judge_verdict?' · 判定：'+escapeHtml(turn.judge_verdict):'')+'</div>').join('');
+  const turns=(interaction.conversation_detail || []).map(turn=>'<div class="muted">第 '+escapeHtml(turn.turn_index || '')+' 轮 · '+escapeHtml(turn.role || '-')+'：'+escapeHtml(turn.content || '')+(turn.stage?' · 阶段：'+escapeHtml(turn.stage):'')+(turn.extracted_summary?' · 摘要：'+escapeHtml(turn.extracted_summary):'')+'</div>').join('');
   return '<div><b>多轮交互</b></div>'+
     '<div>意图：'+escapeHtml(interaction.intent || '-')+'</div>'+
     '<div>轮次：'+escapeHtml(summary.turn_count ?? '-')+' · 最终阶段：'+escapeHtml(summary.final_stage || '-')+' · 停止原因：'+escapeHtml(summary.stop_reason || '-')+'</div>'+
@@ -206,6 +206,14 @@ function showCompact(id,data){
   document.getElementById(id).textContent=text.length>limit?text.slice(0,limit)+'\n... 已截断大体积 JSON，详情请查看后端结果或单条用例。':text;
 }
 function escapeHtml(text){return String(text).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function renderReferenceCell(item){
+  const ref = caseReference(item);
+  if(ref===null || ref===undefined || ref===''){return '<span class="muted">-</span>';}
+  const text = typeof ref === 'string' ? ref : JSON.stringify(ref, null, 2);
+  const limit = 1800;
+  const truncated = text.length > limit ? text.slice(0, limit) + '\n... 已截断，点击下方完整结果查看原始 JSON' : text;
+  return '<pre>'+escapeHtml(truncated)+'</pre>';
+}
 function formatJsonCell(value, limit=1800){
   if(value===null || value===undefined || value===''){return '-';}
   const text=typeof value==='string'?value:JSON.stringify(value,null,2);
@@ -248,7 +256,7 @@ function resultMatchesCase(item){
 function stripResult(item){return {...item,status:'pending',trace:null,judge:null,attribute:null,frontend_view:null,cluster:null,check:null};}
 function sanitizeCaseResult(item){return resultMatchesCase(item) && !hasStaleEmptyQueryResult(item)?item:stripResult(item);}
 function sanitizeCasePool(items){return (items || []).map(sanitizeCaseResult);}
-function inferCaseScenario(item){return item.scenario || item.trace?.project_fields?.scenario || item.input?.scenario || item.input?.metadata?.scenario || '';}
+function inferCaseScenario(item){const row=tableRow(item);return row.scenario || item.scenario || item.input?.scenario || item.input?.metadata?.scenario || '';}
 function caseRunInput(item){
   const payload={};
   if(item.input!==undefined){payload.input=item.input;}
@@ -315,11 +323,13 @@ async function renderPoolLibrary(){
   el.innerHTML=poolLibrary.map(pool=>'<div class="pool-item"><b>'+escapeHtml(pool.name)+'</b><div class="muted">'+escapeHtml(pool.case_count)+' 条 · '+escapeHtml(pool.created_at || '')+'</div><div class="row" style="margin-top:8px"><button class="secondary" onclick="loadNamedPool(\''+escapeHtml(pool.id)+'\')">加载</button><button class="secondary" onclick="deleteNamedPool(\''+escapeHtml(pool.id)+'\')">删除</button></div></div>').join('');
 }
 function toggleCase(id,checked){casePool=casePool.map(x=>x.id===id?{...x,selected:checked}:x);saveCasePool();}
-function fulfillmentPill(status){const cls=status==='fulfilled'?'ok':status==='not_fulfilled'?'bad':['partially_fulfilled','not_evaluable','contested'].includes(status)?'warn':'';return '<span class="pill '+cls+'">'+escapeHtml(status||'pending')+'</span>';}
+function fulfillmentPill(status){const cls=status==='fulfilled'?'ok':status==='not_fulfilled'?'bad':(status==='not_evaluable'?'warn':'');return '<span class="pill '+cls+'">'+escapeHtml(status||'pending')+'</span>';}
 function judgePanel(item){return item.frontend_view?.judge_panel || item.judge || {}; }
 function attributePanel(item){return item.frontend_view?.attribute_panel || item.attribute || {}; }
 function fulfillmentPanel(item){return item.frontend_view?.fulfillment_panel || {}; }
-function judgeReason(item){const panel=judgePanel(item);return panel.display_reason || panel.reasoning_summary || panel.verdict_derivation?.why_verdict || panel.primary_assessment?.reasoning || '';}
+function judgeSummary(item){const row=tableRow(item);return row.judge_summary || (item.judge && item.judge.summary) || (item.judge_summary) || null;}
+function attributionSummary(item){const row=tableRow(item);return row.attribution_summary || (item.attribute && item.attribute.summary) || (item.attribution_summary) || null;}
+function judgeReason(item){const panel=judgePanel(item);return panel.display_reason || panel.reasoning_summary || panel.verdict_derivation?.why_verdict || panel.verdict_derivation?.assessment_summary || '';}
 function _judgeSummaryFromNested(item){
   const panel=judgePanel(item), fulfillment=fulfillmentPanel(item);
   if(!panel || !Object.keys(panel).length){return null;}
@@ -329,18 +339,19 @@ function _judgeSummaryFromNested(item){
   return {status,fulfillment_status:status,verdict:fulfillment.derived_verdict || panel.verdict || '',score:panel.score,reason:judgeReason(item),assessment_count:assessments.length,blocking_count:blocking};
 }
 function renderCaseJudge(item){
-  const nested=_judgeSummaryFromNested(item);
-  const summary=item.judge_summary && nested?{...nested,...item.judge_summary,reason:item.judge_summary.reason || nested.reason}:item.judge_summary || nested;
-  if(summary){
-    const status=summary.fulfillment_status || summary.status || fulfillmentStatus(item) || '-';
-    const counts='assessments='+escapeHtml(summary.assessment_count ?? '-')+' · blocking='+escapeHtml(summary.blocking_count ?? '-');
-    const reason=summary.reason?'<div>'+escapeHtml(shortText(summary.reason,900))+'</div>':'';
-    return '<div><b>Fulfillment：</b>'+escapeHtml(status)+'</div><div class="muted">verdict='+escapeHtml(summary.verdict || '-')+' · score='+escapeHtml(summary.score ?? '-')+'</div><div class="muted">'+counts+'</div>'+reason;
+  const row=tableRow(item);
+  const summary=judgeSummary(item);
+  if(summary || row.verdict || row.score!==undefined){
+    const status=row.fulfillment_status || summary?.fulfillment_status || summary?.status || row.status || '-';
+    const counts=summary?'assessments='+escapeHtml(summary.assessment_count ?? 0)+' · blocking='+escapeHtml(summary.blocking_count ?? 0) : '';
+    const reason=summary?.reason?'<div>'+escapeHtml(shortText(summary.reason,900))+'</div>':'';
+    return '<div><b>Fulfillment：</b>'+escapeHtml(status)+'</div><div class="muted">verdict='+escapeHtml(row.verdict || summary?.verdict || '-')+' · score='+escapeHtml(row.score ?? summary?.score ?? '-')+'</div>'+(counts?'<div class="muted">'+counts+'</div>':'')+reason;
   }
   return '<span class="muted">尚未评估</span>';
 }
 function renderCaseAttribute(item){
-  if(item.attribution_summary){return renderAttributionSummary(item);}
+  const row=tableRow(item);
+  if(row.attribution_summary || item.attribution_summary || (item.attribute && item.attribute.summary)){return renderAttributionSummary(item);}
   if(!item.attribute){return '<span class="muted">尚未归因</span>';}
   return renderAttributionSummary(item);
 }
@@ -358,7 +369,7 @@ function resetCasePoolFilters(){
   if(caseFilter){caseFilter.value='all';}
   if(scenarioFilter){scenarioFilter.value='all';}
 }
-function runModeLabel(item){const mode=item.execution_mode || item.trace?.project_fields?.execution_mode || '';const source=item.output_source || item.trace?.project_fields?.output_source || '';return mode||source?(mode || '-')+(source?' / '+source:''):'-';}
+function runModeLabel(item){const row=tableRow(item);const mode=row.execution_mode || item.execution_mode || '';const source=row.output_source || item.output_source || item.trace?.live_result?.output_source || '';return mode||source?(mode || '-')+(source?' / '+source:''):'-';}
 function renderCasePool(){
   const filter=document.getElementById('caseFilter')?.value || 'all';
   renderScenarioFilter();
@@ -368,42 +379,49 @@ function renderCasePool(){
   const page=visible.slice(0,100);
   const more=visible.length>page.length?'<tr><td colspan="11" class="muted">仅展示前 '+page.length+' / '+visible.length+' 条；请使用场景或状态筛选缩小范围，批量执行仍会使用已选择用例。</td></tr>':'';
   const emptyText=casePool.length?'当前筛选未命中用例，候选区仍有 '+casePool.length+' 条；请选择“全部状态/全部场景”查看跑完后的结果。':'候选区为空，可构建 Mock 用例池或导入自定义数据集。';
-  rows.innerHTML=visible.length?page.map(x=>'<tr><td><input type="checkbox" '+(x.selected?'checked':'')+' onchange="toggleCase(\''+escapeHtml(x.id)+'\',this.checked)"></td><td>'+escapeHtml(x.id)+'</td><td>'+escapeHtml(x.source||'')+'</td><td>'+escapeHtml(runModeLabel(x))+'</td><td>'+escapeHtml(inferCaseScenario(x) || '-')+'</td><td class="case-input">'+escapeHtml(inputLabel(x.input))+'<br><span class="muted">'+escapeHtml(shortText(x.input,260))+'</span></td><td class="case-output">'+renderOutputCell(x)+'</td><td class="case-reference"><pre>'+escapeHtml(formatJsonCell(caseReference(x),1800))+'</pre></td><td>'+fulfillmentPill(fulfillmentStatus(x))+'</td><td class="case-summary">'+renderCaseJudge(x)+'</td><td class="case-summary">'+renderCaseAttribute(x)+'</td></tr>').join('')+more:'<tr><td colspan="11" class="muted">'+escapeHtml(emptyText)+'</td></tr>';
+  rows.innerHTML=visible.length?page.map(x=>{
+    const row=tableRow(x);
+    const inputText=row.input || inputLabel(x.input);
+    const inputDetail=shortText(x.input,260);
+    const referenceText=row.reference_summary || formatJsonCell(caseReference(x),1800);
+    return '<tr><td><input type="checkbox" '+(x.selected?'checked':'')+' onchange="toggleCase(\''+escapeHtml(x.id)+'\',this.checked)"></td><td>'+escapeHtml(row.id || x.id)+'</td><td>'+escapeHtml(x.source||'')+'</td><td>'+escapeHtml(runModeLabel(x))+'</td><td>'+escapeHtml(inferCaseScenario(x) || '-')+'</td><td class="case-input">'+escapeHtml(inputText)+'<br><span class="muted">'+escapeHtml(inputDetail)+'</span></td><td class="case-output">'+renderOutputCell(x)+'</td><td class="case-reference">'+renderReferenceCell(x)+'</td><td>'+fulfillmentPill(fulfillmentStatus(x))+'</td><td class="case-summary">'+renderCaseJudge(x)+'</td><td class="case-summary">'+renderCaseAttribute(x)+'</td></tr>';
+  }).join('')+more:'<tr><td colspan="11" class="muted">'+escapeHtml(emptyText)+'</td></tr>';
   updateStats();
 }
 function outputSummary(item){
+  const row=tableRow(item);
+  if(row.output_summary){return row.output_summary;}
   const interaction=interactionSummary(item);
   if(interaction){return interaction;}
-  const output=item.trace?.extracted_output;
-  const projectFields=item.trace?.project_fields;
-  if(!output && !projectFields){return '-';}
-  return {extracted_output:output, project_fields:projectFields};
+  return '-';
 }
-function fulfillmentStatus(item){const fulfillment=fulfillmentPanel(item);const panel=judgePanel(item);return item.judge_summary?.fulfillment_status || item.judge_summary?.status || fulfillment.overall_fulfillment?.status || panel.display_status || panel.overall_fulfillment?.status || '';}
+function fulfillmentStatus(item){const row=tableRow(item);return row.fulfillment_status || row.status || '';}
 function renderFulfillmentSummary(item){
-  const status=fulfillmentStatus(item);
-  const assessments=fulfillmentPanel(item).matrix || judgePanel(item).fulfillment_assessments || [];
-  const blocking=item.judge_summary?.blocking_count ?? assessments.filter(x=>x.blocking).length;
-  if(!status && !assessments.length){return '<span class="muted">无 fulfillment</span>';}
-  return '<div><b>Fulfillment：</b>'+escapeHtml(status || '-')+'</div><div class="muted">assessments='+escapeHtml(assessments.length)+' · blocking='+escapeHtml(blocking)+'</div>';
+  const row=tableRow(item);
+  const summary=judgeSummary(item) || {};
+  const status=row.fulfillment_status || row.status || summary.fulfillment_status || summary.status || '';
+  const assessmentCount=summary.assessment_count ?? 0;
+  const blockingCount=summary.blocking_count ?? 0;
+  if(!status && !assessmentCount){return '<span class="muted">无 fulfillment</span>';}
+  return '<div><b>Fulfillment：</b>'+escapeHtml(status || '-')+'</div><div class="muted">assessments='+escapeHtml(assessmentCount)+' · blocking='+escapeHtml(blockingCount)+'</div>';
 }
 function renderAttributionSummary(item){
-  const compact=item.attribution_summary || null;
+  const row=tableRow(item);
+  const compact=row.attribution_summary || null;
   const attribute=attributePanel(item);
-  if(compact){
-    const nestedText=attribute.display_root_cause || attribute.incomplete_reason || attribute.root_cause_hypothesis || '';
-    const text=compact.summary_text || nestedText?'<div>'+escapeHtml(shortText(compact.summary_text || nestedText,900))+'</div>':'';
-    return renderFulfillmentSummary(item)+'<div><b>Causal：</b>'+escapeHtml(compact.causal_category || attribute.display_causal_category || '-')+'</div><div class="muted">expectation attributions='+escapeHtml(compact.attribution_count ?? attribute.attribution_count ?? 0)+' · probes='+escapeHtml(compact.probe_count ?? attribute.probe_count ?? 0)+'</div>'+text;
+  if(compact || row.causal_category || row.root_cause_summary){
+    const text=(row.root_cause_summary || compact?.summary_text || attribute.incomplete_reason || attribute.root_cause_hypothesis || '')?'<div>'+escapeHtml(shortText(row.root_cause_summary || compact?.summary_text || attribute.incomplete_reason || attribute.root_cause_hypothesis || '',900))+'</div>':'';
+    return renderFulfillmentSummary(item)+'<div><b>Causal：</b>'+escapeHtml(row.causal_category || compact?.causal_category || '-')+'</div><div class="muted">expectation attributions='+escapeHtml(compact?.attribution_count ?? (attribute.expectation_attributions || []).length)+' · probes='+escapeHtml(compact?.probe_count ?? (attribute.probe_results || []).length)+' · issues='+escapeHtml(row.issue_count ?? 0)+' · fallbacks='+escapeHtml(row.fallback_count ?? 0)+'</div>'+text;
   }
   const attributions=attribute.expectation_attributions || [];
-  const causal=attribute.display_causal_category || attribute.causal_category || attribute.primary_error_type || attribute.failure_category || '';
-  return renderFulfillmentSummary(item)+'<div><b>Causal：</b>'+escapeHtml(causal || '-')+'</div><div class="muted">expectation attributions='+escapeHtml(attribute.attribution_count ?? attributions.length)+' · probes='+escapeHtml(attribute.probe_count ?? (attribute.probe_results || []).length)+'</div><div>'+escapeHtml(shortText(attribute.display_root_cause || attribute.incomplete_reason || attribute.root_cause_hypothesis || '',220))+'</div>';
+  const causal=attribute.causal_category || '';
+  return renderFulfillmentSummary(item)+'<div><b>Causal：</b>'+escapeHtml(causal || '-')+'</div><div class="muted">expectation attributions='+escapeHtml(attributions.length)+' · probes='+escapeHtml((attribute.probe_results || []).length)+'</div><div>'+escapeHtml(shortText(attribute.incomplete_reason || attribute.root_cause_hypothesis || '',220))+'</div>';
 }
 function updateStats(){
   document.getElementById('stat-total').textContent=casePool.length;
   document.getElementById('stat-selected').textContent=casePool.filter(x=>x.selected).length;
   document.getElementById('stat-fulfilled').textContent=casePool.filter(x=>fulfillmentStatus(x)==='fulfilled').length;
-  document.getElementById('stat-not-fulfilled').textContent=casePool.filter(x=>['not_fulfilled','partially_fulfilled','not_evaluable','contested'].includes(fulfillmentStatus(x))).length;
+  document.getElementById('stat-not-fulfilled').textContent=casePool.filter(x=>['not_fulfilled','not_evaluable'].includes(fulfillmentStatus(x))).length;
   document.getElementById('stat-clusters').textContent=(latestCluster?.clusters || []).length;
 }
 function setStatus(text){document.getElementById('progress').style.display='block';document.getElementById('progressText').textContent=text;}
@@ -417,10 +435,10 @@ function setProgress(done,total,line){
     while(log.children.length>120){log.removeChild(log.firstChild);}
   }
 }
-function stableCaseId(value){return value?.case_id || value?.id || value?.run?.case_id || value?.run?.id || '';}
-function runStatus(run,eventStatus){const terminal=run?.status&&run.status!=='done'?run.status:(eventStatus&&eventStatus!=='done'?eventStatus:'');return run?.judge_summary?.fulfillment_status || run?.judge_summary?.status || run?.judge?.overall_fulfillment?.status || terminal || run?.judge?.verdict || run?.status || eventStatus || (run?.error?'error':'done');}
+function stableCaseId(value){return value?.case_id || value?.id || value?.table_row?.id || value?.run?.case_id || value?.run?.id || value?.run?.table_row?.id || '';}
+function runStatus(run,eventStatus){const row=tableRow(run||{});const terminal=row.status&&row.status!=='done'?row.status:(run?.status&&run.status!=='done'?run.status:(eventStatus&&eventStatus!=='done'?eventStatus:''));return row.fulfillment_status || row.status || judgeSummary(run)?.fulfillment_status || judgeSummary(run)?.status || run?.judge?.overall_fulfillment?.status || terminal || row.verdict || run?.judge?.verdict || run?.status || eventStatus || (run?.error?'error':'done');}
 function applyRunToCase(item,run,eventStatus){
-  const next={...item,status:runStatus(run,eventStatus),output:run.trace?.extracted_output || item.output || null,trace:run.trace||null,judge:run.judge||null,attribute:run.attribute||null,frontend_view:run.frontend_view||null,check:run.check||null,cluster:run.cluster||null,error:run.error||null,execution_mode:run.execution_mode || run.trace?.project_fields?.execution_mode || null,output_source:run.output_source || run.trace?.project_fields?.output_source || null,judge_summary:run.judge_summary || null,attribution_summary:run.attribution_summary || null};
+  const next={...item,status:runStatus(run,eventStatus),output:run.trace?.extracted_output || item.output || null,trace:run.trace||null,judge:run.judge||null,attribute:run.attribute||null,frontend_view:run.frontend_view||null,check:run.check||null,cluster:run.cluster||null,error:run.error||null,execution_mode:run.execution_mode || null,output_source:run.output_source || run.trace?.live_result?.output_source || null,table_row:run.table_row || null};
   const generatedRef=run.frontend_view?.reference_panel?.source==='judge_generated'?run.frontend_view?.reference_panel?.reference:null;
   if(!inputReference(next) && generatedRef){next.reference=generatedRef;}
   return next;
@@ -505,7 +523,7 @@ function renderClusterSummary(cluster){
   const el=document.getElementById('clusterSummary');
   if(!cluster){el.textContent='尚未批量归因。';return;}
   const clusters=cluster.clusters || [];
-  el.innerHTML=clusters.length?clusters.map((c,i)=>'<div class="cluster-card"><b>Cluster '+(i+1)+'</b><div>'+escapeHtml(c.title || c.failure_category || c.cluster_id || '未命名聚簇')+'</div><div class="muted">代表用例：'+escapeHtml(shortText(c.representative_cases || [],160))+'</div></div>').join(''):'<div class="muted">暂无聚簇。</div>';
+  el.innerHTML=clusters.length?clusters.map((c,i)=>'<div class="cluster-card"><b>Cluster '+(i+1)+'</b><div>'+escapeHtml(c.title || c.causal_category || c.cluster_id || '未命名聚簇')+'</div><div class="muted">代表用例：'+escapeHtml(shortText(c.representative_cases || [],160))+'</div></div>').join(''):'<div class="muted">暂无聚簇。</div>';
 }
 function chainPayload(){safeSetSessionJson(scopedKey('input'),document.getElementById('input').value);const body={project:project(),input:JSON.parse(document.getElementById('input').value)};const expected=expectedIntent();if(expected){body.expected_intent=expected;}return body;}
 function chainOutput(data){return data.frontend_view?.run_trace_summary?.extracted_output || data.frontend_view?.judge_panel?.actual || data.trace?.extracted_output || data.judge?.actual || null;}

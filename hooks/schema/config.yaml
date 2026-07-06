@@ -1,0 +1,228 @@
+# Schema Hook 配置
+# 目标：扫描全局代码，发现 schema 定义与运行时传播不一致、该用 schema 却使用 ad hoc dict 的位置。
+
+required_layers:
+  - mock
+  - live
+  - trace
+  - judge
+  - attribute
+  - frontend
+  - table
+
+schema_modules_dir: impl/core/schema
+schema_registry_file: impl/core/schema/registry.py
+schema_exports_file: impl/core/schema/__init__.py
+
+# schema 源头白名单：这些文件是标准定义本身，不参与函数输入/输出合规扫描。
+# full/core 模式如果匹配到这些文件，会自动过滤；schema 注册/导出/使用情况仍由元检查读取。
+schema_source_whitelist:
+  - impl/core/schema/*.py
+  - impl/core/schema/**/*.py
+
+audit:
+  # 默认只阻断 error；warning 用于提示仍在迁移中的非 schema 传播风险。
+  block_on:
+    - error
+  output_format: json
+  report_file: hooks/schema/schema-audit-report.json
+
+scan_modes:
+  core:
+    python_files:
+      # 主链路 / API 边界
+      - impl/core/pipeline.py
+      - impl/server.py
+
+      # adapter 抽象和项目 adapter 对接点
+      - impl/core/adapter.py
+      - impl/projects/*/adapter.py
+      - impl/projects/*/tools/*.py
+
+      # mock / live / trace / 多轮
+      - impl/core/case_pool.py
+      - impl/core/interaction_protocol.py
+      - impl/core/state_machine.py
+      - impl/core/trace_analysis.py
+
+      # judge / attribute
+      - impl/core/judge.py
+      - impl/core/attribute.py
+
+      # view / table view
+      - impl/core/frontend_view.py
+      - impl/core/table_view.py
+
+      # 消费 schema 结果的聚合/检查
+      - impl/core/check.py
+      - impl/core/cluster.py
+      - impl/core/summary.py
+    frontend_files:
+      - impl/frontend/summary.html
+      - impl/frontend/live.html
+    exclude_python_files:
+      - tests/**/*.py
+      - hooks/schema/test_schema_hook.py
+  full:
+    python_files:
+      - impl/**/*.py
+      - hooks/**/*.py
+    frontend_files:
+      - impl/frontend/summary.html
+      - impl/frontend/live.html
+    exclude_python_files:
+      - tests/**/*.py
+      - hooks/schema/test_schema_hook.py
+
+# 默认模式：core = 核心边界扫描；full = 全项目扫描。
+default_scan_mode: core
+
+# 这些函数/命名模式允许接收 dict，因为它们是序列化边界或兼容层；但仍会被记录为 info/warning。
+allowed_compat_wrapper_patterns:
+  # Canonical normalization / serialization boundaries.
+  - "normalize_*"
+  - "*_from_run"
+  - "*_from_dict"
+  - "*_from_json"
+  - "*_to_dict"
+  - "to_dict"
+
+  # Store / HTTP / frontend event compatibility wrappers keep JSON dict payloads by design.
+  - "_compact_*"
+  - "compact_*"
+  - "save_*"
+  - "load_*"
+  - "delete_*"
+  - "execute_*"
+  - "evaluate_*"
+  - "probe_*"
+  - "*_required"
+  - "*_has_*"
+  - "*_contradictions"
+  - "*_state"
+  - "_unsupported_*"
+  - "_batch_*"
+  - "*_case"
+  - "*_dataset"
+  - "_strip_transient"
+  - "_case_event"
+  - "on_case_done"
+  - "_run_batch_job"
+
+  # Adapter extension hooks and compatibility shims consume or produce project-shaped dicts.
+  - "build_frontend_extensions"
+  - "trace_state_graph"
+  - "extend_default_trace_graph"
+  - "build_execution_trace"
+  - "build_intent_frame"
+  - "build_interactive_turn"
+  - "run_interactive"
+  - "call_or_prepare"
+  - "register_judge_override"
+  - "build_*_context"
+  - "*_boundary_standard"
+  - "*_governance"
+  - "*_quality_gate"
+  - "*_condition"
+  - "*_items"
+  - "*_equivalent"
+  - "*_value"
+  - "*_body"
+  - "*_data"
+  - "*_raw"
+  - "*_request"
+  - "*_contract"
+  - "*_evidence"
+  - "*_boundary"
+  - "*_cards"
+
+  # View/presentation helpers operate on already-normalized schema dict projections.
+  - "_compute_verdict"
+  - "_judge_*"
+  - "*_boundary_decision"
+  - "_build_judge_result_from_data"
+  - "_minimal_honest_judge_result"
+  - "*_reason_for_run"
+  - "_summary_reason_text"
+  - "_fulfillment_status"
+  - "_trace_reference"
+  - "_display_*"
+  - "_scenario"
+  - "_reference"
+  - "_output"
+  - "_status"
+  - "_row_id"
+  - "*_panel"
+  - "*_standard"
+  - "*_summary"
+  - "summary_from_fulfillment"
+  - "aggregate_failure_dimensions"
+
+  # Deterministic fallback/probe helpers enrich schema objects but may inspect raw fields.
+  - "_reprompt_*"
+  - "_default_*"
+  - "_fallback*"
+  - "*_fallback"
+  - "*_probe"
+  - "*_probes"
+  - "*_failures"
+  - "*_stages"
+  - "*_files_by_stage"
+  - "*_error_type"
+  - "*_text_fields"
+  - "*_attribute_result"
+  - "*_judge"
+  - "*_reference_from_judge"
+  - "*_reference"
+  - "_generate_reference"
+  - "build_mock_cases"
+  - "build_mock_datasets"
+  - "_scrub_*"
+  - "_enrich_*"
+  - "_append_*"
+  - "_select_*"
+  - "_target_*"
+  - "_interactive_turn_trace"
+  - "_mock_session"
+  - "_mock_fallback"
+
+  # Analysis utility outputs are deliberate agent/tool JSON handoffs.
+  - "to_run_trace"
+  - "analyze_execution_trace"
+  - "map_trace_node_to_source"
+
+schema_concepts:
+  mock:
+    keywords: ["mock", "case", "dataset"]
+    schemas: ["SingleTurnCase", "MultiTurnCase", "MockDataset", "MockSpec"]
+  live:
+    keywords: ["live", "request", "execution_result"]
+    schemas: ["LiveRequest", "LiveExecutionResult", "LiveMultiTurnResult"]
+  trace:
+    keywords: ["trace", "state_history", "execution_trace"]
+    schemas: ["RunTrace", "TraceStateRecord", "MultiTurnTraceSummary"]
+  judge:
+    keywords: ["judge", "verdict", "fulfillment"]
+    schemas: ["JudgeResult", "BusinessExpectation", "FulfillmentAssessment", "GapItem"]
+  attribute:
+    keywords: ["attribute", "attribution", "root_cause", "chain_node"]
+    schemas: ["AttributeResult", "ExpectationAttribution", "ChainNode"]
+  frontend:
+    keywords: ["frontend", "view", "panel"]
+    schemas: ["FrontendViewModel"]
+  table:
+    keywords: ["table", "table_row", "case_pool", "summary"]
+    schemas: ["TraceTableRow", "CasePoolTable", "ConversationTurn"]
+
+# 当前允许“声明存在但运行时使用较少”的支持层；不作为 error，只做 info。
+support_only_layers:
+  - base
+  - project
+  - cluster
+  - check
+  - batch
+  - config
+
+support_only_schemas:
+  - SchemaLayerConfig
+  - LayerConfig

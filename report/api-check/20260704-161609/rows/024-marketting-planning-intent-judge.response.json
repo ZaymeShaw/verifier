@@ -1,0 +1,194 @@
+{
+  "trace_id": "1c896611-09d4-474f-b5ff-06bbc0c5a3bf",
+  "project_id": "marketting-planning-intent",
+  "verdict": "correct",
+  "score": 1.0,
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签正确性判断",
+      "downstream_consumer": "意图分发器",
+      "user_intent": "查询业绩表现",
+      "expected_outcome": "系统返回 intent='other'",
+      "acceptance_criteria": [
+        "实际返回的 intent 字段值为 'other'"
+      ],
+      "priority": "must-have"
+    },
+    {
+      "expectation_id": "必要槽位与实体提取",
+      "downstream_consumer": "意图分发器",
+      "user_intent": "查询业绩表现",
+      "expected_outcome": "extracted_output 中无 slots 或相关实体字段，或明确表示无槽位",
+      "acceptance_criteria": [
+        "返回结果中未提供领域内槽位信息"
+      ],
+      "priority": "nice-to-have"
+    },
+    {
+      "expectation_id": "置信度输出合理性",
+      "downstream_consumer": "流程控制模块",
+      "user_intent": "查询业绩表现",
+      "expected_outcome": "confidence > 0 且 < 0.9",
+      "acceptance_criteria": [
+        "实际返回的 confidence 为 0.5（或落入 0.1-0.8 区间）"
+      ],
+      "priority": "nice-to-have"
+    },
+    {
+      "expectation_id": "回退策略标记",
+      "downstream_consumer": "流程控制模块",
+      "user_intent": "查询业绩表现",
+      "expected_outcome": "fallback=false",
+      "acceptance_criteria": [
+        "返回的 fallback 字段值为 false"
+      ],
+      "priority": "must-have"
+    },
+    {
+      "expectation_id": "分发边界指示",
+      "downstream_consumer": "分发协调器",
+      "user_intent": "查询业绩表现",
+      "expected_outcome": "intent='other' 或类似 out-of-scope 标识",
+      "acceptance_criteria": [
+        "意图标签为 other，或者存在表示 out-of-scope 的字段"
+      ],
+      "priority": "must-have"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签正确性判断",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "intent='other'"
+      ],
+      "actual_evidence": [
+        "intent='other'"
+      ],
+      "downstream_impact": "正确分发至通用处理",
+      "blocking": true
+    },
+    {
+      "expectation_id": "必要槽位与实体提取",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "无槽位输出"
+      ],
+      "actual_evidence": [
+        "extracted_output 中无 slots 字段"
+      ],
+      "downstream_impact": "下游不会获取到无关槽位",
+      "blocking": false
+    },
+    {
+      "expectation_id": "置信度输出合理性",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "confidence=0.5"
+      ],
+      "actual_evidence": [
+        "confidence=0.5"
+      ],
+      "downstream_impact": "下游可根据中等置信度决定后续策略",
+      "blocking": false
+    },
+    {
+      "expectation_id": "回退策略标记",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "fallback=false"
+      ],
+      "actual_evidence": [
+        "fallback=false"
+      ],
+      "downstream_impact": "流程正常继续",
+      "blocking": true
+    },
+    {
+      "expectation_id": "分发边界指示",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "intent='other'"
+      ],
+      "actual_evidence": [
+        "intent='other'"
+      ],
+      "downstream_impact": "请求被标记为领域外",
+      "blocking": true
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "fulfilled",
+      "downstream_impact": "当前单轮意图识别满足 reference contract：intent=None，confidence=None 达到最低要求 None。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "fulfilled",
+    "assessment_count": 6
+  },
+  "reasoning_summary": "用户请求为查询团队业绩表现，该请求不属于营销策划系统的目标领域，系统将其识别为 other 意图，置信度0.5，未错误提取领域内槽位，回退标记为 false，明确表达了边界。所有关键评估维度均满足期望，判定为 fulfilled。",
+  "judge_basis": "基于项目名称 marketing-planning-intent 推断其意图领域为营销策划，用户请求为业绩查询，不属于该领域，因此正确识别为 other。",
+  "judge_method": "基于输出与系统边界推理",
+  "verdict_derivation": {
+    "primary_boundary": "intent_recognition",
+    "assessment_summary": "所有维度均满足：意图标签正确，无多余槽位，置信度合理，回退标记正确，边界指示明确。",
+    "why_verdict": "系统准确将非营销策划请求识别为 other，符合领域边界判定，关键维度的期望均得到满足。",
+    "contract_gate": "passed"
+  },
+  "evidence": [
+    "用户请求为查询团队业绩表现，该请求不属于营销策划系统的目标领域，系统将其识别为 other 意图，置信度0.5，未错误提取领域内槽位，回退标记为 false，明确表达了边界。所有关键评估维度均满足期望，判定为 fulfilled。"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": "true",
+    "reasoning": "评估所需信息充足，无不可控限制。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "single_turn_intent",
+    "primary_boundary_name": "单轮意图识别评估",
+    "judge_question": "系统是否正确识别了请求的意图类别并给出了相应的置信度和边界标记？",
+    "verdict_basis": "根据输出与项目业务边界的一致性",
+    "boundary_sources": "项目名称 'marketting-planning-intent' 和常规营销策划意图识别系统的功能范围",
+    "conflict_policy": "无"
+  },
+  "consumer_contract": {
+    "consumer": "上游营销策划服务编排",
+    "contract": "基于意图标签分发"
+  },
+  "intent_model": {
+    "raw_user_request": "帮我看看上个月我们团队的业绩表现怎么样，特别是各个业务员的达成情况",
+    "explicit_intents": [
+      "查询团队业绩表现",
+      "查看各个业务员达成情况"
+    ],
+    "implicit_business_intents": [
+      "管理者想了解绩效数据以进行决策"
+    ],
+    "constraints": {
+      "时间": "上个月",
+      "对象": "当前团队和各个业务员"
+    },
+    "success_definition": "系统正确识别该请求不属于营销策划领域，将其标记为 other，并提供合理的置信度，不做额外槽位提取。",
+    "blocking_requirements": [
+      "意图标签正确为 other",
+      "输出置信度"
+    ]
+  },
+  "reconstructed_intent": "非营销策划（other）",
+  "reference_generation_basis": {
+    "source": "judge 基于项目名和常识构建期望",
+    "alignment_to_live_schema": "无实时契约，基于输出字段推断"
+  },
+  "scenario": "intent_recognition",
+  "quality_flags": [
+    "intent_contract_gate_passed"
+  ],
+  "summary": {
+    "reason": "fulfilled · 3 blocking expectations all met · 用户请求为查询团队业绩表现，该请求不属于营销策划系统的目标领域，系统将其识别为 other 意图，置信度0.5，未错误提取领域内槽位，回退标记为 false，明确表达了边界。所有关键评估维度均满足期望，判定为 fulfilled。",
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 3,
+    "is_formal_attribution": true
+  }
+}

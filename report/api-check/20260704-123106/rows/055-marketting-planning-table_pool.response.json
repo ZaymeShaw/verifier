@@ -1,0 +1,150 @@
+{
+  "project_id": "marketting-planning",
+  "rows": [
+    {
+      "id": "mock-agent-marketting-planning-ce129a44",
+      "input": "org_001",
+      "scenario": "intent_recognition",
+      "output_summary": "{\"event_summary\": {\"canonical_names\": [\"intent_detected\", \"reasoning_message_content\", \"planning_started\", \"card_delta\", \"done\"], \"completed\": true, \"counts\": …",
+      "reference_summary": "{\"stage\": \"intent_recognition\"}",
+      "status": "not_fulfilled",
+      "execution_mode": "",
+      "output_source": "live_service",
+      "verdict": "incorrect",
+      "fulfillment_status": "not_fulfilled",
+      "judge_summary": {
+        "status": "not_fulfilled",
+        "fulfillment_status": "not_fulfilled",
+        "verdict": "incorrect",
+        "reason": "not_fulfilled · blocking=[business_metric 识别正确性,decomposition_dimensions 考虑,planning_actionability 满足,sse_completion 完整性,stage_routing 正确性,time_range 提取] · 规划引擎缺少核心指标，无法生成针对性规划",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 7,
+        "blocking_count": 6,
+        "primary_failure_dimensions": [
+          {
+            "blocking": true,
+            "downstream_impact": "规划引擎缺少核心指标，无法生成针对性规划",
+            "evidence": "raw_response 中 intent 为 4001（其他意图），未见 NBEV 相关字段 | card_result 中 card_list 为空，无指标使用痕迹 | 意图识别或语义分析结果中包含 'NBEV' 实体 | run_trace.raw_response.data.extra_output_params.intent | run_trace.extracted_output.card_summary",
+            "expectation_id": "business_metric 识别正确性",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "用户的核心关切（多招销售人员）被完全忽略",
+            "evidence": "card_list 为空，未生成任何规划内容，完全未涉及该策略维度 | 生成的规划卡片中包含与销售人员扩张相关的分析或建议 | run_trace.extracted_output.card_summary | run_trace.raw_response.data.extra_output_params.card_result.card_list",
+            "expectation_id": "decomposition_dimensions 考虑",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "用户得不到任何可执行的规划建议",
+            "evidence": "card_summary 为空数组，没有任何卡片生成 | card_summary 包含至少一张具体规划卡片 | run_trace.extracted_output.card_summary",
+            "expectation_id": "planning_actionability 满足",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "用户界面渲染后只看到空响应或无意义的完成提示",
+            "evidence": "SSE 流事件完整，但 card_delta 事件对应的卡片列表为空 | raw_response 中所有事件的 card_list 均为空 | 尽管 event_summary.completed 为 true，但无业务内容 | SSE 流包含业务卡片的 card_delta 事件 | 最终卡片内容非空 | run_trace.raw_response | run_trace.extracted_output.card_summary",
+            "expectation_id": "sse_completion 完整性",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "规划流程完全未启动，用户需求未得到处理",
+            "evidence": "extracted_output.stage 为 'non_agent' | execution_trace 中 path_dispatch 的实际路径类型为空 | 系统阶段为 planning | 路径类型为规划相关 | run_trace.extracted_output.stage | run_trace.execution_trace[path_dispatch]",
+            "expectation_id": "stage_routing 正确性",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "规划引擎无法确定计算周期，规划失败",
+            "evidence": "整个运行轨迹中无任何时间范围提取的迹象，session_summary 中无此字段 | session 或规划参数中包含时间范围 '今年' 的具体表示 | run_trace.extracted_output.session_summary | run_trace.raw_response",
+            "expectation_id": "time_range 提取",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": false,
+            "downstream_impact": "用户未得到任何关于 NBEV 提升幅度或目标的回应",
+            "evidence": "系统未进入澄清阶段，也未生成任何规划，无目标值处理行为 | 系统通过澄清提示或默认值处理缺失的目标值 | run_trace.extracted_output.stage | run_trace.raw_response.data.extra_output_params.card_result.card_list",
+            "expectation_id": "target_value_and_unit 提取",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          }
+        ]
+      },
+      "attribution_summary": {
+        "attribution_count": 7,
+        "causal_category": "needs_human_review",
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 0,
+        "summary_text": "意图识别模块存在双重故障：规则层（try_rule_based_intent）的正则和关键词集合设计过窄，无法覆盖用户以'怎么提高 NBEV + 从多招销售人员入手'这种自然口语表达的规划意图；LLM 层的 prompt 示例偏刚性且含有'不明确则判 other'的保守指令，进一步降低了非模板化表达的识别率。两者的交集失效导致该案例从根源上短路——intent 被误判为 other 后，path_dispatch 必然路由至 non_agent，planning_function 不被调用，所有下游期望（指标提取、时间范围、策略维度、卡片生成、SSE 业务内容）全部落空。这不是模型能力问题，而是规则引擎覆盖度不足和 prompt 设计偏差共同构成的实现缺陷。"
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 6,
+        "protocol_gap_count": 0,
+        "consistency_gap_count": 1,
+        "recommended_fix_count": 2,
+        "issues": [
+          "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+          "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+          "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+          "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+          "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/normalize.py",
+          "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: IntentResult, IntentType, IntentType.other, L113, L114, L115"
+        ]
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "quality_flags": [
+        "intent_misclassification",
+        "missing_planning_output",
+        "empty_response",
+        "intent_misclassification_due_to_narrow_regex",
+        "keyword_heuristic_insufficient_coverage",
+        "llm_prompt_conservative_bias",
+        "cascading_failure_from_earliest_divergence"
+      ],
+      "check_passed": false,
+      "issue_count": 7,
+      "fallback_count": 0,
+      "causal_category": "needs_human_review",
+      "divergence_stage": "intent_recognition",
+      "root_cause_summary": "意图识别模块存在双重故障：规则层（try_rule_based_intent）的正则和关键词集合设计过窄，无法覆盖用户以'怎么提高 NBEV + 从多招销售人员入手'这种自然口语表达的规划意图；LLM 层的 prompt 示例偏刚性且含有'不明确则判 other'的保守指令，进一步降低了非模板化表达的识别率。两者的交集失效导致该案例从根源上短路——intent 被误判为 other 后，path_dispatch 必然路由至 non_agent，planning_function 不被调用，所有下游期望（指标提取、时间范围、策略维度、卡片生成、SSE 业务内容）全部落空。这不是模型能力问题，而是规则引擎覆盖度不足和 prompt 设计偏差共同构成的实现缺陷。",
+      "created_at": "2026-07-04T04:31:09.723361+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "8b851329-12bf-4da9-87d8-16dfe3df8bb0"
+    }
+  ],
+  "total": 1,
+  "summary": {
+    "fulfilled_count": 0,
+    "not_fulfilled_count": 1,
+    "pending_count": 0,
+    "correct_count": 0,
+    "incorrect_count": 1,
+    "uncertain_count": 0,
+    "human_review_count": 0,
+    "check_failed_count": 1,
+    "issue_count": 7,
+    "fallback_count": 0,
+    "rows_with_fallback_count": 0,
+    "by_scenario": {
+      "intent_recognition": 1
+    }
+  }
+}

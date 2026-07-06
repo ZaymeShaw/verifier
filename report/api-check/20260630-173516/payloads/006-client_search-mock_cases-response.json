@@ -1,0 +1,1347 @@
+{
+  "project_id": "client_search",
+  "cases": [
+    {
+      "id": "cs-age-sex-premium-correct-1",
+      "input": {
+        "query": "45岁女性保费10万以上"
+      },
+      "scenario": "multi_condition_and",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "clientAge",
+            "operator": "RANGE",
+            "value": {
+              "min": 45,
+              "max": 45
+            }
+          },
+          {
+            "field": "clientSex",
+            "operator": "MATCH",
+            "value": "女"
+          },
+          {
+            "field": "annPremSegNum",
+            "operator": "GTE",
+            "value": 100000
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "demographic_premium",
+        "expected_error_type": "none",
+        "quality_dimension": "condition_semantics",
+        "previous_output": {
+          "logic": "AND",
+          "conditions": [
+            {
+              "field": "clientAge",
+              "operator": "RANGE",
+              "value": {
+                "min": 45,
+                "max": 45
+              }
+            },
+            {
+              "field": "clientSex",
+              "operator": "MATCH",
+              "value": "女"
+            },
+            {
+              "field": "annPremSegNum",
+              "operator": "GTE",
+              "value": 100000
+            }
+          ],
+          "summary": "45岁女性且年缴保费10万以上客户"
+        }
+      }
+    },
+    {
+      "id": "cs-survival-benefit-correct-1",
+      "input": {
+        "query": "有生存金未领取的客户"
+      },
+      "scenario": "policy_status_filter",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "polNoInfo.payamountdue",
+            "operator": "MATCH",
+            "value": "是"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "survival_benefit",
+        "expected_error_type": "none",
+        "quality_dimension": "field_mapping",
+        "previous_output": {
+          "logic": "AND",
+          "conditions": [
+            {
+              "field": "polNoInfo.payamountdue",
+              "operator": "MATCH",
+              "value": "是"
+            }
+          ],
+          "summary": "存在未领取生存金客户"
+        }
+      }
+    },
+    {
+      "id": "cs-premium-unit-error-1",
+      "input": {
+        "query": "年缴保费一万以上的客户"
+      },
+      "scenario": "premium_unit_conversion",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "annPremSegNum",
+            "operator": "GTE",
+            "value": 10000
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "premium",
+        "expected_error_type": "premium_unit_error",
+        "quality_dimension": "numeric_grounding",
+        "previous_output": {
+          "logic": "AND",
+          "conditions": [
+            {
+              "field": "annPremSegNum",
+              "operator": "GTE",
+              "value": 1
+            }
+          ],
+          "summary": "年缴保费一万以上客户"
+        }
+      }
+    },
+    {
+      "id": "cs-age-boundary-correct-1",
+      "input": {
+        "query": "45岁以上女性客户"
+      },
+      "scenario": "age_boundary",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "clientAge",
+            "operator": "GTE",
+            "value": 45
+          },
+          {
+            "field": "clientSex",
+            "operator": "MATCH",
+            "value": "女"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "demographic",
+        "expected_error_type": "none",
+        "quality_dimension": "boundary_operator",
+        "previous_output": {
+          "logic": "AND",
+          "conditions": [
+            {
+              "field": "clientAge",
+              "operator": "GTE",
+              "value": 45
+            },
+            {
+              "field": "clientSex",
+              "operator": "MATCH",
+              "value": "女"
+            }
+          ],
+          "summary": "45岁以上女性客户"
+        }
+      }
+    },
+    {
+      "id": "cs-product-or-correct-1",
+      "input": {
+        "query": "买了年金险或两全险的客户"
+      },
+      "scenario": "product_category_or",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "OR",
+        "expected_conditions": [
+          {
+            "field": "pCategorys",
+            "operator": "CONTAINS",
+            "value": [
+              "年金保险"
+            ]
+          },
+          {
+            "field": "pCategorys",
+            "operator": "CONTAINS",
+            "value": [
+              "两全保险"
+            ]
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "product",
+        "expected_error_type": "none",
+        "quality_dimension": "or_semantics",
+        "previous_output": {
+          "logic": "OR",
+          "conditions": [
+            {
+              "field": "pCategorys",
+              "operator": "CONTAINS",
+              "value": [
+                "年金保险"
+              ]
+            },
+            {
+              "field": "pCategorys",
+              "operator": "CONTAINS",
+              "value": [
+                "两全保险"
+              ]
+            }
+          ],
+          "summary": "购买年金险或两全险客户"
+        }
+      }
+    },
+    {
+      "id": "cs-age-gt-boundary-error-1",
+      "input": {
+        "query": "大于50岁的客户"
+      },
+      "scenario": "age_boundary",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "clientAge",
+            "operator": "GT",
+            "value": 50
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "demographic",
+        "expected_error_type": "boundary_operator_error",
+        "quality_dimension": "boundary_operator",
+        "previous_output": {
+          "logic": "AND",
+          "conditions": [
+            {
+              "field": "clientAge",
+              "operator": "GTE",
+              "value": 50
+            }
+          ],
+          "summary": "50岁及以上客户"
+        }
+      }
+    },
+    {
+      "id": "cs-critical-illness-only-1",
+      "input": {
+        "query": "只有重疾险的客户"
+      },
+      "scenario": "product_exclusion",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "pCategorys",
+            "operator": "CONTAINS",
+            "value": [
+              "疾病保险"
+            ]
+          },
+          {
+            "field": "pCategorys",
+            "operator": "NOT_CONTAINS",
+            "value": [
+              "年金保险",
+              "两全保险",
+              "医疗保险",
+              "意外保险",
+              "寿险",
+              "护理保险"
+            ]
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "product",
+        "expected_error_type": "enum_values_out_of_boundary",
+        "quality_dimension": "exclusion_semantics",
+        "previous_output": {
+          "logic": "AND",
+          "conditions": [
+            {
+              "field": "pCategorys",
+              "operator": "CONTAINS",
+              "value": [
+                "疾病保险"
+              ]
+            },
+            {
+              "field": "pCategorys",
+              "operator": "NOT_CONTAINS",
+              "value": [
+                "年金保险",
+                "两全保险",
+                "医疗保险",
+                "意外保险",
+                "寿险",
+                "护理保险"
+              ]
+            }
+          ],
+          "summary": "仅购买重疾险客户"
+        }
+      }
+    },
+    {
+      "id": "cs-family-responsibility-unsupported-1",
+      "input": {
+        "query": "上有老下有小的客户"
+      },
+      "scenario": "unsupported_family_phrase",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "allow_empty_conditions": true,
+        "expected_reason": "该口语化家庭责任表达缺少当前字段定义支持，不能硬编造年龄或家庭成员条件。"
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "unsupported_semantic_phrase",
+        "expected_error_type": "unsupported_family_phrase",
+        "quality_dimension": "scope_control",
+        "previous_output": {
+          "logic": "AND",
+          "summary": "未能映射到可执行客户搜索条件"
+        }
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-001",
+      "input": {
+        "query": "准客但不是客户的人"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "isBuyInsurance",
+            "operator": "MATCH",
+            "value": "准客"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选准客但不是客户的人",
+        "reason": "客户类型/车险"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-002",
+      "input": {
+        "query": "已购买保险的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "isBuyInsurance",
+            "operator": "MATCH",
+            "value": "客户"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选已购买保险的客户",
+        "reason": "客户类型/车险"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-003",
+      "input": {
+        "query": "产险客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "isBuyProperty",
+            "operator": "MATCH",
+            "value": "有购买"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选产险客户",
+        "reason": "客户类型/车险"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-004",
+      "input": {
+        "query": "非产险客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "isBuyProperty",
+            "operator": "MATCH",
+            "value": "没有购买"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选非产险客户",
+        "reason": "客户类型/车险"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-005",
+      "input": {
+        "query": "养老险客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "isBuyPension",
+            "operator": "MATCH",
+            "value": "是"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选养老险客户",
+        "reason": "客户类型/车险"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-006",
+      "input": {
+        "query": "非养老险客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "isBuyPension",
+            "operator": "MATCH",
+            "value": "否"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选非养老险客户",
+        "reason": "客户类型/车险"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-007",
+      "input": {
+        "query": "健康险客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "isBuyHealth",
+            "operator": "MATCH",
+            "value": "是"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选健康险客户",
+        "reason": "客户类型/车险"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-008",
+      "input": {
+        "query": "非健康险客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "isBuyHealth",
+            "operator": "MATCH",
+            "value": "否"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选非健康险客户",
+        "reason": "客户类型/车险"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-009",
+      "input": {
+        "query": "车险客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "isBuyInsuranceCar",
+            "operator": "MATCH",
+            "value": "是"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选车险客户",
+        "reason": "客户类型/车险"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-010",
+      "input": {
+        "query": "非车险客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "isBuyInsuranceCar",
+            "operator": "MATCH",
+            "value": "否"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选非车险客户",
+        "reason": "客户类型/车险"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-011",
+      "input": {
+        "query": "车险下个月到期客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "carInsuranceMatuDateTime",
+            "operator": "RANGE",
+            "value": "下个月"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选车险下个月到期客户",
+        "reason": "客户类型/车险"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-012",
+      "input": {
+        "query": "车险未来30天到期客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "carInsuranceMatuDateTime",
+            "operator": "RANGE",
+            "value": "未来30天"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选车险未来30天到期客户",
+        "reason": "客户类型/车险"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-013",
+      "input": {
+        "query": "车险已经过期客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "carInsuranceMatuDateTime",
+            "operator": "LT",
+            "value": "今天"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选车险已经过期客户",
+        "reason": "客户类型/车险"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-014",
+      "input": {
+        "query": "持有中高端医疗综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "CONTAINS",
+            "value": "中高端医疗"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选持有中高端医疗综拓产品的客户",
+        "reason": "综拓产品"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-015",
+      "input": {
+        "query": "没有中高端医疗综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "NOT_CONTAINS",
+            "value": "中高端医疗"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选没有中高端医疗综拓产品的客户",
+        "reason": "综拓缺口"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-016",
+      "input": {
+        "query": "持有家财险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "CONTAINS",
+            "value": "家财险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选持有家财险综拓产品的客户",
+        "reason": "综拓产品"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-017",
+      "input": {
+        "query": "没有家财险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "NOT_CONTAINS",
+            "value": "家财险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选没有家财险综拓产品的客户",
+        "reason": "综拓缺口"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-018",
+      "input": {
+        "query": "持有学平险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "CONTAINS",
+            "value": "学平险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选持有学平险综拓产品的客户",
+        "reason": "综拓产品"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-019",
+      "input": {
+        "query": "没有学平险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "NOT_CONTAINS",
+            "value": "学平险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选没有学平险综拓产品的客户",
+        "reason": "综拓缺口"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-020",
+      "input": {
+        "query": "持有合家欢综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "CONTAINS",
+            "value": "合家欢"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选持有合家欢综拓产品的客户",
+        "reason": "综拓产品"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-021",
+      "input": {
+        "query": "没有合家欢综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "NOT_CONTAINS",
+            "value": "合家欢"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选没有合家欢综拓产品的客户",
+        "reason": "综拓缺口"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-022",
+      "input": {
+        "query": "持有宠物险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "CONTAINS",
+            "value": "宠物险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选持有宠物险综拓产品的客户",
+        "reason": "综拓产品"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-023",
+      "input": {
+        "query": "没有宠物险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "NOT_CONTAINS",
+            "value": "宠物险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选没有宠物险综拓产品的客户",
+        "reason": "综拓缺口"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-024",
+      "input": {
+        "query": "持有企业财产险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "CONTAINS",
+            "value": "企业财产险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选持有企业财产险综拓产品的客户",
+        "reason": "综拓产品"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-025",
+      "input": {
+        "query": "没有企业财产险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "NOT_CONTAINS",
+            "value": "企业财产险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选没有企业财产险综拓产品的客户",
+        "reason": "综拓缺口"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-026",
+      "input": {
+        "query": "持有雇主责任险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "CONTAINS",
+            "value": "雇主责任险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选持有雇主责任险综拓产品的客户",
+        "reason": "综拓产品"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-027",
+      "input": {
+        "query": "没有雇主责任险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "NOT_CONTAINS",
+            "value": "雇主责任险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选没有雇主责任险综拓产品的客户",
+        "reason": "综拓缺口"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-028",
+      "input": {
+        "query": "持有意外卡单综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "CONTAINS",
+            "value": "意外卡单"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选持有意外卡单综拓产品的客户",
+        "reason": "综拓产品"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-029",
+      "input": {
+        "query": "没有意外卡单综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "NOT_CONTAINS",
+            "value": "意外卡单"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选没有意外卡单综拓产品的客户",
+        "reason": "综拓缺口"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-030",
+      "input": {
+        "query": "持有旅游险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "CONTAINS",
+            "value": "旅游险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选持有旅游险综拓产品的客户",
+        "reason": "综拓产品"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-031",
+      "input": {
+        "query": "没有旅游险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "NOT_CONTAINS",
+            "value": "旅游险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选没有旅游险综拓产品的客户",
+        "reason": "综拓缺口"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-032",
+      "input": {
+        "query": "持有责任险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "CONTAINS",
+            "value": "责任险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选持有责任险综拓产品的客户",
+        "reason": "综拓产品"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-033",
+      "input": {
+        "query": "没有责任险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "NOT_CONTAINS",
+            "value": "责任险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选没有责任险综拓产品的客户",
+        "reason": "综拓缺口"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-034",
+      "input": {
+        "query": "持有企财险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "CONTAINS",
+            "value": "企财险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选持有企财险综拓产品的客户",
+        "reason": "综拓产品"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-035",
+      "input": {
+        "query": "没有企财险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "NOT_CONTAINS",
+            "value": "企财险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选没有企财险综拓产品的客户",
+        "reason": "综拓缺口"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-036",
+      "input": {
+        "query": "持有货运险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "CONTAINS",
+            "value": "货运险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选持有货运险综拓产品的客户",
+        "reason": "综拓产品"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-037",
+      "input": {
+        "query": "没有货运险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "NOT_CONTAINS",
+            "value": "货运险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选没有货运险综拓产品的客户",
+        "reason": "综拓缺口"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-038",
+      "input": {
+        "query": "持有团意险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "CONTAINS",
+            "value": "团意险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选持有团意险综拓产品的客户",
+        "reason": "综拓产品"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-039",
+      "input": {
+        "query": "没有团意险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "NOT_CONTAINS",
+            "value": "团意险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选没有团意险综拓产品的客户",
+        "reason": "综拓缺口"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-040",
+      "input": {
+        "query": "持有公众责任险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "CONTAINS",
+            "value": "公众责任险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选持有公众责任险综拓产品的客户",
+        "reason": "综拓产品"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-041",
+      "input": {
+        "query": "没有公众责任险综拓产品的客户"
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "agentPerspProductType",
+            "operator": "NOT_CONTAINS",
+            "value": "公众责任险"
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "expected_intent": "筛选没有公众责任险综拓产品的客户",
+        "reason": "综拓缺口"
+      }
+    },
+    {
+      "id": "crosssell_car_customer_type-042",

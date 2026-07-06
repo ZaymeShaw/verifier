@@ -1,0 +1,163 @@
+{
+  "project_id": "QA",
+  "datasets": [
+    {
+      "dataset_id": "QA_qa_gold_answer",
+      "name": "qa_gold_answer mock 数据集",
+      "dimension_type": "qa_gold_answer",
+      "description": "mock_agent 生成的 qa_gold_answer 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-QA-723788bb",
+          "input": {
+            "input": {
+              "question": "我在你们这买了那个百万医疗险，上个月住院花了好多钱，出院后我要准备哪些材料去报销啊？",
+              "generated_answer": "报销需要提供身份证、银行卡、医疗发票、费用清单、诊断书、出院小结等材料，请尽快提交以免过期。"
+            },
+            "metadata": {
+              "session_id": "sess_001",
+              "trace_id": "trace_001",
+              "user_id": "user_001"
+            },
+            "scenario": "qa_gold_answer",
+            "metrics": {
+              "input_tokens": 278,
+              "output_tokens": 1099,
+              "cache_read_tokens": 0,
+              "cache_write_tokens": 0,
+              "reasoning_tokens": 951,
+              "total_tokens": 1377
+            }
+          },
+          "output": {
+            "actual_answer": "您需要准备身份证、银行卡、住院发票和费用清单，然后在我们APP上提交就行。"
+          },
+          "scenario": "qa_gold_answer",
+          "expected_intent": "",
+          "reference": {
+            "actual_answer": "您好，理赔需准备以下材料：1. 理赔申请书（可在我司官网下载）；2. 被保险人身份证正反面复印件；3. 出院小结/诊断证明（盖章）；4. 住院医疗费用原始发票及费用明细清单；5. 银行卡复印件；6. 社保结算单（如已通过社保报销）。请通过官方APP上传，审核通过后3-5个工作日到账。"
+          },
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "ready": [
+              "output",
+              "reference"
+            ],
+            "live_request_mapped": true,
+            "schema_ok": false
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "QA_qa_context_faithfulness",
+      "name": "qa_context_faithfulness mock 数据集",
+      "dimension_type": "qa_context_faithfulness",
+      "description": "mock_agent 生成的 qa_context_faithfulness 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-QA-95b3a340",
+          "input": {
+            "input": {
+              "query": "我上个月刚买了你们那个重疾险，最近身体不舒服想去做个检查，万一查出问题，能马上赔吗？",
+              "context": "重大疾病保险条款：等待期为90天，等待期内因意外伤害以外的原因确诊合同约定的重大疾病，保险公司不承担保险责任。",
+              "answer": "不能马上赔，因为您还在等待期内。"
+            },
+            "metadata": {
+              "session_id": "sess_qa_001",
+              "trace_id": "trace_qa_001",
+              "user_id": "user_10001"
+            },
+            "scenario": "qa_context_faithfulness",
+            "metrics": {
+              "input_tokens": 282,
+              "output_tokens": 1957,
+              "cache_read_tokens": 0,
+              "cache_write_tokens": 0,
+              "reasoning_tokens": 1762,
+              "total_tokens": 2239
+            }
+          },
+          "output": {
+            "actual_answer": "您好，如果您购买的重疾险已经过了犹豫期，并且等待期只有30天的话，那现在检查出的疾病只要符合条款中的重疾定义，我们是可以直接赔付的，您放心去检查吧。"
+          },
+          "scenario": "qa_context_faithfulness",
+          "expected_intent": "",
+          "reference": {
+            "actual_answer": "您好，重疾险通常设有90天或180天的等待期，从您保单生效日起算。您在等待期内因为非意外原因确诊的疾病，一般不在保障范围内，建议您先核实合同约定的等待期时长，如有身体不适请及时就医，我们会根据条款审核。"
+          },
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "ready": [
+              "output",
+              "reference"
+            ],
+            "live_request_mapped": true,
+            "schema_ok": false
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "QA_qa_weak_quality",
+      "name": "qa_weak_quality mock 数据集",
+      "dimension_type": "qa_weak_quality",
+      "description": "mock_agent 生成的 qa_weak_quality 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-QA-ec2b1a57",
+          "input": {
+            "input": {
+              "query": "我买的百万医疗险，住院能报销多少"
+            },
+            "metadata": {
+              "session_id": "session_12345",
+              "trace_id": "trace_67890",
+              "user_id": "user_001",
+              "timestamp": "2025-03-27T10:15:30Z"
+            },
+            "scenario": "qa_weak_quality",
+            "data_quality_flags": [
+              "possible_vague_question",
+              "missing_product_details"
+            ],
+            "metrics": {
+              "input_tokens": 264,
+              "output_tokens": 372,
+              "cache_read_tokens": 0,
+              "cache_write_tokens": 0,
+              "reasoning_tokens": 239,
+              "total_tokens": 636
+            }
+          },
+          "output": {
+            "actual_answer": "百万医疗险一般有免赔额，超过免赔额部分按比例报销，具体需要看你的保险合同条款。"
+          },
+          "scenario": "qa_weak_quality",
+          "expected_intent": "",
+          "reference": {
+            "actual_answer": "百万医疗险通常报销住院医疗费用，包括床位费、手术费、药品费等。一般有1万元免赔额，扣除免赔额后，剩余合理费用通常100%报销，具体以您的保单约定为准。"
+          },
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "ready": [
+              "output",
+              "reference"
+            ],
+            "live_request_mapped": true,
+            "schema_ok": false
+          }
+        }
+      ]
+    }
+  ]
+}

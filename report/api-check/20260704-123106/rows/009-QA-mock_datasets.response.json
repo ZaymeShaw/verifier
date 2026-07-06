@@ -1,0 +1,240 @@
+{
+  "project_id": "QA",
+  "datasets": [
+    {
+      "dataset_id": "QA_qa_gold_answer",
+      "name": "qa_gold_answer mock 数据集",
+      "dimension_type": "qa_gold_answer",
+      "description": "mock_agent 生成的 qa_gold_answer 场景用例",
+      "case_count": 2,
+      "cases": [
+        {
+          "id": "mock-agent-QA-f8906092",
+          "input": {
+            "input": {
+              "user_text": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+              "query": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+            },
+            "metadata": {
+              "session_id": "sess_123456",
+              "trace_id": "trace_qa_001",
+              "user_id": "user_98765",
+              "timestamp": "2025-03-28T10:15:00Z",
+              "product_type": "重疾险",
+              "channel": "在线客服"
+            },
+            "scenario": "qa_gold_answer"
+          },
+          "output": {
+            "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+          },
+          "scenario": "qa_gold_answer",
+          "expected_intent": "",
+          "reference": {
+            "actual_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+          },
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "ready": [
+              "output",
+              "reference"
+            ],
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        },
+        {
+          "id": "mock-agent-QA-3f91391f",
+          "input": {
+            "input": {
+              "user_text": "我想问一下，我家小孩如果得了肺炎住院，买的那个少儿重疾险能赔吗？",
+              "query": "我想问一下，我家小孩如果得了肺炎住院，买的那个少儿重疾险能赔吗？"
+            },
+            "metadata": {
+              "session_id": "sess_qa_001",
+              "trace_id": "trace_qa_001",
+              "user_id": "user_001"
+            },
+            "scenario": "qa_gold_answer"
+          },
+          "output": {
+            "actual_answer": "您好，少儿重疾险是否赔付需要看您孩子的保单具体条款，通常肺炎不属于重疾险保障的重大疾病范围，除非引发了合同中列明的特定重症，例如深度昏迷或严重慢性呼吸衰竭等。建议您查看保单条款，或拨打客服热线进一步确认。"
+          },
+          "scenario": "qa_gold_answer",
+          "expected_intent": "",
+          "reference": {
+            "actual_answer": "一般情况下，单纯肺炎住院不属于少儿重疾险的保障范围，重疾险只赔付符合合同定义的重症。如果肺炎诱发其他符合条件的高危并发症，需结合条款审核。建议您阅读保单中的重大疾病清单或联系理赔专员。"
+          },
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "ready": [
+              "output",
+              "reference"
+            ],
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "QA_qa_context_faithfulness",
+      "name": "qa_context_faithfulness mock 数据集",
+      "dimension_type": "qa_context_faithfulness",
+      "description": "mock_agent 生成的 qa_context_faithfulness 场景用例",
+      "case_count": 2,
+      "cases": [
+        {
+          "id": "mock-agent-QA-4c1f8bc1",
+          "input": {
+            "input": {
+              "query": "我买的那个百万医疗险，住院免赔额是多少啊？"
+            },
+            "metadata": {
+              "session_id": "sess_qa_001",
+              "trace_id": "trace_qa_abc123",
+              "user_id": "user_10010"
+            },
+            "scenario": "qa_context_faithfulness"
+          },
+          "output": {
+            "actual_answer": "免赔额是1万元，但社保报销的部分不能抵扣免赔额。"
+          },
+          "scenario": "qa_context_faithfulness",
+          "expected_intent": "",
+          "reference": {
+            "actual_answer": "本产品的年度免赔额为1万元，通过社保报销的部分可以计入免赔额。"
+          },
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "ready": [
+              "output",
+              "reference"
+            ],
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        },
+        {
+          "id": "mock-agent-QA-d54f3808",
+          "input": {
+            "input": {
+              "user_text": "我买的那个重疾险，万一真得了癌症，到底能赔我多少钱啊？",
+              "session_id": "sess_001",
+              "trace_id": "trace_123",
+              "user_id": "user_456"
+            },
+            "metadata": {
+              "product_type": "重疾险",
+              "question_type": "理赔咨询"
+            },
+            "scenario": "qa_context_faithfulness"
+          },
+          "output": {
+            "actual_answer": "您购买的重疾险保额是50万，确诊癌症可赔付50万，并且还有额外20万的关爱金，总计能拿到70万。"
+          },
+          "scenario": "qa_context_faithfulness",
+          "expected_intent": "",
+          "reference": {
+            "actual_answer": "根据您的保单，基本保额为30万元，确诊癌症属于重疾，按100%基本保额赔付，即赔付30万元。"
+          },
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "ready": [
+              "output",
+              "reference"
+            ],
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "QA_qa_weak_quality",
+      "name": "qa_weak_quality mock 数据集",
+      "dimension_type": "qa_weak_quality",
+      "description": "mock_agent 生成的 qa_weak_quality 场景用例",
+      "case_count": 2,
+      "cases": [
+        {
+          "id": "mock-agent-QA-5bfa61e2",
+          "input": {
+            "input": {
+              "query": "我那个意外险，如果摔伤了去医院，能报销门诊的费用吗？"
+            },
+            "metadata": {
+              "session_id": "sess_12345",
+              "trace_id": "trace_67890",
+              "user_id": "user_001"
+            },
+            "scenario": "qa_weak_quality",
+            "data_quality_flags": [
+              "weak_quality"
+            ]
+          },
+          "output": {
+            "actual_answer": "这个我也不太确定，可能要看情况吧。"
+          },
+          "scenario": "qa_weak_quality",
+          "expected_intent": "",
+          "reference": {
+            "actual_answer": "您的意外险通常包含意外医疗责任，门诊费用一般可以报销，需要在社保范围内扣除免赔额后按约定比例赔付，具体以保单条款为准。"
+          },
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "ready": [
+              "output",
+              "reference"
+            ],
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        },
+        {
+          "id": "mock-agent-QA-30d26224",
+          "input": {
+            "input": {
+              "query": "我想问下你们这个医疗险，感冒发烧去门诊拿药能报销吗？"
+            },
+            "metadata": {
+              "session_id": "sess_default_001",
+              "trace_id": "trace_default_001",
+              "user_id": "user_default_001"
+            },
+            "scenario": "qa_weak_quality"
+          },
+          "output": {
+            "actual_answer": "可以的，所有门诊费用都全额报销。"
+          },
+          "scenario": "qa_weak_quality",
+          "expected_intent": "",
+          "reference": {
+            "actual_answer": "医疗险一般只报销住院或特殊门诊费用，普通门诊拿药通常不在保障范围内，具体要看您购买的险种条款。"
+          },
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "ready": [
+              "output",
+              "reference"
+            ],
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ]
+    }
+  ]
+}

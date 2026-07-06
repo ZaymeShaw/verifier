@@ -1,0 +1,82 @@
+{
+  "trace_id": "491913bc-5b79-4c1d-9ea6-024bc375da03",
+  "project_id": "marketting-planning-intent",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "marketting-planning-intent:target_value_adjustment_recognition",
+      "causal_category": "implementation_bug"
+    }
+  ],
+  "causal_category": "implementation_bug",
+  "earliest_divergence": {
+    "node": "intent_contract_gate",
+    "actual": {
+      "ambiguous": false,
+      "confidence": 0.5,
+      "fallback": false,
+      "intent": "other",
+      "raw_intent": "4001"
+    },
+    "evidence": [
+      []
+    ],
+    "confidence": "medium"
+  },
+  "chain_nodes": [
+    {
+      "status": "failed",
+      "evidence": [
+        {},
+        {},
+        {
+          "actual": {
+            "ambiguous": false,
+            "confidence": 0.5,
+            "fallback": false,
+            "intent": "other",
+            "raw_intent": "4001"
+          }
+        },
+        {}
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": false,
+    "actual": true,
+    "expected": false,
+    "execution_trace": false
+  },
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'ambiguous': False, 'confidence': 0.5, 'fallback': False, 'intent': 'other', 'raw_intent': '4001'}，最早差异位于 intent_contract_gate。",
+  "verification_steps": [
+    "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+  ],
+  "patch_direction": [
+    "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+  ],
+  "needs_human_review": false,
+  "scenario": "intent_recognition",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 1,
+    "probe_count": 3,
+    "summary_text": "当前 query '今年的销售目标能调低一点吗？' 应识别为 target_value_adjustment，但被归为 other。根因有两层：(1) 规则层 _is_target_adjustment_message 的关键字列表仅含 5 个精确词（调整目标/修改目标/重设目标/重新设置目标/换个目标），未覆盖'调低'这一口语化调整表达；且调整意图整体被 has_completed_planning_context 前置条件保护，单轮评估中该条件恒为 False，导致规则层无法命中任何调整意图。(2) LLM 层 prompt 中 target_value_adjustment 示例均为正式表达，缺少'调低/调高'等口语变体，模型（qwen3-next-80b-a3b-instruct）以 0.5 低置信度将其归为 other。最终 raw_intent=4001 经 INTENT_MAPPING 正确映射为 other，映射本身无误。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

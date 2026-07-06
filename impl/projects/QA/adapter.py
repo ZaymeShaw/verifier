@@ -6,15 +6,18 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from impl.core.adapter import ProjectAdapter
-from impl.core.schema import AttributeResult, JudgeResult
+from impl.core.schema import AttributeResult, ExecutionTraceEvent, JudgeResult, LiveExecutionResult, LiveRequest, MultiTurnCase, SingleTurnCase
 
 
 class Adapter(ProjectAdapter):
     metadata_fields = {"category", "model_name", "latency_ms", "token_usage", "cost", "row_index", "source_dataset", "expected_quality", "expected_error_type", "quality_dimension"}
 
-    def build_request(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        sample = self._normalize_sample(input_data)
-        return {
+    def build_request(self, case: SingleTurnCase | MultiTurnCase) -> LiveRequest:
+        # case 可能是 SingleTurnCase（有顶层 output/reference）或裸 dict（前端旧输入）。
+        # _normalize_sample 用 getattr 兼容 dataclass，能从 case.output/case.reference 取值。
+        sample = self._normalize_sample(case)
+        input_data = dict(case.input or {}) if hasattr(case, "input") else (dict(case.get("input") or {}) if isinstance(case, dict) else {})
+        normalized_request = {
             "input": sample["input"],
             "reference": sample["reference"],
             "metadata": sample["metadata"],
@@ -22,9 +25,37 @@ class Adapter(ProjectAdapter):
             "data_quality_flags": sample["data_quality_flags"],
             "output": sample["output"],
         }
+        # 协议层 ready gate 接管 provided 判定后，build_request 不再硬编码 execution_mode；
+        # pipeline live_run 在 provided 分支统一覆盖为 "provided_output"。
+        # 存一份快照，project_fields 在 provided 路径下无 _normalized_request 注入时可回退读取。
+        self._last_normalized_request = normalized_request
+        return LiveRequest(
+            project_id=self.spec.project_id,
+            raw_input=input_data,
+            case_id=str(case.id or sample.get("id") or input_data.get("case_id") or input_data.get("id") or ""),
+            normalized_request=normalized_request,
+            # execution_mode 由 pipeline.live_run 在 provided 分支统一覆盖
+            execution_mode="live_service",
+            session_id=str(input_data.get("session_id") or case.metadata.get("session_id") or ""),
+        )
 
-    def call_or_prepare(self, request: Dict[str, Any]) -> Any:
-        return request.get("output") or {"actual_answer": ""}
+    def call_or_prepare(self, request: LiveRequest) -> LiveExecutionResult:
+        raw_response = request.normalized_request.get("output") or {"actual_answer": ""}
+        if isinstance(raw_response, dict):
+            raw_response = {**raw_response, "_normalized_request": request.normalized_request}
+        extracted_output = self.extract_output(raw_response)
+        return LiveExecutionResult(
+            project_id=request.project_id,
+            case_id=request.case_id,
+            session_id=request.session_id,
+            raw_input=request.raw_input,
+            normalized_request=request.normalized_request,
+            raw_response=raw_response,
+            extracted_output=extracted_output,
+            output_source=request.execution_mode,
+            execution_trace=self.build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output),
+            project_fields=self.project_fields(raw_response, extracted_output),
+        )
 
     def extract_output(self, raw_response: Any) -> Dict[str, Any]:
         if isinstance(raw_response, dict):
@@ -32,7 +63,11 @@ class Adapter(ProjectAdapter):
         return {"actual_answer": str(raw_response or "")}
 
     def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any]) -> Dict[str, Any]:
+        # 优先从 raw_response._normalized_request 取（旧 call_or_prepare 注入路径），
+        # 否则回退到 build_request 快照（provided 统一路径，raw_response 不再注入）。
         request = raw_response.get("_normalized_request") if isinstance(raw_response, dict) else None
+        if not isinstance(request, dict):
+            request = getattr(self, "_last_normalized_request", None) or {}
         if not isinstance(request, dict):
             return {}
         return {
@@ -44,24 +79,19 @@ class Adapter(ProjectAdapter):
             "estimated_quality_only": request.get("scenario") == "qa_weak_quality",
         }
 
-    def build_execution_trace(self, input_data, request, raw_response, extracted_output):
+    def build_execution_trace(self, input_data: Dict[str, Any], request: Dict[str, Any], raw_response: Any, extracted_output: Dict[str, Any]) -> list[ExecutionTraceEvent]:
         return [
-            {"stage": "qa.sample.normalize", "status": "ok" if request.get("scenario") != "invalid_sample" else "suspicious",
-             "evidence": {"scenario": request.get("scenario"), "flags": request.get("data_quality_flags")}},
-            {"stage": "qa.output.read", "status": "ok" if extracted_output.get("actual_answer") else "suspicious",
-             "evidence": "evaluated output read from uploaded sample"},
-            {"stage": "adapter.extract_output", "status": "ok",
-             "evidence": {"actual_answer_present": bool(extracted_output.get("actual_answer"))}},
+            ExecutionTraceEvent(stage="qa.sample.normalize", status="ok" if request.get("scenario") != "invalid_sample" else "suspicious", evidence={"scenario": request.get("scenario"), "flags": request.get("data_quality_flags")}),
+            ExecutionTraceEvent(stage="qa.output.read", status="ok" if extracted_output.get("actual_answer") else "suspicious", evidence="evaluated output read from uploaded sample"),
+            ExecutionTraceEvent(stage="adapter.extract_output", status="ok", evidence={"actual_answer_present": bool(extracted_output.get("actual_answer"))}),
         ]
 
-    def to_run_trace(self, input_data, request, raw_response):
-        if isinstance(raw_response, dict):
-            raw_response = {**raw_response, "_normalized_request": request}
-        return super().to_run_trace(input_data, request, raw_response)
+    def to_run_trace(self, result: LiveExecutionResult):
+        return super().to_run_trace(result)
 
     def build_frontend_extensions(self, trace):
         return {
-            "project_fields": trace.project_fields,
+            "schema_protocol_extensions": trace.project_fields,
             "scenarios": self.spec.frontend_extensions.get("scenarios") or [],
             "score_dimensions": self.spec.frontend_extensions.get("score_dimensions") or [],
             "error_taxonomy": self.spec.frontend_extensions.get("error_taxonomy") or [],
@@ -87,8 +117,10 @@ class Adapter(ProjectAdapter):
             "reference_present": bool(reference),
             "contexts_count": len(sample_input.get("contexts") or []),
             "scenario": request.get("scenario") or "",
-            "provided_output_path": (trace.project_fields or {}).get("execution_mode") == "provided" or (trace.project_fields or {}).get("output_source") == "provided_output",
         }
+        live_output_source = getattr(getattr(trace, "live_result", None), "output_source", "")
+        provided_execution = trace.execution_mode == "provided"
+        evidence["provided_output_path"] = provided_execution or live_output_source == "provided_output"
         missing = [key for key, value in evidence.items() if key in {"question_present", "actual_answer_present"} and not value]
         unrecoverable = [m for m in missing if m == "actual_answer_present"]
         return {
@@ -113,7 +145,7 @@ class Adapter(ProjectAdapter):
         return {
             "project_type": "provided_output_qa_evaluation",
             "current_case_only": True,
-            "reference_contract": request.get("reference") or trace.project_fields.get("reference") or {},
+            "reference_contract": trace.reference_contract if isinstance(trace.reference_contract, dict) else {},
             "score_dimensions": self.spec.frontend_extensions.get("score_dimensions") or [],
             "error_taxonomy": self.spec.frontend_extensions.get("error_taxonomy") or [],
             "application_boundary": {"scope": "qa_semantic_answer_evaluation", "external_service_required": False},
@@ -122,7 +154,7 @@ class Adapter(ProjectAdapter):
     def build_intent_frame(self, trace):
         request = trace.normalized_request or {}
         sample_input = request.get("input") if isinstance(request.get("input"), dict) else {}
-        reference = request.get("reference") or trace.project_fields.get("reference") or {}
+        reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}
         contexts = sample_input.get("contexts") or request.get("contexts") or []
         return {
             **super().build_intent_frame(trace),
@@ -158,13 +190,13 @@ class Adapter(ProjectAdapter):
             expectation.update({
                 "user_intent": question,
                 "expected_outcome": "actual answer should satisfy answer relevance, groundedness, and reference alignment for the current QA sample",
-                "acceptance_criteria": list(judge_result.condition_assessments or judge_result.score_details or []),
+                "acceptance_criteria": list(judge_result.missing or judge_result.wrong or []),
             })
         return expectation
 
     def _default_fulfillment_assessment(self, trace, judge_result, expectation):
-        status = self._expectation_status_from_verict(judge_result)
-        reference = (trace.normalized_request or {}).get("reference") or (trace.project_fields or {}).get("reference") or judge_result.expected or {}
+        status = self._expectation_status_from_verdict(judge_result)
+        reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else judge_result.expected or {}
         actual = judge_result.actual or trace.extracted_output or {}
         return {
             "expectation_id": expectation.get("expectation_id"),
@@ -182,12 +214,12 @@ class Adapter(ProjectAdapter):
     def build_attribute_context(self, trace, judge_result):
         return {
             "chain_nodes_to_check": list(trace.execution_trace or []),
-            "reference_contract": trace.normalized_request.get("reference") or trace.project_fields.get("reference") or {},
+            "reference_contract": trace.reference_contract if isinstance(trace.reference_contract, dict) else {},
             "attribute_standard": "Only attribute QA failures when judge has current-case expected/actual evidence; provided output never calls an external QA service.",
         }
 
     def normalize_judge_result(self, trace, judge_result):
-        scenario = str(trace.project_fields.get("scenario") or (trace.normalized_request or {}).get("scenario") or "")
+        scenario = str(trace.scenario or (trace.normalized_request or {}).get("scenario") or "")
         if scenario == "qa_gold_answer":
             exact = self._gold_answer_exact_probe(trace, judge_result)
             if exact:
@@ -195,10 +227,10 @@ class Adapter(ProjectAdapter):
         if scenario == "qa_weak_quality" and judge_result.verdict in {"correct", "incorrect"}:
             return self._weak_quality_probe(trace, judge_result)
         if judge_result.verdict == "uncertain" and "llm_call_failed" not in (judge_result.quality_flags or []):
-            metadata = dict((trace.normalized_request or {}).get("metadata") or trace.project_fields.get("metadata") or {})
+            metadata = dict((trace.normalized_request or {}).get("metadata") or {})
             expected_quality = metadata.get("expected_quality") or "uncertain"
             if expected_quality in ("correct", "incorrect"):
-                expected_reference = (trace.normalized_request or {}).get("reference") or trace.project_fields.get("reference") or {}
+                expected_reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}
                 actual = trace.extracted_output or judge_result.actual or {}
                 judge_result.expected = expected_reference
                 judge_result.actual = actual
@@ -247,18 +279,7 @@ class Adapter(ProjectAdapter):
             for key in ("why_verdict", "reasoning", "assessment_summary"):
                 if key in vd and isinstance(vd[key], list):
                     vd[key] = [re.sub(pat, replacement, str(item)) for item in vd[key] for pat, replacement in placeholder_patterns]
-        pa = getattr(judge_result, "primary_assessment", None)
-        if isinstance(pa, dict):
-            for key in ("reasoning", "missing", "wrong"):
-                if key in pa:
-                    old_val = pa[key]
-                    if isinstance(old_val, str):
-                        for pat, replacement in placeholder_patterns:
-                            old_val = re.sub(pat, replacement, old_val)
-                        pa[key] = old_val
-                    elif isinstance(old_val, list):
-                        pa[key] = [re.sub(pat, replacement, str(item)) for item in old_val for pat, replacement in placeholder_patterns]
-        for ca_list_attr in ("condition_assessments", "fulfillment_assessments"):
+        for ca_list_attr in ("fulfillment_assessments",):
             ca_list = getattr(judge_result, ca_list_attr, []) or []
             for ca in ca_list:
                 if not isinstance(ca, dict):
@@ -274,7 +295,7 @@ class Adapter(ProjectAdapter):
 
     def _enrich_semantic_judge(self, trace, judge_result, scenario):
         request = trace.normalized_request or {}
-        reference = request.get("reference") or trace.project_fields.get("reference") or {}
+        reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}
         actual = trace.extracted_output or judge_result.actual or {}
         question = str((request.get("input") or {}).get("question") or judge_result.reconstructed_intent or "")
         judge_result.expected = judge_result.expected or reference
@@ -285,7 +306,7 @@ class Adapter(ProjectAdapter):
             f"scenario={scenario or 'unknown'}",
             f"question_present={bool(question)}",
             f"actual_answer_present={bool((actual or {}).get('actual_answer'))}",
-            f"golden_answer_present={bool((reference or {}).get('golden_answer'))}",
+            f"reference_answer_present={bool((reference or {}).get('actual_answer'))}",
         ]
         for item in case_evidence:
             if item not in evidence:
@@ -296,19 +317,19 @@ class Adapter(ProjectAdapter):
         if error_type:
             judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), "taxonomy_error_types": [error_type]}
         dimensions = list(self.spec.frontend_extensions.get("score_dimensions") or [])
-        existing_dimensions = {item.get("dimension") for item in (judge_result.score_details or []) if isinstance(item, dict)}
-        for dimension in dimensions:
-            if dimension not in existing_dimensions:
-                judge_result.score_details.append({"dimension": dimension, "score": judge_result.score, "evidence": evidence, "status": "judged" if judge_result.verdict in {"correct", "incorrect"} else "needs_review"})
-        if not judge_result.condition_assessments:
+        if dimensions:
+            judge_result.verdict_derivation = {
+                **(judge_result.verdict_derivation or {}),
+                "score_dimensions": [{"dimension": dimension, "score": judge_result.score, "evidence": evidence, "status": "judged" if judge_result.verdict in {"correct", "incorrect"} else "needs_review"} for dimension in dimensions],
+            }
+        if not judge_result.fulfillment_assessments:
             req_name = f"answer_quality_for_{scenario}" if scenario else "qa_answer_quality"
-            judge_result.condition_assessments = [{"requirement": req_name, "expected_fragment": reference, "actual_fragment": actual, "status": "wrong" if judge_result.verdict == "incorrect" else "covered", "evidence": evidence}]
-        judge_result.primary_assessment = {
-            **(judge_result.primary_assessment or {}),
-            "boundary_id": scenario or "qa_semantic_evaluation",
-            "score": judge_result.score,
+            judge_result.fulfillment_assessments = [{"expectation_id": req_name, "status": "not_fulfilled" if judge_result.verdict == "incorrect" else "fulfilled", "expected_evidence": [reference], "actual_evidence": [actual], "boundary_decision": judge_result.boundary_decision or {}, "downstream_impact": judge_result.reasoning_summary or "QA answer quality judged for current sample", "blocking": judge_result.verdict == "incorrect", "confidence": judge_result.confidence, "evidence_refs": []}]
+        judge_result.verdict_derivation = {
+            **(judge_result.verdict_derivation or {}),
+            "primary_boundary": scenario or "qa_semantic_evaluation",
             "error_type": error_type,
-            "reasoning": judge_result.reasoning_summary or (judge_result.verdict_derivation or {}).get("why_verdict", ""),
+            "assessment_summary": judge_result.reasoning_summary or (judge_result.verdict_derivation or {}).get("why_verdict", ""),
         }
         judge_result.judge_basis = judge_result.judge_basis or "qa_semantic_judge"
         judge_result.judge_method = judge_result.judge_method or "qa_semantic_judge"
@@ -325,7 +346,7 @@ class Adapter(ProjectAdapter):
         if judge_result.verdict == "uncertain":
             return "needs_human_review" if "needs_human_review" in taxonomy else ""
         wrong_text = " ".join(str(item) for item in (judge_result.wrong or []))
-        expected_text = str((reference or {}).get("golden_answer") or judge_result.expected or "")
+        expected_text = str((reference or {}).get("actual_answer") or judge_result.expected or "")
         actual_text = str((actual or {}).get("actual_answer") or judge_result.actual or "")
         if (wrong_text or expected_text) and actual_text and len(actual_text) < max(len(expected_text) * 0.8, 1):
             return "answer_incomplete" if "answer_incomplete" in taxonomy else "answer_incorrect"
@@ -359,7 +380,7 @@ class Adapter(ProjectAdapter):
             quality["status"] = "next_verification_step"
             quality["missing"] = missing
             attribute_result.analysis_quality = quality
-        if attribute_result.analysis_quality.get("passed") is True and attribute_result.suspected_locations and not attribute_result.local_verifications and not attribute_result.evidence_coverage.get("code_or_config"):
+        if attribute_result.analysis_quality.get("passed") is True and attribute_result.suspected_locations and not attribute_result.probe_results and not attribute_result.evidence_coverage.get("code_or_config"):
             reason = "疑似位置缺少代码/配置或本地验证证据，不能作为正式归因。"
             return self._blocked_attribute_result(
                 trace, judge_result, attribute_result, reason, "qa_unverified_suspected_location",
@@ -384,7 +405,7 @@ class Adapter(ProjectAdapter):
             "model_capability_gap": "模型能力缺陷",
             "boundary_limitation": "边界限制",
         }
-        text_fields = ["incomplete_reason", "root_cause_hypothesis", "business_impact", "failure_category", "failure_stage"]
+        text_fields = ["incomplete_reason", "root_cause_hypothesis", "causal_category"]
         for field in text_fields:
             val = getattr(attribute_result, field, None)
             if val and isinstance(val, str):
@@ -408,14 +429,14 @@ class Adapter(ProjectAdapter):
                 for en, zh in en_to_zh.items():
                     val = val.replace(en, zh)
                 cn["reason"] = val
-        for lv in (attribute_result.local_verifications or []):
-            if not isinstance(lv, dict):
+        for probe in (attribute_result.probe_results or []):
+            if not isinstance(probe, dict):
                 continue
-            val = lv.get("result")
+            val = probe.get("status") or probe.get("result")
             if val and isinstance(val, str):
                 for en, zh in en_to_zh.items():
                     val = val.replace(en, zh)
-                lv["result"] = val
+                probe["status"] = val
         return attribute_result
 
     def _sample_label_attribute_result(self, trace, judge_result, attribute_result):
@@ -423,15 +444,10 @@ class Adapter(ProjectAdapter):
         causal_category = "no_issue" if status == "fulfilled" else "sample_labeled_quality_gap"
         evidence = list(judge_result.evidence or [judge_result.reasoning_summary])
         expectation_id = "QA:answer_quality"
-        error_type = (judge_result.primary_assessment or {}).get("error_type") or ("none" if status == "fulfilled" else "answer_incorrect")
         if status == "fulfilled":
-            error_types = []
-            primary_error_type = "none"
             verification_steps = ["核对当前 QA mock 样本的 metadata.expected_quality、reference 和 output.actual_answer。", "确认样本不属于 qa_weak_quality 且没有 data_quality_flags。"]
             patch_direction = ["无需修复业务链路；保留样本标注作为语义 judge 不可用时的 deterministic mock 判定依据。"]
         else:
-            primary_error_type = error_type if error_type != "none" else "answer_incorrect"
-            error_types = [primary_error_type]
             verification_steps = ["核对当前 QA mock 样本的 expected_quality 与 expected_error_type。", "检查 output.actual_answer 与 reference/contexts 不满足的证据是否对应样本标注。"]
             patch_direction = ["按样本标注的 QA 质量缺口修复被测回答或上游生成逻辑。"]
         return AttributeResult(
@@ -444,7 +460,6 @@ class Adapter(ProjectAdapter):
                 "causal_category": causal_category,
                 "earliest_divergence": {"node": "qa_sample_expected_quality", "evidence": evidence, "confidence": "high"},
                 "causal_chain": [{"name": "qa_sample_expected_quality", "status": "succeeded", "evidence": evidence}],
-                "local_verifications": [{"method": "sample_expected_quality", "target": "metadata.expected_quality", "result": judge_result.verdict, "evidence": evidence}],
                 "suspected_locations": [],
                 "improvement_direction": patch_direction if status != "fulfilled" else [],
                 "source_evidence": evidence,
@@ -453,13 +468,8 @@ class Adapter(ProjectAdapter):
             }],
             causal_category=causal_category,
             probe_results=[{"probe": "qa_sample_expected_quality", "status": "passed", "evidence": evidence}],
-            failure_category="fulfilled_expectation" if status == "fulfilled" else primary_error_type,
-            failure_stage="fulfilled_expectation" if status == "fulfilled" else "qa_sample_expected_quality",
             analysis_method="qa_sample_expected_quality_attribution",
-            evidence_chain=evidence,
-            trace_analysis=list(trace.execution_trace or []),
             chain_nodes=[{"name": "qa_sample_expected_quality", "status": "succeeded", "evidence": evidence, "reason": judge_result.reasoning_summary}],
-            local_verifications=[{"method": "sample_expected_quality", "target": "metadata.expected_quality", "result": judge_result.verdict, "evidence": evidence}],
             earliest_divergence={"node": "qa_sample_expected_quality", "evidence": evidence, "confidence": "high"},
             evidence_coverage={
                 "query": bool((trace.normalized_request.get("input") or {}).get("question")),
@@ -476,30 +486,23 @@ class Adapter(ProjectAdapter):
             root_cause_hypothesis="业务预期已达成，当前归因结论为 no_issue。" if status == "fulfilled" else "QA seeded mock 标注表明当前回答未满足样本质量预期。",
             verification_steps=verification_steps,
             patch_direction=patch_direction,
-            business_impact="当前输出满足 QA 样本业务预期。" if status == "fulfilled" else "当前输出不满足 QA 样本业务预期。",
-            primary_error_type=primary_error_type,
-            error_types=error_types,
-            severity="none" if status == "fulfilled" else "medium",
             needs_human_review=False,
-            scenario=str(trace.project_fields.get("scenario") or (trace.normalized_request or {}).get("scenario") or ""),
+            scenario=str(trace.scenario or (trace.normalized_request or {}).get("scenario") or ""),
             quality_flags=list(judge_result.quality_flags or []),
         )
 
     def _blocked_attribute_result(self, trace, judge_result, attribute_result, reason, method, missing, standard):
-        scenario = str(trace.project_fields.get("scenario") or (trace.normalized_request or {}).get("scenario") or "")
+        scenario = str(trace.scenario or (trace.normalized_request or {}).get("scenario") or "")
         evidence = list(judge_result.evidence or [judge_result.reasoning_summary or reason])
         return AttributeResult(
             trace_id=trace.trace_id,
             project_id=trace.project_id,
             case_id=str(trace.input.get("case_id") or ""),
-            failure_category="needs_human_review",
-            failure_stage=method,
+            causal_category="insufficient_evidence",
             analysis_method=method,
-            evidence_chain=evidence,
-            trace_analysis=list(trace.execution_trace or []),
             chain_nodes=[{"name": method, "status": "not_verified", "evidence": evidence, "reason": reason}],
-            local_verifications=[],
-            earliest_divergence={},
+            probe_results=[],
+            earliest_divergence={"node": method, "evidence": evidence, "confidence": "unknown"},
             evidence_coverage={
                 "query": bool((trace.normalized_request.get("input") or {}).get("question")),
                 "actual": bool((trace.extracted_output or {}).get("actual_answer")),
@@ -513,12 +516,8 @@ class Adapter(ProjectAdapter):
             incomplete_reason=reason,
             suspected_locations=[],
             root_cause_hypothesis="当前证据不足以定位 QA 业务根因，需要语义 judge 或人工复核补足证据。",
-            verification_steps=["确认 semantic judge 可用后重新运行 QA judge 和 attribute。", "检查样本是否提供 output.actual_answer 以及 reference.golden_answer 或 input.contexts。"],
+            verification_steps=["确认 semantic judge 可用后重新运行 QA judge 和 attribute。", "检查样本是否提供 output.actual_answer 以及 reference.actual_answer 或 input.contexts。"],
             patch_direction=["补齐样本协议或恢复语义 judge；不要基于本地探针结果直接修改业务代码。"],
-            business_impact="该样本不能进入正式准确率归因聚簇，只能作为待复核问题保留。",
-            primary_error_type="needs_human_review",
-            error_types=["needs_human_review"],
-            severity="unknown",
             needs_human_review=True,
             scenario=scenario,
             quality_flags=list(judge_result.quality_flags or []),
@@ -528,7 +527,7 @@ class Adapter(ProjectAdapter):
     def _weak_quality_probe(self, trace, judge_result):
         actual = trace.extracted_output or {}
         request = trace.normalized_request or {}
-        data_quality_flags = list(request.get("data_quality_flags") or trace.project_fields.get("data_quality_flags") or [])
+        data_quality_flags = list(request.get("data_quality_flags") or [])
         if "estimated_quality_only" not in data_quality_flags:
             data_quality_flags.append("estimated_quality_only")
         reason = "qa_weak_quality 没有 reference 或 contexts，只能作为质量估计样本，不能产出正式语义正确/错误判定。"
@@ -539,11 +538,7 @@ class Adapter(ProjectAdapter):
         judge_result.confidence = min(float(judge_result.confidence or 0.2), 0.4)
         judge_result.judge_basis = "qa_weak_quality_probe"
         judge_result.judge_method = "qa_weak_quality_probe"
-        judge_result.actual = judge_result.actual or actual
-        if not isinstance(judge_result.actual, dict):
-            judge_result.actual = {"actual_answer": str(judge_result.actual)}
-        elif "actual_answer" not in judge_result.actual and "answer" in judge_result.actual:
-            judge_result.actual = {**judge_result.actual, "actual_answer": judge_result.actual.get("answer")}
+        judge_result.actual = actual
         judge_result.expected = judge_result.expected or self._generate_reference(request, str(actual.get("actual_answer") or ""), [], "qa_weak_quality")
         judge_result.fulfillment_assessments = list(judge_result.fulfillment_assessments or []) + [{
             "expectation_id": "QA:weak_quality_probe",
@@ -553,13 +548,10 @@ class Adapter(ProjectAdapter):
             "downstream_impact": reason,
         }]
         judge_result.boundary_decision = {"within_evaluable_scope": False, "reasoning": reason}
-        judge_result.condition_assessments = [{"requirement": "qa_weak_quality", "expected_fragment": judge_result.expected, "actual_fragment": judge_result.actual, "status": "not_verified", "evidence": [f"data_quality_flags={data_quality_flags}"]}]
-        judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), "blocking_gaps": [reason], "why_verdict": reason}
-        judge_result.primary_assessment = {"boundary_id": "qa_weak_quality", "covered": [], "missing": [reason], "wrong": [], "reasoning": reason}
+        judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), "blocking_gaps": [reason], "why_verdict": reason, "primary_boundary": "qa_weak_quality"}
         judge_result.missing = []
         judge_result.wrong = []
         judge_result.extra = []
-        judge_result.score_details = []
         judge_result.needs_human_review = True
         judge_result.quality_flags = flags
         judge_result.reasoning_summary = reason
@@ -568,21 +560,21 @@ class Adapter(ProjectAdapter):
     def _gold_answer_exact_probe(self, trace, judge_result):
         actual = trace.extracted_output or judge_result.actual or {}
         request = trace.normalized_request or {}
-        reference = request.get("reference") or trace.project_fields.get("reference") or {}
+        reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}
         actual_text = str((actual or {}).get("actual_answer") or "").strip()
-        golden_text = str((reference or {}).get("golden_answer") or "").strip()
+        golden_text = str((reference or {}).get("actual_answer") or "").strip()
         if not actual_text or not golden_text or actual_text != golden_text:
             return None
         evidence = [
             "scenario=qa_gold_answer",
-            "golden_answer_exact_match=True",
+            "reference_exact_match=True",
             f"actual_length={len(actual_text)}",
-            f"golden_length={len(golden_text)}",
+            f"reference_length={len(golden_text)}",
         ]
         judge_result.fulfillment_assessments = list(judge_result.fulfillment_assessments or []) + [
             {"expectation_id": "QA:gold_answer_exact_match", "status": "fulfilled",
              "expected_evidence": [reference], "actual_evidence": [actual],
-             "boundary_decision": {"within_evaluable_scope": True, "reasoning": "actual_answer 与 golden_answer 完全一致"},
+             "boundary_decision": {"within_evaluable_scope": True, "reasoning": "actual_answer 与 reference.actual_answer 完全一致"},
              "downstream_impact": "用户获得了完整准确的答案", "blocking": False, "confidence": 1.0},
         ]
         judge_result.expected = reference
@@ -590,36 +582,32 @@ class Adapter(ProjectAdapter):
         judge_result.reconstructed_intent = str((request.get("input") or {}).get("question") or judge_result.reconstructed_intent or "")
         judge_result.judge_basis = "qa_gold_answer_exact_match"
         judge_result.judge_method = "qa_gold_answer_exact_match"
-        judge_result.intent_decomposition = [{"requirement": str((request.get("input") or {}).get("question") or "qa_gold_answer"), "evidence_source": "current sample reference.golden_answer", "within_boundary": True}]
-        judge_result.condition_assessments = [{"requirement": "golden_answer_exact_match", "expected_fragment": reference, "actual_fragment": actual, "status": "covered", "evidence": evidence}]
         judge_result.semantic_equivalence_checks = [{"method": "exact_string_match", "status": "matched", "evidence": evidence}]
-        judge_result.reference_generation_basis = {"source": "case_reference", "alignment_to_actual_shape": "QA compares output.actual_answer against reference.golden_answer.", "evidence": evidence}
+        judge_result.reference_generation_basis = {"source": "case_reference", "alignment_to_live_schema": "QA compares output.actual_answer against reference.actual_answer.", "evidence": evidence}
         judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}),
-            "assessment_summary": "actual_answer exactly matches golden_answer",
-            "blocking_gaps": [], "why_verdict": "actual_answer 与 golden_answer 完全一致，当前 QA 样本业务预期已达成。",
+            "assessment_summary": "actual_answer exactly matches reference answer",
+            "blocking_gaps": [], "why_verdict": "actual_answer 与 reference.actual_answer 完全一致，当前 QA 样本业务预期已达成。",
             "overridden_by": "qa_gold_answer_exact_probe", "original_verdict": judge_result.verdict,
             "original_judge_method": judge_result.judge_method, "original_quality_flags": list(judge_result.quality_flags or [])}
         judge_result.boundary_decision = {"within_evaluable_scope": True, "reasoning": "qa_gold_answer exact-match sample has deterministic reference evidence"}
         judge_result.evaluation_boundary = {
-            "primary_boundary_id": "qa_gold_answer", "primary_boundary_name": "QA golden answer exact match",
-            "judge_question": "actual_answer 是否与 golden_answer 一致",
-            "verdict_basis": "current sample output.actual_answer + reference.golden_answer",
+            "primary_boundary_id": "qa_gold_answer", "primary_boundary_name": "QA reference answer exact match",
+            "judge_question": "actual_answer 是否与 reference.actual_answer 一致",
+            "verdict_basis": "current sample output.actual_answer + reference.actual_answer",
             "boundary_sources": "impl/data/QA/mock_cases.json",
             "conflict_policy": "exact match is sufficient for seeded qa_gold_answer samples",
         }
-        judge_result.primary_assessment = {"boundary_id": "qa_gold_answer", "covered": ["QA:answer_quality"], "missing": [], "wrong": [], "error_type": "none", "reasoning": "actual_answer exactly matches golden_answer"}
         judge_result.missing = []
         judge_result.wrong = []
         judge_result.extra = []
         judge_result.evidence = evidence
-        judge_result.reasoning_summary = "actual_answer 与 golden_answer 完全一致，当前 QA 样本业务预期已达成。"
-        judge_result.score_details = [{"dimension": "reference_alignment", "score": 1.0, "evidence": evidence, "status": "covered"}]
+        judge_result.reasoning_summary = "actual_answer 与 reference.actual_answer 完全一致，当前 QA 样本业务预期已达成。"
         judge_result.needs_human_review = False
         judge_result.scenario = "qa_gold_answer"
         judge_result.quality_flags = list(judge_result.quality_flags or []) + ["qa_gold_answer_exact_match", "overridden_by_gold_answer_probe"]
         judge_result.overrides = list(judge_result.overrides or []) + [
             {"field": "fulfillment_assessments", "original_value": "LLM original", "overridden_value": "gold_answer_exact_match injected",
-             "reason": "qa_gold_answer_exact_probe: actual_answer exactly matches golden_answer", "source": "qa_gold_answer_exact_probe"},
+             "reason": "qa_gold_answer_exact_probe: actual_answer exactly matches reference answer", "source": "qa_gold_answer_exact_probe"},
         ]
         return judge_result
 
@@ -627,15 +615,15 @@ class Adapter(ProjectAdapter):
         actual = trace.extracted_output or {}
         actual_text = str(actual.get("actual_answer") or "").strip()
         request = trace.normalized_request or {}
-        reference = request.get("reference") or trace.project_fields.get("reference") or {}
-        golden_text = str(reference.get("golden_answer") or "").strip()
+        reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}
+        golden_text = str(reference.get("actual_answer") or "").strip()
         contexts = list((request.get("input") or {}).get("contexts") or [])
-        scenario = str(trace.project_fields.get("scenario") or request.get("scenario") or "")
+        scenario = str(trace.scenario or request.get("scenario") or "")
         if scenario not in {"qa_gold_answer", "qa_context_faithfulness", "qa_weak_quality", "invalid_sample"}:
             return None
-        data_quality_flags = list(request.get("data_quality_flags") or trace.project_fields.get("data_quality_flags") or [])
+        data_quality_flags = list(request.get("data_quality_flags") or [])
         expected_reference = reference or self._expected_reference_from_judge(judge_result.expected) or self._generate_reference(request, actual_text, contexts, scenario)
-        metadata = dict(request.get("metadata") or trace.project_fields.get("metadata") or {})
+        metadata = dict(request.get("metadata") or {})
         labeled = self._fallback_judge_from_sample_label(trace, judge_result, expected_reference, actual, scenario, metadata, data_quality_flags)
         if labeled:
             return labeled
@@ -643,7 +631,7 @@ class Adapter(ProjectAdapter):
         evidence = [
             f"scenario={scenario or 'unknown'}",
             f"actual_answer_present={bool(actual_text)}",
-            f"golden_answer_present={bool(golden_text)}",
+            f"reference_answer_present={bool(golden_text)}",
             f"contexts_present={bool(contexts)}",
             f"data_quality_flags={data_quality_flags}",
         ]
@@ -665,12 +653,10 @@ class Adapter(ProjectAdapter):
         judge_result.reconstructed_intent = str((request.get("input") or {}).get("question") or "")
         judge_result.judge_basis = "qa_local_evidence_probe"
         judge_result.judge_method = "qa_local_evidence_probe"
-        judge_result.intent_decomposition = [{"requirement": str((request.get("input") or {}).get("question") or scenario), "evidence_source": "current query|reference|project_doc", "within_boundary": scenario != "invalid_sample"}]
-        judge_result.condition_assessments = [{"requirement": scenario or "qa_fallback", "expected_fragment": expected_reference, "actual_fragment": actual, "status": "not_verified", "evidence": evidence}]
         judge_result.semantic_equivalence_checks = []
         judge_result.reference_generation_basis = {
             "source": reference_source,
-            "alignment_to_actual_shape": "QA keeps semantic fields: output.actual_answer is evaluated output and reference.golden_answer is the gold answer.",
+            "alignment_to_live_schema": "QA keeps semantic fields: output.actual_answer is evaluated output and reference.actual_answer is the reference answer.",
             "evidence": evidence,
         }
         judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}),
@@ -684,13 +670,11 @@ class Adapter(ProjectAdapter):
             "boundary_sources": "impl/projects/QA/evaluation.md",
             "conflict_policy": "do not infer correct/incorrect from text overlap or answer length",
         }
-        judge_result.primary_assessment = {"boundary_id": scenario or "qa_fallback", "covered": [], "missing": blocking_gaps, "wrong": [], "reasoning": reason}
         judge_result.missing = blocking_gaps if data_quality_flags else []
         judge_result.wrong = []
         judge_result.extra = []
         judge_result.evidence = evidence
         judge_result.reasoning_summary = reason
-        judge_result.score_details = []
         judge_result.needs_human_review = True
         judge_result.scenario = scenario
         judge_result.quality_flags = list(judge_result.quality_flags or []) + ["qa_local_evidence_probe", "semantic_judge_unavailable", "overridden_by_fallback_judge"]
@@ -702,7 +686,7 @@ class Adapter(ProjectAdapter):
 
     def _fallback_judge_from_sample_label_forced(self, trace, judge_result, expected_reference, actual, scenario, metadata, expected_quality):
         """Rescue an LLM 'uncertain' verdict using the seeded sample expected_quality label."""
-        data_quality_flags = list((trace.normalized_request or {}).get("data_quality_flags") or trace.project_fields.get("data_quality_flags") or [])
+        data_quality_flags = list((trace.normalized_request or {}).get("data_quality_flags") or [])
         result = self._fallback_judge_from_sample_label(
             trace, judge_result, expected_reference, actual, scenario, metadata, data_quality_flags
         )
@@ -742,11 +726,9 @@ class Adapter(ProjectAdapter):
         judge_result.reconstructed_intent = str(((trace.normalized_request or {}).get("input") or {}).get("question") or "")
         judge_result.judge_basis = "qa_sample_expected_quality"
         judge_result.judge_method = "qa_sample_expected_quality"
-        judge_result.intent_decomposition = [{"requirement": str(((trace.normalized_request or {}).get("input") or {}).get("question") or scenario), "evidence_source": "current sample metadata|reference", "within_boundary": True}]
-        judge_result.condition_assessments = [{"requirement": scenario or "qa_answer_quality", "expected_fragment": expected_reference, "actual_fragment": actual, "status": "covered" if is_correct else "wrong", "evidence": evidence}]
         judge_result.reference_generation_basis = {
             "source": "case_reference_and_sample_label",
-            "alignment_to_actual_shape": "QA sample label is used only for seeded mock cases with expected_quality metadata.",
+            "alignment_to_live_schema": "QA sample label is used only for seeded mock cases with expected_quality metadata.",
             "evidence": evidence,
         }
         judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}),
@@ -762,18 +744,11 @@ class Adapter(ProjectAdapter):
             "boundary_sources": "impl/data/QA/mock_cases.json",
             "conflict_policy": "only use deterministic sample labels for seeded mock cases; weak-quality remains review-only",
         }
-        judge_result.primary_assessment = {
-            "boundary_id": scenario or "qa_answer_quality",
-            "covered": ["QA:answer_quality"] if is_correct else [], "missing": [], "wrong": blocking_gaps,
-            "error_type": error_type if not is_correct else "none",
-            "reasoning": "deterministic QA mock expected_quality label",
-        }
         judge_result.missing = []
         judge_result.wrong = [] if is_correct else [{"requirement": "QA:answer_quality", "error_type": error_type or "answer_incorrect"}]
         judge_result.extra = []
         judge_result.evidence = evidence
         judge_result.reasoning_summary = "QA seeded mock sample expected_quality label used because semantic LLM judge was unavailable."
-        judge_result.score_details = [{"dimension": str(metadata.get("quality_dimension") or "qa_answer_quality"), "evidence": evidence, "status": "judged_by_sample_label"}]
         judge_result.needs_human_review = False
         judge_result.scenario = scenario
         judge_result.quality_flags = list(judge_result.quality_flags or []) + ["qa_sample_expected_quality", "overridden_by_sample_label"]
@@ -785,11 +760,11 @@ class Adapter(ProjectAdapter):
 
     def _expected_reference_from_judge(self, expected):
         if isinstance(expected, dict):
-            value = expected.get("golden_answer") or expected.get("gold_answer") or expected.get("actual_answer") or expected.get("answer") or expected.get("text")
+            value = expected.get("actual_answer") or expected.get("golden_answer") or expected.get("gold_answer") or expected.get("answer") or expected.get("text")
             if value:
-                return {"golden_answer": str(value)}
+                return {"actual_answer": str(value)}
         if isinstance(expected, str) and expected.strip():
-            return {"golden_answer": expected.strip()}
+            return {"actual_answer": expected.strip()}
         return {}
 
     def _generate_reference(self, request, actual_text, contexts, scenario):
@@ -797,9 +772,9 @@ class Adapter(ProjectAdapter):
         if scenario == "qa_context_faithfulness" and contexts:
             context_text = " ".join(str(ctx).strip() for ctx in contexts if str(ctx).strip())
             if context_text:
-                return {"golden_answer": context_text}
+                return {"actual_answer": context_text}
         if question:
-            return {"golden_answer": f'需要围绕问题"{question}"生成可核验的参考答案；当前样本未提供 golden_answer，不能把 actual_answer 直接当作参考答案。'}
+            return {"actual_answer": f'需要围绕问题"{question}"生成可核验的参考答案；当前样本未提供参考回答，不能把 actual_answer 直接当作参考答案。'}
         return {}
 
     def _text_overlap_ratio(self, actual, expected):
@@ -809,10 +784,10 @@ class Adapter(ProjectAdapter):
             return 0.0
         return len(expected_chars & actual_chars) / len(expected_chars)
 
-    def build_mock_cases(self):
-        path = Path(__file__).resolve().parents[2] / "data" / "QA" / "mock_cases.json"
-        cases = json.loads(path.read_text(encoding="utf-8"))
-        return [self._normalize_mock_case(case) for case in cases]
+    # build_mock_cases / build_mock_datasets 已移除：
+    # pipeline.mock_cases / mock_datasets 全线走 mock_agent（LLM 生成），不再读 seed JSON。
+    # _normalize_mock_case / _normalize_sample 保留供 build_request 解析 case 时复用。
+    # 详见 impl/core/mock_agent.py 与 impl/core/pipeline.py。
 
     def _normalize_mock_case(self, case):
         normalized = dict(case)
@@ -825,8 +800,8 @@ class Adapter(ProjectAdapter):
         if "answer" in input_part and "actual_answer" not in output_part:
             output_part["actual_answer"] = input_part.pop("answer")
         for key in ("golden_answer", "gold_answer"):
-            if key in input_part and "golden_answer" not in reference_part:
-                reference_part["golden_answer"] = input_part.pop(key)
+            if key in input_part and "actual_answer" not in reference_part:
+                reference_part["actual_answer"] = input_part.pop(key)
         for key in self.metadata_fields:
             if key in input_part and key not in metadata:
                 metadata[key] = input_part.pop(key)
@@ -837,28 +812,38 @@ class Adapter(ProjectAdapter):
         normalized.setdefault("status", "pending")
         normalized.setdefault("scenario", self._infer_scenario(
             input_part.get("question"), output_part.get("actual_answer"),
-            reference_part.get("golden_answer"), self._normalize_contexts(input_part.get("contexts"))
+            reference_part.get("actual_answer"), self._normalize_contexts(input_part.get("contexts"))
         ))
         return normalized
 
-    def build_mock_datasets(self):
-        cases = self.build_mock_cases()
-        return [{"dataset_id": "qa_mixed_scenarios_seed",
-                 "name": "QA 混合场景样例",
-                 "dimension_type": "qa_scenario",
-                 "description": "覆盖标准答案、上下文忠实性、弱参考质量、幻觉、矛盾和缺失输出数据质量场景。",
-                 "case_count": len(cases),
-                 "cases": cases}]
+    # build_mock_datasets 已移除：pipeline.mock_datasets 全线走 mock_agent。
 
     def _normalize_sample(self, data):
+        # 兼容 SingleTurnCase dataclass 与裸 dict：dataclass 先转 dict。
+        if not isinstance(data, dict):
+            if hasattr(data, "__dataclass_fields__"):
+                from dataclasses import asdict
+                data = asdict(data)
+            else:
+                data = dict(data or {})
         input_part = dict(data.get("input") or {}) if isinstance(data.get("input"), dict) else {}
         output_part = dict(data.get("output") or {}) if isinstance(data.get("output"), dict) else {}
         reference_part = dict(data.get("reference") or {}) if isinstance(data.get("reference"), dict) else {}
         metadata = dict(data.get("metadata") or {}) if isinstance(data.get("metadata"), dict) else {}
-        question = data.get("question") or input_part.get("question") or input_part.get("user_input") or ""
-        contexts = data.get("contexts") if "contexts" in data else input_part.get("contexts", [])
-        actual_answer = data.get("actual_answer") or data.get("answer") or output_part.get("actual_answer") or output_part.get("answer") or input_part.get("actual_answer") or input_part.get("answer") or ""
-        golden_answer = data.get("golden_answer") or data.get("gold_answer") or reference_part.get("golden_answer") or reference_part.get("gold_answer") or input_part.get("golden_answer") or input_part.get("gold_answer") or ""
+        question = data.get("question") or input_part.get("question") or input_part.get("query") or input_part.get("user_input") or ""
+        # 兼容 mock_agent 产出的嵌套 input 结构：input.input.query / input.input.system_answer
+        nested_input = input_part.get("input") if isinstance(input_part.get("input"), dict) else {}
+        if not question:
+            question = nested_input.get("question") or nested_input.get("query") or nested_input.get("user_input") or ""
+        contexts = data.get("contexts") if "contexts" in data else (input_part.get("contexts") or input_part.get("context") or nested_input.get("contexts") or nested_input.get("context") or [])
+        actual_answer = data.get("actual_answer") or data.get("answer") or output_part.get("actual_answer") or output_part.get("answer") or input_part.get("actual_answer") or input_part.get("answer") or nested_input.get("actual_answer") or nested_input.get("answer") or nested_input.get("system_answer") or nested_input.get("candidate_answer") or ""
+        # reference 答案统一归一化到 actual_answer（对齐 EXTRACT_OUTPUT_SHAPE）。
+        # golden_answer / gold_answer / answer 作为输入别名保留，便于兼容上传数据。
+        reference_answer = reference_part.get("actual_answer") or reference_part.get("golden_answer") or reference_part.get("gold_answer") or reference_part.get("answer") or input_part.get("golden_answer") or input_part.get("gold_answer") or nested_input.get("golden_answer") or nested_input.get("gold_answer") or data.get("golden_answer") or data.get("gold_answer") or ""
+        # 结构化参考（如 {年龄/健康状况/推荐险种: ...}）没有文本键时，
+        # 把整个 reference 序列化为文本，避免 qa_gold_answer 场景误判 missing_reference_answer。
+        if not reference_answer and reference_part:
+            reference_answer = json.dumps(reference_part, ensure_ascii=False)
         for key in self.metadata_fields:
             if key in data and key not in metadata:
                 metadata[key] = data[key]
@@ -870,9 +855,9 @@ class Adapter(ProjectAdapter):
         sample = {
             "input": {"question": str(question), "contexts": contexts},
             "output": {"actual_answer": str(actual_answer)},
-            "reference": {"golden_answer": str(golden_answer)} if golden_answer else {},
+            "reference": {"actual_answer": str(reference_answer)} if reference_answer else {},
             "metadata": metadata,
-            "scenario": str(data.get("scenario") or self._infer_scenario(question, actual_answer, golden_answer, contexts)),
+            "scenario": str(data.get("scenario") or self._infer_scenario(question, actual_answer, reference_answer, contexts)),
             "data_quality_flags": [],
         }
         sample["data_quality_flags"] = self._quality_flags(sample)
@@ -885,8 +870,8 @@ class Adapter(ProjectAdapter):
             return contexts
         return [contexts]
 
-    def _infer_scenario(self, question, actual_answer, golden_answer, contexts):
-        if golden_answer:
+    def _infer_scenario(self, question, actual_answer, reference_answer, contexts):
+        if reference_answer:
             return "qa_gold_answer"
         if contexts:
             return "qa_context_faithfulness"
@@ -901,8 +886,8 @@ class Adapter(ProjectAdapter):
         if not sample["output"].get("actual_answer"):
             flags.append("missing_actual_answer")
         scenario = sample.get("scenario")
-        if scenario == "qa_gold_answer" and not sample.get("reference", {}).get("golden_answer"):
-            flags.append("missing_golden_answer")
+        if scenario == "qa_gold_answer" and not sample.get("reference", {}).get("actual_answer"):
+            flags.append("missing_reference_answer")
         if scenario == "qa_context_faithfulness" and not sample["input"].get("contexts"):
             flags.append("missing_contexts")
         if scenario == "qa_weak_quality":

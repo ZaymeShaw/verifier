@@ -1,0 +1,121 @@
+{
+  "trace_id": "83d0648d-803e-4989-8e08-d1f0bfcc8c06",
+  "project_id": "client_search",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "客户年龄精确为45岁",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "客户性别为女性",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "年缴保费10万及以上",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "所有条件以AND逻辑组合",
+      "causal_category": "no_issue"
+    }
+  ],
+  "causal_category": "no_issue",
+  "earliest_divergence": {
+    "node": "",
+    "expected": "",
+    "actual": "",
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "not_verified",
+      "evidence": [
+        {
+          "field": "normalized_request.user_text",
+          "value": "45岁女性保费10万以上",
+          "note": "用户查询原样传入，无需额外标准化处理"
+        }
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        {
+          "field": "extracted_output.is_empty_result",
+          "value": false,
+          "note": "非空结果，模型成功解析出条件"
+        },
+        {
+          "field": "extracted_output.logic",
+          "value": "AND",
+          "note": "AND 逻辑正确"
+        },
+        {
+          "field": "extracted_output.matched_level",
+          "value": 4,
+          "note": "匹配级别为4，表示所有条件均成功匹配到字段定义"
+        },
+        {
+          "field": "prompt.md 示例",
+          "value": "「45岁女性保费10万以上」→ {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"clientAge\", \"operator\": \"RANGE\", \"value\": {\"min\": 45, \"max\": 45}}, {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}, {\"field\": \"annPremSegNum\", \"operator\": \"GTE\", \"value\": 100000}]}",
+          "note": "prompt 中直接包含与此查询完全匹配的示例，模型可精确参考"
+        }
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        {
+          "field": "extracted_output.matched_level",
+          "value": 4,
+          "note": "匹配级别为最高值，所有解析条件均在字段定义中有明确对应"
+        }
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        {
+          "field": "judge_result.overall_fulfillment.status",
+          "value": "fulfilled",
+          "note": "所有4项业务预期均评估为 fulfilled"
+        },
+        {
+          "field": "judge_result.fulfillment_assessments",
+          "value": "客户年龄精确为45岁=fulfilled, 客户性别为女性=fulfilled, 年缴保费10万及以上=fulfilled, 所有条件以AND逻辑组合=fulfilled",
+          "note": "无任何未达成或部分达成的预期"
+        }
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": true,
+    "execution_trace": true,
+    "project_docs": true,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "本次查询无故障。用户查询「45岁女性保费10万以上」被正确解析为三个 AND 条件：clientAge RANGE {min:45, max:45}（45岁精确年龄）、clientSex MATCH \"女\"（女性映射）、annPremSegNum GTE 100000（10万=100000，以上=GTE）。prompt.md 中甚至直接包含了与该查询完全一致的示例，模型可精确参考执行。judge 评估所有4项业务预期均为 fulfilled，无任何偏离。",
+  "verification_steps": [
+    "无需验证：本次查询解析完全正确，所有预期均已满足。",
+    "如需回归验证，可直接检查 extracted_output 中 conditions 数组是否包含 clientAge RANGE {min:45,max:45}、clientSex MATCH \"女\"、annPremSegNum GTE 100000 三个条件，且 logic 为 AND。"
+  ],
+  "needs_human_review": false,
+  "scenario": "查询「45岁女性保费10万以上」被正确解析，prompt 中包含完全匹配的黄金示例，所有条件均符合业务规则。无故障，无需修复。",
+  "summary": {
+    "causal_category": "no_issue",
+    "attribution_count": 4,
+    "probe_count": 1,
+    "summary_text": "本次查询无故障。用户查询「45岁女性保费10万以上」被正确解析为三个 AND 条件：clientAge RANGE {min:45, max:45}（45岁精确年龄）、clientSex MATCH \"女\"（女性映射）、annPremSegNum GTE 100000（10万=100000，以上=GTE）。prompt.md 中甚至直接包含了与该查询完全一致的示例，模型可精确参考执行。judge 评估所有4项业务预期均为 fulfilled，无任何偏离。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

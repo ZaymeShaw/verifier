@@ -1,0 +1,97 @@
+{
+  "project": "QA",
+  "attributes": [
+    {
+      "trace_id": "55add140-5115-42c5-83e7-3a50cb96ab64",
+      "project_id": "QA",
+      "case_id": "",
+      "expectation_attributions": [
+        {
+          "expectation_id": "QA:answer_quality",
+          "causal_category": "implementation_bug"
+        }
+      ],
+      "causal_category": "需人工复核",
+      "earliest_divergence": {
+        "node": "qa.sample.normalize",
+        "expected": "question = '我去年买的那个百万医疗险，要是住院花了八万，社保报完我自己掏了三万，这保险能给我报多少啊？'",
+        "actual": "question = ''",
+        "evidence": [
+          "原始输入 run_trace.input.input.query 包含完整 query 文本",
+          "归一化后 normalized_request.input.question 为空字符串",
+          "data_quality_flags 含 'missing_question'"
+        ],
+        "confidence": "high"
+      },
+      "chain_nodes": [
+        {
+          "status": "suspicious",
+          "evidence": [
+            "scenario=qa_gold_answer",
+            "flags=['missing_question']",
+            "question 在原始输入中存在（input.input.query）但归一化后丢失"
+          ]
+        },
+        {
+          "status": "not_verified",
+          "evidence": [
+            "actual_answer 正常读取"
+          ]
+        },
+        {
+          "status": "not_verified",
+          "evidence": [
+            "actual_answer_present=true"
+          ]
+        }
+      ],
+      "probe_results": [
+        {
+          "probe_id": "",
+          "status": "not_verified"
+        }
+      ],
+      "evidence_coverage": {
+        "query": false,
+        "actual": true,
+        "expected": true,
+        "execution_trace": true,
+        "project_docs": false,
+        "code_or_config": true
+      },
+      "root_cause_hypothesis": "QA 适配器的 _normalize_sample 方法在提取 question 字段时，仅检查 input_part 第一层的 question/query/user_input 键，未覆盖嵌套的 input_part['input']['query'] 路径。当前 case 的原始输入结构为 case.input = {data_quality_flags, input: {query: '...'}, metadata, scenario}，即真正的 query 位于嵌套的第二层 input.input.query 中。同函数中 contexts 提取已通过 (input_part.get('input') or {}).get('contexts') 处理了嵌套 input 结构，但 question 提取链未同步更新，导致 question 被误判为空、触发 missing_question 标记，进而使 judge 因缺少 question 而无法执行语义评测，最终 QA:answer_quality 变为 not_evaluable。",
+      "verification_steps": [
+        "在 adapter.py 的 _normalize_sample 中，将 question 提取链改为包含 input_part.get('input', {}).get('query') 和 input_part.get('input', {}).get('question') 回退路径",
+        "重新运行当前 case（trace_id=55add140）验证 normalized_request.input.question 非空且 missing_question flag 消失",
+        "确认 judge 在 question 恢复后能正常产出 semantic evaluation 结果"
+      ],
+      "patch_direction": [
+        "修改 adapter.py _normalize_sample 的 question 提取行为，使其与 contexts 提取保持一致：在 data.get('question') | input_part.get('question') | input_part.get('query') | input_part.get('user_input') 之后，增加 input_part.get('input', {}).get('query') | input_part.get('input', {}).get('question') 作为额外回退",
+        "可选：在 build_request 中将 case.input 扁平化，消除嵌套 input.input 结构，从根本上避免字段提取遗漏"
+      ],
+      "needs_human_review": false,
+      "scenario": "qa_gold_answer",
+      "summary": {
+        "causal_category": "needs_human_review",
+        "attribution_count": 1,
+        "probe_count": 1,
+        "summary_text": "QA 适配器的 _normalize_sample 方法在提取 question 字段时，仅检查 input_part 第一层的 question/query/user_input 键，未覆盖嵌套的 input_part['input']['query'] 路径。当前 case 的原始输入结构为 case.input = {data_quality_flags, input: {query: '...'}, metadata, scenario}，即真正的 query 位于嵌套的第二层 input.input.query 中。同函数中 contexts 提取已通过 (input_part.get('input') or {}).get('contexts') 处理了嵌套 input 结构，但 question 提取链未同步更新，导致 question 被误判为空、触发 missing_question 标记，进而使 judge 因缺少 question 而无法执行语义评测，最终 QA:answer_quality 变为 not_evaluable。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      },
+      "analysis_method": "source_code_static_analysis_with_execution_trace_correlation",
+      "analysis_quality": {
+        "passed": false,
+        "missing": [
+          "local_verification"
+        ],
+        "standard": "通过执行 trace 与源码静态分析交叉验证，定位到 _normalize_sample 中 question 提取链未覆盖嵌套 input.input 结构的实现缺陷",
+        "status": "next_verification_step"
+      },
+      "incomplete_reason": "归因需要下一步验证：local_verification",
+      "suspected_locations": [
+        "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py:_normalize_sample:question 提取链"
+      ]
+    }
+  ]
+}

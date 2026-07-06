@@ -1,0 +1,91 @@
+{
+  "project_id": "QA",
+  "rows": [
+    {
+      "id": "mock-agent-QA-f8906092",
+      "input": "qa_gold_answer",
+      "scenario": "qa_gold_answer",
+      "output_summary": "{\"actual_answer\": \"您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。\"}",
+      "reference_summary": "{\"golden_answer\": \"拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。\"}",
+      "status": "not_fulfilled",
+      "execution_mode": "",
+      "output_source": "provided_output",
+      "verdict": "incorrect",
+      "fulfillment_status": "not_fulfilled",
+      "judge_summary": {
+        "status": "not_fulfilled",
+        "fulfillment_status": "not_fulfilled",
+        "verdict": "incorrect",
+        "reason": "not_fulfilled · blocking=[信息准确无虚构] · 用户若拨打此号码可能无法接通，导致理赔申请受阻，严重影响体验与信任",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 3,
+        "blocking_count": 2,
+        "primary_failure_dimensions": [
+          {
+            "blocking": true,
+            "downstream_impact": "用户若拨打此号码可能无法接通，导致理赔申请受阻，严重影响体验与信任",
+            "evidence": "实际答复给出了‘400-xxx-xxxx’这一包含占位符的号码，属于虚构或不实信息 | 金标准中的联系方式应为‘客服热线’，无具体占位号码 | run_trace.extracted_output.actual_answer | run_trace.reference_contract.golden_answer",
+            "expectation_id": "信息准确无虚构",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          }
+        ]
+      },
+      "attribution_summary": {
+        "attribution_count": 3,
+        "causal_category": "insufficient_evidence",
+        "is_complete": false,
+        "is_formal_attribution": false,
+        "probe_count": 1,
+        "summary_text": "attribute agent LLM 调用失败。"
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 1,
+        "protocol_gap_count": 1,
+        "consistency_gap_count": 0,
+        "recommended_fix_count": 1,
+        "issues": [
+          "QA attribution causal_category outside taxonomy: insufficient_evidence"
+        ]
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": true,
+      "quality_flags": [
+        "attribute_blocked"
+      ],
+      "check_passed": false,
+      "issue_count": 2,
+      "fallback_count": 0,
+      "causal_category": "insufficient_evidence",
+      "divergence_stage": "semantic judge or attribute LLM",
+      "root_cause_summary": "attribute agent LLM 调用失败。",
+      "created_at": "2026-07-04T04:31:06.636816+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "c260b933-cb70-496f-b6a4-a5b797d68a27"
+    }
+  ],
+  "total": 1,
+  "summary": {
+    "fulfilled_count": 0,
+    "not_fulfilled_count": 1,
+    "pending_count": 0,
+    "correct_count": 0,
+    "incorrect_count": 1,
+    "uncertain_count": 0,
+    "human_review_count": 1,
+    "check_failed_count": 1,
+    "issue_count": 2,
+    "fallback_count": 0,
+    "rows_with_fallback_count": 0,
+    "by_scenario": {
+      "qa_gold_answer": 1
+    }
+  }
+}

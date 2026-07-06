@@ -1,0 +1,42 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "c0400e92-2b3a-4af8-8dee-6ab3a077b174"
+      ],
+      "representative_traces": [
+        "c0400e92-2b3a-4af8-8dee-6ab3a077b174"
+      ],
+      "common_root_cause": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "shared_failure_pattern": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "representative_diffs": [
+        {
+          "case_id": "c0400e92-2b3a-4af8-8dee-6ab3a077b174",
+          "node": "state_machine",
+          "evidence": [
+            "marketing-planning service unavailable: <urlopen error [Errno 61] Connection refused>"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+      ],
+      "verification_cases": [
+        "c0400e92-2b3a-4af8-8dee-6ab3a077b174"
+      ],
+      "next_actions": [
+        "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+      ]
+    }
+  ],
+  "common_root_cause": "",
+  "impact": "",
+  "priority": ""
+}

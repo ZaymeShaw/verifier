@@ -30,8 +30,14 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # =========================
 CONFIG_FILE="$SCRIPT_DIR/config.yaml"
 
-# 用 python3 解析 YAML 输出为 shell 可读格式
-eval "$(python3 -c "
+# 从 config.yaml 读取 python.executable；优先 PYTHON_EXECUTABLE 环境变量覆盖
+PYTHON_BIN="${PYTHON_EXECUTABLE:-}"
+if [ -z "$PYTHON_BIN" ]; then
+    PYTHON_BIN=$(python -c "from impl.core.config import get_python_config; print(get_python_config().executable)" 2>/dev/null || echo "python3")
+fi
+
+# 用正确解释器解析 YAML 输出为 shell 可读格式
+eval "$("$PYTHON_BIN" -c "
 import yaml, sys
 with open('$CONFIG_FILE') as f:
     cfg = yaml.safe_load(f)
@@ -164,7 +170,7 @@ if [ ${#NEED_AUDIT_ISSUES[@]} -gt 0 ]; then
     --arg issues "$ISSUE_LIST" \
     '{
       "decision": "block",
-      "reason": ("以下 issue 已标记为 closed，但缺少审核 verdict：\n\n" + $issues + "\n请为每个 issue 执行：\n1. Read 审核标准文件：`hooks/issue-solved/audit-prompt.md`\n2. Spawn 独立审核 agent\n3. 审核 agent 写入 verdict\n4. 用户关闭会话触发 re-check"),
+      "reason": ("以下 issue 已标记为 closed，但缺少审核 verdict/需重新verdict：\n\n" + $issues + "\n请为每个 issue 执行：\n1. Read 审核标准文件：`hooks/issue-solved/audit-prompt.md`\n2. Spawn 独立审核 agent\n3. 审核 agent 写入 verdict\n4. 用户关闭会话触发 re-check"),
       "systemMessage": "🔍 Issue 审核：请启动独立审核 agent"
     }'
   exit 0

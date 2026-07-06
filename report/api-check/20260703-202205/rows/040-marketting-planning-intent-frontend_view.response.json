@@ -1,0 +1,1294 @@
+{
+  "project_info": {
+    "project_id": "marketting-planning-intent",
+    "name": "营销规划意图识别评估项目",
+    "description": "单独评估营销规划业务服务的 intent-recognition 单轮接口，与 marketting-planning 共享业务服务但测评边界只覆盖意图识别。"
+  },
+  "run_trace_summary": {
+    "trace_id": "155c874f-8644-4e8a-af1d-5b4b074818af",
+    "project_id": "marketting-planning-intent",
+    "case_id": "mock-agent-marketting-planning-intent-a07d4099",
+    "live_result": {
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-a07d4099",
+      "session_id": "default_session",
+      "raw_input": {
+        "extra_input_params": {
+          "agent_args": {
+            "conversation_id": "default_conv",
+            "message": {
+              "content": "我想了解一下去年买过我们年金险的客户，他们的大致年龄分布和家庭结构是什么样的？",
+              "content_type": "text"
+            }
+          }
+        },
+        "org_id": "default_org",
+        "session_id": "default_session",
+        "trace_id": "default_trace",
+        "user_text": "我想了解一下去年买过我们年金险的客户，他们的大致年龄分布和家庭结构是什么样的？"
+      },
+      "normalized_request": {
+        "case_id": "mock-agent-marketting-planning-intent-a07d4099",
+        "query": "我想了解一下去年买过我们年金险的客户，他们的大致年龄分布和家庭结构是什么样的？",
+        "scenario": "intent_recognition",
+        "session_id": "default_session"
+      },
+      "call_status": "succeeded",
+      "runtime_ms": 3,
+      "extracted_output": {
+        "ambiguous": false,
+        "confidence": 1.0,
+        "fallback": false,
+        "intent": "customer_portrait",
+        "raw_intent": "1001"
+      },
+      "output_source": "live_service",
+      "application_boundary": {
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ],
+        "scope": "single_turn_intent_recognition"
+      },
+      "interaction_mode": "single_turn"
+    },
+    "execution_mode": "",
+    "output_source": "live_service",
+    "scenario": "intent_recognition",
+    "application_boundary": {
+      "excludes": [
+        "multi_turn_planning",
+        "sse_card_generation"
+      ],
+      "scope": "single_turn_intent_recognition"
+    },
+    "evidence_refs": [
+      {
+        "ref_id": "",
+        "source": "",
+        "kind": "",
+        "stage": "",
+        "summary": "",
+        "location": ""
+      }
+    ],
+    "status": "ok",
+    "created_at": "2026-07-03T12:22:43.574374+00:00",
+    "state_history": [
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T12:22:43.569399+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T12:22:43.569413+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T12:22:43.574419+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T12:22:43.574449+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T12:24:12.132853+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T12:24:12.132913+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T12:24:12.132935+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T12:25:57.229191+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T12:27:04.948590+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T12:27:04.948626+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T12:27:04.966190+00:00",
+        "status": "succeeded"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "reason": "trace exists",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "reason": "consumer contract available",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "reason": "business expectations available",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "reason": "fulfillment assessments cover expectations",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "reason": "fulfillment boundary available",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "reason": "derived verdict matches fulfillment state",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "reason": "no contradictions",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "reason": "no unsupported claims",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "reason": "fulfillment assessments cover expectations",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "reason": "attribute targets fulfillment gaps",
+        "recommended_transition": "finalize",
+        "recoverable": false
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": false,
+        "reason": "probe evidence missing",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": true
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "reason": "expectation attribution evidence available",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": false
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "reason": "causal category supported",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": true
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "reason": "improvement direction available",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": true
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "reason": "finalization ready",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "reason": "no contradictions",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "reason": "no unsupported claims",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      }
+    ],
+    "transition_decisions": [
+      {
+        "condition": "always",
+        "from_state": "prepare_trace",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "mock_or_input"
+      },
+      {
+        "condition": "always",
+        "from_state": "mock_or_input",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "execute_or_capture"
+      },
+      {
+        "condition": "always",
+        "from_state": "execute_or_capture",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "collect_evidence"
+      },
+      {
+        "condition": "always",
+        "from_state": "collect_evidence",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "build_business_expectations"
+      },
+      {
+        "condition": "always",
+        "from_state": "build_business_expectations",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "evaluate_fulfillment"
+      },
+      {
+        "condition": "always",
+        "from_state": "evaluate_fulfillment",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "fulfillment_critic"
+      },
+      {
+        "condition": "fulfillment_requires_attribute",
+        "from_state": "fulfillment_critic",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "attribute_expectations"
+      },
+      {
+        "condition": "always",
+        "from_state": "attribute_expectations",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "run_attribution_probes"
+      },
+      {
+        "condition": "always",
+        "from_state": "run_attribution_probes",
+        "reason": "probe evidence missing",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "attribution_critic"
+      },
+      {
+        "condition": "always",
+        "from_state": "attribution_critic",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "finalize"
+      },
+      {
+        "condition": "stop",
+        "from_state": "finalize",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed",
+        "to_state": "completed"
+      }
+    ],
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "session_id": "default_session",
+    "turn_index": 0
+  },
+  "reference_panel": {
+    "reference": {
+      "intent": "客户画像分析（未提取必要槽位）"
+    },
+    "source": "judge_generated",
+    "actual": {
+      "confidence": 1.0,
+      "intent": "customer_portrait"
+    }
+  },
+  "judge_panel": {
+    "trace_id": "155c874f-8644-4e8a-af1d-5b4b074818af",
+    "project_id": "marketting-planning-intent",
+    "verdict": "incorrect",
+    "score": 0.0,
+    "expected": {
+      "intent": "客户画像分析（未提取必要槽位）"
+    },
+    "actual": {
+      "confidence": 1.0,
+      "intent": "customer_portrait"
+    },
+    "consumer_contract": {
+      "application_boundary": {
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ],
+        "scope": "single_turn_intent_recognition"
+      },
+      "consumer": "营销计划分析引擎",
+      "contract": "接收意图标签和槽位参数（时间范围、产品、分析维度），以生成符合条件的客户画像"
+    },
+    "intent_model": {
+      "blocking_requirements": [
+        "意图标签正确",
+        "必要槽位提取"
+      ],
+      "constraints": {
+        "analysis_dimensions": [
+          "年龄分布",
+          "家庭结构"
+        ],
+        "product": "年金险",
+        "time_range": "去年"
+      },
+      "explicit_intents": [
+        "客户画像分析"
+      ],
+      "implicit_business_intents": [
+        "查询特定条件下的客户特征分布"
+      ],
+      "intent_evidence": [
+        "用户查询中包含明确的分析需求和约束条件（去年、年金险、年龄分布、家庭结构）"
+      ],
+      "nice_to_have_requirements": [
+        "高置信度"
+      ],
+      "raw_user_request": "我想了解一下去年买过我们年金险的客户，他们的大致年龄分布和家庭结构是什么样的？",
+      "success_definition": "系统正确识别意图为客户画像分析，并提取时间、产品、分析维度等约束条件，为下游准确提供客户画像分析数据。"
+    },
+    "business_expectations": [
+      {
+        "expectation_id": "意图标签为客户画像分析",
+        "downstream_consumer": "营销计划分析引擎",
+        "user_intent": "客户画像分析",
+        "expected_outcome": "intent 字段为 customer_portrait 或等价",
+        "required_capabilities": [
+          "意图分类"
+        ],
+        "acceptance_criteria": [
+          "intent 值为 customer_portrait"
+        ],
+        "priority": "high",
+        "evidence_refs": [
+          "run_trace.extracted_output.intent"
+        ]
+      },
+      {
+        "expectation_id": "必要槽位提取",
+        "downstream_consumer": "营销计划分析引擎",
+        "user_intent": "提取业务约束",
+        "expected_outcome": "slots 至少包含 time_range 和 product，entities 或 slots 包含 analysis_dimensions",
+        "required_capabilities": [
+          "实体识别"
+        ],
+        "acceptance_criteria": [
+          "输出中包含槽位 time_range=去年",
+          "槽位 product=年金险",
+          "包含分析维度槽位（如 age_distribution, family_structure）"
+        ],
+        "priority": "high",
+        "evidence_refs": [
+          "run_trace.extracted_output.slots",
+          "run_trace.extracted_output.entities"
+        ]
+      },
+      {
+        "expectation_id": "置信度高于阈值",
+        "downstream_consumer": "营销计划分析引擎",
+        "user_intent": "高置信度",
+        "expected_outcome": "confidence >= 0.7",
+        "required_capabilities": [
+          "置信度计算"
+        ],
+        "acceptance_criteria": [
+          "confidence >= 0.7"
+        ],
+        "priority": "medium",
+        "evidence_refs": [
+          "run_trace.extracted_output.confidence"
+        ]
+      },
+      {
+        "expectation_id": "未触发回退策略",
+        "downstream_consumer": "营销计划分析引擎",
+        "user_intent": "正常意图识别",
+        "expected_outcome": "fallback=false",
+        "required_capabilities": [
+          "回退策略"
+        ],
+        "acceptance_criteria": [
+          "fallback 字段为 false"
+        ],
+        "priority": "low",
+        "evidence_refs": [
+          "run_trace.extracted_output.fallback"
+        ]
+      },
+      {
+        "expectation_id": "正确分派到客户画像处理模块",
+        "downstream_consumer": "营销计划分析引擎",
+        "user_intent": "客户画像分析",
+        "expected_outcome": "intent 值为 customer_portrait，与模块映射一致",
+        "required_capabilities": [
+          "意图分派"
+        ],
+        "acceptance_criteria": [
+          "intent 值正确路由到客户画像处理链"
+        ],
+        "priority": "high",
+        "evidence_refs": [
+          "run_trace.extracted_output.intent"
+        ]
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "意图标签为客户画像分析",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "intent 值为 customer_portrait"
+        ],
+        "actual_evidence": [
+          "extracted_output.intent = customer_portrait"
+        ],
+        "downstream_impact": "意图标签正确，支持下游模块正确选择处理逻辑",
+        "blocking": true,
+        "evidence_refs": [
+          "run_trace.extracted_output.intent"
+        ]
+      },
+      {
+        "expectation_id": "必要槽位提取",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "slots 或 entities 中包含 time_range=去年、product=年金险、analysis_dimensions 等槽位"
+        ],
+        "actual_evidence": [
+          "extracted_output.slots = {}",
+          "extracted_output.entities = []"
+        ],
+        "downstream_impact": "缺失槽位将导致下游无法准确限定查询范围，可能返回全部客户画像，不符合用户期望",
+        "blocking": true,
+        "evidence_refs": [
+          "run_trace.extracted_output.slots",
+          "run_trace.extracted_output.entities"
+        ]
+      },
+      {
+        "expectation_id": "置信度高于阈值",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "confidence >= 0.7"
+        ],
+        "actual_evidence": [
+          "extracted_output.confidence = 1.0"
+        ],
+        "downstream_impact": "高置信度增强下游信任，无需额外确认",
+        "blocking": false,
+        "evidence_refs": [
+          "run_trace.extracted_output.confidence"
+        ]
+      },
+      {
+        "expectation_id": "未触发回退策略",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "fallback 字段为 false"
+        ],
+        "actual_evidence": [
+          "extracted_output.fallback = false"
+        ],
+        "downstream_impact": "无降级，保证处理链路完整",
+        "blocking": false,
+        "evidence_refs": [
+          "run_trace.extracted_output.fallback"
+        ]
+      },
+      {
+        "expectation_id": "正确分派到客户画像处理模块",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "intent 为 customer_portrait，模块映射正确"
+        ],
+        "actual_evidence": [
+          "extracted_output.intent = customer_portrait",
+          "intent_name = 客户分布"
+        ],
+        "downstream_impact": "请求进入正确的业务模块，可正常处理",
+        "blocking": true,
+        "evidence_refs": [
+          "run_trace.extracted_output.intent"
+        ]
+      },
+      {
+        "expectation_id": "intent_contract",
+        "status": "not_fulfilled",
+        "downstream_impact": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=customer_portrait，confidence=1.0，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+        "blocking": true
+      }
+    ],
+    "overall_fulfillment": {
+      "assessment_count": 6,
+      "blocking_expectations": [
+        "必要槽位提取",
+        "intent_contract"
+      ],
+      "status": "not_fulfilled"
+    },
+    "reconstructed_intent": "客户画像分析（未提取必要槽位）",
+    "judge_basis": "基于用户查询的意图分析、关键评估维度（intent_label、required_slots_or_entities 等）以及对下游消费者合同的理解",
+    "judge_method": "semantic_analysis_with_contract_check",
+    "semantic_equivalence_checks": [
+      {
+        "actual_fragment": "customer_portrait",
+        "basis": "customer_portrait 是客户画像分析的标准意图名称，与用户查询中的分析需求语义一致",
+        "equivalent": true,
+        "expected_fragment": "客户画像分析"
+      }
+    ],
+    "reference_generation_basis": {
+      "alignment_to_actual_shape": "从用户查询中推导出期望的意图标签和槽位，实际输出仅提供了意图标签，未提供槽位",
+      "evidence": [
+        "用户查询中的明确约束条件（去年、年金险、年龄分布、家庭结构）"
+      ],
+      "source": "通用业务理解"
+    },
+    "verdict_derivation": {
+      "assessment_summary": "意图标签正确，置信度高，未触发回退，但缺失必要槽位提取（时间、产品、分析维度），导致下游可能无法准确执行。",
+      "blocking_gaps": [
+        "缺少槽位 time_range",
+        "缺少槽位 product",
+        "缺少分析维度槽位"
+      ],
+      "contract_gate": "failed",
+      "primary_boundary": "single_turn_intent_recognition",
+      "why_verdict": "虽然意图标签正确满足了核心意图，但因未提取关键业务约束槽位，整体未满足阻塞期望，因此意图识别不完整。"
+    },
+    "boundary_decision": {
+      "reasoning": "基于运行追踪，意图识别输出清晰，可以进行评估，不存在无法评估的约束。",
+      "within_evaluable_scope": true
+    },
+    "evaluation_boundary": {
+      "boundary_sources": "run_trace 和 critical_intent_dimensions",
+      "conflict_policy": "无",
+      "judge_question": "意图识别输出是否满足用户查询所隐含的需求？",
+      "primary_boundary_id": "single_turn_intent_recognition",
+      "primary_boundary_name": "单轮意图识别",
+      "verdict_basis": "根据意图标签、置信度、槽位提取和回退策略进行综合判定"
+    },
+    "missing": [
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "槽位 time_range",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "槽位 product",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "槽位 analysis_dimensions",
+        "incomplete": false
+      }
+    ],
+    "evidence": [
+      "extracted_output.intent = customer_portrait",
+      "extracted_output.confidence = 1.0",
+      "extracted_output.fallback = false",
+      "extracted_output.slots = {}",
+      "extracted_output.entities = []"
+    ],
+    "reasoning_summary": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=customer_portrait，confidence=1.0，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+    "scenario": "intent_recognition",
+    "quality_flags": [
+      "intent_contract_gate_failed"
+    ],
+    "summary": {
+      "assessment_count": 5,
+      "blocking_count": 3,
+      "fulfillment_status": "not_fulfilled",
+      "is_formal_attribution": true,
+      "primary_failure_dimensions": [
+        {
+          "blocking": true,
+          "downstream_impact": "缺失槽位将导致下游无法准确限定查询范围，可能返回全部客户画像，不符合用户期望",
+          "evidence": "extracted_output.slots = {} | extracted_output.entities = [] | slots 或 entities 中包含 time_range=去年、product=年金险、analysis_dimensions 等槽位 | run_trace.extracted_output.slots | run_trace.extracted_output.entities",
+          "expectation_id": "必要槽位提取",
+          "status": "not_fulfilled",
+          "within_evaluable_scope": true
+        }
+      ],
+      "reason": "not_fulfilled · blocking=[必要槽位提取] · 缺失槽位将导致下游无法准确限定查询范围，可能返回全部客户画像，不符合用户期望",
+      "reason_source": "aggregated_fulfillment"
+    },
+    "display_status": "not_fulfilled",
+    "display_reason": "not_fulfilled · blocking=[intent_contract,必要槽位提取] · 当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=customer_portrait，confidence=1.0，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+    "wrong_missing_extra": {
+      "missing": [
+        {
+          "kind": "missing",
+          "error_type": "",
+          "evidence_ref": "",
+          "raw": "槽位 time_range",
+          "incomplete": false
+        },
+        {
+          "kind": "missing",
+          "error_type": "",
+          "evidence_ref": "",
+          "raw": "槽位 product",
+          "incomplete": false
+        },
+        {
+          "kind": "missing",
+          "error_type": "",
+          "evidence_ref": "",
+          "raw": "槽位 analysis_dimensions",
+          "incomplete": false
+        }
+      ]
+    },
+    "blocked_expectations": [
+      {
+        "expectation_id": "意图标签为客户画像分析",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "intent 值为 customer_portrait"
+        ],
+        "actual_evidence": [
+          "extracted_output.intent = customer_portrait"
+        ],
+        "downstream_impact": "意图标签正确，支持下游模块正确选择处理逻辑",
+        "blocking": true,
+        "evidence_refs": [
+          "run_trace.extracted_output.intent"
+        ]
+      },
+      {
+        "expectation_id": "必要槽位提取",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "slots 或 entities 中包含 time_range=去年、product=年金险、analysis_dimensions 等槽位"
+        ],
+        "actual_evidence": [
+          "extracted_output.slots = {}",
+          "extracted_output.entities = []"
+        ],
+        "downstream_impact": "缺失槽位将导致下游无法准确限定查询范围，可能返回全部客户画像，不符合用户期望",
+        "blocking": true,
+        "evidence_refs": [
+          "run_trace.extracted_output.slots",
+          "run_trace.extracted_output.entities"
+        ]
+      },
+      {
+        "expectation_id": "正确分派到客户画像处理模块",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "intent 为 customer_portrait，模块映射正确"
+        ],
+        "actual_evidence": [
+          "extracted_output.intent = customer_portrait",
+          "intent_name = 客户分布"
+        ],
+        "downstream_impact": "请求进入正确的业务模块，可正常处理",
+        "blocking": true,
+        "evidence_refs": [
+          "run_trace.extracted_output.intent"
+        ]
+      },
+      {
+        "expectation_id": "intent_contract",
+        "status": "not_fulfilled",
+        "downstream_impact": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=customer_portrait，confidence=1.0，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+        "blocking": true
+      }
+    ]
+  },
+  "attribute_panel": {
+    "trace_id": "155c874f-8644-4e8a-af1d-5b4b074818af",
+    "project_id": "marketting-planning-intent",
+    "case_id": "",
+    "analysis_method": "current_case_intent_contract_trace",
+    "chain_nodes": [
+      {
+        "name": "",
+        "status": "verified",
+        "reason": ""
+      },
+      {
+        "name": "",
+        "status": "verified",
+        "reason": ""
+      },
+      {
+        "name": "",
+        "status": "verified",
+        "reason": ""
+      },
+      {
+        "name": "",
+        "status": "verified",
+        "reason": ""
+      },
+      {
+        "name": "",
+        "status": "failed",
+        "evidence": [
+          {
+            "query": "我想了解一下去年买过我们年金险的客户，他们的大致年龄分布和家庭结构是什么样的？"
+          },
+          {
+            "expected": {
+              "intent": "客户画像分析（未提取必要槽位）"
+            }
+          },
+          {
+            "actual": {
+              "confidence": 1.0,
+              "intent": "customer_portrait"
+            }
+          },
+          {
+            "missing": [
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "槽位 time_range"
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "槽位 product"
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "槽位 analysis_dimensions"
+              }
+            ]
+          }
+        ],
+        "reason": ""
+      }
+    ],
+    "earliest_divergence": {
+      "actual": {
+        "confidence": 1.0,
+        "intent": "customer_portrait"
+      },
+      "confidence": "medium",
+      "evidence": [
+        [
+          {
+            "error_type": "",
+            "evidence_ref": "",
+            "incomplete": false,
+            "kind": "missing",
+            "raw": "槽位 time_range"
+          },
+          {
+            "error_type": "",
+            "evidence_ref": "",
+            "incomplete": false,
+            "kind": "missing",
+            "raw": "槽位 product"
+          },
+          {
+            "error_type": "",
+            "evidence_ref": "",
+            "incomplete": false,
+            "kind": "missing",
+            "raw": "槽位 analysis_dimensions"
+          }
+        ]
+      ],
+      "expected": {
+        "intent": "客户画像分析（未提取必要槽位）"
+      },
+      "node": "intent_contract_gate"
+    },
+    "evidence_coverage": {
+      "actual": true,
+      "execution_trace": true,
+      "expected": true,
+      "query": true
+    },
+    "analysis_quality": {
+      "passed": true,
+      "status": "supported_root_cause"
+    },
+    "incomplete_reason": "",
+    "suspected_locations": [
+      "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/schemas/intent.py",
+      "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/prompts/intent_prompt.py",
+      "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/steps/intent_recognition.py"
+    ],
+    "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': '客户画像分析（未提取必要槽位）'}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'slots': {}, 'entities': []}，最早差异位于 intent_contract_gate。",
+    "verification_steps": [
+      "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+    ],
+    "patch_direction": [
+      "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+    ],
+    "expectation_attributions": [
+      {
+        "expectation_id": "必要槽位提取",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "intent_contract",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      }
+    ],
+    "causal_category": "implementation_bug",
+    "needs_human_review": false,
+    "scenario": "intent_recognition",
+    "summary": {
+      "attribution_count": 2,
+      "causal_category": "needs_human_review",
+      "is_complete": true,
+      "is_formal_attribution": true,
+      "probe_count": 0,
+      "summary_text": "系统架构在设计上从未支持 customer_portrait 意图的槽位提取。三层根因：(1) IntentResult schema 仅含 intent/confidence/target_value/path_types 四个字段，无通用 slots/entities 字段承载业务约束；(2) LLM prompt 仅在 nbev_planning 意图下指示提取 target_value 和 path_types，对 customer_portrait 无任何槽位提取指令；(3) try_homepage_intent 的正则匹配在识别到 customer_portrait 后直接返回，跳过了可能执行槽位提取的 LLM 调用路径。本次请求的 query 包含完整的业务约束（时间=去年、产品=年金险、分析维度=年龄分布+家庭结构），但因上述三层缺失，最终 adapter 提取到的 slots 为空 dict、entities 为空 list。"
+    },
+    "display_causal_category": "implementation_bug",
+    "display_root_cause": "当前 case 期望 intent/slots 为 {'intent': '客户画像分析（未提取必要槽位）'}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'slots': {}, 'entities': []}，最早差异位于 intent_contract_gate。",
+    "display_verification_steps": [
+      "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+    ],
+    "display_patch_direction": [
+      "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+    ],
+    "attribution_count": 2,
+    "probe_count": 0
+  },
+  "fulfillment_panel": {
+    "consumer_contract": {
+      "application_boundary": {
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ],
+        "scope": "single_turn_intent_recognition"
+      },
+      "consumer": "营销计划分析引擎",
+      "contract": "接收意图标签和槽位参数（时间范围、产品、分析维度），以生成符合条件的客户画像"
+    },
+    "overall_fulfillment": {
+      "assessment_count": 6,
+      "blocking_expectations": [
+        "必要槽位提取",
+        "intent_contract"
+      ],
+      "status": "not_fulfilled"
+    },
+    "matrix": [
+      {
+        "expectation_id": "意图标签为客户画像分析",
+        "downstream_consumer": "营销计划分析引擎",
+        "expected_outcome": "intent 字段为 customer_portrait 或等价",
+        "required_capabilities": [
+          "意图分类"
+        ],
+        "status": "fulfilled",
+        "blocking": true,
+        "downstream_impact": "意图标签正确，支持下游模块正确选择处理逻辑"
+      },
+      {
+        "expectation_id": "必要槽位提取",
+        "downstream_consumer": "营销计划分析引擎",
+        "expected_outcome": "slots 至少包含 time_range 和 product，entities 或 slots 包含 analysis_dimensions",
+        "required_capabilities": [
+          "实体识别"
+        ],
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "缺失槽位将导致下游无法准确限定查询范围，可能返回全部客户画像，不符合用户期望"
+      },
+      {
+        "expectation_id": "置信度高于阈值",
+        "downstream_consumer": "营销计划分析引擎",
+        "expected_outcome": "confidence >= 0.7",
+        "required_capabilities": [
+          "置信度计算"
+        ],
+        "status": "fulfilled",
+        "blocking": false,
+        "downstream_impact": "高置信度增强下游信任，无需额外确认"
+      },
+      {
+        "expectation_id": "未触发回退策略",
+        "downstream_consumer": "营销计划分析引擎",
+        "expected_outcome": "fallback=false",
+        "required_capabilities": [
+          "回退策略"
+        ],
+        "status": "fulfilled",
+        "blocking": false,
+        "downstream_impact": "无降级，保证处理链路完整"
+      },
+      {
+        "expectation_id": "正确分派到客户画像处理模块",
+        "downstream_consumer": "营销计划分析引擎",
+        "expected_outcome": "intent 值为 customer_portrait，与模块映射一致",
+        "required_capabilities": [
+          "意图分派"
+        ],
+        "status": "fulfilled",
+        "blocking": true,
+        "downstream_impact": "请求进入正确的业务模块，可正常处理"
+      }
+    ],
+    "derived_verdict": "incorrect",
+    "verdict_derivation": {
+      "assessment_summary": "意图标签正确，置信度高，未触发回退，但缺失必要槽位提取（时间、产品、分析维度），导致下游可能无法准确执行。",
+      "blocking_gaps": [
+        "缺少槽位 time_range",
+        "缺少槽位 product",
+        "缺少分析维度槽位"
+      ],
+      "contract_gate": "failed",
+      "primary_boundary": "single_turn_intent_recognition",
+      "why_verdict": "虽然意图标签正确满足了核心意图，但因未提取关键业务约束槽位，整体未满足阻塞期望，因此意图识别不完整。"
+    }
+  },
+  "expectation_attribution_panel": {
+    "attributions": [
+      {
+        "expectation_id": "必要槽位提取",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "intent_contract",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      }
+    ],
+    "causal_category": "implementation_bug",
+    "incomplete_reason": ""
+  },
+  "cluster_panel": {
+    "project_id": "marketting-planning-intent",
+    "clusters": [
+      {
+        "canonical_attribution": true,
+        "causal_category": "implementation_bug",
+        "cluster_id": "expectation::implementation_bug::not_fulfilled",
+        "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': '客户画像分析（未提取必要槽位）'}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'slots': {}, 'entities': []}，最早差异位于 intent_contract_gate。",
+        "count": 1,
+        "expectation_ids": [
+          "必要槽位提取",
+          "intent_contract"
+        ],
+        "fulfillment_statuses": [
+          "not_fulfilled"
+        ],
+        "mechanism": "implementation_bug::not_fulfilled",
+        "minimal_fix_direction": [
+          "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+        ],
+        "needs_human_review": false,
+        "next_actions": [
+          "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+        ],
+        "representative_cases": [
+          "155c874f-8644-4e8a-af1d-5b4b074818af"
+        ],
+        "representative_diffs": [
+          {
+            "actual": {
+              "confidence": 1.0,
+              "intent": "customer_portrait"
+            },
+            "case_id": "155c874f-8644-4e8a-af1d-5b4b074818af",
+            "evidence": [
+              [
+                {
+                  "error_type": "",
+                  "evidence_ref": "",
+                  "incomplete": false,
+                  "kind": "missing",
+                  "raw": "槽位 time_range"
+                },
+                {
+                  "error_type": "",
+                  "evidence_ref": "",
+                  "incomplete": false,
+                  "kind": "missing",
+                  "raw": "槽位 product"
+                },
+                {
+                  "error_type": "",
+                  "evidence_ref": "",
+                  "incomplete": false,
+                  "kind": "missing",
+                  "raw": "槽位 analysis_dimensions"
+                }
+              ]
+            ],
+            "expected": {
+              "intent": "客户画像分析（未提取必要槽位）"
+            },
+            "node": "intent_contract_gate"
+          }
+        ],
+        "representative_traces": [
+          "155c874f-8644-4e8a-af1d-5b4b074818af"
+        ],
+        "shared_failure_pattern": "当前 case 期望 intent/slots 为 {'intent': '客户画像分析（未提取必要槽位）'}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'slots': {}, 'entities': []}，最早差异位于 intent_contract_gate。",
+        "verification_cases": [
+          "155c874f-8644-4e8a-af1d-5b4b074818af"
+        ]
+      }
+    ],
+    "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': '客户画像分析（未提取必要槽位）'}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'slots': {}, 'entities': []}，最早差异位于 intent_contract_gate。",
+    "impact": "",
+    "priority": "high"
+  },
+  "check_panel": {
+    "passed": false,
+    "issues": [
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/normalize.py",
+      "Failure attribution passed quality gate with suspected_locations but no code/config or local verification evidence.",
+      "attribution has unsupported root-cause/location claims",
+      "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug",
+      "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: Users, WorkSpace, app, case, confidence, entities"
+    ],
+    "boundary_violations": [
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/normalize.py"
+    ],
+    "protocol_gaps": [
+      "Failure attribution passed quality gate with suspected_locations but no code/config or local verification evidence.",
+      "attribution has unsupported root-cause/location claims",
+      "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug"
+    ],
+    "consistency_gaps": [
+      "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: Users, WorkSpace, app, case, confidence, entities"
+    ],
+    "recommended_fixes": [
+      "Downgrade to insufficient_evidence or next_verification_step until current-case chain evidence supports the root cause.",
+      "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions.",
+      "Complete missing protocol outputs before treating the chain as valid.",
+      "Ensure all steps use the same trace_id and latest run output."
+    ]
+  },
+  "table_row": {
+    "id": "mock-agent-marketting-planning-intent-a07d4099",
+    "input": "default_org",
+    "scenario": "intent_recognition",
+    "output_summary": "{\"ambiguous\": false, \"confidence\": 1.0, \"fallback\": false, \"intent\": \"customer_portrait\", \"raw_intent\": \"1001\"}",
+    "reference_summary": "{\"intent\": \"客户画像分析（未提取必要槽位）\"}",
+    "status": "not_fulfilled",
+    "execution_mode": "",
+    "output_source": "live_service",
+    "verdict": "incorrect",
+    "score": 0.0,
+    "fulfillment_status": "not_fulfilled",
+    "judge_summary": {
+      "status": "not_fulfilled",
+      "fulfillment_status": "not_fulfilled",
+      "verdict": "incorrect",
+      "score": 0.0,
+      "reason": "not_fulfilled · blocking=[必要槽位提取] · 缺失槽位将导致下游无法准确限定查询范围，可能返回全部客户画像，不符合用户期望",
+      "reason_source": "aggregated_fulfillment",
+      "reason_stage": "judge",
+      "is_formal_attribution": true,
+      "assessment_count": 5,
+      "blocking_count": 3,
+      "primary_failure_dimensions": [
+        {
+          "blocking": true,
+          "downstream_impact": "缺失槽位将导致下游无法准确限定查询范围，可能返回全部客户画像，不符合用户期望",
+          "evidence": "extracted_output.slots = {} | extracted_output.entities = [] | slots 或 entities 中包含 time_range=去年、product=年金险、analysis_dimensions 等槽位 | run_trace.extracted_output.slots | run_trace.extracted_output.entities",
+          "expectation_id": "必要槽位提取",
+          "status": "not_fulfilled",
+          "within_evaluable_scope": true
+        }
+      ]
+    },
+    "attribution_summary": {
+      "attribution_count": 2,
+      "causal_category": "needs_human_review",
+      "is_complete": true,
+      "is_formal_attribution": true,
+      "probe_count": 0,
+      "summary_text": "系统架构在设计上从未支持 customer_portrait 意图的槽位提取。三层根因：(1) IntentResult schema 仅含 intent/confidence/target_value/path_types 四个字段，无通用 slots/entities 字段承载业务约束；(2) LLM prompt 仅在 nbev_planning 意图下指示提取 target_value 和 path_types，对 customer_portrait 无任何槽位提取指令；(3) try_homepage_intent 的正则匹配在识别到 customer_portrait 后直接返回，跳过了可能执行槽位提取的 LLM 调用路径。本次请求的 query 包含完整的业务约束（时间=去年、产品=年金险、分析维度=年龄分布+家庭结构），但因上述三层缺失，最终 adapter 提取到的 slots 为空 dict、entities 为空 list。"
+    },
+    "check_summary": {
+      "passed": false,
+      "issue_count": 8,
+      "protocol_gap_count": 3,
+      "consistency_gap_count": 1,
+      "recommended_fix_count": 4,
+      "issues": [
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/normalize.py",
+        "Failure attribution passed quality gate with suspected_locations but no code/config or local verification evidence.",
+        "attribution has unsupported root-cause/location claims",
+        "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug",
+        "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: Users, WorkSpace, app, case, confidence, entities"
+      ]
+    },
+    "fallback_summary": {
+      "count": 0,
+      "needs_human_review": false
+    },
+    "needs_human_review": false,
+    "quality_flags": [
+      "intent_contract_gate_failed"
+    ],
+    "check_passed": false,
+    "issue_count": 12,
+    "fallback_count": 0,
+    "causal_category": "needs_human_review",
+    "divergence_stage": "intent_contract_gate",
+    "root_cause_summary": "系统架构在设计上从未支持 customer_portrait 意图的槽位提取。三层根因：(1) IntentResult schema 仅含 intent/confidence/target_value/path_types 四个字段，无通用 slots/entities 字段承载业务约束；(2) LLM prompt 仅在 nbev_planning 意图下指示提取 target_value 和 path_types，对 customer_portrait 无任何槽位提取指令；(3) try_homepage_intent 的正则匹配在识别到 customer_portrait 后直接返回，跳过了可能执行槽位提取的 LLM 调用路径。本次请求的 query 包含完整的业务约束（时间=去年、产品=年金险、分析维度=年龄分布+家庭结构），但因上述三层缺失，最终 adapter 提取到的 slots 为空 dict、entities 为空 list。",
+    "created_at": "2026-07-03T12:22:43.574374+00:00",
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "trace_id": "155c874f-8644-4e8a-af1d-5b4b074818af"
+  },
+  "project_extensions": {
+    "intent_labels": [
+      "other",
+      "customer_portrait",
+      "nbev_planning",
+      "nbev_planning_fallback",
+      "achievement_measurement_adjustment",
+      "team_portrait",
+      "target_value_adjustment"
+    ],
+    "output_summary_shape": [
+      "intent",
+      "confidence",
+      "raw_intent",
+      "slots",
+      "entities",
+      "ambiguous",
+      "fallback",
+      "errors"
+    ],
+    "frontend_standard": {
+      "frontend_view": {
+        "live": "render query, normalized intent output, reference intent, Judge, Attribute, and compact raw response drill-down",
+        "summary": "render intent case pool with Output and Reference as aligned label/confidence JSON"
+      },
+      "batch_persistence": {
+        "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+        "transient_results": "do not persist full trace, judge, attribute, raw response, or frontend_view as durable case-pool source data"
+      }
+    },
+    "display_contract": {
+      "output_source": "trace.live_result.extracted_output",
+      "reference_source": "judge_generated",
+      "formatting": [
+        "json formatting",
+        "truncation",
+        "output/reference alignment"
+      ]
+    },
+    "verifiable_tools": {
+      "available": false,
+      "reason": "adapter has no get_verifiable_tools"
+    }
+  }
+}

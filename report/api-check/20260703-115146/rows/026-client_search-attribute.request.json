@@ -1,0 +1,586 @@
+{
+  "project": "client_search",
+  "trace": {
+    "trace_id": "448f2719-af57-45c4-bb28-592a98584bfc",
+    "project_id": "client_search",
+    "case_id": "mock-agent-client_search-b4a575aa",
+    "live_result": {
+      "project_id": "client_search",
+      "case_id": "mock-agent-client_search-b4a575aa",
+      "session_id": "session-12345",
+      "raw_input": {
+        "extra_input_params": {
+          "pCategorys": [
+            "年金险"
+          ]
+        },
+        "session_id": "session-12345",
+        "source": "web",
+        "trace_id": "trace-12345",
+        "user_id": "user123",
+        "user_text": "帮我查一下所有买过年金险的客户"
+      },
+      "normalized_request": {
+        "user_text": "帮我查一下所有买过年金险的客户",
+        "user_id": "user123",
+        "trace_id": "trace-12345",
+        "session_id": "session-12345",
+        "source": "web",
+        "extra_input_params": {
+          "pCategorys": [
+            "年金险"
+          ]
+        }
+      },
+      "call_status": "succeeded",
+      "runtime_ms": 1380,
+      "extracted_output": {
+        "summary": "产品类别为年金保险的客户",
+        "structured_output": [
+          {
+            "field": "pCategorys",
+            "operator": "MATCH",
+            "value": "年金保险"
+          }
+        ],
+        "logic": "AND",
+        "status_code": 0,
+        "user_visible_text": "产品类别为年金保险的客户",
+        "empty_result_reason": "",
+        "is_empty_result": false,
+        "source_query": "帮我查一下所有买过年金险的客户",
+        "matched_level": 4,
+        "matched_patterns": "### 当前时间\n2026-07-03 11:51:46 (Asia/Shanghai)\n### 今天星期\n周五\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **polNoInfo.plancodeinfo.plantypedesc** | 操作符: CONTAINS | 值类型: enum | 枚举: ['年金', '两全险', '健康险', '寿险', '定期险'] | 定义: 保单投保险种类别，枚举值使用险种大类\n\n  示例: \"险种类别为定期寿险的客户\" → {\"field\": \"polNoInfo.plancodeinfo.plantypedesc\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n- **polNoInfo.plancodeinfo.plantypedesc** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['年金', '两全险', '健康险', '寿险', '定期险'] | 定义: 表示客户保单险种类别中不包含某类险种，不表示没有任何保单\n\n  示例: \"没有年金险种的客户\" → {\"field\": \"polNoInfo.plancodeinfo.plantypedesc\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"年金\"]}\n\n  示例: \"没有健康险种的客户\" → {\"field\": \"polNoInfo.plancodeinfo.plantypedesc\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"健康险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **policies_insure_date** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 保单投保日期，嵌套字段 | 说明: 本月取当月1日至月末；下月取下月1日至月末；下周取下周一至周天；未来一周取今天至往后顺延6天；未来一个月取今天至往后延顺29天\n\n  示例: \"今年投保的客户（当前时间为2026-04-29）\" → {\"field\": \"policies_insure_date\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"去年投保的客户（当前时间为2026-04-29）\" → {\"field\": \"policies_insure_date\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2025-01-01 00:00:00\", \"max\": \"2025-12-31 23:59:59\"}}\n\n  示例: \"最近一年买保险的人（当前时间为2026-04-29）\" → {\"field\": \"policies_insure_date\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2025-04-29 00:00:00\", \"max\": \"2026-04-29 00:00:00\"}}\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n- **polNo** | 操作符: MATCH | 值类型: extract | 定义: 表示保单号，不表示客户编号，保单号是由P开头+15位数字，如 P966073446746215\n\n  示例: \"保单号为1234567890的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"1234567890\"}\n\n  示例: \"保单号匹配P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n  示例: \"按保单号查P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n### 用户查询\n帮我查一下所有买过年金险的客户",
+        "external_boundary_sources": {
+          "config_paths": {
+            "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+            "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+            "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+            "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+          }
+        }
+      },
+      "output_source": "live_service",
+      "application_boundary": {
+        "downstream_result_set_available": false,
+        "downstream_status": "not_verified",
+        "judge_scope": "parser_condition_semantics_only",
+        "result_set_verified": false,
+        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+      },
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T03:51:46.900769+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T03:51:46.900786+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:51:48.290903+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:51:48.290979+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:52:53.746072+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:52:53.746113+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T03:52:53.746133+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:52:53.747355+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:52:53.748160+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T03:52:53.748181+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:52:53.766071+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence or blocked reason available"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "",
+    "interaction_mode": "single_turn",
+    "session_id": "session-12345",
+    "created_at": "2026-07-03T03:51:48.290816+00:00"
+  },
+  "judge": {
+    "trace_id": "448f2719-af57-45c4-bb28-592a98584bfc",
+    "project_id": "client_search",
+    "verdict": "correct",
+    "business_expectations": [
+      {
+        "expectation_id": "字段选择正确-使用pCategorys字段查询险种",
+        "downstream_consumer": "ES 客户搜索",
+        "user_intent": "查询买过年金险的客户",
+        "expected_outcome": "结构化条件中包含 field 为 pCategorys 的条件",
+        "required_capabilities": [
+          "pCategorys 字段的 CONTAINS 或等价查询能力"
+        ],
+        "acceptance_criteria": [
+          "actual output 中至少有一个条件的 field 为 pCategorys"
+        ],
+        "priority": "critical"
+      },
+      {
+        "expectation_id": "口语映射正确-年金险映射为标准值年金保险",
+        "downstream_consumer": "ES 客户搜索",
+        "user_intent": "查询买过年金险的客户",
+        "expected_outcome": "pCategorys 条件的 value 为'年金保险'",
+        "required_capabilities": [
+          "口语到标准枚举值的映射能力"
+        ],
+        "acceptance_criteria": [
+          "actual output 中 pCategorys 条件的值为'年金保险'"
+        ],
+        "priority": "critical"
+      },
+      {
+        "expectation_id": "查询语义等价-条件能检索到年金保险客户",
+        "downstream_consumer": "ES 客户搜索",
+        "user_intent": "查询买过年金险的客户",
+        "expected_outcome": "最终查询语义能够正确筛选出持有年金保险的客户",
+        "required_capabilities": [
+          "ES 查询语义等价判断"
+        ],
+        "acceptance_criteria": [
+          "条件组合的业务语义等价于'客户持有年金保险险种'"
+        ],
+        "priority": "critical"
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "字段选择正确-使用pCategorys字段查询险种",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "结构化条件中 field 为 pCategorys"
+        ],
+        "actual_evidence": [
+          "structured_output[0].field = 'pCategorys'"
+        ],
+        "downstream_impact": "pCategorys 是查询客户持有险种大类的正确字段",
+        "blocking": true
+      },
+      {
+        "expectation_id": "口语映射正确-年金险映射为标准值年金保险",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "pCategorys 的值为'年金保险'"
+        ],
+        "actual_evidence": [
+          "structured_output[0].value = '年金保险'"
+        ],
+        "downstream_impact": "'年金保险'是 pCategorys 字段的标准枚举值，口语'年金险'被正确映射",
+        "blocking": true
+      },
+      {
+        "expectation_id": "查询语义等价-条件能检索到年金保险客户",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "条件语义等价于 pCategorys CONTAINS '年金保险'"
+        ],
+        "actual_evidence": [
+          "structured_output[0] = {field: 'pCategorys', operator: 'MATCH', value: '年金保险'}",
+          "项目规则明确：CONTAINS 与 MATCH 由后处理统一处置，两者在 ES 查询语义上等价"
+        ],
+        "downstream_impact": "MATCH 操作符与 CONTAINS 在项目中视为等价，能正确检索年金保险客户",
+        "blocking": true
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "fulfilled",
+      "assessment_count": 3
+    },
+    "expected": {
+      "query_logic": "AND",
+      "expected_source": "not_available",
+      "reference_is_oracle": false
+    },
+    "actual": {
+      "query_logic": "AND",
+      "conditions": [
+        {
+          "field": "pCategorys",
+          "operator": "MATCH",
+          "value": "年金保险"
+        }
+      ]
+    },
+    "reasoning_summary": "用户查询'买过年金险的客户'，parser 正确选择了 pCategorys 字段，将口语'年金险'映射为标准值'年金保险'。操作符使用了 MATCH 而非 prompt 示例中的 CONTAINS，但根据项目 judge boundary 规则，两者由后处理统一处置、在 ES 查询语义上等价，不影响检索正确性。三个阻塞级业务期望全部满足，无字段错误、值映射错误或语义偏差。当前评价范围限于 parser 条件语义，下游搜索不可用不影响本次判断。",
+    "judge_basis": "基于 capability_manifest 中 pCategorys 字段的 operators（CONTAINS/NOT_CONTAINS）、value_mappings 中口语到标准的映射规则、以及项目 judge boundary 中关于 CONTAINS/MATCH 等价性的声明进行判断。下游搜索不可用，判断范围为 parser_condition_semantics_only。",
+    "judge_method": "parser_condition_semantics_only（下游搜索不可用），基于 ES 查询语义和项目规则判断条件等价性",
+    "verdict_derivation": {
+      "primary_boundary": "parser_condition_semantics_only",
+      "assessment_summary": "三个核心业务期望全部满足：字段选择正确（pCategorys），口语映射正确（年金险→年金保险），查询语义等价（MATCH 与 CONTAINS 在项目中等价）。actual output 能够正确表达用户意图，可从 ES 数据库检索到持有年金保险的客户。",
+      "why_verdict": "字段 pCategorys 正确承载了用户查询险种大类的意图；口语'年金险'被正确映射为标准值'年金保险'；操作符 MATCH 在项目中与 CONTAINS 语义等价，不影响检索正确性。所有阻塞级期望均已满足，无条件缺失或错误。",
+      "missing_evidence": [
+        "current intent/config expected conditions"
+      ]
+    },
+    "evidence": [
+      "用户 query：'帮我查一下所有买过年金险的客户'",
+      "actual output：{field: 'pCategorys', operator: 'MATCH', value: '年金保险'}",
+      "capability_manifest：pCategorys 字段用于客户持有寿险险种大类，定义中包含'年金保险'",
+      "value_mappings：虽然未显式列出年金险→年金保险，但 pCategorys 说明中明确'年金险等口语应归到险种大类'",
+      "prompt 示例：'持有年金保险的客户' → pCategorys CONTAINS ['年金保险']",
+      "judge boundary：'不要纠结 CONTAINS 和 MATCH 的问题'"
+    ],
+    "boundary_decision": {
+      "within_evaluable_scope": true,
+      "uncontrollable_limits": [
+        "下游 ES 客户搜索在当前运行环境中不可用（downstream_status: not_verified），无法通过实际结果集验证"
+      ],
+      "reasoning": "当前评价范围为 parser_condition_semantics_only，基于 capability_manifest、value_mappings、prompt 示例和项目 judge boundary 规则，pCategorys 字段定义、枚举值覆盖和操作符等价性均可明确判断，无需依赖下游实际返回。"
+    },
+    "evaluation_boundary": {
+      "primary_boundary_id": "client_search_parser_semantics",
+      "primary_boundary_name": "Parser 条件语义评估",
+      "judge_question": "当前 parser 输出的结构化条件在 ES 查询语义上是否等价于用户意图（查询持有年金保险的客户）？",
+      "verdict_basis": "基于字段语义、枚举值映射和操作符等价性规则判断，不依赖下游实际搜索结果",
+      "boundary_sources": "capability_manifest、value_mappings、prompt 示例、judge boundary 声明（CONTAINS/MATCH 等价）",
+      "conflict_policy": "当 prompt/config 与 ES 查询语义存在表面差异时，以 ES 查询语义等价性为准；CONTAINS/MATCH 差异不视为错误"
+    },
+    "consumer_contract": {
+      "consumer": "下游客户搜索 ES 数据库",
+      "contract": "根据 parser 输出的结构化条件检索客户",
+      "application_boundary": {
+        "downstream_result_set_available": false,
+        "downstream_status": "not_verified",
+        "judge_scope": "parser_condition_semantics_only",
+        "result_set_verified": false,
+        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+      }
+    },
+    "intent_model": {
+      "raw_user_request": "帮我查一下所有买过年金险的客户",
+      "explicit_intents": [
+        "查询持有年金险（年金保险）的客户"
+      ],
+      "implicit_business_intents": [
+        "口语'年金险'应映射为标准险种大类名称'年金保险'"
+      ],
+      "constraints": {
+        "target_population": "所有满足条件的客户，无其他筛选限制",
+        "field": "pCategorys（客户持有寿险险种大类）",
+        "operator": "CONTAINS 或等价查询条件",
+        "value": "年金保险"
+      },
+      "success_definition": "输出能够从 ES 数据库中检索出所有持有年金保险险种的客户的结构化条件",
+      "blocking_requirements": [
+        "字段必须为 pCategorys",
+        "值必须为'年金保险'（即口语'年金险'的标准映射）"
+      ],
+      "intent_evidence": [
+        "用户原文：'买过年金险' → 年金险是口语表达，对应标准险种大类'年金保险'",
+        "value_mappings 中虽未显式列出年金险→年金保险，但 pCategorys 定义说明中明确写明'年金保险'属于该字段覆盖的险种大类",
+        "prompt 示例：'持有年金保险的客户' → pCategorys CONTAINS ['年金保险']"
+      ]
+    },
+    "reconstructed_intent": "用户想查询所有持有年金险（标准名称：年金保险）的客户。核心意图是使用 pCategorys 字段筛选持有'年金保险'险种大类的客户，无其他附加筛选条件。",
+    "semantic_equivalence_checks": [
+      {
+        "expected_fragment": "pCategorys CONTAINS '年金保险'",
+        "actual_fragment": "pCategorys MATCH '年金保险'",
+        "equivalent": true,
+        "basis": "项目 judge boundary 明确声明：'不要纠结 CONTAINS 和 MATCH 的问题，因为原项目会通过后处理处置'。在当前 ES 查询语境下，MATCH 与 CONTAINS 在 pCategorys 字段上语义等价，两者均能正确检索持有年金保险的客户。"
+      }
+    ],
+    "reference_generation_basis": {
+      "source": "从用户 query 推导 + capability_manifest + prompt 示例",
+      "alignment_to_actual_shape": "expected 使用 CONTAINS 操作符（prompt 示例标准），actual 使用 MATCH 操作符，两者语义等价",
+      "evidence": [
+        "prompt 示例：'持有年金保险的客户' → pCategorys CONTAINS ['年金保险']",
+        "value_mappings：'年金险'口语应归到险种大类'年金保险'",
+        "judge boundary：CONTAINS 与 MATCH 等价，不纠结此差异"
+      ],
+      "comparison_basis": "client_search wrong/missing/extra customer-search coverage",
+      "expected_source": "not_available"
+    },
+    "scenario": "单条件险种查询-口语映射",
+    "needs_human_review": false,
+    "quality_flags": [
+      {
+        "flag": "operator_variant",
+        "detail": "actual 使用 MATCH，expected 为 CONTAINS，但项目规则声明两者等价",
+        "severity": "info"
+      },
+      {
+        "flag": "enum_not_in_manifest",
+        "detail": "capability_manifest 的 pCategorys enums 列表中未包含'年金保险'，但字段定义和 prompt 示例均确认其为有效值",
+        "severity": "info"
+      }
+    ],
+    "summary": {
+      "reason": "fulfilled · 3 blocking expectations all met · 用户查询'买过年金险的客户'，parser 正确选择了 pCategorys 字段，将口语'年金险'映射为标准值'年金保险'。操作符使用了 MATCH 而非 prompt 示例中的 CONTAINS，但根据项目 judge boundary 规则，两者由后处理统一处置、在 ES 查询语义上等价，不影响检索正确性。三个阻塞级业务期望全部满足，无字段错误、值映射错误或语义偏差。当前评价范围限于 parser 条件语义，下游搜索不可用不影响本次判断。",
+      "reason_source": "aggregated_fulfillment",
+      "fulfillment_status": "fulfilled",
+      "assessment_count": 3,
+      "blocking_count": 3,
+      "is_formal_attribution": true
+    }
+  }
+}

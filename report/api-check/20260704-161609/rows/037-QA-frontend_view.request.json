@@ -1,0 +1,935 @@
+{
+  "project": "QA",
+  "trace": {
+    "trace_id": "52ed9e22-ea57-47bc-be4b-93737ac2257e",
+    "project_id": "QA",
+    "case_id": "mock-agent-QA-02a290c0",
+    "live_result": {
+      "project_id": "QA",
+      "case_id": "mock-agent-QA-02a290c0",
+      "session_id": "",
+      "raw_input": {
+        "input": {
+          "answer": "本产品对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。但需注意，若未经过社保报销，则按60%比例赔付。",
+          "query": "这款百万医疗险对癌症治疗能报销多少？需要先经过社保报销吗？"
+        },
+        "metadata": {
+          "session_id": "sess_qa_12345",
+          "trace_id": "trace_qa_67890",
+          "user_id": "user_001"
+        },
+        "scenario": "qa_gold_answer"
+      },
+      "normalized_request": {
+        "input": {
+          "question": "这款百万医疗险对癌症治疗能报销多少？需要先经过社保报销吗？"
+        },
+        "reference": {
+          "golden_answer": "该百万医疗险对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。通常需要先经过社保报销；若未经社保报销，则按60%比例赔付。具体以保险条款为准。"
+        },
+        "metadata": {
+          "live_request_mapped": true,
+          "project_id": "QA",
+          "ready": [
+            "output",
+            "reference"
+          ],
+          "schema_ok": false,
+          "source": "mock_agent_llm"
+        },
+        "scenario": "qa_gold_answer",
+        "output": {
+          "actual_answer": "本产品对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。但需注意，若未经过社保报销，则按60%比例赔付。"
+        }
+      },
+      "call_status": "succeeded",
+      "extracted_output": {
+        "actual_answer": "本产品对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。但需注意，若未经过社保报销，则按60%比例赔付。"
+      },
+      "output_source": "provided_output",
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T08:16:10.288289+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T08:16:10.288296+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:16:10.289182+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:16:10.289226+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:18:04.940328+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:18:04.940370+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T08:18:04.940394+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:19:21.867029+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:20:40.320527+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T08:20:40.320556+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:20:40.330176+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence missing"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "probe evidence missing",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "qa_gold_answer",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "created_at": "2026-07-04T08:16:10.289144+00:00"
+  },
+  "judge": {
+    "trace_id": "52ed9e22-ea57-47bc-be4b-93737ac2257e",
+    "project_id": "QA",
+    "verdict": "incorrect",
+    "business_expectations": [
+      {
+        "expectation_id": "回答癌症治疗报销比例为100%",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "acceptance_criteria": [
+          "包含'报销比例为100%'或同等意思的表述",
+          "数字准确"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "包含质子重离子治疗保障信息",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "acceptance_criteria": [
+          "提到质子重离子治疗",
+          "表述为在保障范围内"
+        ],
+        "priority": "medium"
+      },
+      {
+        "expectation_id": "明确说明是否需要先经过社保报销",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "acceptance_criteria": [
+          "存在'需要'、'必须先'、'通常需要'等肯定性表述",
+          "直接回答用户的是否问题"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "说明未经过社保报销时的赔付比例",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "acceptance_criteria": [
+          "提及未经过社保报销的情况",
+          "赔付比例为60%"
+        ],
+        "priority": "medium"
+      },
+      {
+        "expectation_id": "包含以保险条款为准等免责声明",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "acceptance_criteria": [
+          "存在免责声明或'以条款为准'等表述"
+        ],
+        "priority": "low"
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "回答癌症治疗报销比例为100%",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "报销比例为100%"
+        ],
+        "actual_evidence": [
+          "本产品对癌症治疗的报销比例为100%"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": ""
+        },
+        "downstream_impact": "",
+        "blocking": true
+      },
+      {
+        "expectation_id": "包含质子重离子治疗保障信息",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "质子重离子治疗在保障范围内"
+        ],
+        "actual_evidence": [
+          "质子重离子治疗也在保障范围内"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": ""
+        },
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "明确说明是否需要先经过社保报销",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "明确肯定需要先经过社保报销的表述，如'通常需要先经过社保报销'"
+        ],
+        "actual_evidence": [
+          "仅说明'若未经过社保报销，则按60%比例赔付'，未直接回答是否需要先经过社保"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": ""
+        },
+        "downstream_impact": "",
+        "blocking": true
+      },
+      {
+        "expectation_id": "说明未经过社保报销时的赔付比例",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "若未经社保报销，则按60%比例赔付"
+        ],
+        "actual_evidence": [
+          "若未经过社保报销，则按60%比例赔付"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": ""
+        },
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "包含以保险条款为准等免责声明",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "具体以保险条款为准等免责声明"
+        ],
+        "actual_evidence": [
+          "无相关表述"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": ""
+        },
+        "downstream_impact": "",
+        "blocking": false
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "not_fulfilled",
+      "assessment_count": 5,
+      "blocking_expectations": [
+        "明确说明是否需要先经过社保报销"
+      ]
+    },
+    "expected": {
+      "golden_answer": "该百万医疗险对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。通常需要先经过社保报销；若未经社保报销，则按60%比例赔付。具体以保险条款为准。"
+    },
+    "actual": {
+      "actual_answer": "本产品对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。但需注意，若未经过社保报销，则按60%比例赔付。"
+    },
+    "reasoning_summary": "实际答案准确提及了癌症治疗100%报销比例和质子重离子保障，以及未经过社保的赔付比例。但用户问题的第二部分'需要先经过社保报销吗？'未被直接回答，仅说明了如果未经过社保的后果，未明确肯定需要先经过社保。因此，核心业务期望'明确说明是否需要先经过社保报销'未满足，导致整体评估为不满足。",
+    "judge_basis": "以 golden_answer 为基准，比较 actual_answer 在回答用户两个问题时的准确性、完整性和直接性。",
+    "judge_method": "qa_gold_answer_comparison",
+    "verdict_derivation": {
+      "primary_boundary": "qa_gold_answer",
+      "assessment_summary": "实际答案准确提及了癌症治疗100%报销比例和质子重离子保障，以及未经过社保的赔付比例。但用户问题的第二部分'需要先经过社保报销吗？'未被直接回答，仅说明了如果未经过社保的后果，未明确肯定需要先经过社保。因此，核心业务期望'明确说明是否需要先经过社保报销'未满足，导致整体评估为不满足。",
+      "blocking_gaps": [
+        "明确说明是否需要先经过社保报销"
+      ],
+      "why_verdict": "答案虽然包含了报销比例和未经过社保的赔付比例，但用户明确询问'需要先经过社保报销吗？'，实际答案未给出直接、明确的肯定回答，仅说明了未经过社保的后果。这会导致用户无法确定是否需要先进行社保报销，未能满足用户的核心信息需求，因此整体不满足。",
+      "taxonomy_error_types": [
+        "answer_incomplete"
+      ],
+      "score_dimensions": [
+        {
+          "dimension": "correctness",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "completeness",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "key_point_coverage",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "faithfulness",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "relevance",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "usefulness",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "coherence",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "risk_control",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "clarity",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        }
+      ],
+      "error_type": "answer_incomplete"
+    },
+    "missing": [
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "需要先经过社保报销的明确肯定性表述",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "免责声明",
+        "incomplete": false
+      }
+    ],
+    "evidence": [
+      "来自样本的 golden_answer 和 actual_answer",
+      "scenario=qa_gold_answer",
+      "question_present=True",
+      "actual_answer_present=True",
+      "golden_answer_present=True"
+    ],
+    "boundary_decision": {
+      "within_evaluable_scope": true,
+      "reasoning": "场景为 qa_gold_answer，提供了标准答案，评估完全在可评估范围内。"
+    },
+    "evaluation_boundary": {
+      "primary_boundary_id": "qa_gold_answer",
+      "primary_boundary_name": "Gold Answer Comparison",
+      "judge_question": "actual_answer 是否准确、完整地回答了用户问题，与 golden_answer 一致？",
+      "verdict_basis": "golden_answer",
+      "boundary_sources": "样本提供的 reference.golden_answer",
+      "conflict_policy": "以 golden_answer 为准"
+    },
+    "consumer_contract": {
+      "consumer": "保险咨询用户",
+      "contract": "提供与产品条款一致的准确报销信息，包括报销比例、保障范围、报销条件。",
+      "reference_contract": "该百万医疗险对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。通常需要先经过社保报销；若未经社保报销，则按60%比例赔付。具体以保险条款为准。"
+    },
+    "intent_model": {
+      "raw_user_request": "这款百万医疗险对癌症治疗能报销多少？需要先经过社保报销吗？",
+      "explicit_intents": [
+        "了解百万医疗险对癌症治疗的报销比例",
+        "了解是否需要先经过社保报销"
+      ],
+      "implicit_business_intents": [
+        "期望得到准确、完整的答复",
+        "期望答案与保险产品实际条款一致"
+      ],
+      "success_definition": "答案准确给出癌症治疗报销比例为100%，包含质子重离子治疗，明确回答是否需要先经过社保报销，并说明未经过社保的赔付比例，最后提醒以正式条款为准。",
+      "blocking_requirements": [
+        "报销比例准确",
+        "明确回答是否需要先经过社保"
+      ],
+      "nice_to_have_requirements": [
+        "包含质子重离子保障说明",
+        "包含免责声明"
+      ]
+    },
+    "reconstructed_intent": "用户意图是获取该百万医疗险对癌症治疗的报销比例以及是否需要社保报销作为前提条件，期望得到明确、准确的信息。",
+    "semantic_equivalence_checks": [
+      {
+        "expected_fragment": "报销比例为100%",
+        "actual_fragment": "报销比例为100%",
+        "equivalent": true,
+        "basis": "文字表述一致"
+      },
+      {
+        "expected_fragment": "质子重离子治疗也在保障范围内",
+        "actual_fragment": "质子重离子治疗也在保障范围内",
+        "equivalent": true,
+        "basis": "文字表述一致"
+      },
+      {
+        "expected_fragment": "通常需要先经过社保报销",
+        "equivalent": false,
+        "basis": "缺少对应表述"
+      },
+      {
+        "expected_fragment": "若未经社保报销，则按60%比例赔付",
+        "actual_fragment": "若未经过社保报销，则按60%比例赔付",
+        "equivalent": true,
+        "basis": "意思相同"
+      },
+      {
+        "expected_fragment": "具体以保险条款为准",
+        "equivalent": false,
+        "basis": "缺少免责声明"
+      }
+    ],
+    "reference_generation_basis": {
+      "source": "golden_answer",
+      "alignment_to_live_schema": "直接使用样本提供的 golden_answer 作为参考基准"
+    },
+    "scenario": "qa_gold_answer",
+    "needs_human_review": false,
+    "summary": {
+      "reason": "not_fulfilled · blocking=[明确说明是否需要先经过社保报销]",
+      "primary_failure_dimensions": [
+        {
+          "expectation_id": "明确说明是否需要先经过社保报销",
+          "status": "not_fulfilled",
+          "blocking": true,
+          "downstream_impact": "",
+          "within_evaluable_scope": true,
+          "evidence": "仅说明'若未经过社保报销，则按60%比例赔付'，未直接回答是否需要先经过社保 | 明确肯定需要先经过社保报销的表述，如'通常需要先经过社保报销'"
+        },
+        {
+          "expectation_id": "包含以保险条款为准等免责声明",
+          "status": "not_fulfilled",
+          "blocking": false,
+          "downstream_impact": "",
+          "within_evaluable_scope": true,
+          "evidence": "无相关表述 | 具体以保险条款为准等免责声明"
+        }
+      ],
+      "reason_source": "aggregated_fulfillment",
+      "fulfillment_status": "not_fulfilled",
+      "assessment_count": 5,
+      "blocking_count": 2,
+      "is_formal_attribution": true
+    }
+  },
+  "attribute": {
+    "trace_id": "52ed9e22-ea57-47bc-be4b-93737ac2257e",
+    "project_id": "QA",
+    "case_id": "",
+    "expectation_attributions": [
+      {
+        "expectation_id": "明确说明是否需要先经过社保报销",
+        "causal_category": "model_capability_gap"
+      },
+      {
+        "expectation_id": "包含以保险条款为准等免责声明",
+        "causal_category": "model_capability_gap"
+      }
+    ],
+    "causal_category": "needs_human_review",
+    "earliest_divergence": {
+      "node": "mock_agent_llm 内容生成阶段",
+      "expected": "回答应包含：(1) 报销比例100%；(2) 质子重离子保障；(3) 明确肯定需要先经过社保报销；(4) 未经过社保按60%赔付；(5) 免责声明",
+      "actual": "回答包含：(1)(2)(4)，缺失(3)正面肯定和(5)免责声明",
+      "evidence": [
+        "judge semantic_equivalence_checks 共5项：3项 equivalent=true，2项 equivalent=false",
+        "blocking_gaps: ['明确说明是否需要先经过社保报销']",
+        "missing: ['需要先经过社保报销的明确肯定性表述', '免责声明']"
+      ],
+      "confidence": "high"
+    },
+    "chain_nodes": [
+      {
+        "status": "not_verified",
+        "evidence": [
+          "scenario=qa_gold_answer",
+          "flags=[]"
+        ]
+      },
+      {
+        "status": "not_verified",
+        "evidence": [
+          "actual_answer_present=true"
+        ]
+      },
+      {
+        "status": "not_verified",
+        "evidence": [
+          "actual_answer_present=true"
+        ]
+      },
+      {
+        "status": "suspicious",
+        "evidence": [
+          "metadata.source=mock_agent_llm",
+          "golden_answer 包含 5 个关键信息点，actual_answer 仅覆盖其中 3 个"
+        ]
+      }
+    ],
+    "evidence_coverage": {
+      "query": true,
+      "actual": true,
+      "expected": true,
+      "execution_trace": true,
+      "project_docs": true,
+      "code_or_config": true
+    },
+    "root_cause_hypothesis": "LLM/mock_agent 在生成 QA 样本回答时存在两个模型能力缺陷：(1) 对用户的是否问题（'需要先经过社保报销吗？'），模型仅通过描述反面情况（未经过社保按60%赔付）间接暗示答案，未能给出'通常需要先经过社保报销'的直接肯定回应，反映出指令遵循或问答完整性方面的不足；(2) 未在保险咨询场景下附加标准免责声明'具体以保险条款为准'，反映出领域合规话术的生成欠缺。pipeline 各节点（normalize → output.read → extract_output）均正常工作，纯粹透传了不完整的回答内容。",
+    "verification_steps": [
+      "检查 mock_agent_llm 的 system prompt 是否包含'必须直接回答用户的是否问题'的指令",
+      "检查 mock_agent_llm 的 prompt 是否包含'保险咨询回答必须以免责声明结尾'的合规要求",
+      "用相同 prompt 重新生成该样本的回答，观察是否稳定复现两个缺失",
+      "若可复现，在 prompt 中补充明确指令后再次生成，验证回答完整性是否提升"
+    ],
+    "patch_direction": [
+      "在 LLM prompt 中增加：'当用户提问包含是/否问题时，回答的第一句必须给出明确的是或否判断，然后展开说明'",
+      "在 LLM prompt 中增加：'所有涉及保险条款、赔付比例、保障范围的回答，末尾必须附加具体以保险条款为准'",
+      "考虑在 QA mock_agent 输出后增加后处理校验：检测回答是否覆盖用户问题中的所有子问题，对遗漏项标记或自动补全"
+    ],
+    "needs_human_review": false,
+    "scenario": "qa_gold_answer",
+    "summary": {
+      "causal_category": "needs_human_review",
+      "attribution_count": 2,
+      "probe_count": 0,
+      "summary_text": "LLM/mock_agent 在生成 QA 样本回答时存在两个模型能力缺陷：(1) 对用户的是否问题（'需要先经过社保报销吗？'），模型仅通过描述反面情况（未经过社保按60%赔付）间接暗示答案，未能给出'通常需要先经过社保报销'的直接肯定回应，反映出指令遵循或问答完整性方面的不足；(2) 未在保险咨询场景下附加标准免责声明'具体以保险条款为准'，反映出领域合规话术的生成欠缺。pipeline 各节点（normalize → output.read → extract_output）均正常工作，纯粹透传了不完整的回答内容。",
+      "is_complete": true,
+      "is_formal_attribution": true
+    },
+    "analysis_method": "qa_gold_answer_content_divergence_analysis",
+    "analysis_quality": {
+      "passed": true,
+      "standard": "基于 golden_answer vs actual_answer 的逐项语义等价对比（judge 已执行5项检查），结合 adapter.py 源码确认 pipeline 未引入内容偏差，归因指向 LLM 生成阶段的模型能力缺陷",
+      "status": "supported_root_cause"
+    },
+    "incomplete_reason": "",
+    "suspected_locations": [
+      {
+        "path": "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py",
+        "area": "extract_output / build_execution_trace / _normalize_sample",
+        "note": "adapter 层仅负责透传和归一化，经源码审查确认不会修改 actual_answer 内容或过滤免责声明；问题不在 adapter。"
+      }
+    ],
+    "tool_call_log": [
+      {
+        "tool_name": "search_source_file",
+        "tool_call_id": "call_00_tD7K86C4gBNfmK9JRg4F0279",
+        "arguments": {
+          "file_key": "project_adapter:adapter.py"
+        },
+        "result": "from __future__ import annotations\n\nimport json\nimport re\nfrom pathlib import Path\nfrom typing import Any, Dict, List\n\nfrom impl.core.adapter import ProjectAdapter\nfrom impl.core.schema import AttributeResult, ExecutionTraceEvent, JudgeResult, LiveExecutionResult, LiveRequest, MultiTurnCase, SingleTurnCase\n\n\nclass Adapter(ProjectAdapter):\n    metadata_fields = {\"category\", \"model_name\", \"latency_ms\", \"token_usage\", \"cost\", \"row_index\", \"source_dataset\", \"expected_quality\", \"expected_error_type\", \"quality_dimension\"}\n\n    def build_request(self, case: SingleTurnCase | MultiTurnCase) -> LiveRequest:\n        # case 可能是 SingleTurnCase（有顶层 output/reference）或裸 dict（前端旧输入）。\n        # _normalize_sample 用 getattr 兼容 dataclass，能从 case.output/case.reference 取值。\n        sample = self._normalize_sample(case)\n        input_data = dict(case.input or {}) if hasattr(case, \"input\") else (dict(case.get(\"input\") or {}) if isinstance(case, dict) else {})\n        normalized_request = {\n            \"input\": sample[\"input\"],\n            \"reference\": sample[\"reference\"],\n            \"metadata\": sample[\"metadata\"],\n            \"scenario\": sample[\"scenario\"],\n            \"data_quality_flags\": sample[\"data_quality_flags\"],\n            \"output\": sample[\"output\"],\n        }\n        # 协议层 ready gate 接管 provided 判定后，build_request 不再硬编码 execution_mode；\n        # pipeline live_run 在 provided 分支统一覆盖为 \"provided_output\"。\n        # 存一份快照，project_fields 在 provided 路径下无 _normalized_request 注入时可回退读取。\n        self._last_normalized_request = normalized_request\n        return LiveRequest(\n            project_id=self.spec.project_id,\n            raw_input=input_data,\n            case_id=str(case.id or sample.get(\"id\") or input_data.get(\"case_id\") or input_data.get(\"id\") or \"\"),\n            normalized_request=normalized_request,\n            # execution_mode 由 pipeline.live_run 在 provided 分支统一覆盖\n            execution_mode=\"live_service\",\n            session_id=str(input_data.get(\"session_id\") or case.metadata.get(\"session_id\") or \"\"),\n        )\n\n    def call_or_prepare(self, request: LiveRequest) -> LiveExecutionResult:\n        raw_response = request.normalized_request.get(\"output\") or {\"actual_answer\": \"\"}\n        if isinstance(raw_response, dict):\n            raw_response = {**raw_response, \"_normalized_request\": request.normalized_request}\n        extracted_output = self.extract_output(raw_response)\n        return LiveExecutionResult(\n            project_id=request.project_id,\n            case_id=request.case_id,\n            session_id=request.session_id,\n            raw_input=request.raw_input,\n            normalized_request=request.normalized_request,\n            raw_response=raw_response,\n            extracted_output=extracted_output,\n            output_source=request.execution_mode,\n            execution_trace=self.build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output),\n            project_fields=self.project_fields(raw_response, extracted_output),\n        )\n\n    def extract_output(self, raw_response: Any) -> Dict[str, Any]:\n        if isinstance(raw_response, dict):\n            return {\"actual_answer\": str(raw_response.get(\"actual_answer\") or raw_response.get(\"answer\") or raw_response.get(\"text\") or \"\")}\n        return {\"actual_answer\": str(raw_response or \"\")}\n\n    def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any]) -> Dict[str, Any]:\n        # 优先从 raw_response._normalized_request 取（旧 call_or_prepare 注入路径），\n        # 否则回退到 build_request 快照（provided 统一路径，raw_response 不再注入）。\n        request = raw_response.get(\"_normalized_request\") if isinstance(raw_response, dict) else None\n        if not isinstance(request, dict):\n            request = getattr(self, \"_last_normalized_request\", None) or {}\n        if not isinstance(request, dict):\n            return {}\n        return {\n            \"scenario\": request.get(\"scenario\") or \"\",\n            \"data_quality_flags\": list(request.get(\"data_quality_flags\") or []),\n            \"contexts\": list((request.get(\"input\") or {}).get(\"contexts\") or []),\n            \"reference\": dict(request.get(\"reference\") or {}),\n            \"metadata\": dict(request.get(\"metadata\") or {}),\n            \"estimated_quality_only\": request.get(\"scenario\") == \"qa_weak_quality\",\n        }\n\n    def build_execution_trace(self, input_data: Dict[str, Any], request: Dict[str, Any], raw_response: Any, extracted_output: Dict[str, Any]) -> list[ExecutionTraceEvent]:\n        return [\n            ExecutionTraceEvent(stage=\"qa.sample.normalize\", status=\"ok\" if request.get(\"scenario\") != \"invalid_sample\" else \"suspicious\", evidence={\"scenario\": request.get(\"scenario\"), \"flags\": request.get(\"data_quality_flags\")}),\n            ExecutionTraceEvent(stage=\"qa.output.read\", status=\"ok\" if extracted_output.get(\"actual_answer\") else \"suspicious\", evidence=\"evaluated output read from uploaded sample\"),\n            ExecutionTraceEvent(stage=\"adapter.extract_output\", status=\"ok\", evidence={\"actual_answer_present\": bool(extracted_output.get(\"actual_answer\"))}),\n        ]\n\n    def to_run_trace(self, result: LiveExecutionResult):\n        return super().to_run_trace(result)\n\n    def build_frontend_extensions(self, trace):\n        return {\n            \"schema_protocol_extensions\": trace.project_fields,\n            \"scenarios\": self.spec.frontend_extensions.get(\"scenarios\") or [],\n            \"score_dimensions\": self.spec.frontend_extensions.get(\"score_dimensions\") or [],\n            \"error_taxonomy\": self.spec.frontend_extensions.get(\"error_taxonomy\") or [],\n        }\n\n    def trace_state_graph(self):\n        return self.extend_default_trace_graph(\"collect_evidence\", [\"qa_case_contract_evidence\"])\n\n    def state_executors(self):\n        return {\"qa_case_contract_evidence\": self._qa_case_contract_evidence}\n\n    def _qa_case_contract_evidence(self, context):\n        trace = context.get(\"trace\")\n        if not trace:\n            return {\"status\": \"failed\", \"missing_evidence\": [\"trace\"]}\n        request = trace.normalized_request or {}\n        sample_input = request.get(\"input\") or {}\n        reference = request.get(\"reference\") or {}\n        actual_answer = (trace.extracted_output or {}).get(\"actual_answer\")\n        evidence = {\n            \"question_present\": bool(sample_input.get(\"question\")),\n            \"actual_answer_present\": bool(actual_answer),\n            \"reference_present\": bool(reference),\n            \"contexts_count\": len(sample_input.get(\"contexts\") or []),\n            \"scenario\": request.get(\"scenario\") or \"\",\n        }\n        live_output_source = getattr(getattr(trace, \"live_result\", None), \"output_source\", \"\")\n        provided_execution = trace.execution_mode == \"provided\"\n        evidence[\"provided_output_path\"] = provided_execution or live_output_source == \"provided_output\"\n        missing = [key for key, value in evidence.items() if key in {\"question_present\", \"actual_answer_present\"} and not value]\n        unrecoverable = [m for m in missing if m == \"actual_answer_present\"]\n        return {\n            \"status\": \"succeeded\" if not missing else \"failed\",\n            \"outputs\": evidence,\n            \"evidence_refs\": [{\"type\": \"qa_case_contract\", \"evidence\": evidence}],\n            \"claims\": [{\"qa_case_contract\": evidence}],\n            \"missing_evidence\": missing,\n            \"unrecoverable_missing\": unrecoverable,\n        }\n\n    def collect_state_evidence(self, state_id, context):\n        trace = context.get(\"trace\")\n        if not trace:\n            return []\n        request = trace.normalized_request or {}\n        return [{\"type\": \"qa_sample_boundary\", \"state_id\": state_id, \"scenario\": request.get(\"scenario\"),\n                 \"reference\": request.get(\"reference\") or {}, \"data_quality_flags\": request.get(\"data_quality_flags\") or []}]\n\n    def build_judge_context(self, trace):\n        request = trace.normalized_request or {}\n        return {\n            \"project_type\": \"provided_output_qa_evaluation\",\n            \"current_case_only\": True,\n            \"reference_contract\": trace.reference_contract if isinstance(trace.reference_contract, dict) else {},\n            \"score_dimensions\": self.spec.frontend_extensions.get(\"score_dimensions\") or [],\n            \"error_taxonomy\": self.spec.frontend_extensions.get(\"error_taxonomy\") or [],\n            \"application_boundary\": {\"scope\": \"qa_semantic_answer_evaluation\", \"external_service_required\": False},\n        }\n\n    def build_intent_frame(self, trace):\n        request = trace.normalized_request or {}\n        sample_input = request.get(\"input\") if isinstance(request.get(\"input\"), dict) else {}\n        reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}\n        contexts = sample_input.get(\"contexts\") or request.get(\"contexts\") or []\n        return {\n            **super().build_intent_frame(trace),\n            \"business_task_type\": \"qa_answer_evaluation\",\n            \"downstream_consumer\": \"QA user\",\n            \"request_source\": \"normalized_request.input.question\",\n            \"question\": sample_input.get(\"question\") or request.get(\"question\") or \"\",\n            \"context_dependency\": {\"has_contexts\": bool(contexts), \"context_count\": len(contexts), \"has_reference\": bool(reference)},\n            \"critical_intent_dimensions\": [\"question_target\", \"context_or_reference_dependency\", \"factual_or_interpretive_answer\", \"faithfulness\", \"contradiction_risk\", \"answer_usefulness\"],\n            \"boundary_rules\": {\"scope\": \"qa_semantic_answer_evaluation\", \"external_service_required\": False},\n            \"output_semantics\": \"produce an answer that addresses the current question and is faithful to provided contexts/reference when present\",\n        }\n\n    def _default_consumer_contract(self, trace, judge_result):\n        context = self.build_judge_context(trace)\n        return {\n            \"consumer\": \"QA user\",\n            \"contract\": \"answer must be relevant, grounded in current contexts/reference, and aligned with the golden answer when provided\",\n            \"reference_contract\": context.get(\"reference_contract\") or {},\n            \"application_boundary\": context.get(\"application_boundary\") or {},\n        }\n\n    def _default_business_expectation(self, trace, judge_result):\n        expectation = super()._default_business_expectation(trace, judge_result)\n        expectation.update({\n            \"expectation_id\": \"QA:answer_quality\",\n            \"downstream_consumer\": \"QA user\",\n            \"required_capabilities\": expectation.get(\"required_capabilities\") or [\"answer_relevance\", \"groundedness\", \"reference_alignment\"],\n            \"boundary\": judge_result.boundary_decision or judge_result.evaluation_boundary or self.build_judge_context(trace).get(\"application_boundary\") or expectation.get(\"boundary\") or {},\n        })\n        if not judge_result.intent_model:\n            question = judge_result.reconstructed_intent or str(((trace.normalized_request or {}).get(\"input\") or {}).get(\"question\") or \"\")\n            expectation.update({\n                \"user_intent\": question,\n                \"expected_outcome\": \"actual answer should satisfy answer relevance, groundedness, and reference alignment for the current QA sample\",\n                \"acceptance_criteria\": list(judge_result.missing or judge_result.wrong or []),\n            })\n        return expectation\n\n    def _default_fulfillment_assessment(self, trace, judge_result, expectation):\n        status = self._expectation_status_from_verdict(judge_result)\n        reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else judge_result.expected or {}\n        actual = judge_result.actual or trace.extracted_output or {}\n        return {\n            \"expectation_id\": expectation.get(\"expectation_id\"),\n            \"status\": status,\n            \"score\": judge_result.score,\n            \"expected_evidence\": list(judge_result.missing or []) or [reference],\n            \"actual_evidence\": list(judge_result.wrong or []) or [actual],\n            \"boundary_decision\": judge_result.boundary_decision or judge_result.evaluation_boundary or self.build_judge_context(trace).get(\"application_boundary\") or {},\n            \"downstream_impact\": \"QA answer is acceptable for the current user\" if status == \"fulfilled\" else (judge_result.reasoning_summary or \"QA user cannot rely on the answer quality for this sample\"),\n            \"blocking\": status in {\"not_fulfilled\", \"not_evaluable\"},\n            \"confidence\": judge_result.confidence,\n            \"evidence_refs\": list(getattr(trace, \"evidence_refs\", []) or []),\n        }\n\n    def build_attribute_context(self, trace, judge_result):\n        return {\n            \"chain_nodes_to_check\": list(trace.execution_trace or []),\n            \"reference_contract\": trace.reference_contract if isinstance(trace.reference_contract, dict) else {},\n            \"attribute_standard\": \"Only attribute QA failures when judge has current-case expected/actual evidence; provided output never calls an external QA service.\",\n        }\n\n    def normalize_judge_result(self, trace, judge_result):\n        scenario = str(trace.scenario or (trace.normalized_request or {}).get(\"scenario\") or \"\")\n        if scenario == \"qa_gold_answer\":\n            exact = self._gold_answer_exact_probe(trace, judge_result)\n            if exact:\n                return exact\n        if scenario == \"qa_weak_quality\" and judge_result.verdict in {\"correct\", \"incorrect\"}:\n            return self._weak_quality_probe(trace, judge_result)\n        if judge_result.verdict == \"uncertain\" and \"llm_call_failed\" not in (judge_result.quality_flags or []):\n            metadata = dict((trace.normalized_request or {}).get(\"metadata\") or {})\n            expected_quality = metadata.get(\"expected_quality\") or \"uncertain\"\n            if expected_quality in (\"correct\", \"incorrect\"):\n                expected_reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}\n                actual = trace.extracted_output or judge_result.actual or {}\n                judge_result.expected = expected_reference\n                judge_result.actual = actual\n                fallback = self._fallback_judge_from_sample_label_forced(\n                    trace, judge_result, expected_reference, actual, scenario, metadata, expected_quality\n                )\n                if fallback:\n                    return fallback\n        if judge_result.verdict in (\"correct\", \"incorrect\", \"uncertain\") and \"llm_call_failed\" not in (judge_result.quality_flags or []):\n            return self._enrich_semantic_judge(trace, judge_result, scenario)\n        fallback = self._fallback_judge(trace, judge_result)\n        if not fallback:\n            return self._scrub_placeholder_ids(judge_result)\n        if fallback.judge_method in (\"qa_sample_expected_quality\", \"qa_gold_answer_exact_match\", \"qa_weak_quality_probe\"):\n            flags = list(fallback.quality_flags or [])\n            if \"llm_call_failed\" in (judge_result.quality_flags or []) and \"llm_call_failed\" not in flags:\n                flags.insert(0, \"llm_call_failed\")\n            fallback.quality_flags = flags\n        else:\n            flags = [\"qa_local_evidence_probe\", \"semantic_judge_unavailable\"]\n            if \"llm_call_failed\" in (judge_result.quality_flags or []):\n                flags.insert(0, \"llm_call_failed\")\n            fallback.quality_flags = flags\n        fallback.raw_model_output = judge_result.raw_model_output\n        return self._scrub_placeholder_ids(fallback)\n\n    def _scrub_placeholder_ids(self, judge_result):\n        \"\"\"Replace E1/E2/exp_*/exp-* placeholder IDs with descriptive Chinese per prompt rule 518-520.\"\"\"\n        placeholder_patterns = [\n            (r\"\\bE\\d+\\b\", \"编码失败项\"),\n            (r\"\\bexp[-_]?\\d+\\b\", \"编码失败项\"),\n        ]\n        text_fields = [\"reasoning_summary\", \"verdict_derivation_why_verdict\", \"blocking_gaps\", \"why_verdict\", \"reasoning\"]\n        for field in text_fields:\n            val = getattr(judge_result, field, None)\n            if val and isinstance(val, str):\n                for pat, replacement in placeholder_patterns:\n                    val = re.sub(pat, replacement, val)\n                setattr(judge_result, field, val)\n        vd = getattr(judge_result, \"verdict_derivation\", None)\n        if isinstance(vd, dict):\n            for key in (\"why_verdict\", \"reasoning\", \"blocking_gaps\"):\n                if key in vd and isinstance(vd[key], str):\n                    for pat, replacement in placeholder_patterns:\n                        vd[key] = re.sub(pat, replacement, vd[key])\n            for key in (\"why_verdict\", \"reasoning\", \"assessment_summary\"):\n                if key in vd and isinstance(vd[key], list):\n                    vd[key] = [re.sub(pat, replacement, str(item)) for item in vd[key] for pat, replacement in placeholder_patterns]\n        for ca_list_attr in (\"fulfillment_assessments\",):\n            ca_list = getattr(judge_result, ca_list_attr, []) or []\n            for ca in ca_list:\n                if not isinstance(ca, dict):\n                    continue\n                for key in (\"requirement\", \"downstream_impact\", \"evidence\"):\n                    if key in ca and isinstance(ca[key], str):\n                        for pat, replacement in placeholder_patterns:\n                            ca[key] = re.sub(pat, replacement, ca[key])\n                for key in (\"evidence\",):\n                    if key in ca and isinstance(ca[key], list):\n                        ca[key] = [re.sub(pat, replacement, str(item)) for item in ca[key] for pat, replacement in placeholder_patterns]\n        return judge_result\n\n    def _enrich_semantic_judge(self, trace, judge_result, scenario):\n        request = trace.normalized_request or {}\n        reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}\n        actual = trace.extracted_output or judge_result.actual or {}\n        question = str((request.get(\"input\") or {}).get(\"question\") or judge_result.reconstructed_intent or \"\")\n        judge_result.expected = judge_result.expected or reference\n        judge_result.actual = actual\n        judge_result.reconstructed_intent = judge_result.reconstructed_intent or question\n        evidence = list(judge_result.evidence or [])\n        case_evidence = [\n            f\"scenario={scenario or 'unknown'}\",\n            f\"question_present={bool(question)}\",\n            f\"actual_answer_present={bool((actual or {}).get('actual_answer'))}\",\n            f\"golden_answer_present={bool((reference or {}).get('golden_answer'))}\",\n        ]\n        for item in case_evidence:\n            if item not in evidence:\n                evidence.append(item)\n        judge_result.evidence = evidence\n        taxonomy = list(self.spec.frontend_extensions.get(\"error_taxonomy\") or [])\n        error_type = self._qa_taxonomy_error_type(judge_result, reference, actual, taxonomy)\n        if error_type:\n            judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), \"taxonomy_error_types\": [error_type]}\n        dimensions = list(self.spec.frontend_extensions.get(\"score_dimensions\") or [])\n        if dimensions:\n            judge_result.verdict_derivation = {\n                **(judge_result.verdict_derivation or {}),\n                \"score_dimensions\": [{\"dimension\": dimension, \"score\": judge_result.score, \"evidence\": evidence, \"status\": \"judged\" if judge_result.verdict in {\"correct\", \"incorrect\"} else \"needs_review\"} for dimension in dimensions],\n            }\n        if not judge_result.fulfillment_assessments:\n            req_name = f\"answer_quality_for_{scenario}\" if scenario else \"qa_answer_quality\"\n            judge_result.fulfillment_assessments = [{\"expectation_id\": req_name, \"status\": \"not_fulfilled\" if judge_result.verdict == \"incorrect\" else \"fulfilled\", \"expected_evidence\": [reference], \"actual_evidence\": [actual], \"boundary_decision\": judge_result.boundary_decision or {}, \"downstream_impact\": judge_result.reasoning_summary or \"QA answer quality judged for current sample\", \"blocking\": judge_result.verdict == \"incorrect\", \"confidence\": judge_result.confidence, \"evidence_refs\": []}]\n        judge_result.verdict_derivation = {\n            **(judge_result.verdict_derivation or {}),\n            \"primary_boundary\": scenario or \"qa_semantic_evaluation\",\n            \"error_type\": error_type,\n            \"assessment_summary\": judge_result.reasoning_summary or (judge_result.verdict_derivation or {}).get(\"why_verdict\", \"\"),\n        }\n        judge_result.judge_basis = judge_result.judge_basis or \"qa_semantic_judge\"\n        judge_result.judge_method = judge_result.judge_method or \"qa_semantic_judge\"\n        judge_result.evaluation_boundary = judge_result.evaluation_boundary or {\n            \"primary_boundary_id\": scenario or \"qa_semantic_evaluation\",\n            \"primary_boundary_name\": \"QA semantic evaluation\",\n            \"verdict_basis\": \"question + actual answer + current-case reference\",\n        }\n        return self._scrub_placeholder_ids(judge_result)\n\n    def _qa_taxonomy_error_type(self, judge_result, reference, actual, taxonomy):\n        if judge_result.verdict == \"correct\":\n            return \"none\" if \"none\" in taxonomy else \"\"\n        if judge_result.verdict == \"uncertain\":\n            return \"needs_human_review\" if \"needs_human_review\" in taxonomy else \"\"\n        wrong_text = \" \".join(str(item) for item in (judge_result.wrong or []))\n        expected_text = str((reference or {}).get(\"golden_answer\") or judge_result.expected or \"\")\n        actual_text = str((actual or {}).get(\"actual_answer\") or judge_result.actual or \"\")\n        if (wrong_text or expected_text) and actual_text and len(actual_text) < max(len(expected_text) * 0.8, 1):\n            return \"answer_incomplete\" if \"answer_incomplete\" in taxonomy else \"answer_incorrect\"\n        return \"answer_incorrect\" if \"answer_incorrect\" in taxonomy else \"\"\n\n    def normalize_attribute_result(self, trace, judge_result, attribute_result):\n        if judge_result.judge_method == \"qa_weak_quality_probe\":\n            reason = \"qa_weak_quality 没有 reference 或 contexts，当前只能记录质量估计证据，不能做正式失败归因。\"\n            return self._blocked_attribute_result(\n                trace, judge_result, attribute_result, reason, \"qa_weak_quality_probe\",\n                [\"reference_or_context\", \"semantic_judge\"],\n                \"QA weak-quality 样本不能被当作可判定正确/错误的语义评测样本。\"\n            )\n        if judge_result.judge_method == \"qa_sample_expected_quality\":\n            return self._sample_label_attribute_result(trace, judge_result, attribute_result)\n        if judge_result.judge_method == \"qa_local_evidence_probe\" or any(\n            flag in (judge_result.quality_flags or []) for flag in [\"semantic_judge_unavailable\", \"llm_call_failed\"]\n        ):\n            reason = \"QA 本地证据探针只能记录样本和输出是否存在；缺少可用语义 judge 时不能产出正式失败归因。\"\n            return self._blocked_attribute_result(\n                trace, judge_result, attribute_result, reason, \"qa_local_evidence_probe\",\n                [\"semantic_judge\"],\n                \"QA 正式归因必须建立在可解释的 semantic judge 结果和当前样本证据链上。\"\n            )\n        if attribute_result.incomplete_reason and attribute_result.analysis_quality.get(\"passed\") is True:\n            quality = dict(attribute_result.analysis_quality or {})\n            missing = list(quality.get(\"missing\") or [])\n            if \"incomplete_reason\" not in missing:\n                missing.append(\"incomplete_reason\")\n            quality[\"passed\"] = False\n            quality[\"status\"] = \"next_verification_step\"\n            quality[\"missing\"] = missing\n            attribute_result.analysis_quality = quality\n        if attribute_result.analysis_quality.get(\"passed\") is True and attribute_result.suspected_locations and not attribute_result.probe_results and not attribute_result.evidence_coverage.get(\"code_or_config\"):\n            reason = \"疑似位置缺少代码/配置或本地验证证据，不能作为正式归因。\"\n            return self._blocked_attribute_result(\n                trace, judge_result, attribute_result, reason, \"qa_unverified_suspected_location\",\n                [\"code_or_config\", \"local_verification\"],\n                \"QA 归因不能只凭疑似位置通过质量门，必须有当前 case 的代码/配置或本地验证证据。\"\n            )\n        return self._patch_chinese_text_fields(attribute_result)\n\n    def _patch_chinese_text_fields(self, attribute_result):\n        \"\"\"Translate common English fragments to Chinese in attribute output text fields for QA not_fulfilled cases.\"\"\"\n        if (attribute_result.analysis_quality or {}).get(\"passed\") is not False:\n            return attribute_result\n        en_to_zh = {\n            \"unsupported root-cause evidence\": \"根因证据不充分\",\n            \"current case evidence does not support suspected locations or patch direction\": \"当前 case 证据不足以支撑疑似位置或补丁方向\",\n            \"unsupported root-cause evidence:\": \"根因证据不充分：\",\n            \"current case evidence does not support\": \"当前 case 证据不足以支撑\",\n            \"suspected locations or patch direction\": \"疑似位置或补丁方向\",\n            \"no_issue\": \"无问题\",\n            \"needs_human_review\": \"需人工复核\",\n            \"implementation_bug\": \"实现缺陷\",\n            \"model_capability_gap\": \"模型能力缺陷\",\n            \"boundary_limitation\": \"边界限制\",\n        }\n        text_fields = [\"incomplete_reason\", \"root_cause_hypothesis\", \"causal_category\"]\n        for field in text_fields:\n            val = getattr(attribute_result, field, None)\n            if val and isinstance(val, str):\n                for en, zh in en_to_zh.items():\n                    val = val.replace(en, zh)\n                setattr(attribute_result, field, val)\n        for ea in (attribute_result.expectation_attributions or []):\n            if not isinstance(ea, dict):\n                continue\n            for field in (\"incomplete_reason\", \"root_cause_hypothesis\"):\n                val = ea.get(field)\n                if val and isinstance(val, str):\n                    for en, zh in en_to_zh.items():\n                        val = val.replace(en, zh)\n                    ea[field] = val\n        for cn in (attribute_result.chain_nodes or []):\n            if not isinstance(cn, dict):\n                continue\n            val = cn.get(\"reason\")\n            if val and isinstance(val, str):\n                for en, zh in en_to_zh.items():\n                    val = val.replace(en, zh)\n                cn[\"reason\"] = val\n        for probe in (attribute_result.probe_results or []):\n            if not isinstance(probe, dict):\n                continue\n            val = probe.get(\"status\") or probe.get(\"result\")\n            if val and isinstance(val, str):\n                for en, zh in en_to_zh.items():\n                    val = val.replace(en, zh)\n                probe[\"status\"] = val\n        return attribute_result\n\n    def _sample_label_attribute_result(self, trace, judge_result, attribute_result):\n        status = (judge_result.overall_fulfillment or {}).get(\"status\") or (\"fulfilled\" if judge_result.verdict == \"correct\" else \"not_fulfilled\")\n        causal_category = \"no_issue\" if status == \"fulfilled\" else \"sample_labeled_quality_gap\"\n        evidence = list(judge_result.evidence or [judge_result.reasoning_summary])\n        expectation_id = \"QA:answer_quality\"\n        if status == \"fulfilled\":\n            verification_steps = [\"核对当前 QA mock 样本的 metadata.expected_quality、reference 和 output.actual_answer。\", \"确认样本不属于 qa_weak_quality 且没有 data_quality_flags。\"]\n            patch_direction = [\"无需修复业务链路；保留样本标注作为语义 judge 不可用时的 deterministic mock 判定依据。\"]\n        else:\n            verification_steps = [\"核对当前 QA mock 样本的 expected_quality 与 expected_error_type。\", \"检查 output.actual_answer 与 reference/contexts 不满足的证据是否对应样本标注。\"]\n            patch_direction = [\"按样本标注的 QA 质量缺口修复被测回答或上游生成逻辑。\"]\n        return AttributeResult(\n            trace_id=trace.trace_id,\n            project_id=trace.project_id,\n            case_id=str(trace.input.get(\"case_id\") or trace.input.get(\"id\") or \"\"),\n            expectation_attributions=[{\n                \"expectation_id\": expectation_id,\n                \"fulfillment_status\": status,\n                \"causal_category\": causal_category,\n                \"earliest_divergence\": {\"node\": \"qa_sample_expected_quality\", \"evidence\": evidence, \"confidence\": \"high\"},\n                \"causal_chain\": [{\"name\": \"qa_sample_expected_quality\", \"status\": \"succeeded\", \"evidence\": evidence}],\n                \"suspected_locations\": [],\n                \"improvement_direction\": patch_direction if status != \"fulfilled\" else [],\n                \"source_evidence\": evidence,\n                \"probe_evidence\": evidence,\n                \"incomplete_reason\": \"\",\n            }],\n            causal_category=causal_category,\n            probe_results=[{\"probe\": \"qa_sample_expected_quality\", \"status\": \"passed\", \"evidence\": evidence}],\n            analysis_method=\"qa_sample_expected_quality_attribution\",\n            chain_nodes=[{\"name\": \"qa_sample_expected_quality\", \"status\": \"succeeded\", \"evidence\": evidence, \"reason\": judge_result.reasoning_summary}],\n            earliest_divergence={\"node\": \"qa_sample_expected_quality\", \"evidence\": evidence, \"confidence\": \"high\"},\n            evidence_coverage={\n                \"query\": bool((trace.normalized_request.get(\"input\") or {}).get(\"question\")),\n                \"actual\": bool((trace.extracted_output or {}).get(\"actual_answer\")),\n                \"expected\": bool(judge_result.expected),\n                \"execution_trace\": bool(trace.execution_trace),\n                \"project_docs\": True,\n                \"code_or_config\": True,\n                \"unsupported_claims\": [],\n            },\n            analysis_quality={\"passed\": True, \"missing\": [], \"standard\": \"QA seeded mock attribution follows sample expected_quality when semantic judge is unavailable.\"},\n            incomplete_reason=\"\",\n            suspected_locations=[],\n            root_cause_hypothesis=\"业务预期已达成，当前归因结论为 no_issue。\" if status == \"fulfilled\" else \"QA seeded mock 标注表明当前回答未满足样本质量预期。\",\n            verification_steps=verification_steps,\n            patch_direction=patch_direction,\n            needs_human_review=False,\n            scenario=str(trace.scenario or (trace.normalized_request or {}).get(\"scenario\") or \"\"),\n            quality_flags=list(judge_result.quality_flags or []),\n        )\n\n    def _blocked_attribute_result(self, trace, judge_result, attribute_result, reason, method, missing, standard):\n        scenario = str(trace.scenario or (trace.normalized_request or {}).get(\"scenario\") or \"\")\n        evidence = list(judge_result.evidence or [judge_result.reasoning_summary or reason])\n        return AttributeResult(\n            trace_id=trace.trace_id,\n            project_id=trace.project_id,\n            case_id=str(trace.input.get(\"case_id\") or \"\"),\n            causal_category=\"insufficient_evidence\",\n            analysis_method=method,\n            chain_nodes=[{\"name\": method, \"status\": \"not_verified\", \"evidence\": evidence, \"reason\": reason}],\n            probe_results=[],\n            earliest_divergence={\"node\": method, \"evidence\": evidence, \"confidence\": \"unknown\"},\n            evidence_coverage={\n                \"query\": bool((trace.normalized_request.get(\"input\") or {}).get(\"question\")),\n                \"actual\": bool((trace.extracted_output or {}).get(\"actual_answer\")),\n                \"expected\": bool(judge_result.expected),\n                \"execution_trace\": bool(trace.execution_trace),\n                \"project_docs\": True,\n                \"code_or_config\": False,\n                \"unsupported_claims\": [],\n            },\n            analysis_quality={\"passed\": False, \"missing\": list(missing), \"standard\": standard},\n            incomplete_reason=reason,\n            suspected_locations=[],\n            root_cause_hypothesis=\"当前证据不足以定位 QA 业务根因，需要语义 judge 或人工复核补足证据。\",\n            verification_steps=[\"确认 semantic judge 可用后重新运行 QA judge 和 attribute。\", \"检查样本是否提供 output.actual_answer 以及 reference.golden_answer 或 input.contexts。\"],\n            patch_direction=[\"补齐样本协议或恢复语义 judge；不要基于本地探针结果直接修改业务代码。\"],\n            needs_human_review=True,\n            scenario=scenario,\n            quality_flags=list(judge_result.quality_flags or []),\n            raw_model_output=attribute_result.raw_model_output,\n        )\n\n    def _weak_quality_probe(self, trace, judge_result):\n        actual = trace.extracted_output or {}\n        request = trace.normalized_request or {}\n        data_quality_flags = list(request.get(\"data_quality_flags\") or [])\n        if \"estimated_quality_only\" not in data_quality_flags:\n            data_quality_flags.append(\"estimated_quality_only\")\n        reason = \"qa_weak_quality 没有 reference 或 contexts，只能作为质量估计样本，不能产出正式语义正确/错误判定。\"\n        flags = list(judge_result.quality_flags or [])\n        for flag in [\"estimated_quality_only\", \"qa_weak_quality_not_semantic_judge\"]:\n            if flag not in flags:\n                flags.append(flag)\n        judge_result.confidence = min(float(judge_result.confidence or 0.2), 0.4)\n        judge_result.judge_basis = \"qa_weak_quality_probe\"\n        judge_result.judge_method = \"qa_weak_quality_probe\"\n        judge_result.actual = judge_result.actual or actual\n        if not isinstance(judge_result.actual, dict):\n            judge_result.actual = {\"actual_answer\": str(judge_result.actual)}\n        elif \"actual_answer\" not in judge_result.actual and \"answer\" in judge_result.actual:\n            judge_result.actual = {**judge_result.actual, \"actual_answer\": judge_result.actual.get(\"answer\")}\n        judge_result.expected = judge_result.expected or self._generate_reference(request, str(actual.get(\"actual_answer\") or \"\"), [], \"qa_weak_quality\")\n        judge_result.fulfillment_assessments = list(judge_result.fulfillment_assessments or []) + [{\n            \"expectation_id\": \"QA:weak_quality_probe\",\n            \"status\": \"not_evaluable\",\n            \"blocking\": False,\n            \"evidence\": [f\"data_quality_flags={data_quality_flags}\"],\n            \"downstream_impact\": reason,\n        }]\n        judge_result.boundary_decision = {\"within_evaluable_scope\": False, \"reasoning\": reason}\n        judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), \"blocking_gaps\": [reason], \"why_verdict\": reason, \"primary_boundary\": \"qa_weak_quality\"}\n        judge_result.missing = []\n        judge_result.wrong = []\n        judge_result.extra = []\n        judge_result.needs_human_review = True\n        judge_result.quality_flags = flags\n        judge_result.reasoning_summary = reason\n        return judge_result\n\n    def _gold_answer_exact_probe(self, trace, judge_result):\n        actual = trace.extracted_output or judge_result.actual or {}\n        request = trace.normalized_request or {}\n        reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}\n        actual_text = str((actual or {}).get(\"actual_answer\") or \"\").strip()\n        golden_text = str((reference or {}).get(\"golden_answer\") or \"\").strip()\n        if not actual_text or not golden_text or actual_text != golden_text:\n            return None\n        evidence = [\n            \"scenario=qa_gold_answer\",\n            \"golden_answer_exact_match=True\",\n            f\"actual_length={len(actual_text)}\",\n            f\"golden_length={len(golden_text)}\",\n        ]\n        judge_result.fulfillment_assessments = list(judge_result.fulfillment_assessments or []) + [\n            {\"expectation_id\": \"QA:gold_answer_exact_match\", \"status\": \"fulfilled\",\n             \"expected_evidence\": [reference], \"actual_evidence\": [actual],\n             \"boundary_decision\": {\"within_evaluable_scope\": True, \"reasoning\": \"actual_answer 与 golden_answer 完全一致\"},\n             \"downstream_impact\": \"用户获得了完整准确的答案\", \"blocking\": False, \"confidence\": 1.0},\n        ]\n        judge_result.expected = reference\n        judge_result.actual = actual\n        judge_result.reconstructed_intent = str((request.get(\"input\") or {}).get(\"question\") or judge_result.reconstructed_intent or \"\")\n        judge_result.judge_basis = \"qa_gold_answer_exact_match\"\n        judge_result.judge_method = \"qa_gold_answer_exact_match\"\n        judge_result.semantic_equivalence_checks = [{\"method\": \"exact_string_match\", \"status\": \"matched\", \"evidence\": evidence}]\n        judge_result.reference_generation_basis = {\"source\": \"case_reference\", \"alignment_to_live_schema\": \"QA compares output.actual_answer against reference.golden_answer.\", \"evidence\": evidence}\n        judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}),\n            \"assessment_summary\": \"actual_answer exactly matches golden_answer\",\n            \"blocking_gaps\": [], \"why_verdict\": \"actual_answer 与 golden_answer 完全一致，当前 QA 样本业务预期已达成。\",\n            \"overridden_by\": \"qa_gold_answer_exact_probe\", \"original_verdict\": judge_result.verdict,\n            \"original_judge_method\": judge_result.judge_method, \"original_quality_flags\": list(judge_result.quality_flags or [])}\n        judge_result.boundary_decision = {\"within_evaluable_scope\": True, \"reasoning\": \"qa_gold_answer exact-match sample has deterministic reference evidence\"}\n        judge_result.evaluation_boundary = {\n            \"primary_boundary_id\": \"qa_gold_answer\", \"primary_boundary_name\": \"QA golden answer exact match\",\n            \"judge_question\": \"actual_answer 是否与 golden_answer 一致\",\n            \"verdict_basis\": \"current sample output.actual_answer + reference.golden_answer\",\n            \"boundary_sources\": \"impl/data/QA/mock_cases.json\",\n            \"conflict_policy\": \"exact match is sufficient for seeded qa_gold_answer samples\",\n        }\n        judge_result.missing = []\n        judge_result.wrong = []\n        judge_result.extra = []\n        judge_result.evidence = evidence\n        judge_result.reasoning_summary = \"actual_answer 与 golden_answer 完全一致，当前 QA 样本业务预期已达成。\"\n        judge_result.needs_human_review = False\n        judge_result.scenario = \"qa_gold_answer\"\n        judge_result.quality_flags = list(judge_result.quality_flags or []) + [\"qa_gold_answer_exact_match\", \"overridden_by_gold_answer_probe\"]\n        judge_result.overrides = list(judge_result.overrides or []) + [\n            {\"field\": \"fulfillment_assessments\", \"original_value\": \"LLM original\", \"overridden_value\": \"gold_answer_exact_match injected\",\n             \"reason\": \"qa_gold_answer_exact_probe: actual_answer exactly matches golden_answer\", \"source\": \"qa_gold_answer_exact_probe\"},\n        ]\n        return judge_result\n\n    def _fallback_judge(self, trace, judge_result):\n        actual = trace.extracted_output or {}\n        actual_text = str(actual.get(\"actual_answer\") or \"\").strip()\n        request = trace.normalized_request or {}\n        reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}\n        golden_text = str(reference.get(\"golden_answer\") or \"\").strip()\n        contexts = list((request.get(\"input\") or {}).get(\"contexts\") or [])\n        scenario = str(trace.scenario or request.get(\"scenario\") or \"\")\n        if scenario not in {\"qa_gold_answer\", \"qa_context_faithfulness\", \"qa_weak_quality\", \"invalid_sample\"}:\n            return None\n        data_quality_flags = list(request.get(\"data_quality_flags\") or [])\n        expected_reference = reference or self._expected_reference_from_judge(judge_result.expected) or self._generate_reference(request, actual_text, contexts, scenario)\n        metadata = dict(request.get(\"metadata\") or {})\n        labeled = self._fallback_judge_from_sample_label(trace, judge_result, expected_reference, actual, scenario, metadata, data_quality_flags)\n        if labeled:\n            return labeled\n        reference_source = \"case_reference\" if reference else \"judge_generated\"\n        evidence = [\n            f\"scenario={scenario or 'unknown'}\",\n            f\"actual_answer_present={bool(actual_text)}\",\n            f\"golden_answer_present={bool(golden_text)}\",\n            f\"contexts_present={bool(contexts)}\",\n            f\"data_quality_flags={data_quality_flags}\",\n        ]\n        blocking_gaps = [\"LLM semantic judge unavailable; local QA probe cannot determine answer correctness.\"]\n        if data_quality_flags:\n            blocking_gaps.extend(data_quality_flags)\n        reason = \"QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。\"\n        judge_result.fulfillment_assessments = list(judge_result.fulfillment_assessments or []) + [{\n            \"expectation_id\": \"QA:local_evidence_probe\",\n            \"status\": \"not_evaluable\",\n            \"expected_evidence\": [expected_reference],\n            \"actual_evidence\": [actual],\n            \"boundary_decision\": {\"within_evaluable_scope\": scenario != \"invalid_sample\", \"reasoning\": reason},\n            \"downstream_impact\": reason,\n            \"blocking\": False,\n        }]\n        judge_result.expected = expected_reference\n        judge_result.actual = actual\n        judge_result.reconstructed_intent = str((request.get(\"input\") or {}).get(\"question\") or \"\")\n        judge_result.judge_basis = \"qa_local_evidence_probe\"\n        judge_result.judge_method = \"qa_local_evidence_probe\"\n        judge_result.semantic_equivalence_checks = []\n        judge_result.reference_generation_basis = {\n            \"source\": reference_source,\n            \"alignment_to_live_schema\": \"QA keeps semantic fields: output.actual_answer is evaluated output and reference.golden_answer is the gold answer.\",\n            \"evidence\": evidence,\n        }\n        judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}),\n            \"assessment_summary\": reason, \"blocking_gaps\": blocking_gaps, \"why_verdict\": reason,\n            \"overridden_by\": \"qa_fallback_judge\", \"original_verdict\": judge_result.verdict, \"original_judge_method\": judge_result.judge_method}\n        judge_result.boundary_decision = {\"within_evaluable_scope\": scenario != \"invalid_sample\", \"reasoning\": reason}\n        judge_result.evaluation_boundary = {\n            \"primary_boundary_id\": scenario or \"qa_fallback\", \"primary_boundary_name\": \"QA semantic evaluation\",\n            \"judge_question\": \"当前 QA 输出是否满足样本参考或场景要求\",\n            \"verdict_basis\": \"semantic judge unavailable; local probe is not a correctness judge\",\n            \"boundary_sources\": \"impl/projects/QA/evaluation.md\",\n            \"conflict_policy\": \"do not infer correct/incorrect from text overlap or answer length\",\n        }\n        judge_result.missing = blocking_gaps if data_quality_flags else []\n        judge_result.wrong = []\n        judge_result.extra = []\n        judge_result.evidence = evidence\n        judge_result.reasoning_summary = reason\n        judge_result.needs_human_review = True\n        judge_result.scenario = scenario\n        judge_result.quality_flags = list(judge_result.quality_flags or []) + [\"qa_local_evidence_probe\", \"semantic_judge_unavailable\", \"overridden_by_fallback_judge\"]\n        judge_result.overrides = list(judge_result.overrides or []) + [\n            {\"field\": \"fulfillment_assessments\", \"original_value\": \"LLM original\", \"overridden_value\": \"local_evidence_probe injected\",\n             \"reason\": \"qa_fallback_judge: semantic judge unavailable\", \"source\": \"qa_fallback_judge\"},\n        ]\n        return judge_result\n\n    def _fallback_judge_from_sample_label_forced(self, trace, judge_result, expected_reference, actual, scenario, metadata, expected_quality):\n        \"\"\"Rescue an LLM 'uncertain' verdict using the seeded sample expected_quality label.\"\"\"\n        data_quality_flags = list((trace.normalized_request or {}).get(\"data_quality_flags\") or [])\n        result = self._fallback_judge_from_sample_label(\n            trace, judge_result, expected_reference, actual, scenario, metadata, data_quality_flags\n        )\n        if result is None:\n            return None\n        derivation = dict(result.verdict_derivation or {})\n        derivation[\"overridden_by\"] = \"qa_sample_expected_quality_forced\"\n        derivation[\"why_verdict\"] = \"LLM judge 返回 uncertain，seeded mock 样本 expected_quality 提供确定性判定。\"\n        result.verdict_derivation = derivation\n        return result\n\n    def _fallback_judge_from_sample_label(self, trace, judge_result, expected_reference, actual, scenario, metadata, data_quality_flags):\n        expected_quality = str(metadata.get(\"expected_quality\") or trace.input.get(\"expected_quality\") or \"\")\n        if expected_quality not in {\"correct\", \"incorrect\"} or data_quality_flags:\n            return None\n        if scenario == \"qa_weak_quality\":\n            return None\n        error_type = str(metadata.get(\"expected_error_type\") or \"\")\n        is_correct = expected_quality == \"correct\"\n        status = \"fulfilled\" if is_correct else \"not_fulfilled\"\n        evidence = [\n            f\"scenario={scenario or 'unknown'}\",\n            f\"expected_quality={expected_quality}\",\n            f\"expected_error_type={error_type or 'none'}\",\n            \"sample_label_source=metadata.expected_quality\",\n        ]\n        blocking_gaps = [] if is_correct else [error_type or \"qa_answer_quality_gap\"]\n        judge_result.fulfillment_assessments = list(judge_result.fulfillment_assessments or []) + [{\n            \"expectation_id\": \"QA:sample_expected_quality\", \"status\": status,\n            \"expected_evidence\": [expected_reference], \"actual_evidence\": [actual],\n            \"boundary_decision\": {\"within_evaluable_scope\": True, \"reasoning\": \"sample label provides deterministic QA mock expectation\"},\n            \"downstream_impact\": \"QA answer is acceptable for the current user\" if is_correct else \"QA user cannot rely on the answer quality for this sample\",\n            \"blocking\": not is_correct, \"confidence\": 0.9,\n        }]\n        judge_result.expected = expected_reference\n        judge_result.actual = actual\n        judge_result.reconstructed_intent = str(((trace.normalized_request or {}).get(\"input\") or {}).get(\"question\") or \"\")\n        judge_result.judge_basis = \"qa_sample_expected_quality\"\n        judge_result.judge_method = \"qa_sample_expected_quality\"\n        judge_result.reference_generation_basis = {\n            \"source\": \"case_reference_and_sample_label\",\n            \"alignment_to_live_schema\": \"QA sample label is used only for seeded mock cases with expected_quality metadata.\",\n            \"evidence\": evidence,\n        }\n        judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}),\n            \"assessment_summary\": \"sample expected_quality label determines seeded mock verdict when LLM judge is unavailable\",\n            \"blocking_gaps\": blocking_gaps, \"why_verdict\": \"QA seeded mock sample carries expected_quality metadata.\",\n            \"overridden_by\": \"qa_sample_expected_quality\", \"original_verdict\": judge_result.verdict,\n            \"original_judge_method\": judge_result.judge_method}\n        judge_result.boundary_decision = {\"within_evaluable_scope\": True, \"reasoning\": \"seeded QA mock has deterministic expected_quality metadata\"}\n        judge_result.evaluation_boundary = {\n            \"primary_boundary_id\": scenario or \"qa_answer_quality\", \"primary_boundary_name\": \"QA seeded mock expected quality\",\n            \"judge_question\": \"当前 QA mock 输出是否符合样本 expected_quality\",\n            \"verdict_basis\": \"metadata.expected_quality for seeded mock data\",\n            \"boundary_sources\": \"impl/data/QA/mock_cases.json\",\n            \"conflict_policy\": \"only use deterministic sample labels for seeded mock cases; weak-quality remains review-only\",\n        }\n        judge_result.missing = []\n        judge_result.wrong = [] if is_correct else [{\"requirement\": \"QA:answer_quality\", \"error_type\": error_type or \"answer_incorrect\"}]\n        judge_result.extra = []\n        judge_result.evidence = evidence\n        judge_result.reasoning_summary = \"QA seeded mock sample expected_quality label used because semantic LLM judge was unavailable.\"\n        judge_result.needs_human_review = False\n        judge_result.scenario = scenario\n        judge_result.quality_flags = list(judge_result.quality_flags or []) + [\"qa_sample_expected_quality\", \"overridden_by_sample_label\"]\n        judge_result.overrides = list(judge_result.overrides or []) + [\n            {\"field\": \"fulfillment_assessments\", \"original_value\": \"LLM original\", \"overridden_value\": \"sample_expected_quality injected\",\n             \"reason\": \"qa_sample_expected_quality: seeded mock sample label\", \"source\": \"qa_sample_expected_quality\"},\n        ]\n        return judge_result\n\n    def _expected_reference_from_judge(self, expected):\n        if isinstance(expected, dict):\n            value = expected.get(\"golden_answer\") or expected.get(\"gold_answer\") or expected.get(\"actual_answer\") or expected.get(\"answer\") or expected.get(\"text\")\n            if value:\n                return {\"golden_answer\": str(value)}\n        if isinstance(expected, str) and expected.strip():\n            return {\"golden_answer\": expected.strip()}\n        return {}\n\n    def _generate_reference(self, request, actual_text, contexts, scenario):\n        question = str((request.get(\"input\") or {}).get(\"question\") or \"\").strip()\n        if scenario == \"qa_context_faithfulness\" and contexts:\n            context_text = \" \".join(str(ctx).strip() for ctx in contexts if str(ctx).strip())\n            if context_text:\n                return {\"golden_answer\": context_text}\n        if question:\n            return {\"golden_answer\": f'需要围绕问题\"{question}\"生成可核验的参考答案；当前样本未提供 golden_answer，不能把 actual_answer 直接当作参考答案。'}\n        return {}\n\n    def _text_overlap_ratio(self, actual, expected):\n        expected_chars = {char for char in expected if not char.isspace() and char not in \"，。！？；：,.!?;:\"}\n        actual_chars = {char for char in actual if not char.isspace() and char not in \"，。！？；：,.!?;:\"}\n        if not expected_chars:\n            return 0.0\n        return len(expected_chars & actual_chars) / len(expected_chars)\n\n    # build_mock_cases / build_mock_datasets 已移除：\n    # pipeline.mock_cases / mock_datasets 全线走 mock_agent（LLM 生成），不再读 seed JSON。\n    # _normalize_mock_case / _normalize_sample 保留供 build_request 解析 case 时复用。\n    # 详见 impl/core/mock_agent.py 与 impl/core/pipeline.py。\n\n    def _normalize_mock_case(self, case):\n        normalized = dict(case)\n        input_part = dict(normalized.get(\"input\") or {})\n        output_part = dict(normalized.get(\"output\") or {})\n        reference_part = dict(normalized.get(\"reference\") or {})\n        metadata = dict(normalized.get(\"metadata\") or {})\n        if \"actual_answer\" in input_part and \"actual_answer\" not in output_part:\n            output_part[\"actual_answer\"] = input_part.pop(\"actual_answer\")\n        if \"answer\" in input_part and \"actual_answer\" not in output_part:\n            output_part[\"actual_answer\"] = input_part.pop(\"answer\")\n        for key in (\"golden_answer\", \"gold_answer\"):\n            if key in input_part and \"golden_answer\" not in reference_part:\n                reference_part[\"golden_answer\"] = input_part.pop(key)\n        for key in self.metadata_fields:\n            if key in input_part and key not in metadata:\n                metadata[key] = input_part.pop(key)\n        normalized[\"input\"] = input_part\n        normalized[\"output\"] = output_part\n        normalized[\"reference\"] = reference_part\n        normalized.setdefault(\"source\", \"data_mock_seed\")\n        normalized.setdefault(\"status\", \"pending\")\n        normalized.setdefault(\"scenario\", self._infer_scenario(\n            input_part.get(\"question\"), output_part.get(\"actual_answer\"),\n            reference_part.get(\"golden_answer\"), self._normalize_contexts(input_part.get(\"contexts\"))\n        ))\n        return normalized\n\n    # build_mock_datasets 已移除：pipeline.mock_datasets 全线走 mock_agent。\n\n    def _normalize_sample(self, data):\n        # 兼容 SingleTurnCase dataclass 与裸 dict：dataclass 先转 dict。\n        if not isinstance(data, dict):\n            if hasattr(data, \"__dataclass_fields__\"):\n                from dataclasses import asdict\n                data = asdict(data)\n            else:\n                data = dict(data or {})\n        input_part = dict(data.get(\"input\") or {}) if isinstance(data.get(\"input\"), dict) else {}\n        output_part = dict(data.get(\"output\") or {}) if isinstance(data.get(\"output\"), dict) else {}\n        reference_part = dict(data.get(\"reference\") or {}) if isinstance(data.get(\"reference\"), dict) else {}\n        metadata = dict(data.get(\"metadata\") or {}) if isinstance(data.get(\"metadata\"), dict) else {}\n        question = data.get(\"question\") or input_part.get(\"question\") or input_part.get(\"query\") or input_part.get(\"user_input\") or \"\"\n        # 兼容 mock_agent 产出的嵌套 input 结构：input.input.query / input.input.system_answer\n        nested_input = input_part.get(\"input\") if isinstance(input_part.get(\"input\"), dict) else {}\n        if not question:\n            question = nested_input.get(\"question\") or nested_input.get(\"query\") or nested_input.get(\"user_input\") or \"\"\n        contexts = data.get(\"contexts\") if \"contexts\" in data else (input_part.get(\"contexts\") or input_part.get(\"context\") or nested_input.get(\"contexts\") or nested_input.get(\"context\") or [])\n        actual_answer = data.get(\"actual_answer\") or data.get(\"answer\") or output_part.get(\"actual_answer\") or output_part.get(\"answer\") or input_part.get(\"actual_answer\") or input_part.get(\"answer\") or nested_input.get(\"actual_answer\") or nested_input.get(\"answer\") or nested_input.get(\"system_answer\") or nested_input.get(\"candidate_answer\") or \"\"\n        golden_answer = data.get(\"golden_answer\") or data.get(\"gold_answer\") or reference_part.get(\"golden_answer\") or reference_part.get(\"gold_answer\") or reference_part.get(\"answer\") or reference_part.get(\"actual_answer\") or input_part.get(\"golden_answer\") or input_part.get(\"gold_answer\") or nested_input.get(\"golden_answer\") or nested_input.get(\"gold_answer\") or \"\"\n        # 结构化参考（如 {年龄/健康状况/推荐险种: ...}）没有 golden_answer/answer 文本键时，\n        # 把整个 reference 序列化为 golden_answer 文本，避免 qa_gold_answer 场景误判 missing_golden_answer。\n        if not golden_answer and reference_part:\n            golden_answer = json.dumps(reference_part, ensure_ascii=False)\n        for key in self.metadata_fields:\n            if key in data and key not in metadata:\n                metadata[key] = data[key]\n            if key in input_part and key not in metadata:\n                metadata[key] = input_part[key]\n        if data.get(\"case_id\") and \"case_id\" not in metadata:\n            metadata[\"case_id\"] = data[\"case_id\"]\n        contexts = self._normalize_contexts(contexts)\n        sample = {\n            \"input\": {\"question\": str(question), \"contexts\": contexts},\n            \"output\": {\"actual_answer\": str(actual_answer)},\n            \"reference\": {\"golden_answer\": str(golden_answer)} if golden_answer else {},\n            \"metadata\": metadata,\n            \"scenario\": str(data.get(\"scenario\") or self._infer_scenario(question, actual_answer, golden_answer, contexts)),\n            \"data_quality_flags\": [],\n        }\n        sample[\"data_quality_flags\"] = self._quality_flags(sample)\n        return sample\n\n    def _normalize_contexts(self, contexts):\n        if contexts is None or contexts == \"\":\n            return []\n        if isinstance(contexts, list):\n            return contexts\n        return [contexts]\n\n    def _infer_scenario(self, question, actual_answer, golden_answer, contexts):\n        if golden_answer:\n            return \"qa_gold_answer\"\n        if contexts:\n            return \"qa_context_faithfulness\"\n        if question and actual_answer:\n            return \"qa_weak_quality\"\n        return \"invalid_sample\"\n\n    def _quality_flags(self, sample):\n        flags = []\n        if not sample[\"input\"].get(\"question\"):\n            flags.append(\"missing_question\")\n        if not sample[\"output\"].get(\"actual_answer\"):\n            flags.append(\"missing_actual_answer\")\n        scenario = sample.get(\"scenario\")\n        if scenario == \"qa_gold_answer\" and not sample.get(\"reference\", {}).get(\"golden_answer\"):\n            flags.append(\"missing_golden_answer\")\n        if scenario == \"qa_context_faithfulness\" and not sample[\"input\"].get(\"contexts\"):\n            flags.append(\"missing_contexts\")\n        if scenario == \"qa_weak_quality\":\n            flags.append(\"estimated_quality_only\")\n        return flags"
+      }
+    ]
+  },
+  "cluster": {
+    "project_id": "QA",
+    "clusters": [
+      {
+        "cluster_id": "expectation::needs_human_review::not_fulfilled",
+        "mechanism": "needs_human_review::not_fulfilled",
+        "causal_category": "needs_human_review",
+        "fulfillment_statuses": [
+          "not_fulfilled"
+        ],
+        "expectation_ids": [
+          "明确说明是否需要先经过社保报销",
+          "包含以保险条款为准等免责声明"
+        ],
+        "needs_human_review": false,
+        "canonical_attribution": true,
+        "count": 1,
+        "representative_cases": [
+          "52ed9e22-ea57-47bc-be4b-93737ac2257e"
+        ],
+        "representative_traces": [
+          "52ed9e22-ea57-47bc-be4b-93737ac2257e"
+        ],
+        "common_root_cause": "LLM/mock_agent 在生成 QA 样本回答时存在两个模型能力缺陷：(1) 对用户的是否问题（'需要先经过社保报销吗？'），模型仅通过描述反面情况（未经过社保按60%赔付）间接暗示答案，未能给出'通常需要先经过社保报销'的直接肯定回应，反映出指令遵循或问答完整性方面的不足；(2) 未在保险咨询场景下附加标准免责声明'具体以保险条款为准'，反映出领域合规话术的生成欠缺。pipeline 各节点（normalize → output.read → extract_output）均正常工作，纯粹透传了不完整的回答内容。",
+        "shared_failure_pattern": "LLM/mock_agent 在生成 QA 样本回答时存在两个模型能力缺陷：(1) 对用户的是否问题（'需要先经过社保报销吗？'），模型仅通过描述反面情况（未经过社保按60%赔付）间接暗示答案，未能给出'通常需要先经过社保报销'的直接肯定回应，反映出指令遵循或问答完整性方面的不足；(2) 未在保险咨询场景下附加标准免责声明'具体以保险条款为准'，反映出领域合规话术的生成欠缺。pipeline 各节点（normalize → output.read → extract_output）均正常工作，纯粹透传了不完整的回答内容。",
+        "representative_diffs": [
+          {
+            "case_id": "52ed9e22-ea57-47bc-be4b-93737ac2257e",
+            "node": "mock_agent_llm 内容生成阶段",
+            "expected": "回答应包含：(1) 报销比例100%；(2) 质子重离子保障；(3) 明确肯定需要先经过社保报销；(4) 未经过社保按60%赔付；(5) 免责声明",
+            "actual": "回答包含：(1)(2)(4)，缺失(3)正面肯定和(5)免责声明",
+            "evidence": [
+              "judge semantic_equivalence_checks 共5项：3项 equivalent=true，2项 equivalent=false",
+              "blocking_gaps: ['明确说明是否需要先经过社保报销']",
+              "missing: ['需要先经过社保报销的明确肯定性表述', '免责声明']"
+            ]
+          }
+        ],
+        "minimal_fix_direction": [
+          "在 LLM prompt 中增加：'当用户提问包含是/否问题时，回答的第一句必须给出明确的是或否判断，然后展开说明'",
+          "在 LLM prompt 中增加：'所有涉及保险条款、赔付比例、保障范围的回答，末尾必须附加具体以保险条款为准'",
+          "考虑在 QA mock_agent 输出后增加后处理校验：检测回答是否覆盖用户问题中的所有子问题，对遗漏项标记或自动补全"
+        ],
+        "verification_cases": [
+          "52ed9e22-ea57-47bc-be4b-93737ac2257e"
+        ],
+        "next_actions": [
+          "检查 mock_agent_llm 的 system prompt 是否包含'必须直接回答用户的是否问题'的指令",
+          "检查 mock_agent_llm 的 prompt 是否包含'保险咨询回答必须以免责声明结尾'的合规要求",
+          "用相同 prompt 重新生成该样本的回答，观察是否稳定复现两个缺失",
+          "若可复现，在 prompt 中补充明确指令后再次生成，验证回答完整性是否提升"
+        ]
+      }
+    ],
+    "common_root_cause": "LLM/mock_agent 在生成 QA 样本回答时存在两个模型能力缺陷：(1) 对用户的是否问题（'需要先经过社保报销吗？'），模型仅通过描述反面情况（未经过社保按60%赔付）间接暗示答案，未能给出'通常需要先经过社保报销'的直接肯定回应，反映出指令遵循或问答完整性方面的不足；(2) 未在保险咨询场景下附加标准免责声明'具体以保险条款为准'，反映出领域合规话术的生成欠缺。pipeline 各节点（normalize → output.read → extract_output）均正常工作，纯粹透传了不完整的回答内容。",
+    "impact": "",
+    "priority": "high"
+  },
+  "check": {
+    "passed": false,
+    "issues": [
+      "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: LLM, Users, WorkSpace, adapter, adapter.py, branch"
+    ],
+    "consistency_gaps": [
+      "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: LLM, Users, WorkSpace, adapter, adapter.py, branch"
+    ],
+    "verification_results": [
+      "Check categories passed current audit."
+    ],
+    "recommended_fixes": [
+      "Ensure all steps use the same trace_id and latest run output."
+    ]
+  }
+}

@@ -1,0 +1,378 @@
+{
+  "trace_id": "a4676d78-676a-48fe-aa33-ce26716754e3",
+  "project_id": "marketting-planning",
+  "verdict": "incorrect",
+  "business_expectations": [
+    {
+      "expectation_id": "识别业务指标NBEV",
+      "downstream_consumer": "规划阶段",
+      "user_intent": "提高NBEV",
+      "expected_outcome": "输出中包含NBEV字段或说明",
+      "required_capabilities": [
+        "名称识别"
+      ],
+      "acceptance_criteria": [
+        "系统响应中显式出现'NBEV'或等价业务指标"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "识别时间范围今年",
+      "downstream_consumer": "规划阶段",
+      "user_intent": "提高今年的NBEV",
+      "expected_outcome": "规划上下文纳入'今年'",
+      "required_capabilities": [
+        "时间解析"
+      ],
+      "acceptance_criteria": [
+        "输出或规划启动时包含'今年'或当前年份的时间范围"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "识别分解维度销售人员",
+      "downstream_consumer": "规划阶段",
+      "user_intent": "是否可以通过多招销售人员提高NBEV",
+      "expected_outcome": "规划分解中包含销售人员维度或分析增员影响",
+      "required_capabilities": [
+        "维度解析"
+      ],
+      "acceptance_criteria": [
+        "响应或规划中提及销售人员增募或相关表述"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "阶段路由至规划",
+      "downstream_consumer": "用户",
+      "user_intent": "想知道怎么提高...",
+      "expected_outcome": "extracted_output.stage 为 'planning' 或 event 中出现 planning_started 并给出卡片",
+      "required_capabilities": [
+        "意图路由"
+      ],
+      "acceptance_criteria": [
+        "stage 字段为 planning 或有 planning_started 且卡片生成"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "产出可执行的NBEV提升规划卡片",
+      "downstream_consumer": "用户",
+      "user_intent": "如何提高",
+      "expected_outcome": "card_summary 不为空，并包含增员相关行动",
+      "required_capabilities": [
+        "规划生成"
+      ],
+      "acceptance_criteria": [
+        "card_summary 至少有一条记录",
+        "卡片内容与NBEV提升和销售人员相关"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "SSE事件流正常完成",
+      "downstream_consumer": "前端",
+      "user_intent": "无直接意图",
+      "expected_outcome": "event_summary.completed = true 且 final_event = 'done'",
+      "required_capabilities": [
+        "SSE"
+      ],
+      "acceptance_criteria": [
+        "event_summary.completed 为 true"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "询问目标提高值",
+      "downstream_consumer": "用户交互",
+      "user_intent": "隐含想提高，但未指定具体目标",
+      "expected_outcome": "在对话中询问目标值",
+      "required_capabilities": [
+        "澄清对话"
+      ],
+      "acceptance_criteria": [
+        "系统发出类似'您希望提高多少NBEV'的澄清问题"
+      ],
+      "priority": "low"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "识别业务指标NBEV",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "输出中提及NBEV"
+      ],
+      "actual_evidence": [
+        "extracted_output 无指标相关信息"
+      ],
+      "downstream_impact": "后续规划无法定位指标",
+      "blocking": true
+    },
+    {
+      "expectation_id": "识别时间范围今年",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "规划上下文包含'今年'"
+      ],
+      "actual_evidence": [
+        "无"
+      ],
+      "downstream_impact": "时间范围缺失",
+      "blocking": true
+    },
+    {
+      "expectation_id": "识别分解维度销售人员",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "规划中包含销售人员维度"
+      ],
+      "actual_evidence": [
+        "无"
+      ],
+      "downstream_impact": "规划维度缺失",
+      "blocking": true
+    },
+    {
+      "expectation_id": "阶段路由至规划",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "stage 为 planning 或 planning_started 且有卡片"
+      ],
+      "actual_evidence": [
+        "extracted_output.stage 为 'non_agent', event 包含 planning_started 但最终 stage 非 planning"
+      ],
+      "downstream_impact": "没有进入规划流程",
+      "blocking": true
+    },
+    {
+      "expectation_id": "产出可执行的NBEV提升规划卡片",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "card_summary 非空"
+      ],
+      "actual_evidence": [
+        "card_summary 为空"
+      ],
+      "downstream_impact": "用户无法获得规划",
+      "blocking": true
+    },
+    {
+      "expectation_id": "SSE事件流正常完成",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "event_summary.completed = true, final_event = 'done'"
+      ],
+      "actual_evidence": [
+        "event_summary.completed = true, final_event = 'done'"
+      ],
+      "downstream_impact": "正常",
+      "blocking": false
+    },
+    {
+      "expectation_id": "询问目标提高值",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "对话中包含澄清目标值的问题"
+      ],
+      "actual_evidence": [
+        "无澄清问题"
+      ],
+      "downstream_impact": "目标值不明确",
+      "blocking": false
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "assessment_count": 7,
+    "blocking_expectations": [
+      "识别业务指标NBEV",
+      "识别时间范围今年",
+      "识别分解维度销售人员",
+      "阶段路由至规划",
+      "产出可执行的NBEV提升规划卡片"
+    ]
+  },
+  "expected": {
+    "stage": "用户希望获取通过增加销售人员来提高今年NBEV的规划方案"
+  },
+  "reasoning_summary": "用户请求提高今年NBEV并从增员入手，系统本应识别指标、时间、维度并路由至规划阶段生成卡片。但实际输出显示stage为non_agent，卡片摘要为空，也未出现任何指标或维度相关表述，仅事件流完成，因此核心业务期望均未满足。",
+  "judge_basis": "基于extracted_output未体现NBEV、时间、维度，stage为非agent，卡片缺失",
+  "judge_method": "基于合约定义逐期望评估",
+  "verdict_derivation": {
+    "primary_boundary": "系统在意图识别和规划路由阶段未能满足用户核心意图",
+    "assessment_summary": "6个blocking期望中有5个未满足，仅SSE事件流正常完成",
+    "blocking_gaps": [
+      "未识别业务指标NBEV",
+      "未识别时间范围今年",
+      "未识别销售人员分解维度",
+      "路由至非agent阶段",
+      "未产出规划卡片"
+    ],
+    "why_verdict": "系统未能根据用户请求识别关键指标NBEV和分解维度，导致没有进入规划阶段，也未生成任何可执行的行动计划，仅事件流技术上正常结束，因此无法满足用户的核心业务需求。"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "NBEV指标识别",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "时间范围",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "销售人员维度",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "规划阶段路由",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "规划卡片",
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    "用户请求提高今年NBEV并从增员入手，系统本应识别指标、时间、维度并路由至规划阶段生成卡片。但实际输出显示stage为non_agent，卡片摘要为空，也未出现任何指标或维度相关表述，仅事件流完成，因此核心业务期望均未满足。"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "evaluable_errors": [
+      "输出缺失关键业务指标",
+      "阶段路由错误",
+      "卡片未生成"
+    ],
+    "reasoning": "失败原因并非外部依赖不可用，而是系统内部未完成意图解析和规划生成，属于可评估范围。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "system_responsibility",
+    "primary_boundary_name": "系统责任边界",
+    "judge_question": "系统是否正确理解用户意图并提供营销规划？",
+    "verdict_basis": "实际未提供规划",
+    "boundary_sources": "application_boundary",
+    "conflict_policy": "无"
+  },
+  "consumer_contract": {
+    "consumer": "营销规划agent下游消费者",
+    "contract": "需提供意图识别结果、阶段路由和规划卡片"
+  },
+  "intent_model": {
+    "raw_user_request": "我想知道怎么提高今年的NBEV，能不能从多招些销售人员入手？",
+    "explicit_intents": [
+      "获取通过增加销售人员来提高今年NBEV的规划或建议"
+    ],
+    "implicit_business_intents": [
+      "对NBEV指标进行分解分析",
+      "基于销售人员维度制定提升策略"
+    ],
+    "constraints": {
+      "time_range": "今年",
+      "metric": "NBEV",
+      "decomposition_dims": [
+        "销售人员"
+      ]
+    },
+    "success_definition": "系统识别NBEV指标、今年时间范围及销售人员维度，路由至规划阶段并输出可执行的提升计划卡片",
+    "blocking_requirements": [
+      "必须识别业务指标为NBEV",
+      "必须识别时间范围为今年",
+      "必须将销售人员的增加作为提升维度",
+      "必须路由到规划阶段",
+      "必须产出具体可执行的规划卡片"
+    ],
+    "nice_to_have_requirements": [
+      "询问或确认目标提升值"
+    ],
+    "intent_evidence": [
+      "用户原话提及'NBEV'和'多招销售人员'",
+      "'怎么提高今年的NBEV'暗示规划需求"
+    ]
+  },
+  "reconstructed_intent": "用户希望获取通过增加销售人员来提高今年NBEV的规划方案",
+  "reference_generation_basis": {
+    "source": "judge-generated",
+    "alignment_to_actual_shape": "基于critical_intent_dimensions生成预期",
+    "evidence": [
+      "用户原话"
+    ]
+  },
+  "scenario": "intent_recognition",
+  "quality_flags": [
+    "missing_intent_recognition",
+    "missing_planning_output"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[产出可执行的NBEV提升规划卡片,识别业务指标NBEV,识别分解维度销售人员,识别时间范围今年,阶段路由至规划] · 用户无法获得规划",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "产出可执行的NBEV提升规划卡片",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "用户无法获得规划",
+        "within_evaluable_scope": true,
+        "evidence": "card_summary 为空 | card_summary 非空"
+      },
+      {
+        "expectation_id": "识别业务指标NBEV",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "后续规划无法定位指标",
+        "within_evaluable_scope": true,
+        "evidence": "extracted_output 无指标相关信息 | 输出中提及NBEV"
+      },
+      {
+        "expectation_id": "识别分解维度销售人员",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "规划维度缺失",
+        "within_evaluable_scope": true,
+        "evidence": "无 | 规划中包含销售人员维度"
+      },
+      {
+        "expectation_id": "识别时间范围今年",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "时间范围缺失",
+        "within_evaluable_scope": true,
+        "evidence": "无 | 规划上下文包含'今年'"
+      },
+      {
+        "expectation_id": "阶段路由至规划",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "没有进入规划流程",
+        "within_evaluable_scope": true,
+        "evidence": "extracted_output.stage 为 'non_agent', event 包含 planning_started 但最终 stage 非 planning | stage 为 planning 或 planning_started 且有卡片"
+      },
+      {
+        "expectation_id": "询问目标提高值",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "目标值不明确",
+        "within_evaluable_scope": true,
+        "evidence": "无澄清问题 | 对话中包含澄清目标值的问题"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 7,
+    "blocking_count": 5,
+    "is_formal_attribution": true
+  }
+}

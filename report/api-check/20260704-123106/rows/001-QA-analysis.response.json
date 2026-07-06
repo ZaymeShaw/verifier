@@ -1,0 +1,95 @@
+{
+  "project_id": "QA",
+  "api": {
+    "base_url": "uploaded_output_evaluation",
+    "endpoint": "uploaded_output_evaluation",
+    "method": "EVALUATE",
+    "timeout": "0"
+  },
+  "application": {
+    "mode": "uploaded_output_evaluation"
+  },
+  "capabilities": [
+    "live_run",
+    "judge",
+    "attribute",
+    "cluster",
+    "check",
+    "scenario"
+  ],
+  "documents": {
+    "application": "application.md",
+    "mock": "mock.md",
+    "evaluation": "evaluation.md",
+    "judge_boundary": "judge_boundary.md",
+    "attribution": "attribution.md",
+    "checklist": "checklist.md",
+    "implementation_standard": "implementation_standard.md"
+  },
+  "mock_guidance": "# QA Mock Notes\n\nQA mock cases 覆盖三个 scenario：\n\n- `qa_gold_answer`: question + actual_answer + golden_answer。\n- `qa_context_faithfulness`: question + actual_answer + contexts。\n- `qa_weak_quality`: question + actual_answer。\n\nMock 数据集保持 JSON case pool 形态，仍通过统一 batch pipeline 执行。",
+  "evaluation_guidance": "# QA Project Evaluation Scenario Notes\n\n## Project positioning\n\nQA is one evaluation project with optional sample-level scenarios. It should not be split into multiple projects such as `QA_gold`, `QA_rag`, or `QA_weak`.\n\nThe project evaluates already-produced QA outputs. A sample can provide the user input, the evaluated answer, and optional references/context. The system should normalize these fields, build a trace, then judge and attribute independently.\n\n## Canonical sample shape\n\nQA datasets should be normalized into:\n\n```json\n{\n  \"id\": \"qa-sample-id\",\n  \"input\": {\n    \"question\": \"...\",\n    \"contexts\": []\n  },\n  \"output\": {\n    \"actual_answer\": \"...\"\n  },\n  \"reference\": {\n    \"golden_answer\": \"...\"\n  },\n  \"metadata\": {\n    \"category\": \"...\",\n    \"model_name\": \"...\",\n    \"row_index\": 1\n  },\n  \"scenario\": \"qa_gold_answer\"\n}\n```\n\nFor flat uploaded JSON, accept standard field names and normalize them:\n\n- `question` -> `input.question`\n- `contexts` -> `input.contexts`\n- `actual_answer` / `answer` -> `output.actual_answer`\n- `golden_answer` / `gold_answer` -> `reference.golden_answer`\n- `category`, `model_name`, `latency_ms`, `token_usage`, `cost` -> `metadata`\n\nThe first version assumes JSON input. Other formats can be converted to JSON before upload.\n\n## Scenario design\n\nScenario is a QA project extension carried on each sample.\n\nRecommended scenarios:\n\n1. `qa_gold_answer`\n   - Required fields: `question`, `actual_answer`, `golden_answer` or `gold_answer`.\n   - Contexts may exist but are auxiliary unless the judge standard says otherwise.\n   - Metrics: correctness, completeness, key point coverage, contradiction control, clarity.\n\n2. `qa_context_faithfulness`\n   - Required fields: `question`, `actual_answer`, `contexts`.\n   - Used when no golden answer exists but evidence/context exists.\n   - Metrics: faithfulness, relevance, evidence support, hallucination risk, context usage.\n\n3. `qa_weak_quality`\n   - Required fields: `question`, `actual_answer`.\n   - Used when neither golden answer nor contexts are available.\n   - Metrics: relevance, usefulness, coherence, risk control, clarity.\n\nDefault inference:\n\n```text\nhas golden_answer/gold_answer -> qa_gold_answer\nelse has non-empty contexts -> qa_context_faithfulness\nelse has question + actual_answer -> qa_weak_quality\nelse invalid_sample\n```\n\nA dataset may contain mixed scenarios, but reports must group metrics by scenario. Do not mix weak-quality samples into accuracy.\n\n## RunTrace semantics for QA\n\nQA does not need to call a tested QA service during evaluation if the dataset already contains the evaluated output.\n\nFor QA:\n\n- `normalized_request`: normalized `input`, `reference`, `metadata`, `data_quality_flags`, and inferred `scenario`.\n- `raw_response`: original `output.actual_answer` or the original uploaded sample output section.\n- `extracted_output`: normalized output, usually `{ \"actual_answer\": \"...\" }`.\n- `reference_contract`: canonical QA reference such as `golden_answer` and scenario-specific expected evidence.\n- `scenario`: canonical scenario selected from normalized sample fields.\n- `schema_protocol_extensions`: QA-private display/debug details only; shared facts must not be sourced from extensions.\n\n## Judge requirements\n\nQA judge should output fulfillment-first generic fields plus multidimensional details:\n\n- `business_expectations`\n- `fulfillment_assessments`\n- `overall_fulfillment`\n- `verdict`\n- `score`\n- `confidence`\n- `reasoning_summary`\n- `verdict_derivation.score_dimensions`\n- `needs_human_review`\n- scenario-specific evidence fields when useful\n\nAll scores are 0-1. Scenario dimensions live under `verdict_derivation.score_dimensions` when present.\n\nGold answer metrics should not be applied to context-only or weak samples. Weak samples should not be reported as accuracy.\n\n## Attribution requirements\n\nQA attribution should use structured error types. Initial taxonomy:\n\n- `answer_incorrect`\n- `answer_incomplete`\n- `question_misunderstood`\n- `irrelevant_answer`\n- `unsupported_claim`\n- `hallucination`\n- `context_not_used`\n- `insufficient_context`\n- `context_noise`\n- `over_refusal`\n- `format_error`\n- `too_vague`\n- `contradiction`\n- `needs_human_review`\n\nEach failed or risky sample should have:\n\n- `causal_category`\n- `expectation_attributions`\n- `earliest_divergence`\n- `chain_nodes`\n- `probe_results`\n- `evidence_coverage`\n- `needs_human_review`\n- actionable reason and suggested fix\n\n## Cluster and summary requirements\n\nQA cluster/report should group by:\n\n- scenario\n- causal category\n- needs human review\n- category/model metadata when available\n\nMetrics must be separated:\n\n- `qa_gold_answer`: accuracy, average correctness, average completeness.\n- `qa_context_faithfulness`: faithful rate, hallucination risk rate, insufficient evidence rate.\n- `qa_weak_quality`: usable rate, human-review rate, high-risk rate.\n\nA combined score may be shown only as `综合质量估计分`.\n\n## Frontend expectations\n\nThe generic frontend should support QA through protocol fields rather than hardcoded QA-only pages:\n\n- Project dropdown includes `QA` and `client_search` from the project list API.\n- Upload/import area accepts JSON and normalizes into case pool samples.\n- Case table displays `Input`, `Output`, `Reference`, and optional `Scenario`.\n- Scenario filters and scenario summary cards appear when the project exposes scenarios.\n- Batch evaluation remains one action; scenario-specific judge behavior is backend/project logic.\n\nDo not label QA output as generic `API 输出`; use `Output` or `被评估输出`.\n\n## QA check requirements\n\nQA-specific check should verify:\n\n- scenario inference is consistent with sample fields;\n- samples without golden answer are not included in accuracy;\n- `verdict_derivation.score_dimensions` scores are 0-1 and match scenario dimensions;\n- `causal_category` comes from the QA taxonomy or generic attribution categories;\n- RAG/context scenario has non-empty contexts;\n- weak-quality scenario conclusions are marked as estimates, not accuracy;\n- human-review queue can be derived from confidence, boundary scores, evidence coverage, and `needs_human_review`.\n",
+  "attribution_guidance": "# QA Attribution Notes\n\nQA attribution 使用结构化错误类型，优先帮助定位回答质量问题而不是代码路径。\n\n## Error taxonomy\n\n- answer_incorrect\n- answer_incomplete\n- question_misunderstood\n- irrelevant_answer\n- unsupported_claim\n- hallucination\n- context_not_used\n- insufficient_context\n- context_noise\n- over_refusal\n- format_error\n- too_vague\n- contradiction\n- needs_human_review\n- none\n\n## Output requirements\n\nAttributeResult 应输出 `causal_category`、`expectation_attributions`、`earliest_divergence`、`chain_nodes`、`probe_results`、`evidence_coverage`、`needs_human_review` 和 `scenario`。失败或高风险样本要给出可执行的原因、验证方式和建议修复方向。",
+  "analysis_handoff": {
+    "api_document": {
+      "base_url": "uploaded_output_evaluation",
+      "endpoint": "uploaded_output_evaluation",
+      "method": "EVALUATE",
+      "timeout": "0"
+    },
+    "api_call_chain": "adapter.py and application.md",
+    "mock_strategy": "mock.md",
+    "frontend_architecture": {
+      "live": "render Input, Output, Reference, Judge, Attribute, and scenario fields from protocol objects",
+      "summary": "render same QA case-pool shape with compact per-case judge and attribute summaries"
+    },
+    "judge_standard": "judge_boundary.md",
+    "attribution_trace_plan": "attribution.md",
+    "key_pipeline_links": [
+      "input_normalization",
+      "output_extraction",
+      "context_alignment",
+      "answer_quality_judge",
+      "attribution"
+    ]
+  },
+  "frontend_build_handoff": {
+    "analysis_output": "ProjectAnalysis.frontend_build_handoff",
+    "frontend_architecture": {
+      "live": "render Input, Output, Reference, Judge, Attribute, and scenario fields from protocol objects",
+      "summary": "render same QA case-pool shape with compact per-case judge and attribute summaries"
+    },
+    "project_frontend_standards": {
+      "frontend_view": {
+        "live": "render Input, Output, Reference, Judge, Attribute, and scenario fields from protocol objects",
+        "summary": "render same QA case-pool shape with compact per-case judge and attribute summaries"
+      },
+      "batch_persistence": {
+        "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+        "transient_results": "do not persist full trace, judge, attribute, or frontend_view as durable case-pool source data"
+      }
+    },
+    "display_contract": {
+      "output_source": "trace.extracted_output",
+      "reference_source": "input.reference or judge.expected",
+      "formatting": [
+        "json formatting",
+        "truncation",
+        "output/reference alignment"
+      ]
+    }
+  },
+  "judge_handoff": {
+    "judge_standard": "judge_boundary.md",
+    "evaluation_guidance": true
+  },
+  "attribute_handoff": {
+    "attribution_trace_plan": "attribution.md",
+    "key_pipeline_links": [
+      "input_normalization",
+      "output_extraction",
+      "context_alignment",
+      "answer_quality_judge",
+      "attribution"
+    ]
+  }
+}

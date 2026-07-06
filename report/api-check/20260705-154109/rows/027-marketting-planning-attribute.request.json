@@ -1,0 +1,679 @@
+{
+  "project": "marketting-planning",
+  "trace": {
+    "trace_id": "6ae4e699-a6fb-4a49-aa75-d25095eebe51",
+    "project_id": "marketting-planning",
+    "case_id": "mock-agent-marketting-planning-d1642b58",
+    "live_result": {
+      "project_id": "marketting-planning",
+      "case_id": "mock-agent-marketting-planning-d1642b58",
+      "session_id": "eval-mock-agent-marketting-planning-d1642b58",
+      "raw_input": {
+        "extra_input_params": {
+          "agent_args": {
+            "conversation_id": "conv_001",
+            "message": {
+              "content": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？",
+              "content_type": "text"
+            }
+          }
+        },
+        "org_id": "org_001",
+        "session_id": "default_session_id",
+        "trace_id": "trace_12345",
+        "user_text": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？"
+      },
+      "normalized_request": {
+        "case_id": "mock-agent-marketting-planning-d1642b58",
+        "session_id": "eval-mock-agent-marketting-planning-d1642b58",
+        "shared_session": false,
+        "user_intent": "intent_recognition",
+        "query": "",
+        "scenario": "intent_recognition",
+        "boundary": {
+          "dependency_status": "available",
+          "allow_fallback": false,
+          "notes": ""
+        },
+        "reference": {
+          "scenario": "intent_recognition"
+        }
+      },
+      "call_status": "succeeded",
+      "runtime_ms": 449,
+      "extracted_output": {
+        "code": 0,
+        "msg": "success",
+        "robot_text": "卡片生成完成",
+        "end_flag": 1,
+        "extra_output_params": {
+          "intent": "4001",
+          "intent_name": "其他意图",
+          "card_result": {
+            "event": "card_end",
+            "sse_id": "mock-agent-marketting-planning-d1642b58:card_end",
+            "think": "",
+            "answer": "",
+            "extensions": {
+              "trace_id": "mock-agent-marketting-planning-d1642b58",
+              "session_id": "eval-mock-agent-marketting-planning-d1642b58"
+            }
+          }
+        }
+      },
+      "output_source": "live_service",
+      "application_boundary": {
+        "dependency_status": "available",
+        "allow_fallback": false,
+        "fallback_used": false,
+        "judge_scope": "system_responsibility_with_declared_external_boundary"
+      },
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-05T07:51:10.576092+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-05T07:51:10.576101+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-05T07:51:11.027439+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "failed",
+        "started_at": "2026-07-05T07:51:11.027464+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-05T07:53:07.604622+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-05T07:53:07.604685+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-05T07:53:07.604711+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-05T07:57:17.546143+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-05T08:00:56.846749+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-05T08:00:56.846799+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-05T08:00:56.871586+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence or blocked reason available"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "intent_recognition",
+    "interaction_mode": "single_turn",
+    "session_id": "eval-mock-agent-marketting-planning-d1642b58",
+    "created_at": "2026-07-05T07:51:11.027398+00:00"
+  },
+  "judge": {
+    "trace_id": "6ae4e699-a6fb-4a49-aa75-d25095eebe51",
+    "project_id": "marketting-planning",
+    "verdict": "incorrect",
+    "business_expectations": [
+      {
+        "expectation_id": "意图阶段路由正确",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "priority": "normal"
+      },
+      {
+        "expectation_id": "业务指标 NBEV 识别",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "priority": "normal"
+      },
+      {
+        "expectation_id": "目标缺口澄清",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "priority": "normal"
+      },
+      {
+        "expectation_id": "规划维度覆盖",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "priority": "normal"
+      },
+      {
+        "expectation_id": "规划可操作性",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "priority": "normal"
+      },
+      {
+        "expectation_id": "SSE 完成且有内容",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "priority": "normal"
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "意图阶段路由正确",
+        "status": "not_fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "业务指标 NBEV 识别",
+        "status": "not_fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "目标缺口澄清",
+        "status": "not_fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "规划维度覆盖",
+        "status": "not_fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "规划可操作性",
+        "status": "not_fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "SSE 完成且有内容",
+        "status": "not_fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "not_fulfilled",
+      "assessment_count": 6
+    },
+    "expected": {
+      "code": 0,
+      "msg": "success",
+      "robot_text": "根据您的NBEV目标差距，我们为您生成了补足方案，包括增加理财师和优化产品配置等建议。",
+      "end_flag": 1,
+      "extra_output_params": {
+        "intent": "planning",
+        "intent_name": "营销规划",
+        "card_result": {
+          "event": "card_end",
+          "card_list": [
+            {
+              "card_code": "nbev_gap_plan",
+              "card_name": "NBEV缺口补足方案",
+              "path_type": "planning"
+            }
+          ],
+          "extensions": {
+            "trace_id": "mock-agent-marketting-planning-d1642b58",
+            "session_id": "eval-mock-agent-marketting-planning-d1642b58"
+          }
+        }
+      }
+    },
+    "actual": {
+      "code": 0,
+      "msg": "success",
+      "robot_text": "卡片生成完成",
+      "end_flag": 1,
+      "extra_output_params": {
+        "intent": "4001",
+        "intent_name": "其他意图",
+        "card_result": {
+          "event": "card_end",
+          "sse_id": "mock-agent-marketting-planning-d1642b58:card_end",
+          "think": "",
+          "answer": "",
+          "extensions": {
+            "trace_id": "mock-agent-marketting-planning-d1642b58",
+            "session_id": "eval-mock-agent-marketting-planning-d1642b58"
+          }
+        }
+      }
+    },
+    "reasoning_summary": "系统未能识别用户的营销规划意图，错误归类为其他意图并进入非代理阶段，输出完全为空。所有关键业务期望（阶段路由、指标识别、缺口澄清、维度覆盖、可操作性、内容有效）均未满足，整体表现为 not_fulfilled。",
+    "judge_basis": "基于用户输入、系统实际输出以及执行追踪中的阶段状态，判断系统是否在责任边界内完成了业务意图。",
+    "judge_method": "将用户意图拆解为原子业务期望，逐一对照实际输出进行满足度判定。",
+    "verdict_derivation": {
+      "logic": "所有业务期望均未满足，因此整体判定为 not_fulfilled。"
+    },
+    "missing": [
+      {
+        "kind": "missing",
+        "error_type": "",
+        "expected": "应包含针对NBEV缺口的补足方案卡片",
+        "actual": "card_list 为空",
+        "evidence_ref": "",
+        "raw": {
+          "description": "规划卡片",
+          "expected": "应包含针对NBEV缺口的补足方案卡片",
+          "actual": "card_list 为空"
+        },
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "expected": "若缺口数值不明确，应询问具体差距",
+        "actual": "无任何澄清",
+        "evidence_ref": "",
+        "raw": {
+          "description": "澄清问题",
+          "expected": "若缺口数值不明确，应询问具体差距",
+          "actual": "无任何澄清"
+        },
+        "incomplete": false
+      }
+    ],
+    "wrong": [
+      {
+        "kind": "wrong",
+        "error_type": "",
+        "expected": "意图为营销规划（约4002或对应code）",
+        "actual": "4001 其他意图",
+        "evidence_ref": "",
+        "raw": {
+          "description": "意图分类",
+          "expected": "意图为营销规划（约4002或对应code）",
+          "actual": "4001 其他意图"
+        },
+        "incomplete": false
+      },
+      {
+        "kind": "wrong",
+        "error_type": "",
+        "expected": "planning或clarification",
+        "actual": "non_agent",
+        "evidence_ref": "",
+        "raw": {
+          "description": "处理阶段",
+          "expected": "planning或clarification",
+          "actual": "non_agent"
+        },
+        "incomplete": false
+      }
+    ],
+    "evidence": [
+      {
+        "source": "execution_trace.intent_recognition",
+        "data": {
+          "actual_stage": "non_agent"
+        }
+      },
+      {
+        "source": "extracted_output",
+        "data": {
+          "intent": "4001"
+        }
+      }
+    ],
+    "boundary_decision": {
+      "within_evaluable_scope": true,
+      "evaluable_errors": [
+        "意图识别错误：将营销规划请求误判为其他意图",
+        "路由到non_agent阶段，未能进入规划或澄清流程",
+        "输出完全为空，未满足任何业务需求"
+      ]
+    },
+    "evaluation_boundary": {
+      "scope": "system_responsibility_with_declared_external_boundary",
+      "dependency_status": "available",
+      "allow_fallback": false
+    },
+    "consumer_contract": {
+      "expected_interaction": "用户期望系统能理解其业务诉求，生成可执行的营销规划建议。"
+    },
+    "intent_model": {
+      "business_metric": "NBEV",
+      "target_value_and_unit": {
+        "gap_explicit": false
+      },
+      "time_range": "今年",
+      "decomposition_dimensions": [
+        "增加理财师",
+        "优化产品方案"
+      ],
+      "stage_routing": "planning_or_clarification",
+      "planning_actionability": true,
+      "sse_completion": true
+    },
+    "reconstructed_intent": "用户希望系统基于团队今年NBEV目标的缺口，探索通过增加理财师或优化产品方案来补足。",
+    "reference_generation_basis": {
+      "note": "未提供 reference，因此根据用户意图和系统边界生成了预期的输出轮廓。"
+    },
+    "scenario": "intent_recognition_fallback",
+    "quality_flags": [
+      "intent_misrouting",
+      "empty_output",
+      "no_clarification"
+    ],
+    "summary": {
+      "reason": "not_fulfilled · blocking=[(none)]",
+      "primary_failure_dimensions": [
+        {
+          "expectation_id": "SSE 完成且有内容",
+          "status": "not_fulfilled",
+          "blocking": false,
+          "downstream_impact": "",
+          "within_evaluable_scope": true,
+          "evidence": "系统未能识别用户的营销规划意图，错误归类为其他意图并进入非代理阶段，输出完全为空。所有关键业务期望（阶段路由、指标识别、缺口澄清、维度覆盖、可操作性、内容有效）均未满足，整体表现为 not_fulfilled。"
+        },
+        {
+          "expectation_id": "业务指标 NBEV 识别",
+          "status": "not_fulfilled",
+          "blocking": false,
+          "downstream_impact": "",
+          "within_evaluable_scope": true,
+          "evidence": "系统未能识别用户的营销规划意图，错误归类为其他意图并进入非代理阶段，输出完全为空。所有关键业务期望（阶段路由、指标识别、缺口澄清、维度覆盖、可操作性、内容有效）均未满足，整体表现为 not_fulfilled。"
+        },
+        {
+          "expectation_id": "意图阶段路由正确",
+          "status": "not_fulfilled",
+          "blocking": false,
+          "downstream_impact": "",
+          "within_evaluable_scope": true,
+          "evidence": "系统未能识别用户的营销规划意图，错误归类为其他意图并进入非代理阶段，输出完全为空。所有关键业务期望（阶段路由、指标识别、缺口澄清、维度覆盖、可操作性、内容有效）均未满足，整体表现为 not_fulfilled。"
+        },
+        {
+          "expectation_id": "目标缺口澄清",
+          "status": "not_fulfilled",
+          "blocking": false,
+          "downstream_impact": "",
+          "within_evaluable_scope": true,
+          "evidence": "系统未能识别用户的营销规划意图，错误归类为其他意图并进入非代理阶段，输出完全为空。所有关键业务期望（阶段路由、指标识别、缺口澄清、维度覆盖、可操作性、内容有效）均未满足，整体表现为 not_fulfilled。"
+        },
+        {
+          "expectation_id": "规划可操作性",
+          "status": "not_fulfilled",
+          "blocking": false,
+          "downstream_impact": "",
+          "within_evaluable_scope": true,
+          "evidence": "系统未能识别用户的营销规划意图，错误归类为其他意图并进入非代理阶段，输出完全为空。所有关键业务期望（阶段路由、指标识别、缺口澄清、维度覆盖、可操作性、内容有效）均未满足，整体表现为 not_fulfilled。"
+        },
+        {
+          "expectation_id": "规划维度覆盖",
+          "status": "not_fulfilled",
+          "blocking": false,
+          "downstream_impact": "",
+          "within_evaluable_scope": true,
+          "evidence": "系统未能识别用户的营销规划意图，错误归类为其他意图并进入非代理阶段，输出完全为空。所有关键业务期望（阶段路由、指标识别、缺口澄清、维度覆盖、可操作性、内容有效）均未满足，整体表现为 not_fulfilled。"
+        }
+      ],
+      "reason_source": "aggregated_fulfillment",
+      "fulfillment_status": "not_fulfilled",
+      "assessment_count": 6,
+      "blocking_count": 0,
+      "is_formal_attribution": true
+    }
+  }
+}

@@ -55,6 +55,12 @@ def main(argv=None):
     p = sub.add_parser("mock-datasets")
     p.add_argument("--project", required=True)
 
+    p = sub.add_parser("mock-check")
+    p.add_argument("--project", default="")
+    p.add_argument("--path", default="", help="mock 数据 JSON 文件或目录；为空时扫描 data/ 与 impl/data")
+    p.add_argument("--cases", default="", help="一次性批量 case 数据（JSON 字符串或文件路径）")
+    p.add_argument("--verbose", action="store_true", help="输出逐 case details")
+
     p = sub.add_parser("judge")
     p.add_argument("--project", required=True)
     p.add_argument("--trace", required=True)
@@ -92,11 +98,21 @@ def main(argv=None):
     elif args.cmd == "analysis":
         emit(pipeline.analysis(args.project))
     elif args.cmd == "live-run":
+        _cli_check_request(args.project, load_json_arg(args.input))
         emit(pipeline.live_run(args.project, load_json_arg(args.input)))
     elif args.cmd == "mock-cases":
         emit({"project_id": args.project, "cases": pipeline.mock_cases(args.project)})
     elif args.cmd == "mock-datasets":
         emit({"project_id": args.project, "datasets": pipeline.mock_datasets(args.project)})
+    elif args.cmd == "mock-check":
+        cases = load_json_arg(args.cases) if args.cases else None
+        result = pipeline.check_mock_data(project_id=args.project, data_path=args.path, cases=cases)
+        if not args.verbose:
+            for item in result.get("items") or []:
+                item.pop("details", None)
+        emit(result)
+        if not result.get("ok"):
+            raise SystemExit(1)
     elif args.cmd == "judge":
         emit(pipeline.judge(args.project, trace_from_json(load_json_arg(args.trace)), args.expected_intent))
     elif args.cmd == "attribute":
@@ -114,9 +130,35 @@ def main(argv=None):
             )
         )
     elif args.cmd == "run-chain":
+        _cli_check_request(args.project, load_json_arg(args.input))
         emit(run_chain(args.project, load_json_arg(args.input), expected_intent=args.expected_intent))
     elif args.cmd == "batch-run":
-        emit(pipeline.batch_run(args.project, load_json_arg(args.inputs), expected_intent=args.expected_intent, concurrency=args.concurrency))
+        inputs = load_json_arg(args.inputs)
+        if isinstance(inputs, list):
+            for item in inputs:
+                _cli_check_request(args.project, item)
+        emit(pipeline.batch_run(args.project, inputs, expected_intent=args.expected_intent, concurrency=args.concurrency))
+
+
+def _cli_check_request(project_id: str, input_data: Any) -> None:
+    """CLI 手动输入校验：输入是否符合 REQUEST_SHAPE。校验不阻断，不一致时打印警告。"""
+    import importlib
+    import sys
+    try:
+        ls = importlib.import_module(f"impl.projects.{project_id}.live_schema")
+    except ModuleNotFoundError:
+        print(f"[live_schema] INFO: project {project_id} has no live_schema module, skipping CLI input check", file=sys.stderr)
+        return
+    if not hasattr(ls, "check"):
+        print(f"[live_schema] INFO: project {project_id} live_schema has no check, skipping CLI input check", file=sys.stderr)
+        return
+    if not isinstance(input_data, dict):
+        return
+    try:
+        if not ls.check.request(input_data):
+            print(f"[live_schema] WARNING: CLI input does not match REQUEST_SHAPE for {project_id}", file=sys.stderr)
+    except Exception as e:
+        print(f"[live_schema] WARNING: request check raised for {project_id}: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":

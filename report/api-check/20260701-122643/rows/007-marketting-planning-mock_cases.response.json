@@ -1,0 +1,356 @@
+{
+  "project_id": "marketting-planning",
+  "cases": [
+    {
+      "id": "mp-premium-growth-plan-correct-1",
+      "input": {
+        "query": "帮我规划队伍、客户的达成路径，NBEV目标值1200000万",
+        "user_intent": "帮我规划队伍、客户的达成路径，NBEV目标值1200000万",
+        "turns": [
+          {
+            "role": "user",
+            "content": "帮我规划队伍、客户的达成路径，NBEV目标值1200000万"
+          }
+        ],
+        "expected_stage": "planning",
+        "expected_path_types": [
+          "premium_growth",
+          "customer_growth"
+        ],
+        "boundary": {
+          "dependency_status": "available",
+          "allow_fallback": false
+        }
+      },
+      "scenario": "execution_planning",
+      "expected_intent": "",
+      "reference": {
+        "expected_stage": "planning",
+        "required_events": [
+          "intent_detected",
+          "planning_started",
+          "card_delta",
+          "done"
+        ],
+        "required_path_types": [
+          "premium_growth",
+          "customer_growth"
+        ],
+        "allow_fallback": false,
+        "session_requirements": {}
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "premium_and_customer",
+        "expected_error_type": "none",
+        "quality_dimension": "planning_contract"
+      }
+    },
+    {
+      "id": "mp-clarification-missing-target-1",
+      "input": {
+        "query": "帮我规划明年的NBEV达成路径",
+        "user_intent": "帮我规划明年的NBEV达成路径",
+        "turns": [
+          {
+            "role": "user",
+            "content": "帮我规划明年的NBEV达成路径"
+          }
+        ],
+        "expected_stage": "clarification",
+        "boundary": {
+          "dependency_status": "available",
+          "allow_fallback": false
+        }
+      },
+      "scenario": "clarification",
+      "expected_intent": "",
+      "reference": {
+        "expected_stage": "clarification",
+        "required_events": [
+          "clarification_requested",
+          "done"
+        ],
+        "forbidden_path_types": [
+          "premium_growth",
+          "customer_growth",
+          "product_mix",
+          "activity"
+        ],
+        "allow_fallback": false,
+        "session_requirements": {
+          "required_fields": [
+            "target_value"
+          ]
+        }
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "field_clarification",
+        "expected_error_type": "none",
+        "quality_dimension": "clarification_contract"
+      }
+    },
+    {
+      "id": "mp-multiturn-field-accumulation-1",
+      "input": {
+        "query": "帮我规划队伍、客户的达成路径，NBEV目标值1200000万",
+        "user_intent": "规划NBEV增长路径",
+        "turns": [
+          {
+            "role": "user",
+            "content": "帮我规划NBEV目标"
+          },
+          {
+            "role": "assistant",
+            "content": "请补充目标年份、目标值和路径类型"
+          },
+          {
+            "role": "user",
+            "content": "队伍、客户的达成路径，NBEV目标值1200000万"
+          }
+        ],
+        "expected_stage": "planning",
+        "expected_path_types": [
+          "premium_growth",
+          "customer_growth"
+        ],
+        "shared_session": true,
+        "session_id": "eval-mp-multiturn-field-accumulation-1",
+        "boundary": {
+          "dependency_status": "available",
+          "allow_fallback": false
+        }
+      },
+      "scenario": "multi_turn_field_accumulation",
+      "expected_intent": "",
+      "reference": {
+        "expected_stage": "planning",
+        "required_events": [
+          "planning_started",
+          "card_delta",
+          "done"
+        ],
+        "required_path_types": [
+          "premium_growth",
+          "customer_growth"
+        ],
+        "allow_fallback": false,
+        "session_requirements": {}
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "multi_turn",
+        "expected_error_type": "none",
+        "quality_dimension": "session_accumulation"
+      }
+    },
+    {
+      "id": "mp-target-unit-error-1",
+      "input": {
+        "query": "帮我规划队伍的达成路径，NBEV目标值120亿",
+        "user_intent": "帮我规划队伍的达成路径，NBEV目标值120亿",
+        "turns": [
+          {
+            "role": "user",
+            "content": "帮我规划队伍的达成路径，NBEV目标值120亿"
+          }
+        ],
+        "expected_stage": "planning",
+        "expected_path_types": [
+          "premium_growth"
+        ],
+        "boundary": {
+          "dependency_status": "available",
+          "allow_fallback": false
+        }
+      },
+      "scenario": "execution_planning",
+      "expected_intent": "",
+      "reference": {
+        "expected_stage": "planning",
+        "required_events": [
+          "planning_started",
+          "card_delta",
+          "done"
+        ],
+        "required_path_types": [
+          "premium_growth"
+        ],
+        "allow_fallback": false,
+        "target_value_wan": 1200000,
+        "session_requirements": {}
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "premium",
+        "expected_error_type": "target_value_unit_error",
+        "quality_dimension": "numeric_grounding"
+      }
+    },
+    {
+      "id": "mp-fallback-allowed-1",
+      "input": {
+        "query": "外部数据源暂时不可用时，给我一个可解释的兜底NBEV规划",
+        "user_intent": "外部数据源暂时不可用时，给我一个可解释的兜底NBEV规划",
+        "turns": [
+          {
+            "role": "user",
+            "content": "外部数据源暂时不可用时，给我一个可解释的兜底NBEV规划"
+          }
+        ],
+        "expected_stage": "fallback",
+        "boundary": {
+          "dependency_status": "unavailable",
+          "allow_fallback": true,
+          "notes": "declared dependency outage"
+        }
+      },
+      "scenario": "fallback_data_unavailable",
+      "expected_intent": "",
+      "reference": {
+        "expected_stage": "fallback",
+        "required_events": [
+          "fallback",
+          "done"
+        ],
+        "allow_fallback": true,
+        "session_requirements": {}
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "external_dependency",
+        "expected_error_type": "none",
+        "quality_dimension": "boundary_fallback"
+      }
+    },
+    {
+      "id": "mp-fallback-not-allowed-1",
+      "input": {
+        "query": "帮我规划队伍的达成路径，NBEV目标值600000万",
+        "user_intent": "帮我规划队伍的达成路径，NBEV目标值600000万",
+        "turns": [
+          {
+            "role": "user",
+            "content": "帮我规划队伍的达成路径，NBEV目标值600000万"
+          }
+        ],
+        "expected_stage": "planning",
+        "expected_path_types": [
+          "premium_growth"
+        ],
+        "boundary": {
+          "dependency_status": "available",
+          "allow_fallback": false
+        }
+      },
+      "scenario": "fallback_data_unavailable",
+      "expected_intent": "",
+      "reference": {
+        "expected_stage": "planning",
+        "required_events": [
+          "planning_started",
+          "card_delta",
+          "done"
+        ],
+        "required_path_types": [
+          "premium_growth"
+        ],
+        "allow_fallback": false,
+        "session_requirements": {}
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "external_dependency",
+        "expected_error_type": "fallback_not_allowed",
+        "quality_dimension": "boundary_fallback"
+      }
+    },
+    {
+      "id": "mp-non-agent-1",
+      "input": {
+        "query": "帮我写一首关于春天的诗",
+        "user_intent": "帮我写一首关于春天的诗",
+        "turns": [
+          {
+            "role": "user",
+            "content": "帮我写一首关于春天的诗"
+          }
+        ],
+        "expected_stage": "non_agent",
+        "boundary": {
+          "dependency_status": "available",
+          "allow_fallback": false
+        }
+      },
+      "scenario": "non_agent_intent",
+      "expected_intent": "",
+      "reference": {
+        "expected_stage": "non_agent",
+        "required_events": [
+          "intent_detected",
+          "done"
+        ],
+        "allow_fallback": false,
+        "session_requirements": {}
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "out_of_scope",
+        "expected_error_type": "none",
+        "quality_dimension": "scope_control"
+      }
+    },
+    {
+      "id": "mp-stream-event-order-1",
+      "input": {
+        "query": "帮我规划队伍的达成路径，NBEV目标值600000万",
+        "user_intent": "帮我规划队伍的达成路径，NBEV目标值600000万",
+        "turns": [
+          {
+            "role": "user",
+            "content": "帮我规划队伍的达成路径，NBEV目标值600000万"
+          }
+        ],
+        "expected_stage": "planning",
+        "expected_path_types": [
+          "premium_growth"
+        ],
+        "boundary": {
+          "dependency_status": "available",
+          "allow_fallback": false
+        }
+      },
+      "scenario": "streaming_protocol",
+      "expected_intent": "",
+      "reference": {
+        "expected_stage": "planning",
+        "required_events": [
+          "intent_detected",
+          "planning_started",
+          "card_delta",
+          "done"
+        ],
+        "required_path_types": [
+          "premium_growth"
+        ],
+        "allow_fallback": false,
+        "session_requirements": {}
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "sse",
+        "expected_error_type": "none",
+        "quality_dimension": "sse_protocol"
+      }
+    }
+  ]
+}

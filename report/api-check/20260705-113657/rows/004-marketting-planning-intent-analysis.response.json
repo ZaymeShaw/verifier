@@ -1,0 +1,106 @@
+{
+  "project_id": "marketting-planning-intent",
+  "api": {
+    "base_url": "http://127.0.0.1:9006",
+    "endpoint": "/api/v1/marketing-planning/intent-recognition",
+    "method": "POST",
+    "timeout": "60"
+  },
+  "application": {
+    "mode": "existing_service_optional",
+    "primary_path": "/api/v1/marketing-planning/intent-recognition",
+    "shared_service_project": "marketting-planning",
+    "external_repo": "/Users/xiaozijian/WorkSpace/package/marketing-planning",
+    "modify_external_repo": false
+  },
+  "capabilities": [
+    "live_run",
+    "judge",
+    "attribute",
+    "cluster",
+    "check",
+    "scenario",
+    "single_turn",
+    "intent_recognition"
+  ],
+  "documents": {
+    "application": "application.md",
+    "mock": "mock.md",
+    "evaluation": "evaluation.md",
+    "judge_boundary": "judge_boundary.md",
+    "attribution": "attribution.md",
+    "checklist": "checklist.md",
+    "implementation_standard": "implementation_standard.md",
+    "source_demand": "../../../projects/marketting-planning-intent/marketplan-demand.md",
+    "source_readme": "../../../projects/marketting-planning-intent/readme.md",
+    "source_start": "../../../projects/marketting-planning-intent/start.md"
+  },
+  "mock_guidance": "# Mock\n\nMock cases are single-turn marketing intent-recognition inputs. Each case uses the generic compact case-pool shape with `id`, `input.query`, `reference.intent`, `scenario`, and `source`.\n\nGenerated cases must still run through the unified application -> judge -> attribute -> cluster -> check pipeline.\n",
+  "evaluation_guidance": "# Evaluation\n\nJudge evaluates whether the normalized `intent` returned by the intent-recognition endpoint matches the current case reference or judge-generated expected intent.\n\nThe evaluation boundary excludes multi-turn field collection, SSE streaming, planning-card generation, and downstream planning execution.\n",
+  "attribution_guidance": "# Attribution\n\nAttribution starts only after judge reports an incorrect, uncertain, or suspicious intent-recognition result for the current trace.\n\nTrace nodes:\n\n1. request_normalization\n2. intent_api_call\n3. adapter_extraction\n4. label_mapping\n5. judge\n6. attribution\n\nA supported root cause must tie the current query, actual intent, expected intent, trace node evidence, and any code/config/prompt location together. If that evidence is missing, attribution must return insufficient evidence or the next verification step.\n",
+  "analysis_handoff": {
+    "api_document": {
+      "base_url": "http://127.0.0.1:9006",
+      "endpoint": "/api/v1/marketing-planning/intent-recognition",
+      "method": "POST",
+      "timeout": "60"
+    },
+    "api_call_chain": "source_demand, source_start, application.md, and adapter.py",
+    "mock_strategy": "mock.md",
+    "frontend_architecture": {
+      "live": "render query, normalized intent output, reference intent, Judge, Attribute, and compact raw response drill-down",
+      "summary": "render intent case pool with Output and Reference as aligned label/confidence JSON"
+    },
+    "judge_standard": "judge_boundary.md",
+    "attribution_trace_plan": "attribution.md",
+    "key_pipeline_links": [
+      "request_normalization",
+      "intent_api_call",
+      "adapter_extraction",
+      "label_mapping",
+      "judge",
+      "attribution"
+    ]
+  },
+  "frontend_build_handoff": {
+    "analysis_output": "ProjectAnalysis.frontend_build_handoff",
+    "frontend_architecture": {
+      "live": "render query, normalized intent output, reference intent, Judge, Attribute, and compact raw response drill-down",
+      "summary": "render intent case pool with Output and Reference as aligned label/confidence JSON"
+    },
+    "project_frontend_standards": {
+      "frontend_view": {
+        "live": "render query, normalized intent output, reference intent, Judge, Attribute, and compact raw response drill-down",
+        "summary": "render intent case pool with Output and Reference as aligned label/confidence JSON"
+      },
+      "batch_persistence": {
+        "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+        "transient_results": "do not persist full trace, judge, attribute, raw response, or frontend_view as durable case-pool source data"
+      }
+    },
+    "display_contract": {
+      "output_source": "trace.extracted_output",
+      "reference_source": "input.reference or judge.expected",
+      "formatting": [
+        "json formatting",
+        "truncation",
+        "output/reference alignment"
+      ]
+    }
+  },
+  "judge_handoff": {
+    "judge_standard": "judge_boundary.md",
+    "evaluation_guidance": true
+  },
+  "attribute_handoff": {
+    "attribution_trace_plan": "attribution.md",
+    "key_pipeline_links": [
+      "request_normalization",
+      "intent_api_call",
+      "adapter_extraction",
+      "label_mapping",
+      "judge",
+      "attribution"
+    ]
+  }
+}

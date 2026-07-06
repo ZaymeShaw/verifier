@@ -1,0 +1,151 @@
+{
+  "project_id": "marketting-planning-intent",
+  "cases": [
+    {
+      "id": "mock-agent-marketting-planning-intent-29f4cb69",
+      "input": {
+        "session_id": "sess_1234567890",
+        "trace_id": "trace_9876543210",
+        "org_id": "org_001",
+        "user_text": "能不能给我看看最近三个月在我们这买了重疾险的客户都是什么样的？比如他们的年龄分布、性别比例什么的。",
+        "extra_input_params": {
+          "agent_args": {
+            "conversation_id": "conv_1234567890",
+            "message": {
+              "content": "能不能给我看看最近三个月在我们这买了重疾险的客户都是什么样的？比如他们的年龄分布、性别比例什么的。",
+              "content_type": "text"
+            }
+          },
+          "args": {}
+        }
+      },
+      "scenario": "intent_recognition",
+      "expected_intent": "customer_portrait",
+      "reference": {
+        "intent": "customer_portrait",
+        "confidence": 0.92,
+        "raw_intent": "客户画像",
+        "slots": {
+          "product": "重疾险",
+          "time_range": "最近三个月"
+        },
+        "entities": [
+          {
+            "type": "product",
+            "value": "重疾险"
+          },
+          {
+            "type": "time",
+            "value": "最近三个月"
+          }
+        ],
+        "ambiguous": false,
+        "fallback": false
+      },
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "ready": [
+          "reference"
+        ],
+        "live_request_mapped": true,
+        "schema_ok": true
+      }
+    },
+    {
+      "id": "mock-agent-marketting-planning-intent-8148f7ca",
+      "input": {
+        "session_id": "default_session",
+        "trace_id": "default_trace",
+        "org_id": "default_org",
+        "user_text": "帮我看看上个月买年金险的那些客户，主要都集中在什么年龄段和收入水平啊？",
+        "extra_input_params": {
+          "agent_args": {
+            "conversation_id": "default_conversation",
+            "message": {
+              "content": "帮我看看上个月买年金险的那些客户，主要都集中在什么年龄段和收入水平啊？",
+              "content_type": "text"
+            }
+          },
+          "args": {}
+        }
+      },
+      "scenario": "non_agent_intent",
+      "expected_intent": "customer_portrait",
+      "reference": {
+        "intent": "customer_portrait",
+        "confidence": 0.95,
+        "raw_intent": "customer_portrait",
+        "slots": {
+          "product": "年金险",
+          "time_range": "上个月"
+        },
+        "entities": [
+          {
+            "entity": "product",
+            "value": "年金险",
+            "start": 7,
+            "end": 10
+          },
+          {
+            "entity": "time_range",
+            "value": "上个月",
+            "start": 2,
+            "end": 5
+          }
+        ],
+        "ambiguous": false,
+        "fallback": false
+      },
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "ready": [
+          "reference"
+        ],
+        "live_request_mapped": true,
+        "schema_ok": true
+      }
+    },
+    {
+      "id": "mock-agent-marketting-planning-intent-5ac9daac",
+      "input": {
+        "session_id": "default-session-id",
+        "trace_id": "default-trace-id",
+        "org_id": "default-org-id",
+        "user_text": "帮我查查这个月我们团队的销售数据，看看谁表现最好，谁需要改进？",
+        "extra_input_params": {
+          "agent_args": {
+            "conversation_id": "default-conversation-id",
+            "message": {
+              "content": "帮我查查这个月我们团队的销售数据，看看谁表现最好，谁需要改进？",
+              "content_type": "text"
+            }
+          },
+          "args": {}
+        }
+      },
+      "scenario": "fallback_unknown",
+      "expected_intent": "team_portrait",
+      "reference": {
+        "intent": "team_portrait",
+        "confidence": 0.95,
+        "raw_intent": "team_portrait",
+        "ambiguous": false,
+        "fallback": false
+      },
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "ready": [
+          "reference"
+        ],
+        "live_request_mapped": true,
+        "schema_ok": true
+      }
+    }
+  ]
+}

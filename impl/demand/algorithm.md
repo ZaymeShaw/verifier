@@ -157,10 +157,10 @@ Judge 的中心产物是：
 
 - `consumer_contract`：当前输出服务的下游消费者和业务合约
 - `business_expectations`：从用户意图、case reference、项目文档和边界中重建出的业务预期
-- `fulfillment_assessments`：每个 expectation 的 `fulfilled / partially_fulfilled / not_fulfilled / not_evaluable / contested` 状态、证据和 downstream impact
+- `fulfillment_assessments`：每个 expectation 的 `fulfilled / not_fulfilled / not_evaluable` 状态、证据和 downstream impact
 - `overall_fulfillment`：聚合状态和 blocking expectations
 
-`verdict` 与 `score` 由 `impl/core/judge.py` 中的 `_compute_verdict` / `_compute_score` 单点派生，LLM 不输出这两个字段。映射规则：`fulfilled → correct`；`not_fulfilled` 且 boundary 内 → `incorrect`；`partially_fulfilled / not_evaluable / contested / boundary 外` → `uncertain`。`score = (fulfilled + 0.5 * partially_fulfilled) / |evaluable assessments|`，无可评估项时为 `None`。后续 Attribute、Cluster、Frontend 的主逻辑不再以 verdict 作为概念中心。
+`verdict` 与 `score` 由 `impl/core/judge.py` 中的 `_compute_verdict` / `_compute_score` 单点派生，LLM 不输出这两个字段。映射规则：`fulfilled → correct`；`not_fulfilled` 且 boundary 内 → `incorrect`；`not_evaluable / boundary 外` → `uncertain`。`score = fulfilled / |evaluable assessments|`，无可评估项时为 `None`。后续 Attribute、Cluster、Frontend 的主逻辑不再以 verdict 作为概念中心。
 
 ### 3.3 边界决策
 
@@ -218,7 +218,7 @@ pipeline.attribute(project_id, trace, judge_result)
 
 1. 如果所有 `fulfillment_assessments` 均为 `fulfilled` → 生成 `no_issue` 的 expectation attribution，作为正向聚合证据
 2. 否则加载项目归因文档，构造 system prompt，要求 LLM：
-   - 针对每个需要归因的 business expectation 重建 expected-vs-actual gap 或 contested reason
+   - 针对每个需要归因的 business expectation 重建 expected-vs-actual gap 或 disputed reason
    - 按 `chain_nodes_to_check` 或 `execution_trace` 逐段标记 normal/suspicious/failed/not_verified
    - 找出 earliest_divergence（最早偏离点）
    - 给出 expectation_attributions、probe_results、verification_steps、improvement_direction
@@ -294,7 +294,7 @@ Mock 用例池
                                     │
                                     ▼
                          Expectation Attribution
-                 (fulfilled→no_issue；gap/contested→因果归因)
+                 (fulfilled→no_issue；gap→因果归因)
                                     │
                                     ▼
                          Cluster fulfillment/causal 聚合

@@ -1,0 +1,61 @@
+{
+  "project_id": "client_search",
+  "clusters": [
+    {
+      "cluster_id": "expectation::no_issue::not_evaluable",
+      "mechanism": "no_issue::not_evaluable",
+      "causal_category": "no_issue",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "目标人群覆盖完整性",
+        "年龄字段语义与操作符正确性",
+        "年龄数值正确性",
+        "性别字段语义与操作符正确性",
+        "性别枚举值正确性",
+        "保费字段语义与操作符正确性",
+        "保费数值和单位换算正确性",
+        "布尔逻辑正确性",
+        "无超出边界请求"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "30260fc9-3024-47d4-a2d2-79bf2cbbac73"
+      ],
+      "representative_traces": [
+        "30260fc9-3024-47d4-a2d2-79bf2cbbac73"
+      ],
+      "common_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+      "shared_failure_pattern": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+      "representative_diffs": [
+        {
+          "case_id": "30260fc9-3024-47d4-a2d2-79bf2cbbac73",
+          "node": "fulfillment_assessment",
+          "evidence": [
+            "actual output包含3个条件：clientAge RANGE {min:45,max:45}、clientSex MATCH '女'、annPremSegNum GTE 100000",
+            "prompt规则确认：精确年龄用RANGE {min:x,max:x}",
+            "prompt规则确认：万=×10000",
+            "prompt规则确认：'以上'映射为GTE",
+            "prompt规则确认：clientSex枚举为['男','女']",
+            "query_logic为AND"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+      ],
+      "verification_cases": [
+        "30260fc9-3024-47d4-a2d2-79bf2cbbac73"
+      ],
+      "next_actions": [
+        "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+      ]
+    }
+  ],
+  "common_root_cause": "",
+  "impact": "",
+  "priority": ""
+}

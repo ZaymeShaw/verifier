@@ -1,0 +1,151 @@
+{
+  "trace_id": "0c93ac76-c27d-413d-b1c7-f9f0bec63024",
+  "project_id": "QA",
+  "verdict": "uncertain",
+  "business_expectations": [
+    {
+      "expectation_id": "QA:answer_quality",
+      "downstream_consumer": "QA user",
+      "user_intent": "",
+      "expected_outcome": "actual answer should satisfy answer relevance, groundedness, and reference alignment for the current QA sample",
+      "required_capabilities": [
+        "answer_relevance",
+        "groundedness",
+        "reference_alignment"
+      ],
+      "boundary": {
+        "within_evaluable_scope": true,
+        "reasoning": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。"
+      },
+      "priority": "normal",
+      "evidence_refs": [
+        {
+          "ref_id": "",
+          "source": "",
+          "kind": "",
+          "stage": "",
+          "summary": "",
+          "location": ""
+        }
+      ]
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "QA:local_evidence_probe",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        {}
+      ],
+      "actual_evidence": [
+        {}
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。"
+      },
+      "downstream_impact": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+      "blocking": false
+    },
+    {
+      "expectation_id": "QA:answer_quality",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        {}
+      ],
+      "actual_evidence": [
+        {}
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。"
+      },
+      "downstream_impact": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+      "blocking": true,
+      "evidence_refs": [
+        {
+          "ref_id": "",
+          "source": "",
+          "kind": "",
+          "stage": "",
+          "summary": "",
+          "location": ""
+        }
+      ]
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_evaluable",
+    "assessment_count": 2,
+    "blocking_expectations": [
+      "QA:answer_quality"
+    ]
+  },
+  "reasoning_summary": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+  "judge_basis": "qa_local_evidence_probe",
+  "judge_method": "qa_local_evidence_probe",
+  "verdict_derivation": {
+    "why_verdict": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+    "assessment_summary": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+    "blocking_gaps": [
+      "LLM semantic judge unavailable; local QA probe cannot determine answer correctness."
+    ],
+    "overridden_by": "qa_fallback_judge",
+    "original_verdict": "uncertain",
+    "original_judge_method": "qa_local_evidence_probe"
+  },
+  "evidence": [
+    "scenario=qa_gold_answer",
+    "actual_answer_present=False",
+    "golden_answer_present=False",
+    "contexts_present=False",
+    "data_quality_flags=[]"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "reasoning": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "qa_gold_answer",
+    "primary_boundary_name": "QA semantic evaluation",
+    "judge_question": "当前 QA 输出是否满足样本参考或场景要求",
+    "verdict_basis": "semantic judge unavailable; local probe is not a correctness judge",
+    "boundary_sources": "impl/projects/QA/evaluation.md",
+    "conflict_policy": "do not infer correct/incorrect from text overlap or answer length"
+  },
+  "consumer_contract": {
+    "consumer": "QA user",
+    "contract": "answer must be relevant, grounded in current contexts/reference, and aligned with the golden answer when provided",
+    "application_boundary": {
+      "scope": "qa_semantic_answer_evaluation",
+      "external_service_required": false
+    }
+  },
+  "reconstructed_intent": "",
+  "reference_generation_basis": {
+    "source": "judge_generated",
+    "alignment_to_actual_shape": "QA keeps semantic fields: output.actual_answer is evaluated output and reference.golden_answer is the gold answer.",
+    "evidence": [
+      "scenario=qa_gold_answer",
+      "actual_answer_present=False",
+      "golden_answer_present=False",
+      "contexts_present=False",
+      "data_quality_flags=[]"
+    ]
+  },
+  "scenario": "qa_gold_answer",
+  "needs_human_review": true,
+  "quality_flags": [
+    "llm_call_failed",
+    "qa_local_evidence_probe",
+    "semantic_judge_unavailable"
+  ],
+  "summary": {
+    "reason": "[llm_call_failed] uncertain · LLM 调用失败，未做出算法判断",
+    "reason_source": "degradation_marker",
+    "fulfillment_status": "not_evaluable",
+    "assessment_count": 0,
+    "blocking_count": 0,
+    "is_formal_attribution": false
+  }
+}

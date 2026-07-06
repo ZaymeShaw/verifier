@@ -1,0 +1,78 @@
+{
+  "project_id": "marketting-planning-intent",
+  "clusters": [
+    {
+      "cluster_id": "expectation::implementation_bug::not_evaluable",
+      "mechanism": "implementation_bug::not_evaluable",
+      "causal_category": "implementation_bug",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "必要槽位提取",
+        "intent_contract"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "155c874f-8644-4e8a-af1d-5b4b074818af"
+      ],
+      "representative_traces": [
+        "155c874f-8644-4e8a-af1d-5b4b074818af"
+      ],
+      "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': '客户画像分析（未提取必要槽位）'}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'slots': {}, 'entities': []}，最早差异位于 intent_contract_gate。",
+      "shared_failure_pattern": "当前 case 期望 intent/slots 为 {'intent': '客户画像分析（未提取必要槽位）'}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'slots': {}, 'entities': []}，最早差异位于 intent_contract_gate。",
+      "representative_diffs": [
+        {
+          "case_id": "155c874f-8644-4e8a-af1d-5b4b074818af",
+          "node": "intent_contract_gate",
+          "expected": {
+            "intent": "客户画像分析（未提取必要槽位）"
+          },
+          "actual": {
+            "confidence": 1.0,
+            "intent": "customer_portrait"
+          },
+          "evidence": [
+            [
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "槽位 time_range"
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "槽位 product"
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "槽位 analysis_dimensions"
+              }
+            ]
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "verification_cases": [
+        "155c874f-8644-4e8a-af1d-5b4b074818af"
+      ],
+      "next_actions": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ]
+    }
+  ],
+  "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': '客户画像分析（未提取必要槽位）'}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'slots': {}, 'entities': []}，最早差异位于 intent_contract_gate。",
+  "impact": "",
+  "priority": "high"
+}

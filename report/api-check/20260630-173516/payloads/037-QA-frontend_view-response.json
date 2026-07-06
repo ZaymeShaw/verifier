@@ -1,0 +1,1027 @@
+{
+  "project_info": {
+    "project_id": "QA",
+    "name": "QA 评估项目",
+    "description": "评估已产出的问答输入、输出、参考答案或上下文证据，支持样本级 scenario。"
+  },
+  "run_trace_summary": {
+    "trace_id": "4db1d19d-6a42-4bd0-add9-cad269f6acf4",
+    "project_id": "QA",
+    "case_id": "qa-gold-exact-1",
+    "input": {
+      "question": "什么是保险合同犹豫期？"
+    },
+    "normalized_request": {
+      "input": {
+        "question": "什么是保险合同犹豫期？"
+      },
+      "scenario": "invalid_sample",
+      "data_quality_flags": [
+        "missing_actual_answer"
+      ],
+      "output": {
+        "actual_answer": ""
+      }
+    },
+    "extracted_output": {
+      "actual_answer": ""
+    },
+    "live_result": {
+      "project_id": "QA",
+      "case_id": "qa-gold-exact-1",
+      "session_id": "",
+      "raw_input": {
+        "question": "什么是保险合同犹豫期？"
+      },
+      "normalized_request": {
+        "input": {
+          "question": "什么是保险合同犹豫期？"
+        },
+        "scenario": "invalid_sample",
+        "data_quality_flags": [
+          "missing_actual_answer"
+        ],
+        "output": {
+          "actual_answer": ""
+        }
+      },
+      "call_status": "succeeded",
+      "extracted_output": {
+        "actual_answer": ""
+      },
+      "output_source": "provided_output",
+      "execution_trace": [
+        {
+          "stage": "qa.sample.normalize",
+          "status": "suspicious",
+          "evidence": {
+            "scenario": "invalid_sample",
+            "flags": [
+              "missing_actual_answer"
+            ]
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "qa.output.read",
+          "status": "suspicious",
+          "evidence": "evaluated output read from uploaded sample",
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "adapter.extract_output",
+          "status": "succeeded",
+          "evidence": {
+            "actual_answer_present": false
+          },
+          "timestamp": "",
+          "error": ""
+        }
+      ],
+      "interaction_mode": "single_turn"
+    },
+    "execution_mode": "live",
+    "output_source": "provided_output",
+    "scenario": "invalid_sample",
+    "evidence_refs": [
+      {
+        "type": "qa_sample_boundary",
+        "state_id": "collect_evidence",
+        "scenario": "invalid_sample",
+        "data_quality_flags": [
+          "missing_actual_answer"
+        ]
+      },
+      {
+        "type": "qa_sample_boundary",
+        "state_id": "collect_evidence",
+        "scenario": "invalid_sample",
+        "data_quality_flags": [
+          "missing_actual_answer"
+        ]
+      }
+    ],
+    "execution_trace": [
+      {
+        "stage": "qa.sample.normalize",
+        "status": "suspicious",
+        "evidence": {
+          "scenario": "invalid_sample",
+          "flags": [
+            "missing_actual_answer"
+          ]
+        },
+        "timestamp": "",
+        "error": ""
+      },
+      {
+        "stage": "qa.output.read",
+        "status": "suspicious",
+        "evidence": "evaluated output read from uploaded sample",
+        "timestamp": "",
+        "error": ""
+      },
+      {
+        "stage": "adapter.extract_output",
+        "status": "succeeded",
+        "evidence": {
+          "actual_answer_present": false
+        },
+        "timestamp": "",
+        "error": ""
+      }
+    ],
+    "status": "ok",
+    "created_at": "2026-06-30T09:35:17.233566+00:00",
+    "state_history": [
+      {
+        "state_id": "prepare_trace",
+        "role": "prepare_trace",
+        "status": "skipped",
+        "attempt": 1,
+        "started_at": "2026-06-30T09:35:17.232098+00:00",
+        "finished_at": "2026-06-30T09:35:17.232099+00:00",
+        "transition_decision": {
+          "from_state": "prepare_trace",
+          "to_state": "mock_or_input",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        }
+      },
+      {
+        "state_id": "mock_or_input",
+        "role": "mock_or_input",
+        "status": "skipped",
+        "attempt": 1,
+        "started_at": "2026-06-30T09:35:17.232105+00:00",
+        "finished_at": "2026-06-30T09:35:17.232106+00:00",
+        "transition_decision": {
+          "from_state": "mock_or_input",
+          "to_state": "execute_or_capture",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        }
+      },
+      {
+        "state_id": "execute_or_capture",
+        "role": "execute_or_capture",
+        "status": "succeeded",
+        "attempt": 1,
+        "started_at": "2026-06-30T09:35:17.233612+00:00",
+        "finished_at": "2026-06-30T09:35:17.233614+00:00",
+        "outputs": {
+          "schema_result_type": "RunTrace"
+        },
+        "gate_decisions": [
+          {
+            "gate_id": "trace_available",
+            "gate_type": "required_evidence",
+            "passed": true,
+            "checked_inputs": {
+              "trace": true,
+              "status": "ok"
+            },
+            "recoverable": false,
+            "recommended_transition": "",
+            "reason": "trace exists"
+          }
+        ],
+        "transition_decision": {
+          "from_state": "execute_or_capture",
+          "to_state": "collect_evidence",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "trace_available"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        }
+      },
+      {
+        "state_id": "collect_evidence",
+        "role": "collect_evidence",
+        "status": "failed",
+        "attempt": 1,
+        "started_at": "2026-06-30T09:35:17.233646+00:00",
+        "finished_at": "2026-06-30T09:35:17.233648+00:00",
+        "outputs": {
+          "collect_evidence": {
+            "recursive_ref": "RunTrace"
+          },
+          "qa_case_contract_evidence": {
+            "status": "failed",
+            "outputs": {
+              "question_present": true,
+              "actual_answer_present": false,
+              "reference_present": false,
+              "contexts_count": 0,
+              "scenario": "invalid_sample",
+              "provided_output_path": true
+            },
+            "evidence_refs": [
+              {
+                "type": "qa_case_contract",
+                "evidence": {
+                  "question_present": true,
+                  "actual_answer_present": false,
+                  "reference_present": false,
+                  "contexts_count": 0,
+                  "scenario": "invalid_sample",
+                  "provided_output_path": true
+                }
+              }
+            ],
+            "claims": [
+              {
+                "qa_case_contract": {
+                  "question_present": true,
+                  "actual_answer_present": false,
+                  "reference_present": false,
+                  "contexts_count": 0,
+                  "scenario": "invalid_sample",
+                  "provided_output_path": true
+                }
+              }
+            ],
+            "missing_evidence": [
+              "actual_answer_present"
+            ],
+            "unrecoverable_missing": [
+              "actual_answer_present"
+            ]
+          }
+        },
+        "subagent_results": [
+          {
+            "executor_id": "collect_evidence",
+            "executor_type": "deterministic",
+            "role": "generic_evidence_collector",
+            "status": "succeeded",
+            "output": {
+              "recursive_ref": "RunTrace"
+            }
+          },
+          {
+            "executor_id": "qa_case_contract_evidence",
+            "executor_type": "adapter_hook",
+            "role": "qa_case_contract_evidence",
+            "status": "failed",
+            "output": {
+              "status": "failed",
+              "outputs": {
+                "question_present": true,
+                "actual_answer_present": false,
+                "reference_present": false,
+                "contexts_count": 0,
+                "scenario": "invalid_sample",
+                "provided_output_path": true
+              },
+              "evidence_refs": [
+                {
+                  "type": "qa_case_contract",
+                  "evidence": {
+                    "question_present": true,
+                    "actual_answer_present": false,
+                    "reference_present": false,
+                    "contexts_count": 0,
+                    "scenario": "invalid_sample",
+                    "provided_output_path": true
+                  }
+                }
+              ],
+              "claims": [
+                {
+                  "qa_case_contract": {
+                    "question_present": true,
+                    "actual_answer_present": false,
+                    "reference_present": false,
+                    "contexts_count": 0,
+                    "scenario": "invalid_sample",
+                    "provided_output_path": true
+                  }
+                }
+              ],
+              "missing_evidence": [
+                "actual_answer_present"
+              ],
+              "unrecoverable_missing": [
+                "actual_answer_present"
+              ]
+            },
+            "evidence_refs": [
+              {
+                "type": "qa_case_contract",
+                "evidence": {
+                  "question_present": true,
+                  "actual_answer_present": false,
+                  "reference_present": false,
+                  "contexts_count": 0,
+                  "scenario": "invalid_sample",
+                  "provided_output_path": true
+                }
+              }
+            ],
+            "claims": [
+              {
+                "qa_case_contract": {
+                  "question_present": true,
+                  "actual_answer_present": false,
+                  "reference_present": false,
+                  "contexts_count": 0,
+                  "scenario": "invalid_sample",
+                  "provided_output_path": true
+                }
+              }
+            ],
+            "missing_evidence": [
+              "actual_answer_present"
+            ]
+          }
+        ],
+        "evidence_refs": [
+          {
+            "type": "qa_case_contract",
+            "evidence": {
+              "question_present": true,
+              "actual_answer_present": false,
+              "reference_present": false,
+              "contexts_count": 0,
+              "scenario": "invalid_sample",
+              "provided_output_path": true
+            }
+          }
+        ],
+        "transition_decision": {
+          "from_state": "collect_evidence",
+          "to_state": "build_business_expectations",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        }
+      },
+      {
+        "state_id": "build_business_expectations",
+        "role": "build_business_expectations",
+        "status": "succeeded",
+        "attempt": 1,
+        "started_at": "2026-06-30T09:37:27.428691+00:00",
+        "finished_at": "2026-06-30T09:37:27.428718+00:00",
+        "outputs": {
+          "schema_result_type": "JudgeResult"
+        },
+        "gate_decisions": [
+          {
+            "gate_id": "consumer_contract_present",
+            "gate_type": "consumer_contract_present",
+            "passed": true,
+            "checked_inputs": {
+              "has_judge": true
+            },
+            "recoverable": true,
+            "recommended_transition": "build_business_expectations",
+            "reason": "consumer contract available"
+          },
+          {
+            "gate_id": "business_expectation_coverage",
+            "gate_type": "business_expectation_coverage",
+            "passed": true,
+            "checked_inputs": {
+              "expectation_count": 4
+            },
+            "recoverable": true,
+            "recommended_transition": "build_business_expectations",
+            "reason": "business expectations available"
+          }
+        ],
+        "transition_decision": {
+          "from_state": "build_business_expectations",
+          "to_state": "evaluate_fulfillment",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "consumer_contract_present",
+            "business_expectation_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        }
+      },
+      {
+        "state_id": "evaluate_fulfillment",
+        "role": "evaluate_fulfillment",
+        "status": "succeeded",
+        "attempt": 1,
+        "started_at": "2026-06-30T09:37:27.429369+00:00",
+        "finished_at": "2026-06-30T09:37:27.429381+00:00",
+        "outputs": {
+          "schema_result_type": "JudgeResult"
+        },
+        "gate_decisions": [
+          {
+            "gate_id": "fulfillment_assessment_coverage",
+            "gate_type": "fulfillment_assessment_coverage",
+            "passed": true,
+            "checked_inputs": {
+              "expectation_count": 4,
+              "assessment_count": 4
+            },
+            "recoverable": true,
+            "recommended_transition": "evaluate_fulfillment",
+            "reason": "fulfillment assessments cover expectations"
+          },
+          {
+            "gate_id": "boundary_decision_present",
+            "gate_type": "boundary_decision_present",
+            "passed": true,
+            "checked_inputs": {
+              "has_judge": true,
+              "assessment_count": 4
+            },
+            "recoverable": false,
+            "recommended_transition": "",
+            "reason": "fulfillment boundary available"
+          },
+          {
+            "gate_id": "derived_verdict_consistency",
+            "gate_type": "derived_verdict_consistency",
+            "passed": false,
+            "checked_inputs": {
+              "has_judge": true,
+              "has_fulfillment": true
+            },
+            "contradictions": [
+              "verdict=correct conflicts with fulfillment-derived verdict=incorrect",
+              "overall_fulfillment.status=fulfilled conflicts with fulfillment-derived status=not_fulfilled",
+              "overall_fulfillment.blocking_expectations conflicts with non-fulfilled assessments"
+            ],
+            "recoverable": true,
+            "recommended_transition": "evaluate_fulfillment",
+            "reason": "derived verdict conflicts with fulfillment state"
+          }
+        ],
+        "transition_decision": {
+          "from_state": "evaluate_fulfillment",
+          "to_state": "collect_evidence",
+          "condition": "gate_failed_recoverable",
+          "reason": "derived verdict conflicts with fulfillment state",
+          "gate_ids": [
+            "fulfillment_assessment_coverage",
+            "boundary_decision_present",
+            "derived_verdict_consistency"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        }
+      },
+      {
+        "state_id": "collect_evidence",
+        "role": "collect_evidence",
+        "status": "failed",
+        "attempt": 2,
+        "started_at": "2026-06-30T09:37:27.429526+00:00",
+        "finished_at": "2026-06-30T09:37:27.429531+00:00",
+        "outputs": {
+          "collect_evidence": {
+            "recursive_ref": "RunTrace"
+          },
+          "qa_case_contract_evidence": {
+            "status": "failed",
+            "outputs": {
+              "question_present": true,
+              "actual_answer_present": false,
+              "reference_present": false,
+              "contexts_count": 0,
+              "scenario": "invalid_sample",
+              "provided_output_path": true
+            },
+            "evidence_refs": [
+              {
+                "type": "qa_case_contract",
+                "evidence": {
+                  "question_present": true,
+                  "actual_answer_present": false,
+                  "reference_present": false,
+                  "contexts_count": 0,
+                  "scenario": "invalid_sample",
+                  "provided_output_path": true
+                }
+              }
+            ],
+            "claims": [
+              {
+                "qa_case_contract": {
+                  "question_present": true,
+                  "actual_answer_present": false,
+                  "reference_present": false,
+                  "contexts_count": 0,
+                  "scenario": "invalid_sample",
+                  "provided_output_path": true
+                }
+              }
+            ],
+            "missing_evidence": [
+              "actual_answer_present"
+            ],
+            "unrecoverable_missing": [
+              "actual_answer_present"
+            ]
+          }
+        },
+        "subagent_results": [
+          {
+            "executor_id": "collect_evidence",
+            "executor_type": "deterministic",
+            "role": "generic_evidence_collector",
+            "status": "succeeded",
+            "output": {
+              "recursive_ref": "RunTrace"
+            }
+          },
+          {
+            "executor_id": "qa_case_contract_evidence",
+            "executor_type": "adapter_hook",
+            "role": "qa_case_contract_evidence",
+            "status": "failed",
+            "output": {
+              "status": "failed",
+              "outputs": {
+                "question_present": true,
+                "actual_answer_present": false,
+                "reference_present": false,
+                "contexts_count": 0,
+                "scenario": "invalid_sample",
+                "provided_output_path": true
+              },
+              "evidence_refs": [
+                {
+                  "type": "qa_case_contract",
+                  "evidence": {
+                    "question_present": true,
+                    "actual_answer_present": false,
+                    "reference_present": false,
+                    "contexts_count": 0,
+                    "scenario": "invalid_sample",
+                    "provided_output_path": true
+                  }
+                }
+              ],
+              "claims": [
+                {
+                  "qa_case_contract": {
+                    "question_present": true,
+                    "actual_answer_present": false,
+                    "reference_present": false,
+                    "contexts_count": 0,
+                    "scenario": "invalid_sample",
+                    "provided_output_path": true
+                  }
+                }
+              ],
+              "missing_evidence": [
+                "actual_answer_present"
+              ],
+              "unrecoverable_missing": [
+                "actual_answer_present"
+              ]
+            },
+            "evidence_refs": [
+              {
+                "type": "qa_case_contract",
+                "evidence": {
+                  "question_present": true,
+                  "actual_answer_present": false,
+                  "reference_present": false,
+                  "contexts_count": 0,
+                  "scenario": "invalid_sample",
+                  "provided_output_path": true
+                }
+              }
+            ],
+            "claims": [
+              {
+                "qa_case_contract": {
+                  "question_present": true,
+                  "actual_answer_present": false,
+                  "reference_present": false,
+                  "contexts_count": 0,
+                  "scenario": "invalid_sample",
+                  "provided_output_path": true
+                }
+              }
+            ],
+            "missing_evidence": [
+              "actual_answer_present"
+            ]
+          }
+        ],
+        "evidence_refs": [
+          {
+            "type": "qa_case_contract",
+            "evidence": {
+              "question_present": true,
+              "actual_answer_present": false,
+              "reference_present": false,
+              "contexts_count": 0,
+              "scenario": "invalid_sample",
+              "provided_output_path": true
+            }
+          }
+        ],
+        "transition_decision": {
+          "from_state": "collect_evidence",
+          "to_state": "build_business_expectations",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 1,
+          "stop_reason": ""
+        }
+      },
+      {
+        "state_id": "build_business_expectations",
+        "role": "build_business_expectations",
+        "status": "succeeded",
+        "attempt": 2,
+        "started_at": "2026-06-30T09:39:26.745113+00:00",
+        "finished_at": "2026-06-30T09:39:26.745127+00:00",
+        "outputs": {
+          "schema_result_type": "JudgeResult"
+        },
+        "gate_decisions": [
+          {
+            "gate_id": "consumer_contract_present",
+            "gate_type": "consumer_contract_present",
+            "passed": true,
+            "checked_inputs": {
+              "has_judge": true
+            },
+            "recoverable": true,
+            "recommended_transition": "build_business_expectations",
+            "reason": "consumer contract available"
+          },
+          {
+            "gate_id": "business_expectation_coverage",
+            "gate_type": "business_expectation_coverage",
+            "passed": true,
+            "checked_inputs": {
+              "expectation_count": 4
+            },
+            "recoverable": true,
+            "recommended_transition": "build_business_expectations",
+            "reason": "business expectations available"
+          }
+        ],
+        "transition_decision": {
+          "from_state": "build_business_expectations",
+          "to_state": "evaluate_fulfillment",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "consumer_contract_present",
+            "business_expectation_coverage"
+          ],
+          "retry_count": 1,
+          "stop_reason": ""
+        }
+      },
+      {
+        "state_id": "evaluate_fulfillment",
+        "role": "evaluate_fulfillment",
+        "status": "succeeded",
+        "attempt": 2,
+        "started_at": "2026-06-30T09:39:26.745646+00:00",
+        "finished_at": "2026-06-30T09:39:26.745651+00:00",
+        "outputs": {
+          "schema_result_type": "JudgeResult"
+        },
+        "gate_decisions": [
+          {
+            "gate_id": "fulfillment_assessment_coverage",
+            "gate_type": "fulfillment_assessment_coverage",
+            "passed": true,
+            "checked_inputs": {
+              "expectation_count": 4,
+              "assessment_count": 4
+            },
+            "recoverable": true,
+            "recommended_transition": "evaluate_fulfillment",
+            "reason": "fulfillment assessments cover expectations"
+          },
+          {
+            "gate_id": "boundary_decision_present",
+            "gate_type": "boundary_decision_present",
+            "passed": true,
+            "checked_inputs": {
+              "has_judge": true,
+              "assessment_count": 4
+            },
+            "recoverable": false,
+            "recommended_transition": "",
+            "reason": "fulfillment boundary available"
+          },
+          {
+            "gate_id": "derived_verdict_consistency",
+            "gate_type": "derived_verdict_consistency",
+            "passed": false,
+            "checked_inputs": {
+              "has_judge": true,
+              "has_fulfillment": true
+            },
+            "contradictions": [
+              "verdict=correct conflicts with fulfillment-derived verdict=incorrect",
+              "overall_fulfillment.status=fulfilled conflicts with fulfillment-derived status=not_fulfilled",
+              "overall_fulfillment.blocking_expectations conflicts with non-fulfilled assessments"
+            ],
+            "recoverable": true,
+            "recommended_transition": "evaluate_fulfillment",
+            "reason": "derived verdict conflicts with fulfillment state"
+          }
+        ],
+        "transition_decision": {
+          "from_state": "evaluate_fulfillment",
+          "to_state": "incomplete_or_human_review",
+          "condition": "retry_limit",
+          "reason": "state retry limit exceeded",
+          "gate_ids": [
+            "fulfillment_assessment_coverage",
+            "boundary_decision_present",
+            "derived_verdict_consistency"
+          ],
+          "retry_count": 1,
+          "stop_reason": "incomplete_retry_limit"
+        }
+      },
+      {
+        "state_id": "incomplete_or_human_review",
+        "role": "incomplete_or_human_review",
+        "status": "skipped",
+        "attempt": 1,
+        "started_at": "2026-06-30T09:39:26.745677+00:00",
+        "finished_at": "2026-06-30T09:39:26.745681+00:00",
+        "transition_decision": {
+          "from_state": "incomplete_or_human_review",
+          "to_state": "completed",
+          "condition": "stop",
+          "reason": "stop",
+          "retry_count": 0,
+          "stop_reason": "incomplete_retry_limit"
+        }
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "checked_inputs": {
+          "trace": true,
+          "status": "ok"
+        },
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "checked_inputs": {
+          "has_judge": true
+        },
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "checked_inputs": {
+          "expectation_count": 4
+        },
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "checked_inputs": {
+          "expectation_count": 4,
+          "assessment_count": 4
+        },
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "checked_inputs": {
+          "has_judge": true,
+          "assessment_count": 4
+        },
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": false,
+        "checked_inputs": {
+          "has_judge": true,
+          "has_fulfillment": true
+        },
+        "contradictions": [
+          "verdict=correct conflicts with fulfillment-derived verdict=incorrect",
+          "overall_fulfillment.status=fulfilled conflicts with fulfillment-derived status=not_fulfilled",
+          "overall_fulfillment.blocking_expectations conflicts with non-fulfilled assessments"
+        ],
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict conflicts with fulfillment state"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "checked_inputs": {
+          "has_judge": true
+        },
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "checked_inputs": {
+          "expectation_count": 4
+        },
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "checked_inputs": {
+          "expectation_count": 4,
+          "assessment_count": 4
+        },
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "checked_inputs": {
+          "has_judge": true,
+          "assessment_count": 4
+        },
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": false,
+        "checked_inputs": {
+          "has_judge": true,
+          "has_fulfillment": true
+        },
+        "contradictions": [
+          "verdict=correct conflicts with fulfillment-derived verdict=incorrect",
+          "overall_fulfillment.status=fulfilled conflicts with fulfillment-derived status=not_fulfilled",
+          "overall_fulfillment.blocking_expectations conflicts with non-fulfilled assessments"
+        ],
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict conflicts with fulfillment state"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "gate_ids": [
+          "trace_available"
+        ],
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "gate_ids": [
+          "consumer_contract_present",
+          "business_expectation_coverage"
+        ],
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "collect_evidence",
+        "condition": "gate_failed_recoverable",
+        "reason": "derived verdict conflicts with fulfillment state",
+        "gate_ids": [
+          "fulfillment_assessment_coverage",
+          "boundary_decision_present",
+          "derived_verdict_consistency"
+        ],
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 1,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "gate_ids": [
+          "consumer_contract_present",
+          "business_expectation_coverage"
+        ],
+        "retry_count": 1,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "incomplete_or_human_review",
+        "condition": "retry_limit",
+        "reason": "state retry limit exceeded",
+        "gate_ids": [
+          "fulfillment_assessment_coverage",
+          "boundary_decision_present",
+          "derived_verdict_consistency"
+        ],
+        "retry_count": 1,
+        "stop_reason": "incomplete_retry_limit"
+      },
+      {
+        "from_state": "incomplete_or_human_review",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "incomplete_retry_limit"
+      }
+    ],
+    "stop_reason": "incomplete_retry_limit",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "turn_index": 0
+  },
+  "reference_panel": {
+    "

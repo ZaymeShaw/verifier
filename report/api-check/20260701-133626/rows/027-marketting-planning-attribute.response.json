@@ -1,0 +1,95 @@
+{
+  "trace_id": "82ae7a0c-8032-4341-abad-8c7ee5e6c356",
+  "project_id": "marketting-planning",
+  "case_id": "",
+  "causal_category": "needs_human_review",
+  "earliest_divergence": {
+    "node": "adapter_extraction",
+    "expected": "营销规划服务返回 HTTP 200 及 SSE 流式响应，extracted_output 包含 stage/event_summary/card_summary 等结构化摘要",
+    "actual": "Connection refused (Errno 61)，服务端口未监听或网络不可达，raw_response 为 None，extracted_output 为空字典 {}",
+    "evidence": [
+      "run_trace.error = 'marketing-planning service unavailable: <urlopen error [Errno 61] Connection refused>'",
+      "run_trace.status = 'error'",
+      "run_trace.extracted_output = '{}'",
+      "run_trace.execution_trace = []",
+      "adapter.call_or_prepare 中 urllib.error.URLError 被捕获"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "failed",
+      "evidence": [
+        "call_error: marketing-planning service unavailable: <urlopen error [Errno 61] Connection refused>",
+        "call_status: failed",
+        "extracted_output: {}"
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "service_availability_check",
+      "status": "failed",
+      "evidence": [
+        "run_trace.status = 'error'",
+        "run_trace.error = 'marketing-planning service unavailable: <urlopen error [Errno 61] Connection refused>'",
+        "execution_trace 为空数组，无任何 workflow step 执行记录",
+        "adapter.call_or_prepare 中 urllib.request.urlopen 抛出 urllib.error.URLError，被捕获为 call_status='failed'"
+      ]
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": true,
+    "execution_trace": true,
+    "project_docs": true,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "营销规划服务（marketing-planning）在本次评估执行时未处于运行状态或网络不可达，导致适配器在 call_or_prepare 中通过 urllib.request.urlopen 发起 HTTP POST 请求时操作系统返回 Connection refused（Errno 61）。适配器在 except (urllib.error.URLError, TimeoutError, OSError) 分支中将 call_status 置为 'failed'、extracted_output 置为空字典，使得 judge 无任何业务产出可评估（verdict=uncertain），attribute agent 也无业务期望可归因（attribution_targets 为空）。这不是代码逻辑缺陷，而是基础设施/部署层面的外部依赖不可用问题。",
+  "verification_steps": [
+    "确认营销规划服务进程是否正常运行：检查目标主机上 marketing-planning 服务的 gunicorn/uvicorn 进程状态",
+    "确认服务端口是否正确：核对 adapter spec 中的 base_url 和 endpoint 是否指向正确的服务地址和端口",
+    "确认网络连通性：从 verifier 执行环境 telnet/curl 目标服务地址端口，验证是否可达",
+    "确认服务启动日志：检查 marketing-planning 服务日志中是否有启动失败、端口冲突、依赖缺失等错误"
+  ],
+  "patch_direction": [
+    "运维层面：确保在评估执行前营销规划服务已正常启动并监听预期端口",
+    "适配器层面（可选增强）：在 call_or_prepare 中增加重试机制（如 3 次指数退避重试），避免因瞬时抖动导致整个 case 失败",
+    "评估流程层面：在 case 执行前增加服务健康检查探活步骤，若服务不可用则提前标记为 infrastructure_error 而非让 judge 产出 uncertain"
+  ],
+  "needs_human_review": true,
+  "scenario": "execution_planning",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 0,
+    "probe_count": 1,
+    "summary_text": "judge 无法评估（verdict=uncertain），attribution_targets 为空，因为营销规划服务完全不可用（Connection refused），没有任何业务产出可供 judge 或 attribute agent 分析。本次归因仅能确认故障位于基础设施/部署层面——适配器 adapter_extraction 阶段发起 HTTP 请求时连接被拒绝，后续所有 workflow 步骤（intent_recognition、field_clarification、path_dispatch、planning_function、result_assembly、sse_generation）均未执行。如需进行业务逻辑归因，需先修复服务可用性问题后重新执行。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  }
+}

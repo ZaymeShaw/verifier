@@ -1,0 +1,56 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图准确识别为营销规划",
+        "进入规划或澄清阶段而非直接结束",
+        "输出包含规划相关卡片或澄清提示"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "9e230598-22ad-461e-b789-62cdf57a430e"
+      ],
+      "representative_traces": [
+        "9e230598-22ad-461e-b789-62cdf57a430e"
+      ],
+      "common_root_cause": "双重根因：(1) 规则链覆盖不足——Tier 0首页正则 r'怎么达成.*NBEV.*目标' 要求特定句式，无法匹配'怎么通过...来补上'的口语化表述；Tier 3关键词列表('达成','规划','路径','测算','分析')缺少'补上''增加''优化''改进'等语义等价词，导致has_planning_intent=False。(2) LLM模型能力缺口——qwen3-next-80b-a3b-instruct（激活3B）在规则未命中时未能正确理解'还差不少''怎么补上'等表述属于nbev_planning意图，prompt中'不确定归other'的兜底策略加剧了误判。两者叠加导致明确的营销规划请求被最终识别为'其他意图'，使系统进入non_agent路径并直接结束交互。",
+      "shared_failure_pattern": "双重根因：(1) 规则链覆盖不足——Tier 0首页正则 r'怎么达成.*NBEV.*目标' 要求特定句式，无法匹配'怎么通过...来补上'的口语化表述；Tier 3关键词列表('达成','规划','路径','测算','分析')缺少'补上''增加''优化''改进'等语义等价词，导致has_planning_intent=False。(2) LLM模型能力缺口——qwen3-next-80b-a3b-instruct（激活3B）在规则未命中时未能正确理解'还差不少''怎么补上'等表述属于nbev_planning意图，prompt中'不确定归other'的兜底策略加剧了误判。两者叠加导致明确的营销规划请求被最终识别为'其他意图'，使系统进入non_agent路径并直接结束交互。",
+      "representative_diffs": [
+        {
+          "case_id": "9e230598-22ad-461e-b789-62cdf57a430e",
+          "expected": "intent=nbev_planning，confidence ≥ 0.9",
+          "actual": "intent=other (4001)，confidence未知（LLM输出）"
+        }
+      ],
+      "minimal_fix_direction": [
+        "修复1 (intent_recognition.py Tier 0): 扩展NBEV规划正则，增加 r'怎么(通过|来).*(补上|弥补|完成|实现).*NBEV' 等模式，覆盖口语化表述",
+        "修复2 (intent_recognition.py Tier 3): 扩展has_planning_intent关键词集合，加入'补上''弥补''增加''优化''提升''改进''追上''填平'",
+        "修复3 (intent_recognition.py): 在Tier 3之后增加NBEV兜底规则——若消息含'NBEV'且未命中任何规则，默认置信度0.6设为nbev_planning，而非直接fallback到LLM",
+        "修复4 (intent_prompt.py): 在INTENT_RECOGNITION_PROMPT的nbev_planning描述中增加few-shot示例：'我们NBEV还差不少，怎么通过增加队伍来补上？→ nbev_planning，target_value=None，path_types=['队伍']'",
+        "修复5 (config.py): 评估升级模型到更大参数版本或引入语义相似度Embedding作为规则与LLM之间的中间兜底层"
+      ],
+      "verification_cases": [
+        "9e230598-22ad-461e-b789-62cdf57a430e"
+      ],
+      "next_actions": [
+        "Step 1: 用正则'怎么达成.*NBEV.*目标'测试实际query，验证Tier 0不匹配",
+        "Step 2: 检查has_planning_intent对'补上''增加''优化'的判定结果，验证Tier 3失效",
+        "Step 3: 用相同query直接调用qwen3-next-80b-a3b-instruct模型（不带规则链），测试是否稳定返回other",
+        "Step 4: 对比测试：将query改为'怎么达成NBEV目标'，验证规则链是否能正常命中nbev_planning",
+        "Step 5: 人工评估：确认'补上NBEV缺口'与'达成NBEV目标'在业务语义上等价"
+      ]
+    }
+  ],
+  "common_root_cause": "双重根因：(1) 规则链覆盖不足——Tier 0首页正则 r'怎么达成.*NBEV.*目标' 要求特定句式，无法匹配'怎么通过...来补上'的口语化表述；Tier 3关键词列表('达成','规划','路径','测算','分析')缺少'补上''增加''优化''改进'等语义等价词，导致has_planning_intent=False。(2) LLM模型能力缺口——qwen3-next-80b-a3b-instruct（激活3B）在规则未命中时未能正确理解'还差不少''怎么补上'等表述属于nbev_planning意图，prompt中'不确定归other'的兜底策略加剧了误判。两者叠加导致明确的营销规划请求被最终识别为'其他意图'，使系统进入non_agent路径并直接结束交互。",
+  "impact": "",
+  "priority": "high"
+}

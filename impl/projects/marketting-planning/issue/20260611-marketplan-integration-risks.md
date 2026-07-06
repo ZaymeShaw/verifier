@@ -265,7 +265,7 @@ NBEV 规划结果包含预测值、达成率、卡片结构、AI 分析文本和
 
 真实路径函数失败时可能被包装成 `SORRY_CARD` 正常返回。如果 trace 不记录真实函数是否调用、校验是否失败、fallback 原因是什么，judge/attribute 会误判。
 
-接入时需要在 `RunTrace.project_fields` 中记录：
+接入时需要在 `RunTrace.extracted_output`、`RunTrace.fallbacks` 或 `RunTrace.execution_trace` 中记录：
 
 - 哪条路径 fallback；
 - fallback 原因；

@@ -2,7 +2,12 @@ project_id: client_search
 name: 客户搜索评估示例
 description: 将客户搜索项目作为通用评估系统的第一个项目适配实现。
 adapter: adapter.py
+source_project: ../../../projects/client_search
 capabilities: ["live_run", "judge", "attribute", "cluster", "check"]
+common:
+  ready: []
+field_provider_module: field_provider.py
+field_provider_class: ClientSearchFieldDefinitionProvider
 api:
   base_url: http://localhost:8000
   endpoint: /api/v1/client_search_query_parse_no_encipher
@@ -27,10 +32,10 @@ documents:
   checklist: checklist.md
   source_readme: ../../../projects/client_search/readme.md
   source_config: ../../../projects/client_search/config.md
-  source_field_definitions: ../../../../llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml
-  source_field_enums: ../../../../llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml
-  source_value_mappings: ../../../../llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml
-  source_enhanced_rules: ../../../../llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml
+  source_field_definitions: /Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml
+  source_field_enums: /Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml
+  source_value_mappings: /Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml
+  source_enhanced_rules: /Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml
   source_prompt: ../../../projects/client_search/prompt.md
   source_judge_boundary: ../../../projects/client_search/judge_boundary-template.md
   implementation_standard: implementation_standard.md
@@ -111,3 +116,25 @@ frontend_extensions:
         condition: "same field and exactly one identical enum/list value"
         basis: "enum field where single-value MATCH is equivalent to CONTAINS with one-element list"
     equivalent_fields: [{"field":"familyInfo.familyclientage","equivalent_field":"familyInfo.familyclientbirthday","condition":"birthday date range is equivalent to the family member age boundary under the current date","basis":"source_enhanced_rules/source_config describe age-to-birthday executable conversion; judge should compare semantic boundary rather than raw field spelling."}]
+
+# ---- API endpoint 自动发现（spec/apitool_discover.md） ----
+# 通用引擎扫描业务系统源码中的路由装饰器，自动构建为 VerifiableTool。
+# 不配置此字段则跳过扫描，完全兼容现有项目。
+endpoint_discovery:
+  source_roots:
+    - /Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python
+  framework: fastapi
+  route_prefix: /api/v1
+  scan_patterns: ["*.py"]
+  exclude_patterns:
+    - "*/test/*"
+    - "*/migrations/*"
+    - "*/venv/*"
+    - "*/__pycache__/*"
+    - "*/logs/*"
+    - "*/docs/*"
+    - "*/docs_BAK/*"
+  # 黑名单：命中则在发现阶段排除，不落盘、不暴露给 LLM
+  blacklist:
+    methods: ["PUT", "DELETE", "PATCH"]
+    route_keywords: ["reload", "reindex", "delete", "update", "create", "write"]

@@ -1,0 +1,4219 @@
+{
+  "project_id": "QA",
+  "total": 1,
+  "runs": [
+    {
+      "trace": {
+        "trace_id": "322b4a8f-6c67-4cad-9e9e-732340b0ae06",
+        "project_id": "QA",
+        "case_id": "mock-agent-QA-f8906092",
+        "live_result": {
+          "project_id": "QA",
+          "case_id": "mock-agent-QA-f8906092",
+          "session_id": "",
+          "raw_input": {
+            "input": {
+              "query": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+              "user_text": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+            },
+            "metadata": {
+              "channel": "在线客服",
+              "product_type": "重疾险",
+              "session_id": "sess_123456",
+              "timestamp": "2025-03-28T10:15:00Z",
+              "trace_id": "trace_qa_001",
+              "user_id": "user_98765"
+            },
+            "scenario": "qa_gold_answer"
+          },
+          "normalized_request": {
+            "input": {
+              "question": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+            },
+            "reference": {
+              "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+            },
+            "metadata": {
+              "live_request_mapped": true,
+              "ready": [
+                "output",
+                "reference"
+              ],
+              "schema_ok": true,
+              "source": "mock_agent_llm"
+            },
+            "scenario": "qa_gold_answer",
+            "output": {
+              "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+            }
+          },
+          "call_status": "succeeded",
+          "extracted_output": {
+            "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+          },
+          "output_source": "provided_output",
+          "interaction_mode": "single_turn"
+        },
+        "status": "ok",
+        "state_history": [
+          {
+            "attempt": 1,
+            "status": "skipped",
+            "started_at": "2026-07-04T04:44:02.673389+00:00"
+          },
+          {
+            "attempt": 1,
+            "status": "skipped",
+            "started_at": "2026-07-04T04:44:02.673415+00:00"
+          },
+          {
+            "attempt": 1,
+            "status": "succeeded",
+            "started_at": "2026-07-04T04:44:02.674420+00:00"
+          },
+          {
+            "attempt": 1,
+            "status": "succeeded",
+            "started_at": "2026-07-04T04:44:02.674468+00:00"
+          },
+          {
+            "attempt": 1,
+            "status": "succeeded",
+            "started_at": "2026-07-04T04:45:57.508690+00:00"
+          },
+          {
+            "attempt": 1,
+            "status": "succeeded",
+            "started_at": "2026-07-04T04:45:57.508817+00:00"
+          },
+          {
+            "attempt": 1,
+            "status": "skipped",
+            "started_at": "2026-07-04T04:45:57.508883+00:00"
+          },
+          {
+            "attempt": 1,
+            "status": "succeeded",
+            "started_at": "2026-07-04T04:45:57.512878+00:00"
+          },
+          {
+            "attempt": 1,
+            "status": "succeeded",
+            "started_at": "2026-07-04T04:45:57.514327+00:00"
+          },
+          {
+            "attempt": 1,
+            "status": "skipped",
+            "started_at": "2026-07-04T04:45:57.514376+00:00"
+          },
+          {
+            "attempt": 1,
+            "status": "succeeded",
+            "started_at": "2026-07-04T04:45:57.533881+00:00"
+          }
+        ],
+        "gate_decisions": [
+          {
+            "gate_id": "trace_available",
+            "gate_type": "required_evidence",
+            "passed": true,
+            "recoverable": false,
+            "recommended_transition": "",
+            "reason": "trace exists"
+          },
+          {
+            "gate_id": "consumer_contract_present",
+            "gate_type": "consumer_contract_present",
+            "passed": true,
+            "recoverable": true,
+            "recommended_transition": "build_business_expectations",
+            "reason": "consumer contract available"
+          },
+          {
+            "gate_id": "business_expectation_coverage",
+            "gate_type": "business_expectation_coverage",
+            "passed": true,
+            "recoverable": true,
+            "recommended_transition": "build_business_expectations",
+            "reason": "business expectations available"
+          },
+          {
+            "gate_id": "fulfillment_assessment_coverage",
+            "gate_type": "fulfillment_assessment_coverage",
+            "passed": true,
+            "recoverable": true,
+            "recommended_transition": "evaluate_fulfillment",
+            "reason": "fulfillment assessments cover expectations"
+          },
+          {
+            "gate_id": "boundary_decision_present",
+            "gate_type": "boundary_decision_present",
+            "passed": true,
+            "recoverable": false,
+            "recommended_transition": "",
+            "reason": "fulfillment boundary available"
+          },
+          {
+            "gate_id": "derived_verdict_consistency",
+            "gate_type": "derived_verdict_consistency",
+            "passed": true,
+            "recoverable": true,
+            "recommended_transition": "evaluate_fulfillment",
+            "reason": "derived verdict matches fulfillment state"
+          },
+          {
+            "gate_id": "contradiction_free",
+            "gate_type": "contradiction_free",
+            "passed": true,
+            "recoverable": true,
+            "recommended_transition": "collect_evidence",
+            "reason": "no contradictions"
+          },
+          {
+            "gate_id": "unsupported_claims_absent",
+            "gate_type": "unsupported_claims_absent",
+            "passed": true,
+            "recoverable": true,
+            "recommended_transition": "collect_evidence",
+            "reason": "no unsupported claims"
+          },
+          {
+            "gate_id": "fulfillment_assessment_coverage",
+            "gate_type": "fulfillment_assessment_coverage",
+            "passed": true,
+            "recoverable": true,
+            "recommended_transition": "evaluate_fulfillment",
+            "reason": "fulfillment assessments cover expectations"
+          },
+          {
+            "gate_id": "attribute_targets_expectation_gap",
+            "gate_type": "attribute_targets_expectation_gap",
+            "passed": true,
+            "recoverable": false,
+            "recommended_transition": "finalize",
+            "reason": "attribute targets fulfillment gaps"
+          },
+          {
+            "gate_id": "probe_evidence_or_blocked_reason",
+            "gate_type": "probe_evidence_or_blocked_reason",
+            "passed": true,
+            "recoverable": true,
+            "recommended_transition": "run_attribution_probes",
+            "reason": "probe evidence or blocked reason available"
+          },
+          {
+            "gate_id": "expectation_attribution_evidence",
+            "gate_type": "expectation_attribution_evidence",
+            "passed": true,
+            "recoverable": false,
+            "recommended_transition": "run_attribution_probes",
+            "reason": "expectation attribution evidence available"
+          },
+          {
+            "gate_id": "causal_category_support",
+            "gate_type": "causal_category_support",
+            "passed": true,
+            "recoverable": true,
+            "recommended_transition": "run_attribution_probes",
+            "reason": "causal category supported"
+          },
+          {
+            "gate_id": "improvement_direction_support",
+            "gate_type": "improvement_direction_support",
+            "passed": true,
+            "recoverable": true,
+            "recommended_transition": "run_attribution_probes",
+            "reason": "improvement direction available"
+          },
+          {
+            "gate_id": "finalization_ready",
+            "gate_type": "finalization_ready",
+            "passed": true,
+            "recoverable": false,
+            "recommended_transition": "",
+            "reason": "finalization ready"
+          },
+          {
+            "gate_id": "contradiction_free",
+            "gate_type": "contradiction_free",
+            "passed": true,
+            "recoverable": true,
+            "recommended_transition": "collect_evidence",
+            "reason": "no contradictions"
+          },
+          {
+            "gate_id": "unsupported_claims_absent",
+            "gate_type": "unsupported_claims_absent",
+            "passed": true,
+            "recoverable": true,
+            "recommended_transition": "collect_evidence",
+            "reason": "no unsupported claims"
+          }
+        ],
+        "transition_decisions": [
+          {
+            "from_state": "prepare_trace",
+            "to_state": "mock_or_input",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          },
+          {
+            "from_state": "mock_or_input",
+            "to_state": "execute_or_capture",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          },
+          {
+            "from_state": "execute_or_capture",
+            "to_state": "collect_evidence",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          },
+          {
+            "from_state": "collect_evidence",
+            "to_state": "build_business_expectations",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          },
+          {
+            "from_state": "build_business_expectations",
+            "to_state": "evaluate_fulfillment",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          },
+          {
+            "from_state": "evaluate_fulfillment",
+            "to_state": "fulfillment_critic",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          },
+          {
+            "from_state": "fulfillment_critic",
+            "to_state": "attribute_expectations",
+            "condition": "fulfillment_requires_attribute",
+            "reason": "fulfillment_requires_attribute",
+            "retry_count": 0,
+            "stop_reason": ""
+          },
+          {
+            "from_state": "attribute_expectations",
+            "to_state": "run_attribution_probes",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          },
+          {
+            "from_state": "run_attribution_probes",
+            "to_state": "attribution_critic",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          },
+          {
+            "from_state": "attribution_critic",
+            "to_state": "finalize",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          },
+          {
+            "from_state": "finalize",
+            "to_state": "completed",
+            "condition": "stop",
+            "reason": "stop",
+            "retry_count": 0,
+            "stop_reason": "completed"
+          }
+        ],
+        "evidence_refs": [
+          {
+            "source": "",
+            "summary": ""
+          }
+        ],
+        "scenario": "qa_gold_answer",
+        "interaction_mode": "single_turn",
+        "session_id": "",
+        "created_at": "2026-07-04T04:44:02.674372+00:00"
+      },
+      "judge": {
+        "trace_id": "322b4a8f-6c67-4cad-9e9e-732340b0ae06",
+        "project_id": "QA",
+        "verdict": "correct",
+        "business_expectations": [
+          {
+            "expectation_id": "理赔申请通过拨打客服热线办理",
+            "downstream_consumer": "普通客户",
+            "user_intent": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+            "expected_outcome": "说明理赔申请的方式是拨打客服热线",
+            "required_capabilities": [
+              "语言理解",
+              "信息提取"
+            ],
+            "acceptance_criteria": [
+              "实际答案中包含“拨打客服热线”或同义表述"
+            ],
+            "priority": "high"
+          },
+          {
+            "expectation_id": "需提供保单号和诊断证明",
+            "downstream_consumer": "普通客户",
+            "user_intent": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+            "expected_outcome": "说明需要提供保单号和诊断证明",
+            "required_capabilities": [
+              "信息提取"
+            ],
+            "acceptance_criteria": [
+              "实际答案中包含“提供保单号和诊断证明”或同义表述"
+            ],
+            "priority": "high"
+          },
+          {
+            "expectation_id": "审核通过后3个工作日内完成赔付",
+            "downstream_consumer": "普通客户",
+            "user_intent": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+            "expected_outcome": "说明审核通过后3个工作日内完成赔付",
+            "required_capabilities": [
+              "时间信息提取"
+            ],
+            "acceptance_criteria": [
+              "实际答案中包含“3个工作日内”或“3个工作日内完成审核并打款”"
+            ],
+            "priority": "high"
+          },
+          {
+            "expectation_id": "答案内容与参考信息不矛盾",
+            "downstream_consumer": "普通客户",
+            "user_intent": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+            "expected_outcome": "答案中的信息一致，无冲突",
+            "required_capabilities": [
+              "一致性检查"
+            ],
+            "acceptance_criteria": [
+              "实际答案中不存在与金标准矛盾的陈述（如不同的理赔方式、不同的材料要求、不同的时间承诺）"
+            ],
+            "priority": "high"
+          },
+          {
+            "expectation_id": "提供客服热线具体号码",
+            "downstream_consumer": "普通客户",
+            "user_intent": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+            "expected_outcome": "给出具体的热线号码",
+            "required_capabilities": [
+              "信息丰富性"
+            ],
+            "acceptance_criteria": [
+              "实际答案中包含类似400-xxx-xxxx的具体号码"
+            ],
+            "priority": "medium"
+          },
+          {
+            "expectation_id": "提供专人跟进等额外服务细节",
+            "downstream_consumer": "普通客户",
+            "user_intent": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+            "expected_outcome": "说明有专人负责跟进理赔",
+            "required_capabilities": [
+              "服务质量"
+            ],
+            "acceptance_criteria": [
+              "实际答案中包含“专人跟进”或同义表述"
+            ],
+            "priority": "medium"
+          }
+        ],
+        "fulfillment_assessments": [
+          {
+            "expectation_id": "理赔申请通过拨打客服热线办理",
+            "status": "fulfilled",
+            "expected_evidence": [
+              "拨打客服热线"
+            ],
+            "actual_evidence": [
+              "拨打我们24小时客服热线400-xxx-xxxx"
+            ],
+            "boundary_decision": {
+              "within_evaluable_scope": true,
+              "reasoning": "金标准明确，实际答案可清晰对比"
+            },
+            "downstream_impact": "客户能够明确知晓需致电客服启动理赔",
+            "blocking": true
+          },
+          {
+            "expectation_id": "需提供保单号和诊断证明",
+            "status": "fulfilled",
+            "expected_evidence": [
+              "提供保单号和诊断证明"
+            ],
+            "actual_evidence": [
+              "提供保单号和诊断证明"
+            ],
+            "boundary_decision": {
+              "within_evaluable_scope": true,
+              "reasoning": "金标准明确，实际答案直接包含"
+            },
+            "downstream_impact": "客户能够事先准备好必要材料",
+            "blocking": true
+          },
+          {
+            "expectation_id": "审核通过后3个工作日内完成赔付",
+            "status": "fulfilled",
+            "expected_evidence": [
+              "审核通过后3个工作日内赔付"
+            ],
+            "actual_evidence": [
+              "一般3个工作日内完成审核并打款"
+            ],
+            "boundary_decision": {
+              "within_evaluable_scope": true,
+              "reasoning": "语义等价，时间承诺一致"
+            },
+            "downstream_impact": "客户对理赔时效有明确预期",
+            "blocking": true
+          },
+          {
+            "expectation_id": "答案内容与参考信息不矛盾",
+            "status": "fulfilled",
+            "expected_evidence": [
+              "无矛盾信息"
+            ],
+            "actual_evidence": [
+              "答案中所有信息与金标准一致，额外信息不冲突"
+            ],
+            "boundary_decision": {
+              "within_evaluable_scope": true,
+              "reasoning": "无任何矛盾点"
+            },
+            "downstream_impact": "客户获得正确指导，避免误解",
+            "blocking": true
+          },
+          {
+            "expectation_id": "提供客服热线具体号码",
+            "status": "fulfilled",
+            "expected_evidence": [
+              "具体客服热线号码"
+            ],
+            "actual_evidence": [
+              "400-xxx-xxxx"
+            ],
+            "boundary_decision": {
+              "within_evaluable_scope": true,
+              "reasoning": "号码已提供，增强了可操作性"
+            },
+            "downstream_impact": "客户可直接拨号，减少操作步骤",
+            "blocking": false
+          },
+          {
+            "expectation_id": "提供专人跟进等额外服务细节",
+            "status": "fulfilled",
+            "expected_evidence": [
+              "专人跟进等表述"
+            ],
+            "actual_evidence": [
+              "我们会安排专人跟进"
+            ],
+            "boundary_decision": {
+              "within_evaluable_scope": true,
+              "reasoning": "额外服务细节提升了答案的关怀感"
+            },
+            "downstream_impact": "客户感到被重视，服务体验提升",
+            "blocking": false
+          }
+        ],
+        "overall_fulfillment": {
+          "status": "fulfilled",
+          "assessment_count": 6
+        },
+        "expected": {
+          "actual_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+        },
+        "actual": {
+          "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+        },
+        "reasoning_summary": "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+        "judge_basis": "基于 qa_gold_answer 场景，将实际答案与金标准答案进行对比，评估关键信息点的覆盖度、准确性和额外信息的价值。",
+        "judge_method": "语义等价与关键信息点逐项比对",
+        "verdict_derivation": {
+          "primary_boundary": "qa_gold_answer",
+          "assessment_summary": "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+          "why_verdict": "实际答案准确且完整地满足了用户获取理赔流程的需求，所有核心信息点均与金标准一致，额外细节提升了答案的可用性，因此整体业务期望均得到满足。",
+          "taxonomy_error_types": [
+            "none"
+          ],
+          "score_dimensions": [
+            {
+              "dimension": "correctness",
+              "score": 1.0,
+              "evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "status": "judged"
+            },
+            {
+              "dimension": "completeness",
+              "score": 1.0,
+              "evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "status": "judged"
+            },
+            {
+              "dimension": "key_point_coverage",
+              "score": 1.0,
+              "evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "status": "judged"
+            },
+            {
+              "dimension": "faithfulness",
+              "score": 1.0,
+              "evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "status": "judged"
+            },
+            {
+              "dimension": "relevance",
+              "score": 1.0,
+              "evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "status": "judged"
+            },
+            {
+              "dimension": "usefulness",
+              "score": 1.0,
+              "evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "status": "judged"
+            },
+            {
+              "dimension": "coherence",
+              "score": 1.0,
+              "evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "status": "judged"
+            },
+            {
+              "dimension": "risk_control",
+              "score": 1.0,
+              "evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "status": "judged"
+            },
+            {
+              "dimension": "clarity",
+              "score": 1.0,
+              "evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "status": "judged"
+            }
+          ],
+          "error_type": "none"
+        },
+        "evidence": [
+          "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=True",
+          "golden_answer_present=True"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": "金标准答案明确，实际答案可清晰对比，无评估障碍。"
+        },
+        "evaluation_boundary": {
+          "primary_boundary_id": "qa_gold_answer",
+          "primary_boundary_name": "金标准对比评估",
+          "judge_question": "实际答案是否准确且完整地反映了金标准答案中的理赔申请步骤？",
+          "verdict_basis": "逐项比对关键信息点：联系方式、材料、时效",
+          "boundary_sources": "样本提供的 golden_answer",
+          "conflict_policy": "无冲突，所有信息一致"
+        },
+        "consumer_contract": {
+          "consumer": "QA评估系统",
+          "contract": "按照 qa_gold_answer 场景，将实际答案与金标准答案进行对比，评估关键信息点的覆盖度、一致性和有用性",
+          "reference_contract": {
+            "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+          }
+        },
+        "intent_model": {
+          "raw_user_request": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+          "explicit_intents": [
+            "用户希望获得重疾险确诊癌症后的理赔申请具体步骤"
+          ],
+          "implicit_business_intents": [
+            "用户期望得到准确、清晰、可立即操作的指导，以便顺利获得赔付",
+            "用户期望客服渠道便捷、响应及时"
+          ],
+          "constraints": {
+            "domain": "重疾险理赔流程",
+            "accuracy_required": true,
+            "completeness_required": true
+          },
+          "success_definition": "实际答案应准确、完整地反映理赔申请的必要步骤（联系客服、提供材料、审核赔付时间），并与金标准答案一致，同时提供有用的细节以增强用户体验。",
+          "blocking_requirements": [
+            "说明拨打客服热线申请理赔",
+            "说明需提供保单号和诊断证明",
+            "说明审核通过后3个工作日内赔付",
+            "答案信息与金标准不矛盾"
+          ],
+          "nice_to_have_requirements": [
+            "提供具体客服热线号码",
+            "提供专人跟进等服务细节"
+          ],
+          "intent_evidence": [
+            "用户提问内容明确询问理赔申请具体流程"
+          ]
+        },
+        "reconstructed_intent": "用户想了解重疾险确诊癌症后的理赔申请具体流程，期望得到包含关键步骤（联系方式、材料、时效）的准确指导。",
+        "semantic_equivalence_checks": [
+          {
+            "expected_fragment": "拨打客服热线",
+            "actual_fragment": "拨打我们24小时客服热线400-xxx-xxxx",
+            "equivalent": true,
+            "basis": "语义包含且具体化，核心动作一致"
+          },
+          {
+            "expected_fragment": "提供保单号和诊断证明",
+            "actual_fragment": "提供保单号和诊断证明",
+            "equivalent": true,
+            "basis": "完全一致"
+          },
+          {
+            "expected_fragment": "审核通过后3个工作日内赔付",
+            "actual_fragment": "一般3个工作日内完成审核并打款",
+            "equivalent": true,
+            "basis": "语义等价，均表示审核通过后3个工作日内完成赔付"
+          }
+        ],
+        "reference_generation_basis": {
+          "source": "provided_reference",
+          "alignment_to_actual_shape": "直接与金标准答案逐点对比"
+        },
+        "scenario": "qa_gold_answer",
+        "needs_human_review": false,
+        "summary": {
+          "reason": "fulfilled · 4 blocking expectations all met · 实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+          "reason_source": "aggregated_fulfillment",
+          "fulfillment_status": "fulfilled",
+          "assessment_count": 6,
+          "blocking_count": 4,
+          "is_formal_attribution": true
+        }
+      },
+      "attribute": {
+        "trace_id": "322b4a8f-6c67-4cad-9e9e-732340b0ae06",
+        "project_id": "QA",
+        "case_id": "",
+        "expectation_attributions": [
+          {
+            "expectation_id": "理赔申请通过拨打客服热线办理",
+            "causal_category": "no_issue"
+          },
+          {
+            "expectation_id": "需提供保单号和诊断证明",
+            "causal_category": "no_issue"
+          },
+          {
+            "expectation_id": "审核通过后3个工作日内完成赔付",
+            "causal_category": "no_issue"
+          },
+          {
+            "expectation_id": "答案内容与参考信息不矛盾",
+            "causal_category": "no_issue"
+          },
+          {
+            "expectation_id": "提供客服热线具体号码",
+            "causal_category": "no_issue"
+          },
+          {
+            "expectation_id": "提供专人跟进等额外服务细节",
+            "causal_category": "no_issue"
+          }
+        ],
+        "causal_category": "no_issue",
+        "earliest_divergence": {
+          "node": "fulfillment_assessment",
+          "evidence": [
+            "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "confidence": "high"
+        },
+        "chain_nodes": [
+          {
+            "status": "verified",
+            "evidence": [
+              "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+              "scenario=qa_gold_answer",
+              "question_present=True",
+              "actual_answer_present=True",
+              "golden_answer_present=True"
+            ]
+          }
+        ],
+        "probe_results": [
+          {
+            "probe_id": "fulfillment_assessment",
+            "status": "not_verified",
+            "evidence": [
+              "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+              "scenario=qa_gold_answer",
+              "question_present=True",
+              "actual_answer_present=True",
+              "golden_answer_present=True"
+            ]
+          }
+        ],
+        "evidence_coverage": {
+          "judge_evidence": true,
+          "execution_trace": true
+        },
+        "root_cause_hypothesis": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+        "verification_steps": [
+          "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+        ],
+        "patch_direction": [
+          "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+        ],
+        "needs_human_review": false,
+        "scenario": "qa_gold_answer",
+        "summary": {
+          "causal_category": "no_issue",
+          "attribution_count": 6,
+          "probe_count": 1,
+          "summary_text": "业务预期已达成",
+          "is_complete": true,
+          "is_formal_attribution": true
+        },
+        "analysis_method": "fulfilled_expectation_attribution",
+        "analysis_quality": {
+          "passed": true
+        },
+        "incomplete_reason": ""
+      },
+      "cluster": {
+        "project_id": "QA",
+        "clusters": [
+          {
+            "cluster_id": "expectation::no_issue::fulfilled",
+            "mechanism": "no_issue::fulfilled",
+            "causal_category": "no_issue",
+            "fulfillment_statuses": [
+              "fulfilled"
+            ],
+            "expectation_ids": [
+              "理赔申请通过拨打客服热线办理",
+              "需提供保单号和诊断证明",
+              "审核通过后3个工作日内完成赔付",
+              "答案内容与参考信息不矛盾",
+              "提供客服热线具体号码",
+              "提供专人跟进等额外服务细节"
+            ],
+            "needs_human_review": false,
+            "canonical_attribution": true,
+            "count": 1,
+            "representative_cases": [
+              "322b4a8f-6c67-4cad-9e9e-732340b0ae06"
+            ],
+            "representative_traces": [
+              "322b4a8f-6c67-4cad-9e9e-732340b0ae06"
+            ],
+            "common_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "shared_failure_pattern": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+            "representative_diffs": [
+              {
+                "case_id": "322b4a8f-6c67-4cad-9e9e-732340b0ae06",
+                "node": "fulfillment_assessment",
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ]
+              }
+            ],
+            "minimal_fix_direction": [
+              "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+            ],
+            "verification_cases": [
+              "322b4a8f-6c67-4cad-9e9e-732340b0ae06"
+            ],
+            "next_actions": [
+              "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+            ]
+          }
+        ],
+        "common_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+        "impact": "",
+        "priority": "normal"
+      },
+      "check": {
+        "passed": true,
+        "verification_results": [
+          "Check categories passed current audit.",
+          "Protocol chain passed current v1 checks."
+        ]
+      },
+      "frontend_view": {
+        "project_info": {
+          "project_id": "QA",
+          "name": "QA 评估项目",
+          "description": "评估已产出的问答输入、输出、参考答案或上下文证据，支持样本级 scenario。"
+        },
+        "run_trace_summary": {
+          "trace_id": "322b4a8f-6c67-4cad-9e9e-732340b0ae06",
+          "project_id": "QA",
+          "case_id": "mock-agent-QA-f8906092",
+          "input": {
+            "input": {
+              "query": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+              "user_text": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+            },
+            "metadata": {
+              "channel": "在线客服",
+              "product_type": "重疾险",
+              "session_id": "sess_123456",
+              "timestamp": "2025-03-28T10:15:00Z",
+              "trace_id": "trace_qa_001",
+              "user_id": "user_98765"
+            },
+            "scenario": "qa_gold_answer"
+          },
+          "normalized_request": {
+            "input": {
+              "question": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+            },
+            "reference": {
+              "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+            },
+            "metadata": {
+              "live_request_mapped": true,
+              "ready": [
+                "output",
+                "reference"
+              ],
+              "schema_ok": true,
+              "source": "mock_agent_llm"
+            },
+            "scenario": "qa_gold_answer",
+            "output": {
+              "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+            }
+          },
+          "extracted_output": {
+            "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+          },
+          "live_result": {
+            "project_id": "QA",
+            "case_id": "mock-agent-QA-f8906092",
+            "session_id": "",
+            "raw_input": {
+              "input": {
+                "query": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+                "user_text": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+              },
+              "metadata": {
+                "channel": "在线客服",
+                "product_type": "重疾险",
+                "session_id": "sess_123456",
+                "timestamp": "2025-03-28T10:15:00Z",
+                "trace_id": "trace_qa_001",
+                "user_id": "user_98765"
+              },
+              "scenario": "qa_gold_answer"
+            },
+            "normalized_request": {
+              "input": {
+                "question": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+              },
+              "reference": {
+                "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+              },
+              "metadata": {
+                "live_request_mapped": true,
+                "ready": [
+                  "output",
+                  "reference"
+                ],
+                "schema_ok": true,
+                "source": "mock_agent_llm"
+              },
+              "scenario": "qa_gold_answer",
+              "output": {
+                "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+              }
+            },
+            "call_status": "succeeded",
+            "extracted_output": {
+              "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+            },
+            "output_source": "provided_output",
+            "execution_trace": [
+              {
+                "stage": "qa.sample.normalize",
+                "status": "succeeded",
+                "evidence": {
+                  "scenario": "qa_gold_answer"
+                },
+                "timestamp": "",
+                "error": ""
+              },
+              {
+                "stage": "qa.output.read",
+                "status": "succeeded",
+                "evidence": "evaluated output read from uploaded sample",
+                "timestamp": "",
+                "error": ""
+              },
+              {
+                "stage": "adapter.extract_output",
+                "status": "succeeded",
+                "evidence": {
+                  "actual_answer_present": true
+                },
+                "timestamp": "",
+                "error": ""
+              }
+            ],
+            "interaction_mode": "single_turn"
+          },
+          "execution_mode": "provided",
+          "output_source": "provided_output",
+          "scenario": "qa_gold_answer",
+          "reference_contract": {
+            "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+          },
+          "evidence_refs": [
+            {
+              "type": "qa_sample_boundary",
+              "state_id": "collect_evidence",
+              "scenario": "qa_gold_answer",
+              "reference": {
+                "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+              }
+            }
+          ],
+          "execution_trace": [
+            {
+              "stage": "qa.sample.normalize",
+              "status": "succeeded",
+              "evidence": {
+                "scenario": "qa_gold_answer"
+              },
+              "timestamp": "",
+              "error": ""
+            },
+            {
+              "stage": "qa.output.read",
+              "status": "succeeded",
+              "evidence": "evaluated output read from uploaded sample",
+              "timestamp": "",
+              "error": ""
+            },
+            {
+              "stage": "adapter.extract_output",
+              "status": "succeeded",
+              "evidence": {
+                "actual_answer_present": true
+              },
+              "timestamp": "",
+              "error": ""
+            }
+          ],
+          "status": "ok",
+          "created_at": "2026-07-04T04:44:02.674372+00:00",
+          "state_history": [
+            {
+              "state_id": "prepare_trace",
+              "role": "prepare_trace",
+              "status": "skipped",
+              "attempt": 1,
+              "started_at": "2026-07-04T04:44:02.673389+00:00",
+              "finished_at": "2026-07-04T04:44:02.673400+00:00",
+              "transition_decision": {
+                "from_state": "prepare_trace",
+                "to_state": "mock_or_input",
+                "condition": "always",
+                "reason": "always",
+                "retry_count": 0,
+                "stop_reason": ""
+              }
+            },
+            {
+              "state_id": "mock_or_input",
+              "role": "mock_or_input",
+              "status": "skipped",
+              "attempt": 1,
+              "started_at": "2026-07-04T04:44:02.673415+00:00",
+              "finished_at": "2026-07-04T04:44:02.673417+00:00",
+              "transition_decision": {
+                "from_state": "mock_or_input",
+                "to_state": "execute_or_capture",
+                "condition": "always",
+                "reason": "always",
+                "retry_count": 0,
+                "stop_reason": ""
+              }
+            },
+            {
+              "state_id": "execute_or_capture",
+              "role": "execute_or_capture",
+              "status": "succeeded",
+              "attempt": 1,
+              "started_at": "2026-07-04T04:44:02.674420+00:00",
+              "finished_at": "2026-07-04T04:44:02.674422+00:00",
+              "outputs": {
+                "schema_result_type": "RunTrace"
+              },
+              "gate_decisions": [
+                {
+                  "gate_id": "trace_available",
+                  "gate_type": "required_evidence",
+                  "passed": true,
+                  "checked_inputs": {
+                    "trace": true,
+                    "status": "ok"
+                  },
+                  "recoverable": false,
+                  "recommended_transition": "",
+                  "reason": "trace exists"
+                }
+              ],
+              "transition_decision": {
+                "from_state": "execute_or_capture",
+                "to_state": "collect_evidence",
+                "condition": "always",
+                "reason": "always",
+                "gate_ids": [
+                  "trace_available"
+                ],
+                "retry_count": 0,
+                "stop_reason": ""
+              }
+            },
+            {
+              "state_id": "collect_evidence",
+              "role": "collect_evidence",
+              "status": "succeeded",
+              "attempt": 1,
+              "started_at": "2026-07-04T04:44:02.674468+00:00",
+              "finished_at": "2026-07-04T04:44:02.674470+00:00",
+              "outputs": {
+                "collect_evidence": {
+                  "recursive_ref": "RunTrace"
+                },
+                "qa_case_contract_evidence": {
+                  "status": "succeeded",
+                  "outputs": {
+                    "question_present": true,
+                    "actual_answer_present": true,
+                    "reference_present": true,
+                    "contexts_count": 0,
+                    "scenario": "qa_gold_answer",
+                    "provided_output_path": true
+                  },
+                  "evidence_refs": [
+                    {
+                      "type": "qa_case_contract",
+                      "evidence": {
+                        "question_present": true,
+                        "actual_answer_present": true,
+                        "reference_present": true,
+                        "contexts_count": 0,
+                        "scenario": "qa_gold_answer",
+                        "provided_output_path": true
+                      }
+                    }
+                  ],
+                  "claims": [
+                    {
+                      "qa_case_contract": {
+                        "question_present": true,
+                        "actual_answer_present": true,
+                        "reference_present": true,
+                        "contexts_count": 0,
+                        "scenario": "qa_gold_answer",
+                        "provided_output_path": true
+                      }
+                    }
+                  ]
+                }
+              },
+              "subagent_results": [
+                {
+                  "executor_id": "collect_evidence",
+                  "executor_type": "deterministic",
+                  "role": "generic_evidence_collector",
+                  "status": "succeeded",
+                  "output": {
+                    "recursive_ref": "RunTrace"
+                  }
+                },
+                {
+                  "executor_id": "qa_case_contract_evidence",
+                  "executor_type": "adapter_hook",
+                  "role": "qa_case_contract_evidence",
+                  "status": "succeeded",
+                  "output": {
+                    "status": "succeeded",
+                    "outputs": {
+                      "question_present": true,
+                      "actual_answer_present": true,
+                      "reference_present": true,
+                      "contexts_count": 0,
+                      "scenario": "qa_gold_answer",
+                      "provided_output_path": true
+                    },
+                    "evidence_refs": [
+                      {
+                        "type": "qa_case_contract",
+                        "evidence": {
+                          "question_present": true,
+                          "actual_answer_present": true,
+                          "reference_present": true,
+                          "contexts_count": 0,
+                          "scenario": "qa_gold_answer",
+                          "provided_output_path": true
+                        }
+                      }
+                    ],
+                    "claims": [
+                      {
+                        "qa_case_contract": {
+                          "question_present": true,
+                          "actual_answer_present": true,
+                          "reference_present": true,
+                          "contexts_count": 0,
+                          "scenario": "qa_gold_answer",
+                          "provided_output_path": true
+                        }
+                      }
+                    ]
+                  },
+                  "evidence_refs": [
+                    {
+                      "type": "qa_case_contract",
+                      "evidence": {
+                        "question_present": true,
+                        "actual_answer_present": true,
+                        "reference_present": true,
+                        "contexts_count": 0,
+                        "scenario": "qa_gold_answer",
+                        "provided_output_path": true
+                      }
+                    }
+                  ],
+                  "claims": [
+                    {
+                      "qa_case_contract": {
+                        "question_present": true,
+                        "actual_answer_present": true,
+                        "reference_present": true,
+                        "contexts_count": 0,
+                        "scenario": "qa_gold_answer",
+                        "provided_output_path": true
+                      }
+                    }
+                  ]
+                }
+              ],
+              "evidence_refs": [
+                {
+                  "type": "qa_case_contract",
+                  "evidence": {
+                    "question_present": true,
+                    "actual_answer_present": true,
+                    "reference_present": true,
+                    "contexts_count": 0,
+                    "scenario": "qa_gold_answer",
+                    "provided_output_path": true
+                  }
+                }
+              ],
+              "transition_decision": {
+                "from_state": "collect_evidence",
+                "to_state": "build_business_expectations",
+                "condition": "always",
+                "reason": "always",
+                "retry_count": 0,
+                "stop_reason": ""
+              }
+            },
+            {
+              "state_id": "build_business_expectations",
+              "role": "build_business_expectations",
+              "status": "succeeded",
+              "attempt": 1,
+              "started_at": "2026-07-04T04:45:57.508690+00:00",
+              "finished_at": "2026-07-04T04:45:57.508712+00:00",
+              "outputs": {
+                "schema_result_type": "JudgeResult"
+              },
+              "gate_decisions": [
+                {
+                  "gate_id": "consumer_contract_present",
+                  "gate_type": "consumer_contract_present",
+                  "passed": true,
+                  "checked_inputs": {
+                    "has_judge": true
+                  },
+                  "recoverable": true,
+                  "recommended_transition": "build_business_expectations",
+                  "reason": "consumer contract available"
+                },
+                {
+                  "gate_id": "business_expectation_coverage",
+                  "gate_type": "business_expectation_coverage",
+                  "passed": true,
+                  "checked_inputs": {
+                    "expectation_count": 6
+                  },
+                  "recoverable": true,
+                  "recommended_transition": "build_business_expectations",
+                  "reason": "business expectations available"
+                }
+              ],
+              "transition_decision": {
+                "from_state": "build_business_expectations",
+                "to_state": "evaluate_fulfillment",
+                "condition": "always",
+                "reason": "always",
+                "gate_ids": [
+                  "consumer_contract_present",
+                  "business_expectation_coverage"
+                ],
+                "retry_count": 0,
+                "stop_reason": ""
+              }
+            },
+            {
+              "state_id": "evaluate_fulfillment",
+              "role": "evaluate_fulfillment",
+              "status": "succeeded",
+              "attempt": 1,
+              "started_at": "2026-07-04T04:45:57.508817+00:00",
+              "finished_at": "2026-07-04T04:45:57.508820+00:00",
+              "outputs": {
+                "schema_result_type": "JudgeResult"
+              },
+              "gate_decisions": [
+                {
+                  "gate_id": "fulfillment_assessment_coverage",
+                  "gate_type": "fulfillment_assessment_coverage",
+                  "passed": true,
+                  "checked_inputs": {
+                    "expectation_count": 6,
+                    "assessment_count": 6
+                  },
+                  "recoverable": true,
+                  "recommended_transition": "evaluate_fulfillment",
+                  "reason": "fulfillment assessments cover expectations"
+                },
+                {
+                  "gate_id": "boundary_decision_present",
+                  "gate_type": "boundary_decision_present",
+                  "passed": true,
+                  "checked_inputs": {
+                    "has_judge": true,
+                    "assessment_count": 6
+                  },
+                  "recoverable": false,
+                  "recommended_transition": "",
+                  "reason": "fulfillment boundary available"
+                },
+                {
+                  "gate_id": "derived_verdict_consistency",
+                  "gate_type": "derived_verdict_consistency",
+                  "passed": true,
+                  "checked_inputs": {
+                    "has_judge": true,
+                    "has_fulfillment": true
+                  },
+                  "recoverable": true,
+                  "recommended_transition": "evaluate_fulfillment",
+                  "reason": "derived verdict matches fulfillment state"
+                }
+              ],
+              "transition_decision": {
+                "from_state": "evaluate_fulfillment",
+                "to_state": "fulfillment_critic",
+                "condition": "always",
+                "reason": "always",
+                "gate_ids": [
+                  "fulfillment_assessment_coverage",
+                  "boundary_decision_present",
+                  "derived_verdict_consistency"
+                ],
+                "retry_count": 0,
+                "stop_reason": ""
+              }
+            },
+            {
+              "state_id": "fulfillment_critic",
+              "role": "fulfillment_critic",
+              "status": "skipped",
+              "attempt": 1,
+              "started_at": "2026-07-04T04:45:57.508883+00:00",
+              "finished_at": "2026-07-04T04:45:57.508886+00:00",
+              "gate_decisions": [
+                {
+                  "gate_id": "contradiction_free",
+                  "gate_type": "contradiction_free",
+                  "passed": true,
+                  "recoverable": true,
+                  "recommended_transition": "collect_evidence",
+                  "reason": "no contradictions"
+                },
+                {
+                  "gate_id": "unsupported_claims_absent",
+                  "gate_type": "unsupported_claims_absent",
+                  "passed": true,
+                  "recoverable": true,
+                  "recommended_transition": "collect_evidence",
+                  "reason": "no unsupported claims"
+                },
+                {
+                  "gate_id": "fulfillment_assessment_coverage",
+                  "gate_type": "fulfillment_assessment_coverage",
+                  "passed": true,
+                  "checked_inputs": {
+                    "expectation_count": 6,
+                    "assessment_count": 6
+                  },
+                  "recoverable": true,
+                  "recommended_transition": "evaluate_fulfillment",
+                  "reason": "fulfillment assessments cover expectations"
+                }
+              ],
+              "transition_decision": {
+                "from_state": "fulfillment_critic",
+                "to_state": "attribute_expectations",
+                "condition": "fulfillment_requires_attribute",
+                "reason": "fulfillment_requires_attribute",
+                "gate_ids": [
+                  "contradiction_free",
+                  "unsupported_claims_absent",
+                  "fulfillment_assessment_coverage"
+                ],
+                "retry_count": 0,
+                "stop_reason": ""
+              }
+            },
+            {
+              "state_id": "attribute_expectations",
+              "role": "attribute_expectations",
+              "status": "succeeded",
+              "attempt": 1,
+              "started_at": "2026-07-04T04:45:57.512878+00:00",
+              "finished_at": "2026-07-04T04:45:57.512888+00:00",
+              "outputs": {
+                "schema_result_type": "AttributeResult"
+              },
+              "gate_decisions": [
+                {
+                  "gate_id": "attribute_targets_expectation_gap",
+                  "gate_type": "attribute_targets_expectation_gap",
+                  "passed": true,
+                  "checked_inputs": {
+                    "fulfillment_requires_attribute": true,
+                    "target_count": 6
+                  },
+                  "recoverable": false,
+                  "recommended_transition": "finalize",
+                  "reason": "attribute targets fulfillment gaps"
+                }
+              ],
+              "transition_decision": {
+                "from_state": "attribute_expectations",
+                "to_state": "run_attribution_probes",
+                "condition": "always",
+                "reason": "always",
+                "gate_ids": [
+                  "attribute_targets_expectation_gap"
+                ],
+                "retry_count": 0,
+                "stop_reason": ""
+              }
+            },
+            {
+              "state_id": "run_attribution_probes",
+              "role": "run_attribution_probes",
+              "status": "succeeded",
+              "attempt": 1,
+              "started_at": "2026-07-04T04:45:57.514327+00:00",
+              "finished_at": "2026-07-04T04:45:57.514334+00:00",
+              "outputs": {
+                "schema_result_type": "AttributeResult"
+              },
+              "gate_decisions": [
+                {
+                  "gate_id": "probe_evidence_or_blocked_reason",
+                  "gate_type": "probe_evidence_or_blocked_reason",
+                  "passed": true,
+                  "checked_inputs": {
+                    "probe_evidence_count": 1,
+                    "has_incomplete_reason": false
+                  },
+                  "recoverable": true,
+                  "recommended_transition": "run_attribution_probes",
+                  "reason": "probe evidence or blocked reason available"
+                }
+              ],
+              "transition_decision": {
+                "from_state": "run_attribution_probes",
+                "to_state": "attribution_critic",
+                "condition": "always",
+                "reason": "always",
+                "gate_ids": [
+                  "probe_evidence_or_blocked_reason"
+                ],
+                "retry_count": 0,
+                "stop_reason": ""
+              }
+            },
+            {
+              "state_id": "attribution_critic",
+              "role": "attribution_critic",
+              "status": "skipped",
+              "attempt": 1,
+              "started_at": "2026-07-04T04:45:57.514376+00:00",
+              "finished_at": "2026-07-04T04:45:57.514379+00:00",
+              "gate_decisions": [
+                {
+                  "gate_id": "expectation_attribution_evidence",
+                  "gate_type": "expectation_attribution_evidence",
+                  "passed": true,
+                  "checked_inputs": {
+                    "attribution_count": 6
+                  },
+                  "recoverable": false,
+                  "recommended_transition": "run_attribution_probes",
+                  "reason": "expectation attribution evidence available"
+                },
+                {
+                  "gate_id": "causal_category_support",
+                  "gate_type": "causal_category_support",
+                  "passed": true,
+                  "checked_inputs": {
+                    "has_causal_category": true,
+                    "has_incomplete_reason": false
+                  },
+                  "recoverable": true,
+                  "recommended_transition": "run_attribution_probes",
+                  "reason": "causal category supported"
+                },
+                {
+                  "gate_id": "improvement_direction_support",
+                  "gate_type": "improvement_direction_support",
+                  "passed": true,
+                  "checked_inputs": {
+                    "direction_count": 1,
+                    "has_incomplete_reason": false
+                  },
+                  "recoverable": true,
+                  "recommended_transition": "run_attribution_probes",
+                  "reason": "improvement direction available"
+                }
+              ],
+              "transition_decision": {
+                "from_state": "attribution_critic",
+                "to_state": "finalize",
+                "condition": "always",
+                "reason": "always",
+                "gate_ids": [
+                  "expectation_attribution_evidence",
+                  "causal_category_support",
+                  "improvement_direction_support"
+                ],
+                "retry_count": 0,
+                "stop_reason": ""
+              }
+            },
+            {
+              "state_id": "finalize",
+              "role": "finalize",
+              "status": "succeeded",
+              "attempt": 1,
+              "started_at": "2026-07-04T04:45:57.533881+00:00",
+              "finished_at": "2026-07-04T04:45:57.533899+00:00",
+              "outputs": {
+                "schema_result_type": "CheckReport"
+              },
+              "gate_decisions": [
+                {
+                  "gate_id": "finalization_ready",
+                  "gate_type": "finalization_ready",
+                  "passed": true,
+                  "checked_inputs": {
+                    "has_trace": true,
+                    "has_judge_result": true
+                  },
+                  "recoverable": false,
+                  "recommended_transition": "",
+                  "reason": "finalization ready"
+                },
+                {
+                  "gate_id": "contradiction_free",
+                  "gate_type": "contradiction_free",
+                  "passed": true,
+                  "recoverable": true,
+                  "recommended_transition": "collect_evidence",
+                  "reason": "no contradictions"
+                },
+                {
+                  "gate_id": "unsupported_claims_absent",
+                  "gate_type": "unsupported_claims_absent",
+                  "passed": true,
+                  "recoverable": true,
+                  "recommended_transition": "collect_evidence",
+                  "reason": "no unsupported claims"
+                }
+              ],
+              "transition_decision": {
+                "from_state": "finalize",
+                "to_state": "completed",
+                "condition": "stop",
+                "reason": "stop",
+                "gate_ids": [
+                  "finalization_ready",
+                  "contradiction_free",
+                  "unsupported_claims_absent"
+                ],
+                "retry_count": 0,
+                "stop_reason": "completed"
+              }
+            }
+          ],
+          "gate_decisions": [
+            {
+              "gate_id": "trace_available",
+              "gate_type": "required_evidence",
+              "passed": true,
+              "checked_inputs": {
+                "trace": true,
+                "status": "ok"
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "trace exists"
+            },
+            {
+              "gate_id": "consumer_contract_present",
+              "gate_type": "consumer_contract_present",
+              "passed": true,
+              "checked_inputs": {
+                "has_judge": true
+              },
+              "recoverable": true,
+              "recommended_transition": "build_business_expectations",
+              "reason": "consumer contract available"
+            },
+            {
+              "gate_id": "business_expectation_coverage",
+              "gate_type": "business_expectation_coverage",
+              "passed": true,
+              "checked_inputs": {
+                "expectation_count": 6
+              },
+              "recoverable": true,
+              "recommended_transition": "build_business_expectations",
+              "reason": "business expectations available"
+            },
+            {
+              "gate_id": "fulfillment_assessment_coverage",
+              "gate_type": "fulfillment_assessment_coverage",
+              "passed": true,
+              "checked_inputs": {
+                "expectation_count": 6,
+                "assessment_count": 6
+              },
+              "recoverable": true,
+              "recommended_transition": "evaluate_fulfillment",
+              "reason": "fulfillment assessments cover expectations"
+            },
+            {
+              "gate_id": "boundary_decision_present",
+              "gate_type": "boundary_decision_present",
+              "passed": true,
+              "checked_inputs": {
+                "has_judge": true,
+                "assessment_count": 6
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "fulfillment boundary available"
+            },
+            {
+              "gate_id": "derived_verdict_consistency",
+              "gate_type": "derived_verdict_consistency",
+              "passed": true,
+              "checked_inputs": {
+                "has_judge": true,
+                "has_fulfillment": true
+              },
+              "recoverable": true,
+              "recommended_transition": "evaluate_fulfillment",
+              "reason": "derived verdict matches fulfillment state"
+            },
+            {
+              "gate_id": "contradiction_free",
+              "gate_type": "contradiction_free",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no contradictions"
+            },
+            {
+              "gate_id": "unsupported_claims_absent",
+              "gate_type": "unsupported_claims_absent",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no unsupported claims"
+            },
+            {
+              "gate_id": "fulfillment_assessment_coverage",
+              "gate_type": "fulfillment_assessment_coverage",
+              "passed": true,
+              "checked_inputs": {
+                "expectation_count": 6,
+                "assessment_count": 6
+              },
+              "recoverable": true,
+              "recommended_transition": "evaluate_fulfillment",
+              "reason": "fulfillment assessments cover expectations"
+            },
+            {
+              "gate_id": "attribute_targets_expectation_gap",
+              "gate_type": "attribute_targets_expectation_gap",
+              "passed": true,
+              "checked_inputs": {
+                "fulfillment_requires_attribute": true,
+                "target_count": 6
+              },
+              "recoverable": false,
+              "recommended_transition": "finalize",
+              "reason": "attribute targets fulfillment gaps"
+            },
+            {
+              "gate_id": "probe_evidence_or_blocked_reason",
+              "gate_type": "probe_evidence_or_blocked_reason",
+              "passed": true,
+              "checked_inputs": {
+                "probe_evidence_count": 1,
+                "has_incomplete_reason": false
+              },
+              "recoverable": true,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "probe evidence or blocked reason available"
+            },
+            {
+              "gate_id": "expectation_attribution_evidence",
+              "gate_type": "expectation_attribution_evidence",
+              "passed": true,
+              "checked_inputs": {
+                "attribution_count": 6
+              },
+              "recoverable": false,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "expectation attribution evidence available"
+            },
+            {
+              "gate_id": "causal_category_support",
+              "gate_type": "causal_category_support",
+              "passed": true,
+              "checked_inputs": {
+                "has_causal_category": true,
+                "has_incomplete_reason": false
+              },
+              "recoverable": true,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "causal category supported"
+            },
+            {
+              "gate_id": "improvement_direction_support",
+              "gate_type": "improvement_direction_support",
+              "passed": true,
+              "checked_inputs": {
+                "direction_count": 1,
+                "has_incomplete_reason": false
+              },
+              "recoverable": true,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "improvement direction available"
+            },
+            {
+              "gate_id": "finalization_ready",
+              "gate_type": "finalization_ready",
+              "passed": true,
+              "checked_inputs": {
+                "has_trace": true,
+                "has_judge_result": true
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "finalization ready"
+            },
+            {
+              "gate_id": "contradiction_free",
+              "gate_type": "contradiction_free",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no contradictions"
+            },
+            {
+              "gate_id": "unsupported_claims_absent",
+              "gate_type": "unsupported_claims_absent",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no unsupported claims"
+            }
+          ],
+          "transition_decisions": [
+            {
+              "from_state": "prepare_trace",
+              "to_state": "mock_or_input",
+              "condition": "always",
+              "reason": "always",
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "mock_or_input",
+              "to_state": "execute_or_capture",
+              "condition": "always",
+              "reason": "always",
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "execute_or_capture",
+              "to_state": "collect_evidence",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "trace_available"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "collect_evidence",
+              "to_state": "build_business_expectations",
+              "condition": "always",
+              "reason": "always",
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "build_business_expectations",
+              "to_state": "evaluate_fulfillment",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "consumer_contract_present",
+                "business_expectation_coverage"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "evaluate_fulfillment",
+              "to_state": "fulfillment_critic",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "fulfillment_assessment_coverage",
+                "boundary_decision_present",
+                "derived_verdict_consistency"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "fulfillment_critic",
+              "to_state": "attribute_expectations",
+              "condition": "fulfillment_requires_attribute",
+              "reason": "fulfillment_requires_attribute",
+              "gate_ids": [
+                "contradiction_free",
+                "unsupported_claims_absent",
+                "fulfillment_assessment_coverage"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "attribute_expectations",
+              "to_state": "run_attribution_probes",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "attribute_targets_expectation_gap"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "run_attribution_probes",
+              "to_state": "attribution_critic",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "probe_evidence_or_blocked_reason"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "attribution_critic",
+              "to_state": "finalize",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "expectation_attribution_evidence",
+                "causal_category_support",
+                "improvement_direction_support"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "finalize",
+              "to_state": "completed",
+              "condition": "stop",
+              "reason": "stop",
+              "gate_ids": [
+                "finalization_ready",
+                "contradiction_free",
+                "unsupported_claims_absent"
+              ],
+              "retry_count": 0,
+              "stop_reason": "completed"
+            }
+          ],
+          "stop_reason": "completed",
+          "interaction_mode": "single_turn",
+          "session_id": "",
+          "turn_index": 0,
+          "ready": [
+            "output",
+            "reference"
+          ]
+        },
+        "reference_panel": {
+          "reference": {
+            "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+          },
+          "source": "input",
+          "actual": {
+            "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+          }
+        },
+        "judge_panel": {
+          "trace_id": "322b4a8f-6c67-4cad-9e9e-732340b0ae06",
+          "project_id": "QA",
+          "verdict": "correct",
+          "expected": {
+            "actual_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+          },
+          "actual": {
+            "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+          },
+          "consumer_contract": {
+            "consumer": "QA评估系统",
+            "contract": "按照 qa_gold_answer 场景，将实际答案与金标准答案进行对比，评估关键信息点的覆盖度、一致性和有用性",
+            "reference_contract": {
+              "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+            }
+          },
+          "intent_model": {
+            "raw_user_request": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+            "explicit_intents": [
+              "用户希望获得重疾险确诊癌症后的理赔申请具体步骤"
+            ],
+            "implicit_business_intents": [
+              "用户期望得到准确、清晰、可立即操作的指导，以便顺利获得赔付",
+              "用户期望客服渠道便捷、响应及时"
+            ],
+            "constraints": {
+              "domain": "重疾险理赔流程",
+              "accuracy_required": true,
+              "completeness_required": true
+            },
+            "success_definition": "实际答案应准确、完整地反映理赔申请的必要步骤（联系客服、提供材料、审核赔付时间），并与金标准答案一致，同时提供有用的细节以增强用户体验。",
+            "blocking_requirements": [
+              "说明拨打客服热线申请理赔",
+              "说明需提供保单号和诊断证明",
+              "说明审核通过后3个工作日内赔付",
+              "答案信息与金标准不矛盾"
+            ],
+            "nice_to_have_requirements": [
+              "提供具体客服热线号码",
+              "提供专人跟进等服务细节"
+            ],
+            "intent_evidence": [
+              "用户提问内容明确询问理赔申请具体流程"
+            ]
+          },
+          "business_expectations": [
+            {
+              "expectation_id": "理赔申请通过拨打客服热线办理",
+              "downstream_consumer": "普通客户",
+              "user_intent": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+              "expected_outcome": "说明理赔申请的方式是拨打客服热线",
+              "required_capabilities": [
+                "语言理解",
+                "信息提取"
+              ],
+              "acceptance_criteria": [
+                "实际答案中包含“拨打客服热线”或同义表述"
+              ],
+              "priority": "high"
+            },
+            {
+              "expectation_id": "需提供保单号和诊断证明",
+              "downstream_consumer": "普通客户",
+              "user_intent": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+              "expected_outcome": "说明需要提供保单号和诊断证明",
+              "required_capabilities": [
+                "信息提取"
+              ],
+              "acceptance_criteria": [
+                "实际答案中包含“提供保单号和诊断证明”或同义表述"
+              ],
+              "priority": "high"
+            },
+            {
+              "expectation_id": "审核通过后3个工作日内完成赔付",
+              "downstream_consumer": "普通客户",
+              "user_intent": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+              "expected_outcome": "说明审核通过后3个工作日内完成赔付",
+              "required_capabilities": [
+                "时间信息提取"
+              ],
+              "acceptance_criteria": [
+                "实际答案中包含“3个工作日内”或“3个工作日内完成审核并打款”"
+              ],
+              "priority": "high"
+            },
+            {
+              "expectation_id": "答案内容与参考信息不矛盾",
+              "downstream_consumer": "普通客户",
+              "user_intent": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+              "expected_outcome": "答案中的信息一致，无冲突",
+              "required_capabilities": [
+                "一致性检查"
+              ],
+              "acceptance_criteria": [
+                "实际答案中不存在与金标准矛盾的陈述（如不同的理赔方式、不同的材料要求、不同的时间承诺）"
+              ],
+              "priority": "high"
+            },
+            {
+              "expectation_id": "提供客服热线具体号码",
+              "downstream_consumer": "普通客户",
+              "user_intent": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+              "expected_outcome": "给出具体的热线号码",
+              "required_capabilities": [
+                "信息丰富性"
+              ],
+              "acceptance_criteria": [
+                "实际答案中包含类似400-xxx-xxxx的具体号码"
+              ],
+              "priority": "medium"
+            },
+            {
+              "expectation_id": "提供专人跟进等额外服务细节",
+              "downstream_consumer": "普通客户",
+              "user_intent": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+              "expected_outcome": "说明有专人负责跟进理赔",
+              "required_capabilities": [
+                "服务质量"
+              ],
+              "acceptance_criteria": [
+                "实际答案中包含“专人跟进”或同义表述"
+              ],
+              "priority": "medium"
+            }
+          ],
+          "fulfillment_assessments": [
+            {
+              "expectation_id": "理赔申请通过拨打客服热线办理",
+              "status": "fulfilled",
+              "expected_evidence": [
+                "拨打客服热线"
+              ],
+              "actual_evidence": [
+                "拨打我们24小时客服热线400-xxx-xxxx"
+              ],
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "金标准明确，实际答案可清晰对比"
+              },
+              "downstream_impact": "客户能够明确知晓需致电客服启动理赔",
+              "blocking": true
+            },
+            {
+              "expectation_id": "需提供保单号和诊断证明",
+              "status": "fulfilled",
+              "expected_evidence": [
+                "提供保单号和诊断证明"
+              ],
+              "actual_evidence": [
+                "提供保单号和诊断证明"
+              ],
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "金标准明确，实际答案直接包含"
+              },
+              "downstream_impact": "客户能够事先准备好必要材料",
+              "blocking": true
+            },
+            {
+              "expectation_id": "审核通过后3个工作日内完成赔付",
+              "status": "fulfilled",
+              "expected_evidence": [
+                "审核通过后3个工作日内赔付"
+              ],
+              "actual_evidence": [
+                "一般3个工作日内完成审核并打款"
+              ],
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "语义等价，时间承诺一致"
+              },
+              "downstream_impact": "客户对理赔时效有明确预期",
+              "blocking": true
+            },
+            {
+              "expectation_id": "答案内容与参考信息不矛盾",
+              "status": "fulfilled",
+              "expected_evidence": [
+                "无矛盾信息"
+              ],
+              "actual_evidence": [
+                "答案中所有信息与金标准一致，额外信息不冲突"
+              ],
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "无任何矛盾点"
+              },
+              "downstream_impact": "客户获得正确指导，避免误解",
+              "blocking": true
+            },
+            {
+              "expectation_id": "提供客服热线具体号码",
+              "status": "fulfilled",
+              "expected_evidence": [
+                "具体客服热线号码"
+              ],
+              "actual_evidence": [
+                "400-xxx-xxxx"
+              ],
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "号码已提供，增强了可操作性"
+              },
+              "downstream_impact": "客户可直接拨号，减少操作步骤",
+              "blocking": false
+            },
+            {
+              "expectation_id": "提供专人跟进等额外服务细节",
+              "status": "fulfilled",
+              "expected_evidence": [
+                "专人跟进等表述"
+              ],
+              "actual_evidence": [
+                "我们会安排专人跟进"
+              ],
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "额外服务细节提升了答案的关怀感"
+              },
+              "downstream_impact": "客户感到被重视，服务体验提升",
+              "blocking": false
+            }
+          ],
+          "overall_fulfillment": {
+            "status": "fulfilled",
+            "assessment_count": 6
+          },
+          "reconstructed_intent": "用户想了解重疾险确诊癌症后的理赔申请具体流程，期望得到包含关键步骤（联系方式、材料、时效）的准确指导。",
+          "judge_basis": "基于 qa_gold_answer 场景，将实际答案与金标准答案进行对比，评估关键信息点的覆盖度、准确性和额外信息的价值。",
+          "judge_method": "语义等价与关键信息点逐项比对",
+          "semantic_equivalence_checks": [
+            {
+              "expected_fragment": "拨打客服热线",
+              "actual_fragment": "拨打我们24小时客服热线400-xxx-xxxx",
+              "equivalent": true,
+              "basis": "语义包含且具体化，核心动作一致"
+            },
+            {
+              "expected_fragment": "提供保单号和诊断证明",
+              "actual_fragment": "提供保单号和诊断证明",
+              "equivalent": true,
+              "basis": "完全一致"
+            },
+            {
+              "expected_fragment": "审核通过后3个工作日内赔付",
+              "actual_fragment": "一般3个工作日内完成审核并打款",
+              "equivalent": true,
+              "basis": "语义等价，均表示审核通过后3个工作日内完成赔付"
+            }
+          ],
+          "reference_generation_basis": {
+            "source": "provided_reference",
+            "alignment_to_actual_shape": "直接与金标准答案逐点对比"
+          },
+          "verdict_derivation": {
+            "primary_boundary": "qa_gold_answer",
+            "assessment_summary": "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+            "why_verdict": "实际答案准确且完整地满足了用户获取理赔流程的需求，所有核心信息点均与金标准一致，额外细节提升了答案的可用性，因此整体业务期望均得到满足。",
+            "taxonomy_error_types": [
+              "none"
+            ],
+            "score_dimensions": [
+              {
+                "dimension": "correctness",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "completeness",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "key_point_coverage",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "faithfulness",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "relevance",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "usefulness",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "coherence",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "risk_control",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "clarity",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              }
+            ],
+            "error_type": "none"
+          },
+          "boundary_decision": {
+            "within_evaluable_scope": true,
+            "reasoning": "金标准答案明确，实际答案可清晰对比，无评估障碍。"
+          },
+          "evaluation_boundary": {
+            "primary_boundary_id": "qa_gold_answer",
+            "primary_boundary_name": "金标准对比评估",
+            "judge_question": "实际答案是否准确且完整地反映了金标准答案中的理赔申请步骤？",
+            "verdict_basis": "逐项比对关键信息点：联系方式、材料、时效",
+            "boundary_sources": "样本提供的 golden_answer",
+            "conflict_policy": "无冲突，所有信息一致"
+          },
+          "evidence": [
+            "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "reasoning_summary": "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+          "needs_human_review": false,
+          "scenario": "qa_gold_answer",
+          "summary": {
+            "reason": "fulfilled · 4 blocking expectations all met · 实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+            "reason_source": "aggregated_fulfillment",
+            "fulfillment_status": "fulfilled",
+            "assessment_count": 6,
+            "blocking_count": 4,
+            "is_formal_attribution": true
+          },
+          "gate_decisions": [
+            {
+              "gate_id": "trace_available",
+              "gate_type": "required_evidence",
+              "passed": true,
+              "checked_inputs": {
+                "trace": true,
+                "status": "ok"
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "trace exists"
+            },
+            {
+              "gate_id": "consumer_contract_present",
+              "gate_type": "consumer_contract_present",
+              "passed": true,
+              "checked_inputs": {
+                "has_judge": true
+              },
+              "recoverable": true,
+              "recommended_transition": "build_business_expectations",
+              "reason": "consumer contract available"
+            },
+            {
+              "gate_id": "business_expectation_coverage",
+              "gate_type": "business_expectation_coverage",
+              "passed": true,
+              "checked_inputs": {
+                "expectation_count": 6
+              },
+              "recoverable": true,
+              "recommended_transition": "build_business_expectations",
+              "reason": "business expectations available"
+            },
+            {
+              "gate_id": "fulfillment_assessment_coverage",
+              "gate_type": "fulfillment_assessment_coverage",
+              "passed": true,
+              "checked_inputs": {
+                "expectation_count": 6,
+                "assessment_count": 6
+              },
+              "recoverable": true,
+              "recommended_transition": "evaluate_fulfillment",
+              "reason": "fulfillment assessments cover expectations"
+            },
+            {
+              "gate_id": "boundary_decision_present",
+              "gate_type": "boundary_decision_present",
+              "passed": true,
+              "checked_inputs": {
+                "has_judge": true,
+                "assessment_count": 6
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "fulfillment boundary available"
+            },
+            {
+              "gate_id": "derived_verdict_consistency",
+              "gate_type": "derived_verdict_consistency",
+              "passed": true,
+              "checked_inputs": {
+                "has_judge": true,
+                "has_fulfillment": true
+              },
+              "recoverable": true,
+              "recommended_transition": "evaluate_fulfillment",
+              "reason": "derived verdict matches fulfillment state"
+            },
+            {
+              "gate_id": "contradiction_free",
+              "gate_type": "contradiction_free",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no contradictions"
+            },
+            {
+              "gate_id": "unsupported_claims_absent",
+              "gate_type": "unsupported_claims_absent",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no unsupported claims"
+            },
+            {
+              "gate_id": "fulfillment_assessment_coverage",
+              "gate_type": "fulfillment_assessment_coverage",
+              "passed": true,
+              "checked_inputs": {
+                "expectation_count": 6,
+                "assessment_count": 6
+              },
+              "recoverable": true,
+              "recommended_transition": "evaluate_fulfillment",
+              "reason": "fulfillment assessments cover expectations"
+            },
+            {
+              "gate_id": "attribute_targets_expectation_gap",
+              "gate_type": "attribute_targets_expectation_gap",
+              "passed": true,
+              "checked_inputs": {
+                "fulfillment_requires_attribute": true,
+                "target_count": 6
+              },
+              "recoverable": false,
+              "recommended_transition": "finalize",
+              "reason": "attribute targets fulfillment gaps"
+            },
+            {
+              "gate_id": "probe_evidence_or_blocked_reason",
+              "gate_type": "probe_evidence_or_blocked_reason",
+              "passed": true,
+              "checked_inputs": {
+                "probe_evidence_count": 1,
+                "has_incomplete_reason": false
+              },
+              "recoverable": true,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "probe evidence or blocked reason available"
+            },
+            {
+              "gate_id": "expectation_attribution_evidence",
+              "gate_type": "expectation_attribution_evidence",
+              "passed": true,
+              "checked_inputs": {
+                "attribution_count": 6
+              },
+              "recoverable": false,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "expectation attribution evidence available"
+            },
+            {
+              "gate_id": "causal_category_support",
+              "gate_type": "causal_category_support",
+              "passed": true,
+              "checked_inputs": {
+                "has_causal_category": true,
+                "has_incomplete_reason": false
+              },
+              "recoverable": true,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "causal category supported"
+            },
+            {
+              "gate_id": "improvement_direction_support",
+              "gate_type": "improvement_direction_support",
+              "passed": true,
+              "checked_inputs": {
+                "direction_count": 1,
+                "has_incomplete_reason": false
+              },
+              "recoverable": true,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "improvement direction available"
+            },
+            {
+              "gate_id": "finalization_ready",
+              "gate_type": "finalization_ready",
+              "passed": true,
+              "checked_inputs": {
+                "has_trace": true,
+                "has_judge_result": true
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "finalization ready"
+            },
+            {
+              "gate_id": "contradiction_free",
+              "gate_type": "contradiction_free",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no contradictions"
+            },
+            {
+              "gate_id": "unsupported_claims_absent",
+              "gate_type": "unsupported_claims_absent",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no unsupported claims"
+            }
+          ],
+          "transition_decisions": [
+            {
+              "from_state": "prepare_trace",
+              "to_state": "mock_or_input",
+              "condition": "always",
+              "reason": "always",
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "mock_or_input",
+              "to_state": "execute_or_capture",
+              "condition": "always",
+              "reason": "always",
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "execute_or_capture",
+              "to_state": "collect_evidence",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "trace_available"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "collect_evidence",
+              "to_state": "build_business_expectations",
+              "condition": "always",
+              "reason": "always",
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "build_business_expectations",
+              "to_state": "evaluate_fulfillment",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "consumer_contract_present",
+                "business_expectation_coverage"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "evaluate_fulfillment",
+              "to_state": "fulfillment_critic",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "fulfillment_assessment_coverage",
+                "boundary_decision_present",
+                "derived_verdict_consistency"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "fulfillment_critic",
+              "to_state": "attribute_expectations",
+              "condition": "fulfillment_requires_attribute",
+              "reason": "fulfillment_requires_attribute",
+              "gate_ids": [
+                "contradiction_free",
+                "unsupported_claims_absent",
+                "fulfillment_assessment_coverage"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "attribute_expectations",
+              "to_state": "run_attribution_probes",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "attribute_targets_expectation_gap"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "run_attribution_probes",
+              "to_state": "attribution_critic",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "probe_evidence_or_blocked_reason"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "attribution_critic",
+              "to_state": "finalize",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "expectation_attribution_evidence",
+                "causal_category_support",
+                "improvement_direction_support"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "finalize",
+              "to_state": "completed",
+              "condition": "stop",
+              "reason": "stop",
+              "gate_ids": [
+                "finalization_ready",
+                "contradiction_free",
+                "unsupported_claims_absent"
+              ],
+              "retry_count": 0,
+              "stop_reason": "completed"
+            }
+          ],
+          "display_status": "fulfilled",
+          "display_reason": "fulfilled · 4 blocking expectations all met · 实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+          "wrong_missing_extra": {},
+          "blocked_expectations": [
+            {
+              "expectation_id": "理赔申请通过拨打客服热线办理",
+              "status": "fulfilled",
+              "expected_evidence": [
+                "拨打客服热线"
+              ],
+              "actual_evidence": [
+                "拨打我们24小时客服热线400-xxx-xxxx"
+              ],
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "金标准明确，实际答案可清晰对比"
+              },
+              "downstream_impact": "客户能够明确知晓需致电客服启动理赔",
+              "blocking": true
+            },
+            {
+              "expectation_id": "需提供保单号和诊断证明",
+              "status": "fulfilled",
+              "expected_evidence": [
+                "提供保单号和诊断证明"
+              ],
+              "actual_evidence": [
+                "提供保单号和诊断证明"
+              ],
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "金标准明确，实际答案直接包含"
+              },
+              "downstream_impact": "客户能够事先准备好必要材料",
+              "blocking": true
+            },
+            {
+              "expectation_id": "审核通过后3个工作日内完成赔付",
+              "status": "fulfilled",
+              "expected_evidence": [
+                "审核通过后3个工作日内赔付"
+              ],
+              "actual_evidence": [
+                "一般3个工作日内完成审核并打款"
+              ],
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "语义等价，时间承诺一致"
+              },
+              "downstream_impact": "客户对理赔时效有明确预期",
+              "blocking": true
+            },
+            {
+              "expectation_id": "答案内容与参考信息不矛盾",
+              "status": "fulfilled",
+              "expected_evidence": [
+                "无矛盾信息"
+              ],
+              "actual_evidence": [
+                "答案中所有信息与金标准一致，额外信息不冲突"
+              ],
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "无任何矛盾点"
+              },
+              "downstream_impact": "客户获得正确指导，避免误解",
+              "blocking": true
+            }
+          ]
+        },
+        "attribute_panel": {
+          "trace_id": "322b4a8f-6c67-4cad-9e9e-732340b0ae06",
+          "project_id": "QA",
+          "case_id": "",
+          "analysis_method": "fulfilled_expectation_attribution",
+          "chain_nodes": [
+            {
+              "name": "fulfillment_assessment",
+              "status": "verified",
+              "evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "reason": "business expectations fulfilled"
+            }
+          ],
+          "earliest_divergence": {
+            "node": "fulfillment_assessment",
+            "evidence": [
+              "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+              "scenario=qa_gold_answer",
+              "question_present=True",
+              "actual_answer_present=True",
+              "golden_answer_present=True"
+            ],
+            "confidence": "high"
+          },
+          "evidence_coverage": {
+            "judge_evidence": true,
+            "execution_trace": true
+          },
+          "analysis_quality": {
+            "passed": true
+          },
+          "incomplete_reason": "",
+          "root_cause_hypothesis": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+          "verification_steps": [
+            "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+          ],
+          "patch_direction": [
+            "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+          ],
+          "expectation_attributions": [
+            {
+              "expectation_id": "理赔申请通过拨打客服热线办理",
+              "fulfillment_status": "fulfilled",
+              "causal_category": "no_issue",
+              "earliest_divergence": {
+                "node": "fulfillment_assessment",
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "confidence": "high"
+              },
+              "causal_chain": [
+                {
+                  "name": "fulfillment_assessment",
+                  "status": "succeeded",
+                  "evidence": [
+                    "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                    "scenario=qa_gold_answer",
+                    "question_present=True",
+                    "actual_answer_present=True",
+                    "golden_answer_present=True"
+                  ]
+                }
+              ],
+              "probe_evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "incomplete_reason": ""
+            },
+            {
+              "expectation_id": "需提供保单号和诊断证明",
+              "fulfillment_status": "fulfilled",
+              "causal_category": "no_issue",
+              "earliest_divergence": {
+                "node": "fulfillment_assessment",
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "confidence": "high"
+              },
+              "causal_chain": [
+                {
+                  "name": "fulfillment_assessment",
+                  "status": "succeeded",
+                  "evidence": [
+                    "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                    "scenario=qa_gold_answer",
+                    "question_present=True",
+                    "actual_answer_present=True",
+                    "golden_answer_present=True"
+                  ]
+                }
+              ],
+              "probe_evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "incomplete_reason": ""
+            },
+            {
+              "expectation_id": "审核通过后3个工作日内完成赔付",
+              "fulfillment_status": "fulfilled",
+              "causal_category": "no_issue",
+              "earliest_divergence": {
+                "node": "fulfillment_assessment",
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "confidence": "high"
+              },
+              "causal_chain": [
+                {
+                  "name": "fulfillment_assessment",
+                  "status": "succeeded",
+                  "evidence": [
+                    "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                    "scenario=qa_gold_answer",
+                    "question_present=True",
+                    "actual_answer_present=True",
+                    "golden_answer_present=True"
+                  ]
+                }
+              ],
+              "probe_evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "incomplete_reason": ""
+            },
+            {
+              "expectation_id": "答案内容与参考信息不矛盾",
+              "fulfillment_status": "fulfilled",
+              "causal_category": "no_issue",
+              "earliest_divergence": {
+                "node": "fulfillment_assessment",
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "confidence": "high"
+              },
+              "causal_chain": [
+                {
+                  "name": "fulfillment_assessment",
+                  "status": "succeeded",
+                  "evidence": [
+                    "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                    "scenario=qa_gold_answer",
+                    "question_present=True",
+                    "actual_answer_present=True",
+                    "golden_answer_present=True"
+                  ]
+                }
+              ],
+              "probe_evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "incomplete_reason": ""
+            },
+            {
+              "expectation_id": "提供客服热线具体号码",
+              "fulfillment_status": "fulfilled",
+              "causal_category": "no_issue",
+              "earliest_divergence": {
+                "node": "fulfillment_assessment",
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "confidence": "high"
+              },
+              "causal_chain": [
+                {
+                  "name": "fulfillment_assessment",
+                  "status": "succeeded",
+                  "evidence": [
+                    "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                    "scenario=qa_gold_answer",
+                    "question_present=True",
+                    "actual_answer_present=True",
+                    "golden_answer_present=True"
+                  ]
+                }
+              ],
+              "probe_evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "incomplete_reason": ""
+            },
+            {
+              "expectation_id": "提供专人跟进等额外服务细节",
+              "fulfillment_status": "fulfilled",
+              "causal_category": "no_issue",
+              "earliest_divergence": {
+                "node": "fulfillment_assessment",
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "confidence": "high"
+              },
+              "causal_chain": [
+                {
+                  "name": "fulfillment_assessment",
+                  "status": "succeeded",
+                  "evidence": [
+                    "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                    "scenario=qa_gold_answer",
+                    "question_present=True",
+                    "actual_answer_present=True",
+                    "golden_answer_present=True"
+                  ]
+                }
+              ],
+              "probe_evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "incomplete_reason": ""
+            }
+          ],
+          "causal_category": "no_issue",
+          "probe_results": [
+            {
+              "probe_id": "fulfillment_assessment",
+              "status": "not_verified",
+              "stage": "",
+              "evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "error": ""
+            }
+          ],
+          "needs_human_review": false,
+          "scenario": "qa_gold_answer",
+          "gate_decisions": [
+            {
+              "gate_id": "trace_available",
+              "gate_type": "required_evidence",
+              "passed": true,
+              "checked_inputs": {
+                "trace": true,
+                "status": "ok"
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "trace exists"
+            },
+            {
+              "gate_id": "consumer_contract_present",
+              "gate_type": "consumer_contract_present",
+              "passed": true,
+              "checked_inputs": {
+                "has_judge": true
+              },
+              "recoverable": true,
+              "recommended_transition": "build_business_expectations",
+              "reason": "consumer contract available"
+            },
+            {
+              "gate_id": "business_expectation_coverage",
+              "gate_type": "business_expectation_coverage",
+              "passed": true,
+              "checked_inputs": {
+                "expectation_count": 6
+              },
+              "recoverable": true,
+              "recommended_transition": "build_business_expectations",
+              "reason": "business expectations available"
+            },
+            {
+              "gate_id": "fulfillment_assessment_coverage",
+              "gate_type": "fulfillment_assessment_coverage",
+              "passed": true,
+              "checked_inputs": {
+                "expectation_count": 6,
+                "assessment_count": 6
+              },
+              "recoverable": true,
+              "recommended_transition": "evaluate_fulfillment",
+              "reason": "fulfillment assessments cover expectations"
+            },
+            {
+              "gate_id": "boundary_decision_present",
+              "gate_type": "boundary_decision_present",
+              "passed": true,
+              "checked_inputs": {
+                "has_judge": true,
+                "assessment_count": 6
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "fulfillment boundary available"
+            },
+            {
+              "gate_id": "derived_verdict_consistency",
+              "gate_type": "derived_verdict_consistency",
+              "passed": true,
+              "checked_inputs": {
+                "has_judge": true,
+                "has_fulfillment": true
+              },
+              "recoverable": true,
+              "recommended_transition": "evaluate_fulfillment",
+              "reason": "derived verdict matches fulfillment state"
+            },
+            {
+              "gate_id": "contradiction_free",
+              "gate_type": "contradiction_free",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no contradictions"
+            },
+            {
+              "gate_id": "unsupported_claims_absent",
+              "gate_type": "unsupported_claims_absent",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no unsupported claims"
+            },
+            {
+              "gate_id": "fulfillment_assessment_coverage",
+              "gate_type": "fulfillment_assessment_coverage",
+              "passed": true,
+              "checked_inputs": {
+                "expectation_count": 6,
+                "assessment_count": 6
+              },
+              "recoverable": true,
+              "recommended_transition": "evaluate_fulfillment",
+              "reason": "fulfillment assessments cover expectations"
+            },
+            {
+              "gate_id": "attribute_targets_expectation_gap",
+              "gate_type": "attribute_targets_expectation_gap",
+              "passed": true,
+              "checked_inputs": {
+                "fulfillment_requires_attribute": true,
+                "target_count": 6
+              },
+              "recoverable": false,
+              "recommended_transition": "finalize",
+              "reason": "attribute targets fulfillment gaps"
+            },
+            {
+              "gate_id": "probe_evidence_or_blocked_reason",
+              "gate_type": "probe_evidence_or_blocked_reason",
+              "passed": true,
+              "checked_inputs": {
+                "probe_evidence_count": 1,
+                "has_incomplete_reason": false
+              },
+              "recoverable": true,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "probe evidence or blocked reason available"
+            },
+            {
+              "gate_id": "expectation_attribution_evidence",
+              "gate_type": "expectation_attribution_evidence",
+              "passed": true,
+              "checked_inputs": {
+                "attribution_count": 6
+              },
+              "recoverable": false,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "expectation attribution evidence available"
+            },
+            {
+              "gate_id": "causal_category_support",
+              "gate_type": "causal_category_support",
+              "passed": true,
+              "checked_inputs": {
+                "has_causal_category": true,
+                "has_incomplete_reason": false
+              },
+              "recoverable": true,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "causal category supported"
+            },
+            {
+              "gate_id": "improvement_direction_support",
+              "gate_type": "improvement_direction_support",
+              "passed": true,
+              "checked_inputs": {
+                "direction_count": 1,
+                "has_incomplete_reason": false
+              },
+              "recoverable": true,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "improvement direction available"
+            },
+            {
+              "gate_id": "finalization_ready",
+              "gate_type": "finalization_ready",
+              "passed": true,
+              "checked_inputs": {
+                "has_trace": true,
+                "has_judge_result": true
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "finalization ready"
+            },
+            {
+              "gate_id": "contradiction_free",
+              "gate_type": "contradiction_free",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no contradictions"
+            },
+            {
+              "gate_id": "unsupported_claims_absent",
+              "gate_type": "unsupported_claims_absent",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no unsupported claims"
+            }
+          ],
+          "transition_decisions": [
+            {
+              "from_state": "prepare_trace",
+              "to_state": "mock_or_input",
+              "condition": "always",
+              "reason": "always",
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "mock_or_input",
+              "to_state": "execute_or_capture",
+              "condition": "always",
+              "reason": "always",
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "execute_or_capture",
+              "to_state": "collect_evidence",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "trace_available"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "collect_evidence",
+              "to_state": "build_business_expectations",
+              "condition": "always",
+              "reason": "always",
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "build_business_expectations",
+              "to_state": "evaluate_fulfillment",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "consumer_contract_present",
+                "business_expectation_coverage"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "evaluate_fulfillment",
+              "to_state": "fulfillment_critic",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "fulfillment_assessment_coverage",
+                "boundary_decision_present",
+                "derived_verdict_consistency"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "fulfillment_critic",
+              "to_state": "attribute_expectations",
+              "condition": "fulfillment_requires_attribute",
+              "reason": "fulfillment_requires_attribute",
+              "gate_ids": [
+                "contradiction_free",
+                "unsupported_claims_absent",
+                "fulfillment_assessment_coverage"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "attribute_expectations",
+              "to_state": "run_attribution_probes",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "attribute_targets_expectation_gap"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "run_attribution_probes",
+              "to_state": "attribution_critic",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "probe_evidence_or_blocked_reason"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "attribution_critic",
+              "to_state": "finalize",
+              "condition": "always",
+              "reason": "always",
+              "gate_ids": [
+                "expectation_attribution_evidence",
+                "causal_category_support",
+                "improvement_direction_support"
+              ],
+              "retry_count": 0,
+              "stop_reason": ""
+            },
+            {
+              "from_state": "finalize",
+              "to_state": "completed",
+              "condition": "stop",
+              "reason": "stop",
+              "gate_ids": [
+                "finalization_ready",
+                "contradiction_free",
+                "unsupported_claims_absent"
+              ],
+              "retry_count": 0,
+              "stop_reason": "completed"
+            }
+          ],
+          "summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 6,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成",
+            "is_complete": true,
+            "is_formal_attribution": true
+          },
+          "display_causal_category": "no_issue",
+          "display_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+          "display_verification_steps": [
+            "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+          ],
+          "display_patch_direction": [
+            "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+          ],
+          "attribution_count": 6,
+          "probe_count": 1
+        },
+        "fulfillment_panel": {
+          "consumer_contract": {
+            "consumer": "QA评估系统",
+            "contract": "按照 qa_gold_answer 场景，将实际答案与金标准答案进行对比，评估关键信息点的覆盖度、一致性和有用性",
+            "reference_contract": {
+              "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+            }
+          },
+          "overall_fulfillment": {
+            "status": "fulfilled",
+            "assessment_count": 6
+          },
+          "matrix": [
+            {
+              "expectation_id": "理赔申请通过拨打客服热线办理",
+              "downstream_consumer": "普通客户",
+              "expected_outcome": "说明理赔申请的方式是拨打客服热线",
+              "required_capabilities": [
+                "语言理解",
+                "信息提取"
+              ],
+              "status": "fulfilled",
+              "blocking": true,
+              "downstream_impact": "客户能够明确知晓需致电客服启动理赔",
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "金标准明确，实际答案可清晰对比"
+              }
+            },
+            {
+              "expectation_id": "需提供保单号和诊断证明",
+              "downstream_consumer": "普通客户",
+              "expected_outcome": "说明需要提供保单号和诊断证明",
+              "required_capabilities": [
+                "信息提取"
+              ],
+              "status": "fulfilled",
+              "blocking": true,
+              "downstream_impact": "客户能够事先准备好必要材料",
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "金标准明确，实际答案直接包含"
+              }
+            },
+            {
+              "expectation_id": "审核通过后3个工作日内完成赔付",
+              "downstream_consumer": "普通客户",
+              "expected_outcome": "说明审核通过后3个工作日内完成赔付",
+              "required_capabilities": [
+                "时间信息提取"
+              ],
+              "status": "fulfilled",
+              "blocking": true,
+              "downstream_impact": "客户对理赔时效有明确预期",
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "语义等价，时间承诺一致"
+              }
+            },
+            {
+              "expectation_id": "答案内容与参考信息不矛盾",
+              "downstream_consumer": "普通客户",
+              "expected_outcome": "答案中的信息一致，无冲突",
+              "required_capabilities": [
+                "一致性检查"
+              ],
+              "status": "fulfilled",
+              "blocking": true,
+              "downstream_impact": "客户获得正确指导，避免误解",
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "无任何矛盾点"
+              }
+            },
+            {
+              "expectation_id": "提供客服热线具体号码",
+              "downstream_consumer": "普通客户",
+              "expected_outcome": "给出具体的热线号码",
+              "required_capabilities": [
+                "信息丰富性"
+              ],
+              "status": "fulfilled",
+              "blocking": false,
+              "downstream_impact": "客户可直接拨号，减少操作步骤",
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "号码已提供，增强了可操作性"
+              }
+            },
+            {
+              "expectation_id": "提供专人跟进等额外服务细节",
+              "downstream_consumer": "普通客户",
+              "expected_outcome": "说明有专人负责跟进理赔",
+              "required_capabilities": [
+                "服务质量"
+              ],
+              "status": "fulfilled",
+              "blocking": false,
+              "downstream_impact": "客户感到被重视，服务体验提升",
+              "boundary_decision": {
+                "within_evaluable_scope": true,
+                "reasoning": "额外服务细节提升了答案的关怀感"
+              }
+            }
+          ],
+          "derived_verdict": "correct",
+          "verdict_derivation": {
+            "primary_boundary": "qa_gold_answer",
+            "assessment_summary": "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+            "why_verdict": "实际答案准确且完整地满足了用户获取理赔流程的需求，所有核心信息点均与金标准一致，额外细节提升了答案的可用性，因此整体业务期望均得到满足。",
+            "taxonomy_error_types": [
+              "none"
+            ],
+            "score_dimensions": [
+              {
+                "dimension": "correctness",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "completeness",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "key_point_coverage",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "faithfulness",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "relevance",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "usefulness",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "coherence",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "risk_control",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              },
+              {
+                "dimension": "clarity",
+                "score": 1.0,
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "status": "judged"
+              }
+            ],
+            "error_type": "none"
+          }
+        },
+        "expectation_attribution_panel": {
+          "attributions": [
+            {
+              "expectation_id": "理赔申请通过拨打客服热线办理",
+              "fulfillment_status": "fulfilled",
+              "causal_category": "no_issue",
+              "earliest_divergence": {
+                "node": "fulfillment_assessment",
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "confidence": "high"
+              },
+              "causal_chain": [
+                {
+                  "name": "fulfillment_assessment",
+                  "status": "succeeded",
+                  "evidence": [
+                    "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                    "scenario=qa_gold_answer",
+                    "question_present=True",
+                    "actual_answer_present=True",
+                    "golden_answer_present=True"
+                  ]
+                }
+              ],
+              "probe_evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "incomplete_reason": ""
+            },
+            {
+              "expectation_id": "需提供保单号和诊断证明",
+              "fulfillment_status": "fulfilled",
+              "causal_category": "no_issue",
+              "earliest_divergence": {
+                "node": "fulfillment_assessment",
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "confidence": "high"
+              },
+              "causal_chain": [
+                {
+                  "name": "fulfillment_assessment",
+                  "status": "succeeded",
+                  "evidence": [
+                    "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                    "scenario=qa_gold_answer",
+                    "question_present=True",
+                    "actual_answer_present=True",
+                    "golden_answer_present=True"
+                  ]
+                }
+              ],
+              "probe_evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "incomplete_reason": ""
+            },
+            {
+              "expectation_id": "审核通过后3个工作日内完成赔付",
+              "fulfillment_status": "fulfilled",
+              "causal_category": "no_issue",
+              "earliest_divergence": {
+                "node": "fulfillment_assessment",
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "confidence": "high"
+              },
+              "causal_chain": [
+                {
+                  "name": "fulfillment_assessment",
+                  "status": "succeeded",
+                  "evidence": [
+                    "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                    "scenario=qa_gold_answer",
+                    "question_present=True",
+                    "actual_answer_present=True",
+                    "golden_answer_present=True"
+                  ]
+                }
+              ],
+              "probe_evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "incomplete_reason": ""
+            },
+            {
+              "expectation_id": "答案内容与参考信息不矛盾",
+              "fulfillment_status": "fulfilled",
+              "causal_category": "no_issue",
+              "earliest_divergence": {
+                "node": "fulfillment_assessment",
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "confidence": "high"
+              },
+              "causal_chain": [
+                {
+                  "name": "fulfillment_assessment",
+                  "status": "succeeded",
+                  "evidence": [
+                    "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                    "scenario=qa_gold_answer",
+                    "question_present=True",
+                    "actual_answer_present=True",
+                    "golden_answer_present=True"
+                  ]
+                }
+              ],
+              "probe_evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "incomplete_reason": ""
+            },
+            {
+              "expectation_id": "提供客服热线具体号码",
+              "fulfillment_status": "fulfilled",
+              "causal_category": "no_issue",
+              "earliest_divergence": {
+                "node": "fulfillment_assessment",
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "confidence": "high"
+              },
+              "causal_chain": [
+                {
+                  "name": "fulfillment_assessment",
+                  "status": "succeeded",
+                  "evidence": [
+                    "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                    "scenario=qa_gold_answer",
+                    "question_present=True",
+                    "actual_answer_present=True",
+                    "golden_answer_present=True"
+                  ]
+                }
+              ],
+              "probe_evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "incomplete_reason": ""
+            },
+            {
+              "expectation_id": "提供专人跟进等额外服务细节",
+              "fulfillment_status": "fulfilled",
+              "causal_category": "no_issue",
+              "earliest_divergence": {
+                "node": "fulfillment_assessment",
+                "evidence": [
+                  "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                  "scenario=qa_gold_answer",
+                  "question_present=True",
+                  "actual_answer_present=True",
+                  "golden_answer_present=True"
+                ],
+                "confidence": "high"
+              },
+              "causal_chain": [
+                {
+                  "name": "fulfillment_assessment",
+                  "status": "succeeded",
+                  "evidence": [
+                    "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                    "scenario=qa_gold_answer",
+                    "question_present=True",
+                    "actual_answer_present=True",
+                    "golden_answer_present=True"
+                  ]
+                }
+              ],
+              "probe_evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "incomplete_reason": ""
+            }
+          ],
+          "causal_category": "no_issue",
+          "probe_results": [
+            {
+              "probe_id": "fulfillment_assessment",
+              "status": "not_verified",
+              "stage": "",
+              "evidence": [
+                "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                "scenario=qa_gold_answer",
+                "question_present=True",
+                "actual_answer_present=True",
+                "golden_answer_present=True"
+              ],
+              "error": ""
+            }
+          ],
+          "incomplete_reason": ""
+        },
+        "cluster_panel": {
+          "project_id": "QA",
+          "clusters": [
+            {
+              "cluster_id": "expectation::no_issue::fulfilled",
+              "mechanism": "no_issue::fulfilled",
+              "causal_category": "no_issue",
+              "fulfillment_statuses": [
+                "fulfilled"
+              ],
+              "expectation_ids": [
+                "理赔申请通过拨打客服热线办理",
+                "需提供保单号和诊断证明",
+                "审核通过后3个工作日内完成赔付",
+                "答案内容与参考信息不矛盾",
+                "提供客服热线具体号码",
+                "提供专人跟进等额外服务细节"
+              ],
+              "needs_human_review": false,
+              "canonical_attribution": true,
+              "count": 1,
+              "representative_cases": [
+                "322b4a8f-6c67-4cad-9e9e-732340b0ae06"
+              ],
+              "representative_traces": [
+                "322b4a8f-6c67-4cad-9e9e-732340b0ae06"
+              ],
+              "common_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+              "shared_failure_pattern": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+              "representative_diffs": [
+                {
+                  "case_id": "322b4a8f-6c67-4cad-9e9e-732340b0ae06",
+                  "node": "fulfillment_assessment",
+                  "evidence": [
+                    "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+                    "scenario=qa_gold_answer",
+                    "question_present=True",
+                    "actual_answer_present=True",
+                    "golden_answer_present=True"
+                  ]
+                }
+              ],
+              "minimal_fix_direction": [
+                "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+              ],
+              "verification_cases": [
+                "322b4a8f-6c67-4cad-9e9e-732340b0ae06"
+              ],
+              "next_actions": [
+                "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+              ]
+            }
+          ],
+          "common_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+          "impact": "",
+          "priority": "normal"
+        },
+        "check_panel": {
+          "passed": true,
+          "verification_results": [
+            "Check categories passed current audit.",
+            "Protocol chain passed current v1 checks."
+          ]
+        },
+        "table_row": {
+          "id": "mock-agent-QA-f8906092",
+          "input": "qa_gold_answer",
+          "scenario": "qa_gold_answer",
+          "output_summary": "{\"actual_answer\": \"您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。\"}",
+          "reference_summary": "{\"golden_answer\": \"拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。\"}",
+          "status": "fulfilled",
+          "execution_mode": "provided",
+          "output_source": "provided_output",
+          "verdict": "correct",
+          "fulfillment_status": "fulfilled",
+          "judge_summary": {
+            "status": "fulfilled",
+            "fulfillment_status": "fulfilled",
+            "verdict": "correct",
+            "reason": "fulfilled · 4 blocking expectations all met · 实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+            "reason_source": "aggregated_fulfillment",
+            "reason_stage": "judge",
+            "is_formal_attribution": true,
+            "assessment_count": 6,
+            "blocking_count": 4
+          },
+          "attribution_summary": {
+            "causal_category": "no_issue",
+            "attribution_count": 6,
+            "probe_count": 1,
+            "summary_text": "业务预期已达成",
+            "is_complete": true,
+            "is_formal_attribution": true
+          },
+          "check_summary": {
+            "passed": true,
+            "issue_count": 0,
+            "protocol_gap_count": 0,
+            "consistency_gap_count": 0,
+            "recommended_fix_count": 0
+          },
+          "fallback_summary": {
+            "count": 0,
+            "needs_human_review": false
+          },
+          "needs_human_review": false,
+          "check_passed": true,
+          "issue_count": 0,
+          "fallback_count": 0,
+          "causal_category": "no_issue",
+          "divergence_stage": "fulfillment_assessment",
+          "root_cause_summary": "业务预期已达成",
+          "created_at": "2026-07-04T04:44:02.674372+00:00",
+          "stop_reason": "completed",
+          "interaction_mode": "single_turn",
+          "trace_id": "322b4a8f-6c67-4cad-9e9e-732340b0ae06"
+        },
+        "project_extensions": {
+          "scenarios": [
+            "qa_gold_answer",
+            "qa_context_faithfulness",
+            "qa_weak_quality"
+          ],
+          "score_dimensions": [
+            "correctness",
+            "completeness",
+            "key_point_coverage",
+            "faithfulness",
+            "relevance",
+            "usefulness",
+            "coherence",
+            "risk_control",
+            "clarity"
+          ],
+          "error_taxonomy": [
+            "answer_incorrect",
+            "answer_incomplete",
+            "question_misunderstood",
+            "irrelevant_answer",
+            "unsupported_claim",
+            "hallucination",
+            "context_not_used",
+            "insufficient_context",
+            "context_noise",
+            "over_refusal",
+            "format_error",
+            "too_vague",
+            "contradiction",
+            "needs_human_review",
+            "none"
+          ],
+          "frontend_standard": {
+            "frontend_view": {
+              "live": "render Input, Output, Reference, Judge, Attribute, and scenario fields from protocol objects",
+              "summary": "render same QA case-pool shape with compact per-case judge and attribute summaries"
+            },
+            "batch_persistence": {
+              "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+              "transient_results": "do not persist full trace, judge, attribute, or frontend_view as durable case-pool source data"
+            }
+          },
+          "display_contract": {
+            "output_source": "trace.live_result.extracted_output",
+            "reference_source": "input",
+            "formatting": [
+              "json formatting",
+              "truncation",
+              "output/reference alignment"
+            ]
+          },
+          "verifiable_tools": {
+            "available": false,
+            "reason": "adapter has no get_verifiable_tools"
+          }
+        }
+      },
+      "table_row": {
+        "id": "mock-agent-QA-f8906092",
+        "input": "qa_gold_answer",
+        "scenario": "qa_gold_answer",
+        "output_summary": "{\"actual_answer\": \"您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。\"}",
+        "reference_summary": "{\"golden_answer\": \"拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。\"}",
+        "status": "fulfilled",
+        "execution_mode": "provided",
+        "output_source": "provided_output",
+        "verdict": "correct",
+        "fulfillment_status": "fulfilled",
+        "judge_summary": {
+          "status": "fulfilled",
+          "fulfillment_status": "fulfilled",
+          "verdict": "correct",
+          "reason": "fulfilled · 4 blocking expectations all met · 实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+          "reason_source": "aggregated_fulfillment",
+          "reason_stage": "judge",
+          "is_formal_attribution": true,
+          "assessment_count": 6,
+          "blocking_count": 4
+        },
+        "attribution_summary": {
+          "causal_category": "no_issue",
+          "attribution_count": 6,
+          "probe_count": 1,
+          "summary_text": "业务预期已达成",
+          "is_complete": true,
+          "is_formal_attribution": true
+        },
+        "check_summary": {
+          "passed": true,
+          "issue_count": 0,
+          "protocol_gap_count": 0,
+          "consistency_gap_count": 0,
+          "recommended_fix_count": 0
+        },
+        "fallback_summary": {
+          "count": 0,
+          "needs_human_review": false
+        },
+        "needs_human_review": false,
+        "check_passed": true,
+        "issue_count": 0,
+        "fallback_count": 0,
+        "causal_category": "no_issue",
+        "divergence_stage": "fulfillment_assessment",
+        "root_cause_summary": "业务预期已达成",
+        "created_at": "2026-07-04T04:44:02.674372+00:00",
+        "stop_reason": "completed",
+        "interaction_mode": "single_turn",
+        "trace_id": "322b4a8f-6c67-4cad-9e9e-732340b0ae06"
+      },
+      "case_id": "mock-agent-QA-f8906092",
+      "execution_mode": "provided",
+      "output_source": "provided_output"
+    }
+  ],
+  "cluster": {
+    "project_id": "QA",
+    "clusters": [
+      {
+        "cluster_id": "expectation::no_issue::fulfilled",
+        "mechanism": "no_issue::fulfilled",
+        "causal_category": "no_issue",
+        "fulfillment_statuses": [
+          "fulfilled"
+        ],
+        "expectation_ids": [
+          "理赔申请通过拨打客服热线办理",
+          "需提供保单号和诊断证明",
+          "审核通过后3个工作日内完成赔付",
+          "答案内容与参考信息不矛盾",
+          "提供客服热线具体号码",
+          "提供专人跟进等额外服务细节"
+        ],
+        "needs_human_review": false,
+        "canonical_attribution": true,
+        "count": 1,
+        "representative_cases": [
+          "322b4a8f-6c67-4cad-9e9e-732340b0ae06"
+        ],
+        "representative_traces": [
+          "322b4a8f-6c67-4cad-9e9e-732340b0ae06"
+        ],
+        "common_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+        "shared_failure_pattern": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+        "representative_diffs": [
+          {
+            "case_id": "322b4a8f-6c67-4cad-9e9e-732340b0ae06",
+            "node": "fulfillment_assessment",
+            "evidence": [
+              "实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+              "scenario=qa_gold_answer",
+              "question_present=True",
+              "actual_answer_present=True",
+              "golden_answer_present=True"
+            ]
+          }
+        ],
+        "minimal_fix_direction": [
+          "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+        ],
+        "verification_cases": [
+          "322b4a8f-6c67-4cad-9e9e-732340b0ae06"
+        ],
+        "next_actions": [
+          "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+        ]
+      }
+    ],
+    "common_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+    "impact": "",
+    "priority": "normal"
+  },
+  "check": {
+    "passed": true,
+    "verification_results": [
+      "Check categories passed current audit.",
+      "Protocol chain passed current v1 checks."
+    ]
+  },
+  "table": {
+    "project_id": "QA",
+    "rows": [
+      {
+        "id": "mock-agent-QA-f8906092",
+        "input": "qa_gold_answer",
+        "scenario": "qa_gold_answer",
+        "output_summary": "{\"actual_answer\": \"您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。\"}",
+        "reference_summary": "{\"golden_answer\": \"拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。\"}",
+        "status": "fulfilled",
+        "execution_mode": "provided",
+        "output_source": "provided_output",
+        "verdict": "correct",
+        "fulfillment_status": "fulfilled",
+        "judge_summary": {
+          "status": "fulfilled",
+          "fulfillment_status": "fulfilled",
+          "verdict": "correct",
+          "reason": "fulfilled · 4 blocking expectations all met · 实际答案提供了清晰的理赔申请指引，包含联系客服热线、提交保单号和诊断证明、3个工作日内审核赔付等核心信息，与金标准答案一致，并额外提供了具体号码和专人跟进细节，增强了用户体验。",
+          "reason_source": "aggregated_fulfillment",
+          "reason_stage": "judge",
+          "is_formal_attribution": true,
+          "assessment_count": 6,
+          "blocking_count": 4
+        },
+        "attribution_summary": {
+          "causal_category": "no_issue",
+          "attribution_count": 6,
+          "probe_count": 1,
+          "summary_text": "业务预期已达成",
+          "is_complete": true,
+          "is_formal_attribution": true
+        },
+        "check_summary": {
+          "passed": true,
+          "issue_count": 0,
+          "protocol_gap_count": 0,
+          "consistency_gap_count": 0,
+          "recommended_fix_count": 0
+        },
+        "fallback_summary": {
+          "count": 0,
+          "needs_human_review": false
+        },
+        "needs_human_review": false,
+        "check_passed": true,
+        "issue_count": 0,
+        "fallback_count": 0,
+        "causal_category": "no_issue",
+        "divergence_stage": "fulfillment_assessment",
+        "root_cause_summary": "业务预期已达成",
+        "created_at": "2026-07-04T04:44:02.674372+00:00",
+        "stop_reason": "completed",
+        "interaction_mode": "single_turn",
+        "trace_id": "322b4a8f-6c67-4cad-9e9e-732340b0ae06"
+      }
+    ],
+    "total": 1,
+    "summary": {
+      "fulfilled_count": 1,
+      "not_fulfilled_count": 0,
+      "pending_count": 0,
+      "correct_count": 1,
+      "incorrect_count": 0,
+      "uncertain_count": 0,
+      "human_review_count": 0,
+      "check_failed_count": 0,
+      "issue_count": 0,
+      "fallback_count": 0,
+      "rows_with_fallback_count": 0,
+      "by_scenario": {
+        "qa_gold_answer": 1
+      }
+    }
+  }
+}

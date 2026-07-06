@@ -1,0 +1,91 @@
+{
+  "project_id": "marketting-planning-intent",
+  "clusters": [
+    {
+      "cluster_id": "expectation::implementation_bug::not_evaluable",
+      "mechanism": "implementation_bug::not_evaluable",
+      "causal_category": "implementation_bug",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "提取时间范围槽位",
+        "提取产品槽位",
+        "提取年龄分布维度槽位",
+        "提取性别比例维度槽位",
+        "intent_contract"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "be79fe4a-3772-42dc-8241-92c0135fc017"
+      ],
+      "representative_traces": [
+        "be79fe4a-3772-42dc-8241-92c0135fc017"
+      ],
+      "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': \"{'intent': 'customer_portrait', 'slots': {'time_range': '最近三个月', 'product': '重疾险', 'dimensions': ['年龄分布', '性别比例']}, 'confidence': 'high', 'fallback': False}\"}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'target_value': None, 'path_types': None, 'raw_intent': '1001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+      "shared_failure_pattern": "当前 case 期望 intent/slots 为 {'intent': \"{'intent': 'customer_portrait', 'slots': {'time_range': '最近三个月', 'product': '重疾险', 'dimensions': ['年龄分布', '性别比例']}, 'confidence': 'high', 'fallback': False}\"}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'target_value': None, 'path_types': None, 'raw_intent': '1001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+      "representative_diffs": [
+        {
+          "case_id": "be79fe4a-3772-42dc-8241-92c0135fc017",
+          "node": "intent_contract_gate",
+          "expected": {
+            "intent": "{'intent': 'customer_portrait', 'slots': {'time_range': '最近三个月', 'product': '重疾险', 'dimensions': ['年龄分布', '性别比例']}, 'confidence': 'high', 'fallback': False}"
+          },
+          "actual": {
+            "ambiguous": false,
+            "confidence": 1.0,
+            "fallback": false,
+            "intent": "customer_portrait",
+            "raw_intent": "1001"
+          },
+          "evidence": [
+            [
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "时间范围槽位"
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "产品槽位"
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "年龄分布维度"
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "性别比例维度"
+              }
+            ]
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "verification_cases": [
+        "be79fe4a-3772-42dc-8241-92c0135fc017"
+      ],
+      "next_actions": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ]
+    }
+  ],
+  "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': \"{'intent': 'customer_portrait', 'slots': {'time_range': '最近三个月', 'product': '重疾险', 'dimensions': ['年龄分布', '性别比例']}, 'confidence': 'high', 'fallback': False}\"}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'target_value': None, 'path_types': None, 'raw_intent': '1001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+  "impact": "",
+  "priority": "high"
+}

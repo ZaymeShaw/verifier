@@ -1,0 +1,769 @@
+{
+  "project": "marketting-planning-intent",
+  "trace": {
+    "trace_id": "be79fe4a-3772-42dc-8241-92c0135fc017",
+    "project_id": "marketting-planning-intent",
+    "case_id": "mock-agent-marketting-planning-intent-29f4cb69",
+    "live_result": {
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-29f4cb69",
+      "session_id": "sess_1234567890",
+      "raw_input": {
+        "extra_input_params": {
+          "agent_args": {
+            "conversation_id": "conv_1234567890",
+            "message": {
+              "content": "能不能给我看看最近三个月在我们这买了重疾险的客户都是什么样的？比如他们的年龄分布、性别比例什么的。",
+              "content_type": "text"
+            }
+          }
+        },
+        "org_id": "org_001",
+        "session_id": "sess_1234567890",
+        "trace_id": "trace_9876543210",
+        "user_text": "能不能给我看看最近三个月在我们这买了重疾险的客户都是什么样的？比如他们的年龄分布、性别比例什么的。"
+      },
+      "normalized_request": {
+        "case_id": "mock-agent-marketting-planning-intent-29f4cb69",
+        "session_id": "sess_1234567890",
+        "query": "能不能给我看看最近三个月在我们这买了重疾险的客户都是什么样的？比如他们的年龄分布、性别比例什么的。",
+        "scenario": "intent_recognition"
+      },
+      "call_status": "succeeded",
+      "runtime_ms": 27,
+      "extracted_output": {
+        "intent": "customer_portrait",
+        "confidence": 1.0,
+        "raw_intent": "1001",
+        "ambiguous": false,
+        "fallback": false
+      },
+      "output_source": "live_service",
+      "application_boundary": {
+        "scope": "single_turn_intent_recognition",
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ]
+      },
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T03:55:09.870518+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T03:55:09.870547+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:55:09.900686+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:55:09.900742+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:56:24.290128+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:56:24.290175+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T03:56:24.290202+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:57:51.815944+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:59:15.905121+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T03:59:15.905165+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:59:15.929438+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence missing"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "probe evidence missing",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "intent_recognition",
+    "interaction_mode": "single_turn",
+    "session_id": "sess_1234567890",
+    "created_at": "2026-07-03T03:55:09.900618+00:00"
+  },
+  "judge": {
+    "trace_id": "be79fe4a-3772-42dc-8241-92c0135fc017",
+    "project_id": "marketting-planning-intent",
+    "verdict": "incorrect",
+    "score": 0.0,
+    "business_expectations": [
+      {
+        "expectation_id": "意图标签为客户画像分析",
+        "downstream_consumer": "营销计划生成模块",
+        "user_intent": "",
+        "expected_outcome": "intent 字段为 customer_portrait",
+        "acceptance_criteria": [
+          "actual intent 为 customer_portrait"
+        ],
+        "priority": "critical"
+      },
+      {
+        "expectation_id": "提取时间范围槽位",
+        "downstream_consumer": "数据查询服务",
+        "user_intent": "",
+        "expected_outcome": "slots 中包含时间范围信息",
+        "acceptance_criteria": [
+          "slots 中存在时间范围字段，值为最近三个月"
+        ],
+        "priority": "critical"
+      },
+      {
+        "expectation_id": "提取产品槽位",
+        "downstream_consumer": "数据查询服务",
+        "user_intent": "",
+        "expected_outcome": "slots 中包含产品信息",
+        "acceptance_criteria": [
+          "slots 中存在产品字段，值为重疾险"
+        ],
+        "priority": "critical"
+      },
+      {
+        "expectation_id": "提取年龄分布维度槽位",
+        "downstream_consumer": "分析维度聚合器",
+        "user_intent": "",
+        "expected_outcome": "slots 或 entities 中包含 age_distribution 或年龄分布相关指示",
+        "acceptance_criteria": [
+          "存在年龄分布相关的维度标识"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "提取性别比例维度槽位",
+        "downstream_consumer": "分析维度聚合器",
+        "user_intent": "",
+        "expected_outcome": "slots 或 entities 中包含 gender_ratio 或性别比例相关指示",
+        "acceptance_criteria": [
+          "存在性别比例相关的维度标识"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "置信度达标",
+        "downstream_consumer": "路由控制",
+        "user_intent": "",
+        "expected_outcome": "confidence >= 阈值",
+        "acceptance_criteria": [
+          "confidence 数值大于或等于最低阈值"
+        ],
+        "priority": "critical"
+      },
+      {
+        "expectation_id": "未触发意外回退",
+        "downstream_consumer": "对话管理器",
+        "user_intent": "",
+        "expected_outcome": "fallback 为 false",
+        "acceptance_criteria": [
+          "fallback 字段为 false"
+        ],
+        "priority": "critical"
+      },
+      {
+        "expectation_id": "调度边界正确",
+        "downstream_consumer": "域路由器",
+        "user_intent": "",
+        "expected_outcome": "intent 属于营销规划域内部",
+        "acceptance_criteria": [
+          "intent 为 customer_portrait 属于营销规划域"
+        ],
+        "priority": "medium"
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "意图标签为客户画像分析",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "intent 为 customer_portrait"
+        ],
+        "actual_evidence": [
+          "extracted_output.intent = 'customer_portrait'"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": "true",
+          "reasoning": "意图标签明确匹配，属于可评估范围"
+        },
+        "downstream_impact": "下游可获得正确的意图路由",
+        "blocking": true
+      },
+      {
+        "expectation_id": "提取时间范围槽位",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "slots 中包含时间范围字段，如 time_range"
+        ],
+        "actual_evidence": [
+          "slots 为空字典",
+          "entities 为空列表"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": "true",
+          "evaluable_errors": [
+            "未提取时间范围槽位"
+          ],
+          "reasoning": "系统未从查询中提取任何槽位，时间信息缺失，直接导致下游无法过滤时间窗口"
+        },
+        "downstream_impact": "数据查询无法限定时间，可能返回全量数据或查询失败",
+        "blocking": true
+      },
+      {
+        "expectation_id": "提取产品槽位",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "slots 中包含产品字段，如 product: '重疾险'"
+        ],
+        "actual_evidence": [
+          "slots 为空",
+          "entities 为空"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": "true",
+          "evaluable_errors": [
+            "未提取产品槽位"
+          ],
+          "reasoning": "产品信息缺失，无法筛选特定险种的客户"
+        },
+        "downstream_impact": "无法生成针对重疾险客户的画像计划",
+        "blocking": true
+      },
+      {
+        "expectation_id": "提取年龄分布维度槽位",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "slots 或 entities 中包含年龄分布维度标识"
+        ],
+        "actual_evidence": [
+          "slots 和 entities 均为空"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": "true",
+          "evaluable_errors": [
+            "未提取年龄分布维度"
+          ],
+          "reasoning": "用户明确要求年龄分布，但输出中无该维度标识"
+        },
+        "downstream_impact": "分析结果中可能不包含年龄分布，偏离用户需求",
+        "blocking": false
+      },
+      {
+        "expectation_id": "提取性别比例维度槽位",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "slots 或 entities 中包含性别比例维度标识"
+        ],
+        "actual_evidence": [
+          "slots 和 entities 均为空"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": "true",
+          "evaluable_errors": [
+            "未提取性别比例维度"
+          ],
+          "reasoning": "用户明确要求性别比例，输出中无此维度"
+        },
+        "downstream_impact": "分析结果中可能不包含性别比例，偏离用户需求",
+        "blocking": false
+      },
+      {
+        "expectation_id": "置信度达标",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "confidence >= 0.6"
+        ],
+        "actual_evidence": [
+          "confidence = 1.0"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": "true",
+          "reasoning": "置信度1.0远高于常规阈值"
+        },
+        "downstream_impact": "可以高置信度路由和处理",
+        "blocking": true
+      },
+      {
+        "expectation_id": "未触发意外回退",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "fallback 为 false"
+        ],
+        "actual_evidence": [
+          "fallback = false"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": "true",
+          "reasoning": "回退未发生，符合预期"
+        },
+        "downstream_impact": "正常进入专业意图处理流程",
+        "blocking": true
+      },
+      {
+        "expectation_id": "调度边界正确",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "意图属于营销规划域"
+        ],
+        "actual_evidence": [
+          "customer_portrait 是营销规划域标准意图"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": "true",
+          "reasoning": "客户画像分析属于营销规划子域，未跨域调度"
+        },
+        "downstream_impact": "正确路由到营销规划处理模块",
+        "blocking": false
+      },
+      {
+        "expectation_id": "intent_contract",
+        "status": "not_fulfilled",
+        "downstream_impact": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=customer_portrait，confidence=1.0，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+        "blocking": true
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "not_fulfilled",
+      "blocking_expectations": [
+        "提取时间范围槽位",
+        "提取产品槽位",
+        "intent_contract"
+      ],
+      "assessment_count": 9
+    },
+    "expected": {
+      "intent": "{'intent': 'customer_portrait', 'slots': {'time_range': '最近三个月', 'product': '重疾险', 'dimensions': ['年龄分布', '性别比例']}, 'confidence': 'high', 'fallback': False}"
+    },
+    "actual": {
+      "intent": "customer_portrait",
+      "confidence": 1.0,
+      "raw_intent": "1001",
+      "ambiguous": false,
+      "fallback": false
+    },
+    "reasoning_summary": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=customer_portrait，confidence=1.0，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+    "judge_basis": "基于用户原始查询意图解析出客户画像分析需求，以及时间、产品、维度等必须槽位，对比实际输出发现仅意图标签和置信度正确，所有业务槽位均缺失，导致阻塞性失败。",
+    "judge_method": "intent_model_derived_expectations",
+    "verdict_derivation": {
+      "primary_boundary": "single_turn_intent_recognition",
+      "assessment_summary": "意图标签正确，但缺失全部业务槽位（时间、产品、两个分析维度），导致下游无法执行具体查询，且这些缺失属于阻塞性需求，整体不满足业务期望。",
+      "blocking_gaps": [
+        "未提取时间范围槽位",
+        "未提取产品槽位"
+      ],
+      "why_verdict": "虽然意图标签正确且置信度高，但缺少时间范围和产品这两个核心槽位，导致下游无法生成有针对性的计划，因此整体未被满足。",
+      "contract_gate": "failed"
+    },
+    "missing": [
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "时间范围槽位",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "产品槽位",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "年龄分布维度",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "性别比例维度",
+        "incomplete": false
+      }
+    ],
+    "evidence": [
+      "raw_response 中 slots 为空",
+      "extracted_output 中 entities 为空"
+    ],
+    "boundary_decision": {
+      "within_evaluable_scope": "true",
+      "evaluable_errors": [
+        "未提取时间范围槽位",
+        "未提取产品槽位",
+        "未提取年龄分布维度",
+        "未提取性别比例维度"
+      ],
+      "reasoning": "所有缺失信息均可从用户查询中提取，属于系统能力范围内但未执行，不存在不可控限制"
+    },
+    "evaluation_boundary": {
+      "primary_boundary_id": "single_turn_intent_recognition",
+      "primary_boundary_name": "单轮意图识别评估",
+      "judge_question": "当前意图识别输出是否完整捕捉了用户查询中的业务意图和必要约束？",
+      "verdict_basis": "缺失的核心槽位使下游无法执行，不符合业务完成标准",
+      "boundary_sources": "critical_intent_dimensions",
+      "conflict_policy": "依据实际评估需求，覆盖所有维度"
+    },
+    "consumer_contract": {
+      "consumer": "营销计划生成模块",
+      "contract": "意图识别需提供标准意图标签和完整业务槽位，缺失必要槽位将导致计划无法执行",
+      "application_boundary": {
+        "scope": "single_turn_intent_recognition",
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ]
+      }
+    },
+    "intent_model": {
+      "raw_user_request": "能不能给我看看最近三个月在我们这买了重疾险的客户都是什么样的？比如他们的年龄分布、性别比例什么的。",
+      "explicit_intents": [
+        "客户画像分析"
+      ],
+      "implicit_business_intents": [
+        "获取最近三个月购买重疾险客户的年龄分布",
+        "获取最近三个月购买重疾险客户的性别比例"
+      ],
+      "constraints": {
+        "time_range": "最近三个月",
+        "product": "重疾险",
+        "dimensions": [
+          "年龄分布",
+          "性别比例"
+        ]
+      },
+      "success_definition": "正确识别意图为客户画像分析，并提取全部必要的业务约束，包括时间范围、产品类型和用户关注的分析维度",
+      "blocking_requirements": [
+        "意图标签为客户画像分析",
+        "时间范围槽位",
+        "产品槽位",
+        "至少一个分析维度槽位"
+      ],
+      "nice_to_have_requirements": [
+        "性别比例维度槽位",
+        "年龄分布维度槽位"
+      ],
+      "intent_evidence": [
+        "用户明确询问'买了重疾险的客户都是什么样的'",
+        "用户举例'年龄分布、性别比例'等分析维度",
+        "时间限定'最近三个月'"
+      ]
+    },
+    "reconstructed_intent": "{'intent': 'customer_portrait', 'slots': {'time_range': '最近三个月', 'product': '重疾险', 'dimensions': ['年龄分布', '性别比例']}, 'confidence': 'high', 'fallback': False}",
+    "reference_generation_basis": {
+      "source": "intent_model_from_user_request",
+      "alignment_to_actual_shape": "理想输出应包含 slots 结构，实际输出缺失",
+      "evidence": [
+        "用户查询中的时间、产品、维度是完成分析的必要上下文"
+      ]
+    },
+    "scenario": "intent_recognition",
+    "quality_flags": [
+      "intent_contract_gate_failed"
+    ],
+    "summary": {
+      "reason": "not_fulfilled · blocking=[提取产品槽位,提取时间范围槽位] · 无法生成针对重疾险客户的画像计划",
+      "primary_failure_dimensions": [
+        {
+          "expectation_id": "提取产品槽位",
+          "status": "not_fulfilled",
+          "blocking": true,
+          "downstream_impact": "无法生成针对重疾险客户的画像计划",
+          "within_evaluable_scope": "true",
+          "evidence": "slots 为空 | entities 为空 | slots 中包含产品字段，如 product: '重疾险'"
+        },
+        {
+          "expectation_id": "提取时间范围槽位",
+          "status": "not_fulfilled",
+          "blocking": true,
+          "downstream_impact": "数据查询无法限定时间，可能返回全量数据或查询失败",
+          "within_evaluable_scope": "true",
+          "evidence": "slots 为空字典 | entities 为空列表 | slots 中包含时间范围字段，如 time_range"
+        },
+        {
+          "expectation_id": "提取年龄分布维度槽位",
+          "status": "not_fulfilled",
+          "blocking": false,
+          "downstream_impact": "分析结果中可能不包含年龄分布，偏离用户需求",
+          "within_evaluable_scope": "true",
+          "evidence": "slots 和 entities 均为空 | slots 或 entities 中包含年龄分布维度标识"
+        },
+        {
+          "expectation_id": "提取性别比例维度槽位",
+          "status": "not_fulfilled",
+          "blocking": false,
+          "downstream_impact": "分析结果中可能不包含性别比例，偏离用户需求",
+          "within_evaluable_scope": "true",
+          "evidence": "slots 和 entities 均为空 | slots 或 entities 中包含性别比例维度标识"
+        }
+      ],
+      "reason_source": "aggregated_fulfillment",
+      "fulfillment_status": "not_fulfilled",
+      "assessment_count": 8,
+      "blocking_count": 5,
+      "is_formal_attribution": true
+    }
+  }
+}

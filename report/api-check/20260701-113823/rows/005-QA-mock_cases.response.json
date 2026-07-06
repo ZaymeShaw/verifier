@@ -1,0 +1,182 @@
+{
+  "project_id": "QA",
+  "cases": [
+    {
+      "id": "qa-gold-exact-1",
+      "input": {
+        "question": "什么是保险合同犹豫期？"
+      },
+      "scenario": "qa_gold_answer",
+      "expected_intent": "",
+      "reference": {
+        "golden_answer": "犹豫期是投保人收到保险合同后，在合同约定期限内可以申请解除合同，保险公司通常退还已交保费的期间。"
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "category": "insurance_contract",
+        "expected_error_type": "none",
+        "quality_dimension": "correctness",
+        "previous_output": {
+          "actual_answer": "犹豫期是投保人收到保险合同后，在合同约定期限内可以申请解除合同，保险公司通常退还已交保费的期间。"
+        }
+      }
+    },
+    {
+      "id": "qa-gold-incomplete-1",
+      "input": {
+        "question": "等待期内因疾病出险是否赔付？"
+      },
+      "scenario": "qa_gold_answer",
+      "expected_intent": "",
+      "reference": {
+        "golden_answer": "等待期内因疾病发生保险事故通常不承担保险责任；但意外事故通常不受等待期限制，且合同另有约定时应按合同执行。"
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "category": "insurance_claim",
+        "expected_error_type": "answer_incomplete",
+        "quality_dimension": "completeness",
+        "previous_output": {
+          "actual_answer": "等待期内疾病出险一般不赔。"
+        }
+      }
+    },
+    {
+      "id": "qa-context-supported-1",
+      "input": {
+        "question": "材料中疾病责任等待期多久？",
+        "contexts": [
+          "产品条款写明：疾病责任等待期为90天，意外伤害责任无等待期。"
+        ]
+      },
+      "scenario": "qa_context_faithfulness",
+      "expected_intent": "",
+      "reference": {
+        "golden_answer": "材料明确疾病责任等待期为90天，意外伤害责任无等待期。"
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "category": "rag_faithfulness",
+        "expected_error_type": "none",
+        "quality_dimension": "faithfulness",
+        "previous_output": {
+          "actual_answer": "疾病责任等待期为90天，意外伤害责任无等待期。"
+        }
+      }
+    },
+    {
+      "id": "qa-context-hallucination-1",
+      "input": {
+        "question": "材料中住院医疗免赔额是多少？",
+        "contexts": [
+          "保障责任包含住院医疗、特殊门诊和住院前后门急诊。材料未提及免赔额。"
+        ]
+      },
+      "scenario": "qa_context_faithfulness",
+      "expected_intent": "",
+      "reference": {
+        "golden_answer": "材料未提及免赔额，不能给出1万元免赔额结论。"
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "category": "rag_faithfulness",
+        "expected_error_type": "unsupported_claim",
+        "quality_dimension": "risk_control",
+        "previous_output": {
+          "actual_answer": "住院医疗免赔额是1万元。"
+        }
+      }
+    },
+    {
+      "id": "qa-context-contradiction-1",
+      "input": {
+        "question": "材料中续保审核规则是什么？",
+        "contexts": [
+          "条款写明：本产品不保证续保，续保需经保险公司审核同意。"
+        ]
+      },
+      "scenario": "qa_context_faithfulness",
+      "expected_intent": "",
+      "reference": {
+        "golden_answer": "本产品不保证续保，续保需经保险公司审核同意。"
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "category": "rag_faithfulness",
+        "expected_error_type": "contradiction",
+        "quality_dimension": "faithfulness",
+        "previous_output": {
+          "actual_answer": "本产品保证续保，不需要保险公司重新审核。"
+        }
+      }
+    },
+    {
+      "id": "qa-over-refusal-1",
+      "input": {
+        "question": "材料中门诊手术是否在保障范围内？",
+        "contexts": [
+          "保障责任写明：门诊手术医疗费用属于保险责任，按约定扣除免赔额后赔付。"
+        ]
+      },
+      "scenario": "qa_context_faithfulness",
+      "expected_intent": "",
+      "reference": {
+        "golden_answer": "材料明确门诊手术医疗费用属于保险责任，按约定扣除免赔额后赔付。"
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "category": "rag_faithfulness",
+        "expected_error_type": "over_refusal",
+        "quality_dimension": "usefulness",
+        "previous_output": {
+          "actual_answer": "无法根据材料判断门诊手术是否在保障范围内，请咨询人工客服。"
+        }
+      }
+    },
+    {
+      "id": "qa-weak-quality-1",
+      "input": {
+        "question": "怎么规划家庭保障？"
+      },
+      "scenario": "qa_weak_quality",
+      "expected_intent": "",
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "category": "open_qa_quality",
+        "expected_error_type": "too_vague",
+        "quality_dimension": "usefulness",
+        "previous_output": {
+          "actual_answer": "先买保险，再看预算。"
+        }
+      }
+    },
+    {
+      "id": "qa-invalid-missing-output-1",
+      "input": {
+        "question": "投保前为什么要健康告知？"
+      },
+      "scenario": "qa_gold_answer",
+      "expected_intent": "",
+      "reference": {
+        "golden_answer": "健康告知用于让保险公司评估被保险人的健康风险，决定是否承保、加费、除外或延期。"
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "category": "data_quality",
+        "expected_error_type": "format_error",
+        "quality_dimension": "data_quality",
+        "previous_output": {
+          "actual_answer": ""
+        }
+      }
+    }
+  ]
+}

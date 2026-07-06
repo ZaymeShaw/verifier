@@ -1,0 +1,188 @@
+{
+  "project": "marketting-planning-intent",
+  "attributes": [
+    {
+      "trace_id": "8bef68cb-c3d1-4d06-ae5c-fce9249a37b1",
+      "project_id": "marketting-planning-intent",
+      "case_id": "",
+      "expectation_attributions": [
+        {
+          "expectation_id": "意图标签准确反映目标调整请求",
+          "causal_category": "implementation_bug"
+        },
+        {
+          "expectation_id": "提取目标金额500万和上个月时间",
+          "causal_category": "implementation_bug"
+        },
+        {
+          "expectation_id": "置信度不应过低以致意图不可信",
+          "causal_category": "model_capability_gap"
+        },
+        {
+          "expectation_id": "意图可分发至目标调整处理模块",
+          "causal_category": "implementation_bug"
+        }
+      ],
+      "causal_category": "implementation_bug",
+      "earliest_divergence": {
+        "node": "intent_contract_gate",
+        "expected": {
+          "intent": "target_adjustment（目标调整）"
+        },
+        "actual": {
+          "intent": "other",
+          "confidence": 0.5,
+          "raw_intent": "4001",
+          "ambiguous": false,
+          "fallback": false
+        },
+        "evidence": [
+          [
+            {
+              "kind": "missing",
+              "error_type": "",
+              "evidence_ref": "",
+              "raw": "正确的意图标签（target_adjustment）",
+              "incomplete": false
+            },
+            {
+              "kind": "missing",
+              "error_type": "",
+              "evidence_ref": "",
+              "raw": "目标金额槽位（500万）",
+              "incomplete": false
+            },
+            {
+              "kind": "missing",
+              "error_type": "",
+              "evidence_ref": "",
+              "raw": "时间槽位（上个月）",
+              "incomplete": false
+            }
+          ]
+        ],
+        "confidence": "medium"
+      },
+      "chain_nodes": [
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "failed",
+          "evidence": [
+            {
+              "query": "帮我看看上个月的目标能不能调到500万，因为最近团队业绩压力大"
+            },
+            {
+              "expected": {
+                "intent": "target_adjustment（目标调整）"
+              }
+            },
+            {
+              "actual": {
+                "intent": "other",
+                "confidence": 0.5,
+                "raw_intent": "4001",
+                "ambiguous": false,
+                "fallback": false
+              }
+            },
+            {
+              "missing": [
+                {
+                  "kind": "missing",
+                  "error_type": "",
+                  "evidence_ref": "",
+                  "raw": "正确的意图标签（target_adjustment）",
+                  "incomplete": false
+                },
+                {
+                  "kind": "missing",
+                  "error_type": "",
+                  "evidence_ref": "",
+                  "raw": "目标金额槽位（500万）",
+                  "incomplete": false
+                },
+                {
+                  "kind": "missing",
+                  "error_type": "",
+                  "evidence_ref": "",
+                  "raw": "时间槽位（上个月）",
+                  "incomplete": false
+                }
+              ],
+              "wrong": [
+                {
+                  "kind": "wrong",
+                  "error_type": "",
+                  "evidence_ref": "",
+                  "raw": "意图标签错误地设为'other'",
+                  "incomplete": false
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "probe_results": [
+        {
+          "probe_id": "",
+          "status": "failed",
+          "evidence": [
+            "raw_intent=4001",
+            "actual_mapping=other",
+            "expected_intent=target_value_adjustment",
+            "INTENT_MAPPING 中 4001→other，target_value_adjustment 在枚举中存在但未被路由到"
+          ]
+        }
+      ],
+      "evidence_coverage": {
+        "query": true,
+        "actual": true,
+        "expected": true,
+        "execution_trace": true
+      },
+      "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': 'target_adjustment（目标调整）'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+      "verification_steps": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ],
+      "patch_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "needs_human_review": false,
+      "scenario": "single_turn_intent_recognition",
+      "summary": {
+        "causal_category": "needs_human_review",
+        "attribution_count": 4,
+        "probe_count": 1,
+        "summary_text": "用户查询'帮我看看上个月的目标能不能调到500万'在语义上明确属于目标调整意图（target_value_adjustment），但系统在两个层面均未能正确识别：（1）规则层面：_is_target_adjustment_message 关键词列表仅含'调整目标/修改目标/重设目标/重新设置目标/换个目标'，不覆盖口语化表达'调到'；且 Tier 1 调整意图规则要求 has_completed_planning_context=True，单轮无上下文场景下该规则永远无法激活。（2）LLM 层面：INTENT_RECOGNITION_PROMPT 中 target_value_adjustment 的定义强调'已经完成NBEV目标值达成测算后'且所有 few-shot 示例均为直接祈使句（'我要调整目标'、'把目标值改成500万重新测算'），导致疑问式/试探式表达'能不能调到500万'被归入 other（confidence=0.5）。两个防御层同时失效，raw_intent=4001 经 INTENT_MAPPING 正确映射为 other，但上游本不应产出 4001。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      },
+      "analysis_method": "current_case_intent_contract_trace",
+      "analysis_quality": {
+        "passed": true,
+        "status": "supported_root_cause"
+      },
+      "incomplete_reason": "",
+      "suspected_locations": [
+        "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/prompts/intent_prompt.py",
+        "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/steps/intent_recognition.py",
+        "projects/marketting-planning-intent/intent.py"
+      ],
+      "quality_flags": [
+        "intent_contract_gate_failed",
+        "dual_layer_failure_rule_and_llm"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "project_id": "client_search",
+  "api": {
+    "base_url": "http://localhost:8000",
+    "endpoint": "/api/v1/client_search_query_parse_no_encipher",
+    "method": "POST",
+    "timeout": "60"
+  },
+  "application": {
+    "mode": "existing_service",
+    "api_base": "http://localhost:8000",
+    "downstream_search": {
+      "base_url": "http://localhost:8081",
+      "endpoint": "/api/v1/search/customer",
+      "method": "POST",
+      "timeout": "3",
+      "enabled": true
+    }
+  },
+  "capabilities": [
+    "live_run",
+    "judge",
+    "attribute",
+    "cluster",
+    "check"
+  ],
+  "documents": {
+    "application": "application.md",
+    "mock": "mock.md",
+    "evaluation": "evaluation.md",
+    "attribution": "attribution.md",
+    "checklist": "checklist.md",
+    "implementation_standard": "implementation_standard.md",
+    "judge_boundary": "judge_boundary_protocals.md",
+    "judge_standard": "judge.md",
+    "source_readme": "../../../projects/client_search/readme.md",
+    "source_config": "../../../projects/client_search/config.md",
+    "source_field_definitions": "../../../../llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+    "source_field_enums": "../../../../llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+    "source_value_mappings": "../../../../llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+    "source_enhanced_rules": "../../../../llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml",
+    "source_prompt": "../../../projects/client_search/prompt.md",
+    "source_judge_boundary": "../../../projects/client_search/judge_boundary-template.md"
+  },
+  "mock_guidance": "# Mock\n\nV1 mock cases should cover single-query and multi-condition customer-search intents using current `projects/client_search/prompt.md` rules and `projects/client_search/config.md` field definitions.\n\nSeed cases:\n\n- `45岁女性保费10万以上`\n- `有生存金未领取的客户`\n- `年缴保费一万以上的客户`\n- `45岁以上女性客户`\n- `买了年金险或两全险的客户`\n- `大于50岁的客户`\n- `只有重疾险的客户`\n- `上有老下有小的客户`\n\nMock guidance:\n\n- Expected intent should be written in business language first.\n- Field-level expectations are allowed here because this file belongs to the client_search project implementation, not generic core.\n- Mock cases should include exact age, age boundary wording, amount unit conversion, enum/contains conditions, and multi-condition AND semantics.\n- Do not use one historical case to judge unrelated cases.\n",
+  "evaluation_guidance": "# Evaluation\n\nJudge the current client_search API output by reconstructing expected-vs-actual from the current query, current response, current downstream-search evidence when available, and the current project prompt/config references from `projects/client_search`.\n\n本文件定义”评估本 case 时的目标和重点”。边界定义和判定流程由 `judge_boundary_protocals.md` 和 `judge.md` 承载，本文件不重复。\n\n## Project-owned source references\n\n- `projects/client_search/readme.md`: 标准答案的答案结果由于数据库字段已经过时、跟 API 返回结果不一致，所以标准答案只能作为参考；judge 需要根据最新项目资料和当前运行证据进行实时标注。\n- `projects/client_search/config.md`: 原始字段定义、枚举、值映射和规则配置是 ES/search 能力边界的重要来源；静态摘要本身只是辅助指针，不是绝对标准。\n- `projects/client_search/prompt.md`: 当前 prompt 规则用于理解 parser 预期，但等价的 ES/search 结果仍然可接受。\n- `RunTrace.extracted_output.downstream_search`: 下游客户搜索探测结果。\n\n## Quality requirements\n\n- 不继承旧 case、page state、cluster 或 attribution 结论。\n- 先理解用户底层意图，再比较条件。\n- 边界优先级和判定流程见 `judge_boundary_protocals.md` 和 `judge.md`。\n- 分离 missing、wrong、extra 条件。\n- 如果 `structured_output` 为空而用户 query 非空，视为 empty-recognition，评估 query 是否应产生条件。\n- 空结果分类必须使用 API 响应中的最佳来源 query；缺少 `rewritten_query` 本身不应将非空请求变成 `empty_query`。\n",
+  "attribution_guidance": "# Attribution\n\nAttribute client_search failures by connecting user intent, expected output, actual output, and available code/config/runtime evidence.\n\nCurrent project-owned sources:\n\n- `projects/client_search/readme.md` defines the evaluation goal: use config field definitions and prompt rules to decide whether returned conditions can search the correct customers.\n- `projects/client_search/config.md` points to authoritative field definition, enum, rule, label, and value-mapping config files in the business project.\n- `projects/client_search/prompt.md` defines current parsing rules for valid fields, operators, age handling, unit conversion, AND/OR, and JSON output.\n- `projects/client_search/start.md` defines service startup, ES reindex, live request, judge, and attribute verification flow.\n\nRequired reasoning chain:\n\n1. Reconstruct the current query intent.\n2. Build expected conditions from current prompt/config/business rules.\n3. Compare actual response with expected output and separate missing, wrong, and extra conditions.\n4. Walk the available `RunTrace.execution_trace` stages and mark each stage as normal, suspicious, failed, or not yet verified.\n5. Identify the earliest likely divergence stage: request normalization, client_search API, routing, prompt/rule construction, model parsing, field/config mapping, post-processing, adapter extraction, service/tooling, or evaluation standard.\n6. Use current response, logs, project docs, prompt/config snippets, and executable trace nodes when available.\n7. If code evidence is available, name the concrete module/function/config and explain expected vs. actual behavior there; if not, explicitly say code-path evidence was not collected.\n8. Produce a minimal root-cause hypothesis.\n9. Give executable verification steps and a minimal patch direction developers can act on.\n\nAttribution quality bar:\n\n- The conclusion must help a developer know what to verify or change next.\n- Do not stop at “a module failed”; connect the gap to the prompt/config/runtime chain when evidence exists.\n- Do not bring fields or fixes from unrelated historical cases into the current query.\n- Do not propose editing frontend display or one run result as the fix when the source generator is wrong.\n- If code evidence was not read, mark suspected locations as hypotheses or leave them empty.\n- If the current output is correct, return a no-failure attribution with evidence from judge rather than inventing a failure.\n",
+  "analysis_handoff": {
+    "api_document": {
+      "base_url": "http://localhost:8000",
+      "endpoint": "/api/v1/client_search_query_parse_no_encipher",
+      "method": "POST",
+      "timeout": "60"
+    },
+    "api_call_chain": "source_readme, source_config, source_prompt, and adapter.py",
+    "mock_strategy": "mock.md",
+    "frontend_architecture": {
+      "live": "render normalized parser output and raw project fields under protocol extension panels",
+      "summary": "align Output and Reference as formatted JSON with equal-size table cells and compact drill-downs"
+    },
+    "judge_standard": "judge.md",
+    "attribution_trace_plan": "attribution.md",
+    "key_pipeline_links": "[request_normalization, prompt_config_mapping, parser_call, adapter_extraction, downstream_search_probe, judge, attribution]"
+  },
+  "frontend_build_handoff": {
+    "analysis_output": "ProjectAnalysis.frontend_build_handoff",
+    "frontend_architecture": {
+      "live": "render normalized parser output and raw project fields under protocol extension panels",
+      "summary": "align Output and Reference as formatted JSON with equal-size table cells and compact drill-downs"
+    },
+    "project_frontend_standards": {
+      "frontend_view": {
+        "live": "render normalized parser output and raw project fields under protocol extension panels",
+        "summary": "align Output and Reference as formatted JSON with equal-size table cells and compact drill-downs"
+      },
+      "batch_persistence": {
+        "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+        "transient_results": "do not persist full trace, judge, attribute, downstream payload, or frontend_view as durable case-pool source data"
+      }
+    },
+    "display_contract": {
+      "output_source": "trace.extracted_output",
+      "reference_source": "input.reference or judge.expected",
+      "formatting": [
+        "json formatting",
+        "truncation",
+        "output/reference alignment"
+      ]
+    }
+  },
+  "judge_handoff": {
+    "judge_standard": "judge.md",
+    "evaluation_guidance": true
+  },
+  "attribute_handoff": {
+    "attribution_trace_plan": "attribution.md",
+    "key_pipeline_links": "[request_normalization, prompt_config_mapping, parser_call, adapter_extraction, downstream_search_probe, judge, attribution]"
+  }
+}

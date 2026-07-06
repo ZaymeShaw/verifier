@@ -1,0 +1,58 @@
+{
+  "trace_id": "1f231a39-ce05-44b9-a0ab-d0ea9b4eb8e8",
+  "project_id": "client_search",
+  "business_expectations": [
+    {},
+    {},
+    {},
+    {},
+    {},
+    {}
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "年龄条件正确",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "性别条件正确",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "保费字段映射正确",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "保费操作符正确",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "保费数值转换正确",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "条件逻辑关系正确",
+      "status": "fulfilled"
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "fulfilled",
+    "assessment_count": 6
+  },
+  "expected": {
+    "query_logic": "AND",
+    "expected_source": "not_available",
+    "reference_is_oracle": false
+  },
+  "actual": {
+    "query_logic": "AND"
+  },
+  "summary": {
+    "reason": "fulfilled · 6 blocking expectations all met · 用户查询'45岁女性保费10万以上'包含三个明确筛选维度。Parser正确输出：(1)clientAge RANGE {min:45,max:45}精确匹配45岁；(2)clientSex MATCH '女'正确映射性别枚举；(3)annPremSegNum GTE 100000正确将'保费'映射为年缴保费字段、'以上'映射为GTE操作符、'10万'转换为100000。三个条件以AND组合，完全覆盖用户意图。所有字段选择、操作符使用、值转换和逻辑关系均与prompt定义和字段能力边界一致，无任何偏差。",
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "fulfilled",
+    "assessment_count": 6,
+    "blocking_count": 6,
+    "is_formal_attribution": true
+  }
+}

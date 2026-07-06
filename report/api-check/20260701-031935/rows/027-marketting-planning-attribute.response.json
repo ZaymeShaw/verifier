@@ -1,0 +1,87 @@
+{
+  "trace_id": "c0400e92-2b3a-4af8-8dee-6ab3a077b174",
+  "project_id": "marketting-planning",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "mp-service-availability",
+      "causal_category": "boundary_limitation"
+    }
+  ],
+  "causal_category": "needs_human_review",
+  "earliest_divergence": {
+    "node": "service_connectivity",
+    "expected": "marketing-planning 服务在目标地址端口正常监听并接受 TCP 连接",
+    "actual": "操作系统返回 ECONNREFUSED（Errno 61），连接被拒绝",
+    "evidence": [
+      "run_trace.status='error'",
+      "run_trace.error 明确记录 'Connection refused'",
+      "execution_trace 为空——确认无任何 pipeline stage 得以执行"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "failed",
+      "evidence": [
+        "run_trace.error: 'marketing-planning service unavailable: <urlopen error [Errno 61] Connection refused>'"
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": true,
+    "execution_trace": false,
+    "project_docs": false,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "marketing-planning 服务在评估执行时未处于运行状态，导致评估框架在尝试建立 TCP 连接时收到 ECONNREFUSED（Errno 61）。这不是代码缺陷或模型能力问题，而是运行时基础设施层面的服务可用性问题——服务进程可能未被启动、已异常退出或监听端口配置不一致。由于连接在 pipeline 执行前即失败，所有九个业务处理阶段均被跳过，judge 无法对任何业务期望做出判断（verdict=uncertain，business_expectations 为空）。",
+  "verification_steps": [
+    "登录 marketing-planning 服务所在主机，执行 `ss -tlnp` 或 `netstat -tlnp` 确认目标端口是否有进程监听",
+    "检查服务进程状态：`systemctl status marketing-planning` 或 `docker ps` 或对应进程管理器",
+    "查看服务日志（如 config.py 中配置的 LOG_DIR/logs/marketing-planning.log）确认是否有启动失败或崩溃记录",
+    "确认评估框架中配置的服务地址与端口是否与实际部署一致"
+  ],
+  "patch_direction": [
+    "若服务进程未启动：启动 marketing-planning 服务并配置开机自启",
+    "若端口不匹配：统一评估框架中的目标地址与服务的实际监听端口",
+    "在评估流水线中增加前置健康检查步骤（如 curl 探测 /health 端点），服务不可用时提前终止并给出清晰提示",
+    "考虑为服务增加进程守护（systemd restart=always 或 docker restart policy）以提高可用性"
+  ],
+  "needs_human_review": true,
+  "scenario": "execution_planning"
+}

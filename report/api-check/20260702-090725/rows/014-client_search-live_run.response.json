@@ -1,0 +1,62 @@
+{
+  "trace_id": "a3cea492-aa39-400a-a125-5b2ea6ba4d1e",
+  "project_id": "client_search",
+  "case_id": "mock-agent-client_search-83316cba",
+  "live_result": {
+    "project_id": "client_search",
+    "case_id": "mock-agent-client_search-83316cba",
+    "session_id": "general-eval-session",
+    "raw_input": {
+      "query": "帮我查一下客户名称里带‘科技’的公司"
+    },
+    "normalized_request": {
+      "user_text": "帮我查一下客户名称里带‘科技’的公司",
+      "user_id": "eval-user",
+      "trace_id": "general-eval-1782954573061",
+      "session_id": "general-eval-session",
+      "source": "askbob"
+    },
+    "call_status": "succeeded",
+    "runtime_ms": 2004,
+    "extracted_output": {
+      "summary": "客户姓名为科技的客户",
+      "structured_output": [
+        {
+          "field": "searchClientName",
+          "operator": "MATCH",
+          "value": "科技"
+        }
+      ],
+      "logic": "AND",
+      "status_code": 0,
+      "user_visible_text": "客户姓名为科技的客户",
+      "empty_result_reason": "",
+      "is_empty_result": false,
+      "source_query": "帮我查一下客户名称里带‘科技’的公司",
+      "matched_level": 4,
+      "matched_patterns": "### 当前时间\n2026-07-02 09:09:33 (Asia/Shanghai)\n### 今天星期\n周四\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.planfullname** | 操作符: MATCH | 值类型: enum | 定义: 保单投保险种全称，嵌套字段，枚举值通过独立配置文件维护\n\n  示例: \"险种名称为平安e生保医疗保险的客户\" → {\"field\": \"polNoInfo.plancodeinfo.planfullname\", \"operator\": \"MATCH\", \"value\": \"平安e生保医疗保险\"}\n\n- **zxjyEquityGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['预达标', '已达标'] | 定义: 表示臻享家医客户范围，包括预达标和已达标两类客户 | 说明: 当用户直接输入“臻享家医客户/家医客户”时，输出 CONTAINS=[预达标, 已达标]，不要只输出已达标。\n\n  示例: \"臻享家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"臻享客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n- **education** | 操作符: CONTAINS | 值类型: enum | 枚举: ['小学以下', '小学', '初中', '中专', '高中', '大学专科', '大学本科生', '硕士研究生', '博士研究生', '博士后'] | 定义: 表示学历等级范围；“以上”不含当前值，例如：本科以上-》不能包含大学本科生；“及以上”含当前值，例如：本科及以上-》需要包含大学本科生 | 说明: 学历从低到高：小学以下<小学<初中<中专<高中<大学专科<大学本科生<硕士研究生<博士研究生<博士后\n\n  示例: \"本科学历及以上客户\" → {\"field\": \"education\", \"operator\": \"CONTAINS\", \"value\": [\"大学本科生\", \"硕士研究生\", \"博士研究生\", \"博士后\"]}\n\n  示例: \"本科学历以上客户\" → {\"field\": \"education\", \"operator\": \"CONTAINS\", \"value\": [\"硕士研究生\", \"博士研究生\", \"博士后\"]}\n\n  示例: \"硕士（不含）以上客户\" → {\"field\": \"education\", \"operator\": \"CONTAINS\", \"value\": [\"博士研究生\", \"博士后\"]}\n\n  反例: \"孩子在上小学的客户\" → 不输出该字段；原因: 这里的小学是孩子，不是客户本人\n\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\n\n  示例: \"男性客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}\n\n  示例: \"女客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}\n\n  反例: \"子女是男性的客户\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n- **polNo** | 操作符: MATCH | 值类型: extract | 定义: 表示保单号，不表示客户编号，保单号是由P开头+15位数字，如 P966073446746215\n\n  示例: \"保单号为1234567890的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"1234567890\"}\n\n  示例: \"保单号匹配P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n  示例: \"按保单号查P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我查一下客户名称里带‘科技’的公司",
+      "external_boundary_sources": {
+        "config_paths": {
+          "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+          "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+          "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+          "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+        }
+      }
+    },
+    "output_source": "live_service",
+    "application_boundary": {
+      "downstream_result_set_available": false,
+      "downstream_status": "not_verified",
+      "judge_scope": "parser_condition_semantics_only",
+      "result_set_verified": false,
+      "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+    },
+    "interaction_mode": "single_turn"
+  },
+  "status": "ok",
+  "scenario": "",
+  "interaction_mode": "single_turn",
+  "session_id": "general-eval-session",
+  "created_at": "2026-07-02T01:09:35.066839+00:00"
+}

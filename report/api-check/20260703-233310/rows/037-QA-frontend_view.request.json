@@ -1,0 +1,885 @@
+{
+  "project": "QA",
+  "trace": {
+    "trace_id": "fa53c1ac-c452-4249-aa40-17e7fa08060e",
+    "project_id": "QA",
+    "case_id": "mock-agent-QA-f8906092",
+    "live_result": {
+      "project_id": "QA",
+      "case_id": "mock-agent-QA-f8906092",
+      "session_id": "",
+      "raw_input": {
+        "input": {
+          "query": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+          "user_text": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+        },
+        "metadata": {
+          "channel": "在线客服",
+          "product_type": "重疾险",
+          "session_id": "sess_123456",
+          "timestamp": "2025-03-28T10:15:00Z",
+          "trace_id": "trace_qa_001",
+          "user_id": "user_98765"
+        },
+        "scenario": "qa_gold_answer"
+      },
+      "normalized_request": {
+        "input": {
+          "question": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+        },
+        "reference": {
+          "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+        },
+        "metadata": {
+          "live_request_mapped": true,
+          "ready": [
+            "output",
+            "reference"
+          ],
+          "schema_ok": true,
+          "source": "mock_agent_llm"
+        },
+        "scenario": "qa_gold_answer",
+        "output": {
+          "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+        }
+      },
+      "call_status": "succeeded",
+      "extracted_output": {
+        "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+      },
+      "output_source": "provided_output",
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T15:33:10.754950+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T15:33:10.754970+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T15:33:10.756452+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T15:33:10.756475+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T15:35:40.244131+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T15:35:40.244265+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T15:35:40.244339+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T15:35:40.247932+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T15:35:40.249319+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T15:35:40.249363+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T15:35:40.265610+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence or blocked reason available"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "qa_gold_answer",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "created_at": "2026-07-03T15:33:10.756419+00:00"
+  },
+  "judge": {
+    "trace_id": "fa53c1ac-c452-4249-aa40-17e7fa08060e",
+    "project_id": "QA",
+    "verdict": "correct",
+    "business_expectations": [
+      {
+        "expectation_id": "回答提供理赔申请方式",
+        "downstream_consumer": "用户",
+        "user_intent": "了解申请流程入口",
+        "expected_outcome": "回答中提到拨打客服热线或类似表述",
+        "acceptance_criteria": [
+          "回答中包含'拨打客服热线'或提供客服电话号码等明确指引"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "回答说明所需材料",
+        "downstream_consumer": "用户",
+        "user_intent": "确定申请时需提交的材料",
+        "expected_outcome": "回答中明确提及保单号和诊断证明",
+        "acceptance_criteria": [
+          "回答中包含'保单号'和'诊断证明'这两个关键材料"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "回答给出处理时效",
+        "downstream_consumer": "用户",
+        "user_intent": "了解理赔处理周期",
+        "expected_outcome": "回答中包含'3个工作日'或类似时间，并关联到赔付或处理完成",
+        "acceptance_criteria": [
+          "回答中提到'3个工作日内'且与赔付/打款/审核相关"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "回答忠实于golden_answer且无错误信息",
+        "downstream_consumer": "用户",
+        "user_intent": "确保信息的可靠性",
+        "expected_outcome": "actual_answer与golden_answer在核心事实上一致，无错误表述",
+        "acceptance_criteria": [
+          "所有陈述与golden_answer无冲突，未引入虚假的流程或额外要求"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "回答无遗漏关键信息",
+        "downstream_consumer": "用户",
+        "user_intent": "了解全流程，不缺失重要步骤",
+        "expected_outcome": "actual_answer包含了拨打客服、材料说明、时效承诺三大要素",
+        "acceptance_criteria": [
+          "回答同时涵盖了申请方式、所需材料和处理时效三个维度的信息"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "回答提供有用的补充信息",
+        "downstream_consumer": "用户",
+        "user_intent": "期望获得更多有助于操作的细节",
+        "expected_outcome": "回答包含golden_answer以外的、合理且不冲突的细节",
+        "acceptance_criteria": [
+          "补充信息（如电话号码、专人跟进）是真实合理的，不会造成误解"
+        ],
+        "priority": "medium"
+      },
+      {
+        "expectation_id": "回答表述清晰准确",
+        "downstream_consumer": "用户",
+        "user_intent": "获得清晰明确的指引",
+        "expected_outcome": "回答语句通顺，承诺表述没有前后矛盾",
+        "acceptance_criteria": [
+          "整体语句通顺，时效承诺的表述不会导致用户对审核和赔付的界限产生重大误解"
+        ],
+        "priority": "medium"
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "回答提供理赔申请方式",
+        "status": "fulfilled",
+        "boundary_decision": {
+          "within_evaluable_scope": true
+        },
+        "downstream_impact": "用户能直接知道申请理赔的第一步是打电话",
+        "blocking": true
+      },
+      {
+        "expectation_id": "回答说明所需材料",
+        "status": "fulfilled",
+        "boundary_decision": {
+          "within_evaluable_scope": true
+        },
+        "downstream_impact": "用户可以提前准备这些材料，提高效率",
+        "blocking": true
+      },
+      {
+        "expectation_id": "回答给出处理时效",
+        "status": "fulfilled",
+        "boundary_decision": {
+          "within_evaluable_scope": true
+        },
+        "downstream_impact": "用户对理赔处理时间有了明确预期",
+        "blocking": true
+      },
+      {
+        "expectation_id": "回答忠实于golden_answer且无错误信息",
+        "status": "fulfilled",
+        "boundary_decision": {
+          "within_evaluable_scope": true
+        },
+        "downstream_impact": "用户不会被误导",
+        "blocking": true
+      },
+      {
+        "expectation_id": "回答无遗漏关键信息",
+        "status": "fulfilled",
+        "boundary_decision": {
+          "within_evaluable_scope": true
+        },
+        "downstream_impact": "用户获得了完整的理赔申请指引",
+        "blocking": true
+      },
+      {
+        "expectation_id": "回答提供有用的补充信息",
+        "status": "fulfilled",
+        "boundary_decision": {
+          "within_evaluable_scope": true
+        },
+        "downstream_impact": "用户感受到更贴心的服务，且能直接联系",
+        "blocking": false
+      },
+      {
+        "expectation_id": "回答表述清晰准确",
+        "status": "fulfilled",
+        "boundary_decision": {
+          "within_evaluable_scope": true
+        },
+        "downstream_impact": "用户理解无碍",
+        "blocking": false
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "fulfilled",
+      "assessment_count": 7
+    },
+    "expected": {
+      "actual_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+    },
+    "actual": {
+      "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+    },
+    "reasoning_summary": "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+    "judge_basis": "将actual_answer与golden_answer进行信息点对比，核对关键要素的覆盖度和准确性。",
+    "judge_method": "golden_answer_comparison",
+    "verdict_derivation": {
+      "primary_boundary": "qa_gold_answer",
+      "assessment_summary": "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+      "why_verdict": "actual_answer准确回答了用户关于重疾险理赔流程的询问，与golden_answer在核心操作指引上一致，补充的细节提升了答案的有用性，无错误或遗漏，因此整体满足业务期望。",
+      "taxonomy_error_types": [
+        "none"
+      ],
+      "score_dimensions": [
+        {
+          "dimension": "correctness",
+          "score": 1.0,
+          "evidence": [
+            "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "completeness",
+          "score": 1.0,
+          "evidence": [
+            "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "key_point_coverage",
+          "score": 1.0,
+          "evidence": [
+            "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "faithfulness",
+          "score": 1.0,
+          "evidence": [
+            "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "relevance",
+          "score": 1.0,
+          "evidence": [
+            "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "usefulness",
+          "score": 1.0,
+          "evidence": [
+            "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "coherence",
+          "score": 1.0,
+          "evidence": [
+            "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "risk_control",
+          "score": 1.0,
+          "evidence": [
+            "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "clarity",
+          "score": 1.0,
+          "evidence": [
+            "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        }
+      ],
+      "error_type": "none"
+    },
+    "extra": [
+      {
+        "kind": "extra",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "具体客服电话400-xxx-xxxx",
+        "incomplete": false
+      },
+      {
+        "kind": "extra",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "24小时服务属性",
+        "incomplete": false
+      },
+      {
+        "kind": "extra",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "专人跟进服务",
+        "incomplete": false
+      }
+    ],
+    "evidence": [
+      "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+      "scenario=qa_gold_answer",
+      "question_present=True",
+      "actual_answer_present=True",
+      "golden_answer_present=True"
+    ],
+    "boundary_decision": {
+      "within_evaluable_scope": true,
+      "reasoning": "该样本包含问题、actual_answer和golden_answer，场景为qa_gold_answer，具备完整的评估条件，没有不可评估的限制。"
+    },
+    "evaluation_boundary": {
+      "primary_boundary_id": "qa_gold_answer",
+      "primary_boundary_name": "黄金答案对比评估",
+      "judge_question": "actual_answer是否在关键信息上与golden_answer一致，且无错误？",
+      "verdict_basis": "基于golden_answer的信息点覆盖度和准确性",
+      "boundary_sources": "项目设定及样本提供",
+      "conflict_policy": "当actual_answer与golden_answer不一致时，以golden_answer为准，除非提供合理增强且不冲突。"
+    },
+    "consumer_contract": {
+      "consumer": "QA评估系统",
+      "contract": "被评估答案需与golden_answer在关键信息上保持一致，允许合理补充但不得矛盾。"
+    },
+    "intent_model": {
+      "raw_user_request": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+      "explicit_intents": [
+        "了解重疾险理赔申请的具体流程",
+        "希望获得清晰可操作的操作指引"
+      ],
+      "implicit_business_intents": [
+        "确认理赔所需材料",
+        "预估理赔处理时间",
+        "获取联系渠道"
+      ],
+      "success_definition": "回答准确提供了理赔申请的方式（拨打客服热线）、所需材料（保单号、诊断证明）以及理赔处理时效（3个工作日内赔付），并且没有错误信息或误导性表述。",
+      "blocking_requirements": [
+        "提供理赔申请方式",
+        "说明所需材料",
+        "给出处理时效",
+        "无错误信息",
+        "无遗漏关键信息"
+      ],
+      "nice_to_have_requirements": [
+        "提供客服热线具体号码",
+        "说明工作时间或跟进服务",
+        "语言简洁清晰"
+      ],
+      "intent_evidence": [
+        "用户问题中直接询问理赔申请流程，未提供上下文，属于标准客服咨询"
+      ]
+    },
+    "reconstructed_intent": "用户咨询确诊癌症后申请重疾险理赔的具体流程，期望获得操作指引。",
+    "semantic_equivalence_checks": [
+      {
+        "expected_fragment": "审核通过后3个工作日内赔付",
+        "actual_fragment": "一般3个工作日内完成审核并打款",
+        "equivalent": true,
+        "basis": "两者均向用户传达了'3个工作日内可获得赔付'的核心信息，尽管前者明确区分了审核与赔付，后者将审核与打款合并表述，但在普通客户对话语境下，这种微调不会改变用户对时效的总体预期，因此视为语义等价。"
+      }
+    ],
+    "reference_generation_basis": {
+      "source": "预设的黄金参考答案",
+      "alignment_to_actual_shape": "golden_answer为简洁流程描述，与actual_answer的服务化话术在内容上实质对齐"
+    },
+    "scenario": "qa_gold_answer",
+    "needs_human_review": false,
+    "summary": {
+      "reason": "fulfilled · 5 blocking expectations all met · actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+      "reason_source": "aggregated_fulfillment",
+      "fulfillment_status": "fulfilled",
+      "assessment_count": 7,
+      "blocking_count": 5,
+      "is_formal_attribution": true
+    }
+  },
+  "attribute": {
+    "trace_id": "fa53c1ac-c452-4249-aa40-17e7fa08060e",
+    "project_id": "QA",
+    "case_id": "",
+    "expectation_attributions": [
+      {
+        "expectation_id": "回答提供理赔申请方式",
+        "causal_category": "no_issue"
+      },
+      {
+        "expectation_id": "回答说明所需材料",
+        "causal_category": "no_issue"
+      },
+      {
+        "expectation_id": "回答给出处理时效",
+        "causal_category": "no_issue"
+      },
+      {
+        "expectation_id": "回答忠实于golden_answer且无错误信息",
+        "causal_category": "no_issue"
+      },
+      {
+        "expectation_id": "回答无遗漏关键信息",
+        "causal_category": "no_issue"
+      },
+      {
+        "expectation_id": "回答提供有用的补充信息",
+        "causal_category": "no_issue"
+      },
+      {
+        "expectation_id": "回答表述清晰准确",
+        "causal_category": "no_issue"
+      }
+    ],
+    "causal_category": "no_issue",
+    "earliest_divergence": {
+      "node": "fulfillment_assessment",
+      "evidence": [
+        "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+        "scenario=qa_gold_answer",
+        "question_present=True",
+        "actual_answer_present=True",
+        "golden_answer_present=True"
+      ],
+      "confidence": "high"
+    },
+    "chain_nodes": [
+      {
+        "status": "verified",
+        "evidence": [
+          "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=True",
+          "golden_answer_present=True"
+        ]
+      }
+    ],
+    "probe_results": [
+      {
+        "probe_id": "fulfillment_assessment",
+        "status": "not_verified",
+        "evidence": [
+          "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=True",
+          "golden_answer_present=True"
+        ]
+      }
+    ],
+    "evidence_coverage": {
+      "judge_evidence": true,
+      "execution_trace": true
+    },
+    "root_cause_hypothesis": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+    "verification_steps": [
+      "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+    ],
+    "patch_direction": [
+      "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+    ],
+    "needs_human_review": false,
+    "scenario": "qa_gold_answer",
+    "summary": {
+      "causal_category": "no_issue",
+      "attribution_count": 7,
+      "probe_count": 1,
+      "summary_text": "业务预期已达成",
+      "is_complete": true,
+      "is_formal_attribution": true
+    },
+    "analysis_method": "fulfilled_expectation_attribution",
+    "analysis_quality": {
+      "passed": true
+    },
+    "incomplete_reason": ""
+  },
+  "cluster": {
+    "project_id": "QA",
+    "clusters": [
+      {
+        "cluster_id": "expectation::no_issue::fulfilled",
+        "mechanism": "no_issue::fulfilled",
+        "causal_category": "no_issue",
+        "fulfillment_statuses": [
+          "fulfilled"
+        ],
+        "expectation_ids": [
+          "回答提供理赔申请方式",
+          "回答说明所需材料",
+          "回答给出处理时效",
+          "回答忠实于golden_answer且无错误信息",
+          "回答无遗漏关键信息",
+          "回答提供有用的补充信息",
+          "回答表述清晰准确"
+        ],
+        "needs_human_review": false,
+        "canonical_attribution": true,
+        "count": 1,
+        "representative_cases": [
+          "fa53c1ac-c452-4249-aa40-17e7fa08060e"
+        ],
+        "representative_traces": [
+          "fa53c1ac-c452-4249-aa40-17e7fa08060e"
+        ],
+        "common_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+        "shared_failure_pattern": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+        "representative_diffs": [
+          {
+            "case_id": "fa53c1ac-c452-4249-aa40-17e7fa08060e",
+            "node": "fulfillment_assessment",
+            "evidence": [
+              "actual_answer正确回答了用户关于重疾险理赔流程的询问，包含了拨打客服热线、提供保单号和诊断证明、以及3个工作日内完成赔付三大核心要素。同时，答案补充了客服电话具体号码、24小时服务及专人跟进等细节，提升了回答的有用性。与golden_answer相比，时效表述的细微措辞差异在客服语境下不改变实质承诺，未发现错误信息。因此，该回答完全满足了用户意图和参考标准。",
+              "scenario=qa_gold_answer",
+              "question_present=True",
+              "actual_answer_present=True",
+              "golden_answer_present=True"
+            ]
+          }
+        ],
+        "minimal_fix_direction": [
+          "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+        ],
+        "verification_cases": [
+          "fa53c1ac-c452-4249-aa40-17e7fa08060e"
+        ],
+        "next_actions": [
+          "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+        ]
+      }
+    ],
+    "common_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+    "impact": "",
+    "priority": "normal"
+  },
+  "check": {
+    "passed": true,
+    "verification_results": [
+      "Check categories passed current audit.",
+      "Protocol chain passed current v1 checks."
+    ]
+  }
+}

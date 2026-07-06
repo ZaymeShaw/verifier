@@ -1,0 +1,50 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::insufficient_evidence::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "insufficient_evidence",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "answer_quality_for_qa_gold_answer",
+        "QA:answer_quality"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "53e51d36-009d-432f-b8a7-1b792f7659b0"
+      ],
+      "representative_traces": [
+        "53e51d36-009d-432f-b8a7-1b792f7659b0"
+      ],
+      "common_root_cause": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+      "shared_failure_pattern": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+      "representative_diffs": [
+        {
+          "case_id": "53e51d36-009d-432f-b8a7-1b792f7659b0",
+          "node": "semantic judge or attribute LLM",
+          "evidence": [
+            "[attribute] LLM 产出不符合结构化输出约束，已阻断（不放行假货）：\n  - 必填字段缺失：expectation_attributions\n  - 必填字段缺失：causal_category\n  - 必填字段缺失：probe_results\n  - 必填字段缺失：analysis_method\n  - 必填字段缺失：chain_nodes\n  - 必填字段缺失：earliest_divergence\n  - 必填字段缺失：evidence_coverage\n  - 必填字段缺失：analysis_quality\n  - 必填字段缺失：incomplete_reason\n  - 必填字段缺失：suspected_locations\n  - 必填字段缺失：root_cause_hypothesis\n  - 必填字段缺失：verification_steps\n  - 必填字段缺失：patch_direction\n  - 必填字段缺失：scenario\n  - 必填字段缺失：quality_flags\n产出预览：{\"raw_text\": \"Insufficient Balance\"}"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "修复 LLM 调用配置或费用问题；不要把该兜底结果当作最终业务根因。"
+      ],
+      "verification_cases": [
+        "53e51d36-009d-432f-b8a7-1b792f7659b0"
+      ],
+      "next_actions": [
+        "检查 LLM API key、余额、网络和模型配置。",
+        "恢复 LLM 后重新运行 judge 和 attribute agent。"
+      ]
+    }
+  ],
+  "common_root_cause": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+  "impact": "",
+  "priority": "high"
+}

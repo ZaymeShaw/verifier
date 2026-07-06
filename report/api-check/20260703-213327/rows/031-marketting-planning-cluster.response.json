@@ -1,0 +1,49 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::insufficient_evidence::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "insufficient_evidence",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "marketting-planning:planning_output_contract"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "b23bd711-5688-4aa6-ac75-b90b23af5901"
+      ],
+      "representative_traces": [
+        "b23bd711-5688-4aa6-ac75-b90b23af5901"
+      ],
+      "common_root_cause": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+      "shared_failure_pattern": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+      "representative_diffs": [
+        {
+          "case_id": "b23bd711-5688-4aa6-ac75-b90b23af5901",
+          "node": "semantic judge or attribute LLM",
+          "evidence": [
+            "Agent.__init__() got an unexpected keyword argument 'memory'"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "修复 LLM 调用配置或费用问题；不要把该兜底结果当作最终业务根因。"
+      ],
+      "verification_cases": [
+        "b23bd711-5688-4aa6-ac75-b90b23af5901"
+      ],
+      "next_actions": [
+        "检查 LLM API key、余额、网络和模型配置。",
+        "恢复 LLM 后重新运行 judge 和 attribute agent。"
+      ]
+    }
+  ],
+  "common_root_cause": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+  "impact": "",
+  "priority": "high"
+}

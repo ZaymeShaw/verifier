@@ -1,0 +1,86 @@
+{
+  "project_id": "marketting-planning-intent",
+  "clusters": [
+    {
+      "cluster_id": "expectation::implementation_bug::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "implementation_bug",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图标签识别为客户分析",
+        "关键实体槽位提取",
+        "识别置信度达标",
+        "intent_contract"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "2e110c89-9453-4662-8620-c497b5eeeacd"
+      ],
+      "representative_traces": [
+        "2e110c89-9453-4662-8620-c497b5eeeacd"
+      ],
+      "common_root_cause": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+      "shared_failure_pattern": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+      "representative_diffs": [
+        {
+          "case_id": "2e110c89-9453-4662-8620-c497b5eeeacd",
+          "node": "intent_contract_gate",
+          "actual": {
+            "ambiguous": false,
+            "confidence": 0.5,
+            "fallback": false,
+            "intent": "other",
+            "raw_intent": "4001"
+          },
+          "evidence": [
+            [
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": {
+                  "element": "正确的意图标签（应为客户分析）"
+                }
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": {
+                  "element": "时间槽位（上季度）"
+                }
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": {
+                  "element": "产品槽位（重疾险）"
+                }
+              }
+            ]
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "verification_cases": [
+        "2e110c89-9453-4662-8620-c497b5eeeacd"
+      ],
+      "next_actions": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ]
+    }
+  ],
+  "common_root_cause": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+  "impact": "",
+  "priority": "high"
+}

@@ -1,0 +1,242 @@
+{
+  "trace_id": "4fc214f1-53dc-44f5-942f-354f61f23927",
+  "project_id": "marketting-planning",
+  "verdict": "uncertain",
+  "business_expectations": [
+    {
+      "expectation_id": "意图识别与规划阶段路由",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "NBEV业务指标识别与响应",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "人员维度分解包含增加理财师",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "产品维度分解包含优化产品方案",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "目标缺口数值缺失时进行澄清",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "SSE事件流完整结束",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "未使用fallback",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图识别与规划阶段路由",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "NBEV业务指标识别与响应",
+      "status": "not_evaluable",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "人员维度分解包含增加理财师",
+      "status": "not_evaluable",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "产品维度分解包含优化产品方案",
+      "status": "not_evaluable",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "目标缺口数值缺失时进行澄清",
+      "status": "not_evaluable",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "SSE事件流完整结束",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "未使用fallback",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_evaluable",
+    "summaries": [
+      "核心流程（意图识别、路由、完成、无fallback）均正常运行，满足 blocking 期望。",
+      "但由于 trace 未捕获卡片详细内容，无法评估规划是否覆盖了 NBEV 指标、两个分解维度以及是否进行了数值澄清，因此整体内容满足度无法判定。"
+    ],
+    "assessment_count": 7
+  },
+  "expected": {
+    "code": 0,
+    "msg": "成功",
+    "robot_text": "已为您生成针对今年NBEV缺口补齐的营销规划，请查看卡片。您可以参考其中关于增加理财师和优化产品方案的建议，如需调整请随时提出。",
+    "end_flag": 1,
+    "extra_output_params": {
+      "cards": [
+        {
+          "title": "NBEV补缺规划",
+          "summary": "基于当前缺口，分人员与产品两维度提供可执行方案"
+        }
+      ]
+    }
+  },
+  "actual": {
+    "stage": "non_agent",
+    "events": {
+      "raw_names": [
+        "reasoning_start",
+        "reasoning_message_content",
+        "reasoning_end",
+        "card_start",
+        "card_message_content",
+        "card_end"
+      ],
+      "canonical_names": [
+        "intent_detected",
+        "reasoning_message_content",
+        "planning_started",
+        "card_delta",
+        "done"
+      ],
+      "final_event": "done"
+    },
+    "card_count": 1,
+    "fallback_used": false
+  },
+  "reasoning_summary": "系统成功识别规划意图并启动规划，事件流完整结束，未发生fallback，基础流程满足期望。但由于未捕获到卡片的文本内容，无法验证规划是否围绕NBEV、是否包含增加理财师和优化产品方案等具体维度，也无法确认是否对缺失的目标数值进行了适当澄清。因此，虽然体系行为基本合规，但内容交付的核心质量无法评定，整体判为不可评估。",
+  "judge_basis": "基于运行轨迹中的事件流、系统边界权限与实际行为进行对比评估，重点考察阶段路由、内容相关性与流程完整性。",
+  "judge_method": "将用户业务意图分解为7项原子可判定期望，逐一比对事件痕迹与可用证据，对无法评估项标记not_evaluable，最终综合判断整体状态。",
+  "verdict_derivation": {
+    "blocking_expectations": [
+      "意图识别与规划阶段路由",
+      "NBEV业务指标识别与响应",
+      "SSE事件流完整结束",
+      "未使用fallback"
+    ],
+    "blocking_fulfilled": 3,
+    "blocking_not_evaluable": 1,
+    "overall_derivation": "由于1项核心期望（NBEV内容）不可评估，系统行为无法被证实完全满足业务目标，整体判为not_evaluable。"
+  },
+  "evidence": [
+    {
+      "event": "intent_detected",
+      "implication": "意图识别成功"
+    },
+    {
+      "event": "planning_started",
+      "implication": "进入规划阶段"
+    },
+    {
+      "event": "card_delta / card_message_content",
+      "implication": "至少有一个规划卡片被推送"
+    },
+    {
+      "event": "done",
+      "implication": "流程正常结束"
+    },
+    {
+      "field": "fallback.used",
+      "value": false,
+      "implication": "未触发兜底"
+    },
+    {
+      "field": "extracted_output.stage",
+      "value": "non_agent",
+      "implication": "提取元数据与行为矛盾，但不影响实际业务评估"
+    }
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "evaluable_errors": [
+      "卡片实际内容缺失，无法评估指标覆盖与维度分解"
+    ],
+    "reasoning": "卡片内容缺失属于评估侧信息捕获不足，非不可控外部依赖导致，仍在本系统可修复范围内，因此标记为evaluable_error。"
+  },
+  "evaluation_boundary": {
+    "scope": "system_responsibility_with_declared_external_boundary",
+    "allow_fallback": false,
+    "dependency_status": "available",
+    "notes": "评估仅涵盖当前trace提供的信息，外部服务依赖正常但卡片文本未记录于trace，造成部分期望不可评估。"
+  },
+  "consumer_contract": {
+    "stage_flow": "intent_recognition → (clarification?) → planning → card_delta → done",
+    "required_events": [
+      "intent_detected",
+      "planning_started",
+      "card_delta",
+      "done"
+    ],
+    "output_schema": "SSE流，包括推理文本和规划卡片"
+  },
+  "intent_model": {
+    "user_intent": "用户希望获得一个营销规划，以补足今年团队的NBEV目标缺口，具体通过增加理财师或优化产品方案来实现。",
+    "business_metric": "NBEV",
+    "target_context": "缺口存在但数值未明确",
+    "decomposition_dimensions": [
+      "增加理财师（人员维度）",
+      "优化产品方案（产品维度）"
+    ],
+    "expected_stage": "planning",
+    "expected_output_type": "规划卡片含可执行建议"
+  },
+  "reconstructed_intent": "用户询问如何通过增加理财师或优化产品方案来补足今年团队的NBEV目标缺口，期望得到具体的营销规划建议。",
+  "reference_generation_basis": {
+    "source": "judge构造",
+    "method": "依据用户意图和系统契约，推断在完全正常执行下应产生的输出结构，作为期望对照。",
+    "note": "卡片具体内容为虚构，仅反映预期主题。"
+  },
+  "scenario": "规划完整性评估（内容缺失）",
+  "needs_human_review": true,
+  "quality_flags": [
+    "missing_card_content",
+    "potential_content_gap",
+    "stage_label_inconsistency"
+  ],
+  "summary": {
+    "reason": "uncertain · 将用户业务意图分解为7项原子可判定期望，逐一比对事件痕迹与可用证据，对无法评估项标记not_evaluable，最终综合判断整体状态。",
+    "reason_source": "reasoning_summary",
+    "fulfillment_status": "not_evaluable",
+    "assessment_count": 7,
+    "blocking_count": 0,
+    "is_formal_attribution": false
+  }
+}

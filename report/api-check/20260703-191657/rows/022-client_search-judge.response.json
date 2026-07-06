@@ -1,0 +1,231 @@
+{
+  "trace_id": "26ad6dd0-5ec7-41ff-809a-20d858d9816a",
+  "project_id": "client_search",
+  "verdict": "correct",
+  "business_expectations": [
+    {
+      "expectation_id": "性别筛选-男性客户",
+      "downstream_consumer": "ES 搜索引擎",
+      "user_intent": "筛选性别为男的客户本人",
+      "expected_outcome": "structured_output 中包含 {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}",
+      "required_capabilities": [
+        "clientSex 字段的 MATCH 操作符"
+      ],
+      "acceptance_criteria": [
+        "field 为 clientSex",
+        "operator 在 {MATCH, EXISTS} 中且语义正确",
+        "value 为 '男'（标准枚举值，非口语'男性'）"
+      ],
+      "boundary": {
+        "field_in_manifest": true,
+        "operator_allowed": true
+      },
+      "priority": "critical"
+    },
+    {
+      "expectation_id": "年缴保费筛选-超过两万-GT操作符",
+      "downstream_consumer": "ES 搜索引擎",
+      "user_intent": "年缴保费大于20000元（不含等于）",
+      "expected_outcome": "structured_output 中包含 {\"field\": \"annPremSegNum\", \"operator\": \"GT\", \"value\": 20000}",
+      "required_capabilities": [
+        "annPremSegNum 字段的 GT 操作符"
+      ],
+      "acceptance_criteria": [
+        "field 为 annPremSegNum（不是 polNoInfo.totmodalpremsum 或其他保费字段）",
+        "operator 为 GT（严格大于，不是 GTE）",
+        "value 为 20000（两万=20000，单位换算正确）"
+      ],
+      "boundary": {
+        "field_in_manifest": true,
+        "operator_allowed": true
+      },
+      "priority": "critical"
+    },
+    {
+      "expectation_id": "条件逻辑-AND组合",
+      "downstream_consumer": "ES 搜索引擎",
+      "user_intent": "男性 AND 年缴保费>20000",
+      "expected_outcome": "logic 为 'AND'，conditions 数组包含两个条件",
+      "required_capabilities": [
+        "AND 逻辑组合"
+      ],
+      "acceptance_criteria": [
+        "logic 或 query_logic 为 AND",
+        "两个条件都在同一 conditions 数组中"
+      ],
+      "priority": "critical"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "性别筛选-男性客户",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "structured_output 中应出现 {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}"
+      ],
+      "actual_evidence": [
+        "实际输出: {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}"
+      ],
+      "boundary_decision": {
+        "field_in_capability_manifest": true,
+        "operator_in_allowed_list": true,
+        "value_mapping_applied": "男（标准枚举值，与用户口语'男性/男'一致）"
+      },
+      "downstream_impact": "能为下游ES提供正确的性别筛选条件",
+      "blocking": true
+    },
+    {
+      "expectation_id": "年缴保费筛选-超过两万-GT操作符",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "structured_output 中应出现 {\"field\": \"annPremSegNum\", \"operator\": \"GT\", \"value\": 20000}"
+      ],
+      "actual_evidence": [
+        "实际输出: {\"field\": \"annPremSegNum\", \"operator\": \"GT\", \"value\": 20000}"
+      ],
+      "boundary_decision": {
+        "field_in_capability_manifest": true,
+        "operator_in_allowed_list": true,
+        "unit_conversion": "两万=20000，换算正确",
+        "semantic_check": "'超过'→GT（严格大于），语义正确"
+      },
+      "downstream_impact": "能为下游ES提供正确的年缴保费筛选条件",
+      "blocking": true
+    },
+    {
+      "expectation_id": "条件逻辑-AND组合",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "logic 应为 AND，两个条件在同一数组中"
+      ],
+      "actual_evidence": [
+        "实际输出: logic='AND'，conditions 数组包含两个条件（annPremSegNum 和 clientSex）"
+      ],
+      "downstream_impact": "确保ES查询同时满足两个条件",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "fulfilled",
+    "assessment_count": 3
+  },
+  "expected": {
+    "query_logic": "AND",
+    "expected_source": "not_available",
+    "reference_is_oracle": false
+  },
+  "actual": {
+    "query_logic": "AND"
+  },
+  "reasoning_summary": "用户查询'每年交保费超过两万块的男客户'包含两个核心筛选意图：年缴保费>20000元（严格大于，'超过'对应GT不含等于）和客户性别为男。parser 输出完全正确：annPremSegNum 字段使用 GT 操作符、值20000（两万换算正确），clientSex 字段使用 MATCH 操作符、值'男'（枚举标准化正确），逻辑为 AND。两个条件均在 capability_manifest 定义的能力边界内——annPremSegNum 的 GT 在允许操作符列表中，clientSex 的 MATCH 也在允许列表中。字段选择语义正确：年缴保费对应 annPremSegNum 而非期交保费的 polNoInfo.totmodalpremsum，客户本人性别对应 clientSex 而非家庭成员性别的 familyInfo.familyclientsex。无缺失、错误或多余条件。所有3个 blocking 期望全部满足。",
+  "judge_basis": "基于 capability_manifest 字段能力清单、enhanced_rules 正则规则、value_mappings 口语映射和 semantic_equivalence_rules 进行语义等价判断。application_boundary 限定评估范围为 parser_condition_semantics_only。",
+  "judge_method": "逐字段核对 capability_manifest：clientSex 的 MATCH 操作符在允许列表中，值'男'为合法枚举值；annPremSegNum 的 GT 操作符在允许列表中，值20000为合法数值。单位换算：'两万'=20000，正确。语义检查：'超过'→GT（不含等于）正确；'男客户'→客户本人性别正确（非家庭成员）。AND 逻辑正确。",
+  "verdict_derivation": {
+    "primary_boundary": "parser_condition_semantics_only",
+    "assessment_summary": "3 个 blocking 期望全部 fulfilled：性别筛选（clientSex=男）、年缴保费筛选（annPremSegNum GT 20000）、AND 逻辑组合。所有条件字段在 capability_manifest 中均存在且操作符在允许列表中，值类型和单位换算均正确。",
+    "why_verdict": "parser 正确将用户自然语言'每年交保费超过两万块的男客户'解析为两个原子条件：annPremSegNum GT 20000 和 clientSex MATCH '男'，并以 AND 逻辑组合。字段选择正确（annPremSegNum 而非 polNoInfo.totmodalpremsum，clientSex 而非 familyInfo.familyclientsex），操作符语义正确（GT 严格大于而非 GTE），单位换算正确（两万=20000），枚举值标准化正确（男而非口语'男性'）。所有 blocking 期望均完全满足，无任何缺失、错误或多余条件。",
+    "missing_evidence": [
+      "current intent/config expected conditions"
+    ]
+  },
+  "evidence": [
+    "用户 query: '帮我找一下那些每年交保费超过两万块的男客户吧'",
+    "actual output: [{\"field\": \"annPremSegNum\", \"operator\": \"GT\", \"value\": 20000}, {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}]",
+    "logic: AND",
+    "capability_manifest: annPremSegNum 支持 GT 操作符，clientSex 支持 MATCH 操作符",
+    "enhanced_rules: '年缴保费-以上'规则 pattern 覆盖'年交保费超过X万'→GT ×10000",
+    "enhanced_rules: '性别-简单'规则 pattern 覆盖'男'→MATCH '男'",
+    "value_mappings: '男性'→'男'的口语映射"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "reasoning": "parser 输出的所有条件均在 capability_manifest 定义的字段和操作符范围内，字段语义、操作符语义、值和逻辑均正确。下游 ES 不可用不影响对 parser 条件语义的评估。不存在任何 evaluable_errors。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "parser_condition_semantics_only",
+    "primary_boundary_name": "仅评估 parser 条件语义",
+    "judge_question": "parser 输出的结构化条件是否在语义上正确表达了用户的搜索意图？",
+    "verdict_basis": "基于 capability_manifest 字段能力边界、enhanced_rules 正则规则、value_mappings 口语映射和 ES 查询语义进行等价判断",
+    "boundary_sources": "application_boundary（judge_scope=parser_condition_semantics_only，result_set_verified=false）；capability_manifest 中的字段定义和操作符白名单",
+    "conflict_policy": "当 prompt.md/config.md 与 capability_manifest 或 ES 查询语义冲突时，以后者为准"
+  },
+  "consumer_contract": {
+    "consumer": "下游ES客户搜索引擎",
+    "contract": "结构化条件 JSON：field/operator/value 三元组，支持 AND/OR 逻辑组合",
+    "application_boundary": {
+      "judge_scope": "parser_condition_semantics_only",
+      "result_set_verified": false
+    }
+  },
+  "intent_model": {
+    "raw_user_request": "帮我找一下那些每年交保费超过两万块的男客户吧",
+    "explicit_intents": [
+      {
+        "intent_id": "性别筛选-男性客户",
+        "description": "筛选客户本人性别为男性的客户",
+        "field": "clientSex",
+        "operator": "MATCH",
+        "value": "男",
+        "evidence": "用户原文中'男客户'明确表达客户性别为男性"
+      },
+      {
+        "intent_id": "年缴保费筛选-超过两万",
+        "description": "筛选年缴保费严格超过20000元的客户",
+        "field": "annPremSegNum",
+        "operator": "GT",
+        "value": 20000,
+        "evidence": "用户原文中'每年交保费超过两万块'，'超过'对应GT（严格大于），'两万块'=20000元"
+      }
+    ],
+    "implicit_business_intents": [
+      {
+        "intent_id": "条件AND组合",
+        "description": "两个筛选条件需同时满足（AND逻辑）",
+        "evidence": "用户语义中'那些...的...客户'将两个条件自然串联，无'或/或者'等OR逻辑词"
+      }
+    ],
+    "constraints": {
+      "logic": "AND",
+      "scope": "客户本人属性，非家庭成员/被保人/投保人"
+    },
+    "success_definition": "parser 正确提取两个原子条件：clientSex=男（MATCH）和 annPremSegNum>20000（GT），并以AND逻辑组合",
+    "blocking_requirements": [
+      "性别筛选-男性客户",
+      "年缴保费筛选-超过两万",
+      "条件AND组合"
+    ],
+    "intent_evidence": [
+      "用户原文：'每年交保费超过两万块的男客户'",
+      "'男'修饰'客户'，为客户本人性别",
+      "'每年交保费'对应年缴保费字段annPremSegNum",
+      "'超过'语义为严格大于（GT，不含等于）",
+      "'两万块'=2×10000=20000元"
+    ]
+  },
+  "reconstructed_intent": "用户意图是筛选年缴保费严格超过20000元、且客户本人性别为男性的客户。两个条件需同时满足（AND逻辑）。'每年交保费'对应 annPremSegNum 字段，'超过'对应 GT（严格大于）操作符，'两万块'=20000元。'男客户'对应 clientSex=男（MATCH）。",
+  "semantic_equivalence_checks": [
+    {
+      "basis": "当前 case 未提供 semantic_equivalence_rules，无需进行等价规则检查"
+    }
+  ],
+  "reference_generation_basis": {
+    "source": "从用户原始 query、capability_manifest、enhanced_rules 和 value_mappings 实时推导",
+    "alignment_to_actual_shape": "expected 与 actual 完全一致：字段、操作符、值、逻辑均匹配",
+    "evidence": [
+      "query 中'男客户'→clientSex MATCH '男'，与 enhanced_rules 中'性别-简单'规则匹配",
+      "query 中'每年交保费超过两万块'→annPremSegNum GT 20000，与 enhanced_rules 中'年缴保费-以上'规则匹配（两万=2×10000）",
+      "value_mappings 中'男性'→'男'的口语映射已正确应用"
+    ],
+    "comparison_basis": "client_search wrong/missing/extra customer-search coverage",
+    "expected_source": "not_available"
+  },
+  "scenario": "单条件组合查询：性别+年缴保费，parser 条件语义完全正确",
+  "summary": {
+    "reason": "fulfilled · 3 blocking expectations all met · 用户查询'每年交保费超过两万块的男客户'包含两个核心筛选意图：年缴保费>20000元（严格大于，'超过'对应GT不含等于）和客户性别为男。parser 输出完全正确：annPremSegNum 字段使用 GT 操作符、值20000（两万换算正确），clientSex 字段使用 MATCH 操作符、值'男'（枚举标准化正确），逻辑为 AND。两个条件均在 capability_manifest 定义的能力边界内——annPremSegNum 的 GT 在允许操作符列表中，clientSex 的 MATCH 也在允许列表中。字段选择语义正确：年缴保费对应 annPremSegNum 而非期交保费的 polNoInfo.totmodalpremsum，客户本人性别对应 clientSex 而非家庭成员性别的 familyInfo.familyclientsex。无缺失、错误或多余条件。所有3个 blocking 期望全部满足。",
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "fulfilled",
+    "assessment_count": 3,
+    "blocking_count": 3,
+    "is_formal_attribution": true
+  }
+}

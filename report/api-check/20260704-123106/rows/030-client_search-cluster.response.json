@@ -1,0 +1,77 @@
+{
+  "project_id": "client_search",
+  "clusters": [
+    {
+      "cluster_id": "expectation::model_capability_gap::not_evaluable",
+      "mechanism": "model_capability_gap::not_evaluable",
+      "causal_category": "model_capability_gap",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "VIP等级应进行档位范围筛选而非仅判断存在性"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "6eb8e5b1-45dd-49ef-9449-2853cc1e720c"
+      ],
+      "representative_traces": [
+        "6eb8e5b1-45dd-49ef-9449-2853cc1e720c"
+      ],
+      "common_root_cause": "系统在 enhanced_rules 匹配阶段未能识别'比较高'这一模糊等级修饰语。现有 enhanced_rules 中 VIP 等级相关规则（如'寿险VIP-以上-黄金'、'寿险VIP-铂金客户'）均依赖用户明确说出等级锚定词（如'黄金'、'铂金'、'白银'）或'{等级}以上'模式。当用户使用'比较高'这类无锚定等级的模糊修饰语时，规则引擎匹配失败，查询原样进入 LLM 解析。LLM 在 prompt 中看到 vipType 的 EXISTS 示例（'寿险VIP客户'→EXISTS）和 CONTAINS 示例（'铂金客户'→CONTAINS），由于'比较高'既不像 EXISTS 示例那样是简单的存在性判断，也不像 CONTAINS 示例那样有具体等级名，LLM 倾向于选择最保守的 EXISTS 操作符——将'VIP等级比较高'退化为'有 VIP 等级'。根因是 enhanced_rules 缺少模糊等级修饰语规则（已有'客户价值-高价值'→CONTAINS [A1,A2,A3,A4,B,C] 的同类范式可参考），且 field_definitions 中 vipType 字段缺少模糊映射指引。",
+      "shared_failure_pattern": "系统在 enhanced_rules 匹配阶段未能识别'比较高'这一模糊等级修饰语。现有 enhanced_rules 中 VIP 等级相关规则（如'寿险VIP-以上-黄金'、'寿险VIP-铂金客户'）均依赖用户明确说出等级锚定词（如'黄金'、'铂金'、'白银'）或'{等级}以上'模式。当用户使用'比较高'这类无锚定等级的模糊修饰语时，规则引擎匹配失败，查询原样进入 LLM 解析。LLM 在 prompt 中看到 vipType 的 EXISTS 示例（'寿险VIP客户'→EXISTS）和 CONTAINS 示例（'铂金客户'→CONTAINS），由于'比较高'既不像 EXISTS 示例那样是简单的存在性判断，也不像 CONTAINS 示例那样有具体等级名，LLM 倾向于选择最保守的 EXISTS 操作符——将'VIP等级比较高'退化为'有 VIP 等级'。根因是 enhanced_rules 缺少模糊等级修饰语规则（已有'客户价值-高价值'→CONTAINS [A1,A2,A3,A4,B,C] 的同类范式可参考），且 field_definitions 中 vipType 字段缺少模糊映射指引。",
+      "representative_diffs": [
+        {
+          "case_id": "6eb8e5b1-45dd-49ef-9449-2853cc1e720c",
+          "node": "client_search.routing (enhanced_rules 匹配阶段)",
+          "expected": "enhanced_rules 中存在一条规则匹配'比较高'模糊等级修饰语，将其转换为 vipType CONTAINS [铂金V1, 铂金V2, 原铂金VIP, 钻石VIP, 金钻VIP, 黑钻VIP]",
+          "actual": "enhanced_rules 中无匹配'比较高'的规则，查询原样传入 LLM，最终 LLM 输出 vipType EXISTS",
+          "evidence": [
+            "rule_verify('比较高') → no rule matched",
+            "search_api 复现 → vipType EXISTS"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        {
+          "change": "新增规则条目，在 VIP 规则区块（寿险VIP-铂金客户 附近）添加：\n- name: 寿险VIP-模糊高等级\n  patterns:\n    - '{SEARCH}VIP等级比较高的客户'\n    - '{SEARCH}VIP比较高的客户'\n    - '{SEARCH}VIP等级高的客户'\n    - '{SEARCH}VIP等级偏高的客户'\n    - '{SEARCH}高VIP等级的客户'\n  field: vipType\n  operator: CONTAINS\n  value_type: static\n  value: ['铂金V1', '铂金V2', '原铂金VIP', '钻石VIP', '金钻VIP', '黑钻VIP']\n  priority: 10",
+          "rationale": "参考已有'客户价值-高价值'规则的范式（将'高价值'映射为 CONTAINS [A1,A2,A3,A4,B,C]），为 VIP 等级实现同等模糊高度映射。优先级设为 10 与'寿险VIP-铂金客户'等规则持平，确保模糊规则在通用规则前触发。",
+          "target": "enhanced_rules_args.yaml"
+        },
+        {
+          "change": "在 vipType 的说明字段末尾增加：当问句中出现'比较高'/'VIP等级高'/'高端VIP'等模糊等级修饰语且未指定具体等级名时，应输出 vipType CONTAINS [铂金V1, 铂金V2, 原铂金VIP, 钻石VIP, 金钻VIP, 黑钻VIP]，不应退化为 EXISTS。",
+          "rationale": "作为 LLM 的兜底指引，当 enhanced_rules 因变体表达未命中时，LLM 仍能通过 prompt 中的明确指引做出正确判断。",
+          "target": "field_definitions_args.yaml (vipType 字段的'说明')"
+        }
+      ],
+      "verification_cases": [
+        "6eb8e5b1-45dd-49ef-9449-2853cc1e720c"
+      ],
+      "next_actions": [
+        {
+          "action": "在 enhanced_rules_args.yaml 中添加规则'寿险VIP-模糊高等级'",
+          "rule_template": "参考已有规则'客户价值-高价值'的范式，patterns 覆盖 {SEARCH}VIP等级比较高的客户、{SEARCH}VIP等级高的客户、{SEARCH}VIP比较高的客户 等模式，field: vipType, operator: CONTAINS, value: [铂金V1, 铂金V2, 原铂金VIP, 钻石VIP, 金钻VIP, 黑钻VIP], priority: 10",
+          "step": 1,
+          "verify": "重启服务后，调用 search_api 验证 query='帮我找出所有VIP等级比较高的客户信息' 返回 vipType CONTAINS 高等级枚举值"
+        },
+        {
+          "action": "在 field_definitions_args.yaml 的 vipType 字段说明中增加模糊等级映射指引",
+          "detail": "在 vipType 的'说明'字段末尾追加：当用户使用'比较高'/'VIP等级高'/'高端VIP'等模糊等级修饰语而未指定具体等级名称时，应映射为铂金V1及以上等级（铂金V1、铂金V2、原铂金VIP、钻石VIP、金钻VIP、黑钻VIP），使用 CONTAINS 操作符。",
+          "step": 2,
+          "verify": "检查 LLM 在收到无规则匹配的类似查询时，是否能通过 prompt 指引正确输出 CONTAINS 而非 EXISTS"
+        },
+        {
+          "action": "边界测试",
+          "detail": "测试相关模糊查询如'VIP等级比较低的客户'（应映射为白银或黄金以下）、'VIP等级一般般的客户'等，确保只处理'比较高'的精确语义，不误杀其他模糊表达",
+          "step": 3,
+          "verify": "调用 search_api 验证各边界 case 的输出正确性"
+        }
+      ]
+    }
+  ],
+  "common_root_cause": "系统在 enhanced_rules 匹配阶段未能识别'比较高'这一模糊等级修饰语。现有 enhanced_rules 中 VIP 等级相关规则（如'寿险VIP-以上-黄金'、'寿险VIP-铂金客户'）均依赖用户明确说出等级锚定词（如'黄金'、'铂金'、'白银'）或'{等级}以上'模式。当用户使用'比较高'这类无锚定等级的模糊修饰语时，规则引擎匹配失败，查询原样进入 LLM 解析。LLM 在 prompt 中看到 vipType 的 EXISTS 示例（'寿险VIP客户'→EXISTS）和 CONTAINS 示例（'铂金客户'→CONTAINS），由于'比较高'既不像 EXISTS 示例那样是简单的存在性判断，也不像 CONTAINS 示例那样有具体等级名，LLM 倾向于选择最保守的 EXISTS 操作符——将'VIP等级比较高'退化为'有 VIP 等级'。根因是 enhanced_rules 缺少模糊等级修饰语规则（已有'客户价值-高价值'→CONTAINS [A1,A2,A3,A4,B,C] 的同类范式可参考），且 field_definitions 中 vipType 字段缺少模糊映射指引。",
+  "impact": "",
+  "priority": "normal"
+}

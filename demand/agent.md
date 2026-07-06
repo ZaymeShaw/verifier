@@ -36,6 +36,16 @@
 2. 为各个场景从不同角度出发，构造有差异性的多个100条数据集，数据集之间彼此不相同，同数据集间也不相同，放在data/<project>目录下
 
 
+> mock数据清洗。构建干净mock数据
+- 按照projects/project.yaml中的common.ready进行重构
+- mock agent需要生产ready的部分给live，不在ready中的不需要mock agent产出
+- 现在很多mock数据是有问题的，要重构哈
+
+
+> mock agent：由agent脚本执行
+    + 预构建批量数据时，批量构建意图/输入query信息时触发（此时不涉及实时多轮交互）
+    + trace运行时，需要模拟用户时触发（通常涉及实时多轮交互）
+
 
 # 算法agent设计
 

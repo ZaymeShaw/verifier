@@ -1,0 +1,983 @@
+{
+  "project_info": {
+    "project_id": "marketting-planning-intent",
+    "name": "营销规划意图识别评估项目",
+    "description": "单独评估营销规划业务服务的 intent-recognition 单轮接口，与 marketting-planning 共享业务服务但测评边界只覆盖意图识别。"
+  },
+  "run_trace_summary": {
+    "trace_id": "2a9b8dbe-016b-4e6f-a50a-9fc6fd2318d8",
+    "project_id": "marketting-planning-intent",
+    "case_id": "mock-agent-marketting-planning-intent-7b353b0e",
+    "live_result": {
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-7b353b0e",
+      "session_id": "eval-mock-agent-marketting-planning-intent-7b353b0e",
+      "raw_input": {
+        "query": "帮我看看最近半年来我们主要客户是哪些人群？"
+      },
+      "normalized_request": {
+        "case_id": "mock-agent-marketting-planning-intent-7b353b0e",
+        "query": "帮我看看最近半年来我们主要客户是哪些人群？",
+        "scenario": "intent_recognition",
+        "session_id": "eval-mock-agent-marketting-planning-intent-7b353b0e"
+      },
+      "call_status": "succeeded",
+      "runtime_ms": 1336,
+      "extracted_output": {
+        "ambiguous": false,
+        "confidence": 0.5,
+        "fallback": false,
+        "intent": "other",
+        "raw_intent": "4001"
+      },
+      "output_source": "live_service",
+      "application_boundary": {
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ],
+        "scope": "single_turn_intent_recognition"
+      },
+      "interaction_mode": "single_turn"
+    },
+    "execution_mode": "",
+    "output_source": "live_service",
+    "scenario": "intent_recognition",
+    "application_boundary": {
+      "excludes": [
+        "multi_turn_planning",
+        "sse_card_generation"
+      ],
+      "scope": "single_turn_intent_recognition"
+    },
+    "evidence_refs": [
+      {
+        "ref_id": "",
+        "source": "",
+        "kind": "",
+        "stage": "",
+        "summary": "",
+        "location": ""
+      }
+    ],
+    "status": "ok",
+    "created_at": "2026-07-02T03:06:44.965251+00:00",
+    "state_history": [
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T03:06:43.471171+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T03:06:43.471214+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T03:06:44.965520+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T03:06:44.965802+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T03:09:10.883027+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T03:09:10.883484+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T03:09:10.883632+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T03:11:50.483654+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T03:13:53.330654+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T03:13:53.330812+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T03:13:53.403395+00:00",
+        "status": "succeeded"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "reason": "trace exists",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "reason": "consumer contract available",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "reason": "business expectations available",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "reason": "fulfillment assessments cover expectations",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "reason": "fulfillment boundary available",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "reason": "derived verdict matches fulfillment state",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "reason": "no contradictions",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "reason": "no unsupported claims",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "reason": "fulfillment assessments cover expectations",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "reason": "attribute targets fulfillment gaps",
+        "recommended_transition": "finalize",
+        "recoverable": false
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "reason": "probe evidence or blocked reason available",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": true
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "reason": "expectation attribution evidence available",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": false
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "reason": "causal category supported",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": true
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "reason": "improvement direction available",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": true
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "reason": "finalization ready",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "reason": "no contradictions",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "reason": "no unsupported claims",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      }
+    ],
+    "transition_decisions": [
+      {
+        "condition": "always",
+        "from_state": "prepare_trace",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "mock_or_input"
+      },
+      {
+        "condition": "always",
+        "from_state": "mock_or_input",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "execute_or_capture"
+      },
+      {
+        "condition": "always",
+        "from_state": "execute_or_capture",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "collect_evidence"
+      },
+      {
+        "condition": "always",
+        "from_state": "collect_evidence",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "build_business_expectations"
+      },
+      {
+        "condition": "always",
+        "from_state": "build_business_expectations",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "evaluate_fulfillment"
+      },
+      {
+        "condition": "always",
+        "from_state": "evaluate_fulfillment",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "fulfillment_critic"
+      },
+      {
+        "condition": "fulfillment_requires_attribute",
+        "from_state": "fulfillment_critic",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "attribute_expectations"
+      },
+      {
+        "condition": "always",
+        "from_state": "attribute_expectations",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "run_attribution_probes"
+      },
+      {
+        "condition": "always",
+        "from_state": "run_attribution_probes",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "attribution_critic"
+      },
+      {
+        "condition": "always",
+        "from_state": "attribution_critic",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "finalize"
+      },
+      {
+        "condition": "stop",
+        "from_state": "finalize",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed",
+        "to_state": "completed"
+      }
+    ],
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "session_id": "eval-mock-agent-marketting-planning-intent-7b353b0e",
+    "turn_index": 0
+  },
+  "reference_panel": {
+    "reference": {
+      "intent": "客户群分析 (customer_audience_analysis)"
+    },
+    "source": "judge_generated",
+    "actual": {
+      "ambiguous": false,
+      "confidence": 0.5,
+      "fallback": false,
+      "intent": "other",
+      "raw_intent": "4001"
+    }
+  },
+  "judge_panel": {
+    "trace_id": "2a9b8dbe-016b-4e6f-a50a-9fc6fd2318d8",
+    "project_id": "marketting-planning-intent",
+    "verdict": "uncertain",
+    "expected": {
+      "intent": "客户群分析 (customer_audience_analysis)"
+    },
+    "actual": {
+      "ambiguous": false,
+      "confidence": 0.5,
+      "fallback": false,
+      "intent": "other",
+      "raw_intent": "4001"
+    },
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "意图标签为客群分析而非其他意图",
+        "status": "not_fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "时间范围槽位被正确提取",
+        "status": "not_fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "目标对象槽位被正确提取",
+        "status": "not_fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "置信度反映意图确定性且达到阈值",
+        "status": "not_fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "不确定意图触发回退而非给出其他兜底",
+        "status": "not_fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "意图分派边界适配客户分析场景",
+        "status": "not_evaluable",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "intent_contract",
+        "status": "not_fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      }
+    ],
+    "overall_fulfillment": {
+      "assessment_count": 7,
+      "blocking_expectations": [
+        "意图标签为客群分析而非其他意图",
+        "时间范围槽位被正确提取",
+        "目标对象槽位被正确提取",
+        "置信度反映意图确定性且达到阈值",
+        "不确定意图触发回退而非给出其他兜底",
+        "intent_contract"
+      ],
+      "status": "not_fulfilled"
+    },
+    "reconstructed_intent": "",
+    "judge_basis": "",
+    "judge_method": "",
+    "reasoning_summary": "",
+    "scenario": "",
+    "summary": {
+      "assessment_count": 6,
+      "blocking_count": 5,
+      "fulfillment_status": "not_fulfilled",
+      "is_formal_attribution": true,
+      "primary_failure_dimensions": [
+        {
+          "blocking": true,
+          "downstream_impact": "用户可能收到不准确的答复或困惑",
+          "evidence": "",
+          "expectation_id": "不确定意图触发回退而非给出其他兜底",
+          "status": "not_fulfilled",
+          "within_evaluable_scope": "true"
+        },
+        {
+          "blocking": true,
+          "downstream_impact": "下游无法正确路由到客户分析模块，可能导致无响应或错误回答",
+          "evidence": "",
+          "expectation_id": "意图标签为客群分析而非其他意图",
+          "status": "not_fulfilled",
+          "within_evaluable_scope": "true"
+        },
+        {
+          "blocking": true,
+          "downstream_impact": "无法过滤时间范围，可能导致分析全量数据或无法执行",
+          "evidence": "",
+          "expectation_id": "时间范围槽位被正确提取",
+          "status": "not_fulfilled",
+          "within_evaluable_scope": "true"
+        },
+        {
+          "blocking": true,
+          "downstream_impact": "无法确定分析目标，可能导致错误查询",
+          "evidence": "",
+          "expectation_id": "目标对象槽位被正确提取",
+          "status": "not_fulfilled",
+          "within_evaluable_scope": "true"
+        },
+        {
+          "blocking": true,
+          "downstream_impact": "低置信度直接输出其他意图，增加错误风险",
+          "evidence": "",
+          "expectation_id": "置信度反映意图确定性且达到阈值",
+          "status": "not_fulfilled",
+          "within_evaluable_scope": "true"
+        }
+      ],
+      "reason": "not_fulfilled · blocking=[不确定意图触发回退而非给出其他兜底,意图标签为客群分析而非其他意图,时间范围槽位被正确提取,目标对象槽位被正确提取,置信度反映意图确定性且达到阈值] · 用户可能收到不准确的答复或困惑",
+      "reason_source": "aggregated_fulfillment"
+    },
+    "display_status": "not_fulfilled",
+    "display_reason": "uncertain · unclear",
+    "wrong_missing_extra": {}
+  },
+  "attribute_panel": {
+    "trace_id": "2a9b8dbe-016b-4e6f-a50a-9fc6fd2318d8",
+    "project_id": "marketting-planning-intent",
+    "case_id": "",
+    "analysis_method": "",
+    "chain_nodes": [
+      {
+        "name": "",
+        "status": "verified",
+        "reason": ""
+      },
+      {
+        "name": "",
+        "status": "verified",
+        "reason": ""
+      },
+      {
+        "name": "",
+        "status": "verified",
+        "reason": ""
+      },
+      {
+        "name": "",
+        "status": "verified",
+        "reason": ""
+      },
+      {
+        "name": "",
+        "status": "failed",
+        "evidence": [
+          {
+            "query": "帮我看看最近半年来我们主要客户是哪些人群？"
+          },
+          {
+            "expected": {
+              "intent": "客户群分析 (customer_audience_analysis)"
+            }
+          },
+          {
+            "actual": {
+              "ambiguous": false,
+              "confidence": 0.5,
+              "fallback": false,
+              "intent": "other",
+              "raw_intent": "4001"
+            }
+          },
+          {
+            "missing": [
+              {
+                "kind": "missing"
+              },
+              {
+                "kind": "missing"
+              }
+            ],
+            "wrong": [
+              {
+                "kind": "wrong"
+              }
+            ]
+          }
+        ],
+        "reason": ""
+      }
+    ],
+    "earliest_divergence": {
+      "actual": {
+        "ambiguous": false,
+        "confidence": 0.5,
+        "fallback": false,
+        "intent": "other",
+        "raw_intent": "4001"
+      },
+      "confidence": "medium",
+      "evidence": [
+        [
+          {
+            "kind": "missing"
+          },
+          {
+            "kind": "missing"
+          }
+        ]
+      ],
+      "expected": {
+        "intent": "客户群分析 (customer_audience_analysis)"
+      },
+      "node": "intent_contract_gate"
+    },
+    "evidence_coverage": {
+      "actual": true,
+      "execution_trace": true,
+      "expected": true,
+      "query": true
+    },
+    "incomplete_reason": "",
+    "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': '客户群分析 (customer_audience_analysis)'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+    "verification_steps": [
+      "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+    ],
+    "patch_direction": [
+      "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+    ],
+    "expectation_attributions": [
+      {
+        "expectation_id": "意图标签为客群分析而非其他意图",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "时间范围槽位被正确提取",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "目标对象槽位被正确提取",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "置信度反映意图确定性且达到阈值",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "不确定意图触发回退而非给出其他兜底",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "意图分派边界适配客户分析场景",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "insufficient_evidence",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "intent_contract",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      }
+    ],
+    "causal_category": "implementation_bug",
+    "probe_results": [
+      {
+        "probe_id": "",
+        "status": "not_verified",
+        "stage": "",
+        "error": ""
+      }
+    ],
+    "needs_human_review": false,
+    "scenario": "single_turn_intent_recognition",
+    "summary": {
+      "attribution_count": 7,
+      "causal_category": "needs_human_review",
+      "is_complete": true,
+      "is_formal_attribution": true,
+      "probe_count": 1,
+      "summary_text": "当前 trace 中 query='帮我看看最近半年来我们主要客户是哪些人群？' 被错误分类为 other(4001)，根因有三层：(1) 正则层：_HOMEPAGE_RULES 中 customer_portrait 的正则模式 客户.*(?:画像|分布|结构|分层) 要求'客户'后紧跟特定关键词，无法匹配'客户是哪些人群'这类自然表达；(2) LLM 层：qwen3-next-80b-a3b-instruct 模型在 INTENT_RECOGNITION_PROMPT 的引导下将该 query 归类为 other，prompt 中 customer_portrait 示例均为'画像/分布/结构'类表达，且'倾向于判断为 other'的引导词增加了误分类风险；(3) 后处理层：recognize_intent 函数在 LLM 返回 other+confidence=0.5 时未触发 fallback，也未进行二次校验，导致低置信度的错误结果直接透传至下游。此外 IntentResult schema 缺少 time_range 和 analysis_target 字段，即使意图分类正确也无法提取所需槽位。"
+    },
+    "display_causal_category": "implementation_bug",
+    "display_root_cause": "当前 case 期望 intent/slots 为 {'intent': '客户群分析 (customer_audience_analysis)'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+    "display_verification_steps": [
+      "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+    ],
+    "display_patch_direction": [
+      "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+    ],
+    "attribution_count": 7,
+    "probe_count": 1
+  },
+  "fulfillment_panel": {
+    "overall_fulfillment": {
+      "assessment_count": 7,
+      "blocking_expectations": [
+        "意图标签为客群分析而非其他意图",
+        "时间范围槽位被正确提取",
+        "目标对象槽位被正确提取",
+        "置信度反映意图确定性且达到阈值",
+        "不确定意图触发回退而非给出其他兜底",
+        "intent_contract"
+      ],
+      "status": "not_fulfilled"
+    },
+    "derived_verdict": "uncertain"
+  },
+  "expectation_attribution_panel": {
+    "attributions": [
+      {
+        "expectation_id": "意图标签为客群分析而非其他意图",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "时间范围槽位被正确提取",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "目标对象槽位被正确提取",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "置信度反映意图确定性且达到阈值",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "不确定意图触发回退而非给出其他兜底",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "意图分派边界适配客户分析场景",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "insufficient_evidence",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "intent_contract",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "implementation_bug",
+        "incomplete_reason": ""
+      }
+    ],
+    "causal_category": "implementation_bug",
+    "probe_results": [
+      {
+        "probe_id": "",
+        "status": "not_verified",
+        "stage": "",
+        "error": ""
+      }
+    ],
+    "incomplete_reason": ""
+  },
+  "cluster_panel": {
+    "project_id": "marketting-planning-intent",
+    "clusters": [
+      {
+        "canonical_attribution": true,
+        "causal_category": "implementation_bug",
+        "cluster_id": "expectation::implementation_bug::not_fulfilled",
+        "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': '客户群分析 (customer_audience_analysis)'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+        "count": 1,
+        "expectation_ids": [
+          "意图标签为客群分析而非其他意图",
+          "时间范围槽位被正确提取",
+          "目标对象槽位被正确提取",
+          "置信度反映意图确定性且达到阈值",
+          "不确定意图触发回退而非给出其他兜底",
+          "意图分派边界适配客户分析场景",
+          "intent_contract"
+        ],
+        "fulfillment_statuses": [
+          "not_fulfilled",
+          "not_evaluable"
+        ],
+        "mechanism": "implementation_bug::not_fulfilled",
+        "minimal_fix_direction": [
+          "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+        ],
+        "needs_human_review": false,
+        "next_actions": [
+          "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+        ],
+        "representative_cases": [
+          "2a9b8dbe-016b-4e6f-a50a-9fc6fd2318d8"
+        ],
+        "representative_diffs": [
+          {
+            "actual": {
+              "ambiguous": false,
+              "confidence": 0.5,
+              "fallback": false,
+              "intent": "other",
+              "raw_intent": "4001"
+            },
+            "case_id": "2a9b8dbe-016b-4e6f-a50a-9fc6fd2318d8",
+            "evidence": [
+              [
+                {
+                  "kind": "missing"
+                },
+                {
+                  "kind": "missing"
+                }
+              ]
+            ],
+            "expected": {
+              "intent": "客户群分析 (customer_audience_analysis)"
+            },
+            "node": "intent_contract_gate"
+          }
+        ],
+        "representative_traces": [
+          "2a9b8dbe-016b-4e6f-a50a-9fc6fd2318d8"
+        ],
+        "shared_failure_pattern": "当前 case 期望 intent/slots 为 {'intent': '客户群分析 (customer_audience_analysis)'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+        "verification_cases": [
+          "2a9b8dbe-016b-4e6f-a50a-9fc6fd2318d8"
+        ]
+      }
+    ],
+    "common_root_cause": "",
+    "impact": "",
+    "priority": ""
+  },
+  "check_panel": {
+    "passed": false,
+    "issues": [
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+      "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug",
+      "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: AppSettings, False, IntentResult, None, adapter.py, ambiguous"
+    ],
+    "boundary_violations": [
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py"
+    ],
+    "protocol_gaps": [
+      "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug"
+    ],
+    "consistency_gaps": [
+      "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: AppSettings, False, IntentResult, None, adapter.py, ambiguous"
+    ],
+    "verification_results": [
+      "Check categories passed current audit."
+    ],
+    "recommended_fixes": [
+      "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions.",
+      "Complete missing protocol outputs before treating the chain as valid.",
+      "Ensure all steps use the same trace_id and latest run output."
+    ]
+  },
+  "table_row": {
+    "id": "mock-agent-marketting-planning-intent-7b353b0e",
+    "input": "帮我看看最近半年来我们主要客户是哪些人群？",
+    "scenario": "intent_recognition",
+    "output_summary": "{\"ambiguous\": false, \"confidence\": 0.5, \"fallback\": false, \"intent\": \"other\", \"raw_intent\": \"4001\"}",
+    "reference_summary": "{\"intent\": \"客户群分析 (customer_audience_analysis)\"}",
+    "status": "not_fulfilled",
+    "execution_mode": "",
+    "output_source": "live_service",
+    "verdict": "uncertain",
+    "fulfillment_status": "not_fulfilled",
+    "judge_summary": {
+      "status": "not_fulfilled",
+      "fulfillment_status": "not_fulfilled",
+      "verdict": "uncertain",
+      "reason": "not_fulfilled · blocking=[不确定意图触发回退而非给出其他兜底,意图标签为客群分析而非其他意图,时间范围槽位被正确提取,目标对象槽位被正确提取,置信度反映意图确定性且达到阈值] · 用户可能收到不准确的答复或困惑",
+      "reason_source": "aggregated_fulfillment",
+      "reason_stage": "judge",
+      "is_formal_attribution": true,
+      "assessment_count": 6,
+      "blocking_count": 5,
+      "primary_failure_dimensions": [
+        {
+          "blocking": true,
+          "downstream_impact": "用户可能收到不准确的答复或困惑",
+          "evidence": "",
+          "expectation_id": "不确定意图触发回退而非给出其他兜底",
+          "status": "not_fulfilled",
+          "within_evaluable_scope": "true"
+        },
+        {
+          "blocking": true,
+          "downstream_impact": "下游无法正确路由到客户分析模块，可能导致无响应或错误回答",
+          "evidence": "",
+          "expectation_id": "意图标签为客群分析而非其他意图",
+          "status": "not_fulfilled",
+          "within_evaluable_scope": "true"
+        },
+        {
+          "blocking": true,
+          "downstream_impact": "无法过滤时间范围，可能导致分析全量数据或无法执行",
+          "evidence": "",
+          "expectation_id": "时间范围槽位被正确提取",
+          "status": "not_fulfilled",
+          "within_evaluable_scope": "true"
+        },
+        {
+          "blocking": true,
+          "downstream_impact": "无法确定分析目标，可能导致错误查询",
+          "evidence": "",
+          "expectation_id": "目标对象槽位被正确提取",
+          "status": "not_fulfilled",
+          "within_evaluable_scope": "true"
+        },
+        {
+          "blocking": true,
+          "downstream_impact": "低置信度直接输出其他意图，增加错误风险",
+          "evidence": "",
+          "expectation_id": "置信度反映意图确定性且达到阈值",
+          "status": "not_fulfilled",
+          "within_evaluable_scope": "true"
+        }
+      ]
+    },
+    "attribution_summary": {
+      "attribution_count": 7,
+      "causal_category": "needs_human_review",
+      "is_complete": true,
+      "is_formal_attribution": true,
+      "probe_count": 1,
+      "summary_text": "当前 trace 中 query='帮我看看最近半年来我们主要客户是哪些人群？' 被错误分类为 other(4001)，根因有三层：(1) 正则层：_HOMEPAGE_RULES 中 customer_portrait 的正则模式 客户.*(?:画像|分布|结构|分层) 要求'客户'后紧跟特定关键词，无法匹配'客户是哪些人群'这类自然表达；(2) LLM 层：qwen3-next-80b-a3b-instruct 模型在 INTENT_RECOGNITION_PROMPT 的引导下将该 query 归类为 other，prompt 中 customer_portrait 示例均为'画像/分布/结构'类表达，且'倾向于判断为 other'的引导词增加了误分类风险；(3) 后处理层：recognize_intent 函数在 LLM 返回 other+confidence=0.5 时未触发 fallback，也未进行二次校验，导致低置信度的错误结果直接透传至下游。此外 IntentResult schema 缺少 time_range 和 analysis_target 字段，即使意图分类正确也无法提取所需槽位。"
+    },
+    "check_summary": {
+      "passed": false,
+      "issue_count": 3,
+      "protocol_gap_count": 1,
+      "consistency_gap_count": 1,
+      "recommended_fix_count": 3,
+      "issues": [
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+        "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug",
+        "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: AppSettings, False, IntentResult, None, adapter.py, ambiguous"
+      ]
+    },
+    "fallback_summary": {
+      "count": 0,
+      "needs_human_review": false
+    },
+    "needs_human_review": false,
+    "check_passed": false,
+    "issue_count": 5,
+    "fallback_count": 0,
+    "causal_category": "needs_human_review",
+    "divergence_stage": "intent_contract_gate",
+    "root_cause_summary": "当前 trace 中 query='帮我看看最近半年来我们主要客户是哪些人群？' 被错误分类为 other(4001)，根因有三层：(1) 正则层：_HOMEPAGE_RULES 中 customer_portrait 的正则模式 客户.*(?:画像|分布|结构|分层) 要求'客户'后紧跟特定关键词，无法匹配'客户是哪些人群'这类自然表达；(2) LLM 层：qwen3-next-80b-a3b-instruct 模型在 INTENT_RECOGNITION_PROMPT 的引导下将该 query 归类为 other，prompt 中 customer_portrait 示例均为'画像/分布/结构'类表达，且'倾向于判断为 other'的引导词增加了误分类风险；(3) 后处理层：recognize_intent 函数在 LLM 返回 other+confidence=0.5 时未触发 fallback，也未进行二次校验，导致低置信度的错误结果直接透传至下游。此外 IntentResult schema 缺少 time_range 和 analysis_target 字段，即使意图分类正确也无法提取所需槽位。",
+    "created_at": "2026-07-02T03:06:44.965251+00:00",
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "trace_id": "2a9b8dbe-016b-4e6f-a50a-9fc6fd2318d8"
+  },
+  "project_extensions": {
+    "intent_labels": [
+      "other",
+      "customer_portrait",
+      "nbev_planning",
+      "nbev_planning_fallback",
+      "achievement_measurement_adjustment",
+      "team_portrait",
+      "target_value_adjustment"
+    ],
+    "output_summary_shape": [
+      "intent",
+      "confidence",
+      "raw_intent",
+      "slots",
+      "entities",
+      "ambiguous",
+      "fallback",
+      "errors"
+    ],
+    "frontend_standard": {
+      "frontend_view": {
+        "live": "render query, normalized intent output, reference intent, Judge, Attribute, and compact raw response drill-down",
+        "summary": "render intent case pool with Output and Reference as aligned label/confidence JSON"
+      },
+      "batch_persistence": {
+        "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+        "transient_results": "do not persist full trace, judge, attribute, raw response, or frontend_view as durable case-pool source data"
+      }
+    },
+    "display_contract": {
+      "output_source": "trace.live_result.extracted_output",
+      "reference_source": "judge_generated",
+      "formatting": [
+        "json formatting",
+        "truncation",
+        "output/reference alignment"
+      ]
+    }
+  }
+}

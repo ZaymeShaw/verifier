@@ -2,7 +2,7 @@
 
 QA mock cases 覆盖三个 scenario：
 
-- `qa_gold_answer`: question + actual_answer + golden_answer。
+- `qa_gold_answer`: question + actual_answer + reference.actual_answer。
 - `qa_context_faithfulness`: question + actual_answer + contexts。
 - `qa_weak_quality`: question + actual_answer。
 

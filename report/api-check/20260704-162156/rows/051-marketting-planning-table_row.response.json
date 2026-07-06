@@ -1,0 +1,120 @@
+{
+  "id": "mock-agent-marketting-planning-a9b1fc80",
+  "input": "org-001",
+  "scenario": "intent_recognition",
+  "output_summary": "{\"event_summary\": {\"canonical_names\": [\"intent_detected\", \"reasoning_message_content\", \"planning_started\", \"card_delta\", \"done\"], \"completed\": true, \"counts\": …",
+  "reference_summary": "{\"scenario\": \"intent_recognition\"}",
+  "status": "not_fulfilled",
+  "execution_mode": "",
+  "output_source": "live_service",
+  "verdict": "incorrect",
+  "fulfillment_status": "not_fulfilled",
+  "judge_summary": {
+    "status": "not_fulfilled",
+    "fulfillment_status": "not_fulfilled",
+    "verdict": "incorrect",
+    "reason": "not_fulfilled · blocking=[业务指标识别为NBEV,分解维度覆盖队伍客户产品策略,提升方向被识别,时间范围识别为下个季度,规划结果可行动,阶段路由至规划阶段] · 规划失去核心指标，无法精准施策",
+    "reason_source": "aggregated_fulfillment",
+    "reason_stage": "judge",
+    "is_formal_attribution": true,
+    "assessment_count": 7,
+    "blocking_count": 6,
+    "primary_failure_dimensions": [
+      {
+        "blocking": true,
+        "downstream_impact": "规划失去核心指标，无法精准施策",
+        "evidence": "robot_text均为占位文本，无NBEV提及 | intent被标记为4001其他意图 | 输出内容中出现NBEV",
+        "expectation_id": "业务指标识别为NBEV",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "用户明确的维度需求未被满足",
+        "evidence": "card_list为空 | 无任何维度相关文本 | 卡片或文本提及队伍、客户、产品策略相关建议",
+        "expectation_id": "分解维度覆盖队伍客户产品策略",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "规划方向错误风险",
+        "evidence": "无任何增长相关文本 | 输出体现增长导向",
+        "expectation_id": "提升方向被识别",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "规划时间边界模糊",
+        "evidence": "无任何时间相关文本 | 输出提及下个季度",
+        "expectation_id": "时间范围识别为下个季度",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "用户无法获得可落地的行动指引",
+        "evidence": "card_summary为空 | SSE中answer始终为空 | 无任何策略文本 | card_summary非空 | 实质性建议内容",
+        "expectation_id": "规划结果可行动",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "用户无法获得任何规划建议，意图完全落空",
+        "evidence": "extracted_output.stage == 'non_agent' | planning_function状态succeeded但card_count=0 | extracted_output.stage == 'planning' | planning_function产出非空",
+        "expectation_id": "阶段路由至规划阶段",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": false,
+        "downstream_impact": "前端展示给用户的仅为空洞状态消息，体验差",
+        "evidence": "事件齐全但robot_text为占位描述（如“开始思考”、“卡片内容已生成”），无实质性NBEV规划内容 | 事件齐全且携带业务数据",
+        "expectation_id": "SSE事件序列完整且有意义",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      }
+    ]
+  },
+  "attribution_summary": {
+    "attribution_count": 7,
+    "causal_category": "needs_human_review",
+    "is_complete": false,
+    "is_formal_attribution": false,
+    "probe_count": 0,
+    "summary_text": "tool_call_budget_exhausted: 已读取 5 个文件（intent.py, config.py, intent_prompt.py, intent_recognition.py 摘要, source_risks.md），但未能读取 (1) extract_path_types_from_text 函数的具体实现（不在 catalog 中），无法确认 Tier 2 提取失败的精确代码逻辑；(2) intent_recognition.py 的完整源码（仅获得摘要），Tier 0/Tier 1 的精确执行顺序和分支条件未完全确认。归因结论基于现有证据的合理推断，置信度为 high 但非 absolute"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 7,
+    "protocol_gap_count": 0,
+    "consistency_gap_count": 3,
+    "recommended_fix_count": 2,
+    "issues": [
+      "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+      "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+      "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+      "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+      "AttributeResult has incomplete_reason but analysis_quality.passed=true.",
+      "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: FieldExtractionResult, IntentResult, IntentType, IntentType.other, LLM, NBEV",
+      "RunTrace.extracted_output and JudgeResult.actual diverge"
+    ]
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": false,
+  "check_passed": false,
+  "issue_count": 10,
+  "fallback_count": 0,
+  "causal_category": "needs_human_review",
+  "divergence_stage": "intent_recognition",
+  "root_cause_summary": "tool_call_budget_exhausted: 已读取 5 个文件（intent.py, config.py, intent_prompt.py, intent_recognition.py 摘要, source_risks.md），但未能读取 (1) extract_path_types_from_text 函数的具体实现（不在 catalog 中），无法确认 Tier 2 提取失败的精确代码逻辑；(2) intent_recognition.py 的完整源码（仅获得摘要），Tier 0/Tier 1 的精确执行顺序和分支条件未完全确认。归因结论基于现有证据的合理推断，置信度为 high 但非 absolute",
+  "created_at": "2026-07-04T08:21:58.872521+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "c4c03177-5b2f-4218-90bb-54e10fbc063c"
+}

@@ -1,0 +1,814 @@
+{
+  "project_info": {
+    "project_id": "marketting-planning-intent",
+    "name": "营销规划意图识别评估项目",
+    "description": "单独评估营销规划业务服务的 intent-recognition 单轮接口，与 marketting-planning 共享业务服务但测评边界只覆盖意图识别。"
+  },
+  "run_trace_summary": {
+    "trace_id": "a5e4414a-55e4-461a-baa1-823432f38df9",
+    "project_id": "marketting-planning-intent",
+    "case_id": "mpi-premium-growth-exact-1",
+    "live_result": {
+      "project_id": "marketting-planning-intent",
+      "case_id": "mpi-premium-growth-exact-1",
+      "session_id": "eval-mpi-premium-growth-exact-1",
+      "raw_input": {
+        "query": "我想看明年NBEV增长规划"
+      },
+      "normalized_request": {
+        "case_id": "mpi-premium-growth-exact-1",
+        "query": "我想看明年NBEV增长规划",
+        "scenario": "intent_recognition",
+        "session_id": "eval-mpi-premium-growth-exact-1"
+      },
+      "call_status": "succeeded",
+      "runtime_ms": 635,
+      "extracted_output": {
+        "ambiguous": false,
+        "confidence": 0.95,
+        "fallback": false,
+        "intent": "nbev_planning",
+        "raw_intent": "1003"
+      },
+      "output_source": "live_service",
+      "application_boundary": {
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ],
+        "scope": "single_turn_intent_recognition"
+      },
+      "interaction_mode": "single_turn"
+    },
+    "execution_mode": "",
+    "output_source": "live_service",
+    "scenario": "intent_recognition",
+    "application_boundary": {
+      "excludes": [
+        "multi_turn_planning",
+        "sse_card_generation"
+      ],
+      "scope": "single_turn_intent_recognition"
+    },
+    "evidence_refs": [
+      {
+        "ref_id": "",
+        "source": "",
+        "kind": "",
+        "stage": "",
+        "summary": "",
+        "location": ""
+      }
+    ],
+    "status": "ok",
+    "created_at": "2026-07-01T09:19:28.222101+00:00",
+    "state_history": [
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T09:19:27.585098+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T09:19:27.585129+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T09:19:28.222260+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T09:19:28.222313+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T09:22:26.268419+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T09:22:26.268503+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T09:22:26.268546+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T09:22:26.278257+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T09:22:26.281749+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T09:22:26.282039+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 2,
+        "started_at": "2026-07-01T09:22:26.285069+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 2,
+        "started_at": "2026-07-01T09:22:26.285181+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T09:22:26.285211+00:00",
+        "status": "skipped"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "reason": "trace exists",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "reason": "consumer contract available",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "reason": "business expectations available",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "reason": "fulfillment assessments cover expectations",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "reason": "fulfillment boundary available",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "reason": "derived verdict matches fulfillment state",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "reason": "no contradictions",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "reason": "no unsupported claims",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "reason": "fulfillment assessments cover expectations",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "reason": "attribute targets fulfillment gaps",
+        "recommended_transition": "finalize",
+        "recoverable": false
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "reason": "probe evidence or blocked reason available",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": true
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "reason": "expectation attribution evidence available",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": false
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "reason": "causal category supported",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": true
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": false,
+        "reason": "improvement direction missing",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": true
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "reason": "probe evidence or blocked reason available",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": true
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "reason": "expectation attribution evidence available",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": false
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "reason": "causal category supported",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": true
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": false,
+        "reason": "improvement direction missing",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": true
+      }
+    ],
+    "transition_decisions": [
+      {
+        "condition": "always",
+        "from_state": "prepare_trace",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "mock_or_input"
+      },
+      {
+        "condition": "always",
+        "from_state": "mock_or_input",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "execute_or_capture"
+      },
+      {
+        "condition": "always",
+        "from_state": "execute_or_capture",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "collect_evidence"
+      },
+      {
+        "condition": "always",
+        "from_state": "collect_evidence",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "build_business_expectations"
+      },
+      {
+        "condition": "always",
+        "from_state": "build_business_expectations",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "evaluate_fulfillment"
+      },
+      {
+        "condition": "always",
+        "from_state": "evaluate_fulfillment",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "fulfillment_critic"
+      },
+      {
+        "condition": "fulfillment_requires_attribute",
+        "from_state": "fulfillment_critic",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "attribute_expectations"
+      },
+      {
+        "condition": "always",
+        "from_state": "attribute_expectations",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "run_attribution_probes"
+      },
+      {
+        "condition": "always",
+        "from_state": "run_attribution_probes",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "attribution_critic"
+      },
+      {
+        "condition": "gate_failed_recoverable",
+        "from_state": "attribution_critic",
+        "reason": "improvement direction missing",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "run_attribution_probes"
+      },
+      {
+        "condition": "always",
+        "from_state": "run_attribution_probes",
+        "reason": "always",
+        "retry_count": 1,
+        "stop_reason": "",
+        "to_state": "attribution_critic"
+      },
+      {
+        "condition": "retry_limit",
+        "from_state": "attribution_critic",
+        "reason": "state retry limit exceeded",
+        "retry_count": 1,
+        "stop_reason": "incomplete_retry_limit",
+        "to_state": "incomplete_or_human_review"
+      },
+      {
+        "condition": "stop",
+        "from_state": "incomplete_or_human_review",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "incomplete_retry_limit",
+        "to_state": "completed"
+      }
+    ],
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "session_id": "eval-mpi-premium-growth-exact-1",
+    "turn_index": 0
+  },
+  "reference_panel": {
+    "reference": {
+      "intent": "用户希望查看明年NBEV（可能为净账面净值）的增长规划。系统将该查询识别为NBEV达成路径规划分析意图，返回意图标签nbev_planning，置信度0.95，未产生歧义或回退，可支持下游规划分析。"
+    },
+    "source": "judge_generated",
+    "actual": {
+      "ambiguous": false,
+      "confidence": 0.95,
+      "fallback": false,
+      "intent": "nbev_planning",
+      "raw_intent": "1003"
+    }
+  },
+  "judge_panel": {
+    "trace_id": "a5e4414a-55e4-461a-baa1-823432f38df9",
+    "project_id": "marketting-planning-intent",
+    "verdict": "uncertain",
+    "expected": {
+      "intent": "用户希望查看明年NBEV（可能为净账面净值）的增长规划。系统将该查询识别为NBEV达成路径规划分析意图，返回意图标签nbev_planning，置信度0.95，未产生歧义或回退，可支持下游规划分析。"
+    },
+    "actual": {
+      "ambiguous": false,
+      "confidence": 0.95,
+      "fallback": false,
+      "intent": "nbev_planning",
+      "raw_intent": "1003"
+    },
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "意图标签应为NBEV相关规划类意图",
+        "status": "fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "意图识别置信度满足业务高可信度要求",
+        "status": "fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "意图未被触发为回退策略",
+        "status": "fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "意图明确，可直接分派下游服务",
+        "status": "fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "所需业务槽位（如目标值）处理合理且无异常",
+        "status": "fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "intent_contract",
+        "status": "fulfilled",
+        "downstream_impact": "",
+        "blocking": false
+      }
+    ],
+    "overall_fulfillment": {
+      "assessment_count": 6,
+      "status": "fulfilled"
+    },
+    "reconstructed_intent": "",
+    "judge_basis": "",
+    "judge_method": "",
+    "reasoning_summary": "",
+    "scenario": "",
+    "summary": {
+      "assessment_count": 5,
+      "blocking_count": 4,
+      "fulfillment_status": "fulfilled",
+      "is_formal_attribution": true,
+      "reason": "fulfilled · 4 blocking expectations all met · 用户查询'我想看明年NBEV增长规划'，业务上期望系统识别为与NBEV增长规划相关的意图。实际输出中，意图标签确定为'nbev_planning'，子意图为'NBEV达成路径规划分析'，这与用户目标高度一致，满足核心意图维度要求。置信度0.95远超常规阈值，表明系统判断可靠，且未触发回退或歧义逻辑，确保下游可直接调度。对于业务槽位，设计所需的target_value和path_types由于查询未提供具体数值而保持null，属于合理处理，不影响主流程。因此，所有评估维度均通过，整体表现符合预期。",
+      "reason_source": "aggregated_fulfillment"
+    },
+    "display_status": "fulfilled",
+    "display_reason": "uncertain · unclear",
+    "wrong_missing_extra": {}
+  },
+  "attribute_panel": {
+    "trace_id": "a5e4414a-55e4-461a-baa1-823432f38df9",
+    "project_id": "marketting-planning-intent",
+    "case_id": "",
+    "analysis_method": "",
+    "chain_nodes": [
+      {
+        "name": "",
+        "status": "verified",
+        "evidence": [
+          "extracted_output.intent='nbev_planning'",
+          "extracted_output.confidence=0.95",
+          "extracted_output.fallback=false",
+          "extracted_output.ambiguous=false",
+          "raw_response.nlu_info.subIntent='NBEV达成路径规划分析'",
+          "raw_response.nlu_info.target_value=null",
+          "raw_response.nlu_info.path_types=null"
+        ],
+        "reason": ""
+      }
+    ],
+    "earliest_divergence": {
+      "confidence": "high",
+      "evidence": [
+        "extracted_output.intent='nbev_planning'",
+        "extracted_output.confidence=0.95",
+        "extracted_output.fallback=false",
+        "extracted_output.ambiguous=false",
+        "raw_response.nlu_info.subIntent='NBEV达成路径规划分析'",
+        "raw_response.nlu_info.target_value=null",
+        "raw_response.nlu_info.path_types=null"
+      ],
+      "node": "fulfillment_assessment"
+    },
+    "evidence_coverage": {
+      "actual": true,
+      "execution_trace": true,
+      "expected": true,
+      "query": true
+    },
+    "incomplete_reason": "",
+    "root_cause_hypothesis": "当前 intent-recognition 输出满足业务预期，归因结论为 no_issue。",
+    "expectation_attributions": [
+      {
+        "expectation_id": "意图标签应为NBEV相关规划类意图",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "no_issue",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "意图识别置信度满足业务高可信度要求",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "no_issue",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "意图未被触发为回退策略",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "no_issue",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "意图明确，可直接分派下游服务",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "no_issue",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "所需业务槽位（如目标值）处理合理且无异常",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "no_issue",
+        "incomplete_reason": ""
+      }
+    ],
+    "causal_category": "no_issue",
+    "probe_results": [
+      {
+        "probe_id": "fulfillment_assessment",
+        "status": "not_verified",
+        "stage": "",
+        "evidence": [
+          "extracted_output.intent='nbev_planning'",
+          "extracted_output.confidence=0.95",
+          "extracted_output.fallback=false",
+          "extracted_output.ambiguous=false",
+          "raw_response.nlu_info.subIntent='NBEV达成路径规划分析'",
+          "raw_response.nlu_info.target_value=null",
+          "raw_response.nlu_info.path_types=null"
+        ],
+        "error": ""
+      }
+    ],
+    "needs_human_review": false,
+    "scenario": "intent_recognition",
+    "summary": {
+      "attribution_count": 5,
+      "causal_category": "no_issue",
+      "is_complete": true,
+      "is_formal_attribution": true,
+      "probe_count": 1,
+      "summary_text": "业务预期已达成"
+    },
+    "display_causal_category": "no_issue",
+    "display_root_cause": "当前 intent-recognition 输出满足业务预期，归因结论为 no_issue。",
+    "attribution_count": 5,
+    "probe_count": 1
+  },
+  "fulfillment_panel": {
+    "overall_fulfillment": {
+      "assessment_count": 6,
+      "status": "fulfilled"
+    },
+    "derived_verdict": "uncertain"
+  },
+  "expectation_attribution_panel": {
+    "attributions": [
+      {
+        "expectation_id": "意图标签应为NBEV相关规划类意图",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "no_issue",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "意图识别置信度满足业务高可信度要求",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "no_issue",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "意图未被触发为回退策略",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "no_issue",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "意图明确，可直接分派下游服务",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "no_issue",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "所需业务槽位（如目标值）处理合理且无异常",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "no_issue",
+        "incomplete_reason": ""
+      }
+    ],
+    "causal_category": "no_issue",
+    "probe_results": [
+      {
+        "probe_id": "fulfillment_assessment",
+        "status": "not_verified",
+        "stage": "",
+        "evidence": [
+          "extracted_output.intent='nbev_planning'",
+          "extracted_output.confidence=0.95",
+          "extracted_output.fallback=false",
+          "extracted_output.ambiguous=false",
+          "raw_response.nlu_info.subIntent='NBEV达成路径规划分析'",
+          "raw_response.nlu_info.target_value=null",
+          "raw_response.nlu_info.path_types=null"
+        ],
+        "error": ""
+      }
+    ],
+    "incomplete_reason": ""
+  },
+  "cluster_panel": {
+    "project_id": "marketting-planning-intent",
+    "clusters": [
+      {
+        "canonical_attribution": true,
+        "causal_category": "no_issue",
+        "cluster_id": "expectation::no_issue::fulfilled",
+        "common_root_cause": "当前 intent-recognition 输出满足业务预期，归因结论为 no_issue。",
+        "count": 1,
+        "expectation_ids": [
+          "意图标签应为NBEV相关规划类意图",
+          "意图识别置信度满足业务高可信度要求",
+          "意图未被触发为回退策略",
+          "意图明确，可直接分派下游服务",
+          "所需业务槽位（如目标值）处理合理且无异常"
+        ],
+        "fulfillment_statuses": [
+          "fulfilled"
+        ],
+        "mechanism": "no_issue::fulfilled",
+        "needs_human_review": false,
+        "representative_cases": [
+          "a5e4414a-55e4-461a-baa1-823432f38df9"
+        ],
+        "representative_diffs": [
+          {
+            "case_id": "a5e4414a-55e4-461a-baa1-823432f38df9",
+            "evidence": [
+              "extracted_output.intent='nbev_planning'",
+              "extracted_output.confidence=0.95",
+              "extracted_output.fallback=false",
+              "extracted_output.ambiguous=false",
+              "raw_response.nlu_info.subIntent='NBEV达成路径规划分析'",
+              "raw_response.nlu_info.target_value=null",
+              "raw_response.nlu_info.path_types=null"
+            ],
+            "node": "fulfillment_assessment"
+          }
+        ],
+        "representative_traces": [
+          "a5e4414a-55e4-461a-baa1-823432f38df9"
+        ],
+        "shared_failure_pattern": "当前 intent-recognition 输出满足业务预期，归因结论为 no_issue。",
+        "verification_cases": [
+          "a5e4414a-55e4-461a-baa1-823432f38df9"
+        ]
+      }
+    ],
+    "common_root_cause": "",
+    "impact": "",
+    "priority": ""
+  },
+  "check_panel": {
+    "passed": false,
+    "issues": [
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+      "AttributeResult missing verification_steps.",
+      "AttributeResult missing patch_direction."
+    ],
+    "boundary_violations": [
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py"
+    ],
+    "protocol_gaps": [
+      "AttributeResult missing verification_steps.",
+      "AttributeResult missing patch_direction."
+    ],
+    "verification_results": [
+      "Check categories passed current audit."
+    ],
+    "recommended_fixes": [
+      "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions.",
+      "Complete missing protocol outputs before treating the chain as valid."
+    ]
+  },
+  "table_row": {
+    "id": "mpi-premium-growth-exact-1",
+    "input": "我想看明年NBEV增长规划",
+    "scenario": "intent_recognition",
+    "output_summary": "{\"ambiguous\": false, \"confidence\": 0.95, \"fallback\": false, \"intent\": \"nbev_planning\", \"raw_intent\": \"1003\"}",
+    "reference_summary": "{\"intent\": \"用户希望查看明年NBEV（可能为净账面净值）的增长规划。系统将该查询识别为NBEV达成路径规划分析意图，返回意图标签nbev_planning，置信度0.95，未产生歧义或回退，可支持下游规划分析。\"}",
+    "status": "fulfilled",
+    "execution_mode": "",
+    "output_source": "live_service",
+    "verdict": "uncertain",
+    "fulfillment_status": "fulfilled",
+    "judge_summary": {
+      "status": "fulfilled",
+      "fulfillment_status": "fulfilled",
+      "verdict": "uncertain",
+      "reason": "fulfilled · 4 blocking expectations all met · 用户查询'我想看明年NBEV增长规划'，业务上期望系统识别为与NBEV增长规划相关的意图。实际输出中，意图标签确定为'nbev_planning'，子意图为'NBEV达成路径规划分析'，这与用户目标高度一致，满足核心意图维度要求。置信度0.95远超常规阈值，表明系统判断可靠，且未触发回退或歧义逻辑，确保下游可直接调度。对于业务槽位，设计所需的target_value和path_types由于查询未提供具体数值而保持null，属于合理处理，不影响主流程。因此，所有评估维度均通过，整体表现符合预期。",
+      "reason_source": "aggregated_fulfillment",
+      "reason_stage": "judge",
+      "is_formal_attribution": true,
+      "assessment_count": 5,
+      "blocking_count": 4
+    },
+    "attribution_summary": {
+      "attribution_count": 5,
+      "causal_category": "no_issue",
+      "is_complete": true,
+      "is_formal_attribution": true,
+      "probe_count": 1,
+      "summary_text": "业务预期已达成"
+    },
+    "check_summary": {
+      "passed": false,
+      "issue_count": 3,
+      "protocol_gap_count": 2,
+      "consistency_gap_count": 0,
+      "recommended_fix_count": 2,
+      "issues": [
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+        "AttributeResult missing verification_steps.",
+        "AttributeResult missing patch_direction."
+      ]
+    },
+    "fallback_summary": {
+      "count": 0,
+      "needs_human_review": false
+    },
+    "needs_human_review": false,
+    "check_passed": false,
+    "issue_count": 5,
+    "fallback_count": 0,
+    "causal_category": "no_issue",
+    "divergence_stage": "fulfillment_assessment",
+    "root_cause_summary": "业务预期已达成",
+    "created_at": "2026-07-01T09:19:28.222101+00:00",
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "trace_id": "a5e4414a-55e4-461a-baa1-823432f38df9"
+  },
+  "project_extensions": {
+    "intent_labels": [
+      "other",
+      "customer_portrait",
+      "nbev_planning",
+      "nbev_planning_fallback",
+      "achievement_measurement_adjustment",
+      "team_portrait",
+      "target_value_adjustment"
+    ],
+    "output_summary_shape": [
+      "intent",
+      "confidence",
+      "raw_intent",
+      "slots",
+      "entities",
+      "ambiguous",
+      "fallback",
+      "errors"
+    ],
+    "frontend_standard": {
+      "frontend_view": {
+        "live": "render query, normalized intent output, reference intent, Judge, Attribute, and compact raw response drill-down",
+        "summary": "render intent case pool with Output and Reference as aligned label/confidence JSON"
+      },
+      "batch_persistence": {
+        "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+        "transient_results": "do not persist full trace, judge, attribute, raw response, or frontend_view as durable case-pool source data"
+      }
+    },
+    "display_contract": {
+      "output_source": "trace.live_result.extracted_output",
+      "reference_source": "judge_generated",
+      "formatting": [
+        "json formatting",
+        "truncation",
+        "output/reference alignment"
+      ]
+    }
+  }
+}

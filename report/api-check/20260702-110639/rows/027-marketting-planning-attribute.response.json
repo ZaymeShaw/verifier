@@ -1,0 +1,134 @@
+{
+  "trace_id": "242e7294-e11a-4531-82aa-8389fcf8ff97",
+  "project_id": "marketting-planning",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图识别准确度",
+      "causal_category": "boundary_limitation"
+    },
+    {
+      "expectation_id": "阶段路由正确性",
+      "causal_category": "boundary_limitation"
+    },
+    {
+      "expectation_id": "业务指标识别",
+      "causal_category": "boundary_limitation"
+    },
+    {
+      "expectation_id": "时间范围理解",
+      "causal_category": "boundary_limitation"
+    },
+    {
+      "expectation_id": "可操作改进建议生成",
+      "causal_category": "boundary_limitation"
+    }
+  ],
+  "causal_category": "needs_human_review",
+  "earliest_divergence": {
+    "node": "intent_recognition",
+    "expected": "从用户查询中识别出「营销活动效果分析」意图，或至少提取时间范围「上个月」作为后续分析参数",
+    "actual": "意图被分类为 IntentType.other，target_value=null, path_types=null，无任何结构化信息被提取",
+    "evidence": [
+      "intent_recognition.py: _HOMEPAGE_RULES 无营销相关正则",
+      "intent_prompt.py: 意图分类仅 team_portrait/customer_portrait/nbev_planning/other",
+      "intent.py: IntentType 枚举不含营销意图",
+      "extracted_output.stage = 'non_agent'"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "not_verified",
+      "evidence": [
+        "normalized_request.query 与原始输入一致，无异常"
+      ]
+    },
+    {
+      "status": "failed",
+      "evidence": [
+        "规则匹配器 _HOMEPAGE_RULES 无匹配",
+        "LLM 分类结果为 IntentType.other（推断自 stage=non_agent）",
+        "IntentResult 的 target_value 和 path_types 均为 null"
+      ]
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "failed",
+      "evidence": [
+        "stage = 'non_agent'"
+      ]
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "suspicious",
+      "evidence": [
+        "raw events 仅含 1 张 card（card_start/card_message_content/card_end），无 planning 产物"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "SSE 事件序列完整：reasoning_start → reasoning_message_content → reasoning_end → card_start → card_message_content → card_end"
+      ]
+    },
+    {
+      "status": "not_verified"
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": true,
+    "execution_trace": true,
+    "project_docs": true,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "用户查询「帮我看一下我们上个月的营销活动效果怎么样，有什么地方可以改进吗」超出了 marketing-planning 智能体的产品边界。该智能体被明确定位为「平安寿险 NBEV 达成路径规划智能体」，其意图分类体系（IntentType 枚举 + LLM prompt + 规则匹配器）仅覆盖 NBEV 达成规划、队伍画像、客户画像三类业务场景。营销活动效果分析不属于上述任一场景，因此在 intent_recognition 阶段被正确归类为 other，触发 non_agent 路径，导致下游所有分析能力（指标识别、时间提取、改进建议生成）均未执行。根因是产品边界限制（boundary_limitation），而非代码缺陷或模型能力不足——系统行为符合其设计契约，但无法满足用户的实际需求。",
+  "verification_steps": [
+    "验证 LLM 实际返回的 IntentResult：检查 run trace 中 intent_recognition 阶段的 LLM 响应，确认 intent 确为 other 且 confidence 值",
+    "检查 card_message_content 的实际文本内容：确认 non_agent 卡片是否向用户说明了能力边界并给出了替代建议",
+    "与产品确认营销活动分析是否在未来规划中：若是，需扩展 IntentType 和 prompt；若否，non_agent 响应需优化话术",
+    "如需进一步验证 adapter 行为：读取 adapter.py 确认 canonical event 映射逻辑是否正确，排除 adapter 层面的二次错误"
+  ],
+  "patch_direction": [
+    "短期：在 non_agent 路径中增强用户响应，明确告知当前智能体的能力范围（NBEV达成规划/队伍画像/客户画像），并引导用户尝试相关功能",
+    "中期：若营销活动分析属于产品路线图，需：(1) 在 IntentType 新增 marketing_campaign_analysis；(2) 在 INTENT_RECOGNITION_PROMPT 增加该意图的描述、示例和字段提取规则（时间范围、指标维度）；(3) 在 _HOMEPAGE_RULES 增加快捷正则；(4) 实现对应的 planning 和 result_assembly 逻辑",
+    "架构改进：为 IntentType.other 增加二级分类机制，区分「合法但超出当前边界」与「完全无关/恶意输入」，使路由层能做差异化处理"
+  ],
+  "needs_human_review": true,
+  "scenario": "intent_recognition",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 5,
+    "probe_count": 4,
+    "summary_text": "tool_call_budget_exhausted: 已读取 5 个文件（intent_recognition.py, intent_prompt.py, intent.py, config.py, 项目风险文档），但 adapter.py（64000 chars）因预算限制未读取。adapter_extraction 节点的验证依赖 extracted_output 间接推断，非直接源码验证",
+    "is_complete": false,
+    "is_formal_attribution": false
+  }
+}

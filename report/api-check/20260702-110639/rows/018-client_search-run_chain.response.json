@@ -1,0 +1,3379 @@
+{
+  "trace": {
+    "trace_id": "4cb04094-136d-4127-a601-4cdeb06c6579",
+    "project_id": "client_search",
+    "case_id": "mock-agent-client_search-71bdaf11",
+    "live_result": {
+      "project_id": "client_search",
+      "case_id": "mock-agent-client_search-71bdaf11",
+      "session_id": "general-eval-session",
+      "raw_input": {
+        "query": "帮我查一下深圳的客户"
+      },
+      "normalized_request": {
+        "user_text": "帮我查一下深圳的客户",
+        "user_id": "eval-user",
+        "trace_id": "general-eval-1782961599942",
+        "session_id": "general-eval-session",
+        "source": "askbob"
+      },
+      "call_status": "succeeded",
+      "runtime_ms": 2574,
+      "extracted_output": {
+        "summary": "未识别到明确查询条件",
+        "logic": "AND",
+        "status_code": 0,
+        "user_visible_text": "未识别到明确查询条件",
+        "empty_result_reason": "service_returned_no_conditions",
+        "is_empty_result": true,
+        "source_query": "帮我查一下深圳的客户",
+        "matched_level": 4,
+        "matched_patterns": "### 当前时间\n2026-07-02 11:06:40 (Asia/Shanghai)\n### 今天星期\n周四\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\n\n  示例: \"男性客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}\n\n  示例: \"女客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}\n\n  反例: \"子女是男性的客户\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n- **polNo** | 操作符: MATCH | 值类型: extract | 定义: 表示保单号，不表示客户编号，保单号是由P开头+15位数字，如 P966073446746215\n\n  示例: \"保单号为1234567890的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"1234567890\"}\n\n  示例: \"保单号匹配P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n  示例: \"按保单号查P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“以下”不含边界，“及以上”、“及以下”含边界 | 说明: 表示客户价值分组集合，如A类=A1/A2/A3/A4，B类=B，A或B/AB类=A1/A2/A3/A4/B；高价值->A1/A2/A3/A4/B/C，排序：F<E<D<C<B<A4<A3<A2<A1\n\n  示例: \"A类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"AB类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"高价值客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\", \"C\"]}\n\n  示例: \"B以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"B及以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"B类以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\"]}\n\n  示例: \"B类及以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\", \"B\"]}\n\n  示例: \"B类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"B\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **zxjyEquityGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['预达标', '已达标'] | 定义: 表示臻享家医客户范围，包括预达标和已达标两类客户 | 说明: 当用户直接输入“臻享家医客户/家医客户”时，输出 CONTAINS=[预达标, 已达标]，不要只输出已达标。\n\n  示例: \"臻享家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"臻享客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n- **clientGroupLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['奋斗青年', '都市白领', '而立一族', '社会中坚', '邻退天命', '慈爱祖辈', '创业新贵', '创富一代', '荣耀高堂', '承富二代', '已退小康'] | 定义: 表示客户画像分群标签。年龄、资产等组合定义用于增强召回理解，不作为默认自动映射规则。 | 说明: 例如：奋斗青年≈16-30岁且资产较低，创业新贵≈36-50岁且高净值；这些定义仅用于辅助理解，不应在缺少标签语境时直接替代为客群标签。\n\n  示例: \"都市白领客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"都市白领\"]}\n\n  示例: \"创业新贵客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"创业新贵\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **birthdayMd** | 操作符: RANGE | 值类型: date | 格式: MM-dd | 说明: 只含月日（不含年），格式MM-dd；本月生日取当月1日至月末；下月生日取下月1日至月末；下周生日取下周一至周天；未来一周生日取今天至往后顺延6天；未来一个月生日取今天至往后延顺29天\n\n  示例: \"3月15日生日的客户\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-15\", \"max\": \"03-15\"}}\n\n  示例: \"本月生日的客户（当前2026年3月）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-01\", \"max\": \"03-31\"}}\n\n  示例: \"下个月生日的客户（当前2026年3月）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"04-01\", \"max\": \"04-30\"}}\n\n  示例: \"下周有哪些客户过生日（当前2026年3月25号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-30\", \"max\": \"04-05\"}}\n\n  示例: \"未来一周的客户（当前2026年4月1号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"04-01\", \"max\": \"04-07\"}}\n\n  示例: \"未来一个月的客户（当前2026年3月25号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-25\", \"max\": \"04-25\"}}\n\n### 用户查询\n帮我查一下深圳的客户",
+        "external_boundary_sources": {
+          "config_paths": {
+            "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+            "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+            "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+            "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+          }
+        }
+      },
+      "output_source": "live_service",
+      "application_boundary": {
+        "downstream_result_set_available": false,
+        "downstream_status": "not_verified",
+        "judge_scope": "parser_condition_semantics_only",
+        "result_set_verified": false,
+        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+      },
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-02T03:06:39.934605+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-02T03:06:39.934748+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-02T03:06:42.517713+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-02T03:06:42.517940+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-02T03:10:06.952440+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-02T03:10:06.952864+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-02T03:10:06.953023+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-02T03:11:53.277719+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-02T03:13:49.082702+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-02T03:13:49.082854+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-02T03:13:49.134144+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence or blocked reason available"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "",
+    "interaction_mode": "single_turn",
+    "session_id": "general-eval-session",
+    "created_at": "2026-07-02T03:06:42.517349+00:00"
+  },
+  "judge": {
+    "trace_id": "4cb04094-136d-4127-a601-4cdeb06c6579",
+    "project_id": "client_search",
+    "business_expectations": [
+      {},
+      {}
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "深圳地域筛选条件",
+        "status": "not_evaluable"
+      },
+      {
+        "expectation_id": "未识别条件时的合理降级",
+        "status": "fulfilled"
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "not_evaluable",
+      "assessment_count": 2,
+      "blocking_expectations": [
+        "深圳地域筛选条件"
+      ]
+    },
+    "expected": {
+      "query_logic": "AND",
+      "expected_source": "not_available",
+      "reference_is_oracle": false
+    },
+    "actual": {
+      "query_logic": "AND"
+    },
+    "summary": {
+      "reason": "uncertain · 用户查询'深圳的客户'需要按城市维度筛选，但经检索ES数据库字段定义，不存在address、city、location、area、region、province、workCity等任何地理位置相关字段。此限制来自上游ES数据库的数据能力，非当前parser系统可优化范畴。parser在无法将'深圳'映射到任何可用字段的情况下，返回空条件并提示'未识别到明确查询条件'，属于合理降级行为。由于核心业务期望完全受制于不可控的上游数据限制，整体评估结果为不可评估。",
+      "reason_source": "reasoning_summary",
+      "fulfillment_status": "not_evaluable",
+      "assessment_count": 2,
+      "blocking_count": 1,
+      "is_formal_attribution": false
+    }
+  },
+  "attribute": {
+    "trace_id": "4cb04094-136d-4127-a601-4cdeb06c6579",
+    "project_id": "client_search",
+    "case_id": "",
+    "expectation_attributions": [
+      {
+        "expectation_id": "深圳地域筛选条件",
+        "causal_category": "boundary_limitation"
+      }
+    ],
+    "causal_category": "boundary_limitation",
+    "earliest_divergence": {
+      "node": "数据模型层 — field_definitions_args.yaml / ES 索引 schema",
+      "expected": "ES 索引中存在城市/地址/地域类字段，使 parser 能将'深圳'映射为结构化条件",
+      "actual": "ES 索引中不存在任何地理位置字段（address、city、location、area、region、province、workCity 全部缺失），parser 无法映射'深圳'",
+      "evidence": [
+        "field_definitions_args.yaml 全文检索：无 address、city、location、area、region、province、workCity 字段",
+        "enhanced_rules_args.yaml 全文检索：无城市/地域相关正则规则",
+        "judge 验证：已检索上述全部字段名，均未找到"
+      ],
+      "confidence": "high"
+    },
+    "chain_nodes": [
+      {
+        "status": "not_verified",
+        "evidence": [
+          "run_trace 显示 user_text='帮我查一下深圳的客户'，source='askbob'，请求构建正常"
+        ]
+      },
+      {
+        "status": "not_verified",
+        "evidence": [
+          "run_trace 显示 code=0，API 调用成功"
+        ]
+      },
+      {
+        "status": "not_verified",
+        "evidence": [
+          "matched_level=4，matched_patterns 中动态召回的字段列表无任何地理位置字段",
+          "这是因为 field_definitions_args.yaml 中根本不存在地理字段——路由的字段召回行为正确"
+        ]
+      },
+      {
+        "status": "not_verified"
+      },
+      {
+        "status": "not_verified",
+        "evidence": [
+          "condition_count=0，user_visible_text='未识别到明确查询条件'",
+          "empty_result_reason='service_returned_no_conditions'"
+        ]
+      }
+    ],
+    "probe_results": [
+      {
+        "probe_id": "",
+        "status": "not_verified"
+      },
+      {
+        "probe_id": "",
+        "status": "not_verified"
+      },
+      {
+        "probe_id": "",
+        "status": "not_verified"
+      },
+      {
+        "probe_id": "",
+        "status": "not_verified"
+      }
+    ],
+    "evidence_coverage": {
+      "query": true,
+      "actual": true,
+      "expected": true,
+      "execution_trace": true,
+      "project_docs": true,
+      "code_or_config": true
+    },
+    "root_cause_hypothesis": "用户查询'帮我查一下深圳的客户'要求按城市维度筛选客户。然而 ES 数据库的字段定义（field_definitions_args.yaml）中不存在任何地理位置相关字段（address、city、location、area、region、province、workCity 等均未定义），增强规则（enhanced_rules_args.yaml）中也没有城市/地域匹配规则。Parser 在 prompt 的硬约束下（'只能使用参考字段定义中明确列出的字段名，若查询意图找不到匹配的字段必须忽略'），无法将'深圳'映射到任何可用字段，因此正确返回空条件并提示'未识别到明确查询条件'。这不是 parser 或 LLM 的缺陷，而是 ES 数据模型层面的能力边界限制——系统上游根本不存储客户的城市场信息，自然无法支持按城市筛选。",
+    "verification_steps": [
+      "1. 检查 ES 实际索引 mapping：确认客户索引中是否存在任何包含城市/地址信息的字段（包括非专用字段如备注、标签、扩展属性等）",
+      "2. 抽查 ES 客户样本数据：查看是否有客户记录中实际存储了'深圳'等城市信息（可能在 clientNote、clientTag、address 等非标准字段中）",
+      "3. 若确认 ES 数据中确实无城市信息：向产品/数据团队确认城市字段是否在数据采集范围内、是否有计划补充",
+      "4. 若确认 ES 数据中存在城市信息但未被 field_definitions 覆盖：在 field_definitions_args.yaml 中补充对应字段定义",
+      "5. 回归验证：新增字段定义后，使用相同 query '帮我查一下深圳的客户' 测试，确认 parser 能输出包含城市条件的结果"
+    ],
+    "patch_direction": [
+      {
+        "scope": "field_definitions_args.yaml",
+        "action": "新增城市/地址字段意图定义",
+        "example": "在 intents 列表中新增类似条目：\n- id: city_filter\n  retrieval_text: '深圳 北京 上海 广州 城市 所在地 地址 哪个城市 在哪个城市'\n  field: clientCity（或 ES 中实际存储城市信息的字段名）\n  operator: MATCH\n  value_type: extract\n  description: '表示客户所在城市，不表示户籍城市或工作城市'\n  examples:\n    - query: '深圳的客户'\n      output: {field: clientCity, operator: MATCH, value: '深圳'}\n    - query: '帮我查一下深圳的客户'\n      output: {field: clientCity, operator: MATCH, value: '深圳'}"
+      },
+      {
+        "scope": "enhanced_rules_args.yaml（可选）",
+        "action": "新增城市正则增强规则",
+        "example": "如需在 LLM 解析前通过正则快速捕获城市名：\n- name: '城市-匹配'\n  patterns:\n    - '{SEARCH}(深圳|北京|上海|广州|杭州|成都|武汉|南京|重庆|天津|苏州|西安|长沙|郑州|东莞|青岛|沈阳|宁波|昆明|大连|厦门|合肥|佛山|福州|哈尔滨|济南|温州|长春|石家庄|常州|泉州|南宁|贵阳|南昌|太原|烟台|嘉兴|南通|金华|珠海|惠州|徐州|海口|乌鲁木齐|兰州|中山|湖州|盐城|潍坊|保定|镇江|洛阳|泰州|临沂|唐山|台州)(?:的客户|客户|的人|人)?'\n  field: 'clientCity'\n  operator: 'MATCH'\n  value_type: 'capture'\n  value:\n    group: 1\n  priority: 7"
+      },
+      {
+        "scope": "ES 数据层（如果城市信息确实不在 ES 中）",
+        "action": "补充客户城市数据到 ES 索引",
+        "detail": "这是根本性前置依赖：如果 ES 中根本没有客户城市数据，任何 parser 配置都无法解决问题。需要从上游数据源（CRM、核心系统等）将客户城市信息同步至 ES 索引。"
+      }
+    ],
+    "needs_human_review": false,
+    "scenario": "用户查询'帮我查一下深圳的客户'，意图按城市筛选。ES 数据库无地理位置字段，parser 正确返回空条件并提示无法识别。属于系统能力边界限制，非 parser 缺陷。",
+    "summary": {
+      "causal_category": "boundary_limitation",
+      "attribution_count": 1,
+      "probe_count": 4,
+      "summary_text": "用户查询'帮我查一下深圳的客户'要求按城市维度筛选客户。然而 ES 数据库的字段定义（field_definitions_args.yaml）中不存在任何地理位置相关字段（address、city、location、area、region、province、workCity 等均未定义），增强规则（enhanced_rules_args.yaml）中也没有城市/地域匹配规则。Parser 在 prompt 的硬约束下（'只能使用参考字段定义中明确列出的字段名，若查询意图找不到匹配的字段必须忽略'），无法将'深圳'映射到任何可用字段，因此正确返回空条件并提示'未识别到明确查询条件'。这不是 parser 或 LLM 的缺陷，而是 ES 数据模型层面的能力边界限制——系统上游根本不存储客户的城市场信息，自然无法支持按城市筛选。",
+      "is_complete": true,
+      "is_formal_attribution": true
+    }
+  },
+  "cluster": {
+    "project_id": "client_search",
+    "clusters": [
+      {
+        "cluster_id": "expectation::boundary_limitation::not_evaluable",
+        "mechanism": "boundary_limitation::not_evaluable",
+        "causal_category": "boundary_limitation",
+        "fulfillment_statuses": [
+          "not_evaluable"
+        ],
+        "expectation_ids": [
+          "深圳地域筛选条件"
+        ],
+        "needs_human_review": false,
+        "canonical_attribution": true,
+        "count": 1,
+        "representative_cases": [
+          "4cb04094-136d-4127-a601-4cdeb06c6579"
+        ],
+        "representative_traces": [
+          "4cb04094-136d-4127-a601-4cdeb06c6579"
+        ],
+        "common_root_cause": "用户查询'帮我查一下深圳的客户'要求按城市维度筛选客户。然而 ES 数据库的字段定义（field_definitions_args.yaml）中不存在任何地理位置相关字段（address、city、location、area、region、province、workCity 等均未定义），增强规则（enhanced_rules_args.yaml）中也没有城市/地域匹配规则。Parser 在 prompt 的硬约束下（'只能使用参考字段定义中明确列出的字段名，若查询意图找不到匹配的字段必须忽略'），无法将'深圳'映射到任何可用字段，因此正确返回空条件并提示'未识别到明确查询条件'。这不是 parser 或 LLM 的缺陷，而是 ES 数据模型层面的能力边界限制——系统上游根本不存储客户的城市场信息，自然无法支持按城市筛选。",
+        "shared_failure_pattern": "用户查询'帮我查一下深圳的客户'要求按城市维度筛选客户。然而 ES 数据库的字段定义（field_definitions_args.yaml）中不存在任何地理位置相关字段（address、city、location、area、region、province、workCity 等均未定义），增强规则（enhanced_rules_args.yaml）中也没有城市/地域匹配规则。Parser 在 prompt 的硬约束下（'只能使用参考字段定义中明确列出的字段名，若查询意图找不到匹配的字段必须忽略'），无法将'深圳'映射到任何可用字段，因此正确返回空条件并提示'未识别到明确查询条件'。这不是 parser 或 LLM 的缺陷，而是 ES 数据模型层面的能力边界限制——系统上游根本不存储客户的城市场信息，自然无法支持按城市筛选。",
+        "representative_diffs": [
+          {
+            "case_id": "4cb04094-136d-4127-a601-4cdeb06c6579",
+            "node": "数据模型层 — field_definitions_args.yaml / ES 索引 schema",
+            "expected": "ES 索引中存在城市/地址/地域类字段，使 parser 能将'深圳'映射为结构化条件",
+            "actual": "ES 索引中不存在任何地理位置字段（address、city、location、area、region、province、workCity 全部缺失），parser 无法映射'深圳'",
+            "evidence": [
+              "field_definitions_args.yaml 全文检索：无 address、city、location、area、region、province、workCity 字段",
+              "enhanced_rules_args.yaml 全文检索：无城市/地域相关正则规则",
+              "judge 验证：已检索上述全部字段名，均未找到"
+            ]
+          }
+        ],
+        "minimal_fix_direction": [
+          {
+            "scope": "field_definitions_args.yaml",
+            "action": "新增城市/地址字段意图定义",
+            "example": "在 intents 列表中新增类似条目：\n- id: city_filter\n  retrieval_text: '深圳 北京 上海 广州 城市 所在地 地址 哪个城市 在哪个城市'\n  field: clientCity（或 ES 中实际存储城市信息的字段名）\n  operator: MATCH\n  value_type: extract\n  description: '表示客户所在城市，不表示户籍城市或工作城市'\n  examples:\n    - query: '深圳的客户'\n      output: {field: clientCity, operator: MATCH, value: '深圳'}\n    - query: '帮我查一下深圳的客户'\n      output: {field: clientCity, operator: MATCH, value: '深圳'}"
+          },
+          {
+            "scope": "enhanced_rules_args.yaml（可选）",
+            "action": "新增城市正则增强规则",
+            "example": "如需在 LLM 解析前通过正则快速捕获城市名：\n- name: '城市-匹配'\n  patterns:\n    - '{SEARCH}(深圳|北京|上海|广州|杭州|成都|武汉|南京|重庆|天津|苏州|西安|长沙|郑州|东莞|青岛|沈阳|宁波|昆明|大连|厦门|合肥|佛山|福州|哈尔滨|济南|温州|长春|石家庄|常州|泉州|南宁|贵阳|南昌|太原|烟台|嘉兴|南通|金华|珠海|惠州|徐州|海口|乌鲁木齐|兰州|中山|湖州|盐城|潍坊|保定|镇江|洛阳|泰州|临沂|唐山|台州)(?:的客户|客户|的人|人)?'\n  field: 'clientCity'\n  operator: 'MATCH'\n  value_type: 'capture'\n  value:\n    group: 1\n  priority: 7"
+          },
+          {
+            "scope": "ES 数据层（如果城市信息确实不在 ES 中）",
+            "action": "补充客户城市数据到 ES 索引",
+            "detail": "这是根本性前置依赖：如果 ES 中根本没有客户城市数据，任何 parser 配置都无法解决问题。需要从上游数据源（CRM、核心系统等）将客户城市信息同步至 ES 索引。"
+          }
+        ],
+        "verification_cases": [
+          "4cb04094-136d-4127-a601-4cdeb06c6579"
+        ],
+        "next_actions": [
+          "1. 检查 ES 实际索引 mapping：确认客户索引中是否存在任何包含城市/地址信息的字段（包括非专用字段如备注、标签、扩展属性等）",
+          "2. 抽查 ES 客户样本数据：查看是否有客户记录中实际存储了'深圳'等城市信息（可能在 clientNote、clientTag、address 等非标准字段中）",
+          "3. 若确认 ES 数据中确实无城市信息：向产品/数据团队确认城市字段是否在数据采集范围内、是否有计划补充",
+          "4. 若确认 ES 数据中存在城市信息但未被 field_definitions 覆盖：在 field_definitions_args.yaml 中补充对应字段定义",
+          "5. 回归验证：新增字段定义后，使用相同 query '帮我查一下深圳的客户' 测试，确认 parser 能输出包含城市条件的结果"
+        ]
+      }
+    ],
+    "common_root_cause": "",
+    "impact": "",
+    "priority": ""
+  },
+  "check": {
+    "passed": false,
+    "issues": [
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: CRM, ES, LLM, Parser, SEARCH, address"
+    ],
+    "boundary_violations": [
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+    ],
+    "consistency_gaps": [
+      "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: CRM, ES, LLM, Parser, SEARCH, address"
+    ],
+    "verification_results": [
+      "Check categories passed current audit."
+    ],
+    "recommended_fixes": [
+      "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions.",
+      "Ensure all steps use the same trace_id and latest run output."
+    ]
+  },
+  "frontend_view": {
+    "project_info": {
+      "project_id": "client_search",
+      "name": "客户搜索评估示例",
+      "description": "将客户搜索项目作为通用评估系统的第一个项目适配实现。"
+    },
+    "run_trace_summary": {
+      "trace_id": "4cb04094-136d-4127-a601-4cdeb06c6579",
+      "project_id": "client_search",
+      "case_id": "mock-agent-client_search-71bdaf11",
+      "input": {
+        "query": "帮我查一下深圳的客户"
+      },
+      "normalized_request": {
+        "user_text": "帮我查一下深圳的客户",
+        "user_id": "eval-user",
+        "trace_id": "general-eval-1782961599942",
+        "session_id": "general-eval-session",
+        "source": "askbob"
+      },
+      "extracted_output": {
+        "summary": "未识别到明确查询条件",
+        "logic": "AND",
+        "status_code": 0,
+        "user_visible_text": "未识别到明确查询条件",
+        "empty_result_reason": "service_returned_no_conditions",
+        "is_empty_result": true,
+        "source_query": "帮我查一下深圳的客户",
+        "matched_level": 4,
+        "matched_patterns": "### 当前时间\n2026-07-02 11:06:40 (Asia/Shanghai)\n### 今天星期\n周四\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\n\n  示例: \"男性客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}\n\n  示例: \"女客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}\n\n  反例: \"子女是男性的客户\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n- **polNo** | 操作符: MATCH | 值类型: extract | 定义: 表示保单号，不表示客户编号，保单号是由P开头+15位数字，如 P966073446746215\n\n  示例: \"保单号为1234567890的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"1234567890\"}\n\n  示例: \"保单号匹配P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n  示例: \"按保单号查P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“以下”不含边界，“及以上”、“及以下”含边界 | 说明: 表示客户价值分组集合，如A类=A1/A2/A3/A4，B类=B，A或B/AB类=A1/A2/A3/A4/B；高价值->A1/A2/A3/A4/B/C，排序：F<E<D<C<B<A4<A3<A2<A1\n\n  示例: \"A类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"AB类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"高价值客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\", \"C\"]}\n\n  示例: \"B以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"B及以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"B类以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\"]}\n\n  示例: \"B类及以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\", \"B\"]}\n\n  示例: \"B类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"B\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **zxjyEquityGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['预达标', '已达标'] | 定义: 表示臻享家医客户范围，包括预达标和已达标两类客户 | 说明: 当用户直接输入“臻享家医客户/家医客户”时，输出 CONTAINS=[预达标, 已达标]，不要只输出已达标。\n\n  示例: \"臻享家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"臻享客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n- **clientGroupLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['奋斗青年', '都市白领', '而立一族', '社会中坚', '邻退天命', '慈爱祖辈', '创业新贵', '创富一代', '荣耀高堂', '承富二代', '已退小康'] | 定义: 表示客户画像分群标签。年龄、资产等组合定义用于增强召回理解，不作为默认自动映射规则。 | 说明: 例如：奋斗青年≈16-30岁且资产较低，创业新贵≈36-50岁且高净值；这些定义仅用于辅助理解，不应在缺少标签语境时直接替代为客群标签。\n\n  示例: \"都市白领客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"都市白领\"]}\n\n  示例: \"创业新贵客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"创业新贵\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **birthdayMd** | 操作符: RANGE | 值类型: date | 格式: MM-dd | 说明: 只含月日（不含年），格式MM-dd；本月生日取当月1日至月末；下月生日取下月1日至月末；下周生日取下周一至周天；未来一周生日取今天至往后顺延6天；未来一个月生日取今天至往后延顺29天\n\n  示例: \"3月15日生日的客户\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-15\", \"max\": \"03-15\"}}\n\n  示例: \"本月生日的客户（当前2026年3月）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-01\", \"max\": \"03-31\"}}\n\n  示例: \"下个月生日的客户（当前2026年3月）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"04-01\", \"max\": \"04-30\"}}\n\n  示例: \"下周有哪些客户过生日（当前2026年3月25号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-30\", \"max\": \"04-05\"}}\n\n  示例: \"未来一周的客户（当前2026年4月1号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"04-01\", \"max\": \"04-07\"}}\n\n  示例: \"未来一个月的客户（当前2026年3月25号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-25\", \"max\": \"04-25\"}}\n\n### 用户查询\n帮我查一下深圳的客户",
+        "external_boundary_sources": {
+          "config_paths": {
+            "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+            "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+            "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+            "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+          }
+        }
+      },
+      "live_result": {
+        "project_id": "client_search",
+        "case_id": "mock-agent-client_search-71bdaf11",
+        "session_id": "general-eval-session",
+        "raw_input": {
+          "query": "帮我查一下深圳的客户"
+        },
+        "normalized_request": {
+          "user_text": "帮我查一下深圳的客户",
+          "user_id": "eval-user",
+          "trace_id": "general-eval-1782961599942",
+          "session_id": "general-eval-session",
+          "source": "askbob"
+        },
+        "call_status": "succeeded",
+        "runtime_ms": 2574,
+        "extracted_output": {
+          "summary": "未识别到明确查询条件",
+          "logic": "AND",
+          "status_code": 0,
+          "user_visible_text": "未识别到明确查询条件",
+          "empty_result_reason": "service_returned_no_conditions",
+          "is_empty_result": true,
+          "source_query": "帮我查一下深圳的客户",
+          "matched_level": 4,
+          "matched_patterns": "### 当前时间\n2026-07-02 11:06:40 (Asia/Shanghai)\n### 今天星期\n周四\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\n\n  示例: \"男性客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}\n\n  示例: \"女客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}\n\n  反例: \"子女是男性的客户\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n- **polNo** | 操作符: MATCH | 值类型: extract | 定义: 表示保单号，不表示客户编号，保单号是由P开头+15位数字，如 P966073446746215\n\n  示例: \"保单号为1234567890的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"1234567890\"}\n\n  示例: \"保单号匹配P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n  示例: \"按保单号查P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“以下”不含边界，“及以上”、“及以下”含边界 | 说明: 表示客户价值分组集合，如A类=A1/A2/A3/A4，B类=B，A或B/AB类=A1/A2/A3/A4/B；高价值->A1/A2/A3/A4/B/C，排序：F<E<D<C<B<A4<A3<A2<A1\n\n  示例: \"A类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"AB类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"高价值客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\", \"C\"]}\n\n  示例: \"B以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"B及以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"B类以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\"]}\n\n  示例: \"B类及以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\", \"B\"]}\n\n  示例: \"B类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"B\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **zxjyEquityGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['预达标', '已达标'] | 定义: 表示臻享家医客户范围，包括预达标和已达标两类客户 | 说明: 当用户直接输入“臻享家医客户/家医客户”时，输出 CONTAINS=[预达标, 已达标]，不要只输出已达标。\n\n  示例: \"臻享家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"臻享客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n- **clientGroupLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['奋斗青年', '都市白领', '而立一族', '社会中坚', '邻退天命', '慈爱祖辈', '创业新贵', '创富一代', '荣耀高堂', '承富二代', '已退小康'] | 定义: 表示客户画像分群标签。年龄、资产等组合定义用于增强召回理解，不作为默认自动映射规则。 | 说明: 例如：奋斗青年≈16-30岁且资产较低，创业新贵≈36-50岁且高净值；这些定义仅用于辅助理解，不应在缺少标签语境时直接替代为客群标签。\n\n  示例: \"都市白领客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"都市白领\"]}\n\n  示例: \"创业新贵客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"创业新贵\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **birthdayMd** | 操作符: RANGE | 值类型: date | 格式: MM-dd | 说明: 只含月日（不含年），格式MM-dd；本月生日取当月1日至月末；下月生日取下月1日至月末；下周生日取下周一至周天；未来一周生日取今天至往后顺延6天；未来一个月生日取今天至往后延顺29天\n\n  示例: \"3月15日生日的客户\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-15\", \"max\": \"03-15\"}}\n\n  示例: \"本月生日的客户（当前2026年3月）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-01\", \"max\": \"03-31\"}}\n\n  示例: \"下个月生日的客户（当前2026年3月）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"04-01\", \"max\": \"04-30\"}}\n\n  示例: \"下周有哪些客户过生日（当前2026年3月25号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-30\", \"max\": \"04-05\"}}\n\n  示例: \"未来一周的客户（当前2026年4月1号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"04-01\", \"max\": \"04-07\"}}\n\n  示例: \"未来一个月的客户（当前2026年3月25号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-25\", \"max\": \"04-25\"}}\n\n### 用户查询\n帮我查一下深圳的客户",
+          "external_boundary_sources": {
+            "config_paths": {
+              "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+              "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+              "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+              "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+            }
+          }
+        },
+        "output_source": "live_service",
+        "execution_trace": [
+          {
+            "stage": "adapter.build_request",
+            "status": "succeeded",
+            "evidence": {
+              "user_text": "帮我查一下深圳的客户",
+              "source": "askbob"
+            },
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "client_search.api",
+            "status": "succeeded",
+            "evidence": {
+              "code": 0
+            },
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "client_search.routing",
+            "status": "succeeded",
+            "evidence": {
+              "matched_level": 4,
+              "matched_patterns": "### 当前时间\n2026-07-02 11:06:40 (Asia/Shanghai)\n### 今天星期\n周四\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\n\n  示例: \"男性客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}\n\n  示例: \"女客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}\n\n  反例: \"子女是男性的客户\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n- **polNo** | 操作符: MATCH | 值类型: extract | 定义: 表示保单号，不表示客户编号，保单号是由P开头+15位数字，如 P966073446746215\n\n  示例: \"保单号为1234567890的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"1234567890\"}\n\n  示例: \"保单号匹配P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n  示例: \"按保单号查P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“以下”不含边界，“及以上”、“及以下”含边界 | 说明: 表示客户价值分组集合，如A类=A1/A2/A3/A4，B类=B，A或B/AB类=A1/A2/A3/A4/B；高价值->A1/A2/A3/A4/B/C，排序：F<E<D<C<B<A4<A3<A2<A1\n\n  示例: \"A类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"AB类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"高价值客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\", \"C\"]}\n\n  示例: \"B以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"B及以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"B类以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\"]}\n\n  示例: \"B类及以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\", \"B\"]}\n\n  示例: \"B类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"B\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **zxjyEquityGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['预达标', '已达标'] | 定义: 表示臻享家医客户范围，包括预达标和已达标两类客户 | 说明: 当用户直接输入“臻享家医客户/家医客户”时，输出 CONTAINS=[预达标, 已达标]，不要只输出已达标。\n\n  示例: \"臻享家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"臻享客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n- **clientGroupLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['奋斗青年', '都市白领', '而立一族', '社会中坚', '邻退天命', '慈爱祖辈', '创业新贵', '创富一代', '荣耀高堂', '承富二代', '已退小康'] | 定义: 表示客户画像分群标签。年龄、资产等组合定义用于增强召回理解，不作为默认自动映射规则。 | 说明: 例如：奋斗青年≈16-30岁且资产较低，创业新贵≈36-50岁且高净值；这些定义仅用于辅助理解，不应在缺少标签语境时直接替代为客群标签。\n\n  示例: \"都市白领客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"都市白领\"]}\n\n  示例: \"创业新贵客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"创业新贵\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **birthdayMd** | 操作符: RANGE | 值类型: date | 格式: MM-dd | 说明: 只含月日（不含年），格式MM-dd；本月生日取当月1日至月末；下月生日取下月1日至月末；下周生日取下周一至周天；未来一周生日取今天至往后顺延6天；未来一个月生日取今天至往后延顺29天\n\n  示例: \"3月15日生日的客户\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-15\", \"max\": \"03-15\"}}\n\n  示例: \"本月生日的客户（当前2026年3月）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-01\", \"max\": \"03-31\"}}\n\n  示例: \"下个月生日的客户（当前2026年3月）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"04-01\", \"max\": \"04-30\"}}\n\n  示例: \"下周有哪些客户过生日（当前2026年3月25号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-30\", \"max\": \"04-05\"}}\n\n  示例: \"未来一周的客户（当前2026年4月1号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"04-01\", \"max\": \"04-07\"}}\n\n  示例: \"未来一个月的客户（当前2026年3月25号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-25\", \"max\": \"04-25\"}}\n\n### 用户查询\n帮我查一下深圳的客户"
+            },
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "client_search.downstream_search",
+            "status": "not_verified",
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "adapter.extract_output",
+            "status": "suspicious",
+            "evidence": {
+              "logic": "AND",
+              "condition_count": 0,
+              "empty_result_reason": "service_returned_no_conditions"
+            },
+            "timestamp": "",
+            "error": ""
+          }
+        ],
+        "application_boundary": {
+          "downstream_result_set_available": false,
+          "downstream_status": "not_verified",
+          "judge_scope": "parser_condition_semantics_only",
+          "result_set_verified": false,
+          "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+        },
+        "interaction_mode": "single_turn"
+      },
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "scenario": "",
+      "application_boundary": {
+        "downstream_result_set_available": false,
+        "downstream_status": "not_verified",
+        "judge_scope": "parser_condition_semantics_only",
+        "result_set_verified": false,
+        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+      },
+      "evidence_refs": [
+        {
+          "type": "client_search_state_boundary",
+          "state_id": "collect_evidence",
+          "application_boundary": {
+            "downstream_result_set_available": false,
+            "downstream_status": "not_verified",
+            "judge_scope": "parser_condition_semantics_only",
+            "result_set_verified": false,
+            "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+          },
+          "external_boundary_sources": {
+            "config_paths": {
+              "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+              "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+              "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+              "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+            }
+          }
+        }
+      ],
+      "execution_trace": [
+        {
+          "stage": "adapter.build_request",
+          "status": "succeeded",
+          "evidence": {
+            "user_text": "帮我查一下深圳的客户",
+            "source": "askbob"
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "client_search.api",
+          "status": "succeeded",
+          "evidence": {
+            "code": 0
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "client_search.routing",
+          "status": "succeeded",
+          "evidence": {
+            "matched_level": 4,
+            "matched_patterns": "### 当前时间\n2026-07-02 11:06:40 (Asia/Shanghai)\n### 今天星期\n周四\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\n\n  示例: \"男性客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}\n\n  示例: \"女客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}\n\n  反例: \"子女是男性的客户\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n- **polNo** | 操作符: MATCH | 值类型: extract | 定义: 表示保单号，不表示客户编号，保单号是由P开头+15位数字，如 P966073446746215\n\n  示例: \"保单号为1234567890的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"1234567890\"}\n\n  示例: \"保单号匹配P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n  示例: \"按保单号查P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“以下”不含边界，“及以上”、“及以下”含边界 | 说明: 表示客户价值分组集合，如A类=A1/A2/A3/A4，B类=B，A或B/AB类=A1/A2/A3/A4/B；高价值->A1/A2/A3/A4/B/C，排序：F<E<D<C<B<A4<A3<A2<A1\n\n  示例: \"A类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"AB类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"高价值客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\", \"C\"]}\n\n  示例: \"B以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"B及以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"B类以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\"]}\n\n  示例: \"B类及以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\", \"B\"]}\n\n  示例: \"B类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"B\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **zxjyEquityGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['预达标', '已达标'] | 定义: 表示臻享家医客户范围，包括预达标和已达标两类客户 | 说明: 当用户直接输入“臻享家医客户/家医客户”时，输出 CONTAINS=[预达标, 已达标]，不要只输出已达标。\n\n  示例: \"臻享家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"臻享客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n- **clientGroupLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['奋斗青年', '都市白领', '而立一族', '社会中坚', '邻退天命', '慈爱祖辈', '创业新贵', '创富一代', '荣耀高堂', '承富二代', '已退小康'] | 定义: 表示客户画像分群标签。年龄、资产等组合定义用于增强召回理解，不作为默认自动映射规则。 | 说明: 例如：奋斗青年≈16-30岁且资产较低，创业新贵≈36-50岁且高净值；这些定义仅用于辅助理解，不应在缺少标签语境时直接替代为客群标签。\n\n  示例: \"都市白领客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"都市白领\"]}\n\n  示例: \"创业新贵客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"创业新贵\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **birthdayMd** | 操作符: RANGE | 值类型: date | 格式: MM-dd | 说明: 只含月日（不含年），格式MM-dd；本月生日取当月1日至月末；下月生日取下月1日至月末；下周生日取下周一至周天；未来一周生日取今天至往后顺延6天；未来一个月生日取今天至往后延顺29天\n\n  示例: \"3月15日生日的客户\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-15\", \"max\": \"03-15\"}}\n\n  示例: \"本月生日的客户（当前2026年3月）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-01\", \"max\": \"03-31\"}}\n\n  示例: \"下个月生日的客户（当前2026年3月）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"04-01\", \"max\": \"04-30\"}}\n\n  示例: \"下周有哪些客户过生日（当前2026年3月25号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-30\", \"max\": \"04-05\"}}\n\n  示例: \"未来一周的客户（当前2026年4月1号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"04-01\", \"max\": \"04-07\"}}\n\n  示例: \"未来一个月的客户（当前2026年3月25号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-25\", \"max\": \"04-25\"}}\n\n### 用户查询\n帮我查一下深圳的客户"
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "client_search.downstream_search",
+          "status": "not_verified",
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "adapter.extract_output",
+          "status": "suspicious",
+          "evidence": {
+            "logic": "AND",
+            "condition_count": 0,
+            "empty_result_reason": "service_returned_no_conditions"
+          },
+          "timestamp": "",
+          "error": ""
+        }
+      ],
+      "status": "ok",
+      "created_at": "2026-07-02T03:06:42.517349+00:00",
+      "state_history": [
+        {
+          "state_id": "prepare_trace",
+          "role": "prepare_trace",
+          "status": "skipped",
+          "attempt": 1,
+          "started_at": "2026-07-02T03:06:39.934605+00:00",
+          "finished_at": "2026-07-02T03:06:39.934621+00:00",
+          "transition_decision": {
+            "from_state": "prepare_trace",
+            "to_state": "mock_or_input",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "mock_or_input",
+          "role": "mock_or_input",
+          "status": "skipped",
+          "attempt": 1,
+          "started_at": "2026-07-02T03:06:39.934748+00:00",
+          "finished_at": "2026-07-02T03:06:39.934753+00:00",
+          "transition_decision": {
+            "from_state": "mock_or_input",
+            "to_state": "execute_or_capture",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "execute_or_capture",
+          "role": "execute_or_capture",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-02T03:06:42.517713+00:00",
+          "finished_at": "2026-07-02T03:06:42.517727+00:00",
+          "outputs": {
+            "schema_result_type": "RunTrace"
+          },
+          "gate_decisions": [
+            {
+              "gate_id": "trace_available",
+              "gate_type": "required_evidence",
+              "passed": true,
+              "checked_inputs": {
+                "trace": true,
+                "status": "ok"
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "trace exists"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "execute_or_capture",
+            "to_state": "collect_evidence",
+            "condition": "always",
+            "reason": "always",
+            "gate_ids": [
+              "trace_available"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "collect_evidence",
+          "role": "collect_evidence",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-02T03:06:42.517940+00:00",
+          "finished_at": "2026-07-02T03:06:42.517950+00:00",
+          "outputs": {
+            "collect_evidence": {
+              "recursive_ref": "RunTrace"
+            },
+            "client_search_boundary_evidence": {
+              "status": "succeeded",
+              "outputs": {
+                "condition_count": 0,
+                "query_logic": "AND",
+                "application_boundary": {
+                  "downstream_result_set_available": false,
+                  "downstream_status": "not_verified",
+                  "judge_scope": "parser_condition_semantics_only",
+                  "result_set_verified": false,
+                  "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                },
+                "source_config_paths": {
+                  "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                  "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                  "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                  "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                }
+              },
+              "evidence_refs": [
+                {
+                  "type": "client_search_boundary",
+                  "evidence": {
+                    "condition_count": 0,
+                    "query_logic": "AND",
+                    "application_boundary": {
+                      "downstream_result_set_available": false,
+                      "downstream_status": "not_verified",
+                      "judge_scope": "parser_condition_semantics_only",
+                      "result_set_verified": false,
+                      "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                    },
+                    "source_config_paths": {
+                      "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                      "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                      "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                      "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                    }
+                  }
+                }
+              ],
+              "claims": [
+                {
+                  "client_search_boundary": {
+                    "condition_count": 0,
+                    "query_logic": "AND",
+                    "application_boundary": {
+                      "downstream_result_set_available": false,
+                      "downstream_status": "not_verified",
+                      "judge_scope": "parser_condition_semantics_only",
+                      "result_set_verified": false,
+                      "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                    },
+                    "source_config_paths": {
+                      "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                      "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                      "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                      "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "subagent_results": [
+            {
+              "executor_id": "collect_evidence",
+              "executor_type": "deterministic",
+              "role": "generic_evidence_collector",
+              "status": "succeeded",
+              "output": {
+                "recursive_ref": "RunTrace"
+              }
+            },
+            {
+              "executor_id": "client_search_boundary_evidence",
+              "executor_type": "adapter_hook",
+              "role": "client_search_boundary_evidence",
+              "status": "succeeded",
+              "output": {
+                "status": "succeeded",
+                "outputs": {
+                  "condition_count": 0,
+                  "query_logic": "AND",
+                  "application_boundary": {
+                    "downstream_result_set_available": false,
+                    "downstream_status": "not_verified",
+                    "judge_scope": "parser_condition_semantics_only",
+                    "result_set_verified": false,
+                    "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                  },
+                  "source_config_paths": {
+                    "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                    "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                    "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                    "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                  }
+                },
+                "evidence_refs": [
+                  {
+                    "type": "client_search_boundary",
+                    "evidence": {
+                      "condition_count": 0,
+                      "query_logic": "AND",
+                      "application_boundary": {
+                        "downstream_result_set_available": false,
+                        "downstream_status": "not_verified",
+                        "judge_scope": "parser_condition_semantics_only",
+                        "result_set_verified": false,
+                        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                      },
+                      "source_config_paths": {
+                        "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                        "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                        "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                        "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                      }
+                    }
+                  }
+                ],
+                "claims": [
+                  {
+                    "client_search_boundary": {
+                      "condition_count": 0,
+                      "query_logic": "AND",
+                      "application_boundary": {
+                        "downstream_result_set_available": false,
+                        "downstream_status": "not_verified",
+                        "judge_scope": "parser_condition_semantics_only",
+                        "result_set_verified": false,
+                        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                      },
+                      "source_config_paths": {
+                        "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                        "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                        "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                        "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                      }
+                    }
+                  }
+                ]
+              },
+              "evidence_refs": [
+                {
+                  "type": "client_search_boundary",
+                  "evidence": {
+                    "condition_count": 0,
+                    "query_logic": "AND",
+                    "application_boundary": {
+                      "downstream_result_set_available": false,
+                      "downstream_status": "not_verified",
+                      "judge_scope": "parser_condition_semantics_only",
+                      "result_set_verified": false,
+                      "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                    },
+                    "source_config_paths": {
+                      "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                      "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                      "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                      "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                    }
+                  }
+                }
+              ],
+              "claims": [
+                {
+                  "client_search_boundary": {
+                    "condition_count": 0,
+                    "query_logic": "AND",
+                    "application_boundary": {
+                      "downstream_result_set_available": false,
+                      "downstream_status": "not_verified",
+                      "judge_scope": "parser_condition_semantics_only",
+                      "result_set_verified": false,
+                      "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                    },
+                    "source_config_paths": {
+                      "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                      "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                      "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                      "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "evidence_refs": [
+            {
+              "type": "client_search_boundary",
+              "evidence": {
+                "condition_count": 0,
+                "query_logic": "AND",
+                "application_boundary": {
+                  "downstream_result_set_available": false,
+                  "downstream_status": "not_verified",
+                  "judge_scope": "parser_condition_semantics_only",
+                  "result_set_verified": false,
+                  "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                },
+                "source_config_paths": {
+                  "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                  "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                  "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                  "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                }
+              }
+            }
+          ],
+          "transition_decision": {
+            "from_state": "collect_evidence",
+            "to_state": "build_business_expectations",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "build_business_expectations",
+          "role": "build_business_expectations",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-02T03:10:06.952440+00:00",
+          "finished_at": "2026-07-02T03:10:06.952496+00:00",
+          "outputs": {
+            "schema_result_type": "JudgeResult"
+          },
+          "gate_decisions": [
+            {
+              "gate_id": "consumer_contract_present",
+              "gate_type": "consumer_contract_present",
+              "passed": true,
+              "checked_inputs": {
+                "has_judge": true
+              },
+              "recoverable": true,
+              "recommended_transition": "build_business_expectations",
+              "reason": "consumer contract available"
+            },
+            {
+              "gate_id": "business_expectation_coverage",
+              "gate_type": "business_expectation_coverage",
+              "passed": true,
+              "checked_inputs": {
+                "expectation_count": 2
+              },
+              "recoverable": true,
+              "recommended_transition": "build_business_expectations",
+              "reason": "business expectations available"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "build_business_expectations",
+            "to_state": "evaluate_fulfillment",
+            "condition": "always",
+            "reason": "always",
+            "gate_ids": [
+              "consumer_contract_present",
+              "business_expectation_coverage"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "evaluate_fulfillment",
+          "role": "evaluate_fulfillment",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-02T03:10:06.952864+00:00",
+          "finished_at": "2026-07-02T03:10:06.952872+00:00",
+          "outputs": {
+            "schema_result_type": "JudgeResult"
+          },
+          "gate_decisions": [
+            {
+              "gate_id": "fulfillment_assessment_coverage",
+              "gate_type": "fulfillment_assessment_coverage",
+              "passed": true,
+              "checked_inputs": {
+                "expectation_count": 2,
+                "assessment_count": 2
+              },
+              "recoverable": true,
+              "recommended_transition": "evaluate_fulfillment",
+              "reason": "fulfillment assessments cover expectations"
+            },
+            {
+              "gate_id": "boundary_decision_present",
+              "gate_type": "boundary_decision_present",
+              "passed": true,
+              "checked_inputs": {
+                "has_judge": true,
+                "assessment_count": 2
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "fulfillment boundary available"
+            },
+            {
+              "gate_id": "derived_verdict_consistency",
+              "gate_type": "derived_verdict_consistency",
+              "passed": true,
+              "checked_inputs": {
+                "has_judge": true,
+                "has_fulfillment": true
+              },
+              "recoverable": true,
+              "recommended_transition": "evaluate_fulfillment",
+              "reason": "derived verdict matches fulfillment state"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "evaluate_fulfillment",
+            "to_state": "fulfillment_critic",
+            "condition": "always",
+            "reason": "always",
+            "gate_ids": [
+              "fulfillment_assessment_coverage",
+              "boundary_decision_present",
+              "derived_verdict_consistency"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "fulfillment_critic",
+          "role": "fulfillment_critic",
+          "status": "skipped",
+          "attempt": 1,
+          "started_at": "2026-07-02T03:10:06.953023+00:00",
+          "finished_at": "2026-07-02T03:10:06.953034+00:00",
+          "gate_decisions": [
+            {
+              "gate_id": "contradiction_free",
+              "gate_type": "contradiction_free",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no contradictions"
+            },
+            {
+              "gate_id": "unsupported_claims_absent",
+              "gate_type": "unsupported_claims_absent",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no unsupported claims"
+            },
+            {
+              "gate_id": "fulfillment_assessment_coverage",
+              "gate_type": "fulfillment_assessment_coverage",
+              "passed": true,
+              "checked_inputs": {
+                "expectation_count": 2,
+                "assessment_count": 2
+              },
+              "recoverable": true,
+              "recommended_transition": "evaluate_fulfillment",
+              "reason": "fulfillment assessments cover expectations"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "fulfillment_critic",
+            "to_state": "attribute_expectations",
+            "condition": "fulfillment_requires_attribute",
+            "reason": "fulfillment_requires_attribute",
+            "gate_ids": [
+              "contradiction_free",
+              "unsupported_claims_absent",
+              "fulfillment_assessment_coverage"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "attribute_expectations",
+          "role": "attribute_expectations",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-02T03:11:53.277719+00:00",
+          "finished_at": "2026-07-02T03:11:53.277753+00:00",
+          "outputs": {
+            "schema_result_type": "AttributeResult"
+          },
+          "gate_decisions": [
+            {
+              "gate_id": "attribute_targets_expectation_gap",
+              "gate_type": "attribute_targets_expectation_gap",
+              "passed": true,
+              "checked_inputs": {
+                "fulfillment_requires_attribute": true,
+                "target_count": 1
+              },
+              "recoverable": false,
+              "recommended_transition": "finalize",
+              "reason": "attribute targets fulfillment gaps"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "attribute_expectations",
+            "to_state": "run_attribution_probes",
+            "condition": "always",
+            "reason": "always",
+            "gate_ids": [
+              "attribute_targets_expectation_gap"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "run_attribution_probes",
+          "role": "run_attribution_probes",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-02T03:13:49.082702+00:00",
+          "finished_at": "2026-07-02T03:13:49.082774+00:00",
+          "outputs": {
+            "schema_result_type": "AttributeResult"
+          },
+          "gate_decisions": [
+            {
+              "gate_id": "probe_evidence_or_blocked_reason",
+              "gate_type": "probe_evidence_or_blocked_reason",
+              "passed": true,
+              "checked_inputs": {
+                "probe_evidence_count": 4,
+                "has_incomplete_reason": false
+              },
+              "recoverable": true,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "probe evidence or blocked reason available"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "run_attribution_probes",
+            "to_state": "attribution_critic",
+            "condition": "always",
+            "reason": "always",
+            "gate_ids": [
+              "probe_evidence_or_blocked_reason"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "attribution_critic",
+          "role": "attribution_critic",
+          "status": "skipped",
+          "attempt": 1,
+          "started_at": "2026-07-02T03:13:49.082854+00:00",
+          "finished_at": "2026-07-02T03:13:49.082861+00:00",
+          "gate_decisions": [
+            {
+              "gate_id": "expectation_attribution_evidence",
+              "gate_type": "expectation_attribution_evidence",
+              "passed": true,
+              "checked_inputs": {
+                "attribution_count": 1
+              },
+              "recoverable": false,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "expectation attribution evidence available"
+            },
+            {
+              "gate_id": "causal_category_support",
+              "gate_type": "causal_category_support",
+              "passed": true,
+              "checked_inputs": {
+                "has_causal_category": true,
+                "has_incomplete_reason": false
+              },
+              "recoverable": true,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "causal category supported"
+            },
+            {
+              "gate_id": "improvement_direction_support",
+              "gate_type": "improvement_direction_support",
+              "passed": true,
+              "checked_inputs": {
+                "direction_count": 5,
+                "has_incomplete_reason": false
+              },
+              "recoverable": true,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "improvement direction available"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "attribution_critic",
+            "to_state": "finalize",
+            "condition": "always",
+            "reason": "always",
+            "gate_ids": [
+              "expectation_attribution_evidence",
+              "causal_category_support",
+              "improvement_direction_support"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "finalize",
+          "role": "finalize",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-02T03:13:49.134144+00:00",
+          "finished_at": "2026-07-02T03:13:49.134225+00:00",
+          "outputs": {
+            "schema_result_type": "CheckReport"
+          },
+          "gate_decisions": [
+            {
+              "gate_id": "finalization_ready",
+              "gate_type": "finalization_ready",
+              "passed": true,
+              "checked_inputs": {
+                "has_trace": true,
+                "has_judge_result": true
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "finalization ready"
+            },
+            {
+              "gate_id": "contradiction_free",
+              "gate_type": "contradiction_free",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no contradictions"
+            },
+            {
+              "gate_id": "unsupported_claims_absent",
+              "gate_type": "unsupported_claims_absent",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no unsupported claims"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "finalize",
+            "to_state": "completed",
+            "condition": "stop",
+            "reason": "stop",
+            "gate_ids": [
+              "finalization_ready",
+              "contradiction_free",
+              "unsupported_claims_absent"
+            ],
+            "retry_count": 0,
+            "stop_reason": "completed"
+          }
+        }
+      ],
+      "gate_decisions": [
+        {
+          "gate_id": "trace_available",
+          "gate_type": "required_evidence",
+          "passed": true,
+          "checked_inputs": {
+            "trace": true,
+            "status": "ok"
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "trace exists"
+        },
+        {
+          "gate_id": "consumer_contract_present",
+          "gate_type": "consumer_contract_present",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true
+          },
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "consumer contract available"
+        },
+        {
+          "gate_id": "business_expectation_coverage",
+          "gate_type": "business_expectation_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 2
+          },
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "business expectations available"
+        },
+        {
+          "gate_id": "fulfillment_assessment_coverage",
+          "gate_type": "fulfillment_assessment_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 2,
+            "assessment_count": 2
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "fulfillment assessments cover expectations"
+        },
+        {
+          "gate_id": "boundary_decision_present",
+          "gate_type": "boundary_decision_present",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true,
+            "assessment_count": 2
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "fulfillment boundary available"
+        },
+        {
+          "gate_id": "derived_verdict_consistency",
+          "gate_type": "derived_verdict_consistency",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true,
+            "has_fulfillment": true
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "derived verdict matches fulfillment state"
+        },
+        {
+          "gate_id": "contradiction_free",
+          "gate_type": "contradiction_free",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no contradictions"
+        },
+        {
+          "gate_id": "unsupported_claims_absent",
+          "gate_type": "unsupported_claims_absent",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no unsupported claims"
+        },
+        {
+          "gate_id": "fulfillment_assessment_coverage",
+          "gate_type": "fulfillment_assessment_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 2,
+            "assessment_count": 2
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "fulfillment assessments cover expectations"
+        },
+        {
+          "gate_id": "attribute_targets_expectation_gap",
+          "gate_type": "attribute_targets_expectation_gap",
+          "passed": true,
+          "checked_inputs": {
+            "fulfillment_requires_attribute": true,
+            "target_count": 1
+          },
+          "recoverable": false,
+          "recommended_transition": "finalize",
+          "reason": "attribute targets fulfillment gaps"
+        },
+        {
+          "gate_id": "probe_evidence_or_blocked_reason",
+          "gate_type": "probe_evidence_or_blocked_reason",
+          "passed": true,
+          "checked_inputs": {
+            "probe_evidence_count": 4,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "probe evidence or blocked reason available"
+        },
+        {
+          "gate_id": "expectation_attribution_evidence",
+          "gate_type": "expectation_attribution_evidence",
+          "passed": true,
+          "checked_inputs": {
+            "attribution_count": 1
+          },
+          "recoverable": false,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "expectation attribution evidence available"
+        },
+        {
+          "gate_id": "causal_category_support",
+          "gate_type": "causal_category_support",
+          "passed": true,
+          "checked_inputs": {
+            "has_causal_category": true,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "causal category supported"
+        },
+        {
+          "gate_id": "improvement_direction_support",
+          "gate_type": "improvement_direction_support",
+          "passed": true,
+          "checked_inputs": {
+            "direction_count": 5,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "improvement direction available"
+        },
+        {
+          "gate_id": "finalization_ready",
+          "gate_type": "finalization_ready",
+          "passed": true,
+          "checked_inputs": {
+            "has_trace": true,
+            "has_judge_result": true
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "finalization ready"
+        },
+        {
+          "gate_id": "contradiction_free",
+          "gate_type": "contradiction_free",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no contradictions"
+        },
+        {
+          "gate_id": "unsupported_claims_absent",
+          "gate_type": "unsupported_claims_absent",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no unsupported claims"
+        }
+      ],
+      "transition_decisions": [
+        {
+          "from_state": "prepare_trace",
+          "to_state": "mock_or_input",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "mock_or_input",
+          "to_state": "execute_or_capture",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "execute_or_capture",
+          "to_state": "collect_evidence",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "trace_available"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "collect_evidence",
+          "to_state": "build_business_expectations",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "build_business_expectations",
+          "to_state": "evaluate_fulfillment",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "consumer_contract_present",
+            "business_expectation_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "evaluate_fulfillment",
+          "to_state": "fulfillment_critic",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "fulfillment_assessment_coverage",
+            "boundary_decision_present",
+            "derived_verdict_consistency"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "fulfillment_critic",
+          "to_state": "attribute_expectations",
+          "condition": "fulfillment_requires_attribute",
+          "reason": "fulfillment_requires_attribute",
+          "gate_ids": [
+            "contradiction_free",
+            "unsupported_claims_absent",
+            "fulfillment_assessment_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "attribute_expectations",
+          "to_state": "run_attribution_probes",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "attribute_targets_expectation_gap"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "run_attribution_probes",
+          "to_state": "attribution_critic",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "probe_evidence_or_blocked_reason"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "attribution_critic",
+          "to_state": "finalize",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "expectation_attribution_evidence",
+            "causal_category_support",
+            "improvement_direction_support"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "finalize",
+          "to_state": "completed",
+          "condition": "stop",
+          "reason": "stop",
+          "gate_ids": [
+            "finalization_ready",
+            "contradiction_free",
+            "unsupported_claims_absent"
+          ],
+          "retry_count": 0,
+          "stop_reason": "completed"
+        }
+      ],
+      "stop_reason": "completed",
+      "interaction_mode": "single_turn",
+      "session_id": "general-eval-session",
+      "turn_index": 0
+    },
+    "reference_panel": {
+      "reference": {
+        "summary": "未识别到明确查询条件",
+        "logic": "AND",
+        "status_code": 0,
+        "user_visible_text": "未识别到明确查询条件",
+        "empty_result_reason": "service_returned_no_conditions",
+        "is_empty_result": true,
+        "source_query": "帮我查一下深圳的客户",
+        "matched_level": 4,
+        "matched_patterns": "### 当前时间\n2026-07-02 11:06:40 (Asia/Shanghai)\n### 今天星期\n周四\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\n\n  示例: \"男性客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}\n\n  示例: \"女客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}\n\n  反例: \"子女是男性的客户\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n- **polNo** | 操作符: MATCH | 值类型: extract | 定义: 表示保单号，不表示客户编号，保单号是由P开头+15位数字，如 P966073446746215\n\n  示例: \"保单号为1234567890的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"1234567890\"}\n\n  示例: \"保单号匹配P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n  示例: \"按保单号查P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“以下”不含边界，“及以上”、“及以下”含边界 | 说明: 表示客户价值分组集合，如A类=A1/A2/A3/A4，B类=B，A或B/AB类=A1/A2/A3/A4/B；高价值->A1/A2/A3/A4/B/C，排序：F<E<D<C<B<A4<A3<A2<A1\n\n  示例: \"A类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"AB类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"高价值客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\", \"C\"]}\n\n  示例: \"B以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"B及以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"B类以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\"]}\n\n  示例: \"B类及以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\", \"B\"]}\n\n  示例: \"B类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"B\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **zxjyEquityGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['预达标', '已达标'] | 定义: 表示臻享家医客户范围，包括预达标和已达标两类客户 | 说明: 当用户直接输入“臻享家医客户/家医客户”时，输出 CONTAINS=[预达标, 已达标]，不要只输出已达标。\n\n  示例: \"臻享家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"臻享客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n- **clientGroupLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['奋斗青年', '都市白领', '而立一族', '社会中坚', '邻退天命', '慈爱祖辈', '创业新贵', '创富一代', '荣耀高堂', '承富二代', '已退小康'] | 定义: 表示客户画像分群标签。年龄、资产等组合定义用于增强召回理解，不作为默认自动映射规则。 | 说明: 例如：奋斗青年≈16-30岁且资产较低，创业新贵≈36-50岁且高净值；这些定义仅用于辅助理解，不应在缺少标签语境时直接替代为客群标签。\n\n  示例: \"都市白领客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"都市白领\"]}\n\n  示例: \"创业新贵客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"创业新贵\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **birthdayMd** | 操作符: RANGE | 值类型: date | 格式: MM-dd | 说明: 只含月日（不含年），格式MM-dd；本月生日取当月1日至月末；下月生日取下月1日至月末；下周生日取下周一至周天；未来一周生日取今天至往后顺延6天；未来一个月生日取今天至往后延顺29天\n\n  示例: \"3月15日生日的客户\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-15\", \"max\": \"03-15\"}}\n\n  示例: \"本月生日的客户（当前2026年3月）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-01\", \"max\": \"03-31\"}}\n\n  示例: \"下个月生日的客户（当前2026年3月）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"04-01\", \"max\": \"04-30\"}}\n\n  示例: \"下周有哪些客户过生日（当前2026年3月25号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-30\", \"max\": \"04-05\"}}\n\n  示例: \"未来一周的客户（当前2026年4月1号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"04-01\", \"max\": \"04-07\"}}\n\n  示例: \"未来一个月的客户（当前2026年3月25号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-25\", \"max\": \"04-25\"}}\n\n### 用户查询\n帮我查一下深圳的客户",
+        "external_boundary_sources": {
+          "config_paths": {
+            "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+            "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+            "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+            "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+          }
+        }
+      },
+      "source": "judge_generated",
+      "actual": {
+        "query_logic": "AND"
+      }
+    },
+    "judge_panel": {
+      "trace_id": "4cb04094-136d-4127-a601-4cdeb06c6579",
+      "project_id": "client_search",
+      "verdict": "uncertain",
+      "expected": {
+        "query_logic": "AND",
+        "expected_source": "not_available",
+        "reference_is_oracle": false
+      },
+      "actual": {
+        "query_logic": "AND"
+      },
+      "consumer_contract": {
+        "consumer": "下游客户搜索引擎",
+        "contract": "将parser输出的结构化条件组装为ES查询语句进行客户检索",
+        "application_boundary": {
+          "downstream_result_set_available": false,
+          "downstream_status": "not_verified",
+          "judge_scope": "parser_condition_semantics_only",
+          "result_set_verified": false,
+          "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+        }
+      },
+      "intent_model": {
+        "raw_user_request": "帮我查一下深圳的客户",
+        "explicit_intents": [
+          "筛选深圳地区的客户"
+        ],
+        "implicit_business_intents": [
+          "按客户所在城市或地域进行过滤"
+        ],
+        "success_definition": "能够输出按深圳地区筛选的结构化搜索条件，从而在ES数据库中检索出深圳客户",
+        "blocking_requirements": [
+          "识别'深圳'为地域筛选条件并映射到可用的地理位置字段"
+        ],
+        "intent_evidence": [
+          "用户查询中明确出现了'深圳'这一地理名词，结合'的客户'表明意图是按地域筛选客户"
+        ]
+      },
+      "business_expectations": [
+        {
+          "expectation_id": "深圳地域筛选条件",
+          "downstream_consumer": "下游ES搜索引擎",
+          "user_intent": "帮我查一下深圳的客户",
+          "expected_outcome": "输出如 {field: '城市/地址相关字段', operator: 'MATCH/CONTAINS', value: '深圳'} 的条件",
+          "required_capabilities": [
+            "ES数据库需存在城市/地址/地域字段"
+          ],
+          "acceptance_criteria": [
+            "实际输出中应包含一个与深圳地域相关的筛选条件"
+          ],
+          "boundary": {
+            "depends_on": "ES数据库中是否存在城市/地址/地域类字段",
+            "current_status": "经检索field_definitions，不存在address、city、location、area、region、province、workCity等任何地理位置相关字段"
+          },
+          "priority": "critical"
+        },
+        {
+          "expectation_id": "未识别条件时的合理降级",
+          "downstream_consumer": "用户界面",
+          "user_intent": "帮我查一下深圳的客户",
+          "expected_outcome": "返回空条件列表，并提示无法识别到明确查询条件",
+          "acceptance_criteria": [
+            "当无可映射字段时返回空条件",
+            "给出用户可理解的提示信息"
+          ],
+          "priority": "normal"
+        }
+      ],
+      "fulfillment_assessments": [
+        {
+          "expectation_id": "深圳地域筛选条件",
+          "status": "not_evaluable",
+          "expected_evidence": [
+            "存在城市/地域字段的条件"
+          ],
+          "actual_evidence": [
+            "conditions为空数组，无任何条件输出"
+          ],
+          "boundary_decision": {
+            "within_evaluable_scope": false,
+            "uncontrollable_limits": [
+              "ES数据库中不存在任何城市、地址、地域、省份等地理位置相关字段，系统上游数据层完全不支持按城市维度筛选客户"
+            ]
+          },
+          "downstream_impact": "无法检索到深圳客户，用户意图在当前系统能力边界内无法实现",
+          "blocking": true,
+          "evidence_refs": [
+            {
+              "type": "field_search_result",
+              "searched": [
+                "address",
+                "city",
+                "location",
+                "area",
+                "region",
+                "province",
+                "workCity"
+              ],
+              "result": "all not found in field definitions"
+            }
+          ]
+        },
+        {
+          "expectation_id": "未识别条件时的合理降级",
+          "status": "fulfilled",
+          "expected_evidence": [
+            "返回空条件数组",
+            "给出'未识别到明确查询条件'提示"
+          ],
+          "actual_evidence": [
+            "structured_output为空数组",
+            "user_visible_text为'未识别到明确查询条件'",
+            "intent_summary为'未识别到明确查询条件'"
+          ],
+          "boundary_decision": {
+            "within_evaluable_scope": true
+          },
+          "downstream_impact": "用户收到合理反馈，得知系统无法处理该查询",
+          "blocking": false,
+          "evidence_refs": [
+            {
+              "type": "actual_output",
+              "field": "structured_output"
+            },
+            {
+              "type": "actual_output",
+              "field": "user_visible_text",
+              "value": "未识别到明确查询条件"
+            }
+          ]
+        }
+      ],
+      "overall_fulfillment": {
+        "status": "not_evaluable",
+        "assessment_count": 2,
+        "blocking_expectations": [
+          "深圳地域筛选条件"
+        ]
+      },
+      "reconstructed_intent": "用户希望查询位于深圳的客户，即按城市/地域维度筛选客户列表。然而当前ES数据库不包含任何城市、地址、地域、省份等地理位置字段，系统上游数据层完全不支持按城市筛选客户。",
+      "judge_basis": "基于当前RunTrace的parser输出（空条件）、ES数据库字段定义检索结果（无地理位置字段）、以及judge_boundary规范中的系统能力边界判定原则。",
+      "judge_method": "parser_condition_semantics_only（下游搜索结果集不可用，仅基于parser条件语义评估）",
+      "reference_generation_basis": {
+        "source": "当前query + ES数据库字段定义检索 + judge_boundary规范",
+        "alignment_to_actual_shape": "N/A - 实际输出为空条件",
+        "comparison_basis": "client_search wrong/missing/extra customer-search coverage",
+        "expected_source": "not_available"
+      },
+      "verdict_derivation": {
+        "primary_boundary": "parser_condition_semantics_only",
+        "assessment_summary": "用户核心意图（按深圳筛选客户）对应的'深圳地域筛选条件'期望无法评估，原因是ES数据库不存在任何地理位置字段，属于不可控的上游数据能力限制。降级行为期望（返回空条件并提示）已满足。",
+        "blocking_gaps": [
+          "ES数据库无城市/地址/地域字段，无法支持按'深圳'筛选客户"
+        ],
+        "why_verdict": "用户查询'深圳的客户'需要按城市维度筛选，但经检索ES数据库字段定义，不存在address、city、location、area、region、province、workCity等任何地理位置相关字段。此限制来自上游ES数据库的数据能力，非当前parser系统可优化范畴。parser在无法将'深圳'映射到任何可用字段的情况下，返回空条件并提示'未识别到明确查询条件'，属于合理降级行为。由于核心业务期望完全受制于不可控的上游数据限制，整体评估结果为不可评估。",
+        "missing_evidence": [
+          "current intent/config expected conditions"
+        ]
+      },
+      "boundary_decision": {
+        "within_evaluable_scope": false,
+        "uncontrollable_limits": [
+          "ES数据库不存在任何城市、地址、地域、省份等地理位置相关字段（已检索address、city、location、area、region、province、workCity均未找到），无法支持按城市维度筛选客户"
+        ],
+        "reasoning": "经检索field_definitions，确认ES数据库中不存在任何地理位置相关字段。用户查询'深圳的客户'依赖城市筛选能力，该能力缺失属于上游ES数据库的数据层限制，不在当前parser系统的可控范围内。parser返回空条件是此限制下的合理结果，不存在可归因于当前系统的错误。"
+      },
+      "evaluation_boundary": {
+        "primary_boundary_id": "parser_condition_semantics_only",
+        "primary_boundary_name": "仅评估parser条件语义",
+        "judge_question": "parser输出的空条件在处理'深圳'这一地域查询时是否正确？",
+        "verdict_basis": "parser条件语义 + ES数据库字段能力边界 + judge_boundary规范中的可控/不可控划分",
+        "boundary_sources": "projects/client_search/judge_boundary-template.md, projects/client_search/config.md, ES field_definitions_args.yaml 检索结果",
+        "conflict_policy": "当用户需求依赖上游ES不存在的字段/枚举/数据时，不直接判为当前系统输出错误，标记为不可控限制"
+      },
+      "evidence": [
+        {
+          "type": "field_definition_search",
+          "searched_fields": [
+            "address",
+            "city",
+            "location",
+            "area",
+            "region",
+            "province",
+            "workCity"
+          ],
+          "result": "全部未找到，ES数据库不存在任何地理位置字段"
+        },
+        {
+          "type": "parser_output",
+          "conditions_count": 0,
+          "user_visible_text": "未识别到明确查询条件",
+          "matched_level": 4
+        }
+      ],
+      "reasoning_summary": "用户查询'帮我查一下深圳的客户'，希望按城市维度筛选深圳客户。经检索ES数据库字段定义（address、city、location、area、region、province、workCity等），确认系统中不存在任何地理位置相关字段，这是上游ES数据库的数据层限制，不属于当前parser系统可优化的范畴。parser在prompt动态召回的字段列表中同样无法找到可映射'深圳'的字段，因此返回空条件并提示'未识别到明确查询条件'，属于合理的降级行为。核心业务期望'深圳地域筛选条件'因不可控的上游数据限制而无法评估，降级期望'未识别条件时的合理降级'已满足。整体评估结果为不可评估。",
+      "scenario": "empty_conditions_due_to_uncontrollable_field_absence",
+      "summary": {
+        "reason": "uncertain · 用户查询'深圳的客户'需要按城市维度筛选，但经检索ES数据库字段定义，不存在address、city、location、area、region、province、workCity等任何地理位置相关字段。此限制来自上游ES数据库的数据能力，非当前parser系统可优化范畴。parser在无法将'深圳'映射到任何可用字段的情况下，返回空条件并提示'未识别到明确查询条件'，属于合理降级行为。由于核心业务期望完全受制于不可控的上游数据限制，整体评估结果为不可评估。",
+        "reason_source": "reasoning_summary",
+        "fulfillment_status": "not_evaluable",
+        "assessment_count": 2,
+        "blocking_count": 1,
+        "is_formal_attribution": false
+      },
+      "gate_decisions": [
+        {
+          "gate_id": "trace_available",
+          "gate_type": "required_evidence",
+          "passed": true,
+          "checked_inputs": {
+            "trace": true,
+            "status": "ok"
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "trace exists"
+        },
+        {
+          "gate_id": "consumer_contract_present",
+          "gate_type": "consumer_contract_present",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true
+          },
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "consumer contract available"
+        },
+        {
+          "gate_id": "business_expectation_coverage",
+          "gate_type": "business_expectation_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 2
+          },
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "business expectations available"
+        },
+        {
+          "gate_id": "fulfillment_assessment_coverage",
+          "gate_type": "fulfillment_assessment_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 2,
+            "assessment_count": 2
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "fulfillment assessments cover expectations"
+        },
+        {
+          "gate_id": "boundary_decision_present",
+          "gate_type": "boundary_decision_present",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true,
+            "assessment_count": 2
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "fulfillment boundary available"
+        },
+        {
+          "gate_id": "derived_verdict_consistency",
+          "gate_type": "derived_verdict_consistency",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true,
+            "has_fulfillment": true
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "derived verdict matches fulfillment state"
+        },
+        {
+          "gate_id": "contradiction_free",
+          "gate_type": "contradiction_free",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no contradictions"
+        },
+        {
+          "gate_id": "unsupported_claims_absent",
+          "gate_type": "unsupported_claims_absent",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no unsupported claims"
+        },
+        {
+          "gate_id": "fulfillment_assessment_coverage",
+          "gate_type": "fulfillment_assessment_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 2,
+            "assessment_count": 2
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "fulfillment assessments cover expectations"
+        },
+        {
+          "gate_id": "attribute_targets_expectation_gap",
+          "gate_type": "attribute_targets_expectation_gap",
+          "passed": true,
+          "checked_inputs": {
+            "fulfillment_requires_attribute": true,
+            "target_count": 1
+          },
+          "recoverable": false,
+          "recommended_transition": "finalize",
+          "reason": "attribute targets fulfillment gaps"
+        },
+        {
+          "gate_id": "probe_evidence_or_blocked_reason",
+          "gate_type": "probe_evidence_or_blocked_reason",
+          "passed": true,
+          "checked_inputs": {
+            "probe_evidence_count": 4,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "probe evidence or blocked reason available"
+        },
+        {
+          "gate_id": "expectation_attribution_evidence",
+          "gate_type": "expectation_attribution_evidence",
+          "passed": true,
+          "checked_inputs": {
+            "attribution_count": 1
+          },
+          "recoverable": false,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "expectation attribution evidence available"
+        },
+        {
+          "gate_id": "causal_category_support",
+          "gate_type": "causal_category_support",
+          "passed": true,
+          "checked_inputs": {
+            "has_causal_category": true,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "causal category supported"
+        },
+        {
+          "gate_id": "improvement_direction_support",
+          "gate_type": "improvement_direction_support",
+          "passed": true,
+          "checked_inputs": {
+            "direction_count": 5,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "improvement direction available"
+        },
+        {
+          "gate_id": "finalization_ready",
+          "gate_type": "finalization_ready",
+          "passed": true,
+          "checked_inputs": {
+            "has_trace": true,
+            "has_judge_result": true
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "finalization ready"
+        },
+        {
+          "gate_id": "contradiction_free",
+          "gate_type": "contradiction_free",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no contradictions"
+        },
+        {
+          "gate_id": "unsupported_claims_absent",
+          "gate_type": "unsupported_claims_absent",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no unsupported claims"
+        }
+      ],
+      "transition_decisions": [
+        {
+          "from_state": "prepare_trace",
+          "to_state": "mock_or_input",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "mock_or_input",
+          "to_state": "execute_or_capture",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "execute_or_capture",
+          "to_state": "collect_evidence",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "trace_available"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "collect_evidence",
+          "to_state": "build_business_expectations",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "build_business_expectations",
+          "to_state": "evaluate_fulfillment",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "consumer_contract_present",
+            "business_expectation_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "evaluate_fulfillment",
+          "to_state": "fulfillment_critic",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "fulfillment_assessment_coverage",
+            "boundary_decision_present",
+            "derived_verdict_consistency"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "fulfillment_critic",
+          "to_state": "attribute_expectations",
+          "condition": "fulfillment_requires_attribute",
+          "reason": "fulfillment_requires_attribute",
+          "gate_ids": [
+            "contradiction_free",
+            "unsupported_claims_absent",
+            "fulfillment_assessment_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "attribute_expectations",
+          "to_state": "run_attribution_probes",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "attribute_targets_expectation_gap"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "run_attribution_probes",
+          "to_state": "attribution_critic",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "probe_evidence_or_blocked_reason"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "attribution_critic",
+          "to_state": "finalize",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "expectation_attribution_evidence",
+            "causal_category_support",
+            "improvement_direction_support"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "finalize",
+          "to_state": "completed",
+          "condition": "stop",
+          "reason": "stop",
+          "gate_ids": [
+            "finalization_ready",
+            "contradiction_free",
+            "unsupported_claims_absent"
+          ],
+          "retry_count": 0,
+          "stop_reason": "completed"
+        }
+      ],
+      "display_status": "not_evaluable",
+      "display_reason": "uncertain · 用户查询'深圳的客户'需要按城市维度筛选，但经检索ES数据库字段定义，不存在address、city、location、area、region、province、workCity等任何地理位置相关字段。此限制来自上游ES数据库的数据能力，非当前parser系统可优化范畴。parser在无法将'深圳'映射到任何可用字段的情况下，返回空条件并提示'未识别到明确查询条件'，属于合理降级行为。由于核心业务期望完全受制于不可控的上游数据限制，整体评估结果为不可评估。",
+      "wrong_missing_extra": {},
+      "blocked_expectations": [
+        {
+          "expectation_id": "深圳地域筛选条件",
+          "status": "not_evaluable",
+          "expected_evidence": [
+            "存在城市/地域字段的条件"
+          ],
+          "actual_evidence": [
+            "conditions为空数组，无任何条件输出"
+          ],
+          "boundary_decision": {
+            "within_evaluable_scope": false,
+            "uncontrollable_limits": [
+              "ES数据库中不存在任何城市、地址、地域、省份等地理位置相关字段，系统上游数据层完全不支持按城市维度筛选客户"
+            ]
+          },
+          "downstream_impact": "无法检索到深圳客户，用户意图在当前系统能力边界内无法实现",
+          "blocking": true,
+          "evidence_refs": [
+            {
+              "type": "field_search_result",
+              "searched": [
+                "address",
+                "city",
+                "location",
+                "area",
+                "region",
+                "province",
+                "workCity"
+              ],
+              "result": "all not found in field definitions"
+            }
+          ]
+        }
+      ]
+    },
+    "attribute_panel": {
+      "trace_id": "4cb04094-136d-4127-a601-4cdeb06c6579",
+      "project_id": "client_search",
+      "case_id": "",
+      "analysis_method": "结合 divergence_analysis（为空）、execution_trace、judge 评估结果，以及直接读取的 field_definitions_args.yaml、enhanced_rules_args.yaml、prompt.md、judge_boundary-template.md 四个关键配置文件，交叉验证 parser 行为与系统能力边界。",
+      "chain_nodes": [
+        {
+          "name": "adapter.build_request",
+          "status": "not_verified",
+          "evidence": [
+            "run_trace 显示 user_text='帮我查一下深圳的客户'，source='askbob'，请求构建正常"
+          ],
+          "reason": "请求标准化阶段无异常，用户输入正确传递"
+        },
+        {
+          "name": "client_search.api",
+          "status": "not_verified",
+          "evidence": [
+            "run_trace 显示 code=0，API 调用成功"
+          ],
+          "reason": "API 层面无错误返回"
+        },
+        {
+          "name": "client_search.routing",
+          "status": "not_verified",
+          "evidence": [
+            "matched_level=4，matched_patterns 中动态召回的字段列表无任何地理位置字段",
+            "这是因为 field_definitions_args.yaml 中根本不存在地理字段——路由的字段召回行为正确"
+          ],
+          "reason": "路由层正确召回了 ES 中存在的字段，但因数据模型缺少地理字段，'深圳'无法匹配任何字段"
+        },
+        {
+          "name": "client_search.downstream_search",
+          "status": "not_verified",
+          "reason": "下游搜索结果集因 application_boundary 限制未纳入本次评估范围，且 parser 输出空条件，下游无法执行有效检索"
+        },
+        {
+          "name": "adapter.extract_output",
+          "status": "not_verified",
+          "evidence": [
+            "condition_count=0，user_visible_text='未识别到明确查询条件'",
+            "empty_result_reason='service_returned_no_conditions'"
+          ],
+          "reason": "虽然 trace 标记为 suspicious，但 parser 在无法映射'深圳'到任何字段的情况下返回空条件是 prompt 约束下的唯一正确行为。标记 suspicious 可能源于空条件触发了告警阈值，但并非 parser 错误"
+        }
+      ],
+      "earliest_divergence": {
+        "node": "数据模型层 — field_definitions_args.yaml / ES 索引 schema",
+        "expected": "ES 索引中存在城市/地址/地域类字段，使 parser 能将'深圳'映射为结构化条件",
+        "actual": "ES 索引中不存在任何地理位置字段（address、city、location、area、region、province、workCity 全部缺失），parser 无法映射'深圳'",
+        "evidence": [
+          "field_definitions_args.yaml 全文检索：无 address、city、location、area、region、province、workCity 字段",
+          "enhanced_rules_args.yaml 全文检索：无城市/地域相关正则规则",
+          "judge 验证：已检索上述全部字段名，均未找到"
+        ],
+        "confidence": "high"
+      },
+      "evidence_coverage": {
+        "query": true,
+        "actual": true,
+        "expected": true,
+        "execution_trace": true,
+        "project_docs": true,
+        "code_or_config": true
+      },
+      "analysis_quality": {
+        "passed": true,
+        "standard": "已覆盖全部 7 项证据要求：当前 query（✓）、actual conditions（✓）、judge expected-vs-actual diff（✓）、execution_trace（✓）、project docs（✓，已读取 field_definitions、enhanced_rules、prompt、judge_boundary）、config evidence（✓）、suspected locations only when evidenced（✓）",
+        "status": "supported_root_cause"
+      },
+      "incomplete_reason": "",
+      "suspected_locations": [
+        "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+        "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+      ],
+      "root_cause_hypothesis": "用户查询'帮我查一下深圳的客户'要求按城市维度筛选客户。然而 ES 数据库的字段定义（field_definitions_args.yaml）中不存在任何地理位置相关字段（address、city、location、area、region、province、workCity 等均未定义），增强规则（enhanced_rules_args.yaml）中也没有城市/地域匹配规则。Parser 在 prompt 的硬约束下（'只能使用参考字段定义中明确列出的字段名，若查询意图找不到匹配的字段必须忽略'），无法将'深圳'映射到任何可用字段，因此正确返回空条件并提示'未识别到明确查询条件'。这不是 parser 或 LLM 的缺陷，而是 ES 数据模型层面的能力边界限制——系统上游根本不存储客户的城市场信息，自然无法支持按城市筛选。",
+      "verification_steps": [
+        "1. 检查 ES 实际索引 mapping：确认客户索引中是否存在任何包含城市/地址信息的字段（包括非专用字段如备注、标签、扩展属性等）",
+        "2. 抽查 ES 客户样本数据：查看是否有客户记录中实际存储了'深圳'等城市信息（可能在 clientNote、clientTag、address 等非标准字段中）",
+        "3. 若确认 ES 数据中确实无城市信息：向产品/数据团队确认城市字段是否在数据采集范围内、是否有计划补充",
+        "4. 若确认 ES 数据中存在城市信息但未被 field_definitions 覆盖：在 field_definitions_args.yaml 中补充对应字段定义",
+        "5. 回归验证：新增字段定义后，使用相同 query '帮我查一下深圳的客户' 测试，确认 parser 能输出包含城市条件的结果"
+      ],
+      "patch_direction": [
+        {
+          "scope": "field_definitions_args.yaml",
+          "action": "新增城市/地址字段意图定义",
+          "example": "在 intents 列表中新增类似条目：\n- id: city_filter\n  retrieval_text: '深圳 北京 上海 广州 城市 所在地 地址 哪个城市 在哪个城市'\n  field: clientCity（或 ES 中实际存储城市信息的字段名）\n  operator: MATCH\n  value_type: extract\n  description: '表示客户所在城市，不表示户籍城市或工作城市'\n  examples:\n    - query: '深圳的客户'\n      output: {field: clientCity, operator: MATCH, value: '深圳'}\n    - query: '帮我查一下深圳的客户'\n      output: {field: clientCity, operator: MATCH, value: '深圳'}"
+        },
+        {
+          "scope": "enhanced_rules_args.yaml（可选）",
+          "action": "新增城市正则增强规则",
+          "example": "如需在 LLM 解析前通过正则快速捕获城市名：\n- name: '城市-匹配'\n  patterns:\n    - '{SEARCH}(深圳|北京|上海|广州|杭州|成都|武汉|南京|重庆|天津|苏州|西安|长沙|郑州|东莞|青岛|沈阳|宁波|昆明|大连|厦门|合肥|佛山|福州|哈尔滨|济南|温州|长春|石家庄|常州|泉州|南宁|贵阳|南昌|太原|烟台|嘉兴|南通|金华|珠海|惠州|徐州|海口|乌鲁木齐|兰州|中山|湖州|盐城|潍坊|保定|镇江|洛阳|泰州|临沂|唐山|台州)(?:的客户|客户|的人|人)?'\n  field: 'clientCity'\n  operator: 'MATCH'\n  value_type: 'capture'\n  value:\n    group: 1\n  priority: 7"
+        },
+        {
+          "scope": "ES 数据层（如果城市信息确实不在 ES 中）",
+          "action": "补充客户城市数据到 ES 索引",
+          "detail": "这是根本性前置依赖：如果 ES 中根本没有客户城市数据，任何 parser 配置都无法解决问题。需要从上游数据源（CRM、核心系统等）将客户城市信息同步至 ES 索引。"
+        }
+      ],
+      "expectation_attributions": [
+        {
+          "expectation_id": "深圳地域筛选条件",
+          "fulfillment_status": "not_evaluable",
+          "causal_category": "boundary_limitation",
+          "earliest_divergence": {
+            "node": "数据模型层（field_definitions_args.yaml）",
+            "expected": "ES 数据库中存在城市/地址/地域类字段（如 city、address、region、province、workCity 等），使 parser 能将'深圳'映射为结构化筛选条件",
+            "actual": "ES 数据库字段定义中不存在任何地理位置相关字段。经检索 address、city、location、area、region、province、workCity 均未找到",
+            "evidence": [
+              "field_definitions_args.yaml（已读取全文约 64000 字符）：涵盖 searchClientName、clientMobile、clientSex、clientAge、clientBirthday、birthdayMd、clientNo、newValueLabel、clientTemperature、clientGroupLabel、vipType、orphanType、trusteeshipFlag、mariSts、profName、idType、idNo、idValidDate、assetsCondition、planAbbrNames、pTypes、pCategorys、annPremSegNum、insnoSumInsSeqNum、validSinsMatuDateTime、validSinsPol、pcustSourcType、jujiaClientGrade、kangyangClientGrade、zhenxiangRunEquityGrade、zxjyEquityGrade、polNoInfo.plancodeinfo.abbrname、polNoInfo.totmodalpremsum、effAnniversaryDate、agentPerspProductType、occurPassPayRegst、education、effAppEndDate 等 50+ 字段意图，但无任何城市/地址/地域字段",
+              "enhanced_rules_args.yaml（已读取全文约 64000 字符）：包含姓名、手机号、性别、年龄、生日、学历、婚姻、客户号、客户价值、温度、VIP、产品、保费、保额、证件、保单周年日、缴费期满等大量正则规则，无任何城市/地域匹配规则"
+            ],
+            "confidence": "high"
+          },
+          "causal_chain": [
+            {
+              "step": 1,
+              "description": "用户输入查询'帮我查一下深圳的客户'，意图按城市'深圳'筛选客户",
+              "node": "adapter.build_request",
+              "status": "normal"
+            },
+            {
+              "step": 2,
+              "description": "client_search API 接收请求，进入路由匹配（matched_level=4），动态召回相关字段定义。召回的字段包括 searchClientName、isBuyInsurance、planAbbrNames、clientSex、dateCreated、polNo、newValueLabel、polNoInfo.plancodeinfo.abbrname、zxjyEquityGrade、clientGroupLabel、birthdayMd 等，但无任何地理位置字段——因为 field_definitions_args.yaml 中根本不存在此类字段",
+              "node": "client_search.routing",
+              "status": "normal"
+            },
+            {
+              "step": 3,
+              "description": "Parser（LLM）依据 prompt.md 核心约束——'只能使用下方参考字段定义中明确列出的字段名（field）。若查询意图找不到匹配的字段，该意图对应的条件必须忽略（不输出）'——对'深圳'进行字段映射。由于动态召回的字段列表中无任何可匹配'深圳'的地理字段，parser 正确地将该意图对应的条件丢弃",
+              "node": "client_search.parse",
+              "status": "normal"
+            },
+            {
+              "step": 4,
+              "description": "Parser 输出空条件数组，user_visible_text='未识别到明确查询条件'，empty_result_reason='service_returned_no_conditions'。这是 prompt 约束下的唯一正确行为",
+              "node": "adapter.extract_output",
+              "status": "suspicious_but_correct"
+            },
+            {
+              "step": 5,
+              "description": "下游 ES 搜索引擎收到空条件，无法执行有效检索。但由于 judge 已确认 judge_scope=parser_condition_semantics_only，下游搜索结果集验证不在本次归因链路内",
+              "node": "client_search.downstream_search",
+              "status": "not_verified"
+            }
+          ],
+          "suspected_locations": [
+            {
+              "file": "config/field_definitions_args.yaml",
+              "path": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+              "reason": "该文件定义了 ES 索引的全部可用字段及 RAG 检索文本。当前缺少任何城市/地址/地域类字段（如 city、address、region、province、workCity 等），导致 parser 无法将'深圳'映射为结构化条件。这是根因所在。",
+              "evidence_type": "confirmed_by_file_read"
+            },
+            {
+              "file": "config/enhanced_rules_args.yaml",
+              "path": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml",
+              "reason": "该文件定义了 Level 2 正则增强规则。当前无任何城市/地域匹配规则，无法在 LLM 解析之前通过正则捕获'深圳'并映射到字段。",
+              "evidence_type": "confirmed_by_file_read"
+            }
+          ],
+          "improvement_direction": [
+            {
+              "direction": "扩展 ES 数据模型，新增地理位置字段",
+              "detail": "在 field_definitions_args.yaml 中新增城市/地址相关字段意图定义。例如：新增 city 字段（operator: MATCH，value_type: extract，retrieval_text 包含'深圳、北京、上海、城市、所在地、地址、哪个城市'等），并在 ES 索引中确保客户数据包含城市字段。这是根本性修复。",
+              "expected_impact": "新增字段后，parser 的动态字段召回可将城市字段纳入候选，LLM 能够将'深圳'映射为 {field: 'city', operator: 'MATCH', value: '深圳'}，从而使下游 ES 能检索出深圳客户"
+            },
+            {
+              "direction": "如 ES 数据中城市信息存储在其他非专用字段（如备注、标签），可考虑通过 value_mappings 或 enhanced_rules 做映射",
+              "detail": "检查 ES 实际数据中是否有字段（如 clientNote、clientTag 等）实际包含城市信息。若有，可在 value_mappings_args.yaml 或 enhanced_rules_args.yaml 中添加城市名→字段的映射规则，使'深圳'能路由到实际存储该信息的字段",
+              "expected_impact": "在不改动 ES schema 的前提下，通过配置映射使现有字段支持城市查询"
+            }
+          ],
+          "source_evidence": [
+            {
+              "source": "field_definitions_args.yaml（已读取）",
+              "finding": "全文约 64000 字符，定义 50+ 字段意图，覆盖姓名、手机、性别、年龄、生日、客户号、价值等级、温度、客群标签、VIP、孤儿单、托管、婚姻、职业、证件、资产、寿险产品、险种类型/大类、保费、保额、保单到期、短险、居家/康养/家医等级、周年日、综拓等，但无任何城市/地址/地域相关字段。"
+            },
+            {
+              "source": "enhanced_rules_args.yaml（已读取）",
+              "finding": "全文约 64000 字符，包含大量正则规则用于姓名、手机号、性别、年龄、生日、学历、婚姻、客户号、价值、温度、VIP、产品、保费、保额、证件、周年日、缴费期满等场景的增强匹配，但无任何城市/地域匹配规则。"
+            },
+            {
+              "source": "prompt.md（已读取）",
+              "finding": "核心约束明确：'只能使用下方参考字段定义中明确列出的字段名（field）。若查询意图找不到匹配的字段，该意图对应的条件必须忽略（不输出）。' parser 遵守了此约束。"
+            },
+            {
+              "source": "judge_boundary-template.md（已读取）",
+              "finding": "明确规定 ES 数据库是硬边界：'上下游的es数据库能力不是由我们系统能力强弱决定的……由于上游限制导致的偏差，这种问题我们无法衡量和解决'。当前问题正属于此类不可控限制。"
+            }
+          ],
+          "incomplete_reason": ""
+        }
+      ],
+      "causal_category": "boundary_limitation",
+      "probe_results": [
+        {
+          "probe_id": "",
+          "status": "not_verified",
+          "stage": "",
+          "error": "",
+          "metadata": {
+            "file": "config/field_definitions_args.yaml",
+            "key": "config:source_field_definitions",
+            "result": "已读取全文。确认该文件定义了约 50+ 字段意图（searchClientName、clientMobile、clientSex、clientAge、clientBirthday、birthdayMd、clientNo、newValueLabel、clientTemperature、clientGroupLabel、vipType、orphanType、trusteeshipFlag、mariSts、profName、idType、idNo、idValidDate、assetsCondition、planAbbrNames、pTypes、pCategorys、annPremSegNum、insnoSumInsSeqNum、validSinsMatuDateTime、validSinsPol、pcustSourcType、jujiaClientGrade、kangyangClientGrade、zhenxiangRunEquityGrade、zxjyEquityGrade、polNoInfo.plancodeinfo.abbrname、polNoInfo.totmodalpremsum、effAnniversaryDate、agentPerspProductType、occurPassPayRegst、education、effAppEndDate 等），但无任何城市/地址/地域相关字段（address、city、location、area、region、province、workCity 均不存在）。"
+          }
+        },
+        {
+          "probe_id": "",
+          "status": "not_verified",
+          "stage": "",
+          "error": "",
+          "metadata": {
+            "file": "config/enhanced_rules_args.yaml",
+            "key": "config:source_enhanced_rules",
+            "result": "已读取全文。确认该文件包含大量 Level 2 正则增强规则（姓名、手机号、性别、年龄、生日、学历、婚姻、客户号、客户价值、温度、客群标签、VIP、产品、险种、保费、保额、证件到期、保单周年日、缴费期满等），但无任何城市/地域匹配规则。"
+          }
+        },
+        {
+          "probe_id": "",
+          "status": "not_verified",
+          "stage": "",
+          "error": "",
+          "metadata": {
+            "file": "prompt.md",
+            "key": "project_doc:source_prompt",
+            "result": "已读取。确认 parser prompt 的核心约束：'只能使用下方参考字段定义中明确列出的字段名（field）。若查询意图找不到匹配的字段，该意图对应的条件必须忽略（不输出）。' parser 行为符合此约束。"
+          }
+        },
+        {
+          "probe_id": "",
+          "status": "not_verified",
+          "stage": "",
+          "error": "",
+          "metadata": {
+            "file": "judge_boundary-template.md",
+            "key": "project_doc:source_judge_boundary",
+            "result": "已读取。确认 judge boundary 将 ES 数据库能力定义为不可控限制：'上下游的es数据库能力不是由我们系统能力强弱决定的……由于上游限制导致的偏差，这种问题我们无法衡量和解决'。当前问题属于此类别。"
+          }
+        }
+      ],
+      "needs_human_review": false,
+      "scenario": "用户查询'帮我查一下深圳的客户'，意图按城市筛选。ES 数据库无地理位置字段，parser 正确返回空条件并提示无法识别。属于系统能力边界限制，非 parser 缺陷。",
+      "gate_decisions": [
+        {
+          "gate_id": "trace_available",
+          "gate_type": "required_evidence",
+          "passed": true,
+          "checked_inputs": {
+            "trace": true,
+            "status": "ok"
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "trace exists"
+        },
+        {
+          "gate_id": "consumer_contract_present",
+          "gate_type": "consumer_contract_present",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true
+          },
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "consumer contract available"
+        },
+        {
+          "gate_id": "business_expectation_coverage",
+          "gate_type": "business_expectation_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 2
+          },
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "business expectations available"
+        },
+        {
+          "gate_id": "fulfillment_assessment_coverage",
+          "gate_type": "fulfillment_assessment_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 2,
+            "assessment_count": 2
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "fulfillment assessments cover expectations"
+        },
+        {
+          "gate_id": "boundary_decision_present",
+          "gate_type": "boundary_decision_present",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true,
+            "assessment_count": 2
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "fulfillment boundary available"
+        },
+        {
+          "gate_id": "derived_verdict_consistency",
+          "gate_type": "derived_verdict_consistency",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true,
+            "has_fulfillment": true
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "derived verdict matches fulfillment state"
+        },
+        {
+          "gate_id": "contradiction_free",
+          "gate_type": "contradiction_free",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no contradictions"
+        },
+        {
+          "gate_id": "unsupported_claims_absent",
+          "gate_type": "unsupported_claims_absent",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no unsupported claims"
+        },
+        {
+          "gate_id": "fulfillment_assessment_coverage",
+          "gate_type": "fulfillment_assessment_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 2,
+            "assessment_count": 2
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "fulfillment assessments cover expectations"
+        },
+        {
+          "gate_id": "attribute_targets_expectation_gap",
+          "gate_type": "attribute_targets_expectation_gap",
+          "passed": true,
+          "checked_inputs": {
+            "fulfillment_requires_attribute": true,
+            "target_count": 1
+          },
+          "recoverable": false,
+          "recommended_transition": "finalize",
+          "reason": "attribute targets fulfillment gaps"
+        },
+        {
+          "gate_id": "probe_evidence_or_blocked_reason",
+          "gate_type": "probe_evidence_or_blocked_reason",
+          "passed": true,
+          "checked_inputs": {
+            "probe_evidence_count": 4,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "probe evidence or blocked reason available"
+        },
+        {
+          "gate_id": "expectation_attribution_evidence",
+          "gate_type": "expectation_attribution_evidence",
+          "passed": true,
+          "checked_inputs": {
+            "attribution_count": 1
+          },
+          "recoverable": false,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "expectation attribution evidence available"
+        },
+        {
+          "gate_id": "causal_category_support",
+          "gate_type": "causal_category_support",
+          "passed": true,
+          "checked_inputs": {
+            "has_causal_category": true,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "causal category supported"
+        },
+        {
+          "gate_id": "improvement_direction_support",
+          "gate_type": "improvement_direction_support",
+          "passed": true,
+          "checked_inputs": {
+            "direction_count": 5,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "improvement direction available"
+        },
+        {
+          "gate_id": "finalization_ready",
+          "gate_type": "finalization_ready",
+          "passed": true,
+          "checked_inputs": {
+            "has_trace": true,
+            "has_judge_result": true
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "finalization ready"
+        },
+        {
+          "gate_id": "contradiction_free",
+          "gate_type": "contradiction_free",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no contradictions"
+        },
+        {
+          "gate_id": "unsupported_claims_absent",
+          "gate_type": "unsupported_claims_absent",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no unsupported claims"
+        }
+      ],
+      "transition_decisions": [
+        {
+          "from_state": "prepare_trace",
+          "to_state": "mock_or_input",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "mock_or_input",
+          "to_state": "execute_or_capture",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "execute_or_capture",
+          "to_state": "collect_evidence",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "trace_available"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "collect_evidence",
+          "to_state": "build_business_expectations",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "build_business_expectations",
+          "to_state": "evaluate_fulfillment",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "consumer_contract_present",
+            "business_expectation_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "evaluate_fulfillment",
+          "to_state": "fulfillment_critic",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "fulfillment_assessment_coverage",
+            "boundary_decision_present",
+            "derived_verdict_consistency"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "fulfillment_critic",
+          "to_state": "attribute_expectations",
+          "condition": "fulfillment_requires_attribute",
+          "reason": "fulfillment_requires_attribute",
+          "gate_ids": [
+            "contradiction_free",
+            "unsupported_claims_absent",
+            "fulfillment_assessment_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "attribute_expectations",
+          "to_state": "run_attribution_probes",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "attribute_targets_expectation_gap"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "run_attribution_probes",
+          "to_state": "attribution_critic",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "probe_evidence_or_blocked_reason"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "attribution_critic",
+          "to_state": "finalize",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "expectation_attribution_evidence",
+            "causal_category_support",
+            "improvement_direction_support"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "finalize",
+          "to_state": "completed",
+          "condition": "stop",
+          "reason": "stop",
+          "gate_ids": [
+            "finalization_ready",
+            "contradiction_free",
+            "unsupported_claims_absent"
+          ],
+          "retry_count": 0,
+          "stop_reason": "completed"
+        }
+      ],
+      "summary": {
+        "causal_category": "boundary_limitation",
+        "attribution_count": 1,
+        "probe_count": 4,
+        "summary_text": "用户查询'帮我查一下深圳的客户'要求按城市维度筛选客户。然而 ES 数据库的字段定义（field_definitions_args.yaml）中不存在任何地理位置相关字段（address、city、location、area、region、province、workCity 等均未定义），增强规则（enhanced_rules_args.yaml）中也没有城市/地域匹配规则。Parser 在 prompt 的硬约束下（'只能使用参考字段定义中明确列出的字段名，若查询意图找不到匹配的字段必须忽略'），无法将'深圳'映射到任何可用字段，因此正确返回空条件并提示'未识别到明确查询条件'。这不是 parser 或 LLM 的缺陷，而是 ES 数据模型层面的能力边界限制——系统上游根本不存储客户的城市场信息，自然无法支持按城市筛选。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      },
+      "display_causal_category": "boundary_limitation",
+      "display_root_cause": "用户查询'帮我查一下深圳的客户'要求按城市维度筛选客户。然而 ES 数据库的字段定义（field_definitions_args.yaml）中不存在任何地理位置相关字段（address、city、location、area、region、province、workCity 等均未定义），增强规则（enhanced_rules_args.yaml）中也没有城市/地域匹配规则。Parser 在 prompt 的硬约束下（'只能使用参考字段定义中明确列出的字段名，若查询意图找不到匹配的字段必须忽略'），无法将'深圳'映射到任何可用字段，因此正确返回空条件并提示'未识别到明确查询条件'。这不是 parser 或 LLM 的缺陷，而是 ES 数据模型层面的能力边界限制——系统上游根本不存储客户的城市场信息，自然无法支持按城市筛选。",
+      "display_verification_steps": [
+        "1. 检查 ES 实际索引 mapping：确认客户索引中是否存在任何包含城市/地址信息的字段（包括非专用字段如备注、标签、扩展属性等）",
+        "2. 抽查 ES 客户样本数据：查看是否有客户记录中实际存储了'深圳'等城市信息（可能在 clientNote、clientTag、address 等非标准字段中）",
+        "3. 若确认 ES 数据中确实无城市信息：向产品/数据团队确认城市字段是否在数据采集范围内、是否有计划补充",
+        "4. 若确认 ES 数据中存在城市信息但未被 field_definitions 覆盖：在 field_definitions_args.yaml 中补充对应字段定义",
+        "5. 回归验证：新增字段定义后，使用相同 query '帮我查一下深圳的客户' 测试，确认 parser 能输出包含城市条件的结果"
+      ],
+      "display_patch_direction": [
+        {
+          "scope": "field_definitions_args.yaml",
+          "action": "新增城市/地址字段意图定义",
+          "example": "在 intents 列表中新增类似条目：\n- id: city_filter\n  retrieval_text: '深圳 北京 上海 广州 城市 所在地 地址 哪个城市 在哪个城市'\n  field: clientCity（或 ES 中实际存储城市信息的字段名）\n  operator: MATCH\n  value_type: extract\n  description: '表示客户所在城市，不表示户籍城市或工作城市'\n  examples:\n    - query: '深圳的客户'\n      output: {field: clientCity, operator: MATCH, value: '深圳'}\n    - query: '帮我查一下深圳的客户'\n      output: {field: clientCity, operator: MATCH, value: '深圳'}"
+        },
+        {
+          "scope": "enhanced_rules_args.yaml（可选）",
+          "action": "新增城市正则增强规则",
+          "example": "如需在 LLM 解析前通过正则快速捕获城市名：\n- name: '城市-匹配'\n  patterns:\n    - '{SEARCH}(深圳|北京|上海|广州|杭州|成都|武汉|南京|重庆|天津|苏州|西安|长沙|郑州|东莞|青岛|沈阳|宁波|昆明|大连|厦门|合肥|佛山|福州|哈尔滨|济南|温州|长春|石家庄|常州|泉州|南宁|贵阳|南昌|太原|烟台|嘉兴|南通|金华|珠海|惠州|徐州|海口|乌鲁木齐|兰州|中山|湖州|盐城|潍坊|保定|镇江|洛阳|泰州|临沂|唐山|台州)(?:的客户|客户|的人|人)?'\n  field: 'clientCity'\n  operator: 'MATCH'\n  value_type: 'capture'\n  value:\n    group: 1\n  priority: 7"
+        },
+        {
+          "scope": "ES 数据层（如果城市信息确实不在 ES 中）",
+          "action": "补充客户城市数据到 ES 索引",
+          "detail": "这是根本性前置依赖：如果 ES 中根本没有客户城市数据，任何 parser 配置都无法解决问题。需要从上游数据源（CRM、核心系统等）将客户城市信息同步至 ES 索引。"
+        }
+      ],
+      "attribution_count": 1,
+      "probe_count": 4
+    },
+    "fulfillment_panel": {
+      "consumer_contract": {
+        "consumer": "下游客户搜索引擎",
+        "contract": "将parser输出的结构化条件组装为ES查询语句进行客户检索",
+        "application_boundary": {
+          "downstream_result_set_available": false,
+          "downstream_status": "not_verified",
+          "judge_scope": "parser_condition_semantics_only",
+          "result_set_verified": false,
+          "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+        }
+      },
+      "overall_fulfillment": {
+        "status": "not_evaluable",
+        "assessment_count": 2,
+        "blocking_expectations": [
+          "深圳地域筛选条件"
+        ]
+      },
+      "matrix": [
+        {
+          "expectation_id": "深圳地域筛选条件",
+          "downstream_consumer": "下游ES搜索引擎",
+          "expected_outcome": "输出如 {field: '城市/地址相关字段', operator: 'MATCH/CONTAINS', value: '深圳'} 的条件",
+          "required_capabilities": [
+            "ES数据库需存在城市/地址/地域字段"
+          ],
+          "status": "not_evaluable",
+          "blocking": true,
+          "downstream_impact": "无法检索到深圳客户，用户意图在当前系统能力边界内无法实现",
+          "boundary_decision": {
+            "within_evaluable_scope": false,
+            "uncontrollable_limits": [
+              "ES数据库中不存在任何城市、地址、地域、省份等地理位置相关字段，系统上游数据层完全不支持按城市维度筛选客户"
+            ]
+          }
+        },
+        {
+          "expectation_id": "未识别条件时的合理降级",
+          "downstream_consumer": "用户界面",
+          "expected_outcome": "返回空条件列表，并提示无法识别到明确查询条件",
+          "status": "fulfilled",
+          "blocking": false,
+          "downstream_impact": "用户收到合理反馈，得知系统无法处理该查询",
+          "boundary_decision": {
+            "within_evaluable_scope": true
+          }
+        }
+      ],
+      "derived_verdict": "uncertain",
+      "verdict_derivation": {
+        "primary_boundary": "parser_condition_semantics_only",
+        "assessment_summary": "用户核心意图（按深圳筛选客户）对应的'深圳地域筛选条件'期望无法评估，原因是ES数据库不存在任何地理位置字段，属于不可控的上游数据能力限制。降级行为期望（返回空条件并提示）已满足。",
+        "blocking_gaps": [
+          "ES数据库无城市/地址/地域字段，无法支持按'深圳'筛选客户"
+        ],
+        "why_verdict": "用户查询'深圳的客户'需要按城市维度筛选，但经检索ES数据库字段定义，不存在address、city、location、area、region、province、workCity等任何地理位置相关字段。此限制来自上游ES数据库的数据能力，非当前parser系统可优化范畴。parser在无法将'深圳'映射到任何可用字段的情况下，返回空条件并提示'未识别到明确查询条件'，属于合理降级行为。由于核心业务期望完全受制于不可控的上游数据限制，整体评估结果为不可评估。",
+        "missing_evidence": [
+          "current intent/config expected conditions"
+        ]
+      }
+    },
+    "expectation_attribution_panel": {
+      "attributions": [
+        {
+          "expectation_id": "深圳地域筛选条件",
+          "fulfillment_status": "not_evaluable",
+          "causal_category": "boundary_limitation",
+          "earliest_divergence": {
+            "node": "数据模型层（field_definitions_args.yaml）",
+            "expected": "ES 数据库中存在城市/地址/地域类字段（如 city、address、region、province、workCity 等），使 parser 能将'深圳'映射为结构化筛选条件",
+            "actual": "ES 数据库字段定义中不存在任何地理位置相关字段。经检索 address、city、location、area、region、province、workCity 均未找到",
+            "evidence": [
+              "field_definitions_args.yaml（已读取全文约 64000 字符）：涵盖 searchClientName、clientMobile、clientSex、clientAge、clientBirthday、birthdayMd、clientNo、newValueLabel、clientTemperature、clientGroupLabel、vipType、orphanType、trusteeshipFlag、mariSts、profName、idType、idNo、idValidDate、assetsCondition、planAbbrNames、pTypes、pCategorys、annPremSegNum、insnoSumInsSeqNum、validSinsMatuDateTime、validSinsPol、pcustSourcType、jujiaClientGrade、kangyangClientGrade、zhenxiangRunEquityGrade、zxjyEquityGrade、polNoInfo.plancodeinfo.abbrname、polNoInfo.totmodalpremsum、effAnniversaryDate、agentPerspProductType、occurPassPayRegst、education、effAppEndDate 等 50+ 字段意图，但无任何城市/地址/地域字段",
+              "enhanced_rules_args.yaml（已读取全文约 64000 字符）：包含姓名、手机号、性别、年龄、生日、学历、婚姻、客户号、客户价值、温度、VIP、产品、保费、保额、证件、保单周年日、缴费期满等大量正则规则，无任何城市/地域匹配规则"
+            ],
+            "confidence": "high"
+          },
+          "causal_chain": [
+            {
+              "step": 1,
+              "description": "用户输入查询'帮我查一下深圳的客户'，意图按城市'深圳'筛选客户",
+              "node": "adapter.build_request",
+              "status": "normal"
+            },
+            {
+              "step": 2,
+              "description": "client_search API 接收请求，进入路由匹配（matched_level=4），动态召回相关字段定义。召回的字段包括 searchClientName、isBuyInsurance、planAbbrNames、clientSex、dateCreated、polNo、newValueLabel、polNoInfo.plancodeinfo.abbrname、zxjyEquityGrade、clientGroupLabel、birthdayMd 等，但无任何地理位置字段——因为 field_definitions_args.yaml 中根本不存在此类字段",
+              "node": "client_search.routing",
+              "status": "normal"
+            },
+            {
+              "step": 3,
+              "description": "Parser（LLM）依据 prompt.md 核心约束——'只能使用下方参考字段定义中明确列出的字段名（field）。若查询意图找不到匹配的字段，该意图对应的条件必须忽略（不输出）'——对'深圳'进行字段映射。由于动态召回的字段列表中无任何可匹配'深圳'的地理字段，parser 正确地将该意图对应的条件丢弃",
+              "node": "client_search.parse",
+              "status": "normal"
+            },
+            {
+              "step": 4,
+              "description": "Parser 输出空条件数组，user_visible_text='未识别到明确查询条件'，empty_result_reason='service_returned_no_conditions'。这是 prompt 约束下的唯一正确行为",
+              "node": "adapter.extract_output",
+              "status": "suspicious_but_correct"
+            },
+            {
+              "step": 5,
+              "description": "下游 ES 搜索引擎收到空条件，无法执行有效检索。但由于 judge 已确认 judge_scope=parser_condition_semantics_only，下游搜索结果集验证不在本次归因链路内",
+              "node": "client_search.downstream_search",
+              "status": "not_verified"
+            }
+          ],
+          "suspected_locations": [
+            {
+              "file": "config/field_definitions_args.yaml",
+              "path": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+              "reason": "该文件定义了 ES 索引的全部可用字段及 RAG 检索文本。当前缺少任何城市/地址/地域类字段（如 city、address、region、province、workCity 等），导致 parser 无法将'深圳'映射为结构化条件。这是根因所在。",
+              "evidence_type": "confirmed_by_file_read"
+            },
+            {
+              "file": "config/enhanced_rules_args.yaml",
+              "path": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml",
+              "reason": "该文件定义了 Level 2 正则增强规则。当前无任何城市/地域匹配规则，无法在 LLM 解析之前通过正则捕获'深圳'并映射到字段。",
+              "evidence_type": "confirmed_by_file_read"
+            }
+          ],
+          "improvement_direction": [
+            {
+              "direction": "扩展 ES 数据模型，新增地理位置字段",
+              "detail": "在 field_definitions_args.yaml 中新增城市/地址相关字段意图定义。例如：新增 city 字段（operator: MATCH，value_type: extract，retrieval_text 包含'深圳、北京、上海、城市、所在地、地址、哪个城市'等），并在 ES 索引中确保客户数据包含城市字段。这是根本性修复。",
+              "expected_impact": "新增字段后，parser 的动态字段召回可将城市字段纳入候选，LLM 能够将'深圳'映射为 {field: 'city', operator: 'MATCH', value: '深圳'}，从而使下游 ES 能检索出深圳客户"
+            },
+            {
+              "direction": "如 ES 数据中城市信息存储在其他非专用字段（如备注、标签），可考虑通过 value_mappings 或 enhanced_rules 做映射",
+              "detail": "检查 ES 实际数据中是否有字段（如 clientNote、clientTag 等）实际包含城市信息。若有，可在 value_mappings_args.yaml 或 enhanced_rules_args.yaml 中添加城市名→字段的映射规则，使'深圳'能路由到实际存储该信息的字段",
+              "expected_impact": "在不改动 ES schema 的前提下，通过配置映射使现有字段支持城市查询"
+            }
+          ],
+          "source_evidence": [
+            {
+              "source": "field_definitions_args.yaml（已读取）",
+              "finding": "全文约 64000 字符，定义 50+ 字段意图，覆盖姓名、手机、性别、年龄、生日、客户号、价值等级、温度、客群标签、VIP、孤儿单、托管、婚姻、职业、证件、资产、寿险产品、险种类型/大类、保费、保额、保单到期、短险、居家/康养/家医等级、周年日、综拓等，但无任何城市/地址/地域相关字段。"
+            },
+            {
+              "source": "enhanced_rules_args.yaml（已读取）",
+              "finding": "全文约 64000 字符，包含大量正则规则用于姓名、手机号、性别、年龄、生日、学历、婚姻、客户号、价值、温度、VIP、产品、保费、保额、证件、周年日、缴费期满等场景的增强匹配，但无任何城市/地域匹配规则。"
+            },
+            {
+              "source": "prompt.md（已读取）",
+              "finding": "核心约束明确：'只能使用下方参考字段定义中明确列出的字段名（field）。若查询意图找不到匹配的字段，该意图对应的条件必须忽略（不输出）。' parser 遵守了此约束。"
+            },
+            {
+              "source": "judge_boundary-template.md（已读取）",
+              "finding": "明确规定 ES 数据库是硬边界：'上下游的es数据库能力不是由我们系统能力强弱决定的……由于上游限制导致的偏差，这种问题我们无法衡量和解决'。当前问题正属于此类不可控限制。"
+            }
+          ],
+          "incomplete_reason": ""
+        }
+      ],
+      "causal_category": "boundary_limitation",
+      "probe_results": [
+        {
+          "probe_id": "",
+          "status": "not_verified",
+          "stage": "",
+          "error": "",
+          "metadata": {
+            "file": "config/field_definitions_args.yaml",
+            "key": "config:source_field_definitions",
+            "result": "已读取全文。确认该文件定义了约 50+ 字段意图（searchClientName、clientMobile、clientSex、clientAge、clientBirthday、birthdayMd、clientNo、newValueLabel、clientTemperature、clientGroupLabel、vipType、orphanType、trusteeshipFlag、mariSts、profName、idType、idNo、idValidDate、assetsCondition、planAbbrNames、pTypes、pCategorys、annPremSegNum、insnoSumInsSeqNum、validSinsMatuDateTime、validSinsPol、pcustSourcType、jujiaClientGrade、kangyangClientGrade、zhenxiangRunEquityGrade、zxjyEquityGrade、polNoInfo.plancodeinfo.abbrname、polNoInfo.totmodalpremsum、effAnniversaryDate、agentPerspProductType、occurPassPayRegst、education、effAppEndDate 等），但无任何城市/地址/地域相关字段（address、city、location、area、region、province、workCity 均不存在）。"
+          }
+        },
+        {
+          "probe_id": "",
+          "status": "not_verified",
+          "stage": "",
+          "error": "",
+          "metadata": {
+            "file": "config/enhanced_rules_args.yaml",
+            "key": "config:source_enhanced_rules",
+            "result": "已读取全文。确认该文件包含大量 Level 2 正则增强规则（姓名、手机号、性别、年龄、生日、学历、婚姻、客户号、客户价值、温度、客群标签、VIP、产品、险种、保费、保额、证件到期、保单周年日、缴费期满等），但无任何城市/地域匹配规则。"
+          }
+        },
+        {
+          "probe_id": "",
+          "status": "not_verified",
+          "stage": "",
+          "error": "",
+          "metadata": {
+            "file": "prompt.md",
+            "key": "project_doc:source_prompt",
+            "result": "已读取。确认 parser prompt 的核心约束：'只能使用下方参考字段定义中明确列出的字段名（field）。若查询意图找不到匹配的字段，该意图对应的条件必须忽略（不输出）。' parser 行为符合此约束。"
+          }
+        },
+        {
+          "probe_id": "",
+          "status": "not_verified",
+          "stage": "",
+          "error": "",
+          "metadata": {
+            "file": "judge_boundary-template.md",
+            "key": "project_doc:source_judge_boundary",
+            "result": "已读取。确认 judge boundary 将 ES 数据库能力定义为不可控限制：'上下游的es数据库能力不是由我们系统能力强弱决定的……由于上游限制导致的偏差，这种问题我们无法衡量和解决'。当前问题属于此类别。"
+          }
+        }
+      ],
+      "incomplete_reason": ""
+    },
+    "cluster_panel": {
+      "project_id": "client_search",
+      "clusters": [
+        {
+          "cluster_id": "expectation::boundary_limitation::not_evaluable",
+          "mechanism": "boundary_limitation::not_evaluable",
+          "causal_category": "boundary_limitation",
+          "fulfillment_statuses": [
+            "not_evaluable"
+          ],
+          "expectation_ids": [
+            "深圳地域筛选条件"
+          ],
+          "needs_human_review": false,
+          "canonical_attribution": true,
+          "count": 1,
+          "representative_cases": [
+            "4cb04094-136d-4127-a601-4cdeb06c6579"
+          ],
+          "representative_traces": [
+            "4cb04094-136d-4127-a601-4cdeb06c6579"
+          ],
+          "common_root_cause": "用户查询'帮我查一下深圳的客户'要求按城市维度筛选客户。然而 ES 数据库的字段定义（field_definitions_args.yaml）中不存在任何地理位置相关字段（address、city、location、area、region、province、workCity 等均未定义），增强规则（enhanced_rules_args.yaml）中也没有城市/地域匹配规则。Parser 在 prompt 的硬约束下（'只能使用参考字段定义中明确列出的字段名，若查询意图找不到匹配的字段必须忽略'），无法将'深圳'映射到任何可用字段，因此正确返回空条件并提示'未识别到明确查询条件'。这不是 parser 或 LLM 的缺陷，而是 ES 数据模型层面的能力边界限制——系统上游根本不存储客户的城市场信息，自然无法支持按城市筛选。",
+          "shared_failure_pattern": "用户查询'帮我查一下深圳的客户'要求按城市维度筛选客户。然而 ES 数据库的字段定义（field_definitions_args.yaml）中不存在任何地理位置相关字段（address、city、location、area、region、province、workCity 等均未定义），增强规则（enhanced_rules_args.yaml）中也没有城市/地域匹配规则。Parser 在 prompt 的硬约束下（'只能使用参考字段定义中明确列出的字段名，若查询意图找不到匹配的字段必须忽略'），无法将'深圳'映射到任何可用字段，因此正确返回空条件并提示'未识别到明确查询条件'。这不是 parser 或 LLM 的缺陷，而是 ES 数据模型层面的能力边界限制——系统上游根本不存储客户的城市场信息，自然无法支持按城市筛选。",
+          "representative_diffs": [
+            {
+              "case_id": "4cb04094-136d-4127-a601-4cdeb06c6579",
+              "node": "数据模型层 — field_definitions_args.yaml / ES 索引 schema",
+              "expected": "ES 索引中存在城市/地址/地域类字段，使 parser 能将'深圳'映射为结构化条件",
+              "actual": "ES 索引中不存在任何地理位置字段（address、city、location、area、region、province、workCity 全部缺失），parser 无法映射'深圳'",
+              "evidence": [
+                "field_definitions_args.yaml 全文检索：无 address、city、location、area、region、province、workCity 字段",
+                "enhanced_rules_args.yaml 全文检索：无城市/地域相关正则规则",
+                "judge 验证：已检索上述全部字段名，均未找到"
+              ]
+            }
+          ],
+          "minimal_fix_direction": [
+            {
+              "scope": "field_definitions_args.yaml",
+              "action": "新增城市/地址字段意图定义",
+              "example": "在 intents 列表中新增类似条目：\n- id: city_filter\n  retrieval_text: '深圳 北京 上海 广州 城市 所在地 地址 哪个城市 在哪个城市'\n  field: clientCity（或 ES 中实际存储城市信息的字段名）\n  operator: MATCH\n  value_type: extract\n  description: '表示客户所在城市，不表示户籍城市或工作城市'\n  examples:\n    - query: '深圳的客户'\n      output: {field: clientCity, operator: MATCH, value: '深圳'}\n    - query: '帮我查一下深圳的客户'\n      output: {field: clientCity, operator: MATCH, value: '深圳'}"
+            },
+            {
+              "scope": "enhanced_rules_args.yaml（可选）",
+              "action": "新增城市正则增强规则",
+              "example": "如需在 LLM 解析前通过正则快速捕获城市名：\n- name: '城市-匹配'\n  patterns:\n    - '{SEARCH}(深圳|北京|上海|广州|杭州|成都|武汉|南京|重庆|天津|苏州|西安|长沙|郑州|东莞|青岛|沈阳|宁波|昆明|大连|厦门|合肥|佛山|福州|哈尔滨|济南|温州|长春|石家庄|常州|泉州|南宁|贵阳|南昌|太原|烟台|嘉兴|南通|金华|珠海|惠州|徐州|海口|乌鲁木齐|兰州|中山|湖州|盐城|潍坊|保定|镇江|洛阳|泰州|临沂|唐山|台州)(?:的客户|客户|的人|人)?'\n  field: 'clientCity'\n  operator: 'MATCH'\n  value_type: 'capture'\n  value:\n    group: 1\n  priority: 7"
+            },
+            {
+              "scope": "ES 数据层（如果城市信息确实不在 ES 中）",
+              "action": "补充客户城市数据到 ES 索引",
+              "detail": "这是根本性前置依赖：如果 ES 中根本没有客户城市数据，任何 parser 配置都无法解决问题。需要从上游数据源（CRM、核心系统等）将客户城市信息同步至 ES 索引。"
+            }
+          ],
+          "verification_cases": [
+            "4cb04094-136d-4127-a601-4cdeb06c6579"
+          ],
+          "next_actions": [
+            "1. 检查 ES 实际索引 mapping：确认客户索引中是否存在任何包含城市/地址信息的字段（包括非专用字段如备注、标签、扩展属性等）",
+            "2. 抽查 ES 客户样本数据：查看是否有客户记录中实际存储了'深圳'等城市信息（可能在 clientNote、clientTag、address 等非标准字段中）",
+            "3. 若确认 ES 数据中确实无城市信息：向产品/数据团队确认城市字段是否在数据采集范围内、是否有计划补充",
+            "4. 若确认 ES 数据中存在城市信息但未被 field_definitions 覆盖：在 field_definitions_args.yaml 中补充对应字段定义",
+            "5. 回归验证：新增字段定义后，使用相同 query '帮我查一下深圳的客户' 测试，确认 parser 能输出包含城市条件的结果"
+          ]
+        }
+      ],
+      "common_root_cause": "",
+      "impact": "",
+      "priority": ""
+    },
+    "check_panel": {
+      "passed": false,
+      "issues": [
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+        "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+        "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: CRM, ES, LLM, Parser, SEARCH, address"
+      ],
+      "boundary_violations": [
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+        "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+      ],
+      "consistency_gaps": [
+        "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: CRM, ES, LLM, Parser, SEARCH, address"
+      ],
+      "verification_results": [
+        "Check categories passed current audit."
+      ],
+      "recommended_fixes": [
+        "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions.",
+        "Ensure all steps use the same trace_id and latest run output."
+      ]
+    },
+    "table_row": {
+      "id": "mock-agent-client_search-71bdaf11",
+      "input": "帮我查一下深圳的客户",
+      "scenario": "",
+      "output_summary": "{\"summary\": \"未识别到明确查询条件\", \"structured_output\": [], \"logic\": \"AND\", \"status_code\": 0, \"user_visible_text\": \"未识别到明确查询条件\", \"empty_result_reason\": \"service_returne…",
+      "reference_summary": "{\"query_logic\": \"AND\", \"conditions\": [], \"expected_source\": \"not_available\", \"reference_conditions\": [], \"reference_is_oracle\": false}",
+      "status": "not_evaluable",
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "verdict": "uncertain",
+      "fulfillment_status": "not_evaluable",
+      "judge_summary": {
+        "status": "not_evaluable",
+        "fulfillment_status": "not_evaluable",
+        "verdict": "uncertain",
+        "reason": "uncertain · 用户查询'深圳的客户'需要按城市维度筛选，但经检索ES数据库字段定义，不存在address、city、location、area、region、province、workCity等任何地理位置相关字段。此限制来自上游ES数据库的数据能力，非当前parser系统可优化范畴。parser在无法将'深圳'映射到任何可用字段的情况下，返回空条件并提示'未识别到明确查询条件'，属于合理降级行为。由于核心业务期望完全受制于不可控的上游数据限制，整体评估结果为不可评估。",
+        "reason_source": "reasoning_summary",
+        "reason_stage": "judge",
+        "is_formal_attribution": false,
+        "assessment_count": 2,
+        "blocking_count": 1
+      },
+      "attribution_summary": {
+        "causal_category": "boundary_limitation",
+        "attribution_count": 1,
+        "probe_count": 4,
+        "summary_text": "用户查询'帮我查一下深圳的客户'要求按城市维度筛选客户。然而 ES 数据库的字段定义（field_definitions_args.yaml）中不存在任何地理位置相关字段（address、city、location、area、region、province、workCity 等均未定义），增强规则（enhanced_rules_args.yaml）中也没有城市/地域匹配规则。Parser 在 prompt 的硬约束下（'只能使用参考字段定义中明确列出的字段名，若查询意图找不到匹配的字段必须忽略'），无法将'深圳'映射到任何可用字段，因此正确返回空条件并提示'未识别到明确查询条件'。这不是 parser 或 LLM 的缺陷，而是 ES 数据模型层面的能力边界限制——系统上游根本不存储客户的城市场信息，自然无法支持按城市筛选。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 4,
+        "protocol_gap_count": 0,
+        "consistency_gap_count": 1,
+        "recommended_fix_count": 2,
+        "issues": [
+          "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+          "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+          "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+          "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: CRM, ES, LLM, Parser, SEARCH, address"
+        ]
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": false,
+      "issue_count": 5,
+      "fallback_count": 0,
+      "causal_category": "boundary_limitation",
+      "divergence_stage": "数据模型层 — field_definitions_args.yaml / ES 索引 schema",
+      "root_cause_summary": "用户查询'帮我查一下深圳的客户'要求按城市维度筛选客户。然而 ES 数据库的字段定义（field_definitions_args.yaml）中不存在任何地理位置相关字段（address、city、location、area、region、province、workCity 等均未定义），增强规则（enhanced_rules_args.yaml）中也没有城市/地域匹配规则。Parser 在 prompt 的硬约束下（'只能使用参考字段定义中明确列出的字段名，若查询意图找不到匹配的字段必须忽略'），无法将'深圳'映射到任何可用字段，因此正确返回空条件并提示'未识别到明确查询条件'。这不是 parser 或 LLM 的缺陷，而是 ES 数据模型层面的能力边界限制——系统上游根本不存储客户的城市场信息，自然无法支持按城市筛选。",
+      "created_at": "2026-07-02T03:06:42.517349+00:00",
+      "stop_reason": "completed",
+      "interaction_mode": "single_turn",
+      "trace_id": "4cb04094-136d-4127-a601-4cdeb06c6579"
+    },
+    "project_extensions": {
+      "frontend_standard": {
+        "frontend_view": {
+          "live": "render normalized parser output and raw project fields under protocol extension panels",
+          "summary": "align Output and Reference as formatted JSON with equal-size table cells and compact drill-downs"
+        },
+        "batch_persistence": {
+          "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+          "transient_results": "do not persist full trace, judge, attribute, downstream payload, or frontend_view as durable case-pool source data"
+        }
+      },
+      "display_contract": {
+        "output_source": "trace.live_result.extracted_output",
+        "reference_source": "judge_generated",
+        "formatting": [
+          "json formatting",
+          "truncation",
+          "output/reference alignment"
+        ]
+      }
+    }
+  },
+  "table_row": {
+    "id": "mock-agent-client_search-71bdaf11",
+    "input": "帮我查一下深圳的客户",
+    "scenario": "",
+    "output_summary": "{\"summary\": \"未识别到明确查询条件\", \"structured_output\": [], \"logic\": \"AND\", \"status_code\": 0, \"user_visible_text\": \"未识别到明确查询条件\", \"empty_result_reason\": \"service_returne…",
+    "reference_summary": "{\"query_logic\": \"AND\", \"conditions\": [], \"expected_source\": \"not_available\", \"reference_conditions\": [], \"reference_is_oracle\": false}",
+    "status": "not_evaluable",
+    "execution_mode": "live",
+    "output_source": "live_service",
+    "verdict": "uncertain",
+    "fulfillment_status": "not_evaluable",
+    "judge_summary": {
+      "status": "not_evaluable",
+      "fulfillment_status": "not_evaluable",
+      "verdict": "uncertain",
+      "reason": "uncertain · 用户查询'深圳的客户'需要按城市维度筛选，但经检索ES数据库字段定义，不存在address、city、location、area、region、province、workCity等任何地理位置相关字段。此限制来自上游ES数据库的数据能力，非当前parser系统可优化范畴。parser在无法将'深圳'映射到任何可用字段的情况下，返回空条件并提示'未识别到明确查询条件'，属于合理降级行为。由于核心业务期望完全受制于不可控的上游数据限制，整体评估结果为不可评估。",
+      "reason_source": "reasoning_summary",
+      "reason_stage": "judge",
+      "is_formal_attribution": false,
+      "assessment_count": 2,
+      "blocking_count": 1
+    },
+    "attribution_summary": {
+      "causal_category": "boundary_limitation",
+      "attribution_count": 1,
+      "probe_count": 4,
+      "summary_text": "用户查询'帮我查一下深圳的客户'要求按城市维度筛选客户。然而 ES 数据库的字段定义（field_definitions_args.yaml）中不存在任何地理位置相关字段（address、city、location、area、region、province、workCity 等均未定义），增强规则（enhanced_rules_args.yaml）中也没有城市/地域匹配规则。Parser 在 prompt 的硬约束下（'只能使用参考字段定义中明确列出的字段名，若查询意图找不到匹配的字段必须忽略'），无法将'深圳'映射到任何可用字段，因此正确返回空条件并提示'未识别到明确查询条件'。这不是 parser 或 LLM 的缺陷，而是 ES 数据模型层面的能力边界限制——系统上游根本不存储客户的城市场信息，自然无法支持按城市筛选。",
+      "is_complete": true,
+      "is_formal_attribution": true
+    },
+    "check_summary": {
+      "passed": false,
+      "issue_count": 4,
+      "protocol_gap_count": 0,
+      "consistency_gap_count": 1,
+      "recommended_fix_count": 2,
+      "issues": [
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+        "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+        "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: CRM, ES, LLM, Parser, SEARCH, address"
+      ]
+    },
+    "fallback_summary": {
+      "count": 0,
+      "needs_human_review": false
+    },
+    "needs_human_review": false,
+    "check_passed": false,
+    "issue_count": 5,
+    "fallback_count": 0,
+    "causal_category": "boundary_limitation",
+    "divergence_stage": "数据模型层 — field_definitions_args.yaml / ES 索引 schema",
+    "root_cause_summary": "用户查询'帮我查一下深圳的客户'要求按城市维度筛选客户。然而 ES 数据库的字段定义（field_definitions_args.yaml）中不存在任何地理位置相关字段（address、city、location、area、region、province、workCity 等均未定义），增强规则（enhanced_rules_args.yaml）中也没有城市/地域匹配规则。Parser 在 prompt 的硬约束下（'只能使用参考字段定义中明确列出的字段名，若查询意图找不到匹配的字段必须忽略'），无法将'深圳'映射到任何可用字段，因此正确返回空条件并提示'未识别到明确查询条件'。这不是 parser 或 LLM 的缺陷，而是 ES 数据模型层面的能力边界限制——系统上游根本不存储客户的城市场信息，自然无法支持按城市筛选。",
+    "created_at": "2026-07-02T03:06:42.517349+00:00",
+    "stop_reason": "completed",
+    "interaction_mode": "single_turn",
+    "trace_id": "4cb04094-136d-4127-a601-4cdeb06c6579"
+  }
+}

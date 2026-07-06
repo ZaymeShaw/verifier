@@ -1,0 +1,113 @@
+{
+  "id": "mock-agent-marketting-planning-ce129a44",
+  "input": "org_001",
+  "scenario": "intent_recognition",
+  "output_summary": "{\"event_summary\": {\"canonical_names\": [\"intent_detected\", \"reasoning_message_content\", \"planning_started\", \"card_delta\", \"done\"], \"completed\": true, \"counts\": …",
+  "reference_summary": "{\"scenario\": \"intent_recognition\"}",
+  "status": "not_fulfilled",
+  "execution_mode": "",
+  "output_source": "live_service",
+  "verdict": "incorrect",
+  "fulfillment_status": "not_fulfilled",
+  "judge_summary": {
+    "status": "not_fulfilled",
+    "fulfillment_status": "not_fulfilled",
+    "verdict": "incorrect",
+    "reason": "not_fulfilled · blocking=[正确识别用户意图为营销规划需求,进入规划或澄清阶段而非直接返回其他意图] · 导致后续规划无法启动，用户请求未得到实质回应",
+    "reason_source": "aggregated_fulfillment",
+    "reason_stage": "judge",
+    "is_formal_attribution": true,
+    "assessment_count": 5,
+    "blocking_count": 2,
+    "primary_failure_dimensions": [
+      {
+        "blocking": true,
+        "downstream_impact": "导致后续规划无法启动，用户请求未得到实质回应",
+        "evidence": "导致后续规划无法启动，用户请求未得到实质回应",
+        "expectation_id": "正确识别用户意图为营销规划需求",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "用户无法获得任何规划建议或引导，需求被完全忽略",
+        "evidence": "用户无法获得任何规划建议或引导，需求被完全忽略",
+        "expectation_id": "进入规划或澄清阶段而非直接返回其他意图",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": false,
+        "downstream_impact": "前端渲染结果为空界面，用户体验极差",
+        "evidence": "前端渲染结果为空界面，用户体验极差",
+        "expectation_id": "SSE事件序列完整且有实际内容",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": false,
+        "downstream_impact": "核心问题未得到解答，业务价值为零",
+        "evidence": "核心问题未得到解答，业务价值为零",
+        "expectation_id": "生成包含销售人员维度的规划建议或澄清问题",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": false,
+        "downstream_impact": "规划可能缺乏时间维度，导致建议不可执行",
+        "evidence": "规划可能缺乏时间维度，导致建议不可执行",
+        "expectation_id": "识别并保留时间范围约束今年",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      }
+    ]
+  },
+  "attribution_summary": {
+    "attribution_count": 5,
+    "causal_category": "insufficient_evidence",
+    "is_complete": false,
+    "is_formal_attribution": false,
+    "probe_count": 1,
+    "summary_text": "attribute agent LLM 调用失败。"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 7,
+    "protocol_gap_count": 1,
+    "consistency_gap_count": 1,
+    "recommended_fix_count": 3,
+    "issues": [
+      "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+      "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+      "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+      "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+      "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/normalize.py",
+      "marketting-planning attribution causal_category outside taxonomy: insufficient_evidence",
+      "RunTrace.extracted_output and JudgeResult.actual diverge"
+    ]
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": true,
+  "quality_flags": [
+    "意图误判",
+    "规划缺失",
+    "空响应",
+    "意图误判",
+    "规划缺失",
+    "空响应",
+    "attribute_blocked"
+  ],
+  "check_passed": false,
+  "issue_count": 9,
+  "fallback_count": 0,
+  "causal_category": "insufficient_evidence",
+  "divergence_stage": "semantic judge or attribute LLM",
+  "root_cause_summary": "attribute agent LLM 调用失败。",
+  "created_at": "2026-07-04T06:33:57.776912+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "ce25e78f-e17e-4fa0-af21-25dff0b262f8"
+}

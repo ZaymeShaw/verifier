@@ -1,0 +1,234 @@
+{
+  "trace_id": "448f2719-af57-45c4-bb28-592a98584bfc",
+  "project_id": "client_search",
+  "verdict": "correct",
+  "business_expectations": [
+    {
+      "expectation_id": "险种大类字段选择正确",
+      "downstream_consumer": "ES 客户搜索",
+      "user_intent": "查询所有买过年金险的客户",
+      "expected_outcome": "structured_output 中第一条条件的 field 为 pCategorys",
+      "required_capabilities": [
+        "pCategorys 字段识别"
+      ],
+      "acceptance_criteria": [
+        "structured_output 包含 field=pCategorys 的条件"
+      ],
+      "boundary": {
+        "field_in_manifest": true,
+        "allowed_operators": [
+          "CONTAINS",
+          "NOT_CONTAINS"
+        ]
+      },
+      "priority": "critical"
+    },
+    {
+      "expectation_id": "口语词年金险正确映射为标准值年金保险",
+      "downstream_consumer": "ES 客户搜索",
+      "user_intent": "查询年金险客户",
+      "expected_outcome": "value 为'年金保险'",
+      "required_capabilities": [
+        "口语到标准枚举映射"
+      ],
+      "acceptance_criteria": [
+        "条件中的 value 等于'年金保险'而非'年金险'"
+      ],
+      "boundary": {
+        "mapping_source": "pCategorys 字段描述：年金险等口语应归到险种大类"
+      },
+      "priority": "critical"
+    },
+    {
+      "expectation_id": "筛选操作符语义正确可执行",
+      "downstream_consumer": "ES 客户搜索",
+      "user_intent": "查询所有买过年金险的客户",
+      "expected_outcome": "操作符为 CONTAINS 或经后处理可等价执行的 MATCH",
+      "required_capabilities": [
+        "包含筛选操作符"
+      ],
+      "acceptance_criteria": [
+        "操作符语义为包含筛选，可筛选出持有年金保险的客户",
+        "项目规则明确不要纠结 CONTAINS 和 MATCH 差异，原项目后处理会处置"
+      ],
+      "boundary": {
+        "project_rule": "不要纠结 CONTAINS 和 MATCH 的问题，原项目会通过后处理处置"
+      },
+      "priority": "critical"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "险种大类字段选择正确",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "field 应为 pCategorys"
+      ],
+      "actual_evidence": [
+        "structured_output: [{\"field\": \"pCategorys\", \"operator\": \"MATCH\", \"value\": \"年金保险\"}]"
+      ],
+      "downstream_impact": "字段正确，下游可按 pCategorys 字段进行险种大类检索",
+      "blocking": true
+    },
+    {
+      "expectation_id": "口语词年金险正确映射为标准值年金保险",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "value 应为'年金保险'"
+      ],
+      "actual_evidence": [
+        "structured_output value 为'年金保险'，正确将口语词'年金险'映射为标准险种大类名称"
+      ],
+      "downstream_impact": "值正确，下游可按年金保险进行精确匹配",
+      "blocking": true
+    },
+    {
+      "expectation_id": "筛选操作符语义正确可执行",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "操作符应表达包含筛选语义，CONTAINS 或后处理等价的 MATCH"
+      ],
+      "actual_evidence": [
+        "structured_output 使用 MATCH 操作符",
+        "项目规则明确说明：不要纠结 CONTAINS 和 MATCH 的问题，原项目会通过后处理处置"
+      ],
+      "downstream_impact": "MATCH 经后处理可等价执行包含筛选，下游能正确检索",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "fulfilled",
+    "assessment_count": 3
+  },
+  "expected": {
+    "query_logic": "AND",
+    "expected_source": "not_available",
+    "reference_is_oracle": false
+  },
+  "actual": {
+    "query_logic": "AND"
+  },
+  "reasoning_summary": "用户查询'帮我查一下所有买过年金险的客户'是一个单一意图的简单查询：筛选持有年金保险的客户。Parser 输出条件 field=pCategorys, operator=MATCH, value='年金保险'。逐项评估：(1) 字段选择正确——pCategorys 是承载险种大类语义的正确字段；(2) 口语词映射正确——'年金险'按字段描述要求归到'年金保险'；(3) 操作符可执行——虽然 capability_manifest 定义 pCategorys 操作符为 CONTAINS/NOT_CONTAINS，但项目规则明确声明不要纠结 CONTAINS 和 MATCH 的差异，原项目后处理会统一处置，因此 MATCH 可等价执行包含筛选。三个 blocking 期望全部满足，无缺失、错误或多余条件。",
+  "judge_basis": "基于 capability_manifest 中 pCategorys 字段定义、项目 judge_boundary 规则（不要纠结 CONTAINS/MATCH 差异），以及 actual structured_output 进行语义等价判断。评估范围限定于 parser_condition_semantics_only，下游结果集不可用。",
+  "judge_method": "parser_condition_semantics_only — 下游搜索不可用，基于 parser 条件语义、capability_manifest 字段能力和项目边界规则进行语义等价判断",
+  "verdict_derivation": {
+    "primary_boundary": "parser_condition_semantics_only",
+    "assessment_summary": "三个 blocking 业务期望全部满足：字段选择正确（pCategorys）、口语词映射正确（年金险→年金保险）、操作符语义可执行（MATCH 经后处理等价于 CONTAINS）。",
+    "why_verdict": "用户意图是查询持有年金保险的客户，parser 输出使用正确的 pCategorys 字段、正确将口语词'年金险'映射为标准值'年金保险'、操作符 MATCH 经项目后处理可等价执行包含筛选语义。三个 blocking 期望全部满足，无缺失、错误或多余条件。",
+    "missing_evidence": [
+      "current intent/config expected conditions"
+    ]
+  },
+  "evidence": [
+    "用户查询: '帮我查一下所有买过年金险的客户'",
+    "extra_input_params: pCategorys=['年金险']",
+    "structured_output: [{\"field\":\"pCategorys\",\"operator\":\"MATCH\",\"value\":\"年金保险\"}]",
+    "capability_manifest: pCategorys operators=['CONTAINS','NOT_CONTAINS'], value_types=['enum']",
+    "pCategorys 描述: '年金险等口语应归到险种大类'",
+    "项目 judge_boundary 规则: '不要纠结 CONTAINS 和 MATCH 的问题，因为原项目会通过后处理处置'"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "uncontrollable_limits": [
+      "下游客户搜索服务不可用，无法通过实际 ES 结果集验证查询是否返回正确客户列表"
+    ],
+    "reasoning": "下游搜索不可用导致评估范围限定于 parser_condition_semantics_only。在此范围内，parser 输出条件完整、正确地表达了用户意图：字段 pCategorys 正确承载险种大类语义，口语词'年金险'正确映射为'年金保险'，MATCH 操作符经项目规则认定与 CONTAINS 等价。不存在 evaluable_errors。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "parser_condition_semantics_only",
+    "primary_boundary_name": "仅评估 Parser 条件语义",
+    "judge_question": "parser 输出的结构化条件是否在语义上正确表达了用户的搜索意图？",
+    "verdict_basis": "以 capability_manifest 字段能力为硬约束，结合项目 judge_boundary 规则（CONTAINS/MATCH 不纠结）进行语义等价判断",
+    "boundary_sources": "projects/client_search/judge_boundary-template.md, capability_manifest, application_boundary",
+    "conflict_policy": "当 capability_manifest 操作符列表与实际输出不一致时，优先参考项目规则（不要纠结 CONTAINS/MATCH），以语义等价为判断标准"
+  },
+  "consumer_contract": {
+    "consumer": "下游 ES 客户搜索",
+    "contract": "parser 输出结构化条件供下游 ES 查询使用，字段需在 capability_manifest 范围内，值需为有效枚举",
+    "application_boundary": {
+      "downstream_result_set_available": false,
+      "judge_scope": "parser_condition_semantics_only"
+    }
+  },
+  "intent_model": {
+    "raw_user_request": "帮我查一下所有买过年金险的客户",
+    "explicit_intents": [
+      {
+        "intent_id": "查询持有年金险的客户",
+        "description": "用户希望查询所有购买过年金保险的客户列表",
+        "field": "pCategorys",
+        "expected_value": "年金保险",
+        "evidence": "用户文本中出现'年金险'，extra_input_params 中 pCategorys 为 ['年金险']"
+      }
+    ],
+    "implicit_business_intents": [
+      {
+        "intent_id": "口语词标准化",
+        "description": "用户使用的口语词'年金险'需要映射为标准险种大类名称'年金保险'",
+        "evidence": "pCategorys 字段描述中明确'年金险等口语应归到险种大类'"
+      }
+    ],
+    "constraints": {
+      "operator_constraint": "pCategorys 字段允许的操作符为 CONTAINS 和 NOT_CONTAINS，但项目规则明确不要纠结 CONTAINS/MATCH 差异",
+      "value_constraint": "值必须为 pCategorys 的有效险种大类枚举值"
+    },
+    "success_definition": "parser 输出一个能筛选出持有年金保险客户的查询条件，字段为 pCategorys，值为'年金保险'，操作符语义正确可执行",
+    "blocking_requirements": [
+      "必须使用 pCategorys 字段表达险种大类筛选",
+      "必须将口语词'年金险'正确映射为标准值'年金保险'",
+      "操作符必须能正确执行包含筛选语义"
+    ],
+    "intent_evidence": [
+      "用户文本：'帮我查一下所有买过年金险的客户'",
+      "extra_input_params: pCategorys=['年金险']",
+      "pCategorys 字段描述：'年金险等口语应归到险种大类'"
+    ]
+  },
+  "reconstructed_intent": "用户意图：查询所有持有年金保险（口语'年金险'）的客户。核心筛选维度为险种大类 pCategorys，值为年金保险。这是一个单一条件的简单查询，无 AND/OR 组合逻辑。",
+  "semantic_equivalence_checks": [
+    {
+      "expected_fragment": {
+        "field": "pCategorys",
+        "operator": "CONTAINS",
+        "value": "年金保险"
+      },
+      "actual_fragment": {
+        "field": "pCategorys",
+        "operator": "MATCH",
+        "value": "年金保险"
+      },
+      "equivalent": true,
+      "basis": "项目 judge_boundary 规则明确声明：不要纠结 CONTAINS 和 MATCH 的问题，因为原项目会通过后处理处置。MATCH 操作符与 CONTAINS 在 pCategorys 上下文中语义等价，均由下游后处理统一处置，不影响最终检索结果。"
+    },
+    {
+      "expected_fragment": {
+        "value": "年金保险"
+      },
+      "actual_fragment": {
+        "value": "年金保险"
+      },
+      "equivalent": true,
+      "basis": "用户口语词'年金险'已正确映射为 pCategorys 标准值'年金保险'，符合字段描述中'年金险等口语应归到险种大类'的要求。"
+    }
+  ],
+  "reference_generation_basis": {
+    "source": "从当前 query 和 capability_manifest 实时推导，不依赖历史标准答案",
+    "alignment_to_actual_shape": "expected 使用 CONTAINS 操作符（capability_manifest 定义），actual 使用 MATCH，两者经项目规则认定为语义等价",
+    "evidence": [
+      "capability_manifest: pCategorys operators=['CONTAINS', 'NOT_CONTAINS']",
+      "pCategorys 描述：'年金险等口语应归到险种大类'",
+      "项目规则：不要纠结 CONTAINS 和 MATCH 的问题"
+    ],
+    "comparison_basis": "client_search wrong/missing/extra customer-search coverage",
+    "expected_source": "not_available"
+  },
+  "scenario": "单条件险种大类查询，下游不可用，parser 条件语义评估",
+  "summary": {
+    "reason": "fulfilled · 3 blocking expectations all met · 用户查询'帮我查一下所有买过年金险的客户'是一个单一意图的简单查询：筛选持有年金保险的客户。Parser 输出条件 field=pCategorys, operator=MATCH, value='年金保险'。逐项评估：(1) 字段选择正确——pCategorys 是承载险种大类语义的正确字段；(2) 口语词映射正确——'年金险'按字段描述要求归到'年金保险'；(3) 操作符可执行——虽然 capability_manifest 定义 pCategorys 操作符为 CONTAINS/NOT_CONTAINS，但项目规则明确声明不要纠结 CONTAINS 和 MATCH 的差异，原项目后处理会统一处置，因此 MATCH 可等价执行包含筛选。三个 blocking 期望全部满足，无缺失、错误或多余条件。",
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "fulfilled",
+    "assessment_count": 3,
+    "blocking_count": 3,
+    "is_formal_attribution": true
+  }
+}

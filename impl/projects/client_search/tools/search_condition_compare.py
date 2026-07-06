@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Mapping
 
 from impl.tools import ToolContext, ToolResult
 
@@ -83,7 +83,7 @@ class ClientSearchConditionCompareTool:
         ]
         return ToolResult(tool_id=self.tool_id, tool_type=self.tool_type, status=status, outputs=outputs, evidence=evidence, missing_evidence=missing_evidence, boundary_limits=boundary_limits)
 
-    def _query_text(self, input_data: Dict[str, Any], normalized_request: Dict[str, Any], extracted_output: Dict[str, Any]) -> str:
+    def _query_text(self, input_data: Mapping[str, Any], normalized_request: Mapping[str, Any], extracted_output: Mapping[str, Any]) -> str:
         nested = input_data.get("input") if isinstance(input_data.get("input"), dict) else {}
         return str(input_data.get("query") or nested.get("query") or normalized_request.get("user_text") or extracted_output.get("source_query") or "")
 

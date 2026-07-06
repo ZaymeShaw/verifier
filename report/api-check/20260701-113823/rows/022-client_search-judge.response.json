@@ -1,0 +1,58 @@
+{
+  "trace_id": "30260fc9-3024-47d4-a2d2-79bf2cbbac73",
+  "project_id": "client_search",
+  "business_expectations": [
+    {},
+    {},
+    {},
+    {},
+    {},
+    {}
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "年龄条件精确匹配",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "性别条件正确映射",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "保费字段映射正确性",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "保费操作符正确性",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "保费数值单位转换正确性",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "条件逻辑关系正确性",
+      "status": "fulfilled"
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "fulfilled",
+    "assessment_count": 6
+  },
+  "expected": {
+    "query_logic": "AND",
+    "expected_source": "not_available",
+    "reference_is_oracle": false
+  },
+  "actual": {
+    "query_logic": "AND"
+  },
+  "summary": {
+    "reason": "fulfilled · 6 blocking expectations all met · 用户查询'45岁女性保费10万以上'的三个核心意图均被正确解析。年龄维度：clientAge使用RANGE操作符精确匹配45岁（{min:45,max:45}），与项目配置中精确年龄示例一致。性别维度：clientSex使用MATCH操作符匹配枚举值'女'，正确区分客户本人性别与家庭成员性别。保费维度：字段正确映射到annPremSegNum（项目示例'保费超过5万'→annPremSegNum确认裸'保费'即年缴保费），操作符GTE正确表达'以上'的包含边界语义，数值10万按项目规则万=×10000正确转换为100000。三个条件以AND逻辑组合，完全符合业务预期。无任何缺失、错误或多余条件。",
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "fulfilled",
+    "assessment_count": 6,
+    "blocking_count": 6,
+    "is_formal_attribution": true
+  }
+}

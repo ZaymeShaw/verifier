@@ -1,0 +1,70 @@
+{
+  "id": "mock-agent-client_search-cdd7df11",
+  "input": "session_001",
+  "scenario": "",
+  "output_summary": "{\"empty_result_reason\": \"\", \"external_boundary_sources\": {\"config_paths\": {\"source_enhanced_rules\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/llm_clien…",
+  "reference_summary": "{\"expected_source\": \"not_available\", \"query_logic\": \"AND\", \"reference_is_oracle\": false}",
+  "status": "fulfilled",
+  "execution_mode": "",
+  "output_source": "live_service",
+  "verdict": "correct",
+  "fulfillment_status": "fulfilled",
+  "judge_summary": {
+    "status": "fulfilled",
+    "fulfillment_status": "fulfilled",
+    "verdict": "correct",
+    "reason": "fulfilled · 2 blocking expectations all met · 用户查询'帮我看看公司里所有买了重疾险的客户都有谁'的核心意图是筛选持有重疾险的客户。解析器输出 field=pCategorys, operator=MATCH, value=疾病保险。字段选择正确（pCategorys 是险种大类的正确字段），值映射正确（重疾险→疾病保险 符合 value_mappings），操作符 MATCH 虽不在 capability_manifest 列出的 [CONTAINS, NOT_CONTAINS] 中，但 judge 规范明确要求不纠结 CONTAINS 与 MATCH 的差异，因为项目后处理会统一处置。rewritten_query 也已将'重疾险'替换为'疾病保险'，进一步验证了映射正确性。综合判断：parser 输出在业务语义上完全满足用户意图。",
+    "reason_source": "aggregated_fulfillment",
+    "reason_stage": "judge",
+    "is_formal_attribution": true,
+    "assessment_count": 2,
+    "blocking_count": 2
+  },
+  "attribution_summary": {
+    "attribution_count": 2,
+    "causal_category": "no_issue",
+    "is_complete": true,
+    "is_formal_attribution": true,
+    "probe_count": 1,
+    "summary_text": "业务预期已达成"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 3,
+    "protocol_gap_count": 0,
+    "consistency_gap_count": 0,
+    "recommended_fix_count": 1,
+    "issues": [
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+    ]
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": false,
+  "quality_flags": [
+    {
+      "detail": "MATCH vs CONTAINS 差异已按项目规范接受为等价",
+      "flag": "operator_variance",
+      "severity": "info"
+    },
+    {
+      "detail": "下游 ES 搜索不可用，无法通过实际结果集验证召回效果",
+      "flag": "downstream_not_verified",
+      "severity": "info"
+    }
+  ],
+  "check_passed": false,
+  "issue_count": 3,
+  "fallback_count": 0,
+  "causal_category": "no_issue",
+  "divergence_stage": "fulfillment_assessment",
+  "root_cause_summary": "业务预期已达成",
+  "created_at": "2026-07-04T08:21:58.697995+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "c9f07d91-a2bf-4a91-a1bf-37ecc0c3eda6"
+}

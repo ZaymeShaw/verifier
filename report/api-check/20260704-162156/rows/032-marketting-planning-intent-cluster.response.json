@@ -1,0 +1,84 @@
+{
+  "project_id": "marketting-planning-intent",
+  "clusters": [
+    {
+      "cluster_id": "expectation::implementation_bug::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "implementation_bug",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图标签准确反映业绩查询",
+        "提取时间槽位'上个月'",
+        "提取实体'业务员'",
+        "置信度达到推荐阈值",
+        "避免误归为兜底意图",
+        "匹配正确的分发边界",
+        "intent_contract"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "29d953a8-086a-4d6b-a56e-5652a5ce34dc"
+      ],
+      "representative_traces": [
+        "29d953a8-086a-4d6b-a56e-5652a5ce34dc"
+      ],
+      "common_root_cause": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 意图为 other（其他意图），无任何槽位或实体，置信度 0.5，最早差异位于 intent_contract_gate。",
+      "shared_failure_pattern": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 意图为 other（其他意图），无任何槽位或实体，置信度 0.5，最早差异位于 intent_contract_gate。",
+      "representative_diffs": [
+        {
+          "case_id": "29d953a8-086a-4d6b-a56e-5652a5ce34dc",
+          "node": "intent_contract_gate",
+          "actual": "意图为 other（其他意图），无任何槽位或实体，置信度 0.5",
+          "evidence": [
+            [
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "业绩查询意图标签"
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "时间槽位（上个月）"
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "业务员实体"
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "足够的置信度"
+              }
+            ]
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "verification_cases": [
+        "29d953a8-086a-4d6b-a56e-5652a5ce34dc"
+      ],
+      "next_actions": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ]
+    }
+  ],
+  "common_root_cause": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 意图为 other（其他意图），无任何槽位或实体，置信度 0.5，最早差异位于 intent_contract_gate。",
+  "impact": "",
+  "priority": "high"
+}

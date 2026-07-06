@@ -1,0 +1,86 @@
+{
+  "trace_id": "7825a441-f78c-4524-b504-4fe37eae12cd",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "回答包含犹豫期定义",
+      "causal_category": "boundary_limitation"
+    },
+    {
+      "expectation_id": "回答具有基本实用性",
+      "causal_category": "boundary_limitation"
+    }
+  ],
+  "causal_category": "需人工复核",
+  "earliest_divergence": {
+    "node": "qa.sample.normalize",
+    "expected": "样本同时包含 question 和 actual_answer，scenario 为可评测类型（qa_gold_answer / qa_context_faithfulness / qa_weak_quality）",
+    "actual": "样本仅包含 question='什么是保险合同犹豫期？'，actual_answer 为空字符串，scenario='invalid_sample'，data_quality_flags=['missing_actual_answer']",
+    "evidence": [
+      "normalized_request.input.question = '什么是保险合同犹豫期？'",
+      "normalized_request.output.actual_answer = ''",
+      "normalized_request.scenario = 'invalid_sample'",
+      "normalized_request.data_quality_flags = ['missing_actual_answer']",
+      "execution_trace stage 'qa.sample.normalize' status = 'suspicious'"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "suspicious",
+      "evidence": [
+        "scenario='invalid_sample'",
+        "data_quality_flags=['missing_actual_answer']"
+      ]
+    },
+    {
+      "status": "suspicious",
+      "evidence": [
+        "extracted_output.actual_answer=''"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "actual_answer_present=false"
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": false,
+    "execution_trace": true,
+    "project_docs": true,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "当前样本在进入 QA 评测系统时，output.actual_answer 字段为空字符串。adapter.py 的 _normalize_sample 方法正确地将此样本的 scenario 推断为 'invalid_sample'，并添加 'missing_actual_answer' 数据质量标记。两个业务预期（'回答包含犹豫期定义'、'回答具有基本实用性'）均因无可评测内容而无法达成。这不是 QA 评测系统或模型的缺陷，而是上游数据管道的边界问题——模型回答在样本准备阶段未被填充。QA 系统在边界处正确识别了无效输入并限制了后续评测行为。",
+  "verification_steps": [
+    "检查数据源（如 impl/data/QA/mock_cases.json）中该样本的 output.actual_answer 是否为空字符串或字段缺失。",
+    "确认上游模型是否对 '什么是保险合同犹豫期？' 生成了回答，以及回答在序列化或传输过程中是否丢失。",
+    "如果该样本来自外部数据管道，检查数据转换逻辑是否正确将 answer 字段映射到 output.actual_answer。",
+    "扫描同批次样本，验证是否还有其他样本存在 actual_answer 缺失的情况，以判断是单点问题还是系统性缺陷。"
+  ],
+  "patch_direction": [
+    "在上游数据管道中修复该样本：为 question='什么是保险合同犹豫期？' 提供模型实际生成的回答文本，填充到 output.actual_answer。",
+    "在数据摄入层增加防御性校验：对缺失 actual_answer 的样本自动标记 scenario='invalid_sample' 并跳过 judge 评测链路，避免产生无意义的 not_fulfilled 判定。",
+    "如需保留该样本用于测试边界行为，将其 scenario 显式设为 'invalid_sample'，使 judge 按 not_evaluable 处理而非 not_fulfilled，更准确地反映样本状态。"
+  ],
+  "needs_human_review": false,
+  "scenario": "invalid_sample"
+}

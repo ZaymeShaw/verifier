@@ -17,9 +17,9 @@ Fields:
 - `intent_model`: 意图优先的核心对象，包含 raw_user_request、explicit_intents、implicit_business_intents、constraints、success_definition、blocking_requirements、intent_evidence。judge 必须先构建 intent_model，再从 intent_model 派生 business_expectations。
 - `consumer_contract`: who consumes the output and what business contract the current run must satisfy
 - `business_expectations`: expectation-level units rebuilt from user intent, project docs, case reference, and downstream contract
-- `fulfillment_assessments`: one assessment per business expectation with status `fulfilled`, `partially_fulfilled`, `not_fulfilled`, `not_evaluable`, or `contested` — these five values are the only allowed status vocabulary
-- `overall_fulfillment`: aggregate `status`, `blocking_expectations`, and downstream impact. `status` uses the same five-value vocabulary
-- `verdict`: derived compatibility summary computed by the verifier from `overall_fulfillment.status` and `boundary_decision.within_evaluable_scope`. Mapping: `fulfilled` → `correct`; `not_fulfilled` with in-scope blocking → `incorrect`; `partially_fulfilled` / `not_evaluable` / `contested` / out-of-scope → `uncertain`. The judge LLM must omit this field.
+- `fulfillment_assessments`: one assessment per business expectation with status `fulfilled`, `not_fulfilled`, or `not_evaluable` — these three values are the only allowed status vocabulary
+- `overall_fulfillment`: aggregate `status`, `blocking_expectations`, and downstream impact. `status` uses the same three-value vocabulary
+- `verdict`: derived compatibility summary computed by the verifier from `overall_fulfillment.status` and `boundary_decision.within_evaluable_scope`. Mapping: `fulfilled` → `correct`; `not_fulfilled` with in-scope blocking → `incorrect`; `not_evaluable` / out-of-scope → `uncertain`. The judge LLM must omit this field.
 - `score`: derived from fulfillment_assessments by `_compute_score`. Returns `None` only when no evaluable assessments exist. The judge LLM must omit this field.
 - `confidence`: optional, judge-emitted self-assessment of evidence quality (0-1)
 - `probability`: optional probability-style confidence for pages or projects that need it

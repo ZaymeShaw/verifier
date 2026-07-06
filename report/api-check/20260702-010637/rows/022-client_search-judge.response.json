@@ -1,0 +1,38 @@
+{
+  "trace_id": "0dff8ef8-4207-4f54-bd12-1a914ed1d108",
+  "project_id": "client_search",
+  "business_expectations": [
+    {},
+    {}
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "识别用户地理区域筛选意图",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "在字段能力缺失时不虚构条件",
+      "status": "fulfilled"
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "fulfilled",
+    "assessment_count": 2
+  },
+  "expected": {
+    "query_logic": "AND",
+    "expected_source": "not_available",
+    "reference_is_oracle": false
+  },
+  "actual": {
+    "query_logic": "AND"
+  },
+  "summary": {
+    "reason": "fulfilled · 2 blocking expectations all met · 用户查询'帮我查一下北京地区的客户有哪些？'的核心意图是按地理位置'北京'筛选客户。经过对ES数据库字段定义进行穷尽检索（共检索19个地理相关候选字段名），确认系统中不存在任何地理区域/城市/地址字段。parser 在 matched_level=4 下完成了对所有可用字段的匹配评估，最终正确判断无法生成有效条件，返回空结果且未将'北京'错误映射到姓名、性别、险种等无关字段。parser 的两个核心业务期望——识别意图和不虚构条件——均完全满足。用户需求无法满足的唯一原因是上游ES数据库缺失地理区域字段这一不可控限制，不属于当前系统可优化的错误。",
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "fulfilled",
+    "assessment_count": 2,
+    "blocking_count": 2,
+    "is_formal_attribution": true
+  }
+}

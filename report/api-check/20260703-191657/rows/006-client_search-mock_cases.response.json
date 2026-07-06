@@ -1,0 +1,265 @@
+{
+  "project_id": "client_search",
+  "cases": [
+    {
+      "id": "mock-agent-client_search-3e94b273",
+      "input": {
+        "user_text": "帮我找一下那些每年交保费超过两万块的男性客户吧",
+        "user_id": "user_10001",
+        "trace_id": "trace_abc_12345",
+        "session_id": "session_xyz_67890",
+        "source": "web",
+        "extra_input_params": {
+          "conditions": [
+            {
+              "field": "clientSex",
+              "value": "男"
+            },
+            {
+              "field": "annPremSegNum",
+              "operator": ">",
+              "value": 20000
+            }
+          ]
+        },
+        "metrics": {
+          "input_tokens": 345,
+          "output_tokens": 552,
+          "cache_read_tokens": 256,
+          "cache_write_tokens": 0,
+          "reasoning_tokens": 420,
+          "total_tokens": 897
+        }
+      },
+      "scenario": "single_condition",
+      "expected_intent": "",
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "live_request_mapped": true,
+        "schema_ok": false
+      }
+    },
+    {
+      "id": "mock-agent-client_search-876fef5c",
+      "input": {
+        "user_text": "帮我找一下女性、年龄在30到40岁之间、年缴保费超过1万、买过重疾险的客户，看看有没有保单状态是有效的。",
+        "user_id": "user_12345",
+        "trace_id": "trace_abcde12345",
+        "session_id": "session_67890",
+        "source": "web",
+        "extra_input_params": {
+          "clientSex": "女",
+          "clientAgeMin": 30,
+          "clientAgeMax": 40,
+          "annPremSegNumMin": 10000,
+          "pCategorys": [
+            "重疾险"
+          ],
+          "polStatus": "有效"
+        },
+        "metrics": {
+          "input_tokens": 368,
+          "output_tokens": 939,
+          "cache_read_tokens": 256,
+          "cache_write_tokens": 0,
+          "reasoning_tokens": 786,
+          "total_tokens": 1307
+        }
+      },
+      "scenario": "multi_condition_and",
+      "expected_intent": "",
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "live_request_mapped": true,
+        "schema_ok": false
+      }
+    },
+    {
+      "id": "mock-agent-client_search-351b5c0b",
+      "input": {
+        "user_text": "帮我找一下购买了重疾险或者年金险的客户，我想看看他们的保费和等级。",
+        "user_id": "user_001",
+        "trace_id": "trace_12345",
+        "session_id": "sess_67890",
+        "source": "chat",
+        "metrics": {
+          "input_tokens": 351,
+          "output_tokens": 460,
+          "cache_read_tokens": 256,
+          "cache_write_tokens": 0,
+          "reasoning_tokens": 383,
+          "total_tokens": 811
+        }
+      },
+      "scenario": "product_category_or",
+      "expected_intent": "",
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "live_request_mapped": true,
+        "schema_ok": false
+      }
+    },
+    {
+      "id": "mock-agent-client_search-407aeaf7",
+      "input": {
+        "user_text": "帮我找一下所有买了重疾险但还没领过生存金的女客户，年龄在30到50之间，年缴保费超过两万的",
+        "user_id": "default_user",
+        "trace_id": "trace_123456",
+        "session_id": "session_123456",
+        "source": "web",
+        "metrics": {
+          "input_tokens": 361,
+          "output_tokens": 287,
+          "cache_read_tokens": 256,
+          "cache_write_tokens": 0,
+          "reasoning_tokens": 202,
+          "total_tokens": 648
+        }
+      },
+      "scenario": "product_exclusion",
+      "expected_intent": "",
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "live_request_mapped": true,
+        "schema_ok": false
+      }
+    },
+    {
+      "id": "mock-agent-client_search-5ed24308",
+      "input": {
+        "user_text": "帮我找一下那些年纪刚好三十出头的客户，看看他们有没有买重疾险或者年金险",
+        "user_id": "user123",
+        "trace_id": "trace-abc",
+        "session_id": "session-xyz",
+        "source": "agent",
+        "extra_input_params": {
+          "clientAge": {
+            "min": 30,
+            "max": 39
+          },
+          "pCategorys": [
+            "重疾险",
+            "年金险"
+          ]
+        },
+        "metrics": {
+          "input_tokens": 352,
+          "output_tokens": 491,
+          "cache_read_tokens": 256,
+          "cache_write_tokens": 0,
+          "reasoning_tokens": 383,
+          "total_tokens": 843
+        }
+      },
+      "scenario": "age_boundary",
+      "expected_intent": "",
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "live_request_mapped": true,
+        "schema_ok": false
+      }
+    },
+    {
+      "id": "mock-agent-client_search-880d8247",
+      "input": {
+        "user_text": "帮我查一下年缴保费在5万以上的年金险客户，最好是年龄在40到50岁之间的男性",
+        "user_id": "default_user",
+        "trace_id": "trace_123",
+        "session_id": "session_456",
+        "source": "premium_unit_conversion",
+        "extra_input_params": {
+          "annPremSegNum": ">50000",
+          "pCategorys": [
+            "年金险"
+          ],
+          "clientAge": "40-50",
+          "clientSex": "男"
+        },
+        "metrics": {
+          "input_tokens": 358,
+          "output_tokens": 426,
+          "cache_read_tokens": 256,
+          "cache_write_tokens": 0,
+          "reasoning_tokens": 304,
+          "total_tokens": 784
+        }
+      },
+      "scenario": "premium_unit_conversion",
+      "expected_intent": "",
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "live_request_mapped": true,
+        "schema_ok": false
+      }
+    },
+    {
+      "id": "mock-agent-client_search-13747533",
+      "input": {
+        "user_text": "帮我把所有保单已经失效的客户找出来，我想看看他们的信息。",
+        "user_id": "user_001",
+        "trace_id": "trace_001",
+        "session_id": "session_001",
+        "source": "agent",
+        "extra_input_params": {
+          "policy_status": "失效"
+        },
+        "metrics": {
+          "input_tokens": 347,
+          "output_tokens": 587,
+          "cache_read_tokens": 256,
+          "cache_write_tokens": 0,
+          "reasoning_tokens": 507,
+          "total_tokens": 934
+        }
+      },
+      "scenario": "policy_status_filter",
+      "expected_intent": "",
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "live_request_mapped": true,
+        "schema_ok": false
+      }
+    },
+    {
+      "id": "mock-agent-client_search-c7f5ce83",
+      "input": {
+        "user_text": "帮我查一下我配偶名下的年金险保单，年缴保费大概一万多的",
+        "user_id": "default_user",
+        "trace_id": "trace_001",
+        "session_id": "session_001",
+        "source": "agent",
+        "metrics": {
+          "input_tokens": 354,
+          "output_tokens": 339,
+          "cache_read_tokens": 256,
+          "cache_write_tokens": 0,
+          "reasoning_tokens": 269,
+          "total_tokens": 693
+        }
+      },
+      "scenario": "unsupported_family_phrase",
+      "expected_intent": "",
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "live_request_mapped": true,
+        "schema_ok": false
+      }
+    }
+  ]
+}

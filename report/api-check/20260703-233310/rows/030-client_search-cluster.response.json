@@ -1,0 +1,63 @@
+{
+  "project_id": "client_search",
+  "clusters": [
+    {
+      "cluster_id": "expectation::implementation_bug::not_evaluable",
+      "mechanism": "implementation_bug::not_evaluable",
+      "causal_category": "implementation_bug",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "比较高语义被正确理解为等级过滤而非存在性判断",
+        "高等级VIP枚举值覆盖合理的高等级范围"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "ab09d934-cd68-4c65-a491-9a53b43bf567"
+      ],
+      "representative_traces": [
+        "ab09d934-cd68-4c65-a491-9a53b43bf567"
+      ],
+      "common_root_cause": "系统在 enhanced_rules 层和 LLM prompt 层均缺乏对「比较高」「高」「高等级」等相对等级修饰语的覆盖。具体而言：(1) enhanced_rules 中 vipType 相关规则仅覆盖「黄金以上」「铂金及以上」等「具体等级名+方向词」模式，未覆盖用户使用相对形容词「比较高」表达等级过滤意图的场景；(2) 当查询在规则层未命中落入 LLM 后，prompt 中 vipType 的 EXISTS 示例（「寿险VIP客户」→ EXISTS）成为与「VIP等级比较高」最语义接近的参考，引导模型错误地将等级过滤意图映射为存在性判断。根因本质是规则/prompt 对用户口语化等级表达（「比较高」而非「黄金以上」）的覆盖率不足。",
+      "shared_failure_pattern": "系统在 enhanced_rules 层和 LLM prompt 层均缺乏对「比较高」「高」「高等级」等相对等级修饰语的覆盖。具体而言：(1) enhanced_rules 中 vipType 相关规则仅覆盖「黄金以上」「铂金及以上」等「具体等级名+方向词」模式，未覆盖用户使用相对形容词「比较高」表达等级过滤意图的场景；(2) 当查询在规则层未命中落入 LLM 后，prompt 中 vipType 的 EXISTS 示例（「寿险VIP客户」→ EXISTS）成为与「VIP等级比较高」最语义接近的参考，引导模型错误地将等级过滤意图映射为存在性判断。根因本质是规则/prompt 对用户口语化等级表达（「比较高」而非「黄金以上」）的覆盖率不足。",
+      "representative_diffs": [
+        {
+          "case_id": "ab09d934-cd68-4c65-a491-9a53b43bf567",
+          "node": "client_search.routing",
+          "expected": "enhanced_rules 应匹配「比较高」并输出 vipType CONTAINS [黄金V1,黄金V2,黄金V3,原黄金VIP,铂金V1,铂金V2,原铂金VIP,钻石VIP,金钻VIP,黑钻VIP]",
+          "actual": "enhanced_rules 未命中，落入 LLM，LLM 输出 vipType EXISTS",
+          "evidence": [
+            "rule_verify: no rule matched",
+            "API probe: vipType EXISTS",
+            "enhanced_rules: 14条 vipType 规则均不覆盖 '比较高'"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        {
+          "action": "新增规则「寿险VIP-高等级」",
+          "config_snippet": "name: \"寿险VIP-高等级\"\npatterns:\n  - '{SEARCH}VIP等级比较?高{CUSTOMER_SUFFIX}'\n  - '{SEARCH}VIP等级高{CUSTOMER_SUFFIX}'\n  - '{SEARCH}高等级VIP{CUSTOMER_SUFFIX}'\n  - '{SEARCH}VIP比较?高{CUSTOMER_SUFFIX}'\nfield: \"vipType\"\noperator: \"CONTAINS\"\nvalue_type: \"static\"\nvalue:\n  - \"黄金V1\"\n  - \"黄金V2\"\n  - \"黄金V3\"\n  - \"原黄金VIP\"\n  - \"铂金V1\"\n  - \"铂金V2\"\n  - \"原铂金VIP\"\n  - \"钻石VIP\"\n  - \"金钻VIP\"\n  - \"黑钻VIP\"\npriority: 10",
+          "target": "enhanced_rules_args.yaml - vipType 段"
+        },
+        {
+          "action": "在 vipType EXISTS 示例与 CONTAINS 示例之间插入一条 '比较高' 示例，明确展示相对等级修饰语应映射为 CONTAINS 而非 EXISTS",
+          "target": "LLM prompt（matched_patterns 的 vipType EXISTS 段附近）"
+        }
+      ],
+      "verification_cases": [
+        "ab09d934-cd68-4c65-a491-9a53b43bf567"
+      ],
+      "next_actions": [
+        "1. 在 enhanced_rules_args.yaml 的 vipType 规则段新增一条静态规则，patterns 覆盖：'VIP等级比较高的客户'、'VIP等级高的客户'、'高等级VIP客户'、'VIP比较高的客户'，field=vipType, operator=CONTAINS, value_type=static, value 为黄金V1及以上全部枚举值，priority=10",
+        "2. 重新部署后调用 client_search_query_parse_no_encipher 验证同一 query 是否返回 CONTAINS + 高等级枚举值列表",
+        "3. 在 LLM prompt 中 vipType 字段下新增一条示例「VIP等级比较高的客户」→ CONTAINS [黄金V1,...黑钻VIP]，验证规则未命中时 LLM 兜底是否正确"
+      ]
+    }
+  ],
+  "common_root_cause": "系统在 enhanced_rules 层和 LLM prompt 层均缺乏对「比较高」「高」「高等级」等相对等级修饰语的覆盖。具体而言：(1) enhanced_rules 中 vipType 相关规则仅覆盖「黄金以上」「铂金及以上」等「具体等级名+方向词」模式，未覆盖用户使用相对形容词「比较高」表达等级过滤意图的场景；(2) 当查询在规则层未命中落入 LLM 后，prompt 中 vipType 的 EXISTS 示例（「寿险VIP客户」→ EXISTS）成为与「VIP等级比较高」最语义接近的参考，引导模型错误地将等级过滤意图映射为存在性判断。根因本质是规则/prompt 对用户口语化等级表达（「比较高」而非「黄金以上」）的覆盖率不足。",
+  "impact": "",
+  "priority": "high"
+}

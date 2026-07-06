@@ -1,0 +1,81 @@
+{
+  "project_id": "QA",
+  "rows": [
+    {
+      "id": "mock-agent-QA-3a635643",
+      "input": "qa_gold_answer",
+      "scenario": "qa_gold_answer",
+      "output_summary": "{\"actual_answer\": \"能报的，一般免赔额一万，剩下的两万能按比例报销，具体得看你合同里的报销比例，通常是100%，但进口药可能只报一部分。\"}",
+      "reference_summary": "{\"golden_answer\": \"{\\\"actual_answer\\\": \\\"百万医疗险通常扣除社保报销后，剩余合理医疗费用减去1万元免赔额，按合同约定的报销比例（一般为100%）进行赔付，报销范围需符合合同约定的医院和用药目录，进口药若在目录内可报。\\\"}\"}",
+      "status": "not_evaluable",
+      "execution_mode": "",
+      "output_source": "provided_output",
+      "verdict": "uncertain",
+      "score": 1.0,
+      "fulfillment_status": "not_evaluable",
+      "judge_summary": {
+        "status": "not_evaluable",
+        "fulfillment_status": "not_evaluable",
+        "verdict": "uncertain",
+        "score": 1.0,
+        "reason": "uncertain · current_case_llm_judge",
+        "reason_source": "reasoning_summary",
+        "reason_stage": "judge",
+        "is_formal_attribution": false,
+        "assessment_count": 0,
+        "blocking_count": 0
+      },
+      "attribution_summary": {
+        "attribution_count": 1,
+        "causal_category": "needs_human_review",
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 1,
+        "summary_text": "QA 适配器的 _normalize_sample 方法在提取 question 字段时，仅检查 input_part 第一层的 question/query/user_input 键，未覆盖嵌套的 input_part['input']['query'] 路径。当前 case 的原始输入结构为 case.input = {data_quality_flags, input: {query: '...'}, metadata, scenario}，即真正的 query 位于嵌套的第二层 input.input.query 中。同函数中 contexts 提取已通过 (input_part.get('input') or {}).get('contexts') 处理了嵌套 input 结构，但 question 提取链未同步更新，导致 question 被误判为空、触发 missing_question 标记，进而使 judge 因缺少 question 而无法执行语义评测，最终 QA:answer_quality 变为 not_evaluable。"
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 2,
+        "protocol_gap_count": 2,
+        "consistency_gap_count": 0,
+        "recommended_fix_count": 1,
+        "issues": [
+          "Uncertain JudgeResult must identify blocking evidence gaps or carry self_check_failed/llm_call_failed; use correct/incorrect when expected-vs-actual is inspectable.",
+          "QA attribution causal_category outside taxonomy: 需人工复核"
+        ]
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": false,
+      "issue_count": 4,
+      "fallback_count": 0,
+      "causal_category": "needs_human_review",
+      "divergence_stage": "qa.sample.normalize",
+      "root_cause_summary": "QA 适配器的 _normalize_sample 方法在提取 question 字段时，仅检查 input_part 第一层的 question/query/user_input 键，未覆盖嵌套的 input_part['input']['query'] 路径。当前 case 的原始输入结构为 case.input = {data_quality_flags, input: {query: '...'}, metadata, scenario}，即真正的 query 位于嵌套的第二层 input.input.query 中。同函数中 contexts 提取已通过 (input_part.get('input') or {}).get('contexts') 处理了嵌套 input 结构，但 question 提取链未同步更新，导致 question 被误判为空、触发 missing_question 标记，进而使 judge 因缺少 question 而无法执行语义评测，最终 QA:answer_quality 变为 not_evaluable。",
+      "created_at": "2026-07-03T03:51:46.780185+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "55add140-5115-42c5-83e7-3a50cb96ab64"
+    }
+  ],
+  "total": 1,
+  "summary": {
+    "fulfilled_count": 0,
+    "not_fulfilled_count": 1,
+    "pending_count": 0,
+    "correct_count": 0,
+    "incorrect_count": 0,
+    "uncertain_count": 1,
+    "human_review_count": 0,
+    "check_failed_count": 1,
+    "issue_count": 4,
+    "fallback_count": 0,
+    "rows_with_fallback_count": 0,
+    "by_scenario": {
+      "qa_gold_answer": 1
+    }
+  }
+}

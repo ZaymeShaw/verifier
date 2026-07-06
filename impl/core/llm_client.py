@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import uuid
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import time
 
@@ -41,19 +42,26 @@ if _deepseek_key and not os.environ.get("OPENAI_API_KEY"):
     os.environ["OPENAI_API_KEY"] = _deepseek_key
 
 from agno.agent import Agent
-from agno.db.json import JsonDb
-from agno.memory.manager import MemoryManager
 from agno.models.deepseek import DeepSeek
+
+
+class JsonExtractionError(ValueError):
+    """Raised when an LLM response cannot be parsed into a JSON value."""
+
+
+def _json_error_summary(exc: json.JSONDecodeError) -> str:
+    return f"{exc.msg} at line {exc.lineno} column {exc.colno} (char {exc.pos})"
 
 
 def extract_json(text: str) -> Any:
     text = text.strip()
     if not text:
         return {}
+    parse_errors: list[str] = []
     try:
         return json.loads(text)
-    except json.JSONDecodeError:
-        pass
+    except json.JSONDecodeError as exc:
+        parse_errors.append(f"whole response: {_json_error_summary(exc)}")
     # Try every fenced block in order. Many LLM outputs embed non-JSON
     # snippets (yaml configs, regex examples) inside ``` fences BEFORE the
     # actual JSON block — a non-greedy single match would silently grab the
@@ -63,20 +71,26 @@ def extract_json(text: str) -> Any:
     json_tagged = [m for m in fence_matches if (m.group(1) or "").lower() == "json"]
     untagged = [m for m in fence_matches if (m.group(1) or "").lower() not in {"json", ""}]
     any_tagged = fence_matches
-    for group in (json_tagged, untagged, any_tagged):
+    for group_name, group in (("json fenced block", json_tagged), ("non-json fenced block", untagged), ("any fenced block", any_tagged)):
         for m in group:
             body = m.group(2)
             try:
                 return json.loads(body)
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as exc:
+                parse_errors.append(f"{group_name}: {_json_error_summary(exc)}")
                 continue
     start = min([idx for idx in [text.find("{"), text.find("[")] if idx >= 0], default=-1)
     if start >= 0:
         try:
             return json.loads(text[start:])
-        except json.JSONDecodeError:
-            return {"raw_text": text}
-    return {"raw_text": text}
+        except json.JSONDecodeError as exc:
+            parse_errors.append(f"bare JSON from first bracket: {_json_error_summary(exc)}")
+    preview = text[:500]
+    detail = "; ".join(parse_errors[-3:]) if parse_errors else "no JSON object or array found"
+    raise JsonExtractionError(
+        "LLM 输出不是合法 JSON，无法进入结构化校验。"
+        f"解析错误：{detail}\n原始输出预览：{preview}"
+    )
 
 
 def _response_content(result: Any) -> str:
@@ -122,6 +136,172 @@ def _normalize_base_url(base_url: str) -> str:
     return base_url.rsplit("/v1/chat/completions", 1)[0] if base_url.endswith("/v1/chat/completions") else base_url
 
 
+def _extract_tool_call_log(result: Any) -> list:
+    """
+    Extract tool-call records from an Agno RunResponse.
+
+    Agno stores the conversation as `result.messages`, a list of Message objects.
+    Each assistant Message may carry `.tool_calls` (a list of ToolCall objects with
+    .function.name / .function.arguments). Each tool Message carries `.tool_call_id`
+    and `.content` (the tool's return value). We pair them by tool_call_id.
+
+    The function is defensive: it handles pydantic Messages, dict-shaped messages,
+    and missing attributes, returning [] when nothing is found.
+    """
+    logs: list = []
+
+    # 1. Locate the messages list on the result object.
+    messages = getattr(result, "messages", None)
+    if not messages:
+        # Some Agno versions nest under run_response / raw_response
+        for attr in ("run_response", "raw_response"):
+            inner = getattr(result, attr, None)
+            if inner is not None:
+                messages = getattr(inner, "messages", None)
+                if messages:
+                    break
+    if not messages:
+        return []
+
+    # 2. Build a tool_call_id -> tool_result map from tool messages.
+    tool_results: Dict[str, Any] = {}
+    for msg in messages:
+        # Normalize to dict once for cheap attribute access.
+        try:
+            md = msg.model_dump() if hasattr(msg, "model_dump") else (
+                msg if isinstance(msg, dict) else None
+            )
+        except Exception:
+            md = None
+        role = (md or {}).get("role") if isinstance(md, dict) else getattr(msg, "role", None)
+        if role != "tool":
+            continue
+        tcid = (md or {}).get("tool_call_id") if isinstance(md, dict) else getattr(msg, "tool_call_id", None)
+        if not tcid:
+            continue
+        content = (md or {}).get("content") if isinstance(md, dict) else getattr(msg, "content", None)
+        if isinstance(content, (dict, list)):
+            content = json.dumps(content, ensure_ascii=False)
+        tool_results[tcid] = content
+
+    # 3. Walk assistant messages, emit one log entry per tool_call.
+    for msg in messages:
+        try:
+            md = msg.model_dump() if hasattr(msg, "model_dump") else (
+                msg if isinstance(msg, dict) else None
+            )
+        except Exception:
+            md = None
+        role = (md or {}).get("role") if isinstance(md, dict) else getattr(msg, "role", None)
+        if role != "assistant":
+            continue
+        tool_calls = (md or {}).get("tool_calls") if isinstance(md, dict) else getattr(msg, "tool_calls", None)
+        if not tool_calls:
+            continue
+        for tc in tool_calls:
+            # tc may be a pydantic ToolCall or a dict.
+            tcd = tc.model_dump() if hasattr(tc, "model_dump") else (
+                tc if isinstance(tc, dict) else None
+            )
+            if not isinstance(tcd, dict):
+                continue
+            fn = tcd.get("function") or {}
+            name = fn.get("name") or tcd.get("name") or ""
+            args = fn.get("arguments") or tcd.get("arguments")
+            tcid = tcd.get("id") or tcd.get("tool_call_id") or ""
+            # arguments may arrive as a JSON string; parse it for readability.
+            if isinstance(args, str):
+                try:
+                    args = json.loads(args)
+                except Exception:
+                    pass
+            entry = {
+                "tool_name": name,
+                "tool_call_id": tcid,
+                "arguments": args,
+                "result": tool_results.get(tcid),
+            }
+            logs.append(entry)
+    return logs
+
+
+def _extract_messages(result: Any) -> List[Dict[str, Any]]:
+    """从 Agno RunResponse 提取 OpenAI messages 协议的完整消息列表。
+
+    供 context_store 记录实际 LLM 调用的输入输出。每个消息 {role, content, ...}，
+    role 不限定 system/user/assistant/tool——按 agno 实际返回的原样保留。
+    """
+    messages = getattr(result, "messages", None)
+    if not messages:
+        for attr in ("run_response", "raw_response"):
+            inner = getattr(result, attr, None)
+            if inner is not None:
+                messages = getattr(inner, "messages", None)
+                if messages:
+                    break
+    if not messages:
+        return []
+    out: List[Dict[str, Any]] = []
+    for msg in messages:
+        try:
+            md = msg.model_dump() if hasattr(msg, "model_dump") else (
+                msg if isinstance(msg, dict) else None
+            )
+        except Exception:
+            md = None
+        if isinstance(md, dict):
+            out.append(md)
+        else:
+            # 退化兜底：直接按属性取
+            role = getattr(msg, "role", None)
+            content = getattr(msg, "content", None)
+            if role is not None or content is not None:
+                out.append({"role": role, "content": content})
+    return out
+
+
+def _track_context(self: "LlmClient", system: str, user: str, result: Any,
+                   trace_id: str, token_metrics: Dict[str, Any],
+                   elapsed_ms: int, error: Optional[str]) -> None:
+    """把本次 LLM 调用的实际 messages 上传到 context_store，供 context.html 检索。
+
+    只做记录，不阻断主流程；任何异常都吞掉。
+    """
+    try:
+        from .context_store import save_context
+        from .schema.context import ContextRecord
+        messages = _extract_messages(result)
+        if not messages:
+            # result 为 None（调用失败）时，至少把 system/user 请求记下来
+            messages = [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ]
+        response: Dict[str, Any] = {}
+        content = _response_content(result) if result is not None else ""
+        if content:
+            response["content"] = content
+        if token_metrics:
+            response["metrics"] = token_metrics
+        prompt_size = sum(len(str(m.get("content") or "")) for m in messages)
+        record = ContextRecord(
+            record_id=str(uuid.uuid4()),
+            trace_id=str(trace_id or ""),
+            project_id=str(getattr(self, "_project_id", "") or ""),
+            caller=str(getattr(self, "_caller", "") or "llm"),
+            messages=messages,
+            response=response or None,
+            created_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            prompt_size=int(prompt_size),
+            llm_model=str(self.model or ""),
+            elapsed_ms=int(elapsed_ms),
+            error=error,
+        )
+        save_context(record)
+    except Exception:
+        pass
+
+
 def project_llm_client(spec: Any, role: str, knowledge: Any = None, tools: list = None,
                        tool_call_limit: Optional[int] = None,
                        compress_tool_results: bool = False,
@@ -148,7 +328,7 @@ def project_llm_client(spec: Any, role: str, knowledge: Any = None, tools: list 
     project_id = str(getattr(spec, "project_id", "default") or "default")
     # CRITICAL: Do NOT create JsonDb or MemoryManager
     # CRITICAL: Do NOT set user_id - it triggers Agno to auto-create impl/knowledge/{user_id}/ directory
-    return LlmClient(
+    client = LlmClient(
         memory_db=None,  # NO persistence
         memory_manager=None,  # NO memories
         knowledge=knowledge,  # Will be set to None by caller
@@ -160,6 +340,9 @@ def project_llm_client(spec: Any, role: str, knowledge: Any = None, tools: list 
         compress_tool_results=compress_tool_results,
         max_tool_calls_from_history=max_tool_calls_from_history,
     )
+    client._project_id = project_id
+    client._caller = role
+    return client
 
 
 class LlmClient:
@@ -193,7 +376,10 @@ class LlmClient:
         self.compress_tool_results = compress_tool_results
         self.max_tool_calls_from_history = max_tool_calls_from_history
 
-    def complete_json(self, system: str, user: str, trace_id: Optional[str] = None) -> Dict[str, Any]:
+    def complete_json(self, system: str, user: str, trace_id: Optional[str] = None,
+                      model: Optional[str] = None,
+                      reasoning_effort: Optional[str] = "max",
+                      output_spec: "StructuredOutputSpec" = None) -> Dict[str, Any]:
         """
         Complete JSON request with isolated session per trace.
 
@@ -202,35 +388,47 @@ class LlmClient:
             user: User prompt
             trace_id: Optional trace ID for session isolation. If provided, creates a unique
                      session for this specific case/trace, preventing cross-case contamination.
+            model: Optional model override (e.g. "deepseek-chat" for lightweight output stub).
+                   Defaults to self.model.
+            reasoning_effort: Reasoning effort level. Defaults to "max" (judge/attribute 需要).
+                              output 扮演等轻量场景可传 "low" 或 None 关闭深度思考。
+            output_spec: spec/struct_output.md 结构化输出约束，**必填**。
+                所有 LLM 调用都必须过结构化输出协议。如果实在没有明确输出结构（如自由文本分析），
+                传 FREE_TEXT_OUTPUT（单字段 result: str）。
+                协议层内部：
+                - 注入 render_output_constraint 文案到 system prompt（兜底强化）
+                - response_format 传 {"type":"json_object"}（DeepSeek 不支持 json_schema）
+                - LLM 返回后跑 enforce_output，不合规直接抛 ValueError 阻断
         """
-        # DEBUG: Log the actual trace_id received with call stack
-        import traceback
-        print(f"\n{'='*80}")
-        print(f"[DEBUG] complete_json called:")
-        print(f"  trace_id: {trace_id!r}")
-        print(f"  type: {type(trace_id).__name__}")
-        print(f"  len: {len(str(trace_id)) if trace_id else 0}")
-        print(f"  user_id: {self.user_id!r}")
-        print(f"\n[STACK]")
-        for line in traceback.format_stack()[-5:-1]:  # Show last 4 frames
-            print(line.rstrip())
-        print(f"{'='*80}\n")
-
+        if output_spec is None:
+            raise TypeError(
+                "complete_json 缺少 output_spec 参数。"
+                "spec/struct_output.md 要求所有 LLM 调用必须传结构化输出约束。"
+                "如果确实没有明确输出结构（如自由文本分析），请传 structured_output.FREE_TEXT_OUTPUT。"
+            )
         if not self.api_key:
             return {"error": "missing_api_key", "raw_text": "No DeepSeek API key configured."}
 
+        # spec/struct_output.md：注入约束文案 + 返回后强校验阻断
+        enforce_spec = output_spec
+        from .structured_output import render_output_constraint
+        system = system + "\n\n" + render_output_constraint(enforce_spec)
+
+        start_ts = time.time()
         # Ensure OPENAI_API_KEY is set for this request (defensive, already set at module import)
         original_openai_key = os.environ.get("OPENAI_API_KEY")
         os.environ["OPENAI_API_KEY"] = self.api_key
 
         try:
-            model = DeepSeek(
-                id=self.model,
-                api_key=self.api_key,
-                base_url=_normalize_base_url(self.base_url),
-                temperature=0,
-                reasoning_effort="max",
-            )
+            model_kwargs = {
+                "id": model or self.model,
+                "api_key": self.api_key,
+                "base_url": _normalize_base_url(self.base_url),
+                "temperature": 0,
+            }
+            if reasoning_effort:
+                model_kwargs["reasoning_effort"] = reasoning_effort
+            model = DeepSeek(**model_kwargs)
 
             # CRITICAL: Use trace-specific session ID to isolate different cases
             # BUT: Prevent conversation history accumulation within same session
@@ -240,18 +438,6 @@ class LlmClient:
 
             # Each trace gets unique session, prevents cross-case contamination
             effective_session_id = f"{trace_id}:{SESSION_START_TIME}"
-
-            # Debug: log session ID and context sizes
-            print(f"[SESSION] Creating Agent with:")
-            print(f"  user_id: {self.user_id}")
-            print(f"  session_id: {effective_session_id}")
-            print(f"  Final (Agno will prepend user_id): {self.user_id}:{effective_session_id}")
-            print(f"[CONTEXT] Prompt sizes:")
-            print(f"  system: {len(system):,} chars (~{len(system)//4:,} tokens)")
-            print(f"  user: {len(user):,} chars (~{len(user)//4:,} tokens)")
-            print(f"  knowledge: {'enabled' if self.knowledge else 'disabled'}")
-            print(f"  tools: {len(self.tools)} tools")
-            print(f"  user_memories: {'enabled' if self.memory_manager else 'disabled'}")
 
             # Retry once on transient LLM failure (network/timeout/rate-limit).
             # Without this, a single hiccup yields verdict=uncertain for the case.
@@ -264,18 +450,12 @@ class LlmClient:
                         system_message=system,
                         use_json_mode=True,
                         tools=self.tools,
-                        memory_manager=None,
-                        db=None,
                         knowledge=None,
-                        knowledge_retriever=None,
                         user_id=self.user_id,
                         session_id=f"{effective_session_id}:retry{attempt}" if attempt else effective_session_id,
                         enable_user_memories=False,
-                        add_memories_to_context=False,
-                        add_knowledge_to_context=False,
-                        add_history_to_context=False,
+                        enable_agentic_memory=False,
                         num_history_runs=0,
-                        num_history_messages=0,
                         tool_call_limit=self.tool_call_limit,
                         compress_tool_results=self.compress_tool_results,
                         max_tool_calls_from_history=self.max_tool_calls_from_history,
@@ -310,6 +490,7 @@ class LlmClient:
                 os.environ.pop("OPENAI_API_KEY", None)
             else:
                 os.environ["OPENAI_API_KEY"] = original_openai_key
+            _track_context(self, system, user, None, trace_id or "", {}, int((time.time() - start_ts) * 1000), str(exc))
             return {"error": "llm_request_failed", "raw_text": str(exc)}
         finally:
             # Always restore original OPENAI_API_KEY
@@ -318,9 +499,25 @@ class LlmClient:
             else:
                 os.environ["OPENAI_API_KEY"] = original_openai_key
 
-        content = _response_content(result)
-        parsed = extract_json(content)
+        try:
+            content = _response_content(result)
+            parsed = extract_json(content)
+        except JsonExtractionError as exc:
+            raw_response = _raw_response(result)
+            elapsed_ms = int((time.time() - start_ts) * 1000)
+            if original_openai_key is None:
+                os.environ.pop("OPENAI_API_KEY", None)
+            else:
+                os.environ["OPENAI_API_KEY"] = original_openai_key
+            _track_context(self, system, user, result, trace_id or "", token_metrics, elapsed_ms, str(exc))
+            raise ValueError(f"[{getattr(self, '_caller', '') or 'llm'}] {exc}") from exc
         raw_response = _raw_response(result)
+        elapsed_ms = int((time.time() - start_ts) * 1000)
+
+        # spec/struct_output.md：强校验阻断，不放行假货
+        from .structured_output import enforce_output
+        caller = getattr(self, "_caller", "") or ""
+        enforce_output(parsed, enforce_spec, caller=caller)
 
         # Add token metrics to raw_response if available
         if token_metrics:
@@ -329,5 +526,13 @@ class LlmClient:
 
         if isinstance(parsed, dict):
             parsed.setdefault("raw_model_response", raw_response)
+            # 从 agno RunOutput 提取 tool call log
+            if token_metrics:
+                parsed.setdefault("metrics", token_metrics)
+            tool_call_log = _extract_tool_call_log(result)
+            if tool_call_log:
+                parsed.setdefault("_tool_call_log", tool_call_log)
+            _track_context(self, system, user, result, trace_id, token_metrics, elapsed_ms, None)
             return parsed
+        _track_context(self, system, user, result, trace_id or "", token_metrics, elapsed_ms, None)
         return {"value": parsed, "raw_model_response": raw_response}

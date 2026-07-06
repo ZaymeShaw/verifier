@@ -1,0 +1,2271 @@
+{
+  "trace": {
+    "trace_id": "db73a74c-c327-4d21-be35-dd395456d217",
+    "project_id": "marketting-planning-intent",
+    "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+    "live_result": {
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+      "session_id": "default_session",
+      "raw_input": {
+        "extra_input_params": {
+          "agent_args": {
+            "conversation_id": "",
+            "message": {
+              "content": "帮我看看上季度买了重疾险的客户都是啥样的？",
+              "content_type": "text"
+            }
+          }
+        },
+        "org_id": "default_org",
+        "session_id": "default_session",
+        "trace_id": "default_trace",
+        "user_text": "帮我看看上季度买了重疾险的客户都是啥样的？"
+      },
+      "normalized_request": {
+        "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+        "session_id": "default_session",
+        "query": "帮我看看上季度买了重疾险的客户都是啥样的？",
+        "scenario": "intent_recognition"
+      },
+      "call_status": "succeeded",
+      "runtime_ms": 355,
+      "extracted_output": {
+        "intent": "other",
+        "confidence": 0.5,
+        "raw_intent": "4001",
+        "ambiguous": false,
+        "fallback": false
+      },
+      "output_source": "live_service",
+      "application_boundary": {
+        "scope": "single_turn_intent_recognition",
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ]
+      },
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T13:12:13.108338+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T13:12:13.108360+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T13:12:13.465407+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T13:12:13.465451+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "failed",
+        "started_at": "2026-07-04T13:12:13.468075+00:00"
+      },
+      {
+        "attempt": 2,
+        "status": "succeeded",
+        "started_at": "2026-07-04T13:12:13.468113+00:00"
+      },
+      {
+        "attempt": 2,
+        "status": "failed",
+        "started_at": "2026-07-04T13:12:13.469829+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T13:12:13.469842+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract missing"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations missing"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract missing"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations missing"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "collect_evidence",
+        "condition": "gate_failed_recoverable",
+        "reason": "consumer contract missing；business expectations missing",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 1,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "incomplete_or_human_review",
+        "condition": "retry_limit",
+        "reason": "state retry limit exceeded",
+        "retry_count": 1,
+        "stop_reason": "incomplete_retry_limit"
+      },
+      {
+        "from_state": "incomplete_or_human_review",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "incomplete_retry_limit"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      },
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "intent_recognition",
+    "interaction_mode": "single_turn",
+    "session_id": "default_session",
+    "created_at": "2026-07-04T13:12:13.465331+00:00"
+  },
+  "judge": {
+    "trace_id": "db73a74c-c327-4d21-be35-dd395456d217",
+    "project_id": "marketting-planning-intent",
+    "verdict": "uncertain",
+    "actual": {
+      "intent": "other",
+      "confidence": 0.5,
+      "raw_intent": "4001",
+      "ambiguous": false,
+      "fallback": false
+    },
+    "reasoning_summary": "trace execution incomplete; human review required before judge",
+    "judge_basis": "trace_execution_incomplete",
+    "judge_method": "state_machine_human_review",
+    "verdict_derivation": {
+      "blocking_gaps": [
+        "incomplete_retry_limit"
+      ],
+      "why_verdict": "trace did not reach judge because execution failed or required human review"
+    },
+    "evidence": [
+      "incomplete_retry_limit"
+    ],
+    "boundary_decision": {
+      "within_evaluable_scope": false,
+      "reasoning": "incomplete_retry_limit"
+    },
+    "evaluation_boundary": {
+      "primary_boundary_id": "trace_execution_incomplete",
+      "verdict_basis": "judge skipped because trace execution did not complete"
+    },
+    "reconstructed_intent": "帮我看看上季度买了重疾险的客户都是啥样的？",
+    "scenario": "",
+    "needs_human_review": true,
+    "quality_flags": [
+      "trace_execution_incomplete",
+      "human_review_required"
+    ]
+  },
+  "attribute": {
+    "trace_id": "db73a74c-c327-4d21-be35-dd395456d217",
+    "project_id": "marketting-planning-intent",
+    "case_id": "",
+    "causal_category": "implementation_bug",
+    "earliest_divergence": {
+      "node": "intent_contract_gate",
+      "actual": {
+        "intent": "other",
+        "confidence": 0.5,
+        "raw_intent": "4001",
+        "ambiguous": false,
+        "fallback": false
+      },
+      "evidence": [
+        []
+      ],
+      "confidence": "medium"
+    },
+    "chain_nodes": [
+      {
+        "status": "verified"
+      },
+      {
+        "status": "verified"
+      },
+      {
+        "status": "verified"
+      },
+      {
+        "status": "verified"
+      },
+      {
+        "status": "failed",
+        "evidence": [
+          {
+            "query": "帮我看看上季度买了重疾险的客户都是啥样的？"
+          },
+          {},
+          {
+            "actual": {
+              "intent": "other",
+              "confidence": 0.5,
+              "raw_intent": "4001",
+              "ambiguous": false,
+              "fallback": false
+            }
+          },
+          {}
+        ]
+      }
+    ],
+    "probe_results": [
+      {
+        "probe_id": "llm_call",
+        "status": "failed",
+        "evidence": [
+          "Circular reference detected"
+        ]
+      }
+    ],
+    "evidence_coverage": {
+      "query": true,
+      "actual": true,
+      "expected": false,
+      "execution_trace": true
+    },
+    "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+    "verification_steps": [
+      "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+    ],
+    "patch_direction": [
+      "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+    ],
+    "needs_human_review": true,
+    "scenario": "intent_recognition",
+    "summary": {
+      "causal_category": "insufficient_evidence",
+      "attribution_count": 0,
+      "probe_count": 1,
+      "summary_text": "attribute agent LLM 调用失败。",
+      "is_complete": false,
+      "is_formal_attribution": false
+    },
+    "analysis_method": "current_case_intent_contract_trace",
+    "analysis_quality": {
+      "passed": false,
+      "status": "next_verification_step",
+      "missing": [
+        "attribute LLM result",
+        "intent_recognition_internal_evidence"
+      ]
+    },
+    "incomplete_reason": "attribute agent LLM 调用失败。",
+    "quality_flags": [
+      "trace_execution_incomplete",
+      "human_review_required",
+      "attribute_blocked"
+    ]
+  },
+  "cluster": {
+    "project_id": "marketting-planning-intent",
+    "clusters": [
+      {
+        "cluster_id": "expectation::implementation_bug",
+        "mechanism": "insufficient_evidence_or_human_review",
+        "causal_category": "implementation_bug",
+        "needs_human_review": true,
+        "canonical_attribution": false,
+        "count": 1,
+        "representative_cases": [
+          "db73a74c-c327-4d21-be35-dd395456d217"
+        ],
+        "representative_traces": [
+          "db73a74c-c327-4d21-be35-dd395456d217"
+        ],
+        "common_root_cause": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+        "shared_failure_pattern": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+        "representative_diffs": [
+          {
+            "case_id": "db73a74c-c327-4d21-be35-dd395456d217",
+            "node": "intent_contract_gate",
+            "actual": {
+              "intent": "other",
+              "confidence": 0.5,
+              "raw_intent": "4001",
+              "ambiguous": false,
+              "fallback": false
+            },
+            "evidence": [
+              []
+            ]
+          }
+        ],
+        "minimal_fix_direction": [
+          "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+        ],
+        "verification_cases": [
+          "db73a74c-c327-4d21-be35-dd395456d217"
+        ],
+        "next_actions": [
+          "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+        ]
+      }
+    ],
+    "common_root_cause": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+    "impact": "",
+    "priority": "high"
+  },
+  "check": {
+    "passed": false,
+    "issues": [
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+      "JudgeResult missing fulfillment_assessments/overall_fulfillment for the selected evaluation boundary.",
+      "JudgeResult missing business_expectations/expected snapshot; verdict is not tied to current-query requirements.",
+      "JudgeResult missing reference_generation_basis; expected output source is unclear.",
+      "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug",
+      "Fallback decisions require human review before treating the chain as fully verified."
+    ],
+    "boundary_violations": [
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py"
+    ],
+    "protocol_gaps": [
+      "JudgeResult missing fulfillment_assessments/overall_fulfillment for the selected evaluation boundary.",
+      "JudgeResult missing business_expectations/expected snapshot; verdict is not tied to current-query requirements.",
+      "JudgeResult missing reference_generation_basis; expected output source is unclear.",
+      "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug"
+    ],
+    "consistency_gaps": [
+      "Fallback decisions require human review before treating the chain as fully verified."
+    ],
+    "verification_results": [
+      "Structured fallback decisions recorded: 1.",
+      "Check categories passed current audit."
+    ],
+    "recommended_fixes": [
+      "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions.",
+      "Complete missing protocol outputs before treating the chain as valid.",
+      "Ensure all steps use the same trace_id and latest run output."
+    ],
+    "fallbacks": [
+      {
+        "reason": "incomplete_retry_limit",
+        "status": "needs_human_review"
+      }
+    ]
+  },
+  "frontend_view": {
+    "project_info": {
+      "project_id": "marketting-planning-intent",
+      "name": "营销规划意图识别评估项目",
+      "description": "单独评估营销规划业务服务的 intent-recognition 单轮接口，与 marketting-planning 共享业务服务但测评边界只覆盖意图识别。"
+    },
+    "run_trace_summary": {
+      "trace_id": "db73a74c-c327-4d21-be35-dd395456d217",
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+      "input": {
+        "extra_input_params": {
+          "agent_args": {
+            "conversation_id": "",
+            "message": {
+              "content": "帮我看看上季度买了重疾险的客户都是啥样的？",
+              "content_type": "text"
+            }
+          }
+        },
+        "org_id": "default_org",
+        "session_id": "default_session",
+        "trace_id": "default_trace",
+        "user_text": "帮我看看上季度买了重疾险的客户都是啥样的？"
+      },
+      "normalized_request": {
+        "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+        "session_id": "default_session",
+        "query": "帮我看看上季度买了重疾险的客户都是啥样的？",
+        "scenario": "intent_recognition"
+      },
+      "extracted_output": {
+        "intent": "other",
+        "confidence": 0.5,
+        "raw_intent": "4001",
+        "ambiguous": false,
+        "fallback": false
+      },
+      "live_result": {
+        "project_id": "marketting-planning-intent",
+        "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+        "session_id": "default_session",
+        "raw_input": {
+          "extra_input_params": {
+            "agent_args": {
+              "conversation_id": "",
+              "message": {
+                "content": "帮我看看上季度买了重疾险的客户都是啥样的？",
+                "content_type": "text"
+              }
+            }
+          },
+          "org_id": "default_org",
+          "session_id": "default_session",
+          "trace_id": "default_trace",
+          "user_text": "帮我看看上季度买了重疾险的客户都是啥样的？"
+        },
+        "normalized_request": {
+          "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+          "session_id": "default_session",
+          "query": "帮我看看上季度买了重疾险的客户都是啥样的？",
+          "scenario": "intent_recognition"
+        },
+        "call_status": "succeeded",
+        "runtime_ms": 355,
+        "extracted_output": {
+          "intent": "other",
+          "confidence": 0.5,
+          "raw_intent": "4001",
+          "ambiguous": false,
+          "fallback": false
+        },
+        "output_source": "live_service",
+        "execution_trace": [
+          {
+            "stage": "request_normalization",
+            "status": "succeeded",
+            "evidence": {
+              "query": "帮我看看上季度买了重疾险的客户都是啥样的？"
+            },
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "intent_api_call",
+            "status": "succeeded",
+            "evidence": {
+              "endpoint": "/api/v1/marketing-planning/intent-recognition"
+            },
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "adapter_extraction",
+            "status": "succeeded",
+            "evidence": {
+              "intent": "other",
+              "confidence": 0.5,
+              "raw_intent": "4001",
+              "ambiguous": false,
+              "fallback": false
+            },
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "label_mapping",
+            "status": "succeeded",
+            "evidence": {
+              "intent": "other"
+            },
+            "timestamp": "",
+            "error": ""
+          }
+        ],
+        "application_boundary": {
+          "scope": "single_turn_intent_recognition",
+          "excludes": [
+            "multi_turn_planning",
+            "sse_card_generation"
+          ]
+        },
+        "interaction_mode": "single_turn"
+      },
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "scenario": "intent_recognition",
+      "application_boundary": {
+        "scope": "single_turn_intent_recognition",
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ]
+      },
+      "evidence_refs": [
+        {
+          "type": "marketing_intent_state_boundary",
+          "state_id": "collect_evidence",
+          "application_boundary": {
+            "scope": "single_turn_intent_recognition",
+            "excludes": [
+              "multi_turn_planning",
+              "sse_card_generation"
+            ]
+          },
+          "single_turn_only": true
+        },
+        {
+          "type": "marketing_intent_state_boundary",
+          "state_id": "collect_evidence",
+          "application_boundary": {
+            "scope": "single_turn_intent_recognition",
+            "excludes": [
+              "multi_turn_planning",
+              "sse_card_generation"
+            ]
+          },
+          "single_turn_only": true
+        }
+      ],
+      "execution_trace": [
+        {
+          "stage": "request_normalization",
+          "status": "succeeded",
+          "evidence": {
+            "query": "帮我看看上季度买了重疾险的客户都是啥样的？"
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "intent_api_call",
+          "status": "succeeded",
+          "evidence": {
+            "endpoint": "/api/v1/marketing-planning/intent-recognition"
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "adapter_extraction",
+          "status": "succeeded",
+          "evidence": {
+            "intent": "other",
+            "confidence": 0.5,
+            "raw_intent": "4001",
+            "ambiguous": false,
+            "fallback": false
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "label_mapping",
+          "status": "succeeded",
+          "evidence": {
+            "intent": "other"
+          },
+          "timestamp": "",
+          "error": ""
+        }
+      ],
+      "status": "ok",
+      "created_at": "2026-07-04T13:12:13.465331+00:00",
+      "state_history": [
+        {
+          "state_id": "prepare_trace",
+          "role": "prepare_trace",
+          "status": "skipped",
+          "attempt": 1,
+          "started_at": "2026-07-04T13:12:13.108338+00:00",
+          "finished_at": "2026-07-04T13:12:13.108352+00:00",
+          "transition_decision": {
+            "from_state": "prepare_trace",
+            "to_state": "mock_or_input",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "mock_or_input",
+          "role": "mock_or_input",
+          "status": "skipped",
+          "attempt": 1,
+          "started_at": "2026-07-04T13:12:13.108360+00:00",
+          "finished_at": "2026-07-04T13:12:13.108361+00:00",
+          "transition_decision": {
+            "from_state": "mock_or_input",
+            "to_state": "execute_or_capture",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "execute_or_capture",
+          "role": "execute_or_capture",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-04T13:12:13.465407+00:00",
+          "finished_at": "2026-07-04T13:12:13.465410+00:00",
+          "outputs": {
+            "schema_result_type": "RunTrace"
+          },
+          "gate_decisions": [
+            {
+              "gate_id": "trace_available",
+              "gate_type": "required_evidence",
+              "passed": true,
+              "checked_inputs": {
+                "trace": true,
+                "status": "ok"
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "trace exists"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "execute_or_capture",
+            "to_state": "collect_evidence",
+            "condition": "always",
+            "reason": "always",
+            "gate_ids": [
+              "trace_available"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "collect_evidence",
+          "role": "collect_evidence",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-04T13:12:13.465451+00:00",
+          "finished_at": "2026-07-04T13:12:13.465453+00:00",
+          "outputs": {
+            "collect_evidence": {
+              "recursive_ref": "RunTrace"
+            },
+            "marketing_intent_boundary_evidence": {
+              "status": "succeeded",
+              "outputs": {
+                "scenario": "intent_recognition",
+                "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                "single_turn_only": true,
+                "application_boundary": {
+                  "scope": "single_turn_intent_recognition",
+                  "excludes": [
+                    "multi_turn_planning",
+                    "sse_card_generation"
+                  ]
+                },
+                "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+              },
+              "evidence_refs": [
+                {
+                  "type": "marketing_intent_boundary",
+                  "evidence": {
+                    "scenario": "intent_recognition",
+                    "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                    "single_turn_only": true,
+                    "application_boundary": {
+                      "scope": "single_turn_intent_recognition",
+                      "excludes": [
+                        "multi_turn_planning",
+                        "sse_card_generation"
+                      ]
+                    },
+                    "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+                  }
+                }
+              ],
+              "claims": [
+                {
+                  "marketing_intent_boundary": {
+                    "scenario": "intent_recognition",
+                    "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                    "single_turn_only": true,
+                    "application_boundary": {
+                      "scope": "single_turn_intent_recognition",
+                      "excludes": [
+                        "multi_turn_planning",
+                        "sse_card_generation"
+                      ]
+                    },
+                    "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+                  }
+                }
+              ]
+            }
+          },
+          "subagent_results": [
+            {
+              "executor_id": "collect_evidence",
+              "executor_type": "deterministic",
+              "role": "generic_evidence_collector",
+              "status": "succeeded",
+              "output": {
+                "recursive_ref": "RunTrace"
+              }
+            },
+            {
+              "executor_id": "marketing_intent_boundary_evidence",
+              "executor_type": "adapter_hook",
+              "role": "marketing_intent_boundary_evidence",
+              "status": "succeeded",
+              "output": {
+                "status": "succeeded",
+                "outputs": {
+                  "scenario": "intent_recognition",
+                  "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                  "single_turn_only": true,
+                  "application_boundary": {
+                    "scope": "single_turn_intent_recognition",
+                    "excludes": [
+                      "multi_turn_planning",
+                      "sse_card_generation"
+                    ]
+                  },
+                  "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+                },
+                "evidence_refs": [
+                  {
+                    "type": "marketing_intent_boundary",
+                    "evidence": {
+                      "scenario": "intent_recognition",
+                      "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                      "single_turn_only": true,
+                      "application_boundary": {
+                        "scope": "single_turn_intent_recognition",
+                        "excludes": [
+                          "multi_turn_planning",
+                          "sse_card_generation"
+                        ]
+                      },
+                      "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+                    }
+                  }
+                ],
+                "claims": [
+                  {
+                    "marketing_intent_boundary": {
+                      "scenario": "intent_recognition",
+                      "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                      "single_turn_only": true,
+                      "application_boundary": {
+                        "scope": "single_turn_intent_recognition",
+                        "excludes": [
+                          "multi_turn_planning",
+                          "sse_card_generation"
+                        ]
+                      },
+                      "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+                    }
+                  }
+                ]
+              },
+              "evidence_refs": [
+                {
+                  "type": "marketing_intent_boundary",
+                  "evidence": {
+                    "scenario": "intent_recognition",
+                    "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                    "single_turn_only": true,
+                    "application_boundary": {
+                      "scope": "single_turn_intent_recognition",
+                      "excludes": [
+                        "multi_turn_planning",
+                        "sse_card_generation"
+                      ]
+                    },
+                    "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+                  }
+                }
+              ],
+              "claims": [
+                {
+                  "marketing_intent_boundary": {
+                    "scenario": "intent_recognition",
+                    "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                    "single_turn_only": true,
+                    "application_boundary": {
+                      "scope": "single_turn_intent_recognition",
+                      "excludes": [
+                        "multi_turn_planning",
+                        "sse_card_generation"
+                      ]
+                    },
+                    "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+                  }
+                }
+              ]
+            }
+          ],
+          "evidence_refs": [
+            {
+              "type": "marketing_intent_boundary",
+              "evidence": {
+                "scenario": "intent_recognition",
+                "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                "single_turn_only": true,
+                "application_boundary": {
+                  "scope": "single_turn_intent_recognition",
+                  "excludes": [
+                    "multi_turn_planning",
+                    "sse_card_generation"
+                  ]
+                },
+                "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+              }
+            }
+          ],
+          "transition_decision": {
+            "from_state": "collect_evidence",
+            "to_state": "build_business_expectations",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "build_business_expectations",
+          "role": "build_business_expectations",
+          "status": "failed",
+          "attempt": 1,
+          "started_at": "2026-07-04T13:12:13.468075+00:00",
+          "finished_at": "2026-07-04T13:12:13.468080+00:00",
+          "gate_decisions": [
+            {
+              "gate_id": "consumer_contract_present",
+              "gate_type": "consumer_contract_present",
+              "passed": false,
+              "checked_inputs": {
+                "has_judge": false
+              },
+              "missing_evidence": [
+                "consumer_contract"
+              ],
+              "recoverable": true,
+              "recommended_transition": "build_business_expectations",
+              "reason": "consumer contract missing"
+            },
+            {
+              "gate_id": "business_expectation_coverage",
+              "gate_type": "business_expectation_coverage",
+              "passed": false,
+              "checked_inputs": {
+                "expectation_count": 0
+              },
+              "missing_evidence": [
+                "business_expectations"
+              ],
+              "recoverable": true,
+              "recommended_transition": "build_business_expectations",
+              "reason": "business expectations missing"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "build_business_expectations",
+            "to_state": "collect_evidence",
+            "condition": "gate_failed_recoverable",
+            "reason": "consumer contract missing；business expectations missing",
+            "gate_ids": [
+              "consumer_contract_present",
+              "business_expectation_coverage"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          },
+          "errors": [
+            "Circular reference detected"
+          ]
+        },
+        {
+          "state_id": "collect_evidence",
+          "role": "collect_evidence",
+          "status": "succeeded",
+          "attempt": 2,
+          "started_at": "2026-07-04T13:12:13.468113+00:00",
+          "finished_at": "2026-07-04T13:12:13.468115+00:00",
+          "outputs": {
+            "collect_evidence": {
+              "recursive_ref": "RunTrace"
+            },
+            "marketing_intent_boundary_evidence": {
+              "status": "succeeded",
+              "outputs": {
+                "scenario": "intent_recognition",
+                "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                "single_turn_only": true,
+                "application_boundary": {
+                  "scope": "single_turn_intent_recognition",
+                  "excludes": [
+                    "multi_turn_planning",
+                    "sse_card_generation"
+                  ]
+                },
+                "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+              },
+              "evidence_refs": [
+                {
+                  "type": "marketing_intent_boundary",
+                  "evidence": {
+                    "scenario": "intent_recognition",
+                    "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                    "single_turn_only": true,
+                    "application_boundary": {
+                      "scope": "single_turn_intent_recognition",
+                      "excludes": [
+                        "multi_turn_planning",
+                        "sse_card_generation"
+                      ]
+                    },
+                    "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+                  }
+                }
+              ],
+              "claims": [
+                {
+                  "marketing_intent_boundary": {
+                    "scenario": "intent_recognition",
+                    "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                    "single_turn_only": true,
+                    "application_boundary": {
+                      "scope": "single_turn_intent_recognition",
+                      "excludes": [
+                        "multi_turn_planning",
+                        "sse_card_generation"
+                      ]
+                    },
+                    "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+                  }
+                }
+              ]
+            }
+          },
+          "subagent_results": [
+            {
+              "executor_id": "collect_evidence",
+              "executor_type": "deterministic",
+              "role": "generic_evidence_collector",
+              "status": "succeeded",
+              "output": {
+                "recursive_ref": "RunTrace"
+              }
+            },
+            {
+              "executor_id": "marketing_intent_boundary_evidence",
+              "executor_type": "adapter_hook",
+              "role": "marketing_intent_boundary_evidence",
+              "status": "succeeded",
+              "output": {
+                "status": "succeeded",
+                "outputs": {
+                  "scenario": "intent_recognition",
+                  "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                  "single_turn_only": true,
+                  "application_boundary": {
+                    "scope": "single_turn_intent_recognition",
+                    "excludes": [
+                      "multi_turn_planning",
+                      "sse_card_generation"
+                    ]
+                  },
+                  "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+                },
+                "evidence_refs": [
+                  {
+                    "type": "marketing_intent_boundary",
+                    "evidence": {
+                      "scenario": "intent_recognition",
+                      "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                      "single_turn_only": true,
+                      "application_boundary": {
+                        "scope": "single_turn_intent_recognition",
+                        "excludes": [
+                          "multi_turn_planning",
+                          "sse_card_generation"
+                        ]
+                      },
+                      "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+                    }
+                  }
+                ],
+                "claims": [
+                  {
+                    "marketing_intent_boundary": {
+                      "scenario": "intent_recognition",
+                      "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                      "single_turn_only": true,
+                      "application_boundary": {
+                        "scope": "single_turn_intent_recognition",
+                        "excludes": [
+                          "multi_turn_planning",
+                          "sse_card_generation"
+                        ]
+                      },
+                      "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+                    }
+                  }
+                ]
+              },
+              "evidence_refs": [
+                {
+                  "type": "marketing_intent_boundary",
+                  "evidence": {
+                    "scenario": "intent_recognition",
+                    "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                    "single_turn_only": true,
+                    "application_boundary": {
+                      "scope": "single_turn_intent_recognition",
+                      "excludes": [
+                        "multi_turn_planning",
+                        "sse_card_generation"
+                      ]
+                    },
+                    "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+                  }
+                }
+              ],
+              "claims": [
+                {
+                  "marketing_intent_boundary": {
+                    "scenario": "intent_recognition",
+                    "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                    "single_turn_only": true,
+                    "application_boundary": {
+                      "scope": "single_turn_intent_recognition",
+                      "excludes": [
+                        "multi_turn_planning",
+                        "sse_card_generation"
+                      ]
+                    },
+                    "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+                  }
+                }
+              ]
+            }
+          ],
+          "evidence_refs": [
+            {
+              "type": "marketing_intent_boundary",
+              "evidence": {
+                "scenario": "intent_recognition",
+                "endpoint": "/api/v1/marketing-planning/intent-recognition",
+                "single_turn_only": true,
+                "application_boundary": {
+                  "scope": "single_turn_intent_recognition",
+                  "excludes": [
+                    "multi_turn_planning",
+                    "sse_card_generation"
+                  ]
+                },
+                "shared_service_boundary": "marketing-planning service boundary, distinct judge scope"
+              }
+            }
+          ],
+          "transition_decision": {
+            "from_state": "collect_evidence",
+            "to_state": "build_business_expectations",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 1,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "build_business_expectations",
+          "role": "build_business_expectations",
+          "status": "failed",
+          "attempt": 2,
+          "started_at": "2026-07-04T13:12:13.469829+00:00",
+          "finished_at": "2026-07-04T13:12:13.469831+00:00",
+          "gate_decisions": [
+            {
+              "gate_id": "consumer_contract_present",
+              "gate_type": "consumer_contract_present",
+              "passed": false,
+              "checked_inputs": {
+                "has_judge": false
+              },
+              "missing_evidence": [
+                "consumer_contract"
+              ],
+              "recoverable": true,
+              "recommended_transition": "build_business_expectations",
+              "reason": "consumer contract missing"
+            },
+            {
+              "gate_id": "business_expectation_coverage",
+              "gate_type": "business_expectation_coverage",
+              "passed": false,
+              "checked_inputs": {
+                "expectation_count": 0
+              },
+              "missing_evidence": [
+                "business_expectations"
+              ],
+              "recoverable": true,
+              "recommended_transition": "build_business_expectations",
+              "reason": "business expectations missing"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "build_business_expectations",
+            "to_state": "incomplete_or_human_review",
+            "condition": "retry_limit",
+            "reason": "state retry limit exceeded",
+            "gate_ids": [
+              "consumer_contract_present",
+              "business_expectation_coverage"
+            ],
+            "retry_count": 1,
+            "stop_reason": "incomplete_retry_limit"
+          },
+          "errors": [
+            "Circular reference detected"
+          ]
+        },
+        {
+          "state_id": "incomplete_or_human_review",
+          "role": "incomplete_or_human_review",
+          "status": "skipped",
+          "attempt": 1,
+          "started_at": "2026-07-04T13:12:13.469842+00:00",
+          "finished_at": "2026-07-04T13:12:13.469844+00:00",
+          "transition_decision": {
+            "from_state": "incomplete_or_human_review",
+            "to_state": "completed",
+            "condition": "stop",
+            "reason": "stop",
+            "retry_count": 0,
+            "stop_reason": "incomplete_retry_limit"
+          }
+        }
+      ],
+      "gate_decisions": [
+        {
+          "gate_id": "trace_available",
+          "gate_type": "required_evidence",
+          "passed": true,
+          "checked_inputs": {
+            "trace": true,
+            "status": "ok"
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "trace exists"
+        },
+        {
+          "gate_id": "consumer_contract_present",
+          "gate_type": "consumer_contract_present",
+          "passed": false,
+          "checked_inputs": {
+            "has_judge": false
+          },
+          "missing_evidence": [
+            "consumer_contract"
+          ],
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "consumer contract missing"
+        },
+        {
+          "gate_id": "business_expectation_coverage",
+          "gate_type": "business_expectation_coverage",
+          "passed": false,
+          "checked_inputs": {
+            "expectation_count": 0
+          },
+          "missing_evidence": [
+            "business_expectations"
+          ],
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "business expectations missing"
+        },
+        {
+          "gate_id": "consumer_contract_present",
+          "gate_type": "consumer_contract_present",
+          "passed": false,
+          "checked_inputs": {
+            "has_judge": false
+          },
+          "missing_evidence": [
+            "consumer_contract"
+          ],
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "consumer contract missing"
+        },
+        {
+          "gate_id": "business_expectation_coverage",
+          "gate_type": "business_expectation_coverage",
+          "passed": false,
+          "checked_inputs": {
+            "expectation_count": 0
+          },
+          "missing_evidence": [
+            "business_expectations"
+          ],
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "business expectations missing"
+        }
+      ],
+      "transition_decisions": [
+        {
+          "from_state": "prepare_trace",
+          "to_state": "mock_or_input",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "mock_or_input",
+          "to_state": "execute_or_capture",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "execute_or_capture",
+          "to_state": "collect_evidence",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "trace_available"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "collect_evidence",
+          "to_state": "build_business_expectations",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "build_business_expectations",
+          "to_state": "collect_evidence",
+          "condition": "gate_failed_recoverable",
+          "reason": "consumer contract missing；business expectations missing",
+          "gate_ids": [
+            "consumer_contract_present",
+            "business_expectation_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "collect_evidence",
+          "to_state": "build_business_expectations",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 1,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "build_business_expectations",
+          "to_state": "incomplete_or_human_review",
+          "condition": "retry_limit",
+          "reason": "state retry limit exceeded",
+          "gate_ids": [
+            "consumer_contract_present",
+            "business_expectation_coverage"
+          ],
+          "retry_count": 1,
+          "stop_reason": "incomplete_retry_limit"
+        },
+        {
+          "from_state": "incomplete_or_human_review",
+          "to_state": "completed",
+          "condition": "stop",
+          "reason": "stop",
+          "retry_count": 0,
+          "stop_reason": "incomplete_retry_limit"
+        }
+      ],
+      "stop_reason": "incomplete_retry_limit",
+      "interaction_mode": "single_turn",
+      "session_id": "default_session",
+      "turn_index": 0,
+      "ready": [
+        "reference"
+      ]
+    },
+    "reference_panel": {
+      "source": "missing",
+      "actual": {
+        "intent": "other",
+        "confidence": 0.5,
+        "raw_intent": "4001",
+        "ambiguous": false,
+        "fallback": false
+      }
+    },
+    "judge_panel": {
+      "trace_id": "db73a74c-c327-4d21-be35-dd395456d217",
+      "project_id": "marketting-planning-intent",
+      "verdict": "uncertain",
+      "actual": {
+        "intent": "other",
+        "confidence": 0.5,
+        "raw_intent": "4001",
+        "ambiguous": false,
+        "fallback": false
+      },
+      "reconstructed_intent": "帮我看看上季度买了重疾险的客户都是啥样的？",
+      "judge_basis": "trace_execution_incomplete",
+      "judge_method": "state_machine_human_review",
+      "verdict_derivation": {
+        "blocking_gaps": [
+          "incomplete_retry_limit"
+        ],
+        "why_verdict": "trace did not reach judge because execution failed or required human review"
+      },
+      "boundary_decision": {
+        "within_evaluable_scope": false,
+        "reasoning": "incomplete_retry_limit"
+      },
+      "evaluation_boundary": {
+        "primary_boundary_id": "trace_execution_incomplete",
+        "verdict_basis": "judge skipped because trace execution did not complete"
+      },
+      "evidence": [
+        "incomplete_retry_limit"
+      ],
+      "reasoning_summary": "trace execution incomplete; human review required before judge",
+      "needs_human_review": true,
+      "scenario": "",
+      "quality_flags": [
+        "trace_execution_incomplete",
+        "human_review_required"
+      ],
+      "gate_decisions": [
+        {
+          "gate_id": "trace_available",
+          "gate_type": "required_evidence",
+          "passed": true,
+          "checked_inputs": {
+            "trace": true,
+            "status": "ok"
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "trace exists"
+        },
+        {
+          "gate_id": "consumer_contract_present",
+          "gate_type": "consumer_contract_present",
+          "passed": false,
+          "checked_inputs": {
+            "has_judge": false
+          },
+          "missing_evidence": [
+            "consumer_contract"
+          ],
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "consumer contract missing"
+        },
+        {
+          "gate_id": "business_expectation_coverage",
+          "gate_type": "business_expectation_coverage",
+          "passed": false,
+          "checked_inputs": {
+            "expectation_count": 0
+          },
+          "missing_evidence": [
+            "business_expectations"
+          ],
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "business expectations missing"
+        },
+        {
+          "gate_id": "consumer_contract_present",
+          "gate_type": "consumer_contract_present",
+          "passed": false,
+          "checked_inputs": {
+            "has_judge": false
+          },
+          "missing_evidence": [
+            "consumer_contract"
+          ],
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "consumer contract missing"
+        },
+        {
+          "gate_id": "business_expectation_coverage",
+          "gate_type": "business_expectation_coverage",
+          "passed": false,
+          "checked_inputs": {
+            "expectation_count": 0
+          },
+          "missing_evidence": [
+            "business_expectations"
+          ],
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "business expectations missing"
+        }
+      ],
+      "transition_decisions": [
+        {
+          "from_state": "prepare_trace",
+          "to_state": "mock_or_input",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "mock_or_input",
+          "to_state": "execute_or_capture",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "execute_or_capture",
+          "to_state": "collect_evidence",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "trace_available"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "collect_evidence",
+          "to_state": "build_business_expectations",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "build_business_expectations",
+          "to_state": "collect_evidence",
+          "condition": "gate_failed_recoverable",
+          "reason": "consumer contract missing；business expectations missing",
+          "gate_ids": [
+            "consumer_contract_present",
+            "business_expectation_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "collect_evidence",
+          "to_state": "build_business_expectations",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 1,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "build_business_expectations",
+          "to_state": "incomplete_or_human_review",
+          "condition": "retry_limit",
+          "reason": "state retry limit exceeded",
+          "gate_ids": [
+            "consumer_contract_present",
+            "business_expectation_coverage"
+          ],
+          "retry_count": 1,
+          "stop_reason": "incomplete_retry_limit"
+        },
+        {
+          "from_state": "incomplete_or_human_review",
+          "to_state": "completed",
+          "condition": "stop",
+          "reason": "stop",
+          "retry_count": 0,
+          "stop_reason": "incomplete_retry_limit"
+        }
+      ],
+      "fallbacks": [
+        {
+          "fallback_id": "judge-incomplete-db73a74c-c327-4d21-be35-dd395456d217",
+          "source_stage": "judge",
+          "fallback_type": "trace_execution_incomplete",
+          "status": "needs_human_review",
+          "reason": "incomplete_retry_limit",
+          "missing_evidence": [
+            "completed_trace_execution",
+            "judge_evidence"
+          ],
+          "recoverable": true,
+          "needs_human_review": true,
+          "quality_flags": [
+            "trace_execution_incomplete",
+            "human_review_required"
+          ],
+          "evidence_refs": [
+            {
+              "type": "marketing_intent_state_boundary",
+              "state_id": "collect_evidence",
+              "application_boundary": {
+                "scope": "single_turn_intent_recognition",
+                "excludes": [
+                  "multi_turn_planning",
+                  "sse_card_generation"
+                ]
+              },
+              "single_turn_only": true
+            },
+            {
+              "type": "marketing_intent_state_boundary",
+              "state_id": "collect_evidence",
+              "application_boundary": {
+                "scope": "single_turn_intent_recognition",
+                "excludes": [
+                  "multi_turn_planning",
+                  "sse_card_generation"
+                ]
+              },
+              "single_turn_only": true
+            }
+          ],
+          "metadata": {
+            "trace_id": "db73a74c-c327-4d21-be35-dd395456d217"
+          }
+        }
+      ],
+      "display_reason": "uncertain · trace did not reach judge because execution failed or required human review",
+      "wrong_missing_extra": {}
+    },
+    "attribute_panel": {
+      "trace_id": "db73a74c-c327-4d21-be35-dd395456d217",
+      "project_id": "marketting-planning-intent",
+      "case_id": "",
+      "analysis_method": "current_case_intent_contract_trace",
+      "chain_nodes": [
+        {
+          "name": "",
+          "status": "verified",
+          "reason": ""
+        },
+        {
+          "name": "",
+          "status": "verified",
+          "reason": ""
+        },
+        {
+          "name": "",
+          "status": "verified",
+          "reason": ""
+        },
+        {
+          "name": "",
+          "status": "verified",
+          "reason": ""
+        },
+        {
+          "name": "intent_contract_gate",
+          "status": "failed",
+          "evidence": [
+            {
+              "query": "帮我看看上季度买了重疾险的客户都是啥样的？"
+            },
+            {},
+            {
+              "actual": {
+                "intent": "other",
+                "confidence": 0.5,
+                "raw_intent": "4001",
+                "ambiguous": false,
+                "fallback": false
+              }
+            },
+            {}
+          ],
+          "reason": "intent contract mismatch"
+        }
+      ],
+      "earliest_divergence": {
+        "node": "intent_contract_gate",
+        "actual": {
+          "intent": "other",
+          "confidence": 0.5,
+          "raw_intent": "4001",
+          "ambiguous": false,
+          "fallback": false
+        },
+        "evidence": [
+          []
+        ],
+        "confidence": "medium"
+      },
+      "evidence_coverage": {
+        "query": true,
+        "actual": true,
+        "expected": false,
+        "execution_trace": true
+      },
+      "analysis_quality": {
+        "passed": false,
+        "status": "next_verification_step",
+        "missing": [
+          "attribute LLM result",
+          "intent_recognition_internal_evidence"
+        ]
+      },
+      "incomplete_reason": "attribute agent LLM 调用失败。",
+      "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+      "verification_steps": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ],
+      "patch_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "causal_category": "implementation_bug",
+      "probe_results": [
+        {
+          "probe_id": "llm_call",
+          "status": "failed",
+          "stage": "",
+          "evidence": [
+            "Circular reference detected"
+          ],
+          "error": ""
+        }
+      ],
+      "needs_human_review": true,
+      "scenario": "intent_recognition",
+      "quality_flags": [
+        "trace_execution_incomplete",
+        "human_review_required",
+        "attribute_blocked"
+      ],
+      "gate_decisions": [
+        {
+          "gate_id": "trace_available",
+          "gate_type": "required_evidence",
+          "passed": true,
+          "checked_inputs": {
+            "trace": true,
+            "status": "ok"
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "trace exists"
+        },
+        {
+          "gate_id": "consumer_contract_present",
+          "gate_type": "consumer_contract_present",
+          "passed": false,
+          "checked_inputs": {
+            "has_judge": false
+          },
+          "missing_evidence": [
+            "consumer_contract"
+          ],
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "consumer contract missing"
+        },
+        {
+          "gate_id": "business_expectation_coverage",
+          "gate_type": "business_expectation_coverage",
+          "passed": false,
+          "checked_inputs": {
+            "expectation_count": 0
+          },
+          "missing_evidence": [
+            "business_expectations"
+          ],
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "business expectations missing"
+        },
+        {
+          "gate_id": "consumer_contract_present",
+          "gate_type": "consumer_contract_present",
+          "passed": false,
+          "checked_inputs": {
+            "has_judge": false
+          },
+          "missing_evidence": [
+            "consumer_contract"
+          ],
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "consumer contract missing"
+        },
+        {
+          "gate_id": "business_expectation_coverage",
+          "gate_type": "business_expectation_coverage",
+          "passed": false,
+          "checked_inputs": {
+            "expectation_count": 0
+          },
+          "missing_evidence": [
+            "business_expectations"
+          ],
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "business expectations missing"
+        }
+      ],
+      "transition_decisions": [
+        {
+          "from_state": "prepare_trace",
+          "to_state": "mock_or_input",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "mock_or_input",
+          "to_state": "execute_or_capture",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "execute_or_capture",
+          "to_state": "collect_evidence",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "trace_available"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "collect_evidence",
+          "to_state": "build_business_expectations",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "build_business_expectations",
+          "to_state": "collect_evidence",
+          "condition": "gate_failed_recoverable",
+          "reason": "consumer contract missing；business expectations missing",
+          "gate_ids": [
+            "consumer_contract_present",
+            "business_expectation_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "collect_evidence",
+          "to_state": "build_business_expectations",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 1,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "build_business_expectations",
+          "to_state": "incomplete_or_human_review",
+          "condition": "retry_limit",
+          "reason": "state retry limit exceeded",
+          "gate_ids": [
+            "consumer_contract_present",
+            "business_expectation_coverage"
+          ],
+          "retry_count": 1,
+          "stop_reason": "incomplete_retry_limit"
+        },
+        {
+          "from_state": "incomplete_or_human_review",
+          "to_state": "completed",
+          "condition": "stop",
+          "reason": "stop",
+          "retry_count": 0,
+          "stop_reason": "incomplete_retry_limit"
+        }
+      ],
+      "summary": {
+        "causal_category": "insufficient_evidence",
+        "attribution_count": 0,
+        "probe_count": 1,
+        "summary_text": "attribute agent LLM 调用失败。",
+        "is_complete": false,
+        "is_formal_attribution": false
+      },
+      "display_causal_category": "implementation_bug",
+      "display_root_cause": "attribute agent LLM 调用失败。",
+      "display_verification_steps": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ],
+      "display_patch_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "attribution_count": 0,
+      "probe_count": 1
+    },
+    "fulfillment_panel": {
+      "derived_verdict": "uncertain",
+      "verdict_derivation": {
+        "blocking_gaps": [
+          "incomplete_retry_limit"
+        ],
+        "why_verdict": "trace did not reach judge because execution failed or required human review"
+      }
+    },
+    "expectation_attribution_panel": {
+      "causal_category": "implementation_bug",
+      "probe_results": [
+        {
+          "probe_id": "llm_call",
+          "status": "failed",
+          "stage": "",
+          "evidence": [
+            "Circular reference detected"
+          ],
+          "error": ""
+        }
+      ],
+      "quality_flags": [
+        "trace_execution_incomplete",
+        "human_review_required",
+        "attribute_blocked"
+      ],
+      "incomplete_reason": "attribute agent LLM 调用失败。"
+    },
+    "cluster_panel": {
+      "project_id": "marketting-planning-intent",
+      "clusters": [
+        {
+          "cluster_id": "expectation::implementation_bug",
+          "mechanism": "insufficient_evidence_or_human_review",
+          "causal_category": "implementation_bug",
+          "needs_human_review": true,
+          "canonical_attribution": false,
+          "count": 1,
+          "representative_cases": [
+            "db73a74c-c327-4d21-be35-dd395456d217"
+          ],
+          "representative_traces": [
+            "db73a74c-c327-4d21-be35-dd395456d217"
+          ],
+          "common_root_cause": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+          "shared_failure_pattern": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+          "representative_diffs": [
+            {
+              "case_id": "db73a74c-c327-4d21-be35-dd395456d217",
+              "node": "intent_contract_gate",
+              "actual": {
+                "intent": "other",
+                "confidence": 0.5,
+                "raw_intent": "4001",
+                "ambiguous": false,
+                "fallback": false
+              },
+              "evidence": [
+                []
+              ]
+            }
+          ],
+          "minimal_fix_direction": [
+            "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+          ],
+          "verification_cases": [
+            "db73a74c-c327-4d21-be35-dd395456d217"
+          ],
+          "next_actions": [
+            "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+          ]
+        }
+      ],
+      "common_root_cause": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+      "impact": "",
+      "priority": "high"
+    },
+    "check_panel": {
+      "passed": false,
+      "issues": [
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+        "JudgeResult missing fulfillment_assessments/overall_fulfillment for the selected evaluation boundary.",
+        "JudgeResult missing business_expectations/expected snapshot; verdict is not tied to current-query requirements.",
+        "JudgeResult missing reference_generation_basis; expected output source is unclear.",
+        "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug",
+        "Fallback decisions require human review before treating the chain as fully verified."
+      ],
+      "boundary_violations": [
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py"
+      ],
+      "protocol_gaps": [
+        "JudgeResult missing fulfillment_assessments/overall_fulfillment for the selected evaluation boundary.",
+        "JudgeResult missing business_expectations/expected snapshot; verdict is not tied to current-query requirements.",
+        "JudgeResult missing reference_generation_basis; expected output source is unclear.",
+        "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug"
+      ],
+      "consistency_gaps": [
+        "Fallback decisions require human review before treating the chain as fully verified."
+      ],
+      "verification_results": [
+        "Structured fallback decisions recorded: 1.",
+        "Check categories passed current audit."
+      ],
+      "recommended_fixes": [
+        "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions.",
+        "Complete missing protocol outputs before treating the chain as valid.",
+        "Ensure all steps use the same trace_id and latest run output."
+      ],
+      "fallbacks": [
+        {
+          "fallback_id": "judge-incomplete-db73a74c-c327-4d21-be35-dd395456d217",
+          "source_stage": "judge",
+          "fallback_type": "trace_execution_incomplete",
+          "status": "needs_human_review",
+          "reason": "incomplete_retry_limit",
+          "missing_evidence": [
+            "completed_trace_execution",
+            "judge_evidence"
+          ],
+          "recoverable": true,
+          "needs_human_review": true,
+          "quality_flags": [
+            "trace_execution_incomplete",
+            "human_review_required"
+          ],
+          "evidence_refs": [
+            {
+              "type": "marketing_intent_state_boundary",
+              "state_id": "collect_evidence",
+              "application_boundary": {
+                "scope": "single_turn_intent_recognition",
+                "excludes": [
+                  "multi_turn_planning",
+                  "sse_card_generation"
+                ]
+              },
+              "single_turn_only": true
+            },
+            {
+              "type": "marketing_intent_state_boundary",
+              "state_id": "collect_evidence",
+              "application_boundary": {
+                "scope": "single_turn_intent_recognition",
+                "excludes": [
+                  "multi_turn_planning",
+                  "sse_card_generation"
+                ]
+              },
+              "single_turn_only": true
+            }
+          ],
+          "metadata": {
+            "trace_id": "db73a74c-c327-4d21-be35-dd395456d217"
+          }
+        }
+      ]
+    },
+    "table_row": {
+      "id": "mock-agent-marketting-planning-intent-9e16256b",
+      "input": "default_org",
+      "scenario": "intent_recognition",
+      "output_summary": "{\"intent\": \"other\", \"confidence\": 0.5, \"target_value\": null, \"path_types\": null, \"raw_intent\": \"4001\", \"slots\": {}, \"entities\": [], \"ambiguous\": false, \"fallba…",
+      "reference_summary": "",
+      "status": "uncertain",
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "verdict": "uncertain",
+      "fulfillment_status": "uncertain",
+      "judge_summary": {
+        "status": "uncertain",
+        "fulfillment_status": "",
+        "verdict": "uncertain",
+        "reason": "uncertain · trace did not reach judge because execution failed or required human review",
+        "reason_source": "reasoning_summary",
+        "reason_stage": "judge",
+        "is_formal_attribution": false,
+        "assessment_count": 0,
+        "blocking_count": 0
+      },
+      "attribution_summary": {
+        "causal_category": "insufficient_evidence",
+        "attribution_count": 0,
+        "probe_count": 1,
+        "summary_text": "attribute agent LLM 调用失败。",
+        "is_complete": false,
+        "is_formal_attribution": false
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 8,
+        "protocol_gap_count": 4,
+        "consistency_gap_count": 1,
+        "recommended_fix_count": 3,
+        "issues": [
+          "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+          "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+          "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+          "JudgeResult missing fulfillment_assessments/overall_fulfillment for the selected evaluation boundary.",
+          "JudgeResult missing business_expectations/expected snapshot; verdict is not tied to current-query requirements.",
+          "JudgeResult missing reference_generation_basis; expected output source is unclear.",
+          "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug",
+          "Fallback decisions require human review before treating the chain as fully verified."
+        ]
+      },
+      "fallback_summary": {
+        "count": 2,
+        "needs_human_review": true,
+        "quality_flags": [
+          "human_review_required",
+          "trace_execution_incomplete"
+        ],
+        "by_stage": {
+          "judge": 2
+        },
+        "reasons": [
+          "incomplete_retry_limit",
+          "incomplete_retry_limit"
+        ]
+      },
+      "needs_human_review": true,
+      "quality_flags": [
+        "trace_execution_incomplete",
+        "human_review_required",
+        "trace_execution_incomplete",
+        "human_review_required",
+        "attribute_blocked",
+        "human_review_required",
+        "trace_execution_incomplete"
+      ],
+      "check_passed": false,
+      "issue_count": 13,
+      "fallback_count": 2,
+      "causal_category": "insufficient_evidence",
+      "divergence_stage": "intent_contract_gate",
+      "root_cause_summary": "attribute agent LLM 调用失败。",
+      "created_at": "2026-07-04T13:12:13.465331+00:00",
+      "stop_reason": "incomplete_retry_limit",
+      "interaction_mode": "single_turn",
+      "trace_id": "db73a74c-c327-4d21-be35-dd395456d217"
+    },
+    "project_extensions": {
+      "intent_labels": [
+        "other",
+        "customer_portrait",
+        "nbev_planning",
+        "nbev_planning_fallback",
+        "achievement_measurement_adjustment",
+        "team_portrait",
+        "target_value_adjustment"
+      ],
+      "output_summary_shape": [
+        "intent",
+        "confidence",
+        "raw_intent",
+        "slots",
+        "entities",
+        "ambiguous",
+        "fallback",
+        "errors"
+      ],
+      "frontend_standard": {
+        "frontend_view": {
+          "live": "render query, normalized intent output, reference intent, Judge, Attribute, and compact raw response drill-down",
+          "summary": "render intent case pool with Output and Reference as aligned label/confidence JSON"
+        },
+        "batch_persistence": {
+          "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+          "transient_results": "do not persist full trace, judge, attribute, raw response, or frontend_view as durable case-pool source data"
+        }
+      },
+      "display_contract": {
+        "output_source": "trace.live_result.extracted_output",
+        "reference_source": "missing",
+        "formatting": [
+          "json formatting",
+          "truncation",
+          "output/reference alignment"
+        ]
+      },
+      "verifiable_tools": {
+        "available": false,
+        "reason": "adapter has no get_verifiable_tools"
+      }
+    }
+  },
+  "table_row": {
+    "id": "mock-agent-marketting-planning-intent-9e16256b",
+    "input": "default_org",
+    "scenario": "intent_recognition",
+    "output_summary": "{\"intent\": \"other\", \"confidence\": 0.5, \"target_value\": null, \"path_types\": null, \"raw_intent\": \"4001\", \"slots\": {}, \"entities\": [], \"ambiguous\": false, \"fallba…",
+    "reference_summary": "",
+    "status": "uncertain",
+    "execution_mode": "live",
+    "output_source": "live_service",
+    "verdict": "uncertain",
+    "fulfillment_status": "uncertain",
+    "judge_summary": {
+      "status": "uncertain",
+      "fulfillment_status": "",
+      "verdict": "uncertain",
+      "reason": "uncertain · trace did not reach judge because execution failed or required human review",
+      "reason_source": "reasoning_summary",
+      "reason_stage": "judge",
+      "is_formal_attribution": false,
+      "assessment_count": 0,
+      "blocking_count": 0
+    },
+    "attribution_summary": {
+      "causal_category": "insufficient_evidence",
+      "attribution_count": 0,
+      "probe_count": 1,
+      "summary_text": "attribute agent LLM 调用失败。",
+      "is_complete": false,
+      "is_formal_attribution": false
+    },
+    "check_summary": {
+      "passed": false,
+      "issue_count": 8,
+      "protocol_gap_count": 4,
+      "consistency_gap_count": 1,
+      "recommended_fix_count": 3,
+      "issues": [
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+        "JudgeResult missing fulfillment_assessments/overall_fulfillment for the selected evaluation boundary.",
+        "JudgeResult missing business_expectations/expected snapshot; verdict is not tied to current-query requirements.",
+        "JudgeResult missing reference_generation_basis; expected output source is unclear.",
+        "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug",
+        "Fallback decisions require human review before treating the chain as fully verified."
+      ]
+    },
+    "fallback_summary": {
+      "count": 2,
+      "needs_human_review": true,
+      "quality_flags": [
+        "human_review_required",
+        "trace_execution_incomplete"
+      ],
+      "by_stage": {
+        "judge": 2
+      },
+      "reasons": [
+        "incomplete_retry_limit",
+        "incomplete_retry_limit"
+      ]
+    },
+    "needs_human_review": true,
+    "quality_flags": [
+      "trace_execution_incomplete",
+      "human_review_required",
+      "trace_execution_incomplete",
+      "human_review_required",
+      "attribute_blocked",
+      "human_review_required",
+      "trace_execution_incomplete"
+    ],
+    "check_passed": false,
+    "issue_count": 13,
+    "fallback_count": 2,
+    "causal_category": "insufficient_evidence",
+    "divergence_stage": "intent_contract_gate",
+    "root_cause_summary": "attribute agent LLM 调用失败。",
+    "created_at": "2026-07-04T13:12:13.465331+00:00",
+    "stop_reason": "incomplete_retry_limit",
+    "interaction_mode": "single_turn",
+    "trace_id": "db73a74c-c327-4d21-be35-dd395456d217"
+  }
+}

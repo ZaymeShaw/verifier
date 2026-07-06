@@ -1,0 +1,38 @@
+project_id: example
+name: 示例项目
+description: 简短说明这个项目测什么
+
+common:
+  source:
+    repo:
+
+  api:
+    base_url:
+    endpoint:
+    method: POST
+    timeout: 60
+
+  start:
+    command:
+
+  docs:
+    demand: 
+
+extra: {}
+
+# ---- 可选：API 端点自动发现 ----
+# 不配置此字段则跳过扫描，完全兼容现有项目。
+# 配置后，启动时通用引擎自动扫描业务系统源码中的 API 端点，
+# 构建为可调用 VerifiableTool，注册到 ToolRegistry。
+endpoint_discovery:
+  source_roots:               # 业务系统源码根路径（相对于项目根目录）
+    - ../../../projects/your_project
+  framework: fastapi           # 使用的 Web 框架：fastapi | flask | grpc | generic
+  scan_patterns: ["*.py"]      # 扫描文件类型，默认 *.py
+  exclude_patterns:            # 排除路径，默认排除 test/migrations/venv
+    - "*/test/*"
+    - "*/migrations/*"
+    - "*/venv/*"
+  blacklist:
+    methods: ["PUT", "DELETE", "PATCH"]    # 可选
+    route_keywords: ["reload", "reindex", "delete", "update", "create", "write"]

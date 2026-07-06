@@ -1,0 +1,97 @@
+{
+  "id": "mock-agent-marketting-planning-d1642b58",
+  "input": "org_001",
+  "scenario": "intent_recognition",
+  "output_summary": "{\"event_summary\": {\"canonical_names\": [\"intent_detected\", \"reasoning_message_content\", \"planning_started\", \"card_delta\", \"done\"], \"completed\": true, \"counts\": …",
+  "reference_summary": "{\"scenario\": \"intent_recognition\"}",
+  "status": "not_fulfilled",
+  "execution_mode": "",
+  "output_source": "live_service",
+  "verdict": "incorrect",
+  "fulfillment_status": "not_fulfilled",
+  "judge_summary": {
+    "status": "not_fulfilled",
+    "fulfillment_status": "not_fulfilled",
+    "verdict": "incorrect",
+    "reason": "not_fulfilled · blocking=[(none)]",
+    "reason_source": "aggregated_fulfillment",
+    "reason_stage": "judge",
+    "is_formal_attribution": true,
+    "assessment_count": 4,
+    "blocking_count": 0,
+    "primary_failure_dimensions": [
+      {
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户请求制定NBEV目标弥补计划，期望系统识别为营销规划并输出策略卡片。实际运行中，系统将意图错误归类为‘其他意图’，导致阶段路由至非代理状态，未生成任何规划卡片。尽管SSE流正常结束，核心业务期望未满足，故整体评估为未满足。",
+        "expectation_id": "识别用户意图为营销规划",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户请求制定NBEV目标弥补计划，期望系统识别为营销规划并输出策略卡片。实际运行中，系统将意图错误归类为‘其他意图’，导致阶段路由至非代理状态，未生成任何规划卡片。尽管SSE流正常结束，核心业务期望未满足，故整体评估为未满足。",
+        "expectation_id": "路由至规划阶段",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户请求制定NBEV目标弥补计划，期望系统识别为营销规划并输出策略卡片。实际运行中，系统将意图错误归类为‘其他意图’，导致阶段路由至非代理状态，未生成任何规划卡片。尽管SSE流正常结束，核心业务期望未满足，故整体评估为未满足。",
+        "expectation_id": "输出非空的规划卡片列表",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      }
+    ]
+  },
+  "attribution_summary": {
+    "attribution_count": 3,
+    "causal_category": "needs_human_review",
+    "is_complete": true,
+    "is_formal_attribution": true,
+    "probe_count": 0,
+    "summary_text": "意图识别三层防御（Tier 0 主页正则 → Tier 3 关键词启发式 → LLM fallback）全部失效。根因有二：一是规则系统（Tier 0/3）的关键词和正则覆盖不足，未考虑 '怎么通过...来补上' 这种间接但语义等价的 NBEV 规划表达；二是 LLM prompt 中 nbev_planning 示例过于单一，模型泛化能力不足以将 '补缺口' 类表述映射到规划意图。用户输入中的 'NBEV' '理财师（队伍）' '产品方案' 三个强信号本应触发 nbev_planning，但在当前实现中全部被忽略。"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 5,
+    "protocol_gap_count": 0,
+    "consistency_gap_count": 1,
+    "recommended_fix_count": 2,
+    "issues": [
+      "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+      "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+      "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+      "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+      "RunTrace.extracted_output and JudgeResult.actual diverge"
+    ]
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": false,
+  "quality_flags": [
+    "intent_misclassification",
+    "empty_card_list",
+    "incorrect_stage_routing",
+    "intent_misclassification",
+    "empty_card_list",
+    "incorrect_stage_routing",
+    "rule_coverage_gap",
+    "prompt_insufficient_examples",
+    "ungrounded_root_cause"
+  ],
+  "check_passed": false,
+  "issue_count": 6,
+  "fallback_count": 0,
+  "causal_category": "needs_human_review",
+  "divergence_stage": "intent_recognition",
+  "root_cause_summary": "意图识别三层防御（Tier 0 主页正则 → Tier 3 关键词启发式 → LLM fallback）全部失效。根因有二：一是规则系统（Tier 0/3）的关键词和正则覆盖不足，未考虑 '怎么通过...来补上' 这种间接但语义等价的 NBEV 规划表达；二是 LLM prompt 中 nbev_planning 示例过于单一，模型泛化能力不足以将 '补缺口' 类表述映射到规划意图。用户输入中的 'NBEV' '理财师（队伍）' '产品方案' 三个强信号本应触发 nbev_planning，但在当前实现中全部被忽略。",
+  "created_at": "2026-07-05T01:15:27.265153+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "2708ec06-9402-4517-b387-faf3d0b9547c"
+}

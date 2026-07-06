@@ -1,0 +1,53 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "识别用户意图为营销规划",
+        "路由至规划阶段",
+        "输出非空的规划卡片列表"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "2708ec06-9402-4517-b387-faf3d0b9547c"
+      ],
+      "representative_traces": [
+        "2708ec06-9402-4517-b387-faf3d0b9547c"
+      ],
+      "common_root_cause": "意图识别三层防御（Tier 0 主页正则 → Tier 3 关键词启发式 → LLM fallback）全部失效。根因有二：一是规则系统（Tier 0/3）的关键词和正则覆盖不足，未考虑 '怎么通过...来补上' 这种间接但语义等价的 NBEV 规划表达；二是 LLM prompt 中 nbev_planning 示例过于单一，模型泛化能力不足以将 '补缺口' 类表述映射到规划意图。用户输入中的 'NBEV' '理财师（队伍）' '产品方案' 三个强信号本应触发 nbev_planning，但在当前实现中全部被忽略。",
+      "shared_failure_pattern": "意图识别三层防御（Tier 0 主页正则 → Tier 3 关键词启发式 → LLM fallback）全部失效。根因有二：一是规则系统（Tier 0/3）的关键词和正则覆盖不足，未考虑 '怎么通过...来补上' 这种间接但语义等价的 NBEV 规划表达；二是 LLM prompt 中 nbev_planning 示例过于单一，模型泛化能力不足以将 '补缺口' 类表述映射到规划意图。用户输入中的 'NBEV' '理财师（队伍）' '产品方案' 三个强信号本应触发 nbev_planning，但在当前实现中全部被忽略。",
+      "representative_diffs": [
+        {
+          "case_id": "2708ec06-9402-4517-b387-faf3d0b9547c"
+        }
+      ],
+      "minimal_fix_direction": [
+        "Tier 0: 在 _HOMEPAGE_RULES 中增加正则 '怎么(?:通过|用|利用).*NBEV.*(?:补|弥补|达成|完成)' 覆盖间接表达",
+        "Tier 3: 扩展 has_planning_intent 关键词元组为 ('达成','规划','路径','测算','分析','补上','弥补','优化','增加','提升','改善','方案')",
+        "Prompt: 在 nbev_planning 示例区增加：'NBEV目标还差不少，怎么通过队伍和产品补上'、'帮我看看怎么优化产品方案来达成NBEV'",
+        "模型侧: 考虑在 LLM 调用时增加 stricter 的 output 约束，例如要求必须给出非 other 的理由才能判 other"
+      ],
+      "verification_cases": [
+        "2708ec06-9402-4517-b387-faf3d0b9547c"
+      ],
+      "next_actions": [
+        "1. 用原始输入重新执行，在 Tier 0 匹配前打印 normalized_message 和匹配结果，确认所有正则未命中",
+        "2. 在 Tier 3 处打印 has_nbev 和 has_planning_intent 值，确认 has_planning_intent=False",
+        "3. 捕获 LLM 返回的 IntentResult raw content，确认其 reasoning（如果模型输出 reasoning）",
+        "4. 扩展 Tier 0 正则后，验证相同输入能否命中 nbev_planning",
+        "5. 扩展 Tier 3 关键词后，验证相同输入能否命中 nbev_planning（confidence=0.95）"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别三层防御（Tier 0 主页正则 → Tier 3 关键词启发式 → LLM fallback）全部失效。根因有二：一是规则系统（Tier 0/3）的关键词和正则覆盖不足，未考虑 '怎么通过...来补上' 这种间接但语义等价的 NBEV 规划表达；二是 LLM prompt 中 nbev_planning 示例过于单一，模型泛化能力不足以将 '补缺口' 类表述映射到规划意图。用户输入中的 'NBEV' '理财师（队伍）' '产品方案' 三个强信号本应触发 nbev_planning，但在当前实现中全部被忽略。",
+  "impact": "",
+  "priority": "high"
+}

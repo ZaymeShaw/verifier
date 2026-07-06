@@ -1,0 +1,118 @@
+{
+  "trace_id": "86512ef1-f562-4df4-aa20-07ef646ca6fe",
+  "project_id": "marketting-planning-intent",
+  "verdict": "uncertain",
+  "score": 1.0,
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签正确归类为other",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "低置信度时执行合理fallback",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签正确归类为other",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "低置信度时执行合理fallback",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "fulfilled",
+      "downstream_impact": "当前单轮意图识别满足 reference contract：intent=None，confidence=None 达到最低要求 None。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "fulfilled",
+    "summary": "所有评估的期望均满足",
+    "assessment_count": 3
+  },
+  "expected": {
+    "intent": "other",
+    "confidence": 0.5
+  },
+  "reasoning_summary": "用户查询意图是对历史客户进行特征分析，属于客群洞察。当前营销策划意图识别项目中，此类查询不属于直接策划操作，因此归类为other是合理的。虽然置信度仅为0.5，但通过归入other避免了错误分发，符合低置信度下的fallback预期。整体上，输出满足了业务期望。",
+  "judge_basis": "基于查询语义和项目意图集推断，判断实际输出是否满足业务期望。",
+  "judge_method": "语义等价检查与预期行为对比",
+  "verdict_derivation": {
+    "process": "分别评估意图标签和置信度处理的合理性，均满足期望，故整体符合。",
+    "contract_gate": "passed"
+  },
+  "evidence": [
+    {
+      "source": "extracted_output",
+      "content": {
+        "intent": "other",
+        "subIntent": "其他意图",
+        "confidence": 0.5
+      }
+    }
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true
+  },
+  "evaluation_boundary": {
+    "in_scope": [
+      "intent_label",
+      "confidence_threshold",
+      "fallback_policy"
+    ],
+    "out_of_scope": [
+      "multi_turn",
+      "planning_card"
+    ]
+  },
+  "consumer_contract": {
+    "project_scope": "营销策划意图识别",
+    "expected_behavior": "对于非策划类查询，归类为other"
+  },
+  "intent_model": {
+    "primary_intent": "客户特征分析",
+    "mapping_to_project_intent": "不属于直接营销策划操作，应视为other",
+    "user_goal": "了解上季度购买重疾险的客户群体特点，用于后续营销策略制定"
+  },
+  "reconstructed_intent": "用户希望分析上季度重疾险购买客户的画像，不属于直接的营销策划操作，因此系统应输出other意图。",
+  "semantic_equivalence_checks": [
+    {
+      "aspect": "意图标签",
+      "expected": "非直接营销策划的查询归类为other",
+      "actual": "other",
+      "equivalent": true
+    }
+  ],
+  "reference_generation_basis": {
+    "method": "无预定义参考，根据查询和项目范围自行构建期望"
+  },
+  "scenario": "intent_recognition",
+  "needs_human_review": true,
+  "quality_flags": [
+    "low_confidence",
+    "intent_contract_gate_passed",
+    "invalid_actual_shape"
+  ],
+  "summary": {
+    "reason": "fulfilled · 0 blocking expectations all met · 用户查询意图是对历史客户进行特征分析，属于客群洞察。当前营销策划意图识别项目中，此类查询不属于直接策划操作，因此归类为other是合理的。虽然置信度仅为0.5，但通过归入other避免了错误分发，符合低置信度下的fallback预期。整体上，输出满足了业务期望。",
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "fulfilled",
+    "assessment_count": 2,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

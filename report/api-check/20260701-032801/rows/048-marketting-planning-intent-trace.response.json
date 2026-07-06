@@ -1,0 +1,103 @@
+{
+  "trace_id": "f4e4e613-835e-4187-b40d-6611027a1aa5",
+  "project_id": "marketting-planning-intent",
+  "case_id": "mpi-premium-growth-exact-1",
+  "live_result": {
+    "project_id": "marketting-planning-intent",
+    "case_id": "mpi-premium-growth-exact-1",
+    "session_id": "eval-mpi-premium-growth-exact-1",
+    "raw_input": {
+      "query": "我想看明年NBEV增长规划"
+    },
+    "normalized_request": {
+      "case_id": "mpi-premium-growth-exact-1",
+      "query": "我想看明年NBEV增长规划",
+      "scenario": "intent_recognition",
+      "session_id": "eval-mpi-premium-growth-exact-1"
+    },
+    "call_status": "failed",
+    "call_error": "marketing-planning intent service unavailable: <urlopen error [Errno 61] Connection refused>",
+    "runtime_ms": 1,
+    "output_source": "live_service",
+    "application_boundary": {
+      "excludes": [
+        "multi_turn_planning",
+        "sse_card_generation"
+      ],
+      "scope": "single_turn_intent_recognition"
+    },
+    "interaction_mode": "single_turn"
+  },
+  "status": "error",
+  "error": "marketing-planning intent service unavailable: <urlopen error [Errno 61] Connection refused>",
+  "state_history": [
+    {
+      "attempt": 1,
+      "started_at": "2026-06-30T19:28:02.344204+00:00",
+      "status": "skipped"
+    },
+    {
+      "attempt": 1,
+      "started_at": "2026-06-30T19:28:02.344219+00:00",
+      "status": "skipped"
+    },
+    {
+      "attempt": 1,
+      "started_at": "2026-06-30T19:28:02.347721+00:00",
+      "status": "succeeded"
+    },
+    {
+      "attempt": 1,
+      "started_at": "2026-06-30T19:28:02.347774+00:00",
+      "status": "skipped"
+    }
+  ],
+  "gate_decisions": [
+    {
+      "gate_id": "trace_available",
+      "gate_type": "required_evidence",
+      "passed": false,
+      "reason": "trace missing or errored",
+      "recommended_transition": "",
+      "recoverable": false
+    }
+  ],
+  "transition_decisions": [
+    {
+      "condition": "always",
+      "from_state": "prepare_trace",
+      "reason": "always",
+      "retry_count": 0,
+      "stop_reason": "",
+      "to_state": "mock_or_input"
+    },
+    {
+      "condition": "always",
+      "from_state": "mock_or_input",
+      "reason": "always",
+      "retry_count": 0,
+      "stop_reason": "",
+      "to_state": "execute_or_capture"
+    },
+    {
+      "condition": "gate_failed_unrecoverable",
+      "from_state": "execute_or_capture",
+      "reason": "trace missing or errored",
+      "retry_count": 0,
+      "stop_reason": "",
+      "to_state": "incomplete_or_human_review"
+    },
+    {
+      "condition": "stop",
+      "from_state": "incomplete_or_human_review",
+      "reason": "stop",
+      "retry_count": 0,
+      "stop_reason": "human_review_required",
+      "to_state": "completed"
+    }
+  ],
+  "scenario": "intent_recognition",
+  "interaction_mode": "single_turn",
+  "session_id": "eval-mpi-premium-growth-exact-1",
+  "created_at": "2026-06-30T19:28:02.347418+00:00"
+}

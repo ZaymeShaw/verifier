@@ -1,0 +1,47 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::insufficient_evidence",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "insufficient_evidence",
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "0c93ac76-c27d-413d-b1c7-f9f0bec63024"
+      ],
+      "representative_traces": [
+        "0c93ac76-c27d-413d-b1c7-f9f0bec63024"
+      ],
+      "common_root_cause": "当前证据不足以定位 QA 业务根因，需要语义 judge 或人工复核补足证据。",
+      "shared_failure_pattern": "当前证据不足以定位 QA 业务根因，需要语义 judge 或人工复核补足证据。",
+      "representative_diffs": [
+        {
+          "case_id": "0c93ac76-c27d-413d-b1c7-f9f0bec63024",
+          "node": "qa_local_evidence_probe",
+          "evidence": [
+            "scenario=qa_gold_answer",
+            "actual_answer_present=True",
+            "golden_answer_present=True",
+            "contexts_present=False",
+            "data_quality_flags=[]"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "补齐样本协议或恢复语义 judge；不要基于本地探针结果直接修改业务代码。"
+      ],
+      "verification_cases": [
+        "0c93ac76-c27d-413d-b1c7-f9f0bec63024"
+      ],
+      "next_actions": [
+        "确认 semantic judge 可用后重新运行 QA judge 和 attribute。",
+        "检查样本是否提供 output.actual_answer 以及 reference.golden_answer 或 input.contexts。"
+      ]
+    }
+  ],
+  "common_root_cause": "当前证据不足以定位 QA 业务根因，需要语义 judge 或人工复核补足证据。",
+  "impact": "",
+  "priority": "high"
+}

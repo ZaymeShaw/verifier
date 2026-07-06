@@ -1,362 +1,218 @@
 [
   {
-    "id": "cs-age-sex-premium-correct-1",
+    "id": "mock-agent-client_search-cdd7df11",
+    "input": {
+      "user_text": "帮我看看公司里所有买了重疾险的客户都有谁",
+      "user_id": "default_user",
+      "trace_id": "trace_001",
+      "session_id": "session_001",
+      "source": "insurance_search",
+      "extra_input_params": {
+        "pCategorys": "重疾险"
+      }
+    },
+    "scenario": "single_condition",
+    "expected_intent": "",
+    "source": "mock_agent_llm",
+    "status": "pending",
+    "metadata": {
+      "source": "mock_agent_llm",
+      "ready": [],
+      "project_id": "client_search",
+      "live_request_mapped": true,
+      "schema_ok": true
+    }
+  },
+  {
+    "id": "mock-agent-client_search-a40d8081",
+    "input": {
+      "user_text": "帮我找一下所有女性客户，年龄在30到40岁之间，而且年缴保费超过2万，保单状态是有效的，还要包含重疾险的",
+      "user_id": "user_123456",
+      "trace_id": "trace-abc-789",
+      "session_id": "sess-xyz-456",
+      "source": "chat",
+      "extra_input_params": {
+        "clientSex": "女",
+        "clientAge": {
+          "min": 30,
+          "max": 40
+        },
+        "annPremSegNum": {
+          "min": 20000
+        },
+        "policyStatus": "有效",
+        "pCategorys": [
+          "重疾险"
+        ]
+      }
+    },
     "scenario": "multi_condition_and",
-    "input": {
-      "query": "45岁女性保费10万以上"
-    },
-    "reference": {
-      "expected_logic": "AND",
-      "expected_conditions": [
-        {
-          "field": "clientAge",
-          "operator": "RANGE",
-          "value": {
-            "min": 45,
-            "max": 45
-          }
-        },
-        {
-          "field": "clientSex",
-          "operator": "MATCH",
-          "value": "女"
-        },
-        {
-          "field": "annPremSegNum",
-          "operator": "GTE",
-          "value": 100000
-        }
-      ]
-    },
+    "expected_intent": "",
+    "source": "mock_agent_llm",
+    "status": "pending",
     "metadata": {
-      "business_axis": "demographic_premium",
-      "expected_error_type": "none",
-      "quality_dimension": "condition_semantics",
-      "previous_output": {
-        "logic": "AND",
-        "conditions": [
-          {
-            "field": "clientAge",
-            "operator": "RANGE",
-            "value": {
-              "min": 45,
-              "max": 45
-            }
-          },
-          {
-            "field": "clientSex",
-            "operator": "MATCH",
-            "value": "女"
-          },
-          {
-            "field": "annPremSegNum",
-            "operator": "GTE",
-            "value": 100000
-          }
-        ],
-        "summary": "45岁女性且年缴保费10万以上客户"
-      }
-    },
-    "expected_quality": "correct",
-    "source": "data_mock_seed",
-    "status": "pending"
+      "source": "mock_agent_llm",
+      "ready": [],
+      "project_id": "client_search",
+      "live_request_mapped": true,
+      "schema_ok": true
+    }
   },
   {
-    "id": "cs-survival-benefit-correct-1",
-    "scenario": "policy_status_filter",
+    "id": "mock-agent-client_search-846eeb3a",
     "input": {
-      "query": "有生存金未领取的客户"
-    },
-    "reference": {
-      "expected_logic": "AND",
-      "expected_conditions": [
-        {
-          "field": "polNoInfo.payamountdue",
-          "operator": "MATCH",
-          "value": "是"
-        }
-      ]
-    },
-    "metadata": {
-      "business_axis": "survival_benefit",
-      "expected_error_type": "none",
-      "quality_dimension": "field_mapping",
-      "previous_output": {
-        "logic": "AND",
-        "conditions": [
-          {
-            "field": "polNoInfo.payamountdue",
-            "operator": "MATCH",
-            "value": "是"
-          }
-        ],
-        "summary": "存在未领取生存金客户"
+      "user_text": "帮我查一下所有买了重疾险或者两全险的客户，男性也行，女性也行，年龄不限",
+      "user_id": "user_12345",
+      "trace_id": "trace_20250220120000_abcd",
+      "session_id": "session_67890",
+      "source": "insurance_search",
+      "extra_input_params": {
+        "pCategorys": [
+          "重疾险",
+          "两全险"
+        ]
       }
     },
-    "expected_quality": "correct",
-    "source": "data_mock_seed",
-    "status": "pending"
-  },
-  {
-    "id": "cs-premium-unit-error-1",
-    "scenario": "premium_unit_conversion",
-    "input": {
-      "query": "年缴保费一万以上的客户"
-    },
-    "reference": {
-      "expected_logic": "AND",
-      "expected_conditions": [
-        {
-          "field": "annPremSegNum",
-          "operator": "GTE",
-          "value": 10000
-        }
-      ]
-    },
-    "metadata": {
-      "business_axis": "premium",
-      "expected_error_type": "premium_unit_error",
-      "quality_dimension": "numeric_grounding",
-      "previous_output": {
-        "logic": "AND",
-        "conditions": [
-          {
-            "field": "annPremSegNum",
-            "operator": "GTE",
-            "value": 1
-          }
-        ],
-        "summary": "年缴保费一万以上客户"
-      }
-    },
-    "expected_quality": "incorrect",
-    "source": "data_mock_seed",
-    "status": "pending"
-  },
-  {
-    "id": "cs-age-boundary-correct-1",
-    "scenario": "age_boundary",
-    "input": {
-      "query": "45岁以上女性客户"
-    },
-    "reference": {
-      "expected_logic": "AND",
-      "expected_conditions": [
-        {
-          "field": "clientAge",
-          "operator": "GTE",
-          "value": 45
-        },
-        {
-          "field": "clientSex",
-          "operator": "MATCH",
-          "value": "女"
-        }
-      ]
-    },
-    "metadata": {
-      "business_axis": "demographic",
-      "expected_error_type": "none",
-      "quality_dimension": "boundary_operator",
-      "previous_output": {
-        "logic": "AND",
-        "conditions": [
-          {
-            "field": "clientAge",
-            "operator": "GTE",
-            "value": 45
-          },
-          {
-            "field": "clientSex",
-            "operator": "MATCH",
-            "value": "女"
-          }
-        ],
-        "summary": "45岁以上女性客户"
-      }
-    },
-    "expected_quality": "correct",
-    "source": "data_mock_seed",
-    "status": "pending"
-  },
-  {
-    "id": "cs-product-or-correct-1",
     "scenario": "product_category_or",
-    "input": {
-      "query": "买了年金险或两全险的客户"
-    },
-    "reference": {
-      "expected_logic": "OR",
-      "expected_conditions": [
-        {
-          "field": "pCategorys",
-          "operator": "CONTAINS",
-          "value": [
-            "年金保险"
-          ]
-        },
-        {
-          "field": "pCategorys",
-          "operator": "CONTAINS",
-          "value": [
-            "两全保险"
-          ]
-        }
-      ]
-    },
+    "expected_intent": "",
+    "source": "mock_agent_llm",
+    "status": "pending",
     "metadata": {
-      "business_axis": "product",
-      "expected_error_type": "none",
-      "quality_dimension": "or_semantics",
-      "previous_output": {
-        "logic": "OR",
-        "conditions": [
-          {
-            "field": "pCategorys",
-            "operator": "CONTAINS",
-            "value": [
-              "年金保险"
-            ]
-          },
-          {
-            "field": "pCategorys",
-            "operator": "CONTAINS",
-            "value": [
-              "两全保险"
-            ]
-          }
-        ],
-        "summary": "购买年金险或两全险客户"
-      }
-    },
-    "expected_quality": "correct",
-    "source": "data_mock_seed",
-    "status": "pending"
+      "source": "mock_agent_llm",
+      "ready": [],
+      "project_id": "client_search",
+      "live_request_mapped": true,
+      "schema_ok": true
+    }
   },
   {
-    "id": "cs-age-gt-boundary-error-1",
-    "scenario": "age_boundary",
+    "id": "mock-agent-client_search-71c39553",
     "input": {
-      "query": "大于50岁的客户"
-    },
-    "reference": {
-      "expected_logic": "AND",
-      "expected_conditions": [
-        {
-          "field": "clientAge",
-          "operator": "GT",
-          "value": 50
-        }
-      ]
-    },
-    "metadata": {
-      "business_axis": "demographic",
-      "expected_error_type": "boundary_operator_error",
-      "quality_dimension": "boundary_operator",
-      "previous_output": {
-        "logic": "AND",
-        "conditions": [
-          {
-            "field": "clientAge",
-            "operator": "GTE",
-            "value": 50
-          }
-        ],
-        "summary": "50岁及以上客户"
+      "user_text": "帮我找一下年缴保费超过两万，而且买过重疾险但没买年金险的女性客户",
+      "user_id": "default_user",
+      "trace_id": "trace_123456",
+      "session_id": "session_abcdef",
+      "source": "insurance_search",
+      "extra_input_params": {
+        "sex": "女",
+        "annual_premium_min": 20000,
+        "must_include_category": "重疾险",
+        "must_exclude_category": "年金险"
       }
     },
-    "expected_quality": "incorrect",
-    "source": "data_mock_seed",
-    "status": "pending"
-  },
-  {
-    "id": "cs-critical-illness-only-1",
     "scenario": "product_exclusion",
-    "input": {
-      "query": "只有重疾险的客户"
-    },
-    "reference": {
-      "expected_logic": "AND",
-      "expected_conditions": [
-        {
-          "field": "pCategorys",
-          "operator": "CONTAINS",
-          "value": [
-            "疾病保险"
-          ]
-        },
-        {
-          "field": "pCategorys",
-          "operator": "NOT_CONTAINS",
-          "value": [
-            "年金保险",
-            "两全保险",
-            "医疗保险",
-            "意外保险",
-            "寿险",
-            "护理保险"
-          ]
-        }
-      ]
-    },
+    "expected_intent": "",
+    "source": "mock_agent_llm",
+    "status": "pending",
     "metadata": {
-      "business_axis": "product",
-      "expected_error_type": "enum_values_out_of_boundary",
-      "quality_dimension": "exclusion_semantics",
-      "previous_output": {
-        "logic": "AND",
-        "conditions": [
-          {
-            "field": "pCategorys",
-            "operator": "CONTAINS",
-            "value": [
-              "疾病保险"
-            ]
-          },
-          {
-            "field": "pCategorys",
-            "operator": "NOT_CONTAINS",
-            "value": [
-              "年金保险",
-              "两全保险",
-              "医疗保险",
-              "意外保险",
-              "寿险",
-              "护理保险"
-            ]
-          }
-        ],
-        "summary": "仅购买重疾险客户"
-      }
-    },
-    "expected_quality": "incorrect",
-    "source": "data_mock_seed",
-    "status": "pending"
+      "source": "mock_agent_llm",
+      "ready": [],
+      "project_id": "client_search",
+      "live_request_mapped": true,
+      "schema_ok": true
+    }
   },
   {
-    "id": "cs-family-responsibility-unsupported-1",
-    "scenario": "unsupported_family_phrase",
+    "id": "mock-agent-client_search-8ed9884a",
     "input": {
-      "query": "上有老下有小的客户"
-    },
-    "reference": {
-      "expected_logic": "AND",
-      "expected_conditions": [],
-      "allow_empty_conditions": true,
-      "expected_reason": "该口语化家庭责任表达缺少当前字段定义支持，不能硬编造年龄或家庭成员条件。"
-    },
-    "metadata": {
-      "business_axis": "unsupported_semantic_phrase",
-      "expected_error_type": "unsupported_family_phrase",
-      "quality_dimension": "scope_control",
-      "previous_output": {
-        "logic": "AND",
-        "conditions": [],
-        "summary": "未能映射到可执行客户搜索条件"
+      "user_text": "帮我找年龄在60岁以上的客户",
+      "user_id": "agent_001",
+      "trace_id": "trace_abc123",
+      "session_id": "session_xyz789",
+      "source": "chat",
+      "extra_input_params": {
+        "clientAge_min": 60,
+        "clientAge_include_boundary": true
       }
     },
-    "expected_quality": "incorrect",
-    "source": "data_mock_seed",
-    "status": "pending"
+    "scenario": "age_boundary",
+    "expected_intent": "",
+    "source": "mock_agent_llm",
+    "status": "pending",
+    "metadata": {
+      "source": "mock_agent_llm",
+      "ready": [],
+      "project_id": "client_search",
+      "live_request_mapped": true,
+      "schema_ok": true
+    }
+  },
+  {
+    "id": "mock-agent-client_search-c52ad0bf",
+    "input": {
+      "user_text": "帮我搜一下每年保费交1万以上的女性客户，年龄在30到40岁之间，最好是有重疾险的。",
+      "user_id": "user_default",
+      "trace_id": "trace_123456",
+      "session_id": "session_789012",
+      "source": "chat",
+      "extra_input_params": {
+        "clientSex": "女",
+        "age_min": 30,
+        "age_max": 40,
+        "annual_premium_min": 10000,
+        "insurance_category": "重疾险"
+      }
+    },
+    "scenario": "premium_unit_conversion",
+    "expected_intent": "",
+    "source": "mock_agent_llm",
+    "status": "pending",
+    "metadata": {
+      "source": "mock_agent_llm",
+      "ready": [],
+      "project_id": "client_search",
+      "live_request_mapped": true,
+      "schema_ok": true
+    }
+  },
+  {
+    "id": "mock-agent-client_search-23321bb0",
+    "input": {
+      "user_text": "帮我找一下所有保单还在有效期的客户，最好是有重疾险的",
+      "user_id": "default_user",
+      "trace_id": "trace_policy_status_filter_001",
+      "session_id": "session_001",
+      "source": "insurance_crm",
+      "extra_input_params": {
+        "policy_status": "effective",
+        "preferred_insurance_category": "重疾险"
+      }
+    },
+    "scenario": "policy_status_filter",
+    "expected_intent": "",
+    "source": "mock_agent_llm",
+    "status": "pending",
+    "metadata": {
+      "source": "mock_agent_llm",
+      "ready": [],
+      "project_id": "client_search",
+      "live_request_mapped": true,
+      "schema_ok": true
+    }
+  },
+  {
+    "id": "mock-agent-client_search-1685e2e5",
+    "input": {
+      "user_text": "帮我查一下，有哪些客户是给父母买了年金险的",
+      "user_id": "default_user_001",
+      "trace_id": "trace_unsupported_family_001",
+      "session_id": "session_default_001",
+      "source": "insurance_customer_search",
+      "extra_input_params": {
+        "relationship": "父母",
+        "insurance_type": "年金险"
+      }
+    },
+    "scenario": "unsupported_family_phrase",
+    "expected_intent": "",
+    "source": "mock_agent_llm",
+    "status": "pending",
+    "metadata": {
+      "source": "mock_agent_llm",
+      "ready": [],
+      "project_id": "client_search",
+      "live_request_mapped": true,
+      "schema_ok": true
+    }
   }
 ]

@@ -1,0 +1,138 @@
+{
+  "project_id": "marketting-planning-intent",
+  "rows": [
+    {
+      "id": "mock-agent-marketting-planning-intent-9e16256b",
+      "input": "default_org",
+      "scenario": "intent_recognition",
+      "output_summary": "{\"confidence\": 0.5, \"intent\": \"other\", \"subIntent\": \"其他意图\"}",
+      "reference_summary": "{\"confidence\": 0.85, \"intent\": \"客户分析\", \"subIntent\": \"客户特征分析\", \"target_value\": \"上季度重疾险客户\"}",
+      "status": "not_fulfilled",
+      "execution_mode": "",
+      "output_source": "live_service",
+      "verdict": "incorrect",
+      "score": 0.0,
+      "fulfillment_status": "not_fulfilled",
+      "judge_summary": {
+        "status": "not_fulfilled",
+        "fulfillment_status": "not_fulfilled",
+        "verdict": "incorrect",
+        "score": 0.0,
+        "reason": "not_fulfilled · blocking=[(none)]",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 5,
+        "blocking_count": 0,
+        "primary_failure_dimensions": [
+          {
+            "blocking": false,
+            "downstream_impact": "",
+            "evidence": "用户查询明确要求查看上季度购买重疾险的客户特征，属于典型的客户分析意图。然而系统输出意图为'other'（其他意图），置信度仅0.5，未提取任何业务实体。根据业务期望，意图标签错误、兜底策略误触发、置信度不足、实体缺失、无法调度等所有关键期望均未满足，整体评判为未满足。系统应能识别此类查询并归类到客户分析意图，提取时间、产品等条件。",
+            "expectation_id": "关键业务实体提取",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": false,
+            "downstream_impact": "",
+            "evidence": "用户查询明确要求查看上季度购买重疾险的客户特征，属于典型的客户分析意图。然而系统输出意图为'other'（其他意图），置信度仅0.5，未提取任何业务实体。根据业务期望，意图标签错误、兜底策略误触发、置信度不足、实体缺失、无法调度等所有关键期望均未满足，整体评判为未满足。系统应能识别此类查询并归类到客户分析意图，提取时间、产品等条件。",
+            "expectation_id": "意图可调度至下游模块",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": false,
+            "downstream_impact": "",
+            "evidence": "用户查询明确要求查看上季度购买重疾险的客户特征，属于典型的客户分析意图。然而系统输出意图为'other'（其他意图），置信度仅0.5，未提取任何业务实体。根据业务期望，意图标签错误、兜底策略误触发、置信度不足、实体缺失、无法调度等所有关键期望均未满足，整体评判为未满足。系统应能识别此类查询并归类到客户分析意图，提取时间、产品等条件。",
+            "expectation_id": "意图标签准确反映客户分析查询",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": false,
+            "downstream_impact": "",
+            "evidence": "用户查询明确要求查看上季度购买重疾险的客户特征，属于典型的客户分析意图。然而系统输出意图为'other'（其他意图），置信度仅0.5，未提取任何业务实体。根据业务期望，意图标签错误、兜底策略误触发、置信度不足、实体缺失、无法调度等所有关键期望均未满足，整体评判为未满足。系统应能识别此类查询并归类到客户分析意图，提取时间、产品等条件。",
+            "expectation_id": "置信度满足下游可信要求",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": false,
+            "downstream_impact": "",
+            "evidence": "用户查询明确要求查看上季度购买重疾险的客户特征，属于典型的客户分析意图。然而系统输出意图为'other'（其他意图），置信度仅0.5，未提取任何业务实体。根据业务期望，意图标签错误、兜底策略误触发、置信度不足、实体缺失、无法调度等所有关键期望均未满足，整体评判为未满足。系统应能识别此类查询并归类到客户分析意图，提取时间、产品等条件。",
+            "expectation_id": "避免兜底策略误触发",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          }
+        ]
+      },
+      "attribution_summary": {
+        "attribution_count": 6,
+        "causal_category": "needs_human_review",
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 4,
+        "summary_text": "LLM 模型（qwen3-next-80b-a3b-instruct）在执行意图识别时，将明确的客户画像查询「帮我看看上季度买了重疾险的客户都是啥样的？」错误分类为兜底意图 other（4001），置信度仅 0.5。根因链条：(1) intent_prompt.py 中 customer_portrait 的 few-shot 示例未能覆盖口语化表达「都是啥样的」这类非正式客户画像查询模式；(2) prompt 中 ambiguous cases 规则为无条件「Default to other」，模型在不确定时直接落入兜底而无纠正机制；(3) intent_recognition.py 的规则快捷路径（try_rule_based_intent）仅覆盖 homepage 正则和 NBEV 关键词，未对客户画像类查询设置关键词兜底规则；(4) recognize_intent 在 LLM 返回 other+低置信度时无二次校验或阈值门控，直接透传错误结果。综合导致客户画像查询被静默归类为 other，下游调度链完全断裂。"
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 4,
+        "protocol_gap_count": 1,
+        "consistency_gap_count": 0,
+        "recommended_fix_count": 2,
+        "issues": [
+          "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+          "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+          "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+          "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug"
+        ]
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "quality_flags": [
+        "intent_misclassification",
+        "low_confidence",
+        "fallback_overuse",
+        "missing_slots",
+        "intent_contract_gate_failed",
+        "intent_misclassification",
+        "low_confidence",
+        "fallback_overuse",
+        "missing_slots",
+        "intent_contract_gate_failed",
+        "ungrounded_root_cause"
+      ],
+      "check_passed": false,
+      "issue_count": 5,
+      "fallback_count": 0,
+      "causal_category": "needs_human_review",
+      "divergence_stage": "intent_contract_gate",
+      "root_cause_summary": "LLM 模型（qwen3-next-80b-a3b-instruct）在执行意图识别时，将明确的客户画像查询「帮我看看上季度买了重疾险的客户都是啥样的？」错误分类为兜底意图 other（4001），置信度仅 0.5。根因链条：(1) intent_prompt.py 中 customer_portrait 的 few-shot 示例未能覆盖口语化表达「都是啥样的」这类非正式客户画像查询模式；(2) prompt 中 ambiguous cases 规则为无条件「Default to other」，模型在不确定时直接落入兜底而无纠正机制；(3) intent_recognition.py 的规则快捷路径（try_rule_based_intent）仅覆盖 homepage 正则和 NBEV 关键词，未对客户画像类查询设置关键词兜底规则；(4) recognize_intent 在 LLM 返回 other+低置信度时无二次校验或阈值门控，直接透传错误结果。综合导致客户画像查询被静默归类为 other，下游调度链完全断裂。",
+      "created_at": "2026-07-05T03:46:59.139767+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "1fdeaa7f-00f7-44a3-9720-0b62e05c8aec"
+    }
+  ],
+  "total": 1,
+  "summary": {
+    "fulfilled_count": 0,
+    "not_fulfilled_count": 1,
+    "pending_count": 0,
+    "correct_count": 0,
+    "incorrect_count": 1,
+    "uncertain_count": 0,
+    "human_review_count": 0,
+    "check_failed_count": 1,
+    "issue_count": 5,
+    "fallback_count": 0,
+    "rows_with_fallback_count": 0,
+    "by_scenario": {
+      "intent_recognition": 1
+    }
+  }
+}

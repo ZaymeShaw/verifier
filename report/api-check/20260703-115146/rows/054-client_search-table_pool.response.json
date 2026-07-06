@@ -1,0 +1,92 @@
+{
+  "project_id": "client_search",
+  "rows": [
+    {
+      "id": "mock-agent-client_search-b4a575aa",
+      "input": "session-12345",
+      "scenario": "",
+      "output_summary": "{\"empty_result_reason\": \"\", \"external_boundary_sources\": {\"config_paths\": {\"source_enhanced_rules\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/llm_clien…",
+      "reference_summary": "{\"empty_result_reason\": \"\", \"external_boundary_sources\": {\"config_paths\": {\"source_enhanced_rules\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/llm_clien…",
+      "status": "fulfilled",
+      "execution_mode": "",
+      "output_source": "live_service",
+      "verdict": "correct",
+      "fulfillment_status": "fulfilled",
+      "judge_summary": {
+        "status": "fulfilled",
+        "fulfillment_status": "fulfilled",
+        "verdict": "correct",
+        "reason": "fulfilled · 3 blocking expectations all met · 用户查询'买过年金险的客户'，parser 正确选择了 pCategorys 字段，将口语'年金险'映射为标准值'年金保险'。操作符使用了 MATCH 而非 prompt 示例中的 CONTAINS，但根据项目 judge boundary 规则，两者由后处理统一处置、在 ES 查询语义上等价，不影响检索正确性。三个阻塞级业务期望全部满足，无字段错误、值映射错误或语义偏差。当前评价范围限于 parser 条件语义，下游搜索不可用不影响本次判断。",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 3,
+        "blocking_count": 3
+      },
+      "attribution_summary": {
+        "attribution_count": 3,
+        "causal_category": "no_issue",
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 1,
+        "summary_text": "业务预期已达成"
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 3,
+        "protocol_gap_count": 0,
+        "consistency_gap_count": 0,
+        "recommended_fix_count": 1,
+        "issues": [
+          "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+          "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+          "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+        ]
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "quality_flags": [
+        {
+          "detail": "actual 使用 MATCH，expected 为 CONTAINS，但项目规则声明两者等价",
+          "flag": "operator_variant",
+          "severity": "info"
+        },
+        {
+          "detail": "capability_manifest 的 pCategorys enums 列表中未包含'年金保险'，但字段定义和 prompt 示例均确认其为有效值",
+          "flag": "enum_not_in_manifest",
+          "severity": "info"
+        }
+      ],
+      "check_passed": false,
+      "issue_count": 3,
+      "fallback_count": 0,
+      "causal_category": "no_issue",
+      "divergence_stage": "fulfillment_assessment",
+      "root_cause_summary": "业务预期已达成",
+      "created_at": "2026-07-03T03:51:48.290816+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "448f2719-af57-45c4-bb28-592a98584bfc"
+    }
+  ],
+  "total": 1,
+  "summary": {
+    "fulfilled_count": 1,
+    "not_fulfilled_count": 0,
+    "pending_count": 0,
+    "correct_count": 1,
+    "incorrect_count": 0,
+    "uncertain_count": 0,
+    "human_review_count": 0,
+    "check_failed_count": 1,
+    "issue_count": 3,
+    "fallback_count": 0,
+    "rows_with_fallback_count": 0,
+    "by_scenario": {
+      "未分类": 1
+    }
+  }
+}

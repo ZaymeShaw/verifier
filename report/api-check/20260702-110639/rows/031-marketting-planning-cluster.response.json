@@ -1,0 +1,66 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "needs_human_review::not_evaluable",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图识别准确度",
+        "阶段路由正确性",
+        "业务指标识别",
+        "时间范围理解",
+        "可操作改进建议生成"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "242e7294-e11a-4531-82aa-8389fcf8ff97"
+      ],
+      "representative_traces": [
+        "242e7294-e11a-4531-82aa-8389fcf8ff97"
+      ],
+      "common_root_cause": "系统意图识别模块（INTENT_RECOGNITION_PROMPT + IntentType 枚举 + 正则规则）在设计时仅覆盖了队伍画像分析（team_portrait）、客户画像分析（customer_portrait）和 NBEV 达成路径规划（nbev_planning）三类核心业务场景，未将'营销活动效果分析与改进建议'纳入意图分类体系。用户查询'帮我看一下我们上个月的营销活动效果怎么样，有什么地方可以改进吗？'因无法匹配任何已定义意图类别，被 LLM 按 prompt 指令正确归为 other(4001)。adapter 路由层将 intent 4001 硬编码映射至 non_agent 阶段，在 allow_fallback=false 的应用边界下，该路由属于无效降级，导致规划引擎完全未被调度，所有下游业务期望（指标识别、时间解析、卡片生成）全部落空。这不是代码实现错误（implementation bug），而是意图分类体系的能力缺口（model_capability_gap）：系统正确执行了设计逻辑，但设计本身未覆盖当前用户需求。",
+      "shared_failure_pattern": "系统意图识别模块（INTENT_RECOGNITION_PROMPT + IntentType 枚举 + 正则规则）在设计时仅覆盖了队伍画像分析（team_portrait）、客户画像分析（customer_portrait）和 NBEV 达成路径规划（nbev_planning）三类核心业务场景，未将'营销活动效果分析与改进建议'纳入意图分类体系。用户查询'帮我看一下我们上个月的营销活动效果怎么样，有什么地方可以改进吗？'因无法匹配任何已定义意图类别，被 LLM 按 prompt 指令正确归为 other(4001)。adapter 路由层将 intent 4001 硬编码映射至 non_agent 阶段，在 allow_fallback=false 的应用边界下，该路由属于无效降级，导致规划引擎完全未被调度，所有下游业务期望（指标识别、时间解析、卡片生成）全部落空。这不是代码实现错误（implementation bug），而是意图分类体系的能力缺口（model_capability_gap）：系统正确执行了设计逻辑，但设计本身未覆盖当前用户需求。",
+      "representative_diffs": [
+        {
+          "case_id": "242e7294-e11a-4531-82aa-8389fcf8ff97",
+          "node": "intent_recognition",
+          "expected": "intent 被分类为营销领域意图（如 campaign_review / marketing_analysis），stage 路由至 planning 或 clarification",
+          "actual": "intent=4001(other)，stage=non_agent",
+          "evidence": [
+            "intent_prompt.py INTENT_RECOGNITION_PROMPT: 仅含 4 类主意图，无'营销活动效果分析'类别",
+            "intent.py IntentType 枚举: 7 个值中无 marketing_campaign 相关",
+            "intent_recognition.py _HOMEPAGE_RULES: 不覆盖营销活动关键词",
+            "adapter.py _extract_stage: intent 4001 → non_agent",
+            "extracted_output.stage = 'non_agent'"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "1. 在 app/schemas/intent.py 的 IntentType 枚举中新增 campaign_performance_review（营销活动效果回顾）枚举值",
+        "2. 在 app/workflow/prompts/intent_prompt.py 的 INTENT_RECOGNITION_PROMPT 中增加第 4 类意图描述：'campaign_performance_review（营销活动效果分析）：用户想查看历史营销活动的效果数据、ROI、转化率等指标，并获取改进建议。示例：帮我看下上个月活动效果、活动ROI分析、营销活动有什么可以改进的'",
+        "3. 在 app/workflow/steps/intent_recognition.py 的 _HOMEPAGE_RULES 中增加正则规则，如 re.compile(r'营销活动.*(?:效果|改进|ROI|转化)', re.IGNORECASE) → IntentType.campaign_performance_review",
+        "4. 在 adapter.py 的 _extract_stage 方法中，将新增的 campaign_performance_review 意图映射至 planning 或 clarification 阶段（而非 non_agent）",
+        "5. 可选：在 CARD_CODE_PATH_TYPE_MAP 或卡片模板中增加营销活动效果分析对应的卡片类型"
+      ],
+      "verification_cases": [
+        "242e7294-e11a-4531-82aa-8389fcf8ff97"
+      ],
+      "next_actions": [
+        "复核 INTENT_RECOGNITION_PROMPT 中是否确实无'营销活动效果''活动分析''活动回顾'等关键词的意图描述",
+        "复核 IntentType 枚举是否确实无 marketing 或 campaign 相关枚举值",
+        "复核 _HOMEPAGE_RULES 正则列表是否不含'营销活动'或'活动效果'模式",
+        "在开发环境向当前 prompt 发送'帮我看一下上个月的营销活动效果怎么样'，验证 LLM 是否稳定输出 other(4001)",
+        "确认 adapter._extract_stage 中 intent 4001 → non_agent 的映射是否存在其他条件分支"
+      ]
+    }
+  ],
+  "common_root_cause": "",
+  "impact": "",
+  "priority": ""
+}

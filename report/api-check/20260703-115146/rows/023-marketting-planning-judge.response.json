@@ -1,0 +1,368 @@
+{
+  "trace_id": "c87d7fc5-d986-46ce-b0fe-f5c5be6267de",
+  "project_id": "marketting-planning",
+  "verdict": "incorrect",
+  "business_expectations": [
+    {
+      "expectation_id": "识别核心业务指标为NBEV",
+      "downstream_consumer": "planning_stage",
+      "user_intent": "分析NBEV目标达成路径",
+      "expected_outcome": "intent_detected事件携带的业务实体包含NBEV",
+      "required_capabilities": [
+        "business_metric_recognition"
+      ],
+      "acceptance_criteria": [
+        "intent_detected事件存在",
+        "关联的元数据或后续推理中明显引用NBEV指标（例如reasoning内容提及）"
+      ],
+      "priority": "highest"
+    },
+    {
+      "expectation_id": "识别时间范围为今年",
+      "downstream_consumer": "planning_stage",
+      "user_intent": "分析今年目标差距",
+      "expected_outcome": "intent_detected或planning_started上下文中包含时间范围（今年）",
+      "required_capabilities": [
+        "time_range_recognition"
+      ],
+      "acceptance_criteria": [
+        "在意图或规划推理中时间上下文为当年"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "识别目标差距需量化填补",
+      "downstream_consumer": "clarification_or_planning_stage",
+      "user_intent": "弥补差距的分析需要具体数字",
+      "expected_outcome": "如果当前会话缺少差距数值，系统应发起澄清；否则应在规划中明确引用了具体的差距值",
+      "required_capabilities": [
+        "slot_filling",
+        "numerical_reasoning"
+      ],
+      "acceptance_criteria": [
+        "存在澄清事件（如ask_for_required_slot）且目标为NBEV差距数值",
+        "或planning卡片中已包含显式的NBEV差距数值并基于此进行计算"
+      ],
+      "priority": "critical"
+    },
+    {
+      "expectation_id": "识别分解维度为销售员数量",
+      "downstream_consumer": "planning_stage",
+      "user_intent": "通过增加销售员提升NBEV",
+      "expected_outcome": "规划或分析卡片以销售员数量作为主要驱动因子",
+      "required_capabilities": [
+        "decomposition_dimension_recognition"
+      ],
+      "acceptance_criteria": [
+        "规划上下文中存在销售员数量、人均贡献等关联字段"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "意图路由至规划阶段",
+      "downstream_consumer": "frontend",
+      "user_intent": "分析这条路行不行",
+      "expected_outcome": "extracted_output.stage为planning且出现planning_started与card_delta事件",
+      "required_capabilities": [
+        "stage_routing"
+      ],
+      "acceptance_criteria": [
+        "planning_started事件存在",
+        "card_delta或等价卡片事件存在"
+      ],
+      "priority": "highest"
+    },
+    {
+      "expectation_id": "关键参数缺失时发起澄清询问",
+      "downstream_consumer": "clarification_phase",
+      "user_intent": "获得准确、可信的分析",
+      "expected_outcome": "存在至少一个澄清事件或session中记录了必须字段后补填",
+      "required_capabilities": [
+        "slot_filling",
+        "clarification_generation"
+      ],
+      "acceptance_criteria": [
+        "事件流中出现clarification或ask字段的事件",
+        "或session_summary.missing_fields体现了尚未提供的必要参数"
+      ],
+      "priority": "critical"
+    },
+    {
+      "expectation_id": "产出可操作的规划结果",
+      "downstream_consumer": "frontend",
+      "user_intent": "给一个量化分析和可行性判断",
+      "expected_outcome": "planning卡片内容包含量化提升数值和可行性分析",
+      "required_capabilities": [
+        "quantitative_analysis",
+        "card_generation"
+      ],
+      "acceptance_criteria": [
+        "卡片或消息中包含招聘人数、预期NBEV提升数值",
+        "以及可行性判断语句"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "SSE事件流完整且正确终止",
+      "downstream_consumer": "frontend",
+      "user_intent": "正常交互",
+      "expected_outcome": "event_summary.completed为true，且final_event为done",
+      "required_capabilities": [
+        "sse_streaming"
+      ],
+      "acceptance_criteria": [
+        "extracted_output.event_summary.completed == true",
+        "final_event == 'done'"
+      ],
+      "priority": "high"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "识别核心业务指标为NBEV",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "intent_detected事件或推理内容明确提及NBEV"
+      ],
+      "actual_evidence": [
+        "event_summary中出现intent_detected事件，且后续reasoning_message_content（推理内容）大概率基于NBEV进行分析"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true
+      },
+      "downstream_impact": "下游规划可围绕NBEV展开",
+      "blocking": true
+    },
+    {
+      "expectation_id": "识别时间范围为今年",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "意图或规划中引用本年度上下文"
+      ],
+      "actual_evidence": [
+        "用户消息中明确提及“今年”，且系统未改变时间范围，默认继承该约束"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true
+      },
+      "downstream_impact": "分析结果限定在当年，避免误导",
+      "blocking": true
+    },
+    {
+      "expectation_id": "识别目标差距需量化填补",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "澄清事件请求NBEV差距数值，或规划卡片中显式引用差距值"
+      ],
+      "actual_evidence": [
+        "事件列表中无澄清事件，reasoning_message_content和card_delta可能基于默认假设生成了分析，但系统未获取或展示具体差距数值"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "evaluable_errors": [
+          "缺少澄清步骤，未填补关键数值缺口即进入规划"
+        ]
+      },
+      "downstream_impact": "规划结果缺乏可验证的数据基础，可能误导用户决策",
+      "blocking": true
+    },
+    {
+      "expectation_id": "识别分解维度为销售员数量",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "规划变量包含销售员人数"
+      ],
+      "actual_evidence": [
+        "用户意图明确围绕“多招些销售员”，系统从事件序列看已将这一维度作为分析核心，reasoning_message_content很可能围绕销售员数量展开"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true
+      },
+      "downstream_impact": "确保规划以正确的驱动因子进行建模",
+      "blocking": true
+    },
+    {
+      "expectation_id": "意图路由至规划阶段",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "planning_started事件和card_delta事件"
+      ],
+      "actual_evidence": [
+        "event_summary中出现planning_started和card_delta事件"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true
+      },
+      "downstream_impact": "用户可直接获得分析结果，路径正确",
+      "blocking": true
+    },
+    {
+      "expectation_id": "关键参数缺失时发起澄清询问",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "存在澄清事件或会话记录中标注缺失字段"
+      ],
+      "actual_evidence": [
+        "事件流中无任何澄清事件，session_summary未记录缺失字段或正在收集的信息"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "evaluable_errors": [
+          "在NBEV差距、销售人员人均贡献等关键输入缺失的情况下，系统直接进入规划，未发起澄清"
+        ]
+      },
+      "downstream_impact": "规划可信度大幅下降，下游消费者可能基于错误假设执行",
+      "blocking": true
+    },
+    {
+      "expectation_id": "产出可操作的规划结果",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "卡片内容包含量化提升数值和可行性结论"
+      ],
+      "actual_evidence": [
+        "trace中card_delta事件存在，但未提供卡片具体内容，无法判断是否包含所需量化数据和可行性判断"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "uncontrollable_limits": [
+          "extracted_output未抓取到卡片payload，无法评估内容质量"
+        ]
+      },
+      "downstream_impact": "无法确定用户看到的信息是否满足需求",
+      "blocking": true
+    },
+    {
+      "expectation_id": "SSE事件流完整且正确终止",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "completed=true, final_event=done"
+      ],
+      "actual_evidence": [
+        "event_summary.completed为true，final_event为done"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true
+      },
+      "downstream_impact": "前端可正常结束流，用户体验无中断",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "assessment_count": 8,
+    "blocking_expectations": [
+      "识别目标差距需量化填补",
+      "关键参数缺失时发起澄清询问",
+      "产出可操作的规划结果"
+    ]
+  },
+  "expected": {
+    "stage": "用户希望系统基于今年NBEV目标差距，量化分析增加销售员能带来的提升，并评估该路径的可行性。该意图隐含需要系统获取差距数值和销售员人均贡献，否则分析不可信。"
+  },
+  "reasoning_summary": "用户意图明确且系统有能力进入规划阶段，但在数据完备性上出现严重缺口：没有澄清关键的NBEV差距和销售人员产能，就急进规划生成卡片。这导致两个阻塞期望未满足——‘识别目标差距需量化填补’和‘关键参数缺失时发起澄清询问’。虽然其余路由、维度识别和流完成均符预期，但核心阻塞项失效使整个交互无法满足用户的真实需求。",
+  "judge_basis": "基于用户原始请求、规划agent的阶段定义、以及关键维度（business_metric、target_value_and_unit、decomposition_dimensions、stage_routing、planning_actionability、sse_completion）逐项评估。由于reference缺失，judge根据通用营销规划责任边界生成期望。",
+  "judge_method": "intent_model拆解用户目标 -> 生成原子化business_expectations -> 依据trace events及session状态逐项评估",
+  "verdict_derivation": {
+    "primary_boundary": "system_responsibility_with_declared_external_boundary",
+    "assessment_summary": "系统正确识别了核心指标、时间范围和分解维度，并将意图路由至规划阶段，SSE流正常终止。然而，在关键参数（NBEV差距具体值、销售人员人均贡献）缺失的情况下，未执行澄清步骤直接进入规划，导致分析可信度无法保证；且由于卡片内容不可见，无法判断输出是否可操作。因此，存在两个阻塞级期望未满足。",
+    "blocking_gaps": [
+      "识别目标差距需量化填补",
+      "关键参数缺失时发起澄清询问"
+    ],
+    "why_verdict": "两个阻塞期望未满足：未对缺失的NBEV差距数值进行澄清，也未补充销售员人均贡献等必要输入。这违反了下游消费者对可靠规划的基本要求，使整体规划的可信证与可执行性下降。尽管系统形式上完成了规划卡片生成，但未满足业务闭环的必备条件。"
+  },
+  "evidence": [
+    "extracted_output.event_summary.names 仅包含 intent_detected, reasoning_message_content, planning_started, card_delta, done，无 clarifications/ask 事件",
+    "session_summary 中未记录任何缺失字段或待收集项"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "evaluable_errors": [
+      "在缺少关键数值时跳过澄清，直接生成规划，属于系统内部可纠正的错误"
+    ],
+    "reasoning": "系统未受外部依赖不可用影响，所有评估均基于其自身的行为选择，因此范围可判定。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "marketing-planning-clarification-and-data-completeness",
+    "primary_boundary_name": "营销规划澄清与数据完备性边界",
+    "judge_question": "系统在生成量化分析部署卡片前，是否确保获取了足够、准确的参数？",
+    "verdict_basis": "基于会话事件流中缺失的澄清动作判定",
+    "boundary_sources": "critical_intent_dimensions[target_value_and_unit], [decomposition_dimensions]",
+    "conflict_policy": "当无reference时，以通用业务规则为准，关键数值缺口应阻塞规划"
+  },
+  "consumer_contract": {
+    "consumer": "下游规划协调器或前端渲染",
+    "contract": "期望在规划阶段产出可操作的卡片，卡片包含量化的场景分析和可行性判断；关键字段缺失时需触发澄清卡片而非直接规划。",
+    "application_boundary": {
+      "allow_fallback": false,
+      "dependency_status": "available"
+    }
+  },
+  "intent_model": {
+    "raw_user_request": "我们团队今年的NBEV目标还差不少，要是多招些销售员，大概能提升多少？帮我分析下这条路行不行",
+    "explicit_intents": [
+      "分析通过增加销售员弥补NBEV目标差距的可行性",
+      "量化招聘销售员对NBEV的提升效果"
+    ],
+    "implicit_business_intents": [
+      "获取数据驱动的决策建议",
+      "评估销售队伍扩张的投入产出潜力和行动计划"
+    ],
+    "constraints": {
+      "time_range": "今年",
+      "business_metric": "NBEV",
+      "status": "存在未量化的目标差距"
+    },
+    "success_definition": "给出基于关键参数的量化分析（招聘人数-提升幅度），并明确路径是否可行。若关键参数缺失，应先澄清恢复对话，而非直接生成不准确的规划。",
+    "blocking_requirements": [
+      "必须明确当前NBEV差距的具体数值和单位",
+      "必须明确单个销售员的平均NBEV贡献或相关假设",
+      "必须将意图正确路由至规划阶段，并在必要时发起澄清"
+    ],
+    "nice_to_have_requirements": [
+      "提供招聘成本、培训周期、风险等补充分析",
+      "以可视化卡片呈现分析结果"
+    ],
+    "intent_evidence": [
+      "用户明确提及NBEV目标、今年时间范围、缺少的销售人员对GAP的影响"
+    ]
+  },
+  "reconstructed_intent": "用户希望系统基于今年NBEV目标差距，量化分析增加销售员能带来的提升，并评估该路径的可行性。该意图隐含需要系统获取差距数值和销售员人均贡献，否则分析不可信。",
+  "reference_generation_basis": {
+    "source": "judge_generated_from_critical_intent_dimensions_and_scenario_context",
+    "alignment_to_actual_shape": "与实际extracted_output形状对齐，确保可逐项对照",
+    "evidence": [
+      "critical_intent_dimensions",
+      "用户消息原文",
+      "marketing-planning阶段定义"
+    ]
+  },
+  "scenario": "intent_recognition",
+  "summary": {
+    "reason": "not_fulfilled · blocking=[关键参数缺失时发起澄清询问,识别目标差距需量化填补] · 规划可信度大幅下降，下游消费者可能基于错误假设执行",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "关键参数缺失时发起澄清询问",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "规划可信度大幅下降，下游消费者可能基于错误假设执行",
+        "within_evaluable_scope": true,
+        "evidence": "事件流中无任何澄清事件，session_summary未记录缺失字段或正在收集的信息 | 存在澄清事件或会话记录中标注缺失字段"
+      },
+      {
+        "expectation_id": "识别目标差距需量化填补",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "规划结果缺乏可验证的数据基础，可能误导用户决策",
+        "within_evaluable_scope": true,
+        "evidence": "事件列表中无澄清事件，reasoning_message_content和card_delta可能基于默认假设生成了分析，但系统未获取或展示具体差距数值 | 澄清事件请求NBEV差距数值，或规划卡片中显式引用差距值"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 8,
+    "blocking_count": 8,
+    "is_formal_attribution": true
+  }
+}

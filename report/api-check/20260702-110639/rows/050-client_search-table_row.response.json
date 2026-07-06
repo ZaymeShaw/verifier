@@ -1,0 +1,59 @@
+{
+  "id": "mock-agent-client_search-71bdaf11",
+  "input": "帮我查一下深圳的客户",
+  "scenario": "",
+  "output_summary": "{\"empty_result_reason\": \"service_returned_no_conditions\", \"external_boundary_sources\": {\"config_paths\": {\"source_enhanced_rules\": \"/Users/xiaozijian/WorkSpace/…",
+  "reference_summary": "{\"empty_result_reason\": \"service_returned_no_conditions\", \"external_boundary_sources\": {\"config_paths\": {\"source_enhanced_rules\": \"/Users/xiaozijian/WorkSpace/…",
+  "status": "not_evaluable",
+  "execution_mode": "",
+  "output_source": "live_service",
+  "verdict": "uncertain",
+  "fulfillment_status": "not_evaluable",
+  "judge_summary": {
+    "status": "not_evaluable",
+    "fulfillment_status": "not_evaluable",
+    "verdict": "uncertain",
+    "reason": "uncertain · 用户查询'深圳的客户'需要按城市筛选，但当前 ES 数据库所有可用字段中不包含地址/城市维度，系统不具备该查询能力。parser 未将'深圳'错误映射到其他字段（如姓名），也未遗漏任何可用条件，返回空条件属于系统能力边界的合理表现，不应判为 parser 错误。",
+    "reason_source": "reasoning_summary",
+    "reason_stage": "judge",
+    "is_formal_attribution": false,
+    "assessment_count": 1,
+    "blocking_count": 1
+  },
+  "attribution_summary": {
+    "attribution_count": 1,
+    "causal_category": "boundary_limitation",
+    "is_complete": true,
+    "is_formal_attribution": true,
+    "probe_count": 3,
+    "summary_text": "用户查询'帮我查一下深圳的客户'需要按城市'深圳'筛选客户，但上游 ES 数据库的字段定义（field_definitions_args.yaml）中不包含任何地址/城市/地区字段。Parser 的 prompt 明确要求'只能使用参考字段定义中明确列出的字段名，若查询意图找不到匹配的字段则忽略'——因此 parser 在正确识别'深圳'为地理位置后，因无对应字段而放弃输出条件。这不是 parser 的理解错误或映射错误，而是系统能力边界限制：ES schema 层面缺少地理位置维度，导致'按城市筛选'类查询在架构上不可满足。matched_level=4 和返回的空条件共同表明系统对查询有较高理解度但受限于字段能力天花板。"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 4,
+    "protocol_gap_count": 0,
+    "consistency_gap_count": 1,
+    "recommended_fix_count": 2,
+    "issues": [
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: ES, Parser, address, agent, area, city"
+    ]
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": false,
+  "check_passed": false,
+  "issue_count": 5,
+  "fallback_count": 0,
+  "causal_category": "boundary_limitation",
+  "divergence_stage": "client_search.routing",
+  "root_cause_summary": "用户查询'帮我查一下深圳的客户'需要按城市'深圳'筛选客户，但上游 ES 数据库的字段定义（field_definitions_args.yaml）中不包含任何地址/城市/地区字段。Parser 的 prompt 明确要求'只能使用参考字段定义中明确列出的字段名，若查询意图找不到匹配的字段则忽略'——因此 parser 在正确识别'深圳'为地理位置后，因无对应字段而放弃输出条件。这不是 parser 的理解错误或映射错误，而是系统能力边界限制：ES schema 层面缺少地理位置维度，导致'按城市筛选'类查询在架构上不可满足。matched_level=4 和返回的空条件共同表明系统对查询有较高理解度但受限于字段能力天花板。",
+  "created_at": "2026-07-02T03:06:42.975183+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "63124b6a-92ce-4779-b9c2-a0426a54347b"
+}

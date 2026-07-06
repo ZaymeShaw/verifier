@@ -1,0 +1,232 @@
+{
+  "project_id": "marketting-planning",
+  "datasets": [
+    {
+      "dataset_id": "marketting-planning_intent_recognition",
+      "name": "intent_recognition mock_agent 数据集",
+      "dimension_type": "intent_recognition",
+      "description": "mock_agent LLM 生成的 intent_recognition 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-marketting-planning-e4b60212",
+          "input": {
+            "query": "唉，我们公司新研发了一款低糖饼干，你说我们怎么推广好呢？",
+            "user_intent": {
+              "expected_stage": "plan_drafting",
+              "expected_path_types": [
+                "marketing_plan_creation"
+              ]
+            }
+          },
+          "scenario": "intent_recognition",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm"
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "marketting-planning_clarification",
+      "name": "clarification mock_agent 数据集",
+      "dimension_type": "clarification",
+      "description": "mock_agent LLM 生成的 clarification 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-marketting-planning-afcdcd4b",
+          "input": {
+            "query": "我想做个线上推广，但没经验，能给我指导一下吗？",
+            "turns": [
+              {
+                "role": "user",
+                "content": "我想做个线上推广，但没经验，能给我指导一下吗？"
+              }
+            ]
+          },
+          "scenario": "clarification",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm"
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "marketting-planning_multi_turn_field_accumulation",
+      "name": "multi_turn_field_accumulation mock_agent 数据集",
+      "dimension_type": "multi_turn_field_accumulation",
+      "description": "mock_agent LLM 生成的 multi_turn_field_accumulation 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-marketting-planning-e62dc61e",
+          "input": {
+            "query": "预算大概5万，活动持续一个月，从7月1号到7月31号。目标受众是25到35岁的上班族。",
+            "user_intent": {
+              "expected_stage": "information_gathering",
+              "expected_path_types": [
+                "field_accumulation"
+              ],
+              "collected_slots": {
+                "campaign_name": "夏日新品风暴",
+                "platform": [
+                  "微信",
+                  "抖音"
+                ]
+              }
+            },
+            "turns": [
+              {
+                "user": "我想创建一个营销活动，针对我们新产品的发布。",
+                "assistant": "好的，请告诉我活动的名称和您想使用的平台。"
+              },
+              {
+                "user": "名称叫“夏日新品风暴”，平台选微信和抖音。",
+                "assistant": "明白了。接下来请提供活动的总预算和持续时间，比如预算多少元，从哪天到哪天。"
+              }
+            ]
+          },
+          "scenario": "multi_turn_field_accumulation",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm"
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "marketting-planning_execution_planning",
+      "name": "execution_planning mock_agent 数据集",
+      "dimension_type": "execution_planning",
+      "description": "mock_agent LLM 生成的 execution_planning 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-marketting-planning-4a759d06",
+          "input": {
+            "query": "能不能把公众号推文排到下周一发，然后短视频的拍摄挪到周三？还有，KOL那边确认了档期没有？",
+            "user_intent": {
+              "stage": "execution_planning",
+              "path_types": [
+                "content_scheduling",
+                "resource_confirmation"
+              ],
+              "goal": "细化内容发布排期并确认合作资源到位"
+            },
+            "turns": [
+              {
+                "user": "我们下个月要推那个健康轻食线，营销活动整体怎么落地你想得怎么样了？",
+                "assistant": "基于之前的策略，我建议主打‘春日轻养’概念，分线上内容种草、短视频挑战赛和线下快闪三个板块。需要我出个详细的执行排期和物料清单吗？"
+              },
+              {
+                "user": "对，你直接给我一份执行计划，要具体到每周谁负责什么。",
+                "assistant": "好的，我已经生成了一份初版执行计划，时间从4月1日到5月15日，涵盖了内容创作、媒介采购和活动执行的关键节点。您看看哪里需要调整？"
+              }
+            ]
+          },
+          "scenario": "execution_planning",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm"
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "marketting-planning_fallback_data_unavailable",
+      "name": "fallback_data_unavailable mock_agent 数据集",
+      "dimension_type": "fallback_data_unavailable",
+      "description": "mock_agent LLM 生成的 fallback_data_unavailable 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-marketting-planning-25563aec",
+          "input": {
+            "query": "我点开上周的广告投放数据，页面一直提示数据加载失败，到底什么情况啊？"
+          },
+          "scenario": "fallback_data_unavailable",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm"
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "marketting-planning_non_agent_intent",
+      "name": "non_agent_intent mock_agent 数据集",
+      "dimension_type": "non_agent_intent",
+      "description": "mock_agent LLM 生成的 non_agent_intent 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-marketting-planning-3bdc3558",
+          "input": {
+            "query": "你好，我只是想打声招呼。",
+            "user_intent": {
+              "expected_stage": "greeting",
+              "expected_path_types": [
+                "non_agent"
+              ]
+            }
+          },
+          "scenario": "non_agent_intent",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm"
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "marketting-planning_streaming_protocol",
+      "name": "streaming_protocol mock_agent 数据集",
+      "dimension_type": "streaming_protocol",
+      "description": "mock_agent LLM 生成的 streaming_protocol 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-marketting-planning-83e8dc5e",
+          "input": {
+            "query": "对了，上次你提到的那个竞争对手分析，能再详细说说吗？",
+            "turns": [
+              {
+                "role": "user",
+                "content": "我们公司打算推出一款新的健康食品，需要做一个全面的营销计划"
+              },
+              {
+                "role": "assistant",
+                "content": "好的，我们先从市场概况和竞争对手入手，您方便告诉我主要的竞争对手有哪些吗？"
+              },
+              {
+                "role": "user",
+                "content": "主要对手是A公司和B公司，他们在线上渠道很强"
+              }
+            ]
+          },
+          "scenario": "streaming_protocol",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm"
+          }
+        }
+      ]
+    }
+  ]
+}

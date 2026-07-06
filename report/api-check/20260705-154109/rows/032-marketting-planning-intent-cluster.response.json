@@ -1,0 +1,87 @@
+{
+  "project_id": "marketting-planning-intent",
+  "clusters": [
+    {
+      "cluster_id": "expectation::implementation_bug::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "implementation_bug",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图标签准确反映客户特征分析的营销意图",
+        "置信度达到可执行客户分析任务的水平",
+        "兜底策略仅在真正无法识别客户分析意图时才触发"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "86512ef1-f562-4df4-aa20-07ef646ca6fe"
+      ],
+      "representative_traces": [
+        "86512ef1-f562-4df4-aa20-07ef646ca6fe"
+      ],
+      "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': 'customer_analysis', 'confidence': 0.85, 'target_value': None, 'path_types': None, 'subIntent': '客户特征分析'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "shared_failure_pattern": "当前 case 期望 intent/slots 为 {'intent': 'customer_analysis', 'confidence': 0.85, 'target_value': None, 'path_types': None, 'subIntent': '客户特征分析'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "representative_diffs": [
+        {
+          "case_id": "86512ef1-f562-4df4-aa20-07ef646ca6fe",
+          "node": "intent_contract_gate",
+          "expected": {
+            "confidence": 0.85,
+            "intent": "customer_analysis",
+            "subIntent": "客户特征分析"
+          },
+          "actual": {
+            "confidence": 0.5,
+            "intent": "other",
+            "subIntent": "其他意图"
+          },
+          "evidence": [
+            [
+              {
+                "actual": "other",
+                "error_type": "",
+                "evidence_ref": "",
+                "expected": "customer_analysis 或等价意图标签",
+                "incomplete": false,
+                "kind": "wrong",
+                "raw": {
+                  "actual": "other",
+                  "expected": "customer_analysis 或等价意图标签",
+                  "item": "intent_label"
+                }
+              },
+              {
+                "actual": "触发了兜底策略，返回其他意图",
+                "error_type": "",
+                "evidence_ref": "",
+                "expected": "不触发兜底，因为意图明确可识别",
+                "incomplete": false,
+                "kind": "wrong",
+                "raw": {
+                  "actual": "触发了兜底策略，返回其他意图",
+                  "expected": "不触发兜底，因为意图明确可识别",
+                  "item": "fallback_policy_execution"
+                }
+              }
+            ]
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "verification_cases": [
+        "86512ef1-f562-4df4-aa20-07ef646ca6fe"
+      ],
+      "next_actions": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ]
+    }
+  ],
+  "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': 'customer_analysis', 'confidence': 0.85, 'target_value': None, 'path_types': None, 'subIntent': '客户特征分析'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+  "impact": "",
+  "priority": "high"
+}

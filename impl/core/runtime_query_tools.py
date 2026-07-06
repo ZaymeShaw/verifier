@@ -10,14 +10,26 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
+from .schema import ExecutionTraceEvent
+
 __all__ = ["analyze_divergence", "extract_runtime_values"]
+
+
+def _trace_step_data(step: Any) -> Dict[str, Any]:
+    if isinstance(step, ExecutionTraceEvent):
+        data = {"stage": step.stage, "status": step.status, "evidence": step.evidence, "error": step.error}
+        data.update(step.outputs or {})
+        data.update(step.metadata or {})
+        return data
+    return step if isinstance(step, dict) else {}
 
 
 def extract_runtime_values(trace: list, actual: Any = None) -> dict:
     """从 trace steps 与 actual 输出中提取运行时实际值。"""
     values: dict[str, Any] = {}
     for step in trace or []:
-        if not isinstance(step, dict):
+        step = _trace_step_data(step)
+        if not step:
             continue
         output = step.get("output") or step.get("evidence") or step.get("result") or step.get("actual")
         if isinstance(output, dict):
@@ -39,7 +51,8 @@ def _merge_first(target: dict, source: dict) -> None:
 def _find_first_failed(trace: list) -> Optional[dict]:
     """找到 trace 中第一个失败/可疑/分歧节点。"""
     for step in trace or []:
-        if not isinstance(step, dict):
+        step = _trace_step_data(step)
+        if not step:
             continue
         status = str(step.get("status", "")).lower()
         if status in ("failed", "diverged", "error", "rejected", "suspicious"):

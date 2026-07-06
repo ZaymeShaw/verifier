@@ -1,0 +1,186 @@
+{
+  "project": "marketting-planning-intent",
+  "attributes": [
+    {
+      "trace_id": "be79fe4a-3772-42dc-8241-92c0135fc017",
+      "project_id": "marketting-planning-intent",
+      "case_id": "",
+      "expectation_attributions": [
+        {
+          "expectation_id": "提取时间范围槽位",
+          "causal_category": "implementation_bug"
+        },
+        {
+          "expectation_id": "提取产品槽位",
+          "causal_category": "implementation_bug"
+        },
+        {
+          "expectation_id": "提取年龄分布维度槽位",
+          "causal_category": "implementation_bug"
+        },
+        {
+          "expectation_id": "提取性别比例维度槽位",
+          "causal_category": "implementation_bug"
+        },
+        {
+          "expectation_id": "intent_contract",
+          "causal_category": "implementation_bug"
+        }
+      ],
+      "causal_category": "implementation_bug",
+      "earliest_divergence": {
+        "node": "intent_contract_gate",
+        "expected": {
+          "intent": "{'intent': 'customer_portrait', 'slots': {'time_range': '最近三个月', 'product': '重疾险', 'dimensions': ['年龄分布', '性别比例']}, 'confidence': 'high', 'fallback': False}"
+        },
+        "actual": {
+          "intent": "customer_portrait",
+          "confidence": 1.0,
+          "raw_intent": "1001",
+          "ambiguous": false,
+          "fallback": false
+        },
+        "evidence": [
+          [
+            {
+              "kind": "missing",
+              "error_type": "",
+              "evidence_ref": "",
+              "raw": "时间范围槽位",
+              "incomplete": false
+            },
+            {
+              "kind": "missing",
+              "error_type": "",
+              "evidence_ref": "",
+              "raw": "产品槽位",
+              "incomplete": false
+            },
+            {
+              "kind": "missing",
+              "error_type": "",
+              "evidence_ref": "",
+              "raw": "年龄分布维度",
+              "incomplete": false
+            },
+            {
+              "kind": "missing",
+              "error_type": "",
+              "evidence_ref": "",
+              "raw": "性别比例维度",
+              "incomplete": false
+            }
+          ]
+        ],
+        "confidence": "medium"
+      },
+      "chain_nodes": [
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "failed",
+          "evidence": [
+            {
+              "query": "能不能给我看看最近三个月在我们这买了重疾险的客户都是什么样的？比如他们的年龄分布、性别比例什么的。"
+            },
+            {
+              "expected": {
+                "intent": "{'intent': 'customer_portrait', 'slots': {'time_range': '最近三个月', 'product': '重疾险', 'dimensions': ['年龄分布', '性别比例']}, 'confidence': 'high', 'fallback': False}"
+              }
+            },
+            {
+              "actual": {
+                "intent": "customer_portrait",
+                "confidence": 1.0,
+                "raw_intent": "1001",
+                "ambiguous": false,
+                "fallback": false
+              }
+            },
+            {
+              "missing": [
+                {
+                  "kind": "missing",
+                  "error_type": "",
+                  "evidence_ref": "",
+                  "raw": "时间范围槽位",
+                  "incomplete": false
+                },
+                {
+                  "kind": "missing",
+                  "error_type": "",
+                  "evidence_ref": "",
+                  "raw": "产品槽位",
+                  "incomplete": false
+                },
+                {
+                  "kind": "missing",
+                  "error_type": "",
+                  "evidence_ref": "",
+                  "raw": "年龄分布维度",
+                  "incomplete": false
+                },
+                {
+                  "kind": "missing",
+                  "error_type": "",
+                  "evidence_ref": "",
+                  "raw": "性别比例维度",
+                  "incomplete": false
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "evidence_coverage": {
+        "query": true,
+        "actual": true,
+        "expected": true,
+        "execution_trace": true
+      },
+      "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': \"{'intent': 'customer_portrait', 'slots': {'time_range': '最近三个月', 'product': '重疾险', 'dimensions': ['年龄分布', '性别比例']}, 'confidence': 'high', 'fallback': False}\"}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'target_value': None, 'path_types': None, 'raw_intent': '1001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+      "verification_steps": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ],
+      "patch_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "needs_human_review": false,
+      "scenario": "single_turn_intent_recognition",
+      "summary": {
+        "causal_category": "needs_human_review",
+        "attribution_count": 5,
+        "probe_count": 0,
+        "summary_text": "意图识别系统的设计和实现存在三重合一的缺陷，导致 customer_portrait 意图的所有业务槽位全部丢失：(1) Schema 层 — IntentResult Pydantic 模型仅定义 intent/confidence/target_value/path_types 四个字段，不存在任何通用槽位承载机制；(2) Prompt 层 — INTENT_RECOGNITION_PROMPT 仅对 nbev_planning 意图描述字段提取规则（target_value、path_types），对 customer_portrait 无任何槽位提取指引；(3) 规则层 — try_homepage_intent 中正则 r'客户.*(?:画像|分布|结构|分层)' 命中用户查询后立即返回，完全绕过 LLM 调用，导致 schema 和 prompt 即使将来被修复，当前查询路径也无法受益。三层缺陷叠加使得用户查询中明确表达的'最近三个月'(时间)、'重疾险'(产品)、'年龄分布、性别比例'(维度) 全部丢失，仅意图标签正确。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      },
+      "analysis_method": "current_case_intent_contract_trace",
+      "analysis_quality": {
+        "passed": true,
+        "status": "supported_root_cause"
+      },
+      "incomplete_reason": "",
+      "suspected_locations": [
+        "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/steps/intent_recognition.py:34-50",
+        "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/schemas/intent.py:15-36",
+        "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/prompts/intent_prompt.py"
+      ],
+      "quality_flags": [
+        "schema_field_missing",
+        "prompt_insufficient_coverage",
+        "rule_bypasses_llm_extraction"
+      ]
+    }
+  ]
+}

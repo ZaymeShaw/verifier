@@ -1,0 +1,950 @@
+{
+  "project": "marketting-planning-intent",
+  "trace": {
+    "trace_id": "8bef68cb-c3d1-4d06-ae5c-fce9249a37b1",
+    "project_id": "marketting-planning-intent",
+    "case_id": "mock-agent-marketting-planning-intent-43d42f80",
+    "live_result": {
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-43d42f80",
+      "session_id": "default_session_001",
+      "raw_input": {
+        "extra_input_params": {
+          "agent_args": {
+            "conversation_id": "conv_xyz_456",
+            "message": {
+              "content": "帮我看看上个月的目标能不能调到500万，因为最近团队业绩压力大",
+              "content_type": "text"
+            }
+          }
+        },
+        "metrics": {
+          "cache_read_tokens": 0,
+          "cache_write_tokens": 0,
+          "input_tokens": 362,
+          "output_tokens": 197,
+          "reasoning_tokens": 49,
+          "total_tokens": 559
+        },
+        "org_id": "org_insurance_001",
+        "session_id": "default_session_001",
+        "trace_id": "trace_abc_123",
+        "user_text": "帮我看看上个月的目标能不能调到500万，因为最近团队业绩压力大"
+      },
+      "normalized_request": {
+        "case_id": "mock-agent-marketting-planning-intent-43d42f80",
+        "session_id": "default_session_001",
+        "query": "帮我看看上个月的目标能不能调到500万，因为最近团队业绩压力大",
+        "scenario": "intent_recognition"
+      },
+      "call_status": "succeeded",
+      "runtime_ms": 364,
+      "extracted_output": {
+        "intent": "other",
+        "confidence": 0.5,
+        "raw_intent": "4001",
+        "ambiguous": false,
+        "fallback": false
+      },
+      "output_source": "live_service",
+      "application_boundary": {
+        "scope": "single_turn_intent_recognition",
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ]
+      },
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T11:17:01.234061+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T11:17:01.234078+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T11:17:01.616946+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T11:17:01.616978+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T11:18:08.314840+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T11:18:08.314894+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T11:18:08.314931+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T11:20:32.559684+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T11:22:45.695964+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T11:22:45.696038+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T11:22:45.717189+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence or blocked reason available"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "intent_recognition",
+    "interaction_mode": "single_turn",
+    "session_id": "default_session_001",
+    "created_at": "2026-07-03T11:17:01.616885+00:00"
+  },
+  "judge": {
+    "trace_id": "8bef68cb-c3d1-4d06-ae5c-fce9249a37b1",
+    "project_id": "marketting-planning-intent",
+    "verdict": "incorrect",
+    "score": 0.0,
+    "business_expectations": [
+      {
+        "expectation_id": "意图标签准确反映目标调整请求",
+        "downstream_consumer": "下游规划处理器",
+        "user_intent": "",
+        "expected_outcome": "意图标签为'target_adjustment'或等效标签",
+        "acceptance_criteria": [
+          "意图标签为'target_adjustment'或'修改目标'类标签",
+          "不是'other'或'其他意图'"
+        ],
+        "boundary": {
+          "scope": "single_turn"
+        },
+        "priority": "normal"
+      },
+      {
+        "expectation_id": "提取目标金额500万和上个月时间",
+        "downstream_consumer": "下游规划处理器",
+        "user_intent": "",
+        "expected_outcome": "target_value为500万，time_period为上个月或类似",
+        "acceptance_criteria": [
+          "target_value为500万或类似数值",
+          "time_period为上个月或等效表达"
+        ],
+        "boundary": {
+          "scope": "single_turn"
+        },
+        "priority": "normal"
+      },
+      {
+        "expectation_id": "置信度不应过低以致意图不可信",
+        "downstream_consumer": "下游规划处理器",
+        "user_intent": "",
+        "expected_outcome": "confidence > 0.6",
+        "acceptance_criteria": [
+          "confidence大于0.6"
+        ],
+        "boundary": {
+          "scope": "single_turn"
+        },
+        "priority": "normal"
+      },
+      {
+        "expectation_id": "意图清晰时不应触发回退",
+        "downstream_consumer": "下游规划处理器",
+        "user_intent": "",
+        "expected_outcome": "fallback为false",
+        "acceptance_criteria": [
+          "fallback为false"
+        ],
+        "boundary": {
+          "scope": "single_turn"
+        },
+        "priority": "normal"
+      },
+      {
+        "expectation_id": "意图可分发至目标调整处理模块",
+        "downstream_consumer": "下游规划处理器",
+        "user_intent": "",
+        "expected_outcome": "意图标签为可路由的业务意图（如'target_adjustment'）",
+        "acceptance_criteria": [
+          "意图不是'other'或'其他意图'",
+          "意图标签对应系统内可处理的领域"
+        ],
+        "boundary": {
+          "scope": "single_turn"
+        },
+        "priority": "normal"
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "意图标签准确反映目标调整请求",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "intent字段应为'target_adjustment'或等效值"
+        ],
+        "actual_evidence": [
+          "intent为'other'，原始intent为'4001'（其他意图）"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": "实际输出的意图标签为'other'，与用户明确的目标调整请求不符"
+        },
+        "downstream_impact": "下游无法识别为可处理的目标调整意图，可能走默认兜底流程",
+        "blocking": true
+      },
+      {
+        "expectation_id": "提取目标金额500万和上个月时间",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "target_value为500万",
+          "time_period为上个月"
+        ],
+        "actual_evidence": [
+          "target_value为null",
+          "slots为空",
+          "entities为空"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": "系统未提取任何槽位或实体"
+        },
+        "downstream_impact": "下游缺乏目标金额和时间参数，无法执行调整",
+        "blocking": false
+      },
+      {
+        "expectation_id": "置信度不应过低以致意图不可信",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "confidence > 0.6"
+        ],
+        "actual_evidence": [
+          "confidence = 0.5"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": "置信率为0.5，低于合理阈值，意图可信度低"
+        },
+        "downstream_impact": "下游可能因低置信度而采取保守处理，如请求澄清或兜底",
+        "blocking": false
+      },
+      {
+        "expectation_id": "意图清晰时不应触发回退",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "fallback为false"
+        ],
+        "actual_evidence": [
+          "fallback = false"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": "回退标志为false，系统未进入回退流程，满足本项期望"
+        },
+        "downstream_impact": "无不良影响，但结合意图错误来看，未回退反而加重了错误路由",
+        "blocking": false
+      },
+      {
+        "expectation_id": "意图可分发至目标调整处理模块",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "意图不是'other'"
+        ],
+        "actual_evidence": [
+          "intent为'other'，属于不可路由的默认意图"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": "意图标签为'other'，无法分发到指定的业务处理模块"
+        },
+        "downstream_impact": "请求可能被丢弃或进入未知处理流程，无法完成目标调整",
+        "blocking": true
+      },
+      {
+        "expectation_id": "intent_contract",
+        "status": "not_fulfilled",
+        "downstream_impact": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=other，confidence=0.5，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+        "blocking": true
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "not_fulfilled",
+      "blocking_expectations": [
+        "意图标签准确反映目标调整请求",
+        "意图可分发至目标调整处理模块",
+        "intent_contract"
+      ],
+      "assessment_count": 6
+    },
+    "expected": {
+      "intent": "target_adjustment（目标调整）"
+    },
+    "actual": {
+      "intent": "other",
+      "confidence": 0.5,
+      "raw_intent": "4001",
+      "ambiguous": false,
+      "fallback": false
+    },
+    "reasoning_summary": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=other，confidence=0.5，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+    "judge_basis": "根据用户查询中明确的目标调整语义，系统应返回目标调整意图和相关槽位",
+    "judge_method": "基于用户请求的语义推断正确意图，与实际输出进行对比",
+    "verdict_derivation": {
+      "primary_boundary": "单轮意图识别评估",
+      "assessment_summary": "两个blocking expectation均未满足：意图标签错误，导致无法分发到目标调整模块；其余non-blocking期望中，置信度和槽位提取也未满足，仅回退标志正确。",
+      "blocking_gaps": [
+        "意图标签为'other'，未能反映目标调整请求",
+        "意图无法分发至目标调整处理模块"
+      ],
+      "why_verdict": "核心意图标签严重偏离用户意图，且导致无法正确路由和处理，因此整体不满足业务期望",
+      "contract_gate": "failed"
+    },
+    "missing": [
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "正确的意图标签（target_adjustment）",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "目标金额槽位（500万）",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "时间槽位（上个月）",
+        "incomplete": false
+      }
+    ],
+    "wrong": [
+      {
+        "kind": "wrong",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "意图标签错误地设为'other'",
+        "incomplete": false
+      }
+    ],
+    "evidence": [
+      "用户查询包含'目标'、'调到500万'、'上个月'等明确的关键词",
+      "系统返回intent='other', confidence=0.5, 无槽位"
+    ],
+    "boundary_decision": {
+      "within_evaluable_scope": true,
+      "reasoning": "本次评估完全在单轮意图识别的可评估范围内，没有不可控限制或评估错误"
+    },
+    "evaluation_boundary": {
+      "primary_boundary_id": "single_turn_intent_recognition",
+      "primary_boundary_name": "单轮意图识别评估",
+      "judge_question": "意图识别输出是否正确反映了用户的目标调整请求？",
+      "verdict_basis": "实际输出的意图标签为'other'，与重构的期望意图'target_adjustment'不匹配，且关键槽位缺失",
+      "boundary_sources": "来源于应用边界定义，排除多轮规划和卡片生成",
+      "conflict_policy": "无冲突"
+    },
+    "consumer_contract": {
+      "consumer": "营销规划系统下游规划模块",
+      "contract": "意图识别返回的intent标签和槽位将用于决定后续处理逻辑，如目标调整、计划修改等",
+      "application_boundary": {
+        "scope": "single_turn_intent_recognition",
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ]
+      }
+    },
+    "intent_model": {
+      "raw_user_request": "帮我看看上个月的目标能不能调到500万，因为最近团队业绩压力大",
+      "explicit_intents": [
+        "查询并调整上月的业绩目标至500万"
+      ],
+      "implicit_business_intents": [
+        "由于团队业绩压力，希望调整目标以缓解压力"
+      ],
+      "success_definition": "系统能识别出用户意图为'目标调整'或'修改目标'，并提取相应的槽位（目标金额、时间），以便后续进行目标调整处理。",
+      "blocking_requirements": [
+        "意图标签应为'目标调整'或'修改目标'，而非'其他意图'"
+      ],
+      "nice_to_have_requirements": [
+        "提取槽位实体如目标金额（500万）和时间（上个月）"
+      ],
+      "intent_evidence": [
+        "用户明确提到'目标'、'调到500万'、'上个月'，表明有明确的目标调整需求"
+      ]
+    },
+    "reconstructed_intent": "target_adjustment（目标调整）",
+    "reference_generation_basis": {
+      "source": "judge根据用户查询构造的期望意图",
+      "alignment_to_actual_shape": "期望意图为target_adjustment，而实际输出为other，不匹配"
+    },
+    "scenario": "intent_recognition",
+    "quality_flags": [
+      "intent_contract_gate_failed"
+    ],
+    "summary": {
+      "reason": "not_fulfilled · blocking=[意图可分发至目标调整处理模块,意图标签准确反映目标调整请求] · 请求可能被丢弃或进入未知处理流程，无法完成目标调整",
+      "primary_failure_dimensions": [
+        {
+          "expectation_id": "意图可分发至目标调整处理模块",
+          "status": "not_fulfilled",
+          "blocking": true,
+          "downstream_impact": "请求可能被丢弃或进入未知处理流程，无法完成目标调整",
+          "within_evaluable_scope": true,
+          "evidence": "intent为'other'，属于不可路由的默认意图 | 意图不是'other'"
+        },
+        {
+          "expectation_id": "意图标签准确反映目标调整请求",
+          "status": "not_fulfilled",
+          "blocking": true,
+          "downstream_impact": "下游无法识别为可处理的目标调整意图，可能走默认兜底流程",
+          "within_evaluable_scope": true,
+          "evidence": "intent为'other'，原始intent为'4001'（其他意图） | intent字段应为'target_adjustment'或等效值"
+        },
+        {
+          "expectation_id": "提取目标金额500万和上个月时间",
+          "status": "not_fulfilled",
+          "blocking": false,
+          "downstream_impact": "下游缺乏目标金额和时间参数，无法执行调整",
+          "within_evaluable_scope": true,
+          "evidence": "target_value为null | slots为空 | entities为空 | target_value为500万 | time_period为上个月"
+        },
+        {
+          "expectation_id": "置信度不应过低以致意图不可信",
+          "status": "not_fulfilled",
+          "blocking": false,
+          "downstream_impact": "下游可能因低置信度而采取保守处理，如请求澄清或兜底",
+          "within_evaluable_scope": true,
+          "evidence": "confidence = 0.5 | confidence > 0.6"
+        }
+      ],
+      "reason_source": "aggregated_fulfillment",
+      "fulfillment_status": "not_fulfilled",
+      "assessment_count": 5,
+      "blocking_count": 2,
+      "is_formal_attribution": true
+    }
+  },
+  "attribute": {
+    "trace_id": "8bef68cb-c3d1-4d06-ae5c-fce9249a37b1",
+    "project_id": "marketting-planning-intent",
+    "case_id": "",
+    "expectation_attributions": [
+      {
+        "expectation_id": "意图标签准确反映目标调整请求",
+        "causal_category": "implementation_bug"
+      },
+      {
+        "expectation_id": "提取目标金额500万和上个月时间",
+        "causal_category": "implementation_bug"
+      },
+      {
+        "expectation_id": "置信度不应过低以致意图不可信",
+        "causal_category": "model_capability_gap"
+      },
+      {
+        "expectation_id": "意图可分发至目标调整处理模块",
+        "causal_category": "implementation_bug"
+      }
+    ],
+    "causal_category": "implementation_bug",
+    "earliest_divergence": {
+      "node": "intent_contract_gate",
+      "expected": {
+        "intent": "target_adjustment（目标调整）"
+      },
+      "actual": {
+        "intent": "other",
+        "confidence": 0.5,
+        "raw_intent": "4001",
+        "ambiguous": false,
+        "fallback": false
+      },
+      "evidence": [
+        [
+          {
+            "kind": "missing",
+            "error_type": "",
+            "evidence_ref": "",
+            "raw": "正确的意图标签（target_adjustment）",
+            "incomplete": false
+          },
+          {
+            "kind": "missing",
+            "error_type": "",
+            "evidence_ref": "",
+            "raw": "目标金额槽位（500万）",
+            "incomplete": false
+          },
+          {
+            "kind": "missing",
+            "error_type": "",
+            "evidence_ref": "",
+            "raw": "时间槽位（上个月）",
+            "incomplete": false
+          }
+        ]
+      ],
+      "confidence": "medium"
+    },
+    "chain_nodes": [
+      {
+        "status": "verified"
+      },
+      {
+        "status": "verified"
+      },
+      {
+        "status": "verified"
+      },
+      {
+        "status": "verified"
+      },
+      {
+        "status": "failed",
+        "evidence": [
+          {
+            "query": "帮我看看上个月的目标能不能调到500万，因为最近团队业绩压力大"
+          },
+          {
+            "expected": {
+              "intent": "target_adjustment（目标调整）"
+            }
+          },
+          {
+            "actual": {
+              "intent": "other",
+              "confidence": 0.5,
+              "raw_intent": "4001",
+              "ambiguous": false,
+              "fallback": false
+            }
+          },
+          {
+            "missing": [
+              {
+                "kind": "missing",
+                "error_type": "",
+                "evidence_ref": "",
+                "raw": "正确的意图标签（target_adjustment）",
+                "incomplete": false
+              },
+              {
+                "kind": "missing",
+                "error_type": "",
+                "evidence_ref": "",
+                "raw": "目标金额槽位（500万）",
+                "incomplete": false
+              },
+              {
+                "kind": "missing",
+                "error_type": "",
+                "evidence_ref": "",
+                "raw": "时间槽位（上个月）",
+                "incomplete": false
+              }
+            ],
+            "wrong": [
+              {
+                "kind": "wrong",
+                "error_type": "",
+                "evidence_ref": "",
+                "raw": "意图标签错误地设为'other'",
+                "incomplete": false
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "probe_results": [
+      {
+        "probe_id": "",
+        "status": "failed",
+        "evidence": [
+          "raw_intent=4001",
+          "actual_mapping=other",
+          "expected_intent=target_value_adjustment",
+          "INTENT_MAPPING 中 4001→other，target_value_adjustment 在枚举中存在但未被路由到"
+        ]
+      }
+    ],
+    "evidence_coverage": {
+      "query": true,
+      "actual": true,
+      "expected": true,
+      "execution_trace": true
+    },
+    "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': 'target_adjustment（目标调整）'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+    "verification_steps": [
+      "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+    ],
+    "patch_direction": [
+      "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+    ],
+    "needs_human_review": false,
+    "scenario": "single_turn_intent_recognition",
+    "summary": {
+      "causal_category": "needs_human_review",
+      "attribution_count": 4,
+      "probe_count": 1,
+      "summary_text": "用户查询'帮我看看上个月的目标能不能调到500万'在语义上明确属于目标调整意图（target_value_adjustment），但系统在两个层面均未能正确识别：（1）规则层面：_is_target_adjustment_message 关键词列表仅含'调整目标/修改目标/重设目标/重新设置目标/换个目标'，不覆盖口语化表达'调到'；且 Tier 1 调整意图规则要求 has_completed_planning_context=True，单轮无上下文场景下该规则永远无法激活。（2）LLM 层面：INTENT_RECOGNITION_PROMPT 中 target_value_adjustment 的定义强调'已经完成NBEV目标值达成测算后'且所有 few-shot 示例均为直接祈使句（'我要调整目标'、'把目标值改成500万重新测算'），导致疑问式/试探式表达'能不能调到500万'被归入 other（confidence=0.5）。两个防御层同时失效，raw_intent=4001 经 INTENT_MAPPING 正确映射为 other，但上游本不应产出 4001。",
+      "is_complete": true,
+      "is_formal_attribution": true
+    },
+    "analysis_method": "current_case_intent_contract_trace",
+    "analysis_quality": {
+      "passed": true,
+      "status": "supported_root_cause"
+    },
+    "incomplete_reason": "",
+    "suspected_locations": [
+      "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/prompts/intent_prompt.py",
+      "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/steps/intent_recognition.py",
+      "projects/marketting-planning-intent/intent.py"
+    ],
+    "quality_flags": [
+      "intent_contract_gate_failed",
+      "dual_layer_failure_rule_and_llm"
+    ]
+  },
+  "cluster": {
+    "project_id": "marketting-planning-intent",
+    "clusters": [
+      {
+        "cluster_id": "expectation::implementation_bug::not_fulfilled",
+        "mechanism": "implementation_bug::not_fulfilled",
+        "causal_category": "implementation_bug",
+        "fulfillment_statuses": [
+          "not_fulfilled"
+        ],
+        "expectation_ids": [
+          "意图标签准确反映目标调整请求",
+          "提取目标金额500万和上个月时间",
+          "置信度不应过低以致意图不可信",
+          "意图可分发至目标调整处理模块"
+        ],
+        "needs_human_review": false,
+        "canonical_attribution": true,
+        "count": 1,
+        "representative_cases": [
+          "8bef68cb-c3d1-4d06-ae5c-fce9249a37b1"
+        ],
+        "representative_traces": [
+          "8bef68cb-c3d1-4d06-ae5c-fce9249a37b1"
+        ],
+        "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': 'target_adjustment（目标调整）'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+        "shared_failure_pattern": "当前 case 期望 intent/slots 为 {'intent': 'target_adjustment（目标调整）'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+        "representative_diffs": [
+          {
+            "case_id": "8bef68cb-c3d1-4d06-ae5c-fce9249a37b1",
+            "node": "intent_contract_gate",
+            "expected": {
+              "intent": "target_adjustment（目标调整）"
+            },
+            "actual": {
+              "intent": "other",
+              "confidence": 0.5,
+              "raw_intent": "4001",
+              "ambiguous": false,
+              "fallback": false
+            },
+            "evidence": [
+              [
+                {
+                  "kind": "missing",
+                  "error_type": "",
+                  "evidence_ref": "",
+                  "raw": "正确的意图标签（target_adjustment）",
+                  "incomplete": false
+                },
+                {
+                  "kind": "missing",
+                  "error_type": "",
+                  "evidence_ref": "",
+                  "raw": "目标金额槽位（500万）",
+                  "incomplete": false
+                },
+                {
+                  "kind": "missing",
+                  "error_type": "",
+                  "evidence_ref": "",
+                  "raw": "时间槽位（上个月）",
+                  "incomplete": false
+                }
+              ]
+            ]
+          }
+        ],
+        "minimal_fix_direction": [
+          "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+        ],
+        "verification_cases": [
+          "8bef68cb-c3d1-4d06-ae5c-fce9249a37b1"
+        ],
+        "next_actions": [
+          "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+        ]
+      }
+    ],
+    "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': 'target_adjustment（目标调整）'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+    "impact": "",
+    "priority": "high"
+  }
+}

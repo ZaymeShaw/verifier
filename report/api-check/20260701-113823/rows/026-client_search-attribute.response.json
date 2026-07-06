@@ -1,0 +1,81 @@
+{
+  "trace_id": "30260fc9-3024-47d4-a2d2-79bf2cbbac73",
+  "project_id": "client_search",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "目标人群覆盖完整性",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "年龄字段语义与操作符正确性",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "年龄数值正确性",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "性别字段语义与操作符正确性",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "性别枚举值正确性",
+      "causal_category": "no_issue"
+    }
+  ],
+  "causal_category": "no_issue",
+  "earliest_divergence": {
+    "node": "",
+    "confidence": "unknown"
+  },
+  "chain_nodes": [
+    {
+      "status": "not_verified",
+      "evidence": [
+        "normalized_request 中 user_text 为 '45岁女性保费10万以上'，原文完整保留未截断或错误改写"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "extracted_output 中 is_empty_result=false，logic='AND'，matched_level=4，表明解析成功且置信度较高",
+        "matched_patterns 中正确召回并匹配了 clientAge、clientSex、annPremSegNum 三条规则"
+      ]
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "judge 产出了 5 个 fulfillment_assessments，全部为 fulfilled",
+        "overall_fulfillment.status='fulfilled'",
+        "application_boundary 中 judge_scope='parser_condition_semantics_only'，评估范围限定在解析语义层面，与本次归因范围一致"
+      ]
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": false,
+    "execution_trace": false,
+    "project_docs": true,
+    "code_or_config": false
+  },
+  "root_cause_hypothesis": "本次查询 '45岁女性保费10万以上' 的解析未出现任何失败或分歧。judge 对全部 5 个业务预期的评估均为 fulfilled，整体 fulfillment 状态为 fulfilled。divergence_analysis 为空（系统未检测到分歧），execution_trace 为空（运行时无异常）。三个核心语义维度——年龄（clientAge RANGE {min:45, max:45}）、性别（clientSex MATCH '女'）、保费（annPremSegNum GTE 100000）——均被 prompt 规则正确覆盖并映射。此场景属于正常的无故障通过案例，无需修复。",
+  "verification_steps": [
+    "确认 extracted_output 中的 conditions 数组实际包含 clientAge、clientSex、annPremSegNum 三个字段条件（当前 matched_patterns 展示了规则匹配，但完整 conditions 列表在截断信息中不可见——建议通过完整日志或下游 ES 查询验证）",
+    "若需进一步增强置信度，可在 application_boundary 中启用 downstream_result_set_available，用实际搜索结果集反向验证条件语义覆盖是否完整"
+  ],
+  "needs_human_review": false,
+  "scenario": "query='45岁女性保费10万以上'，解析结果正确覆盖年龄、性别、保费三个维度，judge 全部评估为 fulfilled，无分歧、无错误、无待修复项",
+  "summary": {
+    "causal_category": "no_issue",
+    "attribution_count": 5,
+    "probe_count": 0,
+    "summary_text": "本次查询 '45岁女性保费10万以上' 的解析未出现任何失败或分歧。judge 对全部 5 个业务预期的评估均为 fulfilled，整体 fulfillment 状态为 fulfilled。divergence_analysis 为空（系统未检测到分歧），execution_trace 为空（运行时无异常）。三个核心语义维度——年龄（clientAge RANGE {min:45, max:45}）、性别（clientSex MATCH '女'）、保费（annPremSegNum GTE 100000）——均被 prompt 规则正确覆盖并映射。此场景属于正常的无故障通过案例，无需修复。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

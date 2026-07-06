@@ -1,0 +1,68 @@
+{
+  "project": "client_search",
+  "cases": [
+    {
+      "id": "cs-age-sex-premium-correct-1",
+      "input": {
+        "query": "45岁女性保费10万以上"
+      },
+      "scenario": "multi_condition_and",
+      "expected_intent": "",
+      "reference": {
+        "expected_logic": "AND",
+        "expected_conditions": [
+          {
+            "field": "clientAge",
+            "operator": "RANGE",
+            "value": {
+              "min": 45,
+              "max": 45
+            }
+          },
+          {
+            "field": "clientSex",
+            "operator": "MATCH",
+            "value": "女"
+          },
+          {
+            "field": "annPremSegNum",
+            "operator": "GTE",
+            "value": 100000
+          }
+        ]
+      },
+      "source": "data_mock_seed",
+      "status": "pending",
+      "metadata": {
+        "business_axis": "demographic_premium",
+        "expected_error_type": "none",
+        "quality_dimension": "condition_semantics",
+        "previous_output": {
+          "logic": "AND",
+          "conditions": [
+            {
+              "field": "clientAge",
+              "operator": "RANGE",
+              "value": {
+                "min": 45,
+                "max": 45
+              }
+            },
+            {
+              "field": "clientSex",
+              "operator": "MATCH",
+              "value": "女"
+            },
+            {
+              "field": "annPremSegNum",
+              "operator": "GTE",
+              "value": 100000
+            }
+          ],
+          "summary": "45岁女性且年缴保费10万以上客户"
+        }
+      }
+    }
+  ],
+  "concurrency": 1
+}

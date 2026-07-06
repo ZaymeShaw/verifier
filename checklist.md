@@ -19,6 +19,11 @@ selenium可以使用此driver：material/chromedriver-149.zip
 ### 工作流
 
 > 步骤1：执行check脚本产出check报告report.md
++ o)直接执行统一check脚本：
+    ```bash
+    impl/checklist/check1.sh
+    ```
+    该脚本会使用独立端口启动 verifier 服务、等待服务启动、执行 `impl/checklist/check1.py`，并在结束后清理本次启动的服务进程。
 + a)实施细节
     + 请用selenium打开浏览器测试，不要用后端接口，并且打开页面截图，查看b的运行完成结果，然后审核他们的值是否符合预期
     + 我建议你并行执行所有项目，不要等待啥的，你看看原理上是否可行，各项目之间是否会冲突

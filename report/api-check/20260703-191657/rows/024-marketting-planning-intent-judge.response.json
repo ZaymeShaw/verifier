@@ -1,0 +1,356 @@
+{
+  "trace_id": "8bef68cb-c3d1-4d06-ae5c-fce9249a37b1",
+  "project_id": "marketting-planning-intent",
+  "verdict": "incorrect",
+  "score": 0.0,
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签为调整目标而非其他",
+      "downstream_consumer": "目标管理模块",
+      "user_intent": "查询或调整上个月的目标值为500万",
+      "expected_outcome": "意图标签为'modify_target'或语义等价标签",
+      "required_capabilities": [
+        "意图分类能力覆盖'目标调整'类别",
+        "语义理解能区分'调整目标'与一般咨询"
+      ],
+      "acceptance_criteria": [
+        "实际输出的intent字段不等于'other'",
+        "intent字段属于'目标调整'相关意图簇"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "正确提取目标调整所需的槽位信息",
+      "downstream_consumer": "目标管理模块",
+      "user_intent": "将上个月目标调到500万",
+      "expected_outcome": "槽位中提取到amount=500万、period=上个月",
+      "required_capabilities": [
+        "槽位提取能力",
+        "实体识别（金额、时间）"
+      ],
+      "acceptance_criteria": [
+        "提取的槽位中包含目标金额500万",
+        "提取的槽位中包含时间范围上个月"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "意图识别置信度应高于阈值",
+      "downstream_consumer": "对话管理模块",
+      "user_intent": "明确表达调整目标的需求",
+      "expected_outcome": "confidence >= 0.7",
+      "required_capabilities": [
+        "置信度评估机制"
+      ],
+      "acceptance_criteria": [
+        "confidence字段 >= 0.7"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "低置信度或无法识别时应触发降级策略",
+      "downstream_consumer": "对话管理模块",
+      "user_intent": "可能超出直接意图范围时，系统应承认无法处理",
+      "expected_outcome": "fallback=true（或进入澄清流程）",
+      "required_capabilities": [
+        "降级策略",
+        "fallback判定逻辑"
+      ],
+      "acceptance_criteria": [
+        "如果intent='other'且confidence<阈值，则fallback应为true"
+      ],
+      "priority": "low"
+    },
+    {
+      "expectation_id": "意图应可分发至目标调整处理模块",
+      "downstream_consumer": "目标管理模块",
+      "user_intent": "实现目标调整操作",
+      "expected_outcome": "意图标签属于可分发至目标调整模块的集合",
+      "required_capabilities": [
+        "意图分发路由表",
+        "可分发意图集合"
+      ],
+      "acceptance_criteria": [
+        "intent标签能够匹配到目标调整模块的路由规则"
+      ],
+      "priority": "high"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签为调整目标而非其他",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "intent字段为'modify_target'或语义等价标签"
+      ],
+      "actual_evidence": [
+        "intent字段为'other'"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": "true",
+        "reasoning": "实际输出可评估，无不可控限制"
+      },
+      "downstream_impact": "无法将用户请求路由到目标管理模块，导致功能不可用",
+      "blocking": true
+    },
+    {
+      "expectation_id": "正确提取目标调整所需的槽位信息",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "槽位中应包含amount=500万、period=上个月"
+      ],
+      "actual_evidence": [
+        "实际输出无任何槽位信息"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": "true",
+        "reasoning": "输出中无槽位字段，可明确评估"
+      },
+      "downstream_impact": "目标管理模块缺少必要参数，无法直接执行调整",
+      "blocking": false
+    },
+    {
+      "expectation_id": "意图识别置信度应高于阈值",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "confidence >= 0.7"
+      ],
+      "actual_evidence": [
+        "confidence = 0.5"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": "true",
+        "reasoning": "置信度数值可比较"
+      },
+      "downstream_impact": "可能导致下游系统误判为低置信度而触发不必要的澄清或降级",
+      "blocking": false
+    },
+    {
+      "expectation_id": "低置信度或无法识别时应触发降级策略",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "fallback = true（因为intent=other且confidence<0.7）"
+      ],
+      "actual_evidence": [
+        "fallback = false"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": "true",
+        "reasoning": "fallback布尔值可评估"
+      },
+      "downstream_impact": "可能直接以错误意图进入业务模块，导致用户困惑",
+      "blocking": false
+    },
+    {
+      "expectation_id": "意图应可分发至目标调整处理模块",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "intent标签属于目标调整路由集合"
+      ],
+      "actual_evidence": [
+        "intent为'other'，不在目标调整集合内"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": "true",
+        "reasoning": "可明确判断分发可能性"
+      },
+      "downstream_impact": "意图识别失败，无法启动目标调整流程",
+      "blocking": true
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "not_fulfilled",
+      "downstream_impact": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=None，confidence=None，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "blocking_expectations": [
+      "意图标签为调整目标而非其他",
+      "意图应可分发至目标调整处理模块",
+      "intent_contract"
+    ],
+    "assessment_count": 6
+  },
+  "expected": {
+    "intent": "根据实际输出重建的意图为：其他意图（'other'），无槽位，置信度0.5，未降级。"
+  },
+  "actual": {
+    "intent": "other",
+    "confidence": 0.5,
+    "fallback": false,
+    "raw_intent": "4001"
+  },
+  "reasoning_summary": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=None，confidence=None，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+  "judge_basis": "基于用户请求'帮我看看上个月的目标能不能调到500万'，核心业务意图是目标调整。实际输出的意图标签为'other'，不符合该业务期望，且缺乏槽位、置信度偏低、未触发降级，因此评估为未满足。",
+  "judge_method": "基于业务期望分解和实际输出对比，逐一评估关键维度。",
+  "verdict_derivation": {
+    "primary_boundary": "single_turn_intent_recognition",
+    "assessment_summary": "五个业务期望中有两个阻塞性期望（意图标签正确性、可分发性）未满足，其他三个非阻塞期望也未满足，整体未通过。",
+    "blocking_gaps": [
+      "意图标签为'other'而不是预期目标调整类标签",
+      "意图'other'无法分发至目标调整模块"
+    ],
+    "why_verdict": "因为核心阻塞期望未满足：意图标签错误导致无法分发到目标模块，且其他质量维度也未达标，故整体判断为未满足。",
+    "contract_gate": "failed"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "正确的意图标签（应为目标调整类）",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "目标金额槽位",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "时间范围槽位",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "足够的置信度",
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "实际意图标签为'other'",
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    "用户明确请求调整上个月目标到500万，属于明显的目标修改意图，但系统返回意图'other'且置信度低（0.5），未提取槽位，也未降级。两个阻塞维度均未满足，导致整体意图识别失败。"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": "true",
+    "reasoning": "实际输出包含所有评估所需字段，无系统错误或不可控限制，全部可评估。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "single_turn_intent_recognition",
+    "primary_boundary_name": "单轮意图识别",
+    "judge_question": "意图识别是否正确理解了用户请求，并输出了可用的意图标签和槽位？",
+    "verdict_basis": "基于业务期望与实际输出的符合度",
+    "boundary_sources": "capability_manifest和critical_intent_dimensions",
+    "conflict_policy": "以critical_intent_dimensions为评估骨架"
+  },
+  "consumer_contract": {
+    "consumer": "目标管理模块",
+    "contract": "期望接收到意图标签为'modify_target'或类似，并包含目标金额、时间等槽位",
+    "application_boundary": {
+      "excludes": [
+        "multi_turn_planning",
+        "sse_card_generation"
+      ],
+      "scope": "single_turn_intent_recognition"
+    }
+  },
+  "intent_model": {
+    "raw_user_request": "帮我看看上个月的目标能不能调到500万，因为最近团队业绩压力大",
+    "explicit_intents": [
+      "查询或调整上个月的目标值为500万"
+    ],
+    "implicit_business_intents": [
+      "应对团队业绩压力，可能需要调整销售目标或指标"
+    ],
+    "constraints": {
+      "target_amount": "500万",
+      "time_period": "上个月",
+      "reason": "团队业绩压力大"
+    },
+    "success_definition": "系统应识别出用户意图为'目标调整'或'目标修改'，并提取关键槽位（金额500万，时间范围上个月），以便后续目标管理模块处理。",
+    "blocking_requirements": [
+      "意图标签必须指向'目标调整'类功能，而非其他类别",
+      "必须能够分发到目标调整处理模块"
+    ],
+    "nice_to_have_requirements": [
+      "高置信度（≥0.7）以体现明确意图",
+      "提取槽位信息（金额、时间）",
+      "在无法明确匹配时应触发降级策略"
+    ],
+    "intent_evidence": [
+      "用户明确提到'调到500万'，表明调整操作",
+      "指定了时间'上个月'",
+      "给出了调整原因"
+    ]
+  },
+  "reconstructed_intent": "根据实际输出重建的意图为：其他意图（'other'），无槽位，置信度0.5，未降级。",
+  "semantic_equivalence_checks": [
+    {
+      "basis": "无参考意图标签，因此未进行语义等价检查"
+    }
+  ],
+  "reference_generation_basis": {
+    "source": "从用户目标和系统职责生成期望",
+    "alignment_to_actual_shape": "期望与实际输出字段一致，均为intent、confidence、fallback等"
+  },
+  "scenario": "intent_recognition",
+  "quality_flags": [
+    "intent_contract_gate_failed"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[意图应可分发至目标调整处理模块,意图标签为调整目标而非其他] · 意图识别失败，无法启动目标调整流程",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "意图应可分发至目标调整处理模块",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "意图识别失败，无法启动目标调整流程",
+        "within_evaluable_scope": "true",
+        "evidence": "intent为'other'，不在目标调整集合内 | intent标签属于目标调整路由集合"
+      },
+      {
+        "expectation_id": "意图标签为调整目标而非其他",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "无法将用户请求路由到目标管理模块，导致功能不可用",
+        "within_evaluable_scope": "true",
+        "evidence": "intent字段为'other' | intent字段为'modify_target'或语义等价标签"
+      },
+      {
+        "expectation_id": "低置信度或无法识别时应触发降级策略",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "可能直接以错误意图进入业务模块，导致用户困惑",
+        "within_evaluable_scope": "true",
+        "evidence": "fallback = false | fallback = true（因为intent=other且confidence<0.7）"
+      },
+      {
+        "expectation_id": "意图识别置信度应高于阈值",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "可能导致下游系统误判为低置信度而触发不必要的澄清或降级",
+        "within_evaluable_scope": "true",
+        "evidence": "confidence = 0.5 | confidence >= 0.7"
+      },
+      {
+        "expectation_id": "正确提取目标调整所需的槽位信息",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "目标管理模块缺少必要参数，无法直接执行调整",
+        "within_evaluable_scope": "true",
+        "evidence": "实际输出无任何槽位信息 | 槽位中应包含amount=500万、period=上个月"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 2,
+    "is_formal_attribution": true
+  }
+}

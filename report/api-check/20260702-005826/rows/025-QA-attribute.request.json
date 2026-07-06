@@ -1,0 +1,215 @@
+{
+  "project": "QA",
+  "trace": {
+    "trace_id": "347e53ca-a24f-4df0-9d53-6b35e7059db3",
+    "project_id": "QA",
+    "case_id": "mock-agent-QA-ffa2efb1",
+    "live_result": {
+      "project_id": "QA",
+      "case_id": "mock-agent-QA-ffa2efb1",
+      "session_id": "",
+      "raw_input": {
+        "query": "你好，我想问一下，咱们国家的首都是哪里啊？"
+      },
+      "normalized_request": {
+        "input": {
+          "question": ""
+        },
+        "metadata": {
+          "ready": [
+            "output",
+            "reference"
+          ],
+          "source": "mock_agent_llm"
+        },
+        "scenario": "qa_gold_answer",
+        "data_quality_flags": [
+          "missing_question",
+          "missing_actual_answer",
+          "missing_golden_answer"
+        ],
+        "output": {
+          "actual_answer": ""
+        }
+      },
+      "call_status": "succeeded",
+      "extracted_output": {
+        "actual_answer": ""
+      },
+      "output_source": "live_service",
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-01T16:58:36.621549+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-01T16:58:36.621562+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-01T16:58:36.622288+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "failed",
+        "started_at": "2026-07-01T16:58:36.622347+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "failed",
+        "started_at": "2026-07-01T16:58:36.623922+00:00"
+      },
+      {
+        "attempt": 2,
+        "status": "failed",
+        "started_at": "2026-07-01T16:58:36.623971+00:00"
+      },
+      {
+        "attempt": 2,
+        "status": "failed",
+        "started_at": "2026-07-01T16:58:36.625751+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-01T16:58:36.625765+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract missing"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations missing"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract missing"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations missing"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "collect_evidence",
+        "condition": "gate_failed_recoverable",
+        "reason": "consumer contract missing；business expectations missing",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 1,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "incomplete_or_human_review",
+        "condition": "retry_limit",
+        "reason": "state retry limit exceeded",
+        "retry_count": 1,
+        "stop_reason": "incomplete_retry_limit"
+      },
+      {
+        "from_state": "incomplete_or_human_review",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "incomplete_retry_limit"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      },
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "qa_gold_answer",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "created_at": "2026-07-01T16:58:36.622247+00:00"
+  },
+  "judge": {
+    "trace_id": "347e53ca-a24f-4df0-9d53-6b35e7059db3",
+    "project_id": "QA",
+    "actual": {
+      "actual_answer": ""
+    }
+  }
+}

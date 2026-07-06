@@ -1,0 +1,60 @@
+{
+  "trace_id": "f4e4e613-835e-4187-b40d-6611027a1aa5",
+  "project_id": "marketting-planning-intent",
+  "case_id": "",
+  "causal_category": "implementation_bug",
+  "earliest_divergence": {
+    "node": "intent_contract_gate",
+    "evidence": [
+      []
+    ],
+    "confidence": "medium"
+  },
+  "chain_nodes": [
+    {
+      "status": "failed",
+      "evidence": [
+        {},
+        {},
+        {},
+        {}
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "failed",
+      "evidence": [
+        "run_trace.status=error",
+        "run_trace.error='marketing-planning intent service unavailable: <urlopen error [Errno 61] Connection refused>'",
+        "run_trace.extracted_output='{}'",
+        "run_trace.execution_trace=[] (empty)"
+      ]
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified",
+      "evidence": [
+        "adapter.py call_or_prepare() 在第 ~95 行捕获 urllib.error.URLError 并记录 call_error",
+        "start.md 明确说明服务监听 127.0.0.1:9006，需先执行 bash start.sh 启动",
+        "intent_recognition.py 中的 try_rule_based_intent() 具备处理查询 '我想看明年NBEV增长规划' 的规则（Tier 3: NBEV + 规划关键词 → nbev_planning, confidence=0.95）"
+      ]
+    }
+  ],
+  "evidence_coverage": {
+    "query": false,
+    "actual": false,
+    "expected": false,
+    "execution_trace": false
+  },
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {}，最早差异位于 intent_contract_gate。",
+  "verification_steps": [
+    "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+  ],
+  "patch_direction": [
+    "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+  ],
+  "needs_human_review": true,
+  "scenario": "service_unavailability_during_evaluation"
+}

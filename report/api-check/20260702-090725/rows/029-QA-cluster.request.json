@@ -1,0 +1,63 @@
+{
+  "project": "QA",
+  "attributes": [
+    {
+      "trace_id": "23d84cb9-9d89-42b4-ad10-a93e484fe852",
+      "project_id": "QA",
+      "case_id": "",
+      "causal_category": "needs_human_review",
+      "earliest_divergence": {
+        "node": "state_machine",
+        "evidence": [
+          {
+            "type": "empty_actual_answer",
+            "description": "actual_answer 字段值为空字符串，没有任何文本内容。"
+          },
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "confidence": "unknown"
+      },
+      "chain_nodes": [
+        {
+          "status": "not_verified",
+          "evidence": [
+            {
+              "type": "empty_actual_answer",
+              "description": "actual_answer 字段值为空字符串，没有任何文本内容。"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=False",
+            "golden_answer_present=False"
+          ]
+        }
+      ],
+      "evidence_coverage": {
+        "query": true,
+        "actual": true,
+        "expected": true,
+        "execution_trace": true
+      },
+      "root_cause_hypothesis": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "verification_steps": [
+        "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+      ],
+      "patch_direction": [
+        "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+      ],
+      "needs_human_review": true,
+      "scenario": "qa_gold_answer",
+      "summary": {
+        "causal_category": "needs_human_review",
+        "attribution_count": 0,
+        "probe_count": 0,
+        "summary_text": "incomplete_retry_limit",
+        "is_complete": false,
+        "is_formal_attribution": false
+      }
+    }
+  ]
+}

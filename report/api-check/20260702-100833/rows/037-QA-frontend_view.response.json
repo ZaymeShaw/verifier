@@ -1,0 +1,706 @@
+{
+  "project_info": {
+    "project_id": "QA",
+    "name": "QA 评估项目",
+    "description": "评估已产出的问答输入、输出、参考答案或上下文证据，支持样本级 scenario。"
+  },
+  "run_trace_summary": {
+    "trace_id": "27a71b88-4e5a-435f-a2a2-0bcd96aaf20f",
+    "project_id": "QA",
+    "case_id": "mock-agent-QA-7f136d07",
+    "live_result": {
+      "project_id": "QA",
+      "case_id": "mock-agent-QA-7f136d07",
+      "session_id": "",
+      "raw_input": {
+        "query": "你好，我想问一下怎么修改我的账户密码？"
+      },
+      "normalized_request": {
+        "data_quality_flags": [
+          "missing_question",
+          "missing_actual_answer",
+          "missing_golden_answer"
+        ],
+        "input": {
+          "question": ""
+        },
+        "metadata": {
+          "ready": [
+            "output",
+            "reference"
+          ],
+          "source": "mock_agent_llm"
+        },
+        "output": {
+          "actual_answer": ""
+        },
+        "scenario": "qa_gold_answer"
+      },
+      "call_status": "succeeded",
+      "extracted_output": {
+        "actual_answer": ""
+      },
+      "output_source": "live_service",
+      "interaction_mode": "single_turn"
+    },
+    "execution_mode": "",
+    "output_source": "live_service",
+    "scenario": "qa_gold_answer",
+    "evidence_refs": [
+      {
+        "ref_id": "",
+        "source": "",
+        "kind": "",
+        "stage": "",
+        "summary": "",
+        "location": ""
+      },
+      {
+        "ref_id": "",
+        "source": "",
+        "kind": "",
+        "stage": "",
+        "summary": "",
+        "location": ""
+      }
+    ],
+    "status": "ok",
+    "created_at": "2026-07-02T02:10:32.205103+00:00",
+    "state_history": [
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T02:10:32.200128+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T02:10:32.200149+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T02:10:32.205171+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T02:10:32.205290+00:00",
+        "status": "failed"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T02:11:59.362234+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T02:11:59.362321+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T02:11:59.362927+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 2,
+        "started_at": "2026-07-02T02:11:59.362974+00:00",
+        "status": "failed"
+      },
+      {
+        "attempt": 2,
+        "started_at": "2026-07-02T02:13:28.597865+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 2,
+        "started_at": "2026-07-02T02:13:28.597932+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 2,
+        "started_at": "2026-07-02T02:13:28.598514+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-02T02:13:28.598648+00:00",
+        "status": "skipped"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "reason": "trace exists",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "reason": "consumer contract available",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "reason": "business expectations available",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "reason": "fulfillment assessments cover expectations",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "reason": "fulfillment boundary available",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "reason": "derived verdict matches fulfillment state",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "reason": "no contradictions",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": false,
+        "reason": "unsupported claims require evidence",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "reason": "fulfillment assessments cover expectations",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "reason": "consumer contract available",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "reason": "business expectations available",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "reason": "fulfillment assessments cover expectations",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "reason": "fulfillment boundary available",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "reason": "derived verdict matches fulfillment state",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "reason": "no contradictions",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": false,
+        "reason": "unsupported claims require evidence",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "reason": "fulfillment assessments cover expectations",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      }
+    ],
+    "transition_decisions": [
+      {
+        "condition": "always",
+        "from_state": "prepare_trace",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "mock_or_input"
+      },
+      {
+        "condition": "always",
+        "from_state": "mock_or_input",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "execute_or_capture"
+      },
+      {
+        "condition": "always",
+        "from_state": "execute_or_capture",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "collect_evidence"
+      },
+      {
+        "condition": "always",
+        "from_state": "collect_evidence",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "build_business_expectations"
+      },
+      {
+        "condition": "always",
+        "from_state": "build_business_expectations",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "evaluate_fulfillment"
+      },
+      {
+        "condition": "always",
+        "from_state": "evaluate_fulfillment",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "fulfillment_critic"
+      },
+      {
+        "condition": "gate_failed_recoverable",
+        "from_state": "fulfillment_critic",
+        "reason": "unsupported claims require evidence",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "collect_evidence"
+      },
+      {
+        "condition": "always",
+        "from_state": "collect_evidence",
+        "reason": "always",
+        "retry_count": 1,
+        "stop_reason": "",
+        "to_state": "build_business_expectations"
+      },
+      {
+        "condition": "always",
+        "from_state": "build_business_expectations",
+        "reason": "always",
+        "retry_count": 1,
+        "stop_reason": "",
+        "to_state": "evaluate_fulfillment"
+      },
+      {
+        "condition": "always",
+        "from_state": "evaluate_fulfillment",
+        "reason": "always",
+        "retry_count": 1,
+        "stop_reason": "",
+        "to_state": "fulfillment_critic"
+      },
+      {
+        "condition": "retry_limit",
+        "from_state": "fulfillment_critic",
+        "reason": "state retry limit exceeded",
+        "retry_count": 1,
+        "stop_reason": "incomplete_retry_limit",
+        "to_state": "incomplete_or_human_review"
+      },
+      {
+        "condition": "stop",
+        "from_state": "incomplete_or_human_review",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "incomplete_retry_limit",
+        "to_state": "completed"
+      }
+    ],
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "turn_index": 0
+  },
+  "reference_panel": {
+    "reference": {
+      "actual_answer": "用户请求指导如何修改其账户密码，期望获得具体、可执行的操作步骤。评估应基于黄金答案验证回答的正确性和完整性，但由于关键数据缺失，评估无法进行。"
+    },
+    "source": "judge_generated",
+    "actual": {
+      "actual_answer": ""
+    }
+  },
+  "judge_panel": {
+    "trace_id": "27a71b88-4e5a-435f-a2a2-0bcd96aaf20f",
+    "project_id": "QA",
+    "verdict": "uncertain",
+    "expected": {
+      "actual_answer": "用户请求指导如何修改其账户密码，期望获得具体、可执行的操作步骤。评估应基于黄金答案验证回答的正确性和完整性，但由于关键数据缺失，评估无法进行。"
+    },
+    "actual": {
+      "actual_answer": ""
+    },
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "回答提供修改密码的方法",
+        "status": "not_evaluable",
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "回答与黄金答案一致",
+        "status": "not_evaluable",
+        "downstream_impact": "",
+        "blocking": false
+      }
+    ],
+    "overall_fulfillment": {
+      "assessment_count": 2,
+      "blocking_expectations": [
+        "回答提供修改密码的方法",
+        "回答与黄金答案一致"
+      ],
+      "status": "not_evaluable"
+    },
+    "reconstructed_intent": "",
+    "judge_basis": "",
+    "judge_method": "",
+    "reasoning_summary": "",
+    "scenario": "",
+    "summary": {
+      "assessment_count": 2,
+      "blocking_count": 2,
+      "fulfillment_status": "not_evaluable",
+      "is_formal_attribution": false,
+      "reason": "uncertain · 由于样本缺失评估所必需的实际输出和参考黄金答案，且当前场景为 qa_gold_answer，要求对比两者方可判定，因此无法作出任何有效判定。",
+      "reason_source": "reasoning_summary"
+    },
+    "display_status": "not_evaluable",
+    "display_reason": "uncertain · unclear",
+    "wrong_missing_extra": {}
+  },
+  "attribute_panel": {
+    "trace_id": "27a71b88-4e5a-435f-a2a2-0bcd96aaf20f",
+    "project_id": "QA",
+    "case_id": "",
+    "analysis_method": "",
+    "chain_nodes": [
+      {
+        "name": "",
+        "status": "not_verified",
+        "evidence": [
+          "样本存在严重数据缺失：实际输出为空字符串，黄金答案缺失，问题字段未正确标准化。在依赖参考对比的 qa_gold_answer 场景下，评估无法执行。建议将样本标记为无效并通知数据管道检查，同时加入人工审核队列。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "reason": ""
+      }
+    ],
+    "earliest_divergence": {
+      "confidence": "unknown",
+      "evidence": [
+        "样本存在严重数据缺失：实际输出为空字符串，黄金答案缺失，问题字段未正确标准化。在依赖参考对比的 qa_gold_answer 场景下，评估无法执行。建议将样本标记为无效并通知数据管道检查，同时加入人工审核队列。",
+        "scenario=qa_gold_answer",
+        "question_present=True",
+        "actual_answer_present=False",
+        "golden_answer_present=False"
+      ],
+      "node": "state_machine"
+    },
+    "evidence_coverage": {
+      "actual": true,
+      "execution_trace": true,
+      "expected": true,
+      "query": true
+    },
+    "incomplete_reason": "",
+    "root_cause_hypothesis": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+    "verification_steps": [
+      "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+    ],
+    "patch_direction": [
+      "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+    ],
+    "causal_category": "needs_human_review",
+    "needs_human_review": true,
+    "scenario": "qa_gold_answer",
+    "summary": {
+      "attribution_count": 0,
+      "causal_category": "needs_human_review",
+      "is_complete": false,
+      "is_formal_attribution": false,
+      "probe_count": 0,
+      "summary_text": "incomplete_retry_limit"
+    },
+    "display_causal_category": "needs_human_review",
+    "display_root_cause": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+    "display_verification_steps": [
+      "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+    ],
+    "display_patch_direction": [
+      "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+    ],
+    "attribution_count": 0,
+    "probe_count": 0
+  },
+  "fulfillment_panel": {
+    "overall_fulfillment": {
+      "assessment_count": 2,
+      "blocking_expectations": [
+        "回答提供修改密码的方法",
+        "回答与黄金答案一致"
+      ],
+      "status": "not_evaluable"
+    },
+    "derived_verdict": "uncertain"
+  },
+  "expectation_attribution_panel": {
+    "causal_category": "needs_human_review",
+    "incomplete_reason": ""
+  },
+  "cluster_panel": {
+    "project_id": "QA",
+    "clusters": [
+      {
+        "canonical_attribution": false,
+        "causal_category": "needs_human_review",
+        "cluster_id": "expectation::needs_human_review",
+        "common_root_cause": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+        "count": 1,
+        "mechanism": "insufficient_evidence_or_human_review",
+        "minimal_fix_direction": [
+          "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+        ],
+        "needs_human_review": true,
+        "next_actions": [
+          "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+        ],
+        "representative_cases": [
+          "27a71b88-4e5a-435f-a2a2-0bcd96aaf20f"
+        ],
+        "representative_diffs": [
+          {
+            "case_id": "27a71b88-4e5a-435f-a2a2-0bcd96aaf20f",
+            "evidence": [
+              "样本存在严重数据缺失：实际输出为空字符串，黄金答案缺失，问题字段未正确标准化。在依赖参考对比的 qa_gold_answer 场景下，评估无法执行。建议将样本标记为无效并通知数据管道检查，同时加入人工审核队列。",
+              "scenario=qa_gold_answer",
+              "question_present=True",
+              "actual_answer_present=False",
+              "golden_answer_present=False"
+            ],
+            "node": "state_machine"
+          }
+        ],
+        "representative_traces": [
+          "27a71b88-4e5a-435f-a2a2-0bcd96aaf20f"
+        ],
+        "shared_failure_pattern": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+        "verification_cases": [
+          "27a71b88-4e5a-435f-a2a2-0bcd96aaf20f"
+        ]
+      }
+    ],
+    "common_root_cause": "",
+    "impact": "",
+    "priority": ""
+  },
+  "check_panel": {
+    "passed": false,
+    "issues": [
+      "QA qa_gold_answer requires reference.golden_answer.",
+      "Fallback decisions require human review before treating the chain as fully verified."
+    ],
+    "protocol_gaps": [
+      "QA qa_gold_answer requires reference.golden_answer."
+    ],
+    "consistency_gaps": [
+      "Fallback decisions require human review before treating the chain as fully verified."
+    ],
+    "verification_results": [
+      "Structured fallback decisions recorded: 1.",
+      "Check categories passed current audit."
+    ],
+    "recommended_fixes": [
+      "Complete missing protocol outputs before treating the chain as valid.",
+      "Ensure all steps use the same trace_id and latest run output."
+    ],
+    "fallbacks": [
+      {
+        "fallback_id": "",
+        "source_stage": "",
+        "fallback_type": "",
+        "status": "needs_human_review",
+        "reason": "incomplete_retry_limit",
+        "recoverable": false,
+        "needs_human_review": false
+      }
+    ]
+  },
+  "table_row": {
+    "id": "mock-agent-QA-7f136d07",
+    "input": "你好，我想问一下怎么修改我的账户密码？",
+    "scenario": "qa_gold_answer",
+    "output_summary": "{\"actual_answer\": \"\"}",
+    "reference_summary": "{\"actual_answer\": \"用户请求指导如何修改其账户密码，期望获得具体、可执行的操作步骤。评估应基于黄金答案验证回答的正确性和完整性，但由于关键数据缺失，评估无法进行。\"}",
+    "status": "not_evaluable",
+    "execution_mode": "",
+    "output_source": "live_service",
+    "verdict": "uncertain",
+    "fulfillment_status": "not_evaluable",
+    "judge_summary": {
+      "status": "not_evaluable",
+      "fulfillment_status": "not_evaluable",
+      "verdict": "uncertain",
+      "reason": "uncertain · 由于样本缺失评估所必需的实际输出和参考黄金答案，且当前场景为 qa_gold_answer，要求对比两者方可判定，因此无法作出任何有效判定。",
+      "reason_source": "reasoning_summary",
+      "reason_stage": "judge",
+      "is_formal_attribution": false,
+      "assessment_count": 2,
+      "blocking_count": 2
+    },
+    "attribution_summary": {
+      "attribution_count": 0,
+      "causal_category": "needs_human_review",
+      "is_complete": false,
+      "is_formal_attribution": false,
+      "probe_count": 0,
+      "summary_text": "incomplete_retry_limit"
+    },
+    "check_summary": {
+      "passed": false,
+      "issue_count": 2,
+      "protocol_gap_count": 1,
+      "consistency_gap_count": 1,
+      "recommended_fix_count": 2,
+      "issues": [
+        "QA qa_gold_answer requires reference.golden_answer.",
+        "Fallback decisions require human review before treating the chain as fully verified."
+      ]
+    },
+    "fallback_summary": {
+      "count": 1,
+      "needs_human_review": false,
+      "by_stage": {
+        "unknown": 1
+      },
+      "reasons": [
+        "incomplete_retry_limit"
+      ]
+    },
+    "needs_human_review": true,
+    "check_passed": false,
+    "issue_count": 4,
+    "fallback_count": 1,
+    "causal_category": "needs_human_review",
+    "divergence_stage": "state_machine",
+    "root_cause_summary": "incomplete_retry_limit",
+    "created_at": "2026-07-02T02:10:32.205103+00:00",
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "trace_id": "27a71b88-4e5a-435f-a2a2-0bcd96aaf20f"
+  },
+  "project_extensions": {
+    "scenarios": [
+      "qa_gold_answer",
+      "qa_context_faithfulness",
+      "qa_weak_quality"
+    ],
+    "score_dimensions": [
+      "correctness",
+      "completeness",
+      "key_point_coverage",
+      "faithfulness",
+      "relevance",
+      "usefulness",
+      "coherence",
+      "risk_control",
+      "clarity"
+    ],
+    "error_taxonomy": [
+      "answer_incorrect",
+      "answer_incomplete",
+      "question_misunderstood",
+      "irrelevant_answer",
+      "unsupported_claim",
+      "hallucination",
+      "context_not_used",
+      "insufficient_context",
+      "context_noise",
+      "over_refusal",
+      "format_error",
+      "too_vague",
+      "contradiction",
+      "needs_human_review",
+      "none"
+    ],
+    "frontend_standard": {
+      "frontend_view": {
+        "live": "render Input, Output, Reference, Judge, Attribute, and scenario fields from protocol objects",
+        "summary": "render same QA case-pool shape with compact per-case judge and attribute summaries"
+      },
+      "batch_persistence": {
+        "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+        "transient_results": "do not persist full trace, judge, attribute, or frontend_view as durable case-pool source data"
+      }
+    },
+    "display_contract": {
+      "output_source": "trace.live_result.extracted_output",
+      "reference_source": "judge_generated",
+      "formatting": [
+        "json formatting",
+        "truncation",
+        "output/reference alignment"
+      ]
+    }
+  }
+}

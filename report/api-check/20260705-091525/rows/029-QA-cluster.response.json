@@ -1,0 +1,53 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::需人工复核::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "需人工复核",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "说明轻症赔付的间隔期要求及常见时长",
+        "说明轻症分组限制",
+        "说明轻症赔付对重疾保额的可能影响"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "3cad0230-53e2-4c99-8132-0d662c15c568"
+      ],
+      "representative_traces": [
+        "3cad0230-53e2-4c99-8132-0d662c15c568"
+      ],
+      "common_root_cause": "实际回答由 mock_agent_llm 生成，模型在生成时未能覆盖参考回答中的全部关键信息点（间隔期具体时长、分组限制、保额影响）。可能原因包括：(1) 模型倾向于生成简洁回答，省略了细节限制条件；(2) prompt 未明确要求提供完整的限制条件说明；(3) 模型缺乏对保险条款细节的足够知识或推理深度。由于无法访问 mock_agent 的 prompt 和模型配置，暂无法确定精确机制，最可能为模型能力缺陷导致的信息覆盖不足。",
+      "shared_failure_pattern": "实际回答由 mock_agent_llm 生成，模型在生成时未能覆盖参考回答中的全部关键信息点（间隔期具体时长、分组限制、保额影响）。可能原因包括：(1) 模型倾向于生成简洁回答，省略了细节限制条件；(2) prompt 未明确要求提供完整的限制条件说明；(3) 模型缺乏对保险条款细节的足够知识或推理深度。由于无法访问 mock_agent 的 prompt 和模型配置，暂无法确定精确机制，最可能为模型能力缺陷导致的信息覆盖不足。",
+      "representative_diffs": [
+        {
+          "case_id": "3cad0230-53e2-4c99-8132-0d662c15c568",
+          "node": "qa.output.read"
+        }
+      ],
+      "minimal_fix_direction": [
+        "在 mock_agent_llm 的 system/user prompt 中明确要求：回答必须覆盖轻症赔付的全部限制条件，包括间隔期时长（如90天/180天）、分组限制（同一组别只能赔一次）、保额影响（不变或减少）。",
+        "添加 few-shot 示例，展示包含完整限制条件的期望回答格式和详细程度。",
+        "考虑使用结构化输出或检查清单机制，在生成后自动校验是否覆盖了所有必要的信息维度。",
+        "如模型能力本身不足，可引入 RAG 增强：在生成前检索保险条款知识库，将相关规则注入 prompt 作为参考上下文。"
+      ],
+      "verification_cases": [
+        "3cad0230-53e2-4c99-8132-0d662c15c568"
+      ],
+      "next_actions": [
+        "获取并审查 mock_agent_llm 的生成 prompt，检查是否明确要求覆盖轻症赔付的全部限制条件（间隔期、分组、保额影响）。",
+        "对比相同 prompt 下多次生成的回答，确认模型是否稳定缺失这些信息点。",
+        "尝试在 prompt 中添加明确的完整性要求（如'请列出所有限制条件，包括间隔期具体时长、分组限制、保额影响'）并重新生成，观察是否改善。",
+        "检查模型是否受到 max_tokens 或长度限制导致截断。"
+      ]
+    }
+  ],
+  "common_root_cause": "实际回答由 mock_agent_llm 生成，模型在生成时未能覆盖参考回答中的全部关键信息点（间隔期具体时长、分组限制、保额影响）。可能原因包括：(1) 模型倾向于生成简洁回答，省略了细节限制条件；(2) prompt 未明确要求提供完整的限制条件说明；(3) 模型缺乏对保险条款细节的足够知识或推理深度。由于无法访问 mock_agent 的 prompt 和模型配置，暂无法确定精确机制，最可能为模型能力缺陷导致的信息覆盖不足。",
+  "impact": "",
+  "priority": "high"
+}

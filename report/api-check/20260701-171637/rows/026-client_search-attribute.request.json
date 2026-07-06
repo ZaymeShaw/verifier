@@ -1,0 +1,437 @@
+{
+  "project": "client_search",
+  "trace": {
+    "trace_id": "cd5eb7f4-172b-4f39-90ee-e217fb94cfe4",
+    "project_id": "client_search",
+    "case_id": "cs-age-sex-premium-correct-1",
+    "live_result": {
+      "project_id": "client_search",
+      "case_id": "cs-age-sex-premium-correct-1",
+      "session_id": "general-eval-session",
+      "raw_input": {
+        "query": "45岁女性保费10万以上"
+      },
+      "normalized_request": {
+        "user_text": "45岁女性保费10万以上",
+        "user_id": "eval-user",
+        "trace_id": "general-eval-1782897406811",
+        "session_id": "general-eval-session",
+        "source": "askbob"
+      },
+      "call_status": "succeeded",
+      "runtime_ms": 1678,
+      "extracted_output": {
+        "summary": "客户年龄=45\n并且客户性别为女\n并且年缴保费≥100000的客户",
+        "structured_output": [
+          {
+            "field": "clientAge",
+            "operator": "RANGE",
+            "value": {
+              "min": 45,
+              "max": 45
+            }
+          },
+          {
+            "field": "clientSex",
+            "operator": "MATCH",
+            "value": "女"
+          },
+          {
+            "field": "annPremSegNum",
+            "operator": "GTE",
+            "value": 100000
+          }
+        ],
+        "logic": "AND",
+        "status_code": 0,
+        "user_visible_text": "客户年龄=45\n并且客户性别为女\n并且年缴保费≥100000的客户",
+        "empty_result_reason": "",
+        "is_empty_result": false,
+        "source_query": "45岁女保费10万以上",
+        "matched_level": 4,
+        "matched_patterns": "### 当前时间\n2026-07-01 17:16:46 (Asia/Shanghai)\n### 今天星期\n周三\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\n\n  示例: \"男性客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}\n\n  示例: \"女客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}\n\n  反例: \"子女是男性的客户\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\n\n- **clientAge** | 操作符: RANGE | 值类型: numeric | 单位: 岁，直接取数字 | 定义: 表示客户本人年龄范围，不表示家庭成员年龄范围 | 说明: 语义年龄：青年18-35，中年36-55，老年56-100，未成年0-17；精确年龄（如'35岁'）用 RANGE {min:x,max:x}；年龄左右按上下各5岁输出，如40岁左右→RANGE {min:35,max:45}\n\n  示例: \"30到40岁的客户\" → {\"field\": \"clientAge\", \"operator\": \"RANGE\", \"value\": {\"min\": 30, \"max\": 40}}\n\n  示例: \"中年客户\" → {\"field\": \"clientAge\", \"operator\": \"RANGE\", \"value\": {\"min\": 36, \"max\": 55}}\n\n  示例: \"35岁的客户\" → {\"field\": \"clientAge\", \"operator\": \"RANGE\", \"value\": {\"min\": 35, \"max\": 35}}\n\n  示例: \"40岁左右的客户\" → {\"field\": \"clientAge\", \"operator\": \"RANGE\", \"value\": {\"min\": 35, \"max\": 45}}\n\n  示例: \"40或50岁的客户\" → \n\n  反例: \"配偶30到40岁的客户\" → 不输出该字段；原因: 这是家庭成员年龄范围，应映射到 familyInfo.familyclientage 并组合 familyInfo.familyrelation\n\n- **annPremSegNum** | 操作符: GTE | 值类型: numeric | 单位: 元，万=×10000，千=×1000，若为明确是万还是千单位，则默认是元 | 定义: 表示年缴保费金额（大于等于），不表示总保费、产品总保额\n\n  示例: \"年缴保费1万及以上的客户\" → {\"field\": \"annPremSegNum\", \"operator\": \"GTE\", \"value\": 10000}\n\n  示例: \"年缴保费1万以上的客户\" → {\"field\": \"annPremSegNum\", \"operator\": \"GTE\", \"value\": 10000}\n\n  示例: \"保费超过5万的客户\" → {\"field\": \"annPremSegNum\", \"operator\": \"GTE\", \"value\": 50000}\n\n  示例: \"年交保费大于1000的客户（没有万或千单位，默认是元，不用做运算）\" → {\"field\": \"annPremSegNum\", \"operator\": \"GTE\", \"value\": 1000}\n\n  反例: \"总保费为50万的客户\" → 不输出该字段；原因: 这是总保费语义，不是年缴保费；当前不能映射到 annPremSegNum\n\n  反例: \"总保费90万以上\" → 不输出该字段；原因: 这是总保费语义，不是年缴保费；当前不能映射到 annPremSegNum\n\n- **familyInfo.familyclientsex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示家庭成员性别，不表示客户本人性别；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件\n\n  示例: \"有儿子的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"子女\"]}, {\"field\": \"familyInfo.familyclientsex\", \"operator\": \"MATCH\", \"value\": \"男\"}]}\n\n  示例: \"有女儿的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"子女\"]}, {\"field\": \"familyInfo.familyclientsex\", \"operator\": \"MATCH\", \"value\": \"女\"}]}\n\n  示例: \"有儿有女的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"子女\"]}, {\"field\": \"familyInfo.familyclientsex\", \"operator\": \"CONTAINS\", \"value\": [\"男\", \"女\"]}]}\n\n  反例: \"男性客户\" → 不输出该字段；原因: 这是客户本人性别，应映射到 clientSex，不是 familyInfo.familyclientsex\n\n  反例: \"女性客户\" → 不输出该字段；原因: 这是客户本人性别，应映射到 clientSex，不是 familyInfo.familyclientsex\n\n- **familyInfo.familyclientage** | 操作符: GT | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄（大于），不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday）；出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件\n\n  示例: \"孩子10岁以上（不含10岁）的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"子女\"]}, {\"field\": \"familyInfo.familyclientage\", \"operator\": \"GT\", \"value\": 10}]}\n\n- **familyInfo.familyclientage** | 操作符: GTE | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄（大于等于），不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday）；出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件\n\n  示例: \"孩子10岁及以上的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"子女\"]}, {\"field\": \"familyInfo.familyclientage\", \"operator\": \"GTE\", \"value\": 10}]}\n\n  示例: \"孩子10岁以上的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"子女\"]}, {\"field\": \"familyInfo.familyclientage\", \"operator\": \"GTE\", \"value\": 10}]}\n\n  示例: \"父母70岁及以上的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"父母\"]}, {\"field\": \"familyInfo.familyclientage\", \"operator\": \"GTE\", \"value\": 70}]}\n\n  示例: \"家里有孩子10岁及以上的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"子女\"]}, {\"field\": \"familyInfo.familyclientage\", \"operator\": \"GTE\", \"value\": 10}]}\n\n  示例: \"有老人的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyclientage\", \"operator\": \"GTE\", \"value\": 55}]}\n\n  反例: \"45岁及以上的客户\" → 不输出该字段；原因: 这是客户本人年龄，应映射到 clientAge，不是 familyInfo.familyclientage\n\n- **familyInfo.familyclientage** | 操作符: RANGE | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄，不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday），语义年龄：未成年0-17，青年18-35；出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件\n\n  示例: \"子女5到10岁的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"子女\"]}, {\"field\": \"familyInfo.familyclientage\", \"operator\": \"RANGE\", \"value\": {\"min\": 5, \"max\": 10}}]}\n\n  示例: \"子女未成年的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"子女\"]}, {\"field\": \"familyInfo.familyclientage\", \"operator\": \"RANGE\", \"value\": {\"min\": 0, \"max\": 17}}]}\n\n  示例: \"家里有老人的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyclientage\", \"operator\": \"GTE\", \"value\": 55}]}\n\n  反例: \"45岁以上的客户\" → 不输出该字段；原因: 这是客户本人年龄，应映射到 clientAge，不是 familyInfo.familyclientage\n\n- **familyInfo.familyclientage** | 操作符: LT | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄（小于），不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday）\n\n  示例: \"孩子10岁以下（不含10岁）的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"子女\"]}, {\"field\": \"familyInfo.familyclientage\", \"operator\": \"LT\", \"value\": 10}]}\n\n- **familyInfo.familyclientage** | 操作符: LTE | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄（小于等于），不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday）；出现子女/父母/配偶等关系词时应同时输出 familyInfo.familyrelation 条件\n\n  示例: \"孩子10岁及以下的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"子女\"]}, {\"field\": \"familyInfo.familyclientage\", \"operator\": \"LTE\", \"value\": 10}]}\n\n  示例: \"孩子10岁以下的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"子女\"]}, {\"field\": \"familyInfo.familyclientage\", \"operator\": \"LTE\", \"value\": 10}]}\n\n  示例: \"父母60岁及以下的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"父母\"]}, {\"field\": \"familyInfo.familyclientage\", \"operator\": \"LTE\", \"value\": 60}]}\n\n  示例: \"配偶年龄不超过40岁的客户\" → {\"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"配偶\"]}, {\"field\": \"familyInfo.familyclientage\", \"operator\": \"LTE\", \"value\": 40}]}\n\n  反例: \"45岁以下的客户\" → 不输出该字段；原因: 这是客户本人年龄，应映射到 clientAge，不是 familyInfo.familyclientage\n\n- **polNoInfo.totmodalpremsum** | 操作符: GT | 值类型: numeric | 单位: 元，万=×10000，千=×1000，如果没有明确单位，则默认是元，不用做运算 | 定义: 期交保费金额，＞ 严格超过；区别于年交保费\n\n  示例: \"期交保费1万以上的客户\" → {\"field\": \"polNoInfo.totmodalpremsum\", \"operator\": \"GT\", \"value\": 10000}\n\n- **polNoInfo.totmodalpremsum** | 操作符: GTE | 值类型: numeric | 单位: 元，万=×10000，千=×1000，如果没有明确单位，则默认是元，不用做运算 | 定义: 期交保费金额，≥ 达到或超过；区别于年交保费 | 说明: 期交保费按每期计算，年交保费按年计算；两者单位不同，不能混淆\n\n  示例: \"期交保费1万及以上的客户\" → {\"field\": \"polNoInfo.totmodalpremsum\", \"operator\": \"GTE\", \"value\": 10000}\n\n### 用户查询\n45岁女保费10万以上",
+        "external_boundary_sources": {
+          "config_paths": {
+            "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+            "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+            "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+            "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+          }
+        }
+      },
+      "output_source": "live_service",
+      "application_boundary": {
+        "downstream_result_set_available": false,
+        "downstream_status": "not_verified",
+        "judge_scope": "parser_condition_semantics_only",
+        "result_set_verified": false,
+        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+      },
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-01T09:16:46.808888+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-01T09:16:46.808914+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-01T09:16:48.490509+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-01T09:16:48.490564+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-01T09:18:38.093333+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-01T09:18:38.093405+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-01T09:18:38.093441+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-01T09:18:38.095886+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-01T09:18:38.097311+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-01T09:18:38.097347+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-01T09:18:38.127051+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence or blocked reason available"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "",
+    "interaction_mode": "single_turn",
+    "session_id": "general-eval-session",
+    "created_at": "2026-07-01T09:16:48.490402+00:00"
+  },
+  "judge": {
+    "trace_id": "cd5eb7f4-172b-4f39-90ee-e217fb94cfe4",
+    "project_id": "client_search",
+    "business_expectations": [
+      {},
+      {},
+      {},
+      {}
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "年龄精确匹配45岁",
+        "status": "fulfilled"
+      },
+      {
+        "expectation_id": "性别为女性",
+        "status": "fulfilled"
+      },
+      {
+        "expectation_id": "年缴保费十万以上",
+        "status": "fulfilled"
+      },
+      {
+        "expectation_id": "条件逻辑AND",
+        "status": "fulfilled"
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "fulfilled",
+      "assessment_count": 4
+    },
+    "expected": {
+      "query_logic": "AND",
+      "expected_source": "not_available",
+      "reference_is_oracle": false
+    },
+    "actual": {
+      "query_logic": "AND",
+      "conditions": [
+        {
+          "field": "clientAge",
+          "operator": "RANGE",
+          "value": {
+            "min": 45,
+            "max": 45
+          }
+        },
+        {
+          "field": "clientSex",
+          "operator": "MATCH",
+          "value": "女"
+        },
+        {
+          "field": "annPremSegNum",
+          "operator": "GTE",
+          "value": 100000
+        }
+      ]
+    },
+    "summary": {
+      "reason": "fulfilled · 4 blocking expectations all met · 用户查询'45岁女性保费10万以上'包含三个核心筛选意图：(1)年龄45岁——parser输出clientAge RANGE {min:45, max:45}，精确年龄使用RANGE操作符且min=max=45，符合项目约定；(2)女性——parser输出clientSex MATCH '女'，正确将口语'女性'映射为标准枚举值'女'，字段选择正确（clientSex为客户本人性别，非家庭成员性别）；(3)保费10万以上——parser输出annPremSegNum GTE 100000，正确将裸'保费'识别为年缴保费语义、'10万'换算为100000元、'以上'解读为GTE（≥包含边界）。三项条件以AND逻辑组合，完全满足用户同时筛选的需求。无任何缺失、多余或错误条件。下游ES搜索不可用但不影响parser条件语义的判断，所有评估均在可评价范围内完成。",
+      "reason_source": "aggregated_fulfillment",
+      "fulfillment_status": "fulfilled",
+      "assessment_count": 4,
+      "blocking_count": 4,
+      "is_formal_attribution": true
+    }
+  }
+}

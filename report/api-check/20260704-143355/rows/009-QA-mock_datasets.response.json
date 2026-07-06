@@ -1,0 +1,136 @@
+{
+  "project_id": "QA",
+  "datasets": [
+    {
+      "dataset_id": "QA_qa_gold_answer",
+      "name": "qa_gold_answer mock 数据集",
+      "dimension_type": "qa_gold_answer",
+      "description": "mock_agent 生成的 qa_gold_answer 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-QA-51db1c4c",
+          "input": {
+            "input": {
+              "user_text": "我买了这个重疾险，如果得了合同里约定的轻症，能赔多少钱啊？",
+              "query": "我买了这个重疾险，如果得了合同里约定的轻症，能赔多少钱啊？"
+            },
+            "metadata": {
+              "session_id": "sess_default_001",
+              "trace_id": "trace_default_001",
+              "user_id": "user_default_001"
+            },
+            "scenario": "qa_gold_answer",
+            "data_quality_flags": [
+              "intent_clarity",
+              "context_faithfulness"
+            ]
+          },
+          "output": {
+            "actual_answer": "轻症的赔付金额通常为基本保额的20%-30%，具体比例需参考您购买的保险合同的约定条款。"
+          },
+          "scenario": "qa_gold_answer",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "ready": [
+              "output",
+              "reference"
+            ],
+            "project_id": "QA",
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "QA_qa_context_faithfulness",
+      "name": "qa_context_faithfulness mock 数据集",
+      "dimension_type": "qa_context_faithfulness",
+      "description": "mock_agent 生成的 qa_context_faithfulness 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-QA-dc2c1a80",
+          "input": {
+            "input": {
+              "query": "我买的那份百万医疗险，住院报销的时候，自费药到底给不给报啊？"
+            },
+            "metadata": {
+              "session_id": "session_default_001",
+              "trace_id": "trace_default_001",
+              "user_id": "user_default_001"
+            },
+            "scenario": "qa_context_faithfulness"
+          },
+          "output": {
+            "actual_answer": "通常百万医疗险不报销自费药，具体需查看您所购保险条款中关于药品报销范围的规定。"
+          },
+          "scenario": "qa_context_faithfulness",
+          "expected_intent": "",
+          "reference": {
+            "actual_answer": "您好！关于您买的百万医疗险，通常来说住院期间产生的自费药（也就是医保不能报销的药品）是可以报销的，但有几个前提：首先，这些自费药必须是治疗所必需的、合理的药品；其次，需要由主治医生开具处方，并且在保险合同认可的医院或药店购买。另外，不同产品的具体规定可能有些差异，比如有的产品对自费药设有单独的限额或者免赔额。所以，最稳妥的办法还是仔细看看您那份保单里的“保障责任”和“免责条款”，或者直接打保险公司客服电话确认一下。希望您早日康复！"
+          },
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "ready": [
+              "output",
+              "reference"
+            ],
+            "project_id": "QA",
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "QA_qa_weak_quality",
+      "name": "qa_weak_quality mock 数据集",
+      "dimension_type": "qa_weak_quality",
+      "description": "mock_agent 生成的 qa_weak_quality 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-QA-d6db486e",
+          "input": {
+            "input": {
+              "query": "我前段时间买了你们那个百万医疗险，我想问下如果真住院了，花的钱都能给报销吗？能报多少比例啊？"
+            },
+            "metadata": {
+              "session_id": "session_default_001",
+              "trace_id": "trace_default_001",
+              "user_id": "user_default_001"
+            },
+            "scenario": "qa_weak_quality"
+          },
+          "output": {
+            "actual_answer": "百万医疗险一般有1万免赔额，扣除社保后，超过免赔额的部分按合同约定的比例报销，通常是100%或80%，具体要看你的保单条款。"
+          },
+          "scenario": "qa_weak_quality",
+          "expected_intent": "",
+          "reference": {
+            "actual_answer": "感谢您的咨询。百万医疗险主要是覆盖住院医疗费用的，但它并不是所有花费都能100%报销。通常会有几个关键点：\n\n1. **免赔额**：一般每年有1万元左右的免赔额，也就是社保报销后，自己花的钱超过这个额度，保险公司才开始按合同报销。\n2. **报销范围**：要求是在二级及以上公立医院普通部住院，且是合理且必要的治疗费用。一些非必需的营养品、整容、私密病房等通常不在保障范围内。\n3. **报销比例**：通常，如果您先经过社保报销，剩余部分可以按100%报销；但如果没有先走社保，或者购买的是有社保版但未使用，报销比例可能会降到60%-80%左右。具体比例要看您的保单约定。\n4. **最高限额**：产品最高报销额度通常在200万-400万之间，一般够用，但仍以合同为准。\n\n所以，并不是所有费用都能报，也不是固定比例，它会根据您是否使用社保和费用的性质来决定。建议您打开保单详情页，查看‘保障责任’和‘免赔额与赔付比例’部分，或者联系我们的在线客服提供保单号，我们帮您具体确认。"
+          },
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "ready": [
+              "output",
+              "reference"
+            ],
+            "project_id": "QA",
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ]
+    }
+  ]
+}

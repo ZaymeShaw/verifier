@@ -1,0 +1,3201 @@
+{
+  "trace": {
+    "trace_id": "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b",
+    "project_id": "client_search",
+    "case_id": "mock-agent-client_search-7ad5d20e",
+    "live_result": {
+      "project_id": "client_search",
+      "case_id": "mock-agent-client_search-7ad5d20e",
+      "session_id": "general-eval-session",
+      "raw_input": {
+        "query": "帮我查一下客户张三的详细资料"
+      },
+      "normalized_request": {
+        "user_text": "帮我查一下客户张三的详细资料",
+        "user_id": "eval-user",
+        "trace_id": "general-eval-1782951077494",
+        "session_id": "general-eval-session",
+        "source": "askbob"
+      },
+      "call_status": "succeeded",
+      "runtime_ms": 841,
+      "extracted_output": {
+        "summary": "客户姓名为张三的客户",
+        "structured_output": [
+          {
+            "field": "searchClientName",
+            "operator": "MATCH",
+            "value": "张三"
+          }
+        ],
+        "logic": "AND",
+        "status_code": 0,
+        "user_visible_text": "客户姓名为张三的客户",
+        "empty_result_reason": "",
+        "is_empty_result": false,
+        "source_query": "帮我查一下客户张三的详细资料",
+        "matched_level": 4,
+        "matched_patterns": "### 当前时间\n2026-07-02 08:11:17 (Asia/Shanghai)\n### 今天星期\n周四\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\n\n  示例: \"男性客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}\n\n  示例: \"女客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}\n\n  反例: \"子女是男性的客户\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\n\n- **asset_scale** | 操作符: LTE | 值类型: numeric | 单位: 元，万=×10000，千=×1000，若为明确是万还是千单位，则默认是元 | 定义: 客户资产规模上限筛选，数值型，单位元。 | 说明: 资产规模不同于年收入或家庭收入；金额单位按 unit 说明换算。\n\n  示例: \"资产规模50万以下的客户\" → {\"field\": \"asset_scale\", \"operator\": \"LTE\", \"value\": 500000}\n\n  示例: \"资产规模500000以下的客户\" → {\"field\": \"asset_scale\", \"operator\": \"LTE\", \"value\": 500000}\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n- **polNo** | 操作符: MATCH | 值类型: extract | 定义: 表示保单号，不表示客户编号，保单号是由P开头+15位数字，如 P966073446746215\n\n  示例: \"保单号为1234567890的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"1234567890\"}\n\n  示例: \"保单号匹配P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n  示例: \"按保单号查P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“以下”不含边界，“及以上”、“及以下”含边界 | 说明: 表示客户价值分组集合，如A类=A1/A2/A3/A4，B类=B，A或B/AB类=A1/A2/A3/A4/B；高价值->A1/A2/A3/A4/B/C，排序：F<E<D<C<B<A4<A3<A2<A1\n\n  示例: \"A类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"AB类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"高价值客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\", \"C\"]}\n\n  示例: \"B以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"B及以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"B类以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\"]}\n\n  示例: \"B类及以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\", \"B\"]}\n\n  示例: \"B类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"B\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **polNum** | 操作符: GTE | 值类型:  | 定义: 客户持有的保单总数量；张以上/张及以上表示 ≥N，张以下表示 ≤N\n\n  示例: \"保单数量超过3张的客户\" → {\"field\": \"polNum\", \"operator\": \"GTE\", \"value\": 3}\n\n  示例: \"持有多张寿险保单的客户\" → {\"field\": \"polNum\", \"operator\": \"GTE\", \"value\": 1}\n\n- **zxjyEquityGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['预达标', '已达标'] | 定义: 表示臻享家医客户范围，包括预达标和已达标两类客户 | 说明: 当用户直接输入“臻享家医客户/家医客户”时，输出 CONTAINS=[预达标, 已达标]，不要只输出已达标。\n\n  示例: \"臻享家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"臻享客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n- **clientGroupLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['奋斗青年', '都市白领', '而立一族', '社会中坚', '邻退天命', '慈爱祖辈', '创业新贵', '创富一代', '荣耀高堂', '承富二代', '已退小康'] | 定义: 表示客户画像分群标签。年龄、资产等组合定义用于增强召回理解，不作为默认自动映射规则。 | 说明: 例如：奋斗青年≈16-30岁且资产较低，创业新贵≈36-50岁且高净值；这些定义仅用于辅助理解，不应在缺少标签语境时直接替代为客群标签。\n\n  示例: \"都市白领客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"都市白领\"]}\n\n  示例: \"创业新贵客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"创业新贵\"]}\n\n### 用户查询\n帮我查一下客户张三的详细资料",
+        "external_boundary_sources": {
+          "config_paths": {
+            "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+            "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+            "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+            "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+          }
+        }
+      },
+      "output_source": "live_service",
+      "application_boundary": {
+        "downstream_result_set_available": false,
+        "downstream_status": "not_verified",
+        "judge_scope": "parser_condition_semantics_only",
+        "result_set_verified": false,
+        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+      },
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-02T00:11:17.489210+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-02T00:11:17.489327+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-02T00:11:18.336168+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-02T00:11:18.336244+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-02T00:12:15.706146+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-02T00:12:15.706232+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-02T00:12:15.706379+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-02T00:12:15.711446+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-02T00:12:15.715011+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-02T00:12:15.715080+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-02T00:12:15.769902+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence or blocked reason available"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "",
+    "interaction_mode": "single_turn",
+    "session_id": "general-eval-session",
+    "created_at": "2026-07-02T00:11:18.335948+00:00"
+  },
+  "judge": {
+    "trace_id": "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b",
+    "project_id": "client_search",
+    "business_expectations": [
+      {},
+      {},
+      {}
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "客户姓名识别与字段映射",
+        "status": "fulfilled"
+      },
+      {
+        "expectation_id": "姓名值完整提取",
+        "status": "fulfilled"
+      },
+      {
+        "expectation_id": "姓名匹配操作符语义正确",
+        "status": "fulfilled"
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "fulfilled",
+      "assessment_count": 3
+    },
+    "expected": {
+      "query_logic": "AND",
+      "expected_source": "not_available",
+      "reference_is_oracle": false
+    },
+    "actual": {
+      "query_logic": "AND",
+      "conditions": [
+        {
+          "field": "searchClientName",
+          "operator": "MATCH",
+          "value": "张三"
+        }
+      ]
+    },
+    "summary": {
+      "reason": "fulfilled · 3 blocking expectations all met · 用户查询'帮我查一下客户张三的详细资料'意图明确——按姓名搜索客户张三。系统输出了 searchClientName MATCH '张三' 这一条件，从三个维度评估：（1）字段映射：searchClientName 正确定义为客户本人姓名，符合用户查询客户姓名的意图；（2）值提取：'张三'完整保留，未被截断；（3）操作符：MATCH 在 capability_manifest 中是 searchClientName 的合法操作符，且对中文姓名搜索语义正确。无缺失条件、无错误条件、无多余条件。三个阻塞级业务期望全部满足。",
+      "reason_source": "aggregated_fulfillment",
+      "fulfillment_status": "fulfilled",
+      "assessment_count": 3,
+      "blocking_count": 3,
+      "is_formal_attribution": true
+    }
+  },
+  "attribute": {
+    "trace_id": "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b",
+    "project_id": "client_search",
+    "case_id": "",
+    "expectation_attributions": [
+      {
+        "expectation_id": "客户姓名识别与字段映射",
+        "causal_category": "no_issue"
+      },
+      {
+        "expectation_id": "姓名值完整提取",
+        "causal_category": "no_issue"
+      },
+      {
+        "expectation_id": "姓名匹配操作符语义正确",
+        "causal_category": "no_issue"
+      }
+    ],
+    "causal_category": "no_issue",
+    "earliest_divergence": {
+      "node": "fulfillment_assessment",
+      "evidence": [
+        "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+        "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+        "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+        "actual output：searchClientName MATCH '张三'"
+      ],
+      "confidence": "high"
+    },
+    "chain_nodes": [
+      {
+        "status": "verified",
+        "evidence": [
+          "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+          "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+          "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+          "actual output：searchClientName MATCH '张三'"
+        ]
+      }
+    ],
+    "probe_results": [
+      {
+        "probe_id": "fulfillment_assessment",
+        "status": "not_verified",
+        "evidence": [
+          "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+          "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+          "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+          "actual output：searchClientName MATCH '张三'"
+        ]
+      }
+    ],
+    "evidence_coverage": {
+      "judge_evidence": true,
+      "execution_trace": true
+    },
+    "root_cause_hypothesis": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+    "verification_steps": [
+      "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+    ],
+    "patch_direction": [
+      "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+    ],
+    "needs_human_review": false,
+    "scenario": "",
+    "summary": {
+      "causal_category": "no_issue",
+      "attribution_count": 3,
+      "probe_count": 1,
+      "summary_text": "业务预期已达成",
+      "is_complete": true,
+      "is_formal_attribution": true
+    }
+  },
+  "cluster": {
+    "project_id": "client_search",
+    "clusters": [
+      {
+        "cluster_id": "expectation::no_issue::fulfilled",
+        "mechanism": "no_issue::fulfilled",
+        "causal_category": "no_issue",
+        "fulfillment_statuses": [
+          "fulfilled"
+        ],
+        "expectation_ids": [
+          "客户姓名识别与字段映射",
+          "姓名值完整提取",
+          "姓名匹配操作符语义正确"
+        ],
+        "needs_human_review": false,
+        "canonical_attribution": true,
+        "count": 1,
+        "representative_cases": [
+          "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b"
+        ],
+        "representative_traces": [
+          "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b"
+        ],
+        "common_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+        "shared_failure_pattern": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+        "representative_diffs": [
+          {
+            "case_id": "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b",
+            "node": "fulfillment_assessment",
+            "evidence": [
+              "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+              "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+              "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+              "actual output：searchClientName MATCH '张三'"
+            ]
+          }
+        ],
+        "minimal_fix_direction": [
+          "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+        ],
+        "verification_cases": [
+          "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b"
+        ],
+        "next_actions": [
+          "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+        ]
+      }
+    ],
+    "common_root_cause": "",
+    "impact": "",
+    "priority": ""
+  },
+  "check": {
+    "passed": false,
+    "issues": [
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+    ],
+    "boundary_violations": [
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+    ],
+    "verification_results": [
+      "Check categories passed current audit."
+    ],
+    "recommended_fixes": [
+      "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions."
+    ]
+  },
+  "frontend_view": {
+    "project_info": {
+      "project_id": "client_search",
+      "name": "客户搜索评估示例",
+      "description": "将客户搜索项目作为通用评估系统的第一个项目适配实现。"
+    },
+    "run_trace_summary": {
+      "trace_id": "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b",
+      "project_id": "client_search",
+      "case_id": "mock-agent-client_search-7ad5d20e",
+      "input": {
+        "query": "帮我查一下客户张三的详细资料"
+      },
+      "normalized_request": {
+        "user_text": "帮我查一下客户张三的详细资料",
+        "user_id": "eval-user",
+        "trace_id": "general-eval-1782951077494",
+        "session_id": "general-eval-session",
+        "source": "askbob"
+      },
+      "extracted_output": {
+        "summary": "客户姓名为张三的客户",
+        "structured_output": [
+          {
+            "field": "searchClientName",
+            "operator": "MATCH",
+            "value": "张三"
+          }
+        ],
+        "logic": "AND",
+        "status_code": 0,
+        "user_visible_text": "客户姓名为张三的客户",
+        "empty_result_reason": "",
+        "is_empty_result": false,
+        "source_query": "帮我查一下客户张三的详细资料",
+        "matched_level": 4,
+        "matched_patterns": "### 当前时间\n2026-07-02 08:11:17 (Asia/Shanghai)\n### 今天星期\n周四\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\n\n  示例: \"男性客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}\n\n  示例: \"女客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}\n\n  反例: \"子女是男性的客户\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\n\n- **asset_scale** | 操作符: LTE | 值类型: numeric | 单位: 元，万=×10000，千=×1000，若为明确是万还是千单位，则默认是元 | 定义: 客户资产规模上限筛选，数值型，单位元。 | 说明: 资产规模不同于年收入或家庭收入；金额单位按 unit 说明换算。\n\n  示例: \"资产规模50万以下的客户\" → {\"field\": \"asset_scale\", \"operator\": \"LTE\", \"value\": 500000}\n\n  示例: \"资产规模500000以下的客户\" → {\"field\": \"asset_scale\", \"operator\": \"LTE\", \"value\": 500000}\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n- **polNo** | 操作符: MATCH | 值类型: extract | 定义: 表示保单号，不表示客户编号，保单号是由P开头+15位数字，如 P966073446746215\n\n  示例: \"保单号为1234567890的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"1234567890\"}\n\n  示例: \"保单号匹配P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n  示例: \"按保单号查P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“以下”不含边界，“及以上”、“及以下”含边界 | 说明: 表示客户价值分组集合，如A类=A1/A2/A3/A4，B类=B，A或B/AB类=A1/A2/A3/A4/B；高价值->A1/A2/A3/A4/B/C，排序：F<E<D<C<B<A4<A3<A2<A1\n\n  示例: \"A类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"AB类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"高价值客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\", \"C\"]}\n\n  示例: \"B以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"B及以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"B类以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\"]}\n\n  示例: \"B类及以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\", \"B\"]}\n\n  示例: \"B类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"B\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **polNum** | 操作符: GTE | 值类型:  | 定义: 客户持有的保单总数量；张以上/张及以上表示 ≥N，张以下表示 ≤N\n\n  示例: \"保单数量超过3张的客户\" → {\"field\": \"polNum\", \"operator\": \"GTE\", \"value\": 3}\n\n  示例: \"持有多张寿险保单的客户\" → {\"field\": \"polNum\", \"operator\": \"GTE\", \"value\": 1}\n\n- **zxjyEquityGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['预达标', '已达标'] | 定义: 表示臻享家医客户范围，包括预达标和已达标两类客户 | 说明: 当用户直接输入“臻享家医客户/家医客户”时，输出 CONTAINS=[预达标, 已达标]，不要只输出已达标。\n\n  示例: \"臻享家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"臻享客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n- **clientGroupLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['奋斗青年', '都市白领', '而立一族', '社会中坚', '邻退天命', '慈爱祖辈', '创业新贵', '创富一代', '荣耀高堂', '承富二代', '已退小康'] | 定义: 表示客户画像分群标签。年龄、资产等组合定义用于增强召回理解，不作为默认自动映射规则。 | 说明: 例如：奋斗青年≈16-30岁且资产较低，创业新贵≈36-50岁且高净值；这些定义仅用于辅助理解，不应在缺少标签语境时直接替代为客群标签。\n\n  示例: \"都市白领客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"都市白领\"]}\n\n  示例: \"创业新贵客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"创业新贵\"]}\n\n### 用户查询\n帮我查一下客户张三的详细资料",
+        "external_boundary_sources": {
+          "config_paths": {
+            "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+            "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+            "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+            "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+          }
+        }
+      },
+      "live_result": {
+        "project_id": "client_search",
+        "case_id": "mock-agent-client_search-7ad5d20e",
+        "session_id": "general-eval-session",
+        "raw_input": {
+          "query": "帮我查一下客户张三的详细资料"
+        },
+        "normalized_request": {
+          "user_text": "帮我查一下客户张三的详细资料",
+          "user_id": "eval-user",
+          "trace_id": "general-eval-1782951077494",
+          "session_id": "general-eval-session",
+          "source": "askbob"
+        },
+        "call_status": "succeeded",
+        "runtime_ms": 841,
+        "extracted_output": {
+          "summary": "客户姓名为张三的客户",
+          "structured_output": [
+            {
+              "field": "searchClientName",
+              "operator": "MATCH",
+              "value": "张三"
+            }
+          ],
+          "logic": "AND",
+          "status_code": 0,
+          "user_visible_text": "客户姓名为张三的客户",
+          "empty_result_reason": "",
+          "is_empty_result": false,
+          "source_query": "帮我查一下客户张三的详细资料",
+          "matched_level": 4,
+          "matched_patterns": "### 当前时间\n2026-07-02 08:11:17 (Asia/Shanghai)\n### 今天星期\n周四\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\n\n  示例: \"男性客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}\n\n  示例: \"女客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}\n\n  反例: \"子女是男性的客户\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\n\n- **asset_scale** | 操作符: LTE | 值类型: numeric | 单位: 元，万=×10000，千=×1000，若为明确是万还是千单位，则默认是元 | 定义: 客户资产规模上限筛选，数值型，单位元。 | 说明: 资产规模不同于年收入或家庭收入；金额单位按 unit 说明换算。\n\n  示例: \"资产规模50万以下的客户\" → {\"field\": \"asset_scale\", \"operator\": \"LTE\", \"value\": 500000}\n\n  示例: \"资产规模500000以下的客户\" → {\"field\": \"asset_scale\", \"operator\": \"LTE\", \"value\": 500000}\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n- **polNo** | 操作符: MATCH | 值类型: extract | 定义: 表示保单号，不表示客户编号，保单号是由P开头+15位数字，如 P966073446746215\n\n  示例: \"保单号为1234567890的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"1234567890\"}\n\n  示例: \"保单号匹配P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n  示例: \"按保单号查P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“以下”不含边界，“及以上”、“及以下”含边界 | 说明: 表示客户价值分组集合，如A类=A1/A2/A3/A4，B类=B，A或B/AB类=A1/A2/A3/A4/B；高价值->A1/A2/A3/A4/B/C，排序：F<E<D<C<B<A4<A3<A2<A1\n\n  示例: \"A类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"AB类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"高价值客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\", \"C\"]}\n\n  示例: \"B以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"B及以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"B类以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\"]}\n\n  示例: \"B类及以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\", \"B\"]}\n\n  示例: \"B类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"B\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **polNum** | 操作符: GTE | 值类型:  | 定义: 客户持有的保单总数量；张以上/张及以上表示 ≥N，张以下表示 ≤N\n\n  示例: \"保单数量超过3张的客户\" → {\"field\": \"polNum\", \"operator\": \"GTE\", \"value\": 3}\n\n  示例: \"持有多张寿险保单的客户\" → {\"field\": \"polNum\", \"operator\": \"GTE\", \"value\": 1}\n\n- **zxjyEquityGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['预达标', '已达标'] | 定义: 表示臻享家医客户范围，包括预达标和已达标两类客户 | 说明: 当用户直接输入“臻享家医客户/家医客户”时，输出 CONTAINS=[预达标, 已达标]，不要只输出已达标。\n\n  示例: \"臻享家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"臻享客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n- **clientGroupLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['奋斗青年', '都市白领', '而立一族', '社会中坚', '邻退天命', '慈爱祖辈', '创业新贵', '创富一代', '荣耀高堂', '承富二代', '已退小康'] | 定义: 表示客户画像分群标签。年龄、资产等组合定义用于增强召回理解，不作为默认自动映射规则。 | 说明: 例如：奋斗青年≈16-30岁且资产较低，创业新贵≈36-50岁且高净值；这些定义仅用于辅助理解，不应在缺少标签语境时直接替代为客群标签。\n\n  示例: \"都市白领客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"都市白领\"]}\n\n  示例: \"创业新贵客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"创业新贵\"]}\n\n### 用户查询\n帮我查一下客户张三的详细资料",
+          "external_boundary_sources": {
+            "config_paths": {
+              "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+              "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+              "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+              "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+            }
+          }
+        },
+        "output_source": "live_service",
+        "execution_trace": [
+          {
+            "stage": "adapter.build_request",
+            "status": "succeeded",
+            "evidence": {
+              "user_text": "帮我查一下客户张三的详细资料",
+              "source": "askbob"
+            },
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "client_search.api",
+            "status": "succeeded",
+            "evidence": {
+              "code": 0
+            },
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "client_search.routing",
+            "status": "succeeded",
+            "evidence": {
+              "matched_level": 4,
+              "matched_patterns": "### 当前时间\n2026-07-02 08:11:17 (Asia/Shanghai)\n### 今天星期\n周四\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\n\n  示例: \"男性客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}\n\n  示例: \"女客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}\n\n  反例: \"子女是男性的客户\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\n\n- **asset_scale** | 操作符: LTE | 值类型: numeric | 单位: 元，万=×10000，千=×1000，若为明确是万还是千单位，则默认是元 | 定义: 客户资产规模上限筛选，数值型，单位元。 | 说明: 资产规模不同于年收入或家庭收入；金额单位按 unit 说明换算。\n\n  示例: \"资产规模50万以下的客户\" → {\"field\": \"asset_scale\", \"operator\": \"LTE\", \"value\": 500000}\n\n  示例: \"资产规模500000以下的客户\" → {\"field\": \"asset_scale\", \"operator\": \"LTE\", \"value\": 500000}\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n- **polNo** | 操作符: MATCH | 值类型: extract | 定义: 表示保单号，不表示客户编号，保单号是由P开头+15位数字，如 P966073446746215\n\n  示例: \"保单号为1234567890的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"1234567890\"}\n\n  示例: \"保单号匹配P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n  示例: \"按保单号查P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“以下”不含边界，“及以上”、“及以下”含边界 | 说明: 表示客户价值分组集合，如A类=A1/A2/A3/A4，B类=B，A或B/AB类=A1/A2/A3/A4/B；高价值->A1/A2/A3/A4/B/C，排序：F<E<D<C<B<A4<A3<A2<A1\n\n  示例: \"A类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"AB类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"高价值客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\", \"C\"]}\n\n  示例: \"B以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"B及以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"B类以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\"]}\n\n  示例: \"B类及以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\", \"B\"]}\n\n  示例: \"B类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"B\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **polNum** | 操作符: GTE | 值类型:  | 定义: 客户持有的保单总数量；张以上/张及以上表示 ≥N，张以下表示 ≤N\n\n  示例: \"保单数量超过3张的客户\" → {\"field\": \"polNum\", \"operator\": \"GTE\", \"value\": 3}\n\n  示例: \"持有多张寿险保单的客户\" → {\"field\": \"polNum\", \"operator\": \"GTE\", \"value\": 1}\n\n- **zxjyEquityGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['预达标', '已达标'] | 定义: 表示臻享家医客户范围，包括预达标和已达标两类客户 | 说明: 当用户直接输入“臻享家医客户/家医客户”时，输出 CONTAINS=[预达标, 已达标]，不要只输出已达标。\n\n  示例: \"臻享家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"臻享客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n- **clientGroupLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['奋斗青年', '都市白领', '而立一族', '社会中坚', '邻退天命', '慈爱祖辈', '创业新贵', '创富一代', '荣耀高堂', '承富二代', '已退小康'] | 定义: 表示客户画像分群标签。年龄、资产等组合定义用于增强召回理解，不作为默认自动映射规则。 | 说明: 例如：奋斗青年≈16-30岁且资产较低，创业新贵≈36-50岁且高净值；这些定义仅用于辅助理解，不应在缺少标签语境时直接替代为客群标签。\n\n  示例: \"都市白领客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"都市白领\"]}\n\n  示例: \"创业新贵客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"创业新贵\"]}\n\n### 用户查询\n帮我查一下客户张三的详细资料"
+            },
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "client_search.downstream_search",
+            "status": "not_verified",
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "adapter.extract_output",
+            "status": "succeeded",
+            "evidence": {
+              "logic": "AND",
+              "condition_count": 1,
+              "empty_result_reason": ""
+            },
+            "timestamp": "",
+            "error": ""
+          }
+        ],
+        "application_boundary": {
+          "downstream_result_set_available": false,
+          "downstream_status": "not_verified",
+          "judge_scope": "parser_condition_semantics_only",
+          "result_set_verified": false,
+          "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+        },
+        "interaction_mode": "single_turn"
+      },
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "scenario": "",
+      "application_boundary": {
+        "downstream_result_set_available": false,
+        "downstream_status": "not_verified",
+        "judge_scope": "parser_condition_semantics_only",
+        "result_set_verified": false,
+        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+      },
+      "evidence_refs": [
+        {
+          "type": "client_search_state_boundary",
+          "state_id": "collect_evidence",
+          "application_boundary": {
+            "downstream_result_set_available": false,
+            "downstream_status": "not_verified",
+            "judge_scope": "parser_condition_semantics_only",
+            "result_set_verified": false,
+            "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+          },
+          "external_boundary_sources": {
+            "config_paths": {
+              "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+              "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+              "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+              "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+            }
+          }
+        }
+      ],
+      "execution_trace": [
+        {
+          "stage": "adapter.build_request",
+          "status": "succeeded",
+          "evidence": {
+            "user_text": "帮我查一下客户张三的详细资料",
+            "source": "askbob"
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "client_search.api",
+          "status": "succeeded",
+          "evidence": {
+            "code": 0
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "client_search.routing",
+          "status": "succeeded",
+          "evidence": {
+            "matched_level": 4,
+            "matched_patterns": "### 当前时间\n2026-07-02 08:11:17 (Asia/Shanghai)\n### 今天星期\n周四\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\n\n  示例: \"男性客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}\n\n  示例: \"女客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}\n\n  反例: \"子女是男性的客户\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\n\n- **asset_scale** | 操作符: LTE | 值类型: numeric | 单位: 元，万=×10000，千=×1000，若为明确是万还是千单位，则默认是元 | 定义: 客户资产规模上限筛选，数值型，单位元。 | 说明: 资产规模不同于年收入或家庭收入；金额单位按 unit 说明换算。\n\n  示例: \"资产规模50万以下的客户\" → {\"field\": \"asset_scale\", \"operator\": \"LTE\", \"value\": 500000}\n\n  示例: \"资产规模500000以下的客户\" → {\"field\": \"asset_scale\", \"operator\": \"LTE\", \"value\": 500000}\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n- **polNo** | 操作符: MATCH | 值类型: extract | 定义: 表示保单号，不表示客户编号，保单号是由P开头+15位数字，如 P966073446746215\n\n  示例: \"保单号为1234567890的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"1234567890\"}\n\n  示例: \"保单号匹配P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n  示例: \"按保单号查P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“以下”不含边界，“及以上”、“及以下”含边界 | 说明: 表示客户价值分组集合，如A类=A1/A2/A3/A4，B类=B，A或B/AB类=A1/A2/A3/A4/B；高价值->A1/A2/A3/A4/B/C，排序：F<E<D<C<B<A4<A3<A2<A1\n\n  示例: \"A类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"AB类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"高价值客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\", \"C\"]}\n\n  示例: \"B以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"B及以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"B类以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\"]}\n\n  示例: \"B类及以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\", \"B\"]}\n\n  示例: \"B类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"B\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **polNum** | 操作符: GTE | 值类型:  | 定义: 客户持有的保单总数量；张以上/张及以上表示 ≥N，张以下表示 ≤N\n\n  示例: \"保单数量超过3张的客户\" → {\"field\": \"polNum\", \"operator\": \"GTE\", \"value\": 3}\n\n  示例: \"持有多张寿险保单的客户\" → {\"field\": \"polNum\", \"operator\": \"GTE\", \"value\": 1}\n\n- **zxjyEquityGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['预达标', '已达标'] | 定义: 表示臻享家医客户范围，包括预达标和已达标两类客户 | 说明: 当用户直接输入“臻享家医客户/家医客户”时，输出 CONTAINS=[预达标, 已达标]，不要只输出已达标。\n\n  示例: \"臻享家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"臻享客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n- **clientGroupLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['奋斗青年', '都市白领', '而立一族', '社会中坚', '邻退天命', '慈爱祖辈', '创业新贵', '创富一代', '荣耀高堂', '承富二代', '已退小康'] | 定义: 表示客户画像分群标签。年龄、资产等组合定义用于增强召回理解，不作为默认自动映射规则。 | 说明: 例如：奋斗青年≈16-30岁且资产较低，创业新贵≈36-50岁且高净值；这些定义仅用于辅助理解，不应在缺少标签语境时直接替代为客群标签。\n\n  示例: \"都市白领客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"都市白领\"]}\n\n  示例: \"创业新贵客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"创业新贵\"]}\n\n### 用户查询\n帮我查一下客户张三的详细资料"
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "client_search.downstream_search",
+          "status": "not_verified",
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "adapter.extract_output",
+          "status": "succeeded",
+          "evidence": {
+            "logic": "AND",
+            "condition_count": 1,
+            "empty_result_reason": ""
+          },
+          "timestamp": "",
+          "error": ""
+        }
+      ],
+      "status": "ok",
+      "created_at": "2026-07-02T00:11:18.335948+00:00",
+      "state_history": [
+        {
+          "state_id": "prepare_trace",
+          "role": "prepare_trace",
+          "status": "skipped",
+          "attempt": 1,
+          "started_at": "2026-07-02T00:11:17.489210+00:00",
+          "finished_at": "2026-07-02T00:11:17.489236+00:00",
+          "transition_decision": {
+            "from_state": "prepare_trace",
+            "to_state": "mock_or_input",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "mock_or_input",
+          "role": "mock_or_input",
+          "status": "skipped",
+          "attempt": 1,
+          "started_at": "2026-07-02T00:11:17.489327+00:00",
+          "finished_at": "2026-07-02T00:11:17.489366+00:00",
+          "transition_decision": {
+            "from_state": "mock_or_input",
+            "to_state": "execute_or_capture",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "execute_or_capture",
+          "role": "execute_or_capture",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-02T00:11:18.336168+00:00",
+          "finished_at": "2026-07-02T00:11:18.336174+00:00",
+          "outputs": {
+            "schema_result_type": "RunTrace"
+          },
+          "gate_decisions": [
+            {
+              "gate_id": "trace_available",
+              "gate_type": "required_evidence",
+              "passed": true,
+              "checked_inputs": {
+                "trace": true,
+                "status": "ok"
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "trace exists"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "execute_or_capture",
+            "to_state": "collect_evidence",
+            "condition": "always",
+            "reason": "always",
+            "gate_ids": [
+              "trace_available"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "collect_evidence",
+          "role": "collect_evidence",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-02T00:11:18.336244+00:00",
+          "finished_at": "2026-07-02T00:11:18.336247+00:00",
+          "outputs": {
+            "collect_evidence": {
+              "recursive_ref": "RunTrace"
+            },
+            "client_search_boundary_evidence": {
+              "status": "succeeded",
+              "outputs": {
+                "condition_count": 1,
+                "query_logic": "AND",
+                "application_boundary": {
+                  "downstream_result_set_available": false,
+                  "downstream_status": "not_verified",
+                  "judge_scope": "parser_condition_semantics_only",
+                  "result_set_verified": false,
+                  "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                },
+                "source_config_paths": {
+                  "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                  "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                  "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                  "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                }
+              },
+              "evidence_refs": [
+                {
+                  "type": "client_search_boundary",
+                  "evidence": {
+                    "condition_count": 1,
+                    "query_logic": "AND",
+                    "application_boundary": {
+                      "downstream_result_set_available": false,
+                      "downstream_status": "not_verified",
+                      "judge_scope": "parser_condition_semantics_only",
+                      "result_set_verified": false,
+                      "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                    },
+                    "source_config_paths": {
+                      "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                      "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                      "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                      "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                    }
+                  }
+                }
+              ],
+              "claims": [
+                {
+                  "client_search_boundary": {
+                    "condition_count": 1,
+                    "query_logic": "AND",
+                    "application_boundary": {
+                      "downstream_result_set_available": false,
+                      "downstream_status": "not_verified",
+                      "judge_scope": "parser_condition_semantics_only",
+                      "result_set_verified": false,
+                      "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                    },
+                    "source_config_paths": {
+                      "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                      "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                      "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                      "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "subagent_results": [
+            {
+              "executor_id": "collect_evidence",
+              "executor_type": "deterministic",
+              "role": "generic_evidence_collector",
+              "status": "succeeded",
+              "output": {
+                "recursive_ref": "RunTrace"
+              }
+            },
+            {
+              "executor_id": "client_search_boundary_evidence",
+              "executor_type": "adapter_hook",
+              "role": "client_search_boundary_evidence",
+              "status": "succeeded",
+              "output": {
+                "status": "succeeded",
+                "outputs": {
+                  "condition_count": 1,
+                  "query_logic": "AND",
+                  "application_boundary": {
+                    "downstream_result_set_available": false,
+                    "downstream_status": "not_verified",
+                    "judge_scope": "parser_condition_semantics_only",
+                    "result_set_verified": false,
+                    "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                  },
+                  "source_config_paths": {
+                    "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                    "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                    "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                    "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                  }
+                },
+                "evidence_refs": [
+                  {
+                    "type": "client_search_boundary",
+                    "evidence": {
+                      "condition_count": 1,
+                      "query_logic": "AND",
+                      "application_boundary": {
+                        "downstream_result_set_available": false,
+                        "downstream_status": "not_verified",
+                        "judge_scope": "parser_condition_semantics_only",
+                        "result_set_verified": false,
+                        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                      },
+                      "source_config_paths": {
+                        "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                        "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                        "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                        "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                      }
+                    }
+                  }
+                ],
+                "claims": [
+                  {
+                    "client_search_boundary": {
+                      "condition_count": 1,
+                      "query_logic": "AND",
+                      "application_boundary": {
+                        "downstream_result_set_available": false,
+                        "downstream_status": "not_verified",
+                        "judge_scope": "parser_condition_semantics_only",
+                        "result_set_verified": false,
+                        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                      },
+                      "source_config_paths": {
+                        "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                        "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                        "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                        "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                      }
+                    }
+                  }
+                ]
+              },
+              "evidence_refs": [
+                {
+                  "type": "client_search_boundary",
+                  "evidence": {
+                    "condition_count": 1,
+                    "query_logic": "AND",
+                    "application_boundary": {
+                      "downstream_result_set_available": false,
+                      "downstream_status": "not_verified",
+                      "judge_scope": "parser_condition_semantics_only",
+                      "result_set_verified": false,
+                      "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                    },
+                    "source_config_paths": {
+                      "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                      "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                      "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                      "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                    }
+                  }
+                }
+              ],
+              "claims": [
+                {
+                  "client_search_boundary": {
+                    "condition_count": 1,
+                    "query_logic": "AND",
+                    "application_boundary": {
+                      "downstream_result_set_available": false,
+                      "downstream_status": "not_verified",
+                      "judge_scope": "parser_condition_semantics_only",
+                      "result_set_verified": false,
+                      "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                    },
+                    "source_config_paths": {
+                      "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                      "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                      "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                      "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "evidence_refs": [
+            {
+              "type": "client_search_boundary",
+              "evidence": {
+                "condition_count": 1,
+                "query_logic": "AND",
+                "application_boundary": {
+                  "downstream_result_set_available": false,
+                  "downstream_status": "not_verified",
+                  "judge_scope": "parser_condition_semantics_only",
+                  "result_set_verified": false,
+                  "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+                },
+                "source_config_paths": {
+                  "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                  "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                  "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                  "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+                }
+              }
+            }
+          ],
+          "transition_decision": {
+            "from_state": "collect_evidence",
+            "to_state": "build_business_expectations",
+            "condition": "always",
+            "reason": "always",
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "build_business_expectations",
+          "role": "build_business_expectations",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-02T00:12:15.706146+00:00",
+          "finished_at": "2026-07-02T00:12:15.706164+00:00",
+          "outputs": {
+            "schema_result_type": "JudgeResult"
+          },
+          "gate_decisions": [
+            {
+              "gate_id": "consumer_contract_present",
+              "gate_type": "consumer_contract_present",
+              "passed": true,
+              "checked_inputs": {
+                "has_judge": true
+              },
+              "recoverable": true,
+              "recommended_transition": "build_business_expectations",
+              "reason": "consumer contract available"
+            },
+            {
+              "gate_id": "business_expectation_coverage",
+              "gate_type": "business_expectation_coverage",
+              "passed": true,
+              "checked_inputs": {
+                "expectation_count": 3
+              },
+              "recoverable": true,
+              "recommended_transition": "build_business_expectations",
+              "reason": "business expectations available"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "build_business_expectations",
+            "to_state": "evaluate_fulfillment",
+            "condition": "always",
+            "reason": "always",
+            "gate_ids": [
+              "consumer_contract_present",
+              "business_expectation_coverage"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "evaluate_fulfillment",
+          "role": "evaluate_fulfillment",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-02T00:12:15.706232+00:00",
+          "finished_at": "2026-07-02T00:12:15.706238+00:00",
+          "outputs": {
+            "schema_result_type": "JudgeResult"
+          },
+          "gate_decisions": [
+            {
+              "gate_id": "fulfillment_assessment_coverage",
+              "gate_type": "fulfillment_assessment_coverage",
+              "passed": true,
+              "checked_inputs": {
+                "expectation_count": 3,
+                "assessment_count": 3
+              },
+              "recoverable": true,
+              "recommended_transition": "evaluate_fulfillment",
+              "reason": "fulfillment assessments cover expectations"
+            },
+            {
+              "gate_id": "boundary_decision_present",
+              "gate_type": "boundary_decision_present",
+              "passed": true,
+              "checked_inputs": {
+                "has_judge": true,
+                "assessment_count": 3
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "fulfillment boundary available"
+            },
+            {
+              "gate_id": "derived_verdict_consistency",
+              "gate_type": "derived_verdict_consistency",
+              "passed": true,
+              "checked_inputs": {
+                "has_judge": true,
+                "has_fulfillment": true
+              },
+              "recoverable": true,
+              "recommended_transition": "evaluate_fulfillment",
+              "reason": "derived verdict matches fulfillment state"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "evaluate_fulfillment",
+            "to_state": "fulfillment_critic",
+            "condition": "always",
+            "reason": "always",
+            "gate_ids": [
+              "fulfillment_assessment_coverage",
+              "boundary_decision_present",
+              "derived_verdict_consistency"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "fulfillment_critic",
+          "role": "fulfillment_critic",
+          "status": "skipped",
+          "attempt": 1,
+          "started_at": "2026-07-02T00:12:15.706379+00:00",
+          "finished_at": "2026-07-02T00:12:15.706398+00:00",
+          "gate_decisions": [
+            {
+              "gate_id": "contradiction_free",
+              "gate_type": "contradiction_free",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no contradictions"
+            },
+            {
+              "gate_id": "unsupported_claims_absent",
+              "gate_type": "unsupported_claims_absent",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no unsupported claims"
+            },
+            {
+              "gate_id": "fulfillment_assessment_coverage",
+              "gate_type": "fulfillment_assessment_coverage",
+              "passed": true,
+              "checked_inputs": {
+                "expectation_count": 3,
+                "assessment_count": 3
+              },
+              "recoverable": true,
+              "recommended_transition": "evaluate_fulfillment",
+              "reason": "fulfillment assessments cover expectations"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "fulfillment_critic",
+            "to_state": "attribute_expectations",
+            "condition": "fulfillment_requires_attribute",
+            "reason": "fulfillment_requires_attribute",
+            "gate_ids": [
+              "contradiction_free",
+              "unsupported_claims_absent",
+              "fulfillment_assessment_coverage"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "attribute_expectations",
+          "role": "attribute_expectations",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-02T00:12:15.711446+00:00",
+          "finished_at": "2026-07-02T00:12:15.711461+00:00",
+          "outputs": {
+            "schema_result_type": "AttributeResult"
+          },
+          "gate_decisions": [
+            {
+              "gate_id": "attribute_targets_expectation_gap",
+              "gate_type": "attribute_targets_expectation_gap",
+              "passed": true,
+              "checked_inputs": {
+                "fulfillment_requires_attribute": true,
+                "target_count": 3
+              },
+              "recoverable": false,
+              "recommended_transition": "finalize",
+              "reason": "attribute targets fulfillment gaps"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "attribute_expectations",
+            "to_state": "run_attribution_probes",
+            "condition": "always",
+            "reason": "always",
+            "gate_ids": [
+              "attribute_targets_expectation_gap"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "run_attribution_probes",
+          "role": "run_attribution_probes",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-02T00:12:15.715011+00:00",
+          "finished_at": "2026-07-02T00:12:15.715024+00:00",
+          "outputs": {
+            "schema_result_type": "AttributeResult"
+          },
+          "gate_decisions": [
+            {
+              "gate_id": "probe_evidence_or_blocked_reason",
+              "gate_type": "probe_evidence_or_blocked_reason",
+              "passed": true,
+              "checked_inputs": {
+                "probe_evidence_count": 1,
+                "has_incomplete_reason": false
+              },
+              "recoverable": true,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "probe evidence or blocked reason available"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "run_attribution_probes",
+            "to_state": "attribution_critic",
+            "condition": "always",
+            "reason": "always",
+            "gate_ids": [
+              "probe_evidence_or_blocked_reason"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "attribution_critic",
+          "role": "attribution_critic",
+          "status": "skipped",
+          "attempt": 1,
+          "started_at": "2026-07-02T00:12:15.715080+00:00",
+          "finished_at": "2026-07-02T00:12:15.715083+00:00",
+          "gate_decisions": [
+            {
+              "gate_id": "expectation_attribution_evidence",
+              "gate_type": "expectation_attribution_evidence",
+              "passed": true,
+              "checked_inputs": {
+                "attribution_count": 3
+              },
+              "recoverable": false,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "expectation attribution evidence available"
+            },
+            {
+              "gate_id": "causal_category_support",
+              "gate_type": "causal_category_support",
+              "passed": true,
+              "checked_inputs": {
+                "has_causal_category": true,
+                "has_incomplete_reason": false
+              },
+              "recoverable": true,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "causal category supported"
+            },
+            {
+              "gate_id": "improvement_direction_support",
+              "gate_type": "improvement_direction_support",
+              "passed": true,
+              "checked_inputs": {
+                "direction_count": 1,
+                "has_incomplete_reason": false
+              },
+              "recoverable": true,
+              "recommended_transition": "run_attribution_probes",
+              "reason": "improvement direction available"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "attribution_critic",
+            "to_state": "finalize",
+            "condition": "always",
+            "reason": "always",
+            "gate_ids": [
+              "expectation_attribution_evidence",
+              "causal_category_support",
+              "improvement_direction_support"
+            ],
+            "retry_count": 0,
+            "stop_reason": ""
+          }
+        },
+        {
+          "state_id": "finalize",
+          "role": "finalize",
+          "status": "succeeded",
+          "attempt": 1,
+          "started_at": "2026-07-02T00:12:15.769902+00:00",
+          "finished_at": "2026-07-02T00:12:15.769915+00:00",
+          "outputs": {
+            "schema_result_type": "CheckReport"
+          },
+          "gate_decisions": [
+            {
+              "gate_id": "finalization_ready",
+              "gate_type": "finalization_ready",
+              "passed": true,
+              "checked_inputs": {
+                "has_trace": true,
+                "has_judge_result": true
+              },
+              "recoverable": false,
+              "recommended_transition": "",
+              "reason": "finalization ready"
+            },
+            {
+              "gate_id": "contradiction_free",
+              "gate_type": "contradiction_free",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no contradictions"
+            },
+            {
+              "gate_id": "unsupported_claims_absent",
+              "gate_type": "unsupported_claims_absent",
+              "passed": true,
+              "recoverable": true,
+              "recommended_transition": "collect_evidence",
+              "reason": "no unsupported claims"
+            }
+          ],
+          "transition_decision": {
+            "from_state": "finalize",
+            "to_state": "completed",
+            "condition": "stop",
+            "reason": "stop",
+            "gate_ids": [
+              "finalization_ready",
+              "contradiction_free",
+              "unsupported_claims_absent"
+            ],
+            "retry_count": 0,
+            "stop_reason": "completed"
+          }
+        }
+      ],
+      "gate_decisions": [
+        {
+          "gate_id": "trace_available",
+          "gate_type": "required_evidence",
+          "passed": true,
+          "checked_inputs": {
+            "trace": true,
+            "status": "ok"
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "trace exists"
+        },
+        {
+          "gate_id": "consumer_contract_present",
+          "gate_type": "consumer_contract_present",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true
+          },
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "consumer contract available"
+        },
+        {
+          "gate_id": "business_expectation_coverage",
+          "gate_type": "business_expectation_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 3
+          },
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "business expectations available"
+        },
+        {
+          "gate_id": "fulfillment_assessment_coverage",
+          "gate_type": "fulfillment_assessment_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 3,
+            "assessment_count": 3
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "fulfillment assessments cover expectations"
+        },
+        {
+          "gate_id": "boundary_decision_present",
+          "gate_type": "boundary_decision_present",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true,
+            "assessment_count": 3
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "fulfillment boundary available"
+        },
+        {
+          "gate_id": "derived_verdict_consistency",
+          "gate_type": "derived_verdict_consistency",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true,
+            "has_fulfillment": true
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "derived verdict matches fulfillment state"
+        },
+        {
+          "gate_id": "contradiction_free",
+          "gate_type": "contradiction_free",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no contradictions"
+        },
+        {
+          "gate_id": "unsupported_claims_absent",
+          "gate_type": "unsupported_claims_absent",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no unsupported claims"
+        },
+        {
+          "gate_id": "fulfillment_assessment_coverage",
+          "gate_type": "fulfillment_assessment_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 3,
+            "assessment_count": 3
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "fulfillment assessments cover expectations"
+        },
+        {
+          "gate_id": "attribute_targets_expectation_gap",
+          "gate_type": "attribute_targets_expectation_gap",
+          "passed": true,
+          "checked_inputs": {
+            "fulfillment_requires_attribute": true,
+            "target_count": 3
+          },
+          "recoverable": false,
+          "recommended_transition": "finalize",
+          "reason": "attribute targets fulfillment gaps"
+        },
+        {
+          "gate_id": "probe_evidence_or_blocked_reason",
+          "gate_type": "probe_evidence_or_blocked_reason",
+          "passed": true,
+          "checked_inputs": {
+            "probe_evidence_count": 1,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "probe evidence or blocked reason available"
+        },
+        {
+          "gate_id": "expectation_attribution_evidence",
+          "gate_type": "expectation_attribution_evidence",
+          "passed": true,
+          "checked_inputs": {
+            "attribution_count": 3
+          },
+          "recoverable": false,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "expectation attribution evidence available"
+        },
+        {
+          "gate_id": "causal_category_support",
+          "gate_type": "causal_category_support",
+          "passed": true,
+          "checked_inputs": {
+            "has_causal_category": true,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "causal category supported"
+        },
+        {
+          "gate_id": "improvement_direction_support",
+          "gate_type": "improvement_direction_support",
+          "passed": true,
+          "checked_inputs": {
+            "direction_count": 1,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "improvement direction available"
+        },
+        {
+          "gate_id": "finalization_ready",
+          "gate_type": "finalization_ready",
+          "passed": true,
+          "checked_inputs": {
+            "has_trace": true,
+            "has_judge_result": true
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "finalization ready"
+        },
+        {
+          "gate_id": "contradiction_free",
+          "gate_type": "contradiction_free",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no contradictions"
+        },
+        {
+          "gate_id": "unsupported_claims_absent",
+          "gate_type": "unsupported_claims_absent",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no unsupported claims"
+        }
+      ],
+      "transition_decisions": [
+        {
+          "from_state": "prepare_trace",
+          "to_state": "mock_or_input",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "mock_or_input",
+          "to_state": "execute_or_capture",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "execute_or_capture",
+          "to_state": "collect_evidence",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "trace_available"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "collect_evidence",
+          "to_state": "build_business_expectations",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "build_business_expectations",
+          "to_state": "evaluate_fulfillment",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "consumer_contract_present",
+            "business_expectation_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "evaluate_fulfillment",
+          "to_state": "fulfillment_critic",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "fulfillment_assessment_coverage",
+            "boundary_decision_present",
+            "derived_verdict_consistency"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "fulfillment_critic",
+          "to_state": "attribute_expectations",
+          "condition": "fulfillment_requires_attribute",
+          "reason": "fulfillment_requires_attribute",
+          "gate_ids": [
+            "contradiction_free",
+            "unsupported_claims_absent",
+            "fulfillment_assessment_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "attribute_expectations",
+          "to_state": "run_attribution_probes",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "attribute_targets_expectation_gap"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "run_attribution_probes",
+          "to_state": "attribution_critic",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "probe_evidence_or_blocked_reason"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "attribution_critic",
+          "to_state": "finalize",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "expectation_attribution_evidence",
+            "causal_category_support",
+            "improvement_direction_support"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "finalize",
+          "to_state": "completed",
+          "condition": "stop",
+          "reason": "stop",
+          "gate_ids": [
+            "finalization_ready",
+            "contradiction_free",
+            "unsupported_claims_absent"
+          ],
+          "retry_count": 0,
+          "stop_reason": "completed"
+        }
+      ],
+      "stop_reason": "completed",
+      "interaction_mode": "single_turn",
+      "session_id": "general-eval-session",
+      "turn_index": 0
+    },
+    "reference_panel": {
+      "reference": {
+        "summary": "客户姓名为张三的客户",
+        "logic": "AND",
+        "status_code": 0,
+        "user_visible_text": "客户姓名为张三的客户",
+        "empty_result_reason": "",
+        "is_empty_result": false,
+        "source_query": "帮我查一下客户张三的详细资料",
+        "matched_level": 4,
+        "matched_patterns": "### 当前时间\n2026-07-02 08:11:17 (Asia/Shanghai)\n### 今天星期\n周四\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\n\n  示例: \"男性客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}\n\n  示例: \"女客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}\n\n  反例: \"子女是男性的客户\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\n\n- **asset_scale** | 操作符: LTE | 值类型: numeric | 单位: 元，万=×10000，千=×1000，若为明确是万还是千单位，则默认是元 | 定义: 客户资产规模上限筛选，数值型，单位元。 | 说明: 资产规模不同于年收入或家庭收入；金额单位按 unit 说明换算。\n\n  示例: \"资产规模50万以下的客户\" → {\"field\": \"asset_scale\", \"operator\": \"LTE\", \"value\": 500000}\n\n  示例: \"资产规模500000以下的客户\" → {\"field\": \"asset_scale\", \"operator\": \"LTE\", \"value\": 500000}\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n- **polNo** | 操作符: MATCH | 值类型: extract | 定义: 表示保单号，不表示客户编号，保单号是由P开头+15位数字，如 P966073446746215\n\n  示例: \"保单号为1234567890的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"1234567890\"}\n\n  示例: \"保单号匹配P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n  示例: \"按保单号查P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“以下”不含边界，“及以上”、“及以下”含边界 | 说明: 表示客户价值分组集合，如A类=A1/A2/A3/A4，B类=B，A或B/AB类=A1/A2/A3/A4/B；高价值->A1/A2/A3/A4/B/C，排序：F<E<D<C<B<A4<A3<A2<A1\n\n  示例: \"A类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"AB类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"高价值客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\", \"C\"]}\n\n  示例: \"B以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"B及以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"B类以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\"]}\n\n  示例: \"B类及以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\", \"B\"]}\n\n  示例: \"B类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"B\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **polNum** | 操作符: GTE | 值类型:  | 定义: 客户持有的保单总数量；张以上/张及以上表示 ≥N，张以下表示 ≤N\n\n  示例: \"保单数量超过3张的客户\" → {\"field\": \"polNum\", \"operator\": \"GTE\", \"value\": 3}\n\n  示例: \"持有多张寿险保单的客户\" → {\"field\": \"polNum\", \"operator\": \"GTE\", \"value\": 1}\n\n- **zxjyEquityGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['预达标', '已达标'] | 定义: 表示臻享家医客户范围，包括预达标和已达标两类客户 | 说明: 当用户直接输入“臻享家医客户/家医客户”时，输出 CONTAINS=[预达标, 已达标]，不要只输出已达标。\n\n  示例: \"臻享家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"臻享客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n- **clientGroupLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['奋斗青年', '都市白领', '而立一族', '社会中坚', '邻退天命', '慈爱祖辈', '创业新贵', '创富一代', '荣耀高堂', '承富二代', '已退小康'] | 定义: 表示客户画像分群标签。年龄、资产等组合定义用于增强召回理解，不作为默认自动映射规则。 | 说明: 例如：奋斗青年≈16-30岁且资产较低，创业新贵≈36-50岁且高净值；这些定义仅用于辅助理解，不应在缺少标签语境时直接替代为客群标签。\n\n  示例: \"都市白领客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"都市白领\"]}\n\n  示例: \"创业新贵客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"创业新贵\"]}\n\n### 用户查询\n帮我查一下客户张三的详细资料",
+        "external_boundary_sources": {
+          "config_paths": {
+            "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+            "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+            "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+            "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+          }
+        }
+      },
+      "source": "judge_generated",
+      "actual": {
+        "query_logic": "AND",
+        "conditions": [
+          {
+            "field": "searchClientName",
+            "operator": "MATCH",
+            "value": "张三"
+          }
+        ]
+      }
+    },
+    "judge_panel": {
+      "trace_id": "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b",
+      "project_id": "client_search",
+      "verdict": "correct",
+      "expected": {
+        "query_logic": "AND",
+        "expected_source": "not_available",
+        "reference_is_oracle": false
+      },
+      "actual": {
+        "query_logic": "AND",
+        "conditions": [
+          {
+            "field": "searchClientName",
+            "operator": "MATCH",
+            "value": "张三"
+          }
+        ]
+      },
+      "consumer_contract": {
+        "consumer": "下游 ES 客户搜索",
+        "contract": "输出结构化搜索条件供 ES 查询使用",
+        "application_boundary": {
+          "downstream_result_set_available": false,
+          "judge_scope": "parser_condition_semantics_only"
+        }
+      },
+      "intent_model": {
+        "raw_user_request": "帮我查一下客户张三的详细资料",
+        "explicit_intents": [
+          "按客户姓名搜索名为'张三'的客户"
+        ],
+        "implicit_business_intents": [
+          "返回客户'张三'的基础信息",
+          "'详细资料'为查看诉求修饰语，不构成额外搜索过滤条件"
+        ],
+        "constraints": {
+          "姓名必须完整保留": "不能将'张三'截断为'张'或遗漏"
+        },
+        "success_definition": "输出包含 searchClientName = MATCH '张三' 的条件，能够从 ES 中检索到名叫张三的客户",
+        "blocking_requirements": [
+          "必须将查询中的'张三'识别为客户姓名字段 searchClientName",
+          "姓名值必须完整为'张三'",
+          "操作符必须为 MATCH 或语义等价操作符"
+        ],
+        "intent_evidence": [
+          "query 中'客户张三'为中文自然表达，语义等同于'名叫张三的客户'",
+          "prompt 示例中'陈成'→ MATCH '陈成'、'叫张三的客户'→ MATCH '张三'均支持此映射"
+        ]
+      },
+      "business_expectations": [
+        {
+          "expectation_id": "客户姓名识别与字段映射",
+          "downstream_consumer": "ES searchClientName 索引",
+          "user_intent": "查询名叫张三的客户",
+          "expected_outcome": "输出 field=searchClientName",
+          "required_capabilities": [
+            "searchClientName 字段的 MATCH 操作符"
+          ],
+          "acceptance_criteria": [
+            "actual output 中至少有一个 condition 的 field 为 searchClientName"
+          ],
+          "priority": "critical"
+        },
+        {
+          "expectation_id": "姓名值完整提取",
+          "downstream_consumer": "ES searchClientName 索引",
+          "user_intent": "查询名叫张三的客户",
+          "expected_outcome": "输出 value='张三'",
+          "required_capabilities": [
+            "searchClientName 的 extract 值类型"
+          ],
+          "acceptance_criteria": [
+            "searchClientName condition 的 value 为'张三'",
+            "不能是'张'或任何截断/变形值"
+          ],
+          "priority": "critical"
+        },
+        {
+          "expectation_id": "姓名匹配操作符语义正确",
+          "downstream_consumer": "ES searchClientName 索引",
+          "user_intent": "精确/模糊匹配客户姓名",
+          "expected_outcome": "operator 为 MATCH",
+          "required_capabilities": [
+            "searchClientName 的 MATCH 或 CONTAINS 操作符"
+          ],
+          "acceptance_criteria": [
+            "searchClientName condition 的 operator 为 MATCH 或 CONTAINS（capability_manifest 两者均允许，MATCH 对姓名语义更精确）"
+          ],
+          "priority": "critical"
+        }
+      ],
+      "fulfillment_assessments": [
+        {
+          "expectation_id": "客户姓名识别与字段映射",
+          "status": "fulfilled",
+          "expected_evidence": [
+            "prompt 示例：'叫张三的客户'→ searchClientName MATCH '张三'",
+            "prompt 示例：'陈成'→ searchClientName MATCH '陈成'"
+          ],
+          "actual_evidence": [
+            "structured_output[0].field = 'searchClientName'"
+          ],
+          "downstream_impact": "正确映射字段可确保 ES 查询命中 searchClientName 索引",
+          "blocking": true
+        },
+        {
+          "expectation_id": "姓名值完整提取",
+          "status": "fulfilled",
+          "expected_evidence": [
+            "query 中完整姓名为'张三'，capability_manifest 要求保留全名原样"
+          ],
+          "actual_evidence": [
+            "structured_output[0].value = '张三'"
+          ],
+          "downstream_impact": "值完整确保精确匹配名为张三的客户",
+          "blocking": true
+        },
+        {
+          "expectation_id": "姓名匹配操作符语义正确",
+          "status": "fulfilled",
+          "expected_evidence": [
+            "capability_manifest 中 searchClientName 允许 MATCH 和 CONTAINS",
+            "enhanced_rules 中姓名匹配规则均使用 MATCH 操作符"
+          ],
+          "actual_evidence": [
+            "structured_output[0].operator = 'MATCH'"
+          ],
+          "downstream_impact": "MATCH 操作符对姓名搜索语义正确，能够匹配客户姓名",
+          "blocking": true
+        }
+      ],
+      "overall_fulfillment": {
+        "status": "fulfilled",
+        "assessment_count": 3
+      },
+      "reconstructed_intent": "用户意图是按客户姓名'张三'搜索客户，系统应输出 searchClientName MATCH '张三' 这一条件。'详细资料'只是查看诉求，不构成额外搜索过滤条件。",
+      "judge_basis": "基于 capability_manifest 中 searchClientName 字段定义、enhanced_rules 中姓名匹配规则、以及 prompt 中姓名查询示例进行语义判断。judge_scope 为 parser_condition_semantics_only，下游搜索结果不可用，但 parser 条件语义可独立评估。",
+      "judge_method": "parser_condition_semantics_only",
+      "semantic_equivalence_checks": [
+        {
+          "expected_fragment": "searchClientName MATCH '张三'",
+          "actual_fragment": "searchClientName MATCH '张三'",
+          "equivalent": true,
+          "basis": "actual 输出与 expected 完全一致，无需等价转换"
+        }
+      ],
+      "reference_generation_basis": {
+        "source": "基于当前 query、capability_manifest、enhanced_rules 和 prompt 示例推导",
+        "alignment_to_actual_shape": "完全一致",
+        "evidence": [
+          "prompt 示例：'叫张三的客户'→ searchClientName MATCH '张三'",
+          "capability_manifest：searchClientName 允许 MATCH 操作符"
+        ],
+        "comparison_basis": "client_search wrong/missing/extra customer-search coverage",
+        "expected_source": "not_available"
+      },
+      "verdict_derivation": {
+        "primary_boundary": "parser_condition_semantics_only",
+        "assessment_summary": "三个业务期望全部满足：字段正确映射为 searchClientName、姓名值完整保留为'张三'、操作符使用 MATCH 语义正确。actual output 与 expected 完全一致。",
+        "why_verdict": "用户查询'帮我查一下客户张三的详细资料'，核心意图是按姓名搜索客户张三。系统输出 searchClientName MATCH '张三'，字段映射正确（searchClientName 为客户本人姓名）、姓名值完整提取（'张三'未被截断）、操作符语义正确（MATCH 对姓名匹配适用）。三个阻塞级业务期望全部满足，无缺失条件、无错误条件、无多余条件。",
+        "missing_evidence": [
+          "current intent/config expected conditions"
+        ]
+      },
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "uncontrollable_limits": [
+          "下游 ES 客户搜索服务不可用，无法进行结果集验证"
+        ],
+        "reasoning": "下游搜索结果不可用，但 judge_scope 已限制为 parser_condition_semantics_only。我们仍可基于字段定义、操作符语义、枚举能力和业务意图独立判断 parser 条件是否正确。actual output 中 searchClientName MATCH '张三' 在字段、值和操作符三个维度均正确，不存在可评价的系统错误。"
+      },
+      "evaluation_boundary": {
+        "primary_boundary_id": "parser_condition_semantics_only",
+        "primary_boundary_name": "仅评估 parser 条件语义",
+        "judge_question": "parser 输出的结构化搜索条件在字段语义、操作符语义、值正确性和逻辑关系上是否能正确表达用户搜索意图？",
+        "verdict_basis": "基于 capability_manifest、enhanced_rules、prompt 示例和 ES 查询语义进行等价判断",
+        "boundary_sources": "application_boundary（下游不可用）、capability_manifest（字段能力）、enhanced_rules（正则规则）",
+        "conflict_policy": "当下游不可用时，不退化到字符串比对，仍基于 ES 查询语义和业务意图判断"
+      },
+      "evidence": [
+        "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+        "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+        "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+        "actual output：searchClientName MATCH '张三'"
+      ],
+      "reasoning_summary": "用户查询'帮我查一下客户张三的详细资料'意图明确——按姓名搜索客户张三。系统输出了 searchClientName MATCH '张三' 这一条件，从三个维度评估：（1）字段映射：searchClientName 正确定义为客户本人姓名，符合用户查询客户姓名的意图；（2）值提取：'张三'完整保留，未被截断；（3）操作符：MATCH 在 capability_manifest 中是 searchClientName 的合法操作符，且对中文姓名搜索语义正确。无缺失条件、无错误条件、无多余条件。三个阻塞级业务期望全部满足。",
+      "scenario": "客户姓名精确搜索 - parser 条件语义正确",
+      "summary": {
+        "reason": "fulfilled · 3 blocking expectations all met · 用户查询'帮我查一下客户张三的详细资料'意图明确——按姓名搜索客户张三。系统输出了 searchClientName MATCH '张三' 这一条件，从三个维度评估：（1）字段映射：searchClientName 正确定义为客户本人姓名，符合用户查询客户姓名的意图；（2）值提取：'张三'完整保留，未被截断；（3）操作符：MATCH 在 capability_manifest 中是 searchClientName 的合法操作符，且对中文姓名搜索语义正确。无缺失条件、无错误条件、无多余条件。三个阻塞级业务期望全部满足。",
+        "reason_source": "aggregated_fulfillment",
+        "fulfillment_status": "fulfilled",
+        "assessment_count": 3,
+        "blocking_count": 3,
+        "is_formal_attribution": true
+      },
+      "gate_decisions": [
+        {
+          "gate_id": "trace_available",
+          "gate_type": "required_evidence",
+          "passed": true,
+          "checked_inputs": {
+            "trace": true,
+            "status": "ok"
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "trace exists"
+        },
+        {
+          "gate_id": "consumer_contract_present",
+          "gate_type": "consumer_contract_present",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true
+          },
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "consumer contract available"
+        },
+        {
+          "gate_id": "business_expectation_coverage",
+          "gate_type": "business_expectation_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 3
+          },
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "business expectations available"
+        },
+        {
+          "gate_id": "fulfillment_assessment_coverage",
+          "gate_type": "fulfillment_assessment_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 3,
+            "assessment_count": 3
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "fulfillment assessments cover expectations"
+        },
+        {
+          "gate_id": "boundary_decision_present",
+          "gate_type": "boundary_decision_present",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true,
+            "assessment_count": 3
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "fulfillment boundary available"
+        },
+        {
+          "gate_id": "derived_verdict_consistency",
+          "gate_type": "derived_verdict_consistency",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true,
+            "has_fulfillment": true
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "derived verdict matches fulfillment state"
+        },
+        {
+          "gate_id": "contradiction_free",
+          "gate_type": "contradiction_free",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no contradictions"
+        },
+        {
+          "gate_id": "unsupported_claims_absent",
+          "gate_type": "unsupported_claims_absent",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no unsupported claims"
+        },
+        {
+          "gate_id": "fulfillment_assessment_coverage",
+          "gate_type": "fulfillment_assessment_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 3,
+            "assessment_count": 3
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "fulfillment assessments cover expectations"
+        },
+        {
+          "gate_id": "attribute_targets_expectation_gap",
+          "gate_type": "attribute_targets_expectation_gap",
+          "passed": true,
+          "checked_inputs": {
+            "fulfillment_requires_attribute": true,
+            "target_count": 3
+          },
+          "recoverable": false,
+          "recommended_transition": "finalize",
+          "reason": "attribute targets fulfillment gaps"
+        },
+        {
+          "gate_id": "probe_evidence_or_blocked_reason",
+          "gate_type": "probe_evidence_or_blocked_reason",
+          "passed": true,
+          "checked_inputs": {
+            "probe_evidence_count": 1,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "probe evidence or blocked reason available"
+        },
+        {
+          "gate_id": "expectation_attribution_evidence",
+          "gate_type": "expectation_attribution_evidence",
+          "passed": true,
+          "checked_inputs": {
+            "attribution_count": 3
+          },
+          "recoverable": false,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "expectation attribution evidence available"
+        },
+        {
+          "gate_id": "causal_category_support",
+          "gate_type": "causal_category_support",
+          "passed": true,
+          "checked_inputs": {
+            "has_causal_category": true,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "causal category supported"
+        },
+        {
+          "gate_id": "improvement_direction_support",
+          "gate_type": "improvement_direction_support",
+          "passed": true,
+          "checked_inputs": {
+            "direction_count": 1,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "improvement direction available"
+        },
+        {
+          "gate_id": "finalization_ready",
+          "gate_type": "finalization_ready",
+          "passed": true,
+          "checked_inputs": {
+            "has_trace": true,
+            "has_judge_result": true
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "finalization ready"
+        },
+        {
+          "gate_id": "contradiction_free",
+          "gate_type": "contradiction_free",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no contradictions"
+        },
+        {
+          "gate_id": "unsupported_claims_absent",
+          "gate_type": "unsupported_claims_absent",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no unsupported claims"
+        }
+      ],
+      "transition_decisions": [
+        {
+          "from_state": "prepare_trace",
+          "to_state": "mock_or_input",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "mock_or_input",
+          "to_state": "execute_or_capture",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "execute_or_capture",
+          "to_state": "collect_evidence",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "trace_available"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "collect_evidence",
+          "to_state": "build_business_expectations",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "build_business_expectations",
+          "to_state": "evaluate_fulfillment",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "consumer_contract_present",
+            "business_expectation_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "evaluate_fulfillment",
+          "to_state": "fulfillment_critic",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "fulfillment_assessment_coverage",
+            "boundary_decision_present",
+            "derived_verdict_consistency"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "fulfillment_critic",
+          "to_state": "attribute_expectations",
+          "condition": "fulfillment_requires_attribute",
+          "reason": "fulfillment_requires_attribute",
+          "gate_ids": [
+            "contradiction_free",
+            "unsupported_claims_absent",
+            "fulfillment_assessment_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "attribute_expectations",
+          "to_state": "run_attribution_probes",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "attribute_targets_expectation_gap"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "run_attribution_probes",
+          "to_state": "attribution_critic",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "probe_evidence_or_blocked_reason"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "attribution_critic",
+          "to_state": "finalize",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "expectation_attribution_evidence",
+            "causal_category_support",
+            "improvement_direction_support"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "finalize",
+          "to_state": "completed",
+          "condition": "stop",
+          "reason": "stop",
+          "gate_ids": [
+            "finalization_ready",
+            "contradiction_free",
+            "unsupported_claims_absent"
+          ],
+          "retry_count": 0,
+          "stop_reason": "completed"
+        }
+      ],
+      "display_status": "fulfilled",
+      "display_reason": "fulfilled · 3 blocking expectations all met · 用户查询'帮我查一下客户张三的详细资料'意图明确——按姓名搜索客户张三。系统输出了 searchClientName MATCH '张三' 这一条件，从三个维度评估：（1）字段映射：searchClientName 正确定义为客户本人姓名，符合用户查询客户姓名的意图；（2）值提取：'张三'完整保留，未被截断；（3）操作符：MATCH 在 capability_manifest 中是 searchClientName 的合法操作符，且对中文姓名搜索语义正确。无缺失条件、无错误条件、无多余条件。三个阻塞级业务期望全部满足。",
+      "wrong_missing_extra": {},
+      "blocked_expectations": [
+        {
+          "expectation_id": "客户姓名识别与字段映射",
+          "status": "fulfilled",
+          "expected_evidence": [
+            "prompt 示例：'叫张三的客户'→ searchClientName MATCH '张三'",
+            "prompt 示例：'陈成'→ searchClientName MATCH '陈成'"
+          ],
+          "actual_evidence": [
+            "structured_output[0].field = 'searchClientName'"
+          ],
+          "downstream_impact": "正确映射字段可确保 ES 查询命中 searchClientName 索引",
+          "blocking": true
+        },
+        {
+          "expectation_id": "姓名值完整提取",
+          "status": "fulfilled",
+          "expected_evidence": [
+            "query 中完整姓名为'张三'，capability_manifest 要求保留全名原样"
+          ],
+          "actual_evidence": [
+            "structured_output[0].value = '张三'"
+          ],
+          "downstream_impact": "值完整确保精确匹配名为张三的客户",
+          "blocking": true
+        },
+        {
+          "expectation_id": "姓名匹配操作符语义正确",
+          "status": "fulfilled",
+          "expected_evidence": [
+            "capability_manifest 中 searchClientName 允许 MATCH 和 CONTAINS",
+            "enhanced_rules 中姓名匹配规则均使用 MATCH 操作符"
+          ],
+          "actual_evidence": [
+            "structured_output[0].operator = 'MATCH'"
+          ],
+          "downstream_impact": "MATCH 操作符对姓名搜索语义正确，能够匹配客户姓名",
+          "blocking": true
+        }
+      ]
+    },
+    "attribute_panel": {
+      "trace_id": "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b",
+      "project_id": "client_search",
+      "case_id": "",
+      "analysis_method": "fulfilled_expectation_attribution",
+      "chain_nodes": [
+        {
+          "name": "fulfillment_assessment",
+          "status": "verified",
+          "evidence": [
+            "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+            "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+            "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+            "actual output：searchClientName MATCH '张三'"
+          ],
+          "reason": "business expectations fulfilled"
+        }
+      ],
+      "earliest_divergence": {
+        "node": "fulfillment_assessment",
+        "evidence": [
+          "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+          "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+          "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+          "actual output：searchClientName MATCH '张三'"
+        ],
+        "confidence": "high"
+      },
+      "evidence_coverage": {
+        "judge_evidence": true,
+        "execution_trace": true
+      },
+      "analysis_quality": {
+        "passed": true
+      },
+      "incomplete_reason": "",
+      "root_cause_hypothesis": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+      "verification_steps": [
+        "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+      ],
+      "patch_direction": [
+        "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+      ],
+      "expectation_attributions": [
+        {
+          "expectation_id": "客户姓名识别与字段映射",
+          "fulfillment_status": "fulfilled",
+          "causal_category": "no_issue",
+          "earliest_divergence": {
+            "node": "fulfillment_assessment",
+            "evidence": [
+              "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+              "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+              "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+              "actual output：searchClientName MATCH '张三'"
+            ],
+            "confidence": "high"
+          },
+          "causal_chain": [
+            {
+              "name": "fulfillment_assessment",
+              "status": "succeeded",
+              "evidence": [
+                "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+                "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+                "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+                "actual output：searchClientName MATCH '张三'"
+              ]
+            }
+          ],
+          "probe_evidence": [
+            "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+            "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+            "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+            "actual output：searchClientName MATCH '张三'"
+          ],
+          "incomplete_reason": ""
+        },
+        {
+          "expectation_id": "姓名值完整提取",
+          "fulfillment_status": "fulfilled",
+          "causal_category": "no_issue",
+          "earliest_divergence": {
+            "node": "fulfillment_assessment",
+            "evidence": [
+              "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+              "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+              "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+              "actual output：searchClientName MATCH '张三'"
+            ],
+            "confidence": "high"
+          },
+          "causal_chain": [
+            {
+              "name": "fulfillment_assessment",
+              "status": "succeeded",
+              "evidence": [
+                "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+                "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+                "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+                "actual output：searchClientName MATCH '张三'"
+              ]
+            }
+          ],
+          "probe_evidence": [
+            "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+            "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+            "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+            "actual output：searchClientName MATCH '张三'"
+          ],
+          "incomplete_reason": ""
+        },
+        {
+          "expectation_id": "姓名匹配操作符语义正确",
+          "fulfillment_status": "fulfilled",
+          "causal_category": "no_issue",
+          "earliest_divergence": {
+            "node": "fulfillment_assessment",
+            "evidence": [
+              "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+              "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+              "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+              "actual output：searchClientName MATCH '张三'"
+            ],
+            "confidence": "high"
+          },
+          "causal_chain": [
+            {
+              "name": "fulfillment_assessment",
+              "status": "succeeded",
+              "evidence": [
+                "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+                "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+                "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+                "actual output：searchClientName MATCH '张三'"
+              ]
+            }
+          ],
+          "probe_evidence": [
+            "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+            "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+            "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+            "actual output：searchClientName MATCH '张三'"
+          ],
+          "incomplete_reason": ""
+        }
+      ],
+      "causal_category": "no_issue",
+      "probe_results": [
+        {
+          "probe_id": "fulfillment_assessment",
+          "status": "not_verified",
+          "stage": "",
+          "evidence": [
+            "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+            "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+            "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+            "actual output：searchClientName MATCH '张三'"
+          ],
+          "error": ""
+        }
+      ],
+      "needs_human_review": false,
+      "scenario": "",
+      "gate_decisions": [
+        {
+          "gate_id": "trace_available",
+          "gate_type": "required_evidence",
+          "passed": true,
+          "checked_inputs": {
+            "trace": true,
+            "status": "ok"
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "trace exists"
+        },
+        {
+          "gate_id": "consumer_contract_present",
+          "gate_type": "consumer_contract_present",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true
+          },
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "consumer contract available"
+        },
+        {
+          "gate_id": "business_expectation_coverage",
+          "gate_type": "business_expectation_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 3
+          },
+          "recoverable": true,
+          "recommended_transition": "build_business_expectations",
+          "reason": "business expectations available"
+        },
+        {
+          "gate_id": "fulfillment_assessment_coverage",
+          "gate_type": "fulfillment_assessment_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 3,
+            "assessment_count": 3
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "fulfillment assessments cover expectations"
+        },
+        {
+          "gate_id": "boundary_decision_present",
+          "gate_type": "boundary_decision_present",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true,
+            "assessment_count": 3
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "fulfillment boundary available"
+        },
+        {
+          "gate_id": "derived_verdict_consistency",
+          "gate_type": "derived_verdict_consistency",
+          "passed": true,
+          "checked_inputs": {
+            "has_judge": true,
+            "has_fulfillment": true
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "derived verdict matches fulfillment state"
+        },
+        {
+          "gate_id": "contradiction_free",
+          "gate_type": "contradiction_free",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no contradictions"
+        },
+        {
+          "gate_id": "unsupported_claims_absent",
+          "gate_type": "unsupported_claims_absent",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no unsupported claims"
+        },
+        {
+          "gate_id": "fulfillment_assessment_coverage",
+          "gate_type": "fulfillment_assessment_coverage",
+          "passed": true,
+          "checked_inputs": {
+            "expectation_count": 3,
+            "assessment_count": 3
+          },
+          "recoverable": true,
+          "recommended_transition": "evaluate_fulfillment",
+          "reason": "fulfillment assessments cover expectations"
+        },
+        {
+          "gate_id": "attribute_targets_expectation_gap",
+          "gate_type": "attribute_targets_expectation_gap",
+          "passed": true,
+          "checked_inputs": {
+            "fulfillment_requires_attribute": true,
+            "target_count": 3
+          },
+          "recoverable": false,
+          "recommended_transition": "finalize",
+          "reason": "attribute targets fulfillment gaps"
+        },
+        {
+          "gate_id": "probe_evidence_or_blocked_reason",
+          "gate_type": "probe_evidence_or_blocked_reason",
+          "passed": true,
+          "checked_inputs": {
+            "probe_evidence_count": 1,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "probe evidence or blocked reason available"
+        },
+        {
+          "gate_id": "expectation_attribution_evidence",
+          "gate_type": "expectation_attribution_evidence",
+          "passed": true,
+          "checked_inputs": {
+            "attribution_count": 3
+          },
+          "recoverable": false,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "expectation attribution evidence available"
+        },
+        {
+          "gate_id": "causal_category_support",
+          "gate_type": "causal_category_support",
+          "passed": true,
+          "checked_inputs": {
+            "has_causal_category": true,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "causal category supported"
+        },
+        {
+          "gate_id": "improvement_direction_support",
+          "gate_type": "improvement_direction_support",
+          "passed": true,
+          "checked_inputs": {
+            "direction_count": 1,
+            "has_incomplete_reason": false
+          },
+          "recoverable": true,
+          "recommended_transition": "run_attribution_probes",
+          "reason": "improvement direction available"
+        },
+        {
+          "gate_id": "finalization_ready",
+          "gate_type": "finalization_ready",
+          "passed": true,
+          "checked_inputs": {
+            "has_trace": true,
+            "has_judge_result": true
+          },
+          "recoverable": false,
+          "recommended_transition": "",
+          "reason": "finalization ready"
+        },
+        {
+          "gate_id": "contradiction_free",
+          "gate_type": "contradiction_free",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no contradictions"
+        },
+        {
+          "gate_id": "unsupported_claims_absent",
+          "gate_type": "unsupported_claims_absent",
+          "passed": true,
+          "recoverable": true,
+          "recommended_transition": "collect_evidence",
+          "reason": "no unsupported claims"
+        }
+      ],
+      "transition_decisions": [
+        {
+          "from_state": "prepare_trace",
+          "to_state": "mock_or_input",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "mock_or_input",
+          "to_state": "execute_or_capture",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "execute_or_capture",
+          "to_state": "collect_evidence",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "trace_available"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "collect_evidence",
+          "to_state": "build_business_expectations",
+          "condition": "always",
+          "reason": "always",
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "build_business_expectations",
+          "to_state": "evaluate_fulfillment",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "consumer_contract_present",
+            "business_expectation_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "evaluate_fulfillment",
+          "to_state": "fulfillment_critic",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "fulfillment_assessment_coverage",
+            "boundary_decision_present",
+            "derived_verdict_consistency"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "fulfillment_critic",
+          "to_state": "attribute_expectations",
+          "condition": "fulfillment_requires_attribute",
+          "reason": "fulfillment_requires_attribute",
+          "gate_ids": [
+            "contradiction_free",
+            "unsupported_claims_absent",
+            "fulfillment_assessment_coverage"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "attribute_expectations",
+          "to_state": "run_attribution_probes",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "attribute_targets_expectation_gap"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "run_attribution_probes",
+          "to_state": "attribution_critic",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "probe_evidence_or_blocked_reason"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "attribution_critic",
+          "to_state": "finalize",
+          "condition": "always",
+          "reason": "always",
+          "gate_ids": [
+            "expectation_attribution_evidence",
+            "causal_category_support",
+            "improvement_direction_support"
+          ],
+          "retry_count": 0,
+          "stop_reason": ""
+        },
+        {
+          "from_state": "finalize",
+          "to_state": "completed",
+          "condition": "stop",
+          "reason": "stop",
+          "gate_ids": [
+            "finalization_ready",
+            "contradiction_free",
+            "unsupported_claims_absent"
+          ],
+          "retry_count": 0,
+          "stop_reason": "completed"
+        }
+      ],
+      "summary": {
+        "causal_category": "no_issue",
+        "attribution_count": 3,
+        "probe_count": 1,
+        "summary_text": "业务预期已达成",
+        "is_complete": true,
+        "is_formal_attribution": true
+      },
+      "display_causal_category": "no_issue",
+      "display_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+      "display_verification_steps": [
+        "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+      ],
+      "display_patch_direction": [
+        "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+      ],
+      "attribution_count": 3,
+      "probe_count": 1
+    },
+    "fulfillment_panel": {
+      "consumer_contract": {
+        "consumer": "下游 ES 客户搜索",
+        "contract": "输出结构化搜索条件供 ES 查询使用",
+        "application_boundary": {
+          "downstream_result_set_available": false,
+          "judge_scope": "parser_condition_semantics_only"
+        }
+      },
+      "overall_fulfillment": {
+        "status": "fulfilled",
+        "assessment_count": 3
+      },
+      "matrix": [
+        {
+          "expectation_id": "客户姓名识别与字段映射",
+          "downstream_consumer": "ES searchClientName 索引",
+          "expected_outcome": "输出 field=searchClientName",
+          "required_capabilities": [
+            "searchClientName 字段的 MATCH 操作符"
+          ],
+          "status": "fulfilled",
+          "blocking": true,
+          "downstream_impact": "正确映射字段可确保 ES 查询命中 searchClientName 索引"
+        },
+        {
+          "expectation_id": "姓名值完整提取",
+          "downstream_consumer": "ES searchClientName 索引",
+          "expected_outcome": "输出 value='张三'",
+          "required_capabilities": [
+            "searchClientName 的 extract 值类型"
+          ],
+          "status": "fulfilled",
+          "blocking": true,
+          "downstream_impact": "值完整确保精确匹配名为张三的客户"
+        },
+        {
+          "expectation_id": "姓名匹配操作符语义正确",
+          "downstream_consumer": "ES searchClientName 索引",
+          "expected_outcome": "operator 为 MATCH",
+          "required_capabilities": [
+            "searchClientName 的 MATCH 或 CONTAINS 操作符"
+          ],
+          "status": "fulfilled",
+          "blocking": true,
+          "downstream_impact": "MATCH 操作符对姓名搜索语义正确，能够匹配客户姓名"
+        }
+      ],
+      "derived_verdict": "correct",
+      "verdict_derivation": {
+        "primary_boundary": "parser_condition_semantics_only",
+        "assessment_summary": "三个业务期望全部满足：字段正确映射为 searchClientName、姓名值完整保留为'张三'、操作符使用 MATCH 语义正确。actual output 与 expected 完全一致。",
+        "why_verdict": "用户查询'帮我查一下客户张三的详细资料'，核心意图是按姓名搜索客户张三。系统输出 searchClientName MATCH '张三'，字段映射正确（searchClientName 为客户本人姓名）、姓名值完整提取（'张三'未被截断）、操作符语义正确（MATCH 对姓名匹配适用）。三个阻塞级业务期望全部满足，无缺失条件、无错误条件、无多余条件。",
+        "missing_evidence": [
+          "current intent/config expected conditions"
+        ]
+      }
+    },
+    "expectation_attribution_panel": {
+      "attributions": [
+        {
+          "expectation_id": "客户姓名识别与字段映射",
+          "fulfillment_status": "fulfilled",
+          "causal_category": "no_issue",
+          "earliest_divergence": {
+            "node": "fulfillment_assessment",
+            "evidence": [
+              "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+              "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+              "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+              "actual output：searchClientName MATCH '张三'"
+            ],
+            "confidence": "high"
+          },
+          "causal_chain": [
+            {
+              "name": "fulfillment_assessment",
+              "status": "succeeded",
+              "evidence": [
+                "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+                "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+                "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+                "actual output：searchClientName MATCH '张三'"
+              ]
+            }
+          ],
+          "probe_evidence": [
+            "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+            "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+            "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+            "actual output：searchClientName MATCH '张三'"
+          ],
+          "incomplete_reason": ""
+        },
+        {
+          "expectation_id": "姓名值完整提取",
+          "fulfillment_status": "fulfilled",
+          "causal_category": "no_issue",
+          "earliest_divergence": {
+            "node": "fulfillment_assessment",
+            "evidence": [
+              "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+              "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+              "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+              "actual output：searchClientName MATCH '张三'"
+            ],
+            "confidence": "high"
+          },
+          "causal_chain": [
+            {
+              "name": "fulfillment_assessment",
+              "status": "succeeded",
+              "evidence": [
+                "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+                "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+                "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+                "actual output：searchClientName MATCH '张三'"
+              ]
+            }
+          ],
+          "probe_evidence": [
+            "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+            "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+            "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+            "actual output：searchClientName MATCH '张三'"
+          ],
+          "incomplete_reason": ""
+        },
+        {
+          "expectation_id": "姓名匹配操作符语义正确",
+          "fulfillment_status": "fulfilled",
+          "causal_category": "no_issue",
+          "earliest_divergence": {
+            "node": "fulfillment_assessment",
+            "evidence": [
+              "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+              "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+              "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+              "actual output：searchClientName MATCH '张三'"
+            ],
+            "confidence": "high"
+          },
+          "causal_chain": [
+            {
+              "name": "fulfillment_assessment",
+              "status": "succeeded",
+              "evidence": [
+                "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+                "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+                "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+                "actual output：searchClientName MATCH '张三'"
+              ]
+            }
+          ],
+          "probe_evidence": [
+            "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+            "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+            "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+            "actual output：searchClientName MATCH '张三'"
+          ],
+          "incomplete_reason": ""
+        }
+      ],
+      "causal_category": "no_issue",
+      "probe_results": [
+        {
+          "probe_id": "fulfillment_assessment",
+          "status": "not_verified",
+          "stage": "",
+          "evidence": [
+            "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+            "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+            "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+            "actual output：searchClientName MATCH '张三'"
+          ],
+          "error": ""
+        }
+      ],
+      "incomplete_reason": ""
+    },
+    "cluster_panel": {
+      "project_id": "client_search",
+      "clusters": [
+        {
+          "cluster_id": "expectation::no_issue::fulfilled",
+          "mechanism": "no_issue::fulfilled",
+          "causal_category": "no_issue",
+          "fulfillment_statuses": [
+            "fulfilled"
+          ],
+          "expectation_ids": [
+            "客户姓名识别与字段映射",
+            "姓名值完整提取",
+            "姓名匹配操作符语义正确"
+          ],
+          "needs_human_review": false,
+          "canonical_attribution": true,
+          "count": 1,
+          "representative_cases": [
+            "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b"
+          ],
+          "representative_traces": [
+            "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b"
+          ],
+          "common_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+          "shared_failure_pattern": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+          "representative_diffs": [
+            {
+              "case_id": "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b",
+              "node": "fulfillment_assessment",
+              "evidence": [
+                "capability_manifest：searchClientName 字段 operators 包含 MATCH，value_types 为 extract",
+                "enhanced_rules：姓名-匹配和姓名-模糊匹配规则均使用 MATCH 操作符，覆盖'张三'这类中文完整姓名",
+                "prompt 示例：'叫张三的客户'→ MATCH '张三'、'陈成'→ MATCH '陈成'",
+                "actual output：searchClientName MATCH '张三'"
+              ]
+            }
+          ],
+          "minimal_fix_direction": [
+            "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+          ],
+          "verification_cases": [
+            "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b"
+          ],
+          "next_actions": [
+            "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+          ]
+        }
+      ],
+      "common_root_cause": "",
+      "impact": "",
+      "priority": ""
+    },
+    "check_panel": {
+      "passed": false,
+      "issues": [
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+        "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+      ],
+      "boundary_violations": [
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+        "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+      ],
+      "verification_results": [
+        "Check categories passed current audit."
+      ],
+      "recommended_fixes": [
+        "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions."
+      ]
+    },
+    "table_row": {
+      "id": "mock-agent-client_search-7ad5d20e",
+      "input": "帮我查一下客户张三的详细资料",
+      "scenario": "",
+      "output_summary": "{\"summary\": \"客户姓名为张三的客户\", \"structured_output\": [{\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}], \"logic\": \"AND\", \"status_code\": 0, \"user_vis…",
+      "reference_summary": "{\"query_logic\": \"AND\", \"conditions\": [], \"expected_source\": \"not_available\", \"reference_conditions\": [], \"reference_is_oracle\": false}",
+      "status": "fulfilled",
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "verdict": "correct",
+      "fulfillment_status": "fulfilled",
+      "judge_summary": {
+        "status": "fulfilled",
+        "fulfillment_status": "fulfilled",
+        "verdict": "correct",
+        "reason": "fulfilled · 3 blocking expectations all met · 用户查询'帮我查一下客户张三的详细资料'意图明确——按姓名搜索客户张三。系统输出了 searchClientName MATCH '张三' 这一条件，从三个维度评估：（1）字段映射：searchClientName 正确定义为客户本人姓名，符合用户查询客户姓名的意图；（2）值提取：'张三'完整保留，未被截断；（3）操作符：MATCH 在 capability_manifest 中是 searchClientName 的合法操作符，且对中文姓名搜索语义正确。无缺失条件、无错误条件、无多余条件。三个阻塞级业务期望全部满足。",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 3,
+        "blocking_count": 3
+      },
+      "attribution_summary": {
+        "causal_category": "no_issue",
+        "attribution_count": 3,
+        "probe_count": 1,
+        "summary_text": "业务预期已达成",
+        "is_complete": true,
+        "is_formal_attribution": true
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 3,
+        "protocol_gap_count": 0,
+        "consistency_gap_count": 0,
+        "recommended_fix_count": 1,
+        "issues": [
+          "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+          "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+          "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+        ]
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": false,
+      "issue_count": 3,
+      "fallback_count": 0,
+      "causal_category": "no_issue",
+      "divergence_stage": "fulfillment_assessment",
+      "root_cause_summary": "业务预期已达成",
+      "created_at": "2026-07-02T00:11:18.335948+00:00",
+      "stop_reason": "completed",
+      "interaction_mode": "single_turn",
+      "trace_id": "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b"
+    },
+    "project_extensions": {
+      "frontend_standard": {
+        "frontend_view": {
+          "live": "render normalized parser output and raw project fields under protocol extension panels",
+          "summary": "align Output and Reference as formatted JSON with equal-size table cells and compact drill-downs"
+        },
+        "batch_persistence": {
+          "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+          "transient_results": "do not persist full trace, judge, attribute, downstream payload, or frontend_view as durable case-pool source data"
+        }
+      },
+      "display_contract": {
+        "output_source": "trace.live_result.extracted_output",
+        "reference_source": "judge_generated",
+        "formatting": [
+          "json formatting",
+          "truncation",
+          "output/reference alignment"
+        ]
+      }
+    }
+  },
+  "table_row": {
+    "id": "mock-agent-client_search-7ad5d20e",
+    "input": "帮我查一下客户张三的详细资料",
+    "scenario": "",
+    "output_summary": "{\"summary\": \"客户姓名为张三的客户\", \"structured_output\": [{\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}], \"logic\": \"AND\", \"status_code\": 0, \"user_vis…",
+    "reference_summary": "{\"query_logic\": \"AND\", \"conditions\": [], \"expected_source\": \"not_available\", \"reference_conditions\": [], \"reference_is_oracle\": false}",
+    "status": "fulfilled",
+    "execution_mode": "live",
+    "output_source": "live_service",
+    "verdict": "correct",
+    "fulfillment_status": "fulfilled",
+    "judge_summary": {
+      "status": "fulfilled",
+      "fulfillment_status": "fulfilled",
+      "verdict": "correct",
+      "reason": "fulfilled · 3 blocking expectations all met · 用户查询'帮我查一下客户张三的详细资料'意图明确——按姓名搜索客户张三。系统输出了 searchClientName MATCH '张三' 这一条件，从三个维度评估：（1）字段映射：searchClientName 正确定义为客户本人姓名，符合用户查询客户姓名的意图；（2）值提取：'张三'完整保留，未被截断；（3）操作符：MATCH 在 capability_manifest 中是 searchClientName 的合法操作符，且对中文姓名搜索语义正确。无缺失条件、无错误条件、无多余条件。三个阻塞级业务期望全部满足。",
+      "reason_source": "aggregated_fulfillment",
+      "reason_stage": "judge",
+      "is_formal_attribution": true,
+      "assessment_count": 3,
+      "blocking_count": 3
+    },
+    "attribution_summary": {
+      "causal_category": "no_issue",
+      "attribution_count": 3,
+      "probe_count": 1,
+      "summary_text": "业务预期已达成",
+      "is_complete": true,
+      "is_formal_attribution": true
+    },
+    "check_summary": {
+      "passed": false,
+      "issue_count": 3,
+      "protocol_gap_count": 0,
+      "consistency_gap_count": 0,
+      "recommended_fix_count": 1,
+      "issues": [
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+        "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+      ]
+    },
+    "fallback_summary": {
+      "count": 0,
+      "needs_human_review": false
+    },
+    "needs_human_review": false,
+    "check_passed": false,
+    "issue_count": 3,
+    "fallback_count": 0,
+    "causal_category": "no_issue",
+    "divergence_stage": "fulfillment_assessment",
+    "root_cause_summary": "业务预期已达成",
+    "created_at": "2026-07-02T00:11:18.335948+00:00",
+    "stop_reason": "completed",
+    "interaction_mode": "single_turn",
+    "trace_id": "fe4e7e3e-f153-470c-9dfe-0ffc3bda252b"
+  }
+}

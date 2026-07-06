@@ -1,0 +1,192 @@
+{
+  "trace_id": "12911435-eb88-455c-ad45-60825f4e264a",
+  "project_id": "marketting-planning-intent",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图标签准确性",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "置信度达标",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "关键实体提取",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "回退策略合规",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "intent_contract",
+      "causal_category": "insufficient_evidence"
+    }
+  ],
+  "causal_category": "implementation_bug",
+  "earliest_divergence": {
+    "node": "intent_contract_gate",
+    "expected": {
+      "confidence": 0.9,
+      "intent": "客户特征分析",
+      "subIntent": "客户画像",
+      "target_value": "重疾险,上季度"
+    },
+    "actual": {
+      "confidence": 0.5,
+      "intent": "other",
+      "subIntent": "其他意图"
+    },
+    "evidence": [
+      [
+        {
+          "kind": "missing",
+          "error_type": "",
+          "expected": "客户特征分析",
+          "actual": "other",
+          "evidence_ref": "",
+          "raw": {
+            "actual": "other",
+            "expected": "客户特征分析",
+            "field": "intent_label",
+            "impact": "导致后续路由错误"
+          },
+          "incomplete": false
+        },
+        {
+          "kind": "missing",
+          "error_type": "",
+          "expected": "包含产品和时间信息",
+          "actual": "null",
+          "evidence_ref": "",
+          "raw": {
+            "actual": "null",
+            "expected": "包含产品和时间信息",
+            "field": "target_value",
+            "impact": "缺少实体导致无法生成精准客户分群"
+          },
+          "incomplete": false
+        }
+      ]
+    ],
+    "confidence": "medium"
+  },
+  "chain_nodes": [
+    {
+      "status": "failed",
+      "evidence": [
+        {},
+        {
+          "expected": {
+            "confidence": 0.9,
+            "intent": "客户特征分析",
+            "subIntent": "客户画像",
+            "target_value": "重疾险,上季度"
+          }
+        },
+        {
+          "actual": {
+            "confidence": 0.5,
+            "intent": "other",
+            "subIntent": "其他意图"
+          }
+        },
+        {
+          "missing": [
+            {
+              "kind": "missing",
+              "error_type": "",
+              "expected": "客户特征分析",
+              "actual": "other",
+              "evidence_ref": "",
+              "raw": {
+                "actual": "other",
+                "expected": "客户特征分析",
+                "field": "intent_label",
+                "impact": "导致后续路由错误"
+              },
+              "incomplete": false
+            },
+            {
+              "kind": "missing",
+              "error_type": "",
+              "expected": "包含产品和时间信息",
+              "actual": "null",
+              "evidence_ref": "",
+              "raw": {
+                "actual": "null",
+                "expected": "包含产品和时间信息",
+                "field": "target_value",
+                "impact": "缺少实体导致无法生成精准客户分群"
+              },
+              "incomplete": false
+            }
+          ],
+          "wrong": [
+            {
+              "kind": "wrong",
+              "error_type": "",
+              "evidence_ref": "",
+              "raw": {
+                "field": "intent_label",
+                "reason": "与用户查询语义不匹配",
+                "value": "other"
+              },
+              "incomplete": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "llm_call",
+      "status": "failed",
+      "evidence": [
+        "[attribute] LLM 产出不符合结构化输出约束，已阻断（不放行假货）：\n  - 必填字段缺失：expectation_attributions\n  - 必填字段缺失：causal_category\n  - 必填字段缺失：probe_results\n  - 必填字段缺失：analysis_method\n  - 必填字段缺失：chain_nodes\n  - 必填字段缺失：earliest_divergence\n  - 必填字段缺失：evidence_coverage\n  - 必填字段缺失：analysis_quality\n  - 必填字段缺失：incomplete_reason\n  - 必填字段缺失：suspected_locations\n  - 必填字段缺失：root_cause_hypothesis\n  - 必填字段缺失：verification_steps\n  - 必填字段缺失：patch_direction\n  - 必填字段缺失：scenario\n  - 必填字段缺失：quality_flags\n产出预览：{\"raw_text\": \"Insufficient Balance\"}"
+      ]
+    }
+  ],
+  "evidence_coverage": {
+    "query": false,
+    "actual": true,
+    "expected": true,
+    "execution_trace": false
+  },
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'confidence': 0.9, 'intent': '客户特征分析', 'subIntent': '客户画像', 'target_value': '重疾险,上季度'}，实际 normalized intent evidence 为 {'confidence': 0.5, 'intent': 'other', 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+  "verification_steps": [
+    "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+  ],
+  "patch_direction": [
+    "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+  ],
+  "needs_human_review": true,
+  "scenario": "intent_recognition",
+  "summary": {
+    "causal_category": "insufficient_evidence",
+    "attribution_count": 5,
+    "probe_count": 1,
+    "summary_text": "attribute agent LLM 调用失败。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  },
+  "analysis_method": "current_case_intent_contract_trace",
+  "analysis_quality": {
+    "passed": false,
+    "status": "next_verification_step",
+    "missing": [
+      "attribute LLM result",
+      "intent_recognition_internal_evidence"
+    ]
+  },
+  "incomplete_reason": "attribute agent LLM 调用失败。",
+  "quality_flags": [
+    "low_confidence",
+    "incorrect_intent_label",
+    "missing_entities",
+    "intent_contract_gate_failed",
+    "attribute_blocked"
+  ]
+}

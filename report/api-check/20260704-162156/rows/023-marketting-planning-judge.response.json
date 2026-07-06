@@ -1,0 +1,261 @@
+{
+  "trace_id": "c4c03177-5b2f-4218-90bb-54e10fbc063c",
+  "project_id": "marketting-planning",
+  "verdict": "uncertain",
+  "business_expectations": [
+    {
+      "expectation_id": "意图识别正确路由至规划阶段",
+      "downstream_consumer": "用户",
+      "user_intent": "营销规划",
+      "expected_outcome": "事件流显示 planning_started",
+      "acceptance_criteria": [
+        "事件流包含 intent_detected",
+        "事件流包含 planning_started"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "规划生成覆盖NBEV提升的卡片",
+      "downstream_consumer": "用户",
+      "user_intent": "提升NBEV",
+      "expected_outcome": "卡片内容包含 NBEV 或相关指标",
+      "acceptance_criteria": [
+        "事件流包含 card_delta 或 card_start/card_end",
+        "卡片内容（如能获取）需包含 NBEV 或相关指标"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "分解维度覆盖队伍客户产品",
+      "downstream_consumer": "用户",
+      "user_intent": "分析不同策略维度",
+      "expected_outcome": "输出包含队伍、客户、产品策略的讨论",
+      "acceptance_criteria": [
+        "输出的文本或卡片内容中包含队伍、客户、产品策略的讨论"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "缺失目标数值时进行澄清询问",
+      "downstream_consumer": "用户",
+      "user_intent": "提供足够信息",
+      "expected_outcome": "若有需要，出现 clarification 事件或提问文本",
+      "acceptance_criteria": [
+        "若系统无法默认目标，应有 clarification 事件或文本询问目标值"
+      ],
+      "priority": "low"
+    },
+    {
+      "expectation_id": "SSE事件流完整结束",
+      "downstream_consumer": "系统",
+      "user_intent": "完成交互",
+      "expected_outcome": "事件流以 done 终止且 completed 为 true",
+      "acceptance_criteria": [
+        "事件流包含 done 事件",
+        "completed 为 true",
+        "无 error 事件"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "无不当回退",
+      "downstream_consumer": "系统",
+      "user_intent": "正常处理",
+      "expected_outcome": "fallback.used 为 false",
+      "acceptance_criteria": [
+        "fallback.used 为 false"
+      ],
+      "priority": "high"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图识别正确路由至规划阶段",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "intent_detected 事件",
+        "planning_started 事件"
+      ],
+      "actual_evidence": [
+        "事件列表中有 intent_detected 和 planning_started"
+      ],
+      "downstream_impact": "规划流程正常启动",
+      "blocking": true
+    },
+    {
+      "expectation_id": "规划生成覆盖NBEV提升的卡片",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "卡片内容包含 NBEV 或相关提升目标"
+      ],
+      "actual_evidence": [
+        "仅有 card_delta 事件，无卡片内容详情"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": false,
+        "uncontrollable_limits": [
+          "trace 未提供卡片内容文本，无法验证业务语义"
+        ],
+        "reasoning": "由于缺乏内容，无法评估卡片是否覆盖NBEV"
+      },
+      "downstream_impact": "无法确认规划质量",
+      "blocking": true
+    },
+    {
+      "expectation_id": "分解维度覆盖队伍客户产品",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "文本或卡片提及队伍、客户、产品策略"
+      ],
+      "actual_evidence": [
+        "无可用文本"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": false,
+        "uncontrollable_limits": [
+          "缺少输出文本内容"
+        ],
+        "reasoning": "无法验证维度覆盖"
+      },
+      "downstream_impact": "不确定是否满足用户的维度期望",
+      "blocking": false
+    },
+    {
+      "expectation_id": "缺失目标数值时进行澄清询问",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "若需要数值，应有 clarification 事件或提问消息"
+      ],
+      "actual_evidence": [
+        "事件中没有 clarification 事件；但 reasoning_message_content 内容未知"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": false,
+        "uncontrollable_limits": [
+          "无法获取 reasoning_message_content 内容"
+        ],
+        "reasoning": "无法确定是否进行了澄清"
+      },
+      "downstream_impact": "可能缺失关键信息",
+      "blocking": false
+    },
+    {
+      "expectation_id": "SSE事件流完整结束",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "done 事件，completed=true"
+      ],
+      "actual_evidence": [
+        "事件流以 done 结束，completed 为 true"
+      ],
+      "downstream_impact": "响应完整",
+      "blocking": true
+    },
+    {
+      "expectation_id": "无不当回退",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "fallback.used=false"
+      ],
+      "actual_evidence": [
+        "fallback.used 为 false"
+      ],
+      "downstream_impact": "系统在正常范围内处理",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_evaluable",
+    "assessment_count": 6,
+    "blocking_expectations": [
+      "规划生成覆盖NBEV提升的卡片"
+    ]
+  },
+  "reasoning_summary": "根据事件流，系统正确识别了意图并进入规划阶段，生成了至少一个规划卡片，且流程以done事件正常结束，没有触发回退。然而，由于trace中未提供卡片的实际内容文本和推理消息的细节，无法验证规划是否确实围绕NBEV提升展开，以及是否覆盖了用户提到的队伍、客户、产品策略等维度。因此，尽管流程控制指标达标，但业务语义满足度无法评估。评估结论为 not_evaluable。",
+  "judge_basis": "基于run_trace中的事件流、fallback标记及extracted_output的内容进行评估。reference为空，由judge根据用户意图生成预期。",
+  "judge_method": "规则匹配与缺失分析",
+  "verdict_derivation": {
+    "primary_boundary": "system_responsibility_with_declared_external_boundary",
+    "assessment_summary": "6个期望中3个fulfilled，3个not_evaluable。fulfilled的包括正确路由、SSE完成、无回退。not_evaluable的涉及卡片内容与澄清行为，因trace未提供输出文本。",
+    "blocking_gaps": [
+      "无法验证规划卡片是否覆盖NBEV提升内容",
+      "无法验证卡片是否包含用户提及的维度",
+      "无法确认缺失目标值时是否进行了澄清"
+    ],
+    "why_verdict": "由于关键业务期望（规划卡片内容覆盖NBEV及维度）无法从现有trace中验证，因此整体评估为not_evaluable。系统在流程控制方面表现正常（无回退、SSE完整），但内容质量无法评定。"
+  },
+  "evidence": [
+    "根据事件流，系统正确识别了意图并进入规划阶段，生成了至少一个规划卡片，且流程以done事件正常结束，没有触发回退。然而，由于trace中未提供卡片的实际内容文本和推理消息的细节，无法验证规划是否确实围绕NBEV提升展开，以及是否覆盖了用户提到的队伍、客户、产品策略等维度。因此，尽管流程控制指标达标，但业务语义满足度无法评估。评估结论为 not_evaluable。"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": false,
+    "uncontrollable_limits": [
+      "trace 中缺少卡片输出内容及 reasoning 文本，无法验证业务语义"
+    ],
+    "reasoning": "评估依赖输出内容的详细语义，但当前trace仅提供了事件类型和元数据，缺乏具体文本，因此超出可评估范围。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "marketing-planning",
+    "primary_boundary_name": "营销规划Agent系统责任边界",
+    "judge_question": "该系统是否在责任边界内正确完成了用户的营销规划请求？",
+    "verdict_basis": "基于事件流和fallback状态判断流程正确性，但无法判断内容质量",
+    "boundary_sources": "capability_manifest为空，使用项目默认责任范围",
+    "conflict_policy": "以事件流为准，忽略可能异常的stage标签"
+  },
+  "consumer_contract": {
+    "consumer": "下游规划消费者",
+    "contract": "根据事件流和卡片内容判断规划是否满足用户意图",
+    "application_boundary": "system_responsibility_with_declared_external_boundary"
+  },
+  "intent_model": {
+    "raw_user_request": "下个季度我想把NBEV目标再提一提，能不能帮我看看从哪些方面入手，比如增加队伍还是多找客户，或者调整产品策略？",
+    "explicit_intents": [
+      "营销规划",
+      "提升NBEV"
+    ],
+    "implicit_business_intents": [
+      "获得可执行的提升策略",
+      "分析不同维度的效果"
+    ],
+    "constraints": {
+      "time_range": "下个季度",
+      "metric": "NBEV",
+      "target_change": "未指定具体提升幅度"
+    },
+    "success_definition": "系统应识别用户意图为营销规划，并进入规划阶段，生成针对NBEV提升的规划卡片，涵盖队伍、客户、产品等维度，或询问缺失的目标值。",
+    "blocking_requirements": [
+      "意图识别为规划",
+      "进入规划阶段",
+      "无 fallback",
+      "SSE 正常结束"
+    ],
+    "nice_to_have_requirements": [
+      "提供具体数值建议",
+      "卡片中包含分解维度详情"
+    ],
+    "intent_evidence": [
+      "用户明确提到'看看从哪些方面入手'和三个维度"
+    ]
+  },
+  "reconstructed_intent": "用户希望获得一份提升下季度NBEV的营销规划，包含从增加队伍、多找客户或调整产品策略等维度入手的具体建议。",
+  "reference_generation_basis": {
+    "source": "judge_generated_from_user_intent",
+    "alignment_to_live_schema": "基于critical_intent_dimensions映射到项目期望"
+  },
+  "scenario": "intent_recognition",
+  "needs_human_review": true,
+  "quality_flags": [
+    {
+      "flag": "missing_content_text",
+      "description": "trace 缺少卡片内容和推理文本，导致业务语义无法评估"
+    }
+  ],
+  "summary": {
+    "reason": "uncertain · 由于关键业务期望（规划卡片内容覆盖NBEV及维度）无法从现有trace中验证，因此整体评估为not_evaluable。系统在流程控制方面表现正常（无回退、SSE完整），但内容质量无法评定。",
+    "reason_source": "reasoning_summary",
+    "fulfillment_status": "not_evaluable",
+    "assessment_count": 6,
+    "blocking_count": 4,
+    "is_formal_attribution": false
+  }
+}

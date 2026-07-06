@@ -1,0 +1,110 @@
+{
+  "project": "marketting-planning-intent",
+  "trace": {
+    "trace_id": "dbe48361-14cd-4c0b-b8c0-4aff47f62aab",
+    "project_id": "marketting-planning-intent",
+    "case_id": "mpi-premium-growth-exact-1",
+    "live_result": {
+      "project_id": "marketting-planning-intent",
+      "case_id": "mpi-premium-growth-exact-1",
+      "session_id": "eval-mpi-premium-growth-exact-1",
+      "raw_input": {
+        "query": "我想看明年NBEV增长规划"
+      },
+      "normalized_request": {
+        "case_id": "mpi-premium-growth-exact-1",
+        "session_id": "eval-mpi-premium-growth-exact-1",
+        "query": "我想看明年NBEV增长规划",
+        "scenario": "intent_recognition"
+      },
+      "call_status": "failed",
+      "call_error": "marketing-planning intent service unavailable: <urlopen error [Errno 61] Connection refused>",
+      "runtime_ms": 2,
+      "output_source": "live_service",
+      "application_boundary": {
+        "scope": "single_turn_intent_recognition",
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ]
+      },
+      "interaction_mode": "single_turn"
+    },
+    "status": "error",
+    "error": "marketing-planning intent service unavailable: <urlopen error [Errno 61] Connection refused>",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-06-30T19:04:12.642879+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-06-30T19:04:12.642899+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-06-30T19:04:12.647653+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-06-30T19:04:12.647670+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": false,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace missing or errored"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "incomplete_or_human_review",
+        "condition": "gate_failed_unrecoverable",
+        "reason": "trace missing or errored",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "incomplete_or_human_review",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "human_review_required"
+      }
+    ],
+    "scenario": "intent_recognition",
+    "interaction_mode": "single_turn",
+    "session_id": "eval-mpi-premium-growth-exact-1",
+    "created_at": "2026-06-30T19:04:12.647484+00:00"
+  },
+  "judge": {
+    "trace_id": "dbe48361-14cd-4c0b-b8c0-4aff47f62aab",
+    "project_id": "marketting-planning-intent"
+  }
+}

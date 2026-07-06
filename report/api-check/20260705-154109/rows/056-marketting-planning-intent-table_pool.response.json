@@ -1,0 +1,120 @@
+{
+  "project_id": "marketting-planning-intent",
+  "rows": [
+    {
+      "id": "mock-agent-marketting-planning-intent-9e16256b",
+      "input": "default_org",
+      "scenario": "intent_recognition",
+      "output_summary": "{\"confidence\": 0.5, \"intent\": \"other\", \"subIntent\": \"其他意图\"}",
+      "reference_summary": "{\"confidence\": 0.85, \"intent\": \"customer_analysis\", \"subIntent\": \"客户特征分析\"}",
+      "status": "not_fulfilled",
+      "execution_mode": "",
+      "output_source": "live_service",
+      "verdict": "incorrect",
+      "score": 1.0,
+      "fulfillment_status": "not_fulfilled",
+      "judge_summary": {
+        "status": "not_fulfilled",
+        "fulfillment_status": "not_fulfilled",
+        "verdict": "incorrect",
+        "score": 1.0,
+        "reason": "not_fulfilled · blocking=[(none)]",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 4,
+        "blocking_count": 0,
+        "primary_failure_dimensions": [
+          {
+            "blocking": false,
+            "downstream_impact": "",
+            "evidence": "用户输入为'帮我看看上季度买了重疾险的客户都是啥样的？'，明确表达了针对特定产品的客户群体特征分析需求。然而系统返回意图标签为'other（其他意图）'，置信度仅为 0.5，未能满足'意图标签准确反映客户特征分析的营销意图'这一核心期望；同时错误触发了兜底策略，导致无法进入后续客户分析流程。虽然实体槽位未产生冲突，但关键意图识别失败已使整体输出无法支撑业务目标，因此整体判定为未满足。",
+            "expectation_id": "兜底策略仅在真正无法识别客户分析意图时才触发",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": false,
+            "downstream_impact": "",
+            "evidence": "用户输入为'帮我看看上季度买了重疾险的客户都是啥样的？'，明确表达了针对特定产品的客户群体特征分析需求。然而系统返回意图标签为'other（其他意图）'，置信度仅为 0.5，未能满足'意图标签准确反映客户特征分析的营销意图'这一核心期望；同时错误触发了兜底策略，导致无法进入后续客户分析流程。虽然实体槽位未产生冲突，但关键意图识别失败已使整体输出无法支撑业务目标，因此整体判定为未满足。",
+            "expectation_id": "意图标签准确反映客户特征分析的营销意图",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": false,
+            "downstream_impact": "",
+            "evidence": "用户输入为'帮我看看上季度买了重疾险的客户都是啥样的？'，明确表达了针对特定产品的客户群体特征分析需求。然而系统返回意图标签为'other（其他意图）'，置信度仅为 0.5，未能满足'意图标签准确反映客户特征分析的营销意图'这一核心期望；同时错误触发了兜底策略，导致无法进入后续客户分析流程。虽然实体槽位未产生冲突，但关键意图识别失败已使整体输出无法支撑业务目标，因此整体判定为未满足。",
+            "expectation_id": "置信度达到可执行客户分析任务的水平",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          }
+        ]
+      },
+      "attribution_summary": {
+        "attribution_count": 3,
+        "causal_category": "needs_human_review",
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 4,
+        "summary_text": "系统将 '帮我看看上季度买了重疾险的客户都是啥样的？' 识别为 other 而非 customer_portrait，根因存在于两条并行路径的同时失效：规则路径——intent_recognition.py 的 try_homepage_intent 中客户画像正则仅匹配 '客户.*(?:画像|分布|结构|分层)'，无法覆盖口语化表达 '都是啥样的'；LLM 路径——intent_prompt.py 的 customer_portrait 定义（'客户画像分析'）和唯一示例（'分析客户画像'）语义锚定过窄，且 prompt 末尾 'Default to other if uncertain' 的兜底规则导致 LLM 在语义模糊时保守地走向 other 而非尝试匹配最接近的意图。两条路径的覆盖缺口在本次查询上形成交集，最终导致明确的客户分析意图被误判为兜底意图。"
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 4,
+        "protocol_gap_count": 1,
+        "consistency_gap_count": 0,
+        "recommended_fix_count": 2,
+        "issues": [
+          "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+          "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+          "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+          "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug"
+        ]
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "quality_flags": [
+        "关键意图标签与用户真实业务意图不匹配",
+        "兜底策略被非必要触发",
+        "置信度处于低水位，可能影响下游决策",
+        "intent_contract_gate_passed",
+        "规则匹配与 LLM 两条路径同时失效形成覆盖盲区",
+        "prompt 语义锚定过窄导致 LLM 无法泛化到口语化表达",
+        "兜底策略在明确可识别场景被非必要触发",
+        "置信度硬编码 0.5 无法反映真实确定性",
+        "ungrounded_root_cause"
+      ],
+      "check_passed": false,
+      "issue_count": 5,
+      "fallback_count": 0,
+      "causal_category": "needs_human_review",
+      "divergence_stage": "intent_contract_gate",
+      "root_cause_summary": "系统将 '帮我看看上季度买了重疾险的客户都是啥样的？' 识别为 other 而非 customer_portrait，根因存在于两条并行路径的同时失效：规则路径——intent_recognition.py 的 try_homepage_intent 中客户画像正则仅匹配 '客户.*(?:画像|分布|结构|分层)'，无法覆盖口语化表达 '都是啥样的'；LLM 路径——intent_prompt.py 的 customer_portrait 定义（'客户画像分析'）和唯一示例（'分析客户画像'）语义锚定过窄，且 prompt 末尾 'Default to other if uncertain' 的兜底规则导致 LLM 在语义模糊时保守地走向 other 而非尝试匹配最接近的意图。两条路径的覆盖缺口在本次查询上形成交集，最终导致明确的客户分析意图被误判为兜底意图。",
+      "created_at": "2026-07-05T07:41:11.849660+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "86512ef1-f562-4df4-aa20-07ef646ca6fe"
+    }
+  ],
+  "total": 1,
+  "summary": {
+    "fulfilled_count": 0,
+    "not_fulfilled_count": 1,
+    "pending_count": 0,
+    "correct_count": 0,
+    "incorrect_count": 1,
+    "uncertain_count": 0,
+    "human_review_count": 0,
+    "check_failed_count": 1,
+    "issue_count": 5,
+    "fallback_count": 0,
+    "rows_with_fallback_count": 0,
+    "by_scenario": {
+      "intent_recognition": 1
+    }
+  }
+}

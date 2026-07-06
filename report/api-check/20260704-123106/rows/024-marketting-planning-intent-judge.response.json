@@ -1,0 +1,205 @@
+{
+  "trace_id": "0892a3d5-1076-410f-a34a-3c5bc15e68b4",
+  "project_id": "marketting-planning-intent",
+  "verdict": "uncertain",
+  "score": 1.0,
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签为 customer_portrait",
+      "downstream_consumer": "规划引擎",
+      "user_intent": "查询客户画像",
+      "expected_outcome": "intent='customer_portrait'",
+      "required_capabilities": [
+        "意图分类"
+      ],
+      "acceptance_criteria": [
+        "extracted_output.intent == 'customer_portrait'"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "置信度不低于阈值",
+      "downstream_consumer": "规划引擎",
+      "user_intent": "获取可靠意图",
+      "expected_outcome": "confidence >= 0.8",
+      "required_capabilities": [
+        "置信度计算"
+      ],
+      "acceptance_criteria": [
+        "extracted_output.confidence >= 0.8"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "无歧义标记",
+      "downstream_consumer": "规划引擎",
+      "user_intent": "获取明确意图",
+      "expected_outcome": "ambiguous == false",
+      "required_capabilities": [
+        "歧义检测"
+      ],
+      "acceptance_criteria": [
+        "extracted_output.ambiguous == false"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "未触发回退策略",
+      "downstream_consumer": "规划引擎",
+      "user_intent": "获取有效意图",
+      "expected_outcome": "fallback == false",
+      "required_capabilities": [
+        "回退策略"
+      ],
+      "acceptance_criteria": [
+        "extracted_output.fallback == false"
+      ],
+      "priority": "medium"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签为 customer_portrait",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "项目定义的参考意图标签"
+      ],
+      "actual_evidence": [
+        "extracted_output.intent = 'customer_portrait'"
+      ],
+      "downstream_impact": "无法确认意图标签是否符合预期，可能导致下游误规划",
+      "blocking": true
+    },
+    {
+      "expectation_id": "置信度不低于阈值",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "项目定义的置信度阈值"
+      ],
+      "actual_evidence": [
+        "extracted_output.confidence = 1.0"
+      ],
+      "downstream_impact": "无法确认置信度是否达标，可能影响下游对结果的使用",
+      "blocking": true
+    },
+    {
+      "expectation_id": "无歧义标记",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "项目定义的歧义判断标准"
+      ],
+      "actual_evidence": [
+        "extracted_output.ambiguous = false"
+      ],
+      "downstream_impact": "无法评估歧义判断的准确性",
+      "blocking": false
+    },
+    {
+      "expectation_id": "未触发回退策略",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "项目定义的回退触发条件"
+      ],
+      "actual_evidence": [
+        "extracted_output.fallback = false"
+      ],
+      "downstream_impact": "无法评估回退策略执行是否正确",
+      "blocking": false
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "fulfilled",
+      "downstream_impact": "当前单轮意图识别满足 reference contract：intent=None，confidence=None 达到最低要求 None。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_evaluable",
+    "assessment_count": 5,
+    "blocking_expectations": [
+      "意图标签为 customer_portrait",
+      "置信度不低于阈值"
+    ]
+  },
+  "expected": {
+    "intent": "customer_portrait"
+  },
+  "actual": {
+    "intent": "customer_portrait",
+    "confidence": 1.0,
+    "ambiguous": false,
+    "fallback": false
+  },
+  "reasoning_summary": "用户查询旨在了解去年购买年金险客户的年龄分布和家庭结构，系统识别为 customer_portrait 并返回高置信度。但由于缺乏项目定义的预期意图标签及验收标准，无法判断该识别是否确实正确，也无法评估置信度、歧义和回退策略是否符合要求。因此，所有关键维度均无法评估。",
+  "judge_basis": "由于项目未提供 expected_intent 或任何参考标准，无法判定 actual output 是否满足业务预期，因此评估不可进行。",
+  "judge_method": "基于 critical_intent_dimensions 构建业务预期，但由于缺少预期参考，所有维度评定为 not_evaluable。",
+  "verdict_derivation": {
+    "primary_boundary": "single_turn_intent_recognition",
+    "assessment_summary": "共4项业务预期，均因缺少参考标准而无法评估。",
+    "blocking_gaps": [
+      "缺少预期意图标签及项目验收标准，无法判断意图标签是否正确；缺少置信度阈值标准，无法判断置信度是否达标。"
+    ],
+    "why_verdict": "因为缺少 expected_intent 或项目定义的参考标准，所有业务预期无法评估，整体评估不可进行。",
+    "contract_gate": "passed"
+  },
+  "evidence": [
+    "用户查询旨在了解去年购买年金险客户的年龄分布和家庭结构，系统识别为 customer_portrait 并返回高置信度。但由于缺乏项目定义的预期意图标签及验收标准，无法判断该识别是否确实正确，也无法评估置信度、歧义和回退策略是否符合要求。因此，所有关键维度均无法评估。"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": false,
+    "uncontrollable_limits": [
+      "未提供 expected_intent 或参考输出，无法建立评估基线；缺少项目定义的置信度阈值、歧义标准等验收准则。"
+    ],
+    "reasoning": "评估所需的标准全部缺失，不属于可评估范围。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "single_turn_intent_recognition",
+    "primary_boundary_name": "单轮意图识别评估",
+    "judge_question": "系统返回的意图标签及置信度是否符合项目预期？",
+    "verdict_basis": "对比 actual output 与 expected output，但 expected output 未提供。",
+    "boundary_sources": "run_trace 中的 extracted_output 与 critical_intent_dimensions",
+    "conflict_policy": "无冲突，因为无法评估"
+  },
+  "consumer_contract": {
+    "consumer": "下游规划或执行模块",
+    "contract": "基于意图标签进行后续规划"
+  },
+  "intent_model": {
+    "raw_user_request": "我想了解一下去年买过我们年金险的客户，他们的大致年龄分布和家庭结构是什么样的？",
+    "explicit_intents": [
+      "查询去年购买年金险的客户的年龄分布和家庭结构"
+    ],
+    "implicit_business_intents": [
+      "客户画像分析",
+      "精准营销或客户维护"
+    ],
+    "constraints": {
+      "time_range": "去年",
+      "product": "年金险"
+    },
+    "success_definition": "系统正确识别意图为 customer_portrait，并提取相关实体，返回高置信度且无歧义的结果。",
+    "blocking_requirements": [
+      "意图标签必须正确"
+    ],
+    "nice_to_have_requirements": [
+      "提取时间范围和产品实体"
+    ]
+  },
+  "reconstructed_intent": "customer_portrait",
+  "reference_generation_basis": {
+    "source": "无",
+    "alignment_to_actual_shape": "无"
+  },
+  "scenario": "intent_recognition",
+  "quality_flags": [
+    "intent_contract_gate_passed"
+  ],
+  "summary": {
+    "reason": "uncertain · 因为缺少 expected_intent 或项目定义的参考标准，所有业务预期无法评估，整体评估不可进行。",
+    "reason_source": "reasoning_summary",
+    "fulfillment_status": "not_evaluable",
+    "assessment_count": 4,
+    "blocking_count": 2,
+    "is_formal_attribution": false
+  }
+}

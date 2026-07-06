@@ -1,0 +1,95 @@
+{
+  "trace_id": "ec804a11-2bfd-4327-b982-7564ce103d27",
+  "project_id": "client_search",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "年龄字段选择正确性",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "年龄操作符选择正确性",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "年龄数值正确性",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "性别字段选择正确性",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "性别枚举值映射正确性",
+      "causal_category": "no_issue"
+    }
+  ],
+  "causal_category": "no_issue",
+  "earliest_divergence": {
+    "evidence": [
+      "judge 全部评估项为 fulfilled，未检测到任何分歧",
+      "prompt 中的示例与当前查询完全一致，LLM 输出符合预期"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "not_verified",
+      "evidence": [
+        "run_trace.normalized_request.user_text 记录为 '45岁女性保费10万以上'，无异常"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "prompt.md 包含该查询的完整示例，LLM 可直接参照输出",
+        "judge 全部 5 项评估为 fulfilled，覆盖年龄字段/操作符/数值、性别字段/枚举值"
+      ]
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "judge_result.overall_fulfillment.status = 'fulfilled'",
+        "judge_result.fulfillment_assessments 全部 5 项 status = 'fulfilled'",
+        "judge_boundary-template.md 确认评估范围为 parser 输出语义与用户意图的一致性"
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": true,
+    "execution_trace": false,
+    "project_docs": true,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "无需归因：当前查询'45岁女性保费10万以上'的解析结果完全符合 prompt 规则和字段定义。prompt.md 中已包含该查询的完整示例（clientAge RANGE {min:45, max:45} + clientSex MATCH '女' + annPremSegNum GTE 100000，AND 逻辑），LLM 可直接参照示例输出正确条件。judge 的 5 项评估（年龄字段选择、年龄操作符、年龄数值、性别字段选择、性别枚举值映射）均为 fulfilled，整体评估状态为 fulfilled。不存在任何需要归因的分歧或缺陷。",
+  "verification_steps": [
+    "确认 prompt.md 中包含 '45岁女性保费10万以上' 的示例（已确认——source_prompt 文件核查通过）",
+    "确认 judge 评估项全部为 fulfilled（已确认——judge_result 核查通过）",
+    "如需进一步验证，可检查实际 API 响应中的 conditions 数组是否包含 3 个条件且字段/操作符/值与预期一致"
+  ],
+  "needs_human_review": false,
+  "scenario": "查询'45岁女性保费10万以上'——prompt 中包含完全一致的示例，LLM 参照输出正确条件，所有评估项均达成。无归因需求。"
+}

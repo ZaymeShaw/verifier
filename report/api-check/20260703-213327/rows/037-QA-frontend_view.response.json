@@ -1,0 +1,834 @@
+{
+  "project_info": {
+    "project_id": "QA",
+    "name": "QA 评估项目",
+    "description": "评估已产出的问答输入、输出、参考答案或上下文证据，支持样本级 scenario。"
+  },
+  "run_trace_summary": {
+    "trace_id": "0c93ac76-c27d-413d-b1c7-f9f0bec63024",
+    "project_id": "QA",
+    "case_id": "mock-agent-QA-f8906092",
+    "live_result": {
+      "project_id": "QA",
+      "case_id": "mock-agent-QA-f8906092",
+      "session_id": "",
+      "raw_input": {
+        "input": {
+          "query": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+          "user_text": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+        },
+        "metadata": {
+          "channel": "在线客服",
+          "product_type": "重疾险",
+          "session_id": "sess_123456",
+          "timestamp": "2025-03-28T10:15:00Z",
+          "trace_id": "trace_qa_001",
+          "user_id": "user_98765"
+        },
+        "scenario": "qa_gold_answer"
+      },
+      "normalized_request": {
+        "input": {
+          "question": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+        },
+        "metadata": {
+          "live_request_mapped": true,
+          "ready": [
+            "output",
+            "reference"
+          ],
+          "schema_ok": true,
+          "source": "mock_agent_llm"
+        },
+        "output": {
+          "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+        },
+        "reference": {
+          "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+        },
+        "scenario": "qa_gold_answer"
+      },
+      "call_status": "succeeded",
+      "extracted_output": {
+        "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+      },
+      "output_source": "provided_output",
+      "interaction_mode": "single_turn"
+    },
+    "execution_mode": "",
+    "output_source": "provided_output",
+    "scenario": "qa_gold_answer",
+    "evidence_refs": [
+      {
+        "ref_id": "",
+        "source": "",
+        "kind": "",
+        "stage": "",
+        "summary": "",
+        "location": ""
+      }
+    ],
+    "status": "ok",
+    "created_at": "2026-07-03T13:33:27.247709+00:00",
+    "state_history": [
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T13:33:27.246718+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T13:33:27.246729+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T13:33:27.247738+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T13:33:27.247761+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T13:33:29.254138+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T13:33:29.254174+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T13:33:29.254189+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T13:33:31.263155+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-03T13:33:31.340438+00:00",
+        "status": "succeeded"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "reason": "trace exists",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "reason": "consumer contract available",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "reason": "business expectations available",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "reason": "fulfillment assessments cover expectations",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "reason": "fulfillment boundary available",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "reason": "derived verdict matches fulfillment state",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "reason": "no contradictions",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "reason": "no unsupported claims",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "reason": "fulfillment assessments cover expectations",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": false,
+        "reason": "attribute targets fulfillment gaps",
+        "recommended_transition": "finalize",
+        "recoverable": false
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "reason": "finalization ready",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "reason": "no contradictions",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "reason": "no unsupported claims",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      }
+    ],
+    "transition_decisions": [
+      {
+        "condition": "always",
+        "from_state": "prepare_trace",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "mock_or_input"
+      },
+      {
+        "condition": "always",
+        "from_state": "mock_or_input",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "execute_or_capture"
+      },
+      {
+        "condition": "always",
+        "from_state": "execute_or_capture",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "collect_evidence"
+      },
+      {
+        "condition": "always",
+        "from_state": "collect_evidence",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "build_business_expectations"
+      },
+      {
+        "condition": "always",
+        "from_state": "build_business_expectations",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "evaluate_fulfillment"
+      },
+      {
+        "condition": "always",
+        "from_state": "evaluate_fulfillment",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "fulfillment_critic"
+      },
+      {
+        "condition": "fulfillment_requires_attribute",
+        "from_state": "fulfillment_critic",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "attribute_expectations"
+      },
+      {
+        "condition": "gate_failed_unrecoverable",
+        "from_state": "attribute_expectations",
+        "reason": "attribute targets fulfillment gaps",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "finalize"
+      },
+      {
+        "condition": "stop",
+        "from_state": "finalize",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed",
+        "to_state": "completed"
+      }
+    ],
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "turn_index": 0
+  },
+  "reference_panel": {
+    "reference": {
+      "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+    },
+    "source": "input",
+    "actual": {
+      "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+    }
+  },
+  "judge_panel": {
+    "trace_id": "0c93ac76-c27d-413d-b1c7-f9f0bec63024",
+    "project_id": "QA",
+    "verdict": "uncertain",
+    "expected": {
+      "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+    },
+    "actual": {
+      "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+    },
+    "consumer_contract": {
+      "application_boundary": {
+        "external_service_required": false,
+        "scope": "qa_semantic_answer_evaluation"
+      },
+      "consumer": "QA user",
+      "contract": "answer must be relevant, grounded in current contexts/reference, and aligned with the golden answer when provided",
+      "reference_contract": {
+        "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+      }
+    },
+    "business_expectations": [
+      {
+        "expectation_id": "QA:answer_quality",
+        "downstream_consumer": "QA user",
+        "user_intent": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+        "expected_outcome": "actual answer should satisfy answer relevance, groundedness, and reference alignment for the current QA sample",
+        "required_capabilities": [
+          "answer_relevance",
+          "groundedness",
+          "reference_alignment"
+        ],
+        "boundary": {
+          "reasoning": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+          "within_evaluable_scope": true
+        },
+        "priority": "normal",
+        "evidence_refs": [
+          {
+            "reference": {
+              "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+            },
+            "scenario": "qa_gold_answer",
+            "state_id": "collect_evidence",
+            "type": "qa_sample_boundary"
+          }
+        ]
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "QA:local_evidence_probe",
+        "status": "not_evaluable",
+        "expected_evidence": [
+          {
+            "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+          }
+        ],
+        "actual_evidence": [
+          {
+            "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+          }
+        ],
+        "boundary_decision": {
+          "reasoning": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+          "within_evaluable_scope": true
+        },
+        "downstream_impact": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+        "blocking": false
+      },
+      {
+        "expectation_id": "QA:answer_quality",
+        "status": "not_evaluable",
+        "expected_evidence": [
+          {
+            "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+          }
+        ],
+        "actual_evidence": [
+          {
+            "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+          }
+        ],
+        "boundary_decision": {
+          "reasoning": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+          "within_evaluable_scope": true
+        },
+        "downstream_impact": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+        "blocking": true,
+        "evidence_refs": [
+          {
+            "reference": {
+              "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+            },
+            "scenario": "qa_gold_answer",
+            "state_id": "collect_evidence",
+            "type": "qa_sample_boundary"
+          }
+        ]
+      }
+    ],
+    "overall_fulfillment": {
+      "assessment_count": 2,
+      "blocking_expectations": [
+        "QA:answer_quality"
+      ],
+      "status": "not_evaluable"
+    },
+    "reconstructed_intent": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+    "judge_basis": "qa_local_evidence_probe",
+    "judge_method": "qa_local_evidence_probe",
+    "reference_generation_basis": {
+      "alignment_to_actual_shape": "QA keeps semantic fields: output.actual_answer is evaluated output and reference.golden_answer is the gold answer.",
+      "evidence": [
+        "scenario=qa_gold_answer",
+        "actual_answer_present=True",
+        "golden_answer_present=True",
+        "contexts_present=False",
+        "data_quality_flags=[]"
+      ],
+      "source": "case_reference"
+    },
+    "verdict_derivation": {
+      "assessment_summary": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+      "blocking_gaps": [
+        "LLM semantic judge unavailable; local QA probe cannot determine answer correctness."
+      ],
+      "original_judge_method": "qa_local_evidence_probe",
+      "original_verdict": "uncertain",
+      "overridden_by": "qa_fallback_judge",
+      "why_verdict": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。"
+    },
+    "boundary_decision": {
+      "reasoning": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+      "within_evaluable_scope": true
+    },
+    "evaluation_boundary": {
+      "boundary_sources": "impl/projects/QA/evaluation.md",
+      "conflict_policy": "do not infer correct/incorrect from text overlap or answer length",
+      "judge_question": "当前 QA 输出是否满足样本参考或场景要求",
+      "primary_boundary_id": "qa_gold_answer",
+      "primary_boundary_name": "QA semantic evaluation",
+      "verdict_basis": "semantic judge unavailable; local probe is not a correctness judge"
+    },
+    "evidence": [
+      "scenario=qa_gold_answer",
+      "actual_answer_present=True",
+      "golden_answer_present=True",
+      "contexts_present=False",
+      "data_quality_flags=[]"
+    ],
+    "reasoning_summary": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+    "needs_human_review": true,
+    "scenario": "qa_gold_answer",
+    "quality_flags": [
+      "llm_call_failed",
+      "qa_local_evidence_probe",
+      "semantic_judge_unavailable"
+    ],
+    "summary": {
+      "assessment_count": 0,
+      "blocking_count": 0,
+      "fulfillment_status": "not_evaluable",
+      "is_formal_attribution": false,
+      "reason": "[llm_call_failed] uncertain · LLM 调用失败，未做出算法判断",
+      "reason_source": "degradation_marker"
+    },
+    "display_status": "not_evaluable",
+    "display_reason": "[llm_call_failed] uncertain · QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+    "wrong_missing_extra": {},
+    "blocked_expectations": [
+      {
+        "expectation_id": "QA:answer_quality",
+        "status": "not_evaluable",
+        "expected_evidence": [
+          {
+            "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+          }
+        ],
+        "actual_evidence": [
+          {
+            "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+          }
+        ],
+        "boundary_decision": {
+          "reasoning": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+          "within_evaluable_scope": true
+        },
+        "downstream_impact": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+        "blocking": true,
+        "evidence_refs": [
+          {
+            "reference": {
+              "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+            },
+            "scenario": "qa_gold_answer",
+            "state_id": "collect_evidence",
+            "type": "qa_sample_boundary"
+          }
+        ]
+      }
+    ]
+  },
+  "attribute_panel": {
+    "trace_id": "0c93ac76-c27d-413d-b1c7-f9f0bec63024",
+    "project_id": "QA",
+    "case_id": "",
+    "analysis_method": "qa_local_evidence_probe",
+    "chain_nodes": [
+      {
+        "name": "",
+        "status": "not_verified",
+        "evidence": [
+          "scenario=qa_gold_answer",
+          "actual_answer_present=True",
+          "golden_answer_present=True",
+          "contexts_present=False",
+          "data_quality_flags=[]"
+        ],
+        "reason": ""
+      }
+    ],
+    "earliest_divergence": {
+      "confidence": "unknown",
+      "evidence": [
+        "scenario=qa_gold_answer",
+        "actual_answer_present=True",
+        "golden_answer_present=True",
+        "contexts_present=False",
+        "data_quality_flags=[]"
+      ],
+      "node": "qa_local_evidence_probe"
+    },
+    "evidence_coverage": {
+      "actual": true,
+      "code_or_config": false,
+      "execution_trace": true,
+      "expected": true,
+      "project_docs": true,
+      "query": true
+    },
+    "analysis_quality": {
+      "missing": [
+        "semantic_judge"
+      ],
+      "passed": false,
+      "standard": "QA 正式归因必须建立在可解释的 semantic judge 结果和当前样本证据链上。"
+    },
+    "incomplete_reason": "QA 本地证据探针只能记录样本和输出是否存在；缺少可用语义 judge 时不能产出正式失败归因。",
+    "root_cause_hypothesis": "当前证据不足以定位 QA 业务根因，需要语义 judge 或人工复核补足证据。",
+    "verification_steps": [
+      "确认 semantic judge 可用后重新运行 QA judge 和 attribute。",
+      "检查样本是否提供 output.actual_answer 以及 reference.golden_answer 或 input.contexts。"
+    ],
+    "patch_direction": [
+      "补齐样本协议或恢复语义 judge；不要基于本地探针结果直接修改业务代码。"
+    ],
+    "causal_category": "insufficient_evidence",
+    "needs_human_review": true,
+    "scenario": "qa_gold_answer",
+    "quality_flags": [
+      "llm_call_failed",
+      "qa_local_evidence_probe",
+      "semantic_judge_unavailable"
+    ],
+    "display_causal_category": "insufficient_evidence",
+    "display_root_cause": "QA 本地证据探针只能记录样本和输出是否存在；缺少可用语义 judge 时不能产出正式失败归因。",
+    "display_verification_steps": [
+      "确认 semantic judge 可用后重新运行 QA judge 和 attribute。",
+      "检查样本是否提供 output.actual_answer 以及 reference.golden_answer 或 input.contexts。"
+    ],
+    "display_patch_direction": [
+      "补齐样本协议或恢复语义 judge；不要基于本地探针结果直接修改业务代码。"
+    ],
+    "attribution_count": 0,
+    "probe_count": 0
+  },
+  "fulfillment_panel": {
+    "consumer_contract": {
+      "application_boundary": {
+        "external_service_required": false,
+        "scope": "qa_semantic_answer_evaluation"
+      },
+      "consumer": "QA user",
+      "contract": "answer must be relevant, grounded in current contexts/reference, and aligned with the golden answer when provided",
+      "reference_contract": {
+        "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+      }
+    },
+    "overall_fulfillment": {
+      "assessment_count": 2,
+      "blocking_expectations": [
+        "QA:answer_quality"
+      ],
+      "status": "not_evaluable"
+    },
+    "matrix": [
+      {
+        "expectation_id": "QA:answer_quality",
+        "downstream_consumer": "QA user",
+        "expected_outcome": "actual answer should satisfy answer relevance, groundedness, and reference alignment for the current QA sample",
+        "required_capabilities": [
+          "answer_relevance",
+          "groundedness",
+          "reference_alignment"
+        ],
+        "status": "not_evaluable",
+        "blocking": true,
+        "downstream_impact": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+        "boundary_decision": {
+          "reasoning": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+          "within_evaluable_scope": true
+        }
+      }
+    ],
+    "derived_verdict": "uncertain",
+    "verdict_derivation": {
+      "assessment_summary": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。",
+      "blocking_gaps": [
+        "LLM semantic judge unavailable; local QA probe cannot determine answer correctness."
+      ],
+      "original_judge_method": "qa_local_evidence_probe",
+      "original_verdict": "uncertain",
+      "overridden_by": "qa_fallback_judge",
+      "why_verdict": "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。"
+    }
+  },
+  "expectation_attribution_panel": {
+    "causal_category": "insufficient_evidence",
+    "quality_flags": [
+      "llm_call_failed",
+      "qa_local_evidence_probe",
+      "semantic_judge_unavailable"
+    ],
+    "incomplete_reason": "QA 本地证据探针只能记录样本和输出是否存在；缺少可用语义 judge 时不能产出正式失败归因。"
+  },
+  "cluster_panel": {
+    "project_id": "QA",
+    "clusters": [
+      {
+        "canonical_attribution": false,
+        "causal_category": "insufficient_evidence",
+        "cluster_id": "expectation::insufficient_evidence",
+        "common_root_cause": "当前证据不足以定位 QA 业务根因，需要语义 judge 或人工复核补足证据。",
+        "count": 1,
+        "mechanism": "insufficient_evidence_or_human_review",
+        "minimal_fix_direction": [
+          "补齐样本协议或恢复语义 judge；不要基于本地探针结果直接修改业务代码。"
+        ],
+        "needs_human_review": true,
+        "next_actions": [
+          "确认 semantic judge 可用后重新运行 QA judge 和 attribute。",
+          "检查样本是否提供 output.actual_answer 以及 reference.golden_answer 或 input.contexts。"
+        ],
+        "representative_cases": [
+          "0c93ac76-c27d-413d-b1c7-f9f0bec63024"
+        ],
+        "representative_diffs": [
+          {
+            "case_id": "0c93ac76-c27d-413d-b1c7-f9f0bec63024",
+            "evidence": [
+              "scenario=qa_gold_answer",
+              "actual_answer_present=True",
+              "golden_answer_present=True",
+              "contexts_present=False",
+              "data_quality_flags=[]"
+            ],
+            "node": "qa_local_evidence_probe"
+          }
+        ],
+        "representative_traces": [
+          "0c93ac76-c27d-413d-b1c7-f9f0bec63024"
+        ],
+        "shared_failure_pattern": "当前证据不足以定位 QA 业务根因，需要语义 judge 或人工复核补足证据。",
+        "verification_cases": [
+          "0c93ac76-c27d-413d-b1c7-f9f0bec63024"
+        ]
+      }
+    ],
+    "common_root_cause": "当前证据不足以定位 QA 业务根因，需要语义 judge 或人工复核补足证据。",
+    "impact": "",
+    "priority": "high"
+  },
+  "check_panel": {
+    "passed": false,
+    "issues": [
+      "QA attribution causal_category outside taxonomy: insufficient_evidence"
+    ],
+    "protocol_gaps": [
+      "QA attribution causal_category outside taxonomy: insufficient_evidence"
+    ],
+    "verification_results": [
+      "Check categories passed current audit."
+    ],
+    "recommended_fixes": [
+      "Complete missing protocol outputs before treating the chain as valid."
+    ]
+  },
+  "table_row": {
+    "id": "mock-agent-QA-f8906092",
+    "input": "qa_gold_answer",
+    "scenario": "qa_gold_answer",
+    "output_summary": "{\"actual_answer\": \"您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。\"}",
+    "reference_summary": "{\"golden_answer\": \"拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。\"}",
+    "status": "not_evaluable",
+    "execution_mode": "",
+    "output_source": "provided_output",
+    "verdict": "uncertain",
+    "fulfillment_status": "not_evaluable",
+    "judge_summary": {
+      "status": "not_evaluable",
+      "fulfillment_status": "not_evaluable",
+      "verdict": "uncertain",
+      "reason": "[llm_call_failed] uncertain · LLM 调用失败，未做出算法判断",
+      "reason_source": "degradation_marker",
+      "reason_stage": "judge",
+      "is_formal_attribution": false,
+      "assessment_count": 0,
+      "blocking_count": 0
+    },
+    "attribution_summary": {
+      "causal_category": "insufficient_evidence",
+      "attribution_count": 0,
+      "probe_count": 0,
+      "summary_text": "QA 本地证据探针只能记录样本和输出是否存在；缺少可用语义 judge 时不能产出正式失败归因。",
+      "is_complete": false,
+      "is_formal_attribution": false
+    },
+    "check_summary": {
+      "passed": false,
+      "issue_count": 1,
+      "protocol_gap_count": 1,
+      "consistency_gap_count": 0,
+      "recommended_fix_count": 1,
+      "issues": [
+        "QA attribution causal_category outside taxonomy: insufficient_evidence"
+      ]
+    },
+    "fallback_summary": {
+      "count": 0,
+      "needs_human_review": false
+    },
+    "needs_human_review": true,
+    "quality_flags": [
+      "llm_call_failed",
+      "qa_local_evidence_probe",
+      "semantic_judge_unavailable",
+      "llm_call_failed",
+      "qa_local_evidence_probe",
+      "semantic_judge_unavailable"
+    ],
+    "check_passed": false,
+    "issue_count": 2,
+    "fallback_count": 0,
+    "causal_category": "insufficient_evidence",
+    "divergence_stage": "qa_local_evidence_probe",
+    "root_cause_summary": "当前证据不足以定位 QA 业务根因，需要语义 judge 或人工复核补足证据。",
+    "created_at": "2026-07-03T13:33:27.247709+00:00",
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "trace_id": "0c93ac76-c27d-413d-b1c7-f9f0bec63024"
+  },
+  "project_extensions": {
+    "scenarios": [
+      "qa_gold_answer",
+      "qa_context_faithfulness",
+      "qa_weak_quality"
+    ],
+    "score_dimensions": [
+      "correctness",
+      "completeness",
+      "key_point_coverage",
+      "faithfulness",
+      "relevance",
+      "usefulness",
+      "coherence",
+      "risk_control",
+      "clarity"
+    ],
+    "error_taxonomy": [
+      "answer_incorrect",
+      "answer_incomplete",
+      "question_misunderstood",
+      "irrelevant_answer",
+      "unsupported_claim",
+      "hallucination",
+      "context_not_used",
+      "insufficient_context",
+      "context_noise",
+      "over_refusal",
+      "format_error",
+      "too_vague",
+      "contradiction",
+      "needs_human_review",
+      "none"
+    ],
+    "frontend_standard": {
+      "frontend_view": {
+        "live": "render Input, Output, Reference, Judge, Attribute, and scenario fields from protocol objects",
+        "summary": "render same QA case-pool shape with compact per-case judge and attribute summaries"
+      },
+      "batch_persistence": {
+        "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+        "transient_results": "do not persist full trace, judge, attribute, or frontend_view as durable case-pool source data"
+      }
+    },
+    "display_contract": {
+      "output_source": "trace.live_result.extracted_output",
+      "reference_source": "input",
+      "formatting": [
+        "json formatting",
+        "truncation",
+        "output/reference alignment"
+      ]
+    },
+    "verifiable_tools": {
+      "available": false,
+      "reason": "adapter has no get_verifiable_tools"
+    }
+  }
+}

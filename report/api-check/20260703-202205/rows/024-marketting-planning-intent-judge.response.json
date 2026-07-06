@@ -1,0 +1,137 @@
+{
+  "trace_id": "155c874f-8644-4e8a-af1d-5b4b074818af",
+  "project_id": "marketting-planning-intent",
+  "verdict": "uncertain",
+  "score": 1.0,
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签为客户画像分析",
+      "downstream_consumer": "下游规划与执行模块",
+      "user_intent": "客户画像分析",
+      "expected_outcome": "意图标签正确匹配客户画像分析场景",
+      "required_capabilities": [
+        "客户画像意图定义",
+        "意图分类"
+      ],
+      "acceptance_criteria": [
+        "actual intent 字段的值等于或语义等价于 customer_portrait"
+      ],
+      "priority": "最高"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签为客户画像分析",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "预定义的期望意图标签（expected_intent）"
+      ],
+      "actual_evidence": [
+        "extracted output 中 intent 为 customer_portrait，confidence 为 1.0"
+      ],
+      "downstream_impact": "无法确认下游规划是否正确触发",
+      "blocking": true
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "fulfilled",
+      "downstream_impact": "当前单轮意图识别满足 reference contract：intent=None，confidence=None 达到最低要求 None。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_evaluable",
+    "assessment_count": 2,
+    "blocking_expectations": [
+      "意图标签为客户画像分析"
+    ]
+  },
+  "expected": {
+    "intent": "用户希望获取去年购买过年金险的客户画像数据，主要关注年龄分布和家庭结构"
+  },
+  "actual": {
+    "intent": "customer_portrait",
+    "confidence": 1.0,
+    "ambiguous": false,
+    "fallback": false
+  },
+  "reasoning_summary": "本次评估因 expected_intent 为 null 而无法进行。核心业务期望是意图标签应正确反映客户画像分析，但缺乏参考值，因此评估状态为 not_evaluable。系统实际输出意图标签为 customer_portrait（置信度 1.0），表面上看合理，但无权威预期无法确认",
+  "judge_basis": "基于用户原始请求与意图识别结果进行业务期望评估",
+  "judge_method": "semantic_equivalence_and_business_expectation_fulfillment",
+  "verdict_derivation": {
+    "primary_boundary": "缺少评估基准（expected_intent 未提供）",
+    "assessment_summary": "唯一的业务期望（意图标签正确）因缺少参考值而无法评估",
+    "blocking_gaps": [
+      "缺少 expected_intent 导致无法判定意图标签是否正确"
+    ],
+    "why_verdict": "由于未提供 expected_intent（期望意图标签），无法判断实际输出的 customer_portrait 是否满足业务期望，评估基准缺失，因此评估状态为 not_evaluable",
+    "contract_gate": "passed"
+  },
+  "evidence": [
+    "本次评估因 expected_intent 为 null 而无法进行。核心业务期望是意图标签应正确反映客户画像分析，但缺乏参考值，因此评估状态为 not_evaluable。系统实际输出意图标签为 customer_portrait（置信度 1.0），表面上看合理，但无权威预期无法确认"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": false,
+    "uncontrollable_limits": [
+      "expected_intent 为 null，无法确定意图标签的正确性"
+    ],
+    "reasoning": "评估需要期望值作为比对基准，当前 case 未提供 expected_intent，此限制超出评估者控制，故超出可评估范围"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "intent_label_correctness",
+    "primary_boundary_name": "意图标签正确性",
+    "judge_question": "实际提取的意图标签是否与期望标签一致？",
+    "verdict_basis": "语义匹配（无参考标准时无法判定）",
+    "boundary_sources": "critical_intent_dimensions 中的 intent_label",
+    "conflict_policy": "当 expected_intent 缺失时，不进行一致性判定"
+  },
+  "consumer_contract": {
+    "consumer": "downstream_planner",
+    "contract": "intent_label"
+  },
+  "intent_model": {
+    "raw_user_request": "我想了解一下去年买过我们年金险的客户，他们的大致年龄分布和家庭结构是什么样的？",
+    "explicit_intents": [
+      "查询去年购买过年金险的客户群体画像，包括年龄分布和家庭结构"
+    ],
+    "implicit_business_intents": [
+      "进行客户细分或营销策略分析前的数据摸底",
+      "为后续年金险客户再营销或服务提供数据支持"
+    ],
+    "constraints": {
+      "time_range": "去年",
+      "product": "年金险",
+      "required_dimensions": [
+        "年龄分布",
+        "家庭结构"
+      ]
+    },
+    "success_definition": "正确识别用户意图为进行客户画像分析，并将意图标签映射为 customer_portrait，提取关键维度（产品、时间、分析维度）",
+    "blocking_requirements": [
+      "意图标签必须准确反映客户画像分析意图"
+    ],
+    "nice_to_have_requirements": [
+      "提取时间、产品等槽位"
+    ],
+    "intent_evidence": [
+      "用户使用了“年龄分布”、“家庭结构”等典型客户画像分析词汇"
+    ]
+  },
+  "reconstructed_intent": "用户希望获取去年购买过年金险的客户画像数据，主要关注年龄分布和家庭结构",
+  "reference_generation_basis": {
+    "source": "none",
+    "alignment_to_actual_shape": "expected_intent 为 null，无法生成参考意图"
+  },
+  "scenario": "intent_recognition",
+  "quality_flags": [
+    "intent_contract_gate_passed"
+  ],
+  "summary": {
+    "reason": "uncertain · 由于未提供 expected_intent（期望意图标签），无法判断实际输出的 customer_portrait 是否满足业务期望，评估基准缺失，因此评估状态为 not_evaluable",
+    "reason_source": "reasoning_summary",
+    "fulfillment_status": "not_evaluable",
+    "assessment_count": 1,
+    "blocking_count": 1,
+    "is_formal_attribution": false
+  }
+}

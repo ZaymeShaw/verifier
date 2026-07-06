@@ -1,0 +1,46 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "27a71b88-4e5a-435f-a2a2-0bcd96aaf20f"
+      ],
+      "representative_traces": [
+        "27a71b88-4e5a-435f-a2a2-0bcd96aaf20f"
+      ],
+      "common_root_cause": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "shared_failure_pattern": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "representative_diffs": [
+        {
+          "case_id": "27a71b88-4e5a-435f-a2a2-0bcd96aaf20f",
+          "node": "state_machine",
+          "evidence": [
+            "样本存在严重数据缺失：实际输出为空字符串，黄金答案缺失，问题字段未正确标准化。在依赖参考对比的 qa_gold_answer 场景下，评估无法执行。建议将样本标记为无效并通知数据管道检查，同时加入人工审核队列。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=False",
+            "golden_answer_present=False"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+      ],
+      "verification_cases": [
+        "27a71b88-4e5a-435f-a2a2-0bcd96aaf20f"
+      ],
+      "next_actions": [
+        "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+      ]
+    }
+  ],
+  "common_root_cause": "",
+  "impact": "",
+  "priority": ""
+}

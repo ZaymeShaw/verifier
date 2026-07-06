@@ -21,7 +21,7 @@ QA datasets should be normalized into:
     "actual_answer": "..."
   },
   "reference": {
-    "golden_answer": "..."
+    "actual_answer": "..."
   },
   "metadata": {
     "category": "...",
@@ -37,7 +37,7 @@ For flat uploaded JSON, accept standard field names and normalize them:
 - `question` -> `input.question`
 - `contexts` -> `input.contexts`
 - `actual_answer` / `answer` -> `output.actual_answer`
-- `golden_answer` / `gold_answer` -> `reference.golden_answer`
+- `golden_answer` / `gold_answer` -> `reference.actual_answer`（输入别名，归一化到与 output 同形状）
 - `category`, `model_name`, `latency_ms`, `token_usage`, `cost` -> `metadata`
 
 The first version assumes JSON input. Other formats can be converted to JSON before upload.
@@ -49,7 +49,7 @@ Scenario is a QA project extension carried on each sample.
 Recommended scenarios:
 
 1. `qa_gold_answer`
-   - Required fields: `question`, `actual_answer`, `golden_answer` or `gold_answer`.
+   - Required fields: `question`, `actual_answer`, reference answer (provided as `actual_answer` in reference, or uploaded via `golden_answer` / `gold_answer` alias).
    - Contexts may exist but are auxiliary unless the judge standard says otherwise.
    - Metrics: correctness, completeness, key point coverage, contradiction control, clarity.
 
@@ -66,7 +66,7 @@ Recommended scenarios:
 Default inference:
 
 ```text
-has golden_answer/gold_answer -> qa_gold_answer
+has golden_answer/gold_answer (alias) -> qa_gold_answer
 else has non-empty contexts -> qa_context_faithfulness
 else has question + actual_answer -> qa_weak_quality
 else invalid_sample
@@ -80,24 +80,29 @@ QA does not need to call a tested QA service during evaluation if the dataset al
 
 For QA:
 
-- `normalized_request`: normalized `input`, `reference`, `metadata`, and inferred `scenario`.
+- `normalized_request`: normalized `input`, `reference`, `metadata`, `data_quality_flags`, and inferred `scenario`.
 - `raw_response`: original `output.actual_answer` or the original uploaded sample output section.
 - `extracted_output`: normalized output, usually `{ "actual_answer": "..." }`.
-- `project_fields`: scenario, data quality flags, normalized contexts, and QA-specific parsing details.
+- `reference_contract`: canonical QA reference such as `actual_answer` and scenario-specific expected evidence.
+- `scenario`: canonical scenario selected from normalized sample fields.
+- `schema_protocol_extensions`: QA-private display/debug details only; shared facts must not be sourced from extensions.
 
 ## Judge requirements
 
-QA judge should output generic fields plus multidimensional details:
+QA judge should output fulfillment-first generic fields plus multidimensional details:
 
+- `business_expectations`
+- `fulfillment_assessments`
+- `overall_fulfillment`
 - `verdict`
 - `score`
 - `confidence`
 - `reasoning_summary`
-- `score_details`
+- `verdict_derivation.score_dimensions`
 - `needs_human_review`
 - scenario-specific evidence fields when useful
 
-All scores are 0-1. `score_details` dimensions depend on scenario.
+All scores are 0-1. Scenario dimensions live under `verdict_derivation.score_dimensions` when present.
 
 Gold answer metrics should not be applied to context-only or weak samples. Weak samples should not be reported as accuracy.
 
@@ -122,9 +127,12 @@ QA attribution should use structured error types. Initial taxonomy:
 
 Each failed or risky sample should have:
 
-- `primary_error_type`
-- `error_types`
-- `severity`
+- `causal_category`
+- `expectation_attributions`
+- `earliest_divergence`
+- `chain_nodes`
+- `probe_results`
+- `evidence_coverage`
 - `needs_human_review`
 - actionable reason and suggested fix
 
@@ -133,8 +141,7 @@ Each failed or risky sample should have:
 QA cluster/report should group by:
 
 - scenario
-- primary error type
-- severity
+- causal category
 - needs human review
 - category/model metadata when available
 
@@ -164,8 +171,8 @@ QA-specific check should verify:
 
 - scenario inference is consistent with sample fields;
 - samples without golden answer are not included in accuracy;
-- `score_details` scores are 0-1 and match scenario dimensions;
-- `primary_error_type` and `error_types` come from the QA taxonomy;
+- `verdict_derivation.score_dimensions` scores are 0-1 and match scenario dimensions;
+- `causal_category` comes from the QA taxonomy or generic attribution categories;
 - RAG/context scenario has non-empty contexts;
 - weak-quality scenario conclusions are marked as estimates, not accuracy;
-- human-review queue can be derived from confidence, severity, and boundary scores.
+- human-review queue can be derived from confidence, boundary scores, evidence coverage, and `needs_human_review`.

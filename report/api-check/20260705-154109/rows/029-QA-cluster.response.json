@@ -1,0 +1,55 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::需人工复核::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "需人工复核",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "提供影响多次赔付的关键限制条件如分组限制或累计赔付上限"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "2fcd2a15-acb6-4bb0-add1-2519fbe1ca1f"
+      ],
+      "representative_traces": [
+        "2fcd2a15-acb6-4bb0-add1-2519fbe1ca1f"
+      ],
+      "common_root_cause": "LLM（mock_agent_llm）在生成重疾险轻症赔付相关回答时存在知识覆盖偏差：模型能够召回并输出最常见的信息维度（赔付次数、金额比例 20%-30%、次数上限 3-5 次、间隔期要求），但未能覆盖两个对用户决策同样关键的限制条件——轻症分组限制（同一组别轻症仅赔付一次）和累计赔付上限。这本质上是模型在知识密集型问答中的覆盖率不足：单次生成未穷举所有影响'多次赔付是否真的多次'这一核心关切的关键约束。适配器和 pipeline 执行链路均正常运行，不是根因所在。",
+      "shared_failure_pattern": "LLM（mock_agent_llm）在生成重疾险轻症赔付相关回答时存在知识覆盖偏差：模型能够召回并输出最常见的信息维度（赔付次数、金额比例 20%-30%、次数上限 3-5 次、间隔期要求），但未能覆盖两个对用户决策同样关键的限制条件——轻症分组限制（同一组别轻症仅赔付一次）和累计赔付上限。这本质上是模型在知识密集型问答中的覆盖率不足：单次生成未穷举所有影响'多次赔付是否真的多次'这一核心关切的关键约束。适配器和 pipeline 执行链路均正常运行，不是根因所在。",
+      "representative_diffs": [
+        {
+          "case_id": "2fcd2a15-acb6-4bb0-add1-2519fbe1ca1f",
+          "node": "mock_agent_llm.answer_generation",
+          "evidence": [
+            "actual_answer 长度约 120 字符 vs reference 约 500+ 字符",
+            "语义等价检查确认'分组限制与累计上限'为不等价",
+            "pipeline 执行链路全部节点 succeeded，排除执行层问题"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "在 mock_agent_llm 的生成 prompt 中显式增加对轻症多次赔付限制条件的覆盖要求：明确列出'分组限制（同组轻症仅赔一次）'和'累计赔付上限'作为必须覆盖的维度",
+        "考虑在 prompt 中引入结构化输出约束（如要求按维度列出：赔付次数、金额比例、间隔期、分组限制、累计上限、合同提示），降低遗漏风险",
+        "在 QA 评估层增加答案完整性自动检测：当 qa_gold_answer 场景下 actual_answer 的关键信息点覆盖率低于阈值时，自动标记为高风险样本"
+      ],
+      "verification_cases": [
+        "2fcd2a15-acb6-4bb0-add1-2519fbe1ca1f"
+      ],
+      "next_actions": [
+        "审查 mock_agent_llm 的生成 prompt，确认是否明确要求覆盖分组限制、累计赔付上限等约束条件",
+        "用相同的 question 重新调用 LLM 多次（如 5-10 次），统计分组限制和累计赔付上限的出现频率，量化模型的覆盖偏差",
+        "检查 mock_agent_llm 是否有 temperature 或其他采样参数设置过高导致输出变异",
+        "对比同类型保险知识问答的其他样本，确认是否为系统性覆盖不足还是个案波动"
+      ]
+    }
+  ],
+  "common_root_cause": "LLM（mock_agent_llm）在生成重疾险轻症赔付相关回答时存在知识覆盖偏差：模型能够召回并输出最常见的信息维度（赔付次数、金额比例 20%-30%、次数上限 3-5 次、间隔期要求），但未能覆盖两个对用户决策同样关键的限制条件——轻症分组限制（同一组别轻症仅赔付一次）和累计赔付上限。这本质上是模型在知识密集型问答中的覆盖率不足：单次生成未穷举所有影响'多次赔付是否真的多次'这一核心关切的关键约束。适配器和 pipeline 执行链路均正常运行，不是根因所在。",
+  "impact": "",
+  "priority": "high"
+}

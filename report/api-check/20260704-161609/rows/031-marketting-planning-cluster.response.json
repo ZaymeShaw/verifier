@@ -1,0 +1,66 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "needs_human_review::not_evaluable",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "正确识别用户意图为营销规划",
+        "系统提取业务指标NBEV",
+        "系统识别时间范围下个季度",
+        "系统识别分解维度增加队伍多找客户调整产品策略",
+        "系统路由至规划或澄清阶段",
+        "系统生成可操作的规划卡片",
+        "系统对缺失目标值做出响应"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "6a91aa20-aa71-4969-9550-1dce3d4502dc"
+      ],
+      "representative_traces": [
+        "6a91aa20-aa71-4969-9550-1dce3d4502dc"
+      ],
+      "common_root_cause": "意图识别管线（规则匹配 + LLM fallback）均未能将用户的 NBEV 营销规划请求正确分类。规则层：Tier 0 正则仅覆盖 怎么达成.*NBEV.*目标 一种句式，Tier 3 关键词列表缺少 提升/调整/入手 等高频变体，Tier 2 因 target_value 缺失而丢弃了有效的 path_types 信号。LLM 层：qwen3-next-80b-a3b-instruct 在现有 prompt 下未能识别 无具体目标值但含队伍/客户/产品维度 的 nbev_planning 意图，输出 other。两个防御层同时失效导致整个规划链路中断。",
+      "shared_failure_pattern": "意图识别管线（规则匹配 + LLM fallback）均未能将用户的 NBEV 营销规划请求正确分类。规则层：Tier 0 正则仅覆盖 怎么达成.*NBEV.*目标 一种句式，Tier 3 关键词列表缺少 提升/调整/入手 等高频变体，Tier 2 因 target_value 缺失而丢弃了有效的 path_types 信号。LLM 层：qwen3-next-80b-a3b-instruct 在现有 prompt 下未能识别 无具体目标值但含队伍/客户/产品维度 的 nbev_planning 意图，输出 other。两个防御层同时失效导致整个规划链路中断。",
+      "representative_diffs": [
+        {
+          "case_id": "6a91aa20-aa71-4969-9550-1dce3d4502dc",
+          "node": "intent_recognition",
+          "expected": "IntentType.nbev_planning，confidence ≥ 0.85，stage 为 planning 或 clarification，path_types 包含 [队伍, 客户, 产品]",
+          "actual": "IntentType.other（intent 4001），confidence 0.5，stage=non_agent，path_types=[]",
+          "evidence": [
+            "raw_response: intent=4001",
+            "extracted_output: stage=non_agent，card_summary=[]",
+            "execution_trace intent_recognition: actual_stage=non_agent",
+            "源码 intent_recognition.py: Tier 0 正则 怎么达成.*NBEV.*目标 不匹配用户表述",
+            "源码 intent_recognition.py: Tier 3 关键词 [达成,规划,路径,测算,分析] 不包含 提升/调整/看看/入手"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "扩展 Tier 0 nbev_planning 正则：增加 (提升|提高|再提|再冲).*NBEV|NBEV.*(提升|提一提)|怎么.*(提升|提高).*NBEV|(看看|分析).*NBEV.*入手 等模式",
+        "扩展 Tier 3 关键词列表：加入 提升/提高/调整/优化/看看/入手/怎么/策略/目标 等",
+        "修正 Tier 2 逻辑：当 path_types 非空时，即使 target_value 缺失也应返回 nbev_planning（confidence 0.9），后续由 field_clarification 或 planning_function 主动澄清目标值",
+        "优化 LLM prompt：增加覆盖 无目标值+有维度信号的 nbev_planning 正例 few-shot，明确 other 仅用于完全无关的输入"
+      ],
+      "verification_cases": [
+        "6a91aa20-aa71-4969-9550-1dce3d4502dc"
+      ],
+      "next_actions": [
+        "用同一 query 直接调用 intent_recognition 的 recognize_intent（LLM fallback），观察是否稳定输出 other",
+        "将 query 中的 NBEV目标再提一提 改为 怎么达成NBEV目标 后重跑，验证 Tier 0 正则是否能命中",
+        "将 Tier 3 关键词临时加入 提升 后重跑完整流程，验证是否命中 nbev_planning",
+        "检查 INTENT_RECOGNITION_PROMPT 中是否缺少 无 target_value 但有 path_types 的 nbev_planning 正例"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别管线（规则匹配 + LLM fallback）均未能将用户的 NBEV 营销规划请求正确分类。规则层：Tier 0 正则仅覆盖 怎么达成.*NBEV.*目标 一种句式，Tier 3 关键词列表缺少 提升/调整/入手 等高频变体，Tier 2 因 target_value 缺失而丢弃了有效的 path_types 信号。LLM 层：qwen3-next-80b-a3b-instruct 在现有 prompt 下未能识别 无具体目标值但含队伍/客户/产品维度 的 nbev_planning 意图，输出 other。两个防御层同时失效导致整个规划链路中断。",
+  "impact": "",
+  "priority": "high"
+}

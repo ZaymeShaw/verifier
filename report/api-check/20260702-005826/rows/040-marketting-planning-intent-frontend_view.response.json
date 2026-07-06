@@ -1,0 +1,521 @@
+{
+  "project_info": {
+    "project_id": "marketting-planning-intent",
+    "name": "营销规划意图识别评估项目",
+    "description": "单独评估营销规划业务服务的 intent-recognition 单轮接口，与 marketting-planning 共享业务服务但测评边界只覆盖意图识别。"
+  },
+  "run_trace_summary": {
+    "trace_id": "245f0740-4739-4b80-8ec2-6c93fa6ec8d3",
+    "project_id": "marketting-planning-intent",
+    "case_id": "mock-agent-marketting-planning-intent-99e095af",
+    "live_result": {
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-99e095af",
+      "session_id": "eval-mock-agent-marketting-planning-intent-99e095af",
+      "raw_input": {
+        "query": "帮我分析一下，过去半年成交的客户里，哪些行业的占比最高？"
+      },
+      "normalized_request": {
+        "case_id": "mock-agent-marketting-planning-intent-99e095af",
+        "query": "帮我分析一下，过去半年成交的客户里，哪些行业的占比最高？",
+        "scenario": "intent_recognition",
+        "session_id": "eval-mock-agent-marketting-planning-intent-99e095af"
+      },
+      "call_status": "succeeded",
+      "runtime_ms": 319,
+      "extracted_output": {
+        "ambiguous": false,
+        "confidence": 0.5,
+        "fallback": false,
+        "intent": "other",
+        "raw_intent": "4001"
+      },
+      "output_source": "live_service",
+      "application_boundary": {
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ],
+        "scope": "single_turn_intent_recognition"
+      },
+      "interaction_mode": "single_turn"
+    },
+    "execution_mode": "",
+    "output_source": "live_service",
+    "scenario": "intent_recognition",
+    "application_boundary": {
+      "excludes": [
+        "multi_turn_planning",
+        "sse_card_generation"
+      ],
+      "scope": "single_turn_intent_recognition"
+    },
+    "evidence_refs": [
+      {
+        "ref_id": "",
+        "source": "",
+        "kind": "",
+        "stage": "",
+        "summary": "",
+        "location": ""
+      },
+      {
+        "ref_id": "",
+        "source": "",
+        "kind": "",
+        "stage": "",
+        "summary": "",
+        "location": ""
+      }
+    ],
+    "status": "ok",
+    "created_at": "2026-07-01T16:58:46.904479+00:00",
+    "state_history": [
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T16:58:46.510445+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T16:58:46.510462+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T16:58:46.904613+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T16:58:46.904679+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T16:58:46.993587+00:00",
+        "status": "failed"
+      },
+      {
+        "attempt": 2,
+        "started_at": "2026-07-01T16:58:46.993626+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 2,
+        "started_at": "2026-07-01T16:58:47.015261+00:00",
+        "status": "failed"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-01T16:58:47.015291+00:00",
+        "status": "skipped"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "reason": "trace exists",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": false,
+        "reason": "consumer contract missing",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": false,
+        "reason": "business expectations missing",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": false,
+        "reason": "consumer contract missing",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": false,
+        "reason": "business expectations missing",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      }
+    ],
+    "transition_decisions": [
+      {
+        "condition": "always",
+        "from_state": "prepare_trace",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "mock_or_input"
+      },
+      {
+        "condition": "always",
+        "from_state": "mock_or_input",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "execute_or_capture"
+      },
+      {
+        "condition": "always",
+        "from_state": "execute_or_capture",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "collect_evidence"
+      },
+      {
+        "condition": "always",
+        "from_state": "collect_evidence",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "build_business_expectations"
+      },
+      {
+        "condition": "gate_failed_recoverable",
+        "from_state": "build_business_expectations",
+        "reason": "consumer contract missing；business expectations missing",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "collect_evidence"
+      },
+      {
+        "condition": "always",
+        "from_state": "collect_evidence",
+        "reason": "always",
+        "retry_count": 1,
+        "stop_reason": "",
+        "to_state": "build_business_expectations"
+      },
+      {
+        "condition": "retry_limit",
+        "from_state": "build_business_expectations",
+        "reason": "state retry limit exceeded",
+        "retry_count": 1,
+        "stop_reason": "incomplete_retry_limit",
+        "to_state": "incomplete_or_human_review"
+      },
+      {
+        "condition": "stop",
+        "from_state": "incomplete_or_human_review",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "incomplete_retry_limit",
+        "to_state": "completed"
+      }
+    ],
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "session_id": "eval-mock-agent-marketting-planning-intent-99e095af",
+    "turn_index": 0
+  },
+  "reference_panel": {
+    "source": "missing",
+    "actual": {
+      "ambiguous": false,
+      "confidence": 0.5,
+      "fallback": false,
+      "intent": "other",
+      "raw_intent": "4001"
+    }
+  },
+  "judge_panel": {
+    "trace_id": "245f0740-4739-4b80-8ec2-6c93fa6ec8d3",
+    "project_id": "marketting-planning-intent",
+    "verdict": "uncertain",
+    "actual": {
+      "ambiguous": false,
+      "confidence": 0.5,
+      "fallback": false,
+      "intent": "other",
+      "raw_intent": "4001"
+    },
+    "reconstructed_intent": "",
+    "judge_basis": "",
+    "judge_method": "",
+    "reasoning_summary": "",
+    "scenario": "",
+    "display_reason": "uncertain · unclear",
+    "wrong_missing_extra": {}
+  },
+  "attribute_panel": {
+    "trace_id": "245f0740-4739-4b80-8ec2-6c93fa6ec8d3",
+    "project_id": "marketting-planning-intent",
+    "case_id": "",
+    "analysis_method": "",
+    "chain_nodes": [
+      {
+        "name": "",
+        "status": "not_verified",
+        "evidence": [
+          "incomplete_retry_limit"
+        ],
+        "reason": ""
+      }
+    ],
+    "earliest_divergence": {
+      "confidence": "unknown",
+      "evidence": [
+        "incomplete_retry_limit"
+      ],
+      "node": "state_machine"
+    },
+    "evidence_coverage": {
+      "actual": true,
+      "execution_trace": true,
+      "expected": false,
+      "query": true
+    },
+    "incomplete_reason": "",
+    "root_cause_hypothesis": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+    "verification_steps": [
+      "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+    ],
+    "patch_direction": [
+      "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+    ],
+    "causal_category": "needs_human_review",
+    "needs_human_review": true,
+    "scenario": "intent_recognition",
+    "summary": {
+      "attribution_count": 0,
+      "causal_category": "needs_human_review",
+      "is_complete": false,
+      "is_formal_attribution": false,
+      "probe_count": 0,
+      "summary_text": "incomplete_retry_limit"
+    },
+    "display_causal_category": "needs_human_review",
+    "display_root_cause": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+    "display_verification_steps": [
+      "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+    ],
+    "display_patch_direction": [
+      "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+    ],
+    "attribution_count": 0,
+    "probe_count": 0
+  },
+  "fulfillment_panel": {
+    "derived_verdict": "uncertain"
+  },
+  "expectation_attribution_panel": {
+    "causal_category": "needs_human_review",
+    "incomplete_reason": ""
+  },
+  "cluster_panel": {
+    "project_id": "marketting-planning-intent",
+    "clusters": [
+      {
+        "canonical_attribution": false,
+        "causal_category": "needs_human_review",
+        "cluster_id": "expectation::needs_human_review",
+        "common_root_cause": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+        "count": 1,
+        "mechanism": "insufficient_evidence_or_human_review",
+        "minimal_fix_direction": [
+          "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+        ],
+        "needs_human_review": true,
+        "next_actions": [
+          "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+        ],
+        "representative_cases": [
+          "245f0740-4739-4b80-8ec2-6c93fa6ec8d3"
+        ],
+        "representative_diffs": [
+          {
+            "case_id": "245f0740-4739-4b80-8ec2-6c93fa6ec8d3",
+            "evidence": [
+              "incomplete_retry_limit"
+            ],
+            "node": "state_machine"
+          }
+        ],
+        "representative_traces": [
+          "245f0740-4739-4b80-8ec2-6c93fa6ec8d3"
+        ],
+        "shared_failure_pattern": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+        "verification_cases": [
+          "245f0740-4739-4b80-8ec2-6c93fa6ec8d3"
+        ]
+      }
+    ],
+    "common_root_cause": "",
+    "impact": "",
+    "priority": ""
+  },
+  "check_panel": {
+    "passed": false,
+    "issues": [
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+      "JudgeResult missing fulfillment_assessments/overall_fulfillment for the selected evaluation boundary.",
+      "JudgeResult missing business_expectations/expected snapshot; verdict is not tied to current-query requirements.",
+      "JudgeResult missing reference_generation_basis; expected output source is unclear.",
+      "Fallback decisions require human review before treating the chain as fully verified."
+    ],
+    "boundary_violations": [
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py"
+    ],
+    "protocol_gaps": [
+      "JudgeResult missing fulfillment_assessments/overall_fulfillment for the selected evaluation boundary.",
+      "JudgeResult missing business_expectations/expected snapshot; verdict is not tied to current-query requirements.",
+      "JudgeResult missing reference_generation_basis; expected output source is unclear."
+    ],
+    "consistency_gaps": [
+      "Fallback decisions require human review before treating the chain as fully verified."
+    ],
+    "verification_results": [
+      "Structured fallback decisions recorded: 2.",
+      "Check categories passed current audit."
+    ],
+    "recommended_fixes": [
+      "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions.",
+      "Complete missing protocol outputs before treating the chain as valid.",
+      "Ensure all steps use the same trace_id and latest run output."
+    ],
+    "fallbacks": [
+      {
+        "fallback_id": "",
+        "source_stage": "",
+        "fallback_type": "",
+        "status": "needs_human_review",
+        "reason": "incomplete_retry_limit",
+        "recoverable": false,
+        "needs_human_review": false
+      },
+      {
+        "fallback_id": "",
+        "source_stage": "",
+        "fallback_type": "",
+        "status": "needs_human_review",
+        "reason": "incomplete_retry_limit",
+        "recoverable": false,
+        "needs_human_review": false
+      }
+    ]
+  },
+  "table_row": {
+    "id": "mock-agent-marketting-planning-intent-99e095af",
+    "input": "帮我分析一下，过去半年成交的客户里，哪些行业的占比最高？",
+    "scenario": "intent_recognition",
+    "output_summary": "{\"ambiguous\": false, \"confidence\": 0.5, \"fallback\": false, \"intent\": \"other\", \"raw_intent\": \"4001\"}",
+    "reference_summary": "",
+    "status": "uncertain",
+    "execution_mode": "",
+    "output_source": "live_service",
+    "verdict": "uncertain",
+    "fulfillment_status": "uncertain",
+    "judge_summary": {
+      "status": "uncertain",
+      "fulfillment_status": "",
+      "verdict": "uncertain",
+      "reason": "uncertain · unclear",
+      "reason_source": "reasoning_summary",
+      "reason_stage": "judge",
+      "is_formal_attribution": false,
+      "assessment_count": 0,
+      "blocking_count": 0
+    },
+    "attribution_summary": {
+      "attribution_count": 0,
+      "causal_category": "needs_human_review",
+      "is_complete": false,
+      "is_formal_attribution": false,
+      "probe_count": 0,
+      "summary_text": "incomplete_retry_limit"
+    },
+    "check_summary": {
+      "passed": false,
+      "issue_count": 5,
+      "protocol_gap_count": 3,
+      "consistency_gap_count": 1,
+      "recommended_fix_count": 3,
+      "issues": [
+        "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+        "JudgeResult missing fulfillment_assessments/overall_fulfillment for the selected evaluation boundary.",
+        "JudgeResult missing business_expectations/expected snapshot; verdict is not tied to current-query requirements.",
+        "JudgeResult missing reference_generation_basis; expected output source is unclear.",
+        "Fallback decisions require human review before treating the chain as fully verified."
+      ]
+    },
+    "fallback_summary": {
+      "count": 2,
+      "needs_human_review": false,
+      "by_stage": {
+        "unknown": 2
+      },
+      "reasons": [
+        "incomplete_retry_limit",
+        "incomplete_retry_limit"
+      ]
+    },
+    "needs_human_review": true,
+    "check_passed": false,
+    "issue_count": 9,
+    "fallback_count": 2,
+    "causal_category": "needs_human_review",
+    "divergence_stage": "state_machine",
+    "root_cause_summary": "incomplete_retry_limit",
+    "created_at": "2026-07-01T16:58:46.904479+00:00",
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "trace_id": "245f0740-4739-4b80-8ec2-6c93fa6ec8d3"
+  },
+  "project_extensions": {
+    "intent_labels": [
+      "other",
+      "customer_portrait",
+      "nbev_planning",
+      "nbev_planning_fallback",
+      "achievement_measurement_adjustment",
+      "team_portrait",
+      "target_value_adjustment"
+    ],
+    "output_summary_shape": [
+      "intent",
+      "confidence",
+      "raw_intent",
+      "slots",
+      "entities",
+      "ambiguous",
+      "fallback",
+      "errors"
+    ],
+    "frontend_standard": {
+      "frontend_view": {
+        "live": "render query, normalized intent output, reference intent, Judge, Attribute, and compact raw response drill-down",
+        "summary": "render intent case pool with Output and Reference as aligned label/confidence JSON"
+      },
+      "batch_persistence": {
+        "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+        "transient_results": "do not persist full trace, judge, attribute, raw response, or frontend_view as durable case-pool source data"
+      }
+    },
+    "display_contract": {
+      "output_source": "trace.live_result.extracted_output",
+      "reference_source": "missing",
+      "formatting": [
+        "json formatting",
+        "truncation",
+        "output/reference alignment"
+      ]
+    }
+  }
+}

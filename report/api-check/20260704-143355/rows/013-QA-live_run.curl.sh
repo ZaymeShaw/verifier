@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+curl -sS -X POST 'http://127.0.0.1:8021/api/live_run' -H 'Content-Type: application/json' --data-raw '{"input": {"expected_intent": "", "id": "mock-agent-QA-51db1c4c", "input": {"data_quality_flags": ["intent_clarity", "context_faithfulness"], "input": {"query": "我买了这个重疾险，如果得了合同里约定的轻症，能赔多少钱啊？", "user_text": "我买了这个重疾险，如果得了合同里约定的轻症，能赔多少钱啊？"}, "metadata": {"session_id": "sess_default_001", "trace_id": "trace_default_001", "user_id": "user_default_001"}, "scenario": "qa_gold_answer"}, "metadata": {"live_request_mapped": true, "project_id": "QA", "ready": ["output", "reference"], "schema_ok": true, "source": "mock_agent_llm"}, "output": {"actual_answer": "轻症的赔付金额通常为基本保额的20%-30%，具体比例需参考您购买的保险合同的约定条款。"}, "scenario": "qa_gold_answer", "source": "mock_agent_llm", "status": "pending"}, "project": "QA"}' --write-out '
+__HTTP_STATUS__:%{http_code}'

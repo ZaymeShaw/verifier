@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any, Iterable
 
-from .schema import AttributeResult, ClusterSummary
+from .schema import AttributeResult, ClusterSummary, attribute_causal_category, attribute_failure_stage
 
 
 def _field_values(value: Any) -> list[str]:
@@ -75,9 +75,11 @@ def _mechanism_key(item: AttributeResult) -> str:
     node = divergence.get("node") if isinstance(divergence, dict) else None
     if node:
         return "mechanism::" + str(node)
-    if item.primary_error_type:
-        return "::".join(part for part in ["mechanism", item.scenario, item.primary_error_type] if part)
-    return "mechanism::" + (item.failure_category or "未分类")
+    causal_category = attribute_causal_category(item)
+    divergence_stage = attribute_failure_stage(item)
+    if causal_category:
+        return "::".join(part for part in ["mechanism", item.scenario, causal_category] if part)
+    return "mechanism::" + (divergence_stage or "未分类")
 
 
 def _representative_diffs(items: list[AttributeResult]) -> list[dict[str, Any]]:
@@ -98,9 +100,10 @@ def cluster_attributes(project_id: str, attributes: Iterable[AttributeResult]) -
     grouped = defaultdict(list)
     for item in attributes:
         has_expectation_attribution = bool(_expectation_items(item))
-        if not has_expectation_attribution and (item.primary_error_type == "none" or item.failure_category == "none"):
+        causal_category = attribute_causal_category(item)
+        if not has_expectation_attribution and causal_category in {"", "none", "no_issue"}:
             continue
-        if not has_expectation_attribution and not item.root_cause_hypothesis and not item.failure_category and not item.primary_error_type:
+        if not has_expectation_attribution and not item.root_cause_hypothesis and not causal_category:
             continue
         grouped[_mechanism_key(item)].append(item)
     clusters = []
@@ -108,7 +111,7 @@ def cluster_attributes(project_id: str, attributes: Iterable[AttributeResult]) -
         first = items[0] if items else None
         canonical = bool(first and _canonical(first))
         expectation_items = [expectation for item in items for expectation in _expectation_items(item)]
-        causal_categories = _unique([item.causal_category for item in items if item.causal_category] + [expectation.get("causal_category") for expectation in expectation_items if expectation.get("causal_category")])
+        causal_categories = _unique([attribute_causal_category(item) for item in items if attribute_causal_category(item)] + [expectation.get("causal_category") for expectation in expectation_items if expectation.get("causal_category")])
         fulfillment_statuses = _unique(expectation.get("fulfillment_status") for expectation in expectation_items)
         expectation_ids = _unique(expectation.get("expectation_id") for expectation in expectation_items)
         affected_fields = _unique(field for item in items for field in _field_values([item.earliest_divergence, item.suspected_locations, item.chain_nodes]))
@@ -121,11 +124,6 @@ def cluster_attributes(project_id: str, attributes: Iterable[AttributeResult]) -
                 "causal_category": causal_categories[0] if causal_categories else "",
                 "fulfillment_statuses": fulfillment_statuses,
                 "expectation_ids": expectation_ids,
-                "failure_category": first.failure_category if first else category,
-                "scenario": first.scenario if first else "",
-                "primary_error_type": first.primary_error_type if first else "",
-                "error_types": _unique(error for item in items for error in (item.error_types or [])),
-                "severity": first.severity if first else "",
                 "needs_human_review": any(bool(item.needs_human_review) for item in items) or not canonical,
                 "canonical_attribution": canonical,
                 "count": len(items),
@@ -140,4 +138,45 @@ def cluster_attributes(project_id: str, attributes: Iterable[AttributeResult]) -
                 "next_actions": verification_steps[:5],
             }
         )
-    return ClusterSummary(project_id=project_id, clusters=clusters)
+    return ClusterSummary(
+        project_id=project_id,
+        clusters=clusters,
+        common_root_cause=_derive_common_root_cause(clusters),
+        priority=_derive_priority(clusters),
+    )
+
+
+def _derive_common_root_cause(clusters: list[dict]) -> str:
+    """从聚类结果中提取共性根因摘要。"""
+    if not clusters:
+        return ""
+    root_causes: list[str] = []
+    for c in clusters[:3]:
+        rc = c.get("common_root_cause") or c.get("shared_failure_pattern") or ""
+        if rc and rc not in root_causes:
+            root_causes.append(rc)
+    if len(root_causes) == 0:
+        return ""
+    if len(root_causes) == 1:
+        return root_causes[0]
+    # 多聚类时取最高频的 causal_category 作为主导根因
+    from collections import Counter
+    cat = Counter(c.get("causal_category") or "" for c in clusters)
+    top_cat = cat.most_common(1)[0][0] if cat else ""
+    return top_cat or "多个根因混合"
+
+
+def _derive_priority(clusters: list[dict]) -> str:
+    """从聚类结果中推导优先级。"""
+    if not clusters:
+        return "normal"
+    total = sum(c.get("count", 0) for c in clusters)
+    needs_review = sum(c.get("count", 0) for c in clusters if c.get("needs_human_review"))
+    if needs_review > 0 and needs_review == total:
+        return "high"
+    if needs_review > total // 2:
+        return "medium"
+    top_cat = clusters[0].get("causal_category") or ""
+    if top_cat in {"implementation_bug", "needs_human_review"}:
+        return "high"
+    return "normal"

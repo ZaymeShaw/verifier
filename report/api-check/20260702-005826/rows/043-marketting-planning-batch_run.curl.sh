@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+curl -sS -X POST 'http://127.0.0.1:8020/api/batch_run' -H 'Content-Type: application/json' --data-raw '{"cases": [{"expected_intent": "", "id": "mock-agent-marketting-planning-638cb3e5", "input": {"query": "那给我算算，如果在微信和抖音都投信息流广告，大概要准备多少预算？", "turns": [{"content": "你好，我是你的营销规划助手，请问你需要什么帮助？", "role": "assistant"}, {"content": "我们公司打算做一波线上推广，主要面向25-35岁的职场人群，产品是智能办公本。", "role": "user"}, {"content": "好的，针对这个目标人群和产品，我建议可以考虑在微信朋友圈和抖音平台进行信息流广告投放。要不要先预估一下预算？", "role": "assistant"}], "user_intent": {"expected_path_types": ["budget_estimation", "channel_selection"], "expected_stage": "planning"}}, "metadata": {"source": "mock_agent_llm"}, "scenario": "intent_recognition", "source": "mock_agent_llm", "status": "pending"}], "concurrency": 1, "project": "marketting-planning"}' --write-out '
+__HTTP_STATUS__:%{http_code}'

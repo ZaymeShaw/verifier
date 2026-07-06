@@ -1,0 +1,55 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "needs_human_review::not_evaluable",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "说明轻症赔付限制条件"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "5bf66983-8277-4e09-9872-fa9a541f4204"
+      ],
+      "representative_traces": [
+        "5bf66983-8277-4e09-9872-fa9a541f4204"
+      ],
+      "common_root_cause": "mock_agent_llm 在生成 qa_gold_answer 场景的 actual_answer 时，未能覆盖 reference 中关于轻症赔付的全部限制条件。具体表现为：仅笼统提及'间隔期要求'而未给出 90 天/180 天的具体范围，且完全遗漏了轻症分组限制（同一组别只赔一次）、部分产品轻症赔付后重疾保额减少、以及累计赔付上限有限制这三项关键信息。流水线代码（normalize → output.read → extract_output）均正常运行，非根因所在。该问题属于模型生成能力缺陷：在 qa_gold_answer 场景下，模型未能产出与 reference 同等信息密度的回答，导致 judge 评估为 answer_incomplete。",
+      "shared_failure_pattern": "mock_agent_llm 在生成 qa_gold_answer 场景的 actual_answer 时，未能覆盖 reference 中关于轻症赔付的全部限制条件。具体表现为：仅笼统提及'间隔期要求'而未给出 90 天/180 天的具体范围，且完全遗漏了轻症分组限制（同一组别只赔一次）、部分产品轻症赔付后重疾保额减少、以及累计赔付上限有限制这三项关键信息。流水线代码（normalize → output.read → extract_output）均正常运行，非根因所在。该问题属于模型生成能力缺陷：在 qa_gold_answer 场景下，模型未能产出与 reference 同等信息密度的回答，导致 judge 评估为 answer_incomplete。",
+      "representative_diffs": [
+        {
+          "case_id": "5bf66983-8277-4e09-9872-fa9a541f4204",
+          "node": "mock_agent_llm.answer_generation",
+          "evidence": [
+            "actual_answer 约 163 字符，reference.actual_answer 约 450 字符",
+            "actual_answer 完整遗漏 reference 中关于分组限制、保额影响、累计赔付上限的全部描述",
+            "actual_answer 对间隔期的描述缺少具体天数参考范围（90天/180天）"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "增强 mock_agent_llm 的生成指令：在 qa_gold_answer 场景的 prompt 中显式枚举需覆盖的限制条件维度（间隔期天数、分组规则、保额影响、累计上限），引导模型逐项作答。",
+        "在答案生成后增设信息点覆盖校验步骤，以 reference 中的关键实体做存在性正则匹配，不达标则触发补充生成或重试。",
+        "如批量扫描发现为系统性问题，需从 fine-tuning 或更强模型替换层面提升生成的信息密度和完整性。"
+      ],
+      "verification_cases": [
+        "5bf66983-8277-4e09-9872-fa9a541f4204"
+      ],
+      "next_actions": [
+        "对比 actual_answer 与 reference.actual_answer 的字符长度与信息点覆盖矩阵，确认四项缺失的具体对应关系。",
+        "检查 mock_agent_llm 的生成参数（max_tokens、temperature、top_p）是否限制了输出长度或多样性。",
+        "审查 mock_agent_llm 的 system prompt 或 few-shot 示例是否明确要求覆盖所有限制条件类别。",
+        "对同类 qa_gold_answer 样本（N≥20）进行批量扫描，统计信息遗漏率，判断是个案还是系统性偏差。"
+      ]
+    }
+  ],
+  "common_root_cause": "mock_agent_llm 在生成 qa_gold_answer 场景的 actual_answer 时，未能覆盖 reference 中关于轻症赔付的全部限制条件。具体表现为：仅笼统提及'间隔期要求'而未给出 90 天/180 天的具体范围，且完全遗漏了轻症分组限制（同一组别只赔一次）、部分产品轻症赔付后重疾保额减少、以及累计赔付上限有限制这三项关键信息。流水线代码（normalize → output.read → extract_output）均正常运行，非根因所在。该问题属于模型生成能力缺陷：在 qa_gold_answer 场景下，模型未能产出与 reference 同等信息密度的回答，导致 judge 评估为 answer_incomplete。",
+  "impact": "",
+  "priority": "high"
+}

@@ -1,0 +1,496 @@
+{
+  "trace_id": "29d953a8-086a-4d6b-a56e-5652a5ce34dc",
+  "project_id": "marketting-planning-intent",
+  "verdict": "incorrect",
+  "score": 0.0,
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签识别为业绩相关领域意图",
+      "downstream_consumer": "业绩查询服务",
+      "user_intent": "查询团队业绩",
+      "expected_outcome": "intent = 'performance_inquiry' 或类似领域标签",
+      "required_capabilities": [
+        "意图分类"
+      ],
+      "acceptance_criteria": [
+        "实际 intent 标签属于业绩/绩效相关类别，且不是 'other'"
+      ],
+      "priority": "critical"
+    },
+    {
+      "expectation_id": "时间实体'上个月'被正确提取",
+      "downstream_consumer": "业绩查询服务",
+      "user_intent": "查询上个月业绩",
+      "expected_outcome": "槽位 time_period = 'last_month' 或类似",
+      "required_capabilities": [
+        "实体提取"
+      ],
+      "acceptance_criteria": [
+        "extracted slots 包含表示上个月的时间实体"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "团队实体'我们团队'被正确识别",
+      "downstream_consumer": "业绩查询服务",
+      "user_intent": "查看我们团队的业绩",
+      "expected_outcome": "槽位 team = 'current_user_team' 或类似",
+      "required_capabilities": [
+        "实体提取",
+        "用户上下文理解"
+      ],
+      "acceptance_criteria": [
+        "extracted slots 包含团队实体，或通过上下文获取"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "业务员维度被识别为分析粒度",
+      "downstream_consumer": "业绩查询服务",
+      "user_intent": "特别关注各个业务员的达成情况",
+      "expected_outcome": "槽位或参数中指定 group_by='salesperson' 或类似",
+      "required_capabilities": [
+        "细粒度意图理解"
+      ],
+      "acceptance_criteria": [
+        "extracted output 表明需要按业务员维度分析"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "业绩指标'达成情况'被提取",
+      "downstream_consumer": "业绩查询服务",
+      "user_intent": "看达成情况",
+      "expected_outcome": "指标槽位中包含 achievement_rate 或类似",
+      "required_capabilities": [
+        "指标识别"
+      ],
+      "acceptance_criteria": [
+        "extracted slots 包含达成情况相关指标"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "置信度达到业务可用阈值（例如0.7）",
+      "downstream_consumer": "下游所有依赖置信度的模块",
+      "user_intent": "可靠地获取信息",
+      "expected_outcome": "confidence >= 0.7",
+      "required_capabilities": [
+        "置信度评估"
+      ],
+      "acceptance_criteria": [
+        "实际 confidence 值 >= 0.7"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "低置信度下触发降级或人工确认策略",
+      "downstream_consumer": "对话管理或前端",
+      "user_intent": "协商澄清或转人工",
+      "expected_outcome": "当 confidence < 0.7 时，fallback = true",
+      "required_capabilities": [
+        "降级策略"
+      ],
+      "acceptance_criteria": [
+        "若 confidence 低于阈值，则 fallback 为 true；当前 confidence=0.5 且 fallback=false，则不满足"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "意图能够被正确分发至业绩查询模块",
+      "downstream_consumer": "分发路由模块",
+      "user_intent": "获取业绩数据",
+      "expected_outcome": "intent 标签可被分发至业绩相关服务",
+      "required_capabilities": [
+        "意图分发"
+      ],
+      "acceptance_criteria": [
+        "实际 intent 不是 'other' 或 'fallback' 导致无法分发；当前 intent='other'，无法分发"
+      ],
+      "priority": "critical"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签识别为业绩相关领域意图",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "返回的 intent 属于业绩、绩效、报表等类别"
+      ],
+      "actual_evidence": [
+        "intent = 'other'",
+        "raw_intent = '4001'"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "基于 extracted_output 可明确判断"
+      },
+      "downstream_impact": "下游无法识别业绩查询意图，可能路由至通用兜底或直接失败",
+      "blocking": true
+    },
+    {
+      "expectation_id": "时间实体'上个月'被正确提取",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "槽位中包含 time_period='last_month' 或等价表示"
+      ],
+      "actual_evidence": [
+        "extracted_output 中无任何槽位/实体信息"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "extracted_output 未提供槽位，可判定为缺失"
+      },
+      "downstream_impact": "缺少时间范围将导致查询无法限定范围，可能返回空或错误数据",
+      "blocking": true
+    },
+    {
+      "expectation_id": "团队实体'我们团队'被正确识别",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "槽位中包含 team 实体或通过上下文获取"
+      ],
+      "actual_evidence": [
+        "extracted_output 中无任何团队实体信息"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "无槽位输出，可直接判断"
+      },
+      "downstream_impact": "无法确定查询团队，可能导致数据范围错误",
+      "blocking": true
+    },
+    {
+      "expectation_id": "业务员维度被识别为分析粒度",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "输出中包含按业务员分析的指示"
+      ],
+      "actual_evidence": [
+        "无相关维度信息"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "当前输出无此维度，不满足"
+      },
+      "downstream_impact": "可能无法按业务员拆解结果，降低回答针对性",
+      "blocking": false
+    },
+    {
+      "expectation_id": "业绩指标'达成情况'被提取",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "槽位包含指标 achieving_rate 或类似"
+      ],
+      "actual_evidence": [
+        "无指标信息"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "输出中无指标实体"
+      },
+      "downstream_impact": "可能使用默认指标而非用户关心的达成率",
+      "blocking": false
+    },
+    {
+      "expectation_id": "置信度达到业务可用阈值（例如0.7）",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "confidence >= 0.7"
+      ],
+      "actual_evidence": [
+        "confidence = 0.5"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "confidence 值明确低于阈值"
+      },
+      "downstream_impact": "低置信度可能引发错误处理或需要人工介入",
+      "blocking": true
+    },
+    {
+      "expectation_id": "低置信度下触发降级或人工确认策略",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "当 confidence < 0.7 时，fallback = true"
+      ],
+      "actual_evidence": [
+        "confidence = 0.5",
+        "fallback = false"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "低置信度下未触发降级"
+      },
+      "downstream_impact": "可能在不确定的情况下给出不可靠的回答",
+      "blocking": false
+    },
+    {
+      "expectation_id": "意图能够被正确分发至业绩查询模块",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "intent 标签可路由至业绩相关服务"
+      ],
+      "actual_evidence": [
+        "intent = 'other'，无法对应具体服务"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "意图为 other，分发必然错误"
+      },
+      "downstream_impact": "请求无法被负责业绩查询的模块处理，导致用户需求无法满足",
+      "blocking": true
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "not_fulfilled",
+      "downstream_impact": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=None，confidence=None，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "blocking_expectations": [
+      "意图标签识别为业绩相关领域意图",
+      "时间实体'上个月'被正确提取",
+      "团队实体'我们团队'被正确识别",
+      "置信度达到业务可用阈值（例如0.7）",
+      "意图能够被正确分发至业绩查询模块",
+      "intent_contract"
+    ],
+    "assessment_count": 9
+  },
+  "actual": {
+    "intent": "other",
+    "confidence": 0.5,
+    "fallback": false,
+    "ambiguous": false,
+    "raw_intent": "4001"
+  },
+  "reasoning_summary": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=None，confidence=None，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+  "judge_basis": "基于 critical_intent_dimensions（intent_label, required_slots_or_entities, confidence_threshold, fallback_policy, dispatch_boundary）对 extracted_output 进行逐项评估，发现实际输出在意图标签、实体提取、置信度、降级策略及分发边界上均未满足业务期望，故整体判断为 not_fulfilled。",
+  "judge_method": "business_expectations_fulfillment",
+  "verdict_derivation": {
+    "primary_boundary": "intent_recognition",
+    "assessment_summary": "用户请求查询上月团队业绩及业务员达成情况，期望系统识别为业绩查询意图并提取关键实体。但实际返回意图为'other'，未提供任何槽位，置信度仅0.5，且未触发降级，导致无法正确分发和处理。",
+    "blocking_gaps": [
+      "意图标签始终为'other'，未能识别为业绩相关查询",
+      "未提取时间实体'上个月'，导致查询缺少时间范围",
+      "未提取团队实体，无法确定查询对象",
+      "置信度0.5低于必要阈值，系统缺乏处理信心",
+      "意图'other'无法分发至具体的业绩查询模块"
+    ],
+    "why_verdict": "由于多个阻塞性期望（意图标签、关键实体提取、置信度、分发）均未满足，实际输出无法支撑下游业绩查询流程，故整体评估为 not_fulfilled。",
+    "contract_gate": "failed"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "业绩相关意图标签",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "时间实体",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "团队实体",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "业务员维度",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "达成指标实体",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "满足阈值的置信度",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "降级策略触发",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "有效的分发目标",
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "intent='other'（应识别为业绩相关意图）",
+      "incomplete": false
+    },
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "confidence=0.5（应≥0.7）",
+      "incomplete": false
+    },
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "fallback=false（在低置信度下应为true）",
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    "用户明确请求查看上个月团队业绩及业务员达成情况，属于典型的业绩查询场景。实际意图识别仅返回'other'标签，置信度低且未降级，关键实体完全缺失，无法满足下游分发与查询需求。因此，所有关键业务期望均未达成，整体为 not_fulfilled。"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "reasoning": "所有评估维度均可在当前单轮意图识别输出范围内直接判定，无超出可控范围的限制。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "single_turn_intent_recognition",
+    "primary_boundary_name": "单轮意图识别评估",
+    "judge_question": "实际输出的意图识别结果是否满足基于用户需求和关键维度的业务期望？",
+    "verdict_basis": "基于 critical_intent_dimensions 生成的 business_expectations 的 fulfillment",
+    "boundary_sources": "user prompt 中的 critical_intent_dimensions; run_trace 中的 extracted_output",
+    "conflict_policy": "以阻塞性维度（意图标签、关键实体）的评估结果为主"
+  },
+  "consumer_contract": {
+    "consumer": "下游业绩查询/报表服务",
+    "contract": "接收意图标签及必要的槽位参数（如时间周期、团队标识、分析维度），根据标签路由至具体查询接口"
+  },
+  "intent_model": {
+    "raw_user_request": "帮我看看上个月我们团队的业绩表现怎么样，特别是各个业务员的达成情况",
+    "explicit_intents": [
+      "查询上个月团队业绩表现",
+      "关注各个业务员的达成情况"
+    ],
+    "implicit_business_intents": [
+      "希望获取业绩数据以评估团队和个人的绩效",
+      "可能需要系统生成报表或展示统计图表"
+    ],
+    "constraints": {
+      "time_period": "上个月",
+      "object": "我们团队的业绩表现",
+      "detail": "各个业务员的达成情况"
+    },
+    "success_definition": "系统正确识别意图为业绩查询/团队绩效查询，并提取出时间、团队、业务员等关键信息，准确路由至业绩查询服务，返回相关业绩数据；若无法处理，应给予明确提示而非返回模糊的'other'意图。",
+    "blocking_requirements": [
+      "意图标签准确识别为业绩/绩效查询相关领域意图，以便下游正确路由",
+      "关键实体（时间、团队）被正确提取，否则查询无法完成",
+      "置信度达到业务可用阈值，否则可能产生错误结果"
+    ],
+    "nice_to_have_requirements": [
+      "提取'达成情况'作为考核指标",
+      "提取'各个业务员'作为分析维度"
+    ]
+  },
+  "reconstructed_intent": "performance_inquiry(team={current_user_team}, time_period=last_month, group_by=salesperson, metric=achievement_rate)",
+  "reference_generation_basis": {
+    "source": "critical_intent_dimensions from user prompt",
+    "alignment_to_live_schema": "N/A"
+  },
+  "scenario": "intent_recognition",
+  "needs_human_review": false,
+  "quality_flags": [
+    "intent_contract_gate_failed"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[团队实体'我们团队'被正确识别,意图标签识别为业绩相关领域意图,意图能够被正确分发至业绩查询模块,时间实体'上个月'被正确提取,置信度达到业务可用阈值（例如0.7）] · 无法确定查询团队，可能导致数据范围错误",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "团队实体'我们团队'被正确识别",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "无法确定查询团队，可能导致数据范围错误",
+        "within_evaluable_scope": true,
+        "evidence": "extracted_output 中无任何团队实体信息 | 槽位中包含 team 实体或通过上下文获取"
+      },
+      {
+        "expectation_id": "意图标签识别为业绩相关领域意图",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "下游无法识别业绩查询意图，可能路由至通用兜底或直接失败",
+        "within_evaluable_scope": true,
+        "evidence": "intent = 'other' | raw_intent = '4001' | 返回的 intent 属于业绩、绩效、报表等类别"
+      },
+      {
+        "expectation_id": "意图能够被正确分发至业绩查询模块",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "请求无法被负责业绩查询的模块处理，导致用户需求无法满足",
+        "within_evaluable_scope": true,
+        "evidence": "intent = 'other'，无法对应具体服务 | intent 标签可路由至业绩相关服务"
+      },
+      {
+        "expectation_id": "时间实体'上个月'被正确提取",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "缺少时间范围将导致查询无法限定范围，可能返回空或错误数据",
+        "within_evaluable_scope": true,
+        "evidence": "extracted_output 中无任何槽位/实体信息 | 槽位中包含 time_period='last_month' 或等价表示"
+      },
+      {
+        "expectation_id": "置信度达到业务可用阈值（例如0.7）",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "低置信度可能引发错误处理或需要人工介入",
+        "within_evaluable_scope": true,
+        "evidence": "confidence = 0.5 | confidence >= 0.7"
+      },
+      {
+        "expectation_id": "业务员维度被识别为分析粒度",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "可能无法按业务员拆解结果，降低回答针对性",
+        "within_evaluable_scope": true,
+        "evidence": "无相关维度信息 | 输出中包含按业务员分析的指示"
+      },
+      {
+        "expectation_id": "业绩指标'达成情况'被提取",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "可能使用默认指标而非用户关心的达成率",
+        "within_evaluable_scope": true,
+        "evidence": "无指标信息 | 槽位包含指标 achieving_rate 或类似"
+      },
+      {
+        "expectation_id": "低置信度下触发降级或人工确认策略",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "可能在不确定的情况下给出不可靠的回答",
+        "within_evaluable_scope": true,
+        "evidence": "confidence = 0.5 | fallback = false | 当 confidence < 0.7 时，fallback = true"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 8,
+    "blocking_count": 5,
+    "is_formal_attribution": true
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "trace_id": "55aa09f2-1be4-468f-815f-40311970049a",
+  "project_id": "client_search",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "年龄字段选择正确性",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "年龄精确值正确性",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "年龄操作符正确性",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "性别字段选择正确性",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "性别值映射正确性",
+      "causal_category": "no_issue"
+    }
+  ],
+  "causal_category": "no_issue",
+  "earliest_divergence": {
+    "confidence": "unknown"
+  },
+  "chain_nodes": [
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        {
+          "source": "extracted_output.matched_patterns",
+          "note": "matched_level=4，logic=AND，matched_patterns 包含完整的字段定义和示例引用，表明解析器正确匹配了规则模板"
+        }
+      ]
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        {
+          "source": "judge_result.fulfillment_assessments",
+          "note": "全部 5 项评估均为 fulfilled，overall_fulfillment.status=fulfilled"
+        }
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": true,
+    "execution_trace": false,
+    "project_docs": true,
+    "code_or_config": false,
+    "unsupported_claims": [
+      "execution_trace 为空，无法覆盖运行时的中间步骤验证",
+      "未读取 adapter.py 或其他代码文件，无法覆盖代码层面的字段映射逻辑",
+      "attribution_targets 为空，judge 的 business_expectations 和 intent_model 均为空对象，无法确认完整的预期行为建模"
+    ]
+  },
+  "root_cause_hypothesis": "当前查询 '45岁女性保费10万以上' 的解析结果与 prompt.md 中内置的完整示例完全吻合。prompt.md 明确给出了该查询的期望输出：clientAge RANGE {min:45, max:45}、clientSex MATCH '女'、annPremSegNum GTE 100000，logic=AND。Judge 对所有 5 项可见评估维度均判定为 fulfilled。不存在解析层面的功能缺陷或行为分歧。verdict=uncertain 可能源于 judge 仅展示了部分评估（5/11），但不改变已评估内容正确的事实。",
+  "verification_steps": [
+    "核对 extracted_output 中实际生成的 conditions JSON（若可获取），逐条件与 prompt.md 示例对照：clientAge.operator 应为 RANGE、clientAge.value 应为 {min:45, max:45}、clientSex.value 应为 '女'、annPremSegNum.operator 应为 GTE、annPremSegNum.value 应为 100000",
+    "若需完整验证，获取 judge 未展示的其余 6 项评估内容，确认无隐藏的失败项",
+    "在完整 execution_trace 可用的前提下，重放 request_normalization 和 routing_pattern_match 阶段的中间输出，确认无上游数据污染"
+  ],
+  "needs_human_review": false,
+  "scenario": "当前查询与 prompt.md 内置示例完全匹配，解析规则、字段选择、操作符、值映射均正确。无代码缺陷、模型能力不足或边界限制问题。Judge 所有可见评估均为 fulfilled，归因结论为 no_issue。"
+}

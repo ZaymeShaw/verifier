@@ -1,0 +1,186 @@
+{
+  "trace_id": "bb8f8f0b-8a9c-402a-b948-fb7155dad332",
+  "project_id": "client_search",
+  "verdict": "correct",
+  "business_expectations": [
+    {
+      "expectation_id": "使用pCategorys字段进行险种大类查询",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "口语别名重疾险映射为标准枚举值疾病保险",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "操作符可用于表达持有该险种的查询语义",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "使用pCategorys字段进行险种大类查询",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "口语别名重疾险映射为标准枚举值疾病保险",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "操作符可用于表达持有该险种的查询语义",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "fulfilled",
+    "assessment_count": 3
+  },
+  "expected": {
+    "code": 0,
+    "msg": "success",
+    "query": "帮我看看公司里所有买了重疾险的客户都有谁",
+    "conditions": [
+      {
+        "field": "pCategorys",
+        "operator": "CONTAINS",
+        "value": [
+          "疾病保险"
+        ]
+      }
+    ],
+    "robot_text": "产品类别为疾病保险的客户",
+    "query_logic": "AND",
+    "matched_level": 4,
+    "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+    "intent_summary": "按险种大类疾病保险筛选客户"
+  },
+  "actual": {
+    "structured_output": [
+      {
+        "field": "pCategorys",
+        "operator": "MATCH",
+        "value": "疾病保险"
+      }
+    ],
+    "logic": "AND",
+    "summary": "产品类别为疾病保险的客户",
+    "source_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+    "matched_level": 4
+  },
+  "reasoning_summary": "用户查询'帮我看看公司里所有买了重疾险的客户都有谁'，核心意图是按险种大类筛选持有疾病保险的客户。系统输出正确：字段pCategorys准确承载了险种大类查询语义；口语别名'重疾险'经value_mappings正确映射为标准枚举值'疾病保险'（该值在pCategorys枚举列表中）；操作符MATCH虽与capability_manifest定义的CONTAINS形态不同，但项目边界明确声明两者由后处理统一处置、业务语义等价。输出无缺失条件、无错误条件、无多余条件，所有阻塞性业务期望均满足。",
+  "judge_basis": "基于capability_manifest中pCategorys字段的操作符和枚举能力、value_mappings中'重疾险→疾病保险'的映射关系、enhanced_rules中'险种-持有'规则，以及项目边界关于CONTAINS/MATCH等价性的声明，进行字段-操作符-值的语义等价判断",
+  "judge_method": "parser_condition_semantics_only（下游搜索结果不可用，仅评估条件语义等价性）",
+  "verdict_derivation": {
+    "all_blocking_expectations_fulfilled": true,
+    "field_correct": true,
+    "value_mapping_correct": true,
+    "operator_semantically_compatible": true,
+    "no_missing_conditions": true,
+    "no_wrong_conditions": true,
+    "no_extra_conditions": true,
+    "condition_comparison_expected": {
+      "query_logic": "AND",
+      "expected_source": "not_available",
+      "reference_is_oracle": false
+    },
+    "condition_comparison_actual": {
+      "query_logic": "AND"
+    },
+    "why_verdict": "client_search condition comparison has no current intent/config expected conditions; reference conditions are evidence only",
+    "missing_evidence": [
+      "current intent/config expected conditions"
+    ]
+  },
+  "evidence": [
+    {
+      "type": "capability_manifest",
+      "content": "pCategorys字段操作符为['CONTAINS', 'NOT_CONTAINS']，值类型为enum，枚举列表包含'疾病保险'"
+    },
+    {
+      "type": "value_mapping",
+      "content": "value_mappings中定义'重疾险'→'疾病保险'"
+    },
+    {
+      "type": "enhanced_rules",
+      "content": "规则'险种-持有'确认pCategorys + CONTAINS为正确模式，patterns_template覆盖了'{SEARCH}{enum}(?:产品|保险)?...'等口语表达"
+    },
+    {
+      "type": "actual_output",
+      "content": "structured_output为[{\"field\":\"pCategorys\",\"operator\":\"MATCH\",\"value\":\"疾病保险\"}]，source_query已重写为'疾病保险'"
+    },
+    {
+      "type": "project_boundary_rule",
+      "content": "judge边界明确声明CONTAINS与MATCH的差异由后处理处置，不应作为判定依据"
+    }
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "application_boundary": {
+      "judge_scope": "parser_condition_semantics_only",
+      "result_set_verified": false,
+      "downstream_status": "not_verified"
+    }
+  },
+  "evaluation_boundary": {
+    "scope": "parser_condition_semantics_only",
+    "result_set_verified": false,
+    "downstream_available": false,
+    "boundary_source": "application_boundary from project adapter — 下游客户搜索不可用，评估范围限定为parser条件语义"
+  },
+  "consumer_contract": {
+    "expected_field": "pCategorys",
+    "expected_operator": "CONTAINS",
+    "expected_value": "疾病保险",
+    "operator_flexibility": "MATCH在项目后处理中等价于CONTAINS"
+  },
+  "intent_model": {
+    "primary_intent": "按险种大类筛选客户",
+    "target_field": "pCategorys",
+    "target_value_original": "重疾险",
+    "target_value_mapped": "疾病保险",
+    "intent_type": "单条件筛选"
+  },
+  "reconstructed_intent": "用户想查找公司里所有购买了重疾险（口语别名，标准枚举值为疾病保险）的客户，属于单一险种大类筛选查询",
+  "semantic_equivalence_checks": [
+    {
+      "check_type": "operator_compatibility",
+      "actual": "MATCH",
+      "expected_in_capability": "CONTAINS",
+      "equivalent": true,
+      "rationale": "项目judge边界明确声明不要纠结CONTAINS和MATCH的问题，原项目会通过后处理统一处置。业务语义上两者均表达'客户持有该险种大类'的查询意图，在当前上下文中等价。"
+    }
+  ],
+  "reference_generation_basis": {
+    "primary_source": "value_mappings + capability_manifest + enhanced_rules",
+    "field_selection": "pCategorys是险种大类查询的唯一正确字段，从capability_manifest和enhanced_rules确认",
+    "value_derivation": "用户口语'重疾险'经value_mappings映射为'疾病保险'，该值在pCategorys枚举列表中",
+    "operator_selection": "CONTAINS是capability_manifest为pCategorys定义的允许操作符，enhanced_rules中'险种-持有'规则也使用CONTAINS",
+    "source": "not_available",
+    "comparison_basis": "client_search wrong/missing/extra customer-search coverage",
+    "expected_source": "not_available"
+  },
+  "scenario": "单条件险种大类查询-口语别名映射",
+  "needs_human_review": false,
+  "summary": {
+    "reason": "fulfilled · 0 blocking expectations all met · 用户查询'帮我看看公司里所有买了重疾险的客户都有谁'，核心意图是按险种大类筛选持有疾病保险的客户。系统输出正确：字段pCategorys准确承载了险种大类查询语义；口语别名'重疾险'经value_mappings正确映射为标准枚举值'疾病保险'（该值在pCategorys枚举列表中）；操作符MATCH虽与capability_manifest定义的CONTAINS形态不同，但项目边界明确声明两者由后处理统一处置、业务语义等价。输出无缺失条件、无错误条件、无多余条件，所有阻塞性业务期望均满足。",
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "fulfilled",
+    "assessment_count": 3,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

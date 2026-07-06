@@ -1,0 +1,229 @@
+{
+  "trace_id": "c9f07d91-a2bf-4a91-a1bf-37ecc0c3eda6",
+  "project_id": "client_search",
+  "verdict": "correct",
+  "business_expectations": [
+    {
+      "expectation_id": "险种大类字段选择正确",
+      "downstream_consumer": "ES 数据库客户搜索",
+      "user_intent": "找买了重疾险的客户",
+      "expected_outcome": "structured_output 中包含 field=pCategorys 的条件",
+      "required_capabilities": [
+        "pCategorys 字段",
+        "CONTAINS 或 MATCH 操作符"
+      ],
+      "acceptance_criteria": [
+        "条件中 field 为 pCategorys"
+      ],
+      "boundary": {
+        "applicable": true,
+        "note": "pCategorys 在当前 capability_manifest 中存在，属于可评价范围"
+      },
+      "priority": "critical"
+    },
+    {
+      "expectation_id": "口语值到标准枚举映射正确",
+      "downstream_consumer": "ES 数据库客户搜索",
+      "user_intent": "重疾险即疾病保险",
+      "expected_outcome": "value 为「疾病保险」",
+      "required_capabilities": [
+        "value_mappings 中 重疾险→疾病保险"
+      ],
+      "acceptance_criteria": [
+        "条件中 value 等于「疾病保险」",
+        "不使用原始口语「重疾险」作为值"
+      ],
+      "boundary": {
+        "applicable": true,
+        "note": "value_mappings 提供了明确映射关系"
+      },
+      "priority": "critical"
+    },
+    {
+      "expectation_id": "操作符可用于下游检索",
+      "downstream_consumer": "ES 数据库客户搜索",
+      "user_intent": "能搜出持有疾病保险的客户",
+      "expected_outcome": "操作符为 CONTAINS 或 MATCH（项目后处理会统一转换）",
+      "required_capabilities": [
+        "ES 查询能力"
+      ],
+      "acceptance_criteria": [
+        "操作符不是 NOT_CONTAINS 等排除性操作符",
+        "操作符语义为正向匹配",
+        "CONTAINS 与 MATCH 的差异由项目后处理负责，不视为错误"
+      ],
+      "boundary": {
+        "applicable": true,
+        "note": "judge_boundary 明确声明：不纠结 CONTAINS 和 MATCH 问题，原项目通过后处理处置"
+      },
+      "priority": "critical"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "险种大类字段选择正确",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "field 应为 pCategorys"
+      ],
+      "actual_evidence": [
+        "structured_output[0].field = 'pCategorys'"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true
+      },
+      "downstream_impact": "满足——pCategorys 是当前系统支持的险种大类字段",
+      "blocking": true
+    },
+    {
+      "expectation_id": "口语值到标准枚举映射正确",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "value 应为「疾病保险」",
+        "value_mappings 中「重疾险」→「疾病保险」"
+      ],
+      "actual_evidence": [
+        "structured_output[0].value = '疾病保险'",
+        "matched_patterns 中已重写查询：将「重疾险」替换为「疾病保险」"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true
+      },
+      "downstream_impact": "满足——「疾病保险」是 pCategorys 的标准枚举值，可正确匹配 ES 数据",
+      "blocking": true
+    },
+    {
+      "expectation_id": "操作符可用于下游检索",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "操作符应为正向匹配类（CONTAINS 或 MATCH）",
+        "项目后处理可转换 CONTAINS ↔ MATCH"
+      ],
+      "actual_evidence": [
+        "structured_output[0].operator = 'MATCH'",
+        "judge_boundary 明确声明不纠结 CONTAINS 和 MATCH 的差异"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true
+      },
+      "downstream_impact": "满足——MATCH 对精确枚举值「疾病保险」的检索语义与 CONTAINS 等价，后处理会统一",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "fulfilled",
+    "assessment_count": 3
+  },
+  "expected": {
+    "query_logic": "AND",
+    "expected_source": "not_available",
+    "reference_is_oracle": false
+  },
+  "actual": {
+    "query_logic": "AND"
+  },
+  "reasoning_summary": "用户查询「帮我看看公司里所有买了重疾险的客户都有谁」，核心意图是筛选持有疾病保险的客户。parser 输出 field=pCategorys、operator=MATCH、value=疾病保险。三项原子评估全部满足：字段 pCategorys 是险种大类的正确承载字段；口语「重疾险」按 value_mappings 正确映射为标准枚举「疾病保险」；操作符 MATCH 虽不在 capability_manifest 声明的 operators 列表中，但 judge_boundary 明确豁免 CONTAINS/MATCH 差异（项目后处理统一处置），且对精确枚举值检索语义等价。无缺失、无错误、无多余条件，整体输出语义完整准确。",
+  "judge_basis": "基于 capability_manifest 中 pCategorys 字段能力、value_mappings 中「重疾险→疾病保险」映射、以及 judge_boundary 中对 CONTAINS/MATCH 的后处理豁免声明，逐项评估 parser 输出条件。",
+  "judge_method": "parser_condition_semantics_only（下游搜索结果不可用，基于 parser 条件语义与 ES 查询等价性判断）",
+  "verdict_derivation": {
+    "primary_boundary": "parser_condition_semantics_only",
+    "assessment_summary": "三项核心业务期望全部满足：字段 pCategorys 正确、口语「重疾险」正确映射为标准枚举「疾病保险」、操作符 MATCH 在后处理可转换前提下语义等价于 CONTAINS。无缺失条件、无多余条件、无错误条件。",
+    "why_verdict": "parser 正确理解用户「找买了重疾险的客户」的意图，输出字段 pCategorys 承载险种大类筛选，将口语「重疾险」按 value_mappings 映射为标准枚举「疾病保险」。操作符使用 MATCH 而非 capability_manifest 中的 CONTAINS，但 judge_boundary 明确声明不纠结 CONTAINS 与 MATCH 差异（项目后处理统一处置），且对精确枚举值两者检索语义等价。整体条件语义完整、准确、可执行。",
+    "missing_evidence": [
+      "current intent/config expected conditions"
+    ]
+  },
+  "evidence": [
+    "capability_manifest: pCategorys 定义为「客户持有的寿险险种大类」，支持 CONTAINS/NOT_CONTAINS",
+    "value_mappings: 重疾险→疾病保险",
+    "judge_boundary: 「不要纠结 CONTAINS 和 MATCH 的问题，因为原项目会通过后处理处置」",
+    "actual output: field=pCategorys, operator=MATCH, value=疾病保险",
+    "matched_patterns 中已将用户查询重写：重疾险→疾病保险"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "reasoning": "当前 case 涉及的所有维度（字段选择 pCategorys、值映射 重疾险→疾病保险、操作符语义）均在系统可评价范围内。MATCH 与 CONTAINS 的差异已被 judge_boundary 明确豁免，不构成可评价错误。下游搜索结果不可用不影响语义等价判断。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "parser_condition_semantics_only",
+    "primary_boundary_name": "仅评估 parser 条件语义",
+    "judge_question": "parser 输出的结构化条件是否在语义上正确表达了用户「筛选持有重疾险（疾病保险）的客户」的意图？",
+    "verdict_basis": "基于 capability_manifest 字段能力、value_mappings 映射规则、judge_boundary 对 CONTAINS/MATCH 的豁免声明，判断条件语义等价性",
+    "boundary_sources": "application_boundary (adapter 探测下游不可用) + judge_boundary (不纠结 CONTAINS/MATCH)",
+    "conflict_policy": "judge_boundary 项目级声明优先于 capability_manifest 中 operators 列表的机械比对"
+  },
+  "consumer_contract": {
+    "consumer": "下游客户搜索 ES 数据库",
+    "contract": "结构化搜索条件，字段为 pCategorys，值为标准枚举，操作符可被后处理转换为 ES 可执行查询",
+    "application_boundary": {
+      "judge_scope": "parser_condition_semantics_only",
+      "result_set_verified": false,
+      "downstream_status": "not_verified"
+    }
+  },
+  "intent_model": {
+    "raw_user_request": "帮我看看公司里所有买了重疾险的客户都有谁",
+    "explicit_intents": [
+      {
+        "intent_id": "filter_by_insurance_category",
+        "description": "筛选持有重疾险（疾病保险）的客户",
+        "required": true
+      }
+    ],
+    "implicit_business_intents": [
+      {
+        "intent_id": "company_scope",
+        "description": "公司内所有客户，即系统默认查询范围，无需额外过滤条件"
+      }
+    ],
+    "constraints": {
+      "field_mapping": "重疾险为口语表达，应映射到标准枚举值「疾病保险」",
+      "field_choice": "险种大类应使用 pCategorys 字段"
+    },
+    "success_definition": "解析结果能够正确筛选出持有疾病保险（重疾险）的客户群体",
+    "blocking_requirements": [
+      "字段选择为 pCategorys",
+      "值正确映射为疾病保险",
+      "操作符语义正确，能有效检索"
+    ],
+    "intent_evidence": [
+      "用户查询中「重疾险」是口语化表达，对应标准枚举「疾病保险」",
+      "value_mappings 中明确 重疾险→疾病保险",
+      "capability_manifest 中 pCategorys 定义为「客户持有的寿险险种大类」"
+    ]
+  },
+  "reconstructed_intent": "用户在保险公司业务场景下，希望筛选出所有持有重疾险（疾病保险）的客户。核心筛选条件为险种大类 = 疾病保险，查询范围为系统内全体客户（默认范围）。",
+  "semantic_equivalence_checks": [
+    {
+      "expected_fragment": "CONTAINS pCategorys ['疾病保险']",
+      "actual_fragment": "MATCH pCategorys '疾病保险'",
+      "equivalent": true,
+      "basis": "judge_boundary 明确声明不纠结 CONTAINS 与 MATCH 差异，原项目后处理负责统一转换；且对精确枚举值「疾病保险」，两者在 ES 中的匹配语义等价"
+    }
+  ],
+  "reference_generation_basis": {
+    "source": "capability_manifest + value_mappings + judge_boundary",
+    "alignment_to_live_schema": "pCategorys 为当前系统支持的险种大类字段，疾病保险为有效枚举值",
+    "evidence": [
+      "capability_manifest: pCategorys 支持 CONTAINS/NOT_CONTAINS，值类型 enum",
+      "value_mappings: 重疾险→疾病保险",
+      "judge_boundary: 不纠结 CONTAINS 和 MATCH 问题"
+    ],
+    "comparison_basis": "client_search wrong/missing/extra customer-search coverage",
+    "expected_source": "not_available"
+  },
+  "scenario": "单条件险种大类筛选，口语值映射，操作符在豁免范围内",
+  "quality_flags": [
+    "parser_output_single_condition_correct",
+    "value_mapping_applied_correctly",
+    "operator_variance_covered_by_boundary_exemption"
+  ],
+  "summary": {
+    "reason": "fulfilled · 3 blocking expectations all met · 用户查询「帮我看看公司里所有买了重疾险的客户都有谁」，核心意图是筛选持有疾病保险的客户。parser 输出 field=pCategorys、operator=MATCH、value=疾病保险。三项原子评估全部满足：字段 pCategorys 是险种大类的正确承载字段；口语「重疾险」按 value_mappings 正确映射为标准枚举「疾病保险」；操作符 MATCH 虽不在 capability_manifest 声明的 operators 列表中，但 judge_boundary 明确豁免 CONTAINS/MATCH 差异（项目后处理统一处置），且对精确枚举值检索语义等价。无缺失、无错误、无多余条件，整体输出语义完整准确。",
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "fulfilled",
+    "assessment_count": 3,
+    "blocking_count": 3,
+    "is_formal_attribution": true
+  }
+}

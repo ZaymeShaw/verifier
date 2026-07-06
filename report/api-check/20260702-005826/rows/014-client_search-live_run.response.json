@@ -1,0 +1,55 @@
+{
+  "trace_id": "f409c304-bdbc-4652-8162-dd74e01cd07e",
+  "project_id": "client_search",
+  "case_id": "mock-agent-client_search-a55d78af",
+  "live_result": {
+    "project_id": "client_search",
+    "case_id": "mock-agent-client_search-a55d78af",
+    "session_id": "general-eval-session",
+    "raw_input": {
+      "query": "帮我查一下北京地区的客户"
+    },
+    "normalized_request": {
+      "user_text": "帮我查一下北京地区的客户",
+      "user_id": "eval-user",
+      "trace_id": "general-eval-1782925118423",
+      "session_id": "general-eval-session",
+      "source": "askbob"
+    },
+    "call_status": "succeeded",
+    "runtime_ms": 1590,
+    "extracted_output": {
+      "summary": "未识别到明确查询条件",
+      "logic": "AND",
+      "status_code": 0,
+      "user_visible_text": "未识别到明确查询条件",
+      "empty_result_reason": "service_returned_no_conditions",
+      "is_empty_result": true,
+      "source_query": "帮我查一下北京地区的客户",
+      "matched_level": 4,
+      "matched_patterns": "### 当前时间\n2026-07-02 00:58:38 (Asia/Shanghai)\n### 今天星期\n周四\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\n\n  示例: \"男性客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"男\"}\n\n  示例: \"女客户\" → {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\"}\n\n  反例: \"子女是男性的客户\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\n\n- **dateCreated** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 客户添加到系统中的日期时间\n\n  示例: \"本月添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-03-01 00:00:00\", \"max\": \"2026-03-31 23:59:59\"}}\n\n  示例: \"2026年新添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n  示例: \"2025年之后添加的客户\" → {\"field\": \"dateCreated\", \"operator\": \"GTE\", \"value\": \"2025-01-01 00:00:00\"}\n\n  示例: \"今年新加的客户名单（当前时间为2026-05-11）\" → {\"field\": \"dateCreated\", \"operator\": \"RANGE\", \"value\": {\"min\": \"2026-01-01 00:00:00\", \"max\": \"2026-12-31 23:59:59\"}}\n\n- **polNo** | 操作符: MATCH | 值类型: extract | 定义: 表示保单号，不表示客户编号，保单号是由P开头+15位数字，如 P966073446746215\n\n  示例: \"保单号为1234567890的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"1234567890\"}\n\n  示例: \"保单号匹配P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n  示例: \"按保单号查P100000000000010的客户\" → {\"field\": \"polNo\", \"operator\": \"MATCH\", \"value\": \"P100000000000010\"}\n\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“以下”不含边界，“及以上”、“及以下”含边界 | 说明: 表示客户价值分组集合，如A类=A1/A2/A3/A4，B类=B，A或B/AB类=A1/A2/A3/A4/B；高价值->A1/A2/A3/A4/B/C，排序：F<E<D<C<B<A4<A3<A2<A1\n\n  示例: \"A类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"AB类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"高价值客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\", \"C\"]}\n\n  示例: \"B以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\"]}\n\n  示例: \"B及以上的客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"A1\", \"A2\", \"A3\", \"A4\", \"B\"]}\n\n  示例: \"B类以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\"]}\n\n  示例: \"B类及以下客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"F\", \"E\", \"D\", \"C\", \"B\"]}\n\n  示例: \"B类客户\" → {\"field\": \"newValueLabel\", \"operator\": \"CONTAINS\", \"value\": [\"B\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **zxjyEquityGrade** | 操作符: CONTAINS | 值类型: enum | 枚举: ['预达标', '已达标'] | 定义: 表示臻享家医客户范围，包括预达标和已达标两类客户 | 说明: 当用户直接输入“臻享家医客户/家医客户”时，输出 CONTAINS=[预达标, 已达标]，不要只输出已达标。\n\n  示例: \"臻享家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"家医客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n  示例: \"臻享客户\" → {\"field\": \"zxjyEquityGrade\", \"operator\": \"CONTAINS\", \"value\": [\"预达标\", \"已达标\"]}\n\n- **clientGroupLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['奋斗青年', '都市白领', '而立一族', '社会中坚', '邻退天命', '慈爱祖辈', '创业新贵', '创富一代', '荣耀高堂', '承富二代', '已退小康'] | 定义: 表示客户画像分群标签。年龄、资产等组合定义用于增强召回理解，不作为默认自动映射规则。 | 说明: 例如：奋斗青年≈16-30岁且资产较低，创业新贵≈36-50岁且高净值；这些定义仅用于辅助理解，不应在缺少标签语境时直接替代为客群标签。\n\n  示例: \"都市白领客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"都市白领\"]}\n\n  示例: \"创业新贵客户\" → {\"field\": \"clientGroupLabel\", \"operator\": \"CONTAINS\", \"value\": [\"创业新贵\"]}\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **birthdayMd** | 操作符: RANGE | 值类型: date | 格式: MM-dd | 说明: 只含月日（不含年），格式MM-dd；本月生日取当月1日至月末；下月生日取下月1日至月末；下周生日取下周一至周天；未来一周生日取今天至往后顺延6天；未来一个月生日取今天至往后延顺29天\n\n  示例: \"3月15日生日的客户\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-15\", \"max\": \"03-15\"}}\n\n  示例: \"本月生日的客户（当前2026年3月）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-01\", \"max\": \"03-31\"}}\n\n  示例: \"下个月生日的客户（当前2026年3月）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"04-01\", \"max\": \"04-30\"}}\n\n  示例: \"下周有哪些客户过生日（当前2026年3月25号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-30\", \"max\": \"04-05\"}}\n\n  示例: \"未来一周的客户（当前2026年4月1号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"04-01\", \"max\": \"04-07\"}}\n\n  示例: \"未来一个月的客户（当前2026年3月25号）\" → {\"field\": \"birthdayMd\", \"operator\": \"RANGE\", \"value\": {\"min\": \"03-25\", \"max\": \"04-25\"}}\n\n### 用户查询\n帮我查一下北京地区的客户",
+      "external_boundary_sources": {
+        "config_paths": {
+          "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+          "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+          "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+          "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+        }
+      }
+    },
+    "output_source": "live_service",
+    "application_boundary": {
+      "downstream_result_set_available": false,
+      "downstream_status": "not_verified",
+      "judge_scope": "parser_condition_semantics_only",
+      "result_set_verified": false,
+      "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+    },
+    "interaction_mode": "single_turn"
+  },
+  "status": "ok",
+  "scenario": "",
+  "interaction_mode": "single_turn",
+  "session_id": "general-eval-session",
+  "created_at": "2026-07-01T16:58:40.020119+00:00"
+}

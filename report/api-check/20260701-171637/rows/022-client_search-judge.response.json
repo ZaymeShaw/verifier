@@ -1,0 +1,48 @@
+{
+  "trace_id": "cd5eb7f4-172b-4f39-90ee-e217fb94cfe4",
+  "project_id": "client_search",
+  "business_expectations": [
+    {},
+    {},
+    {},
+    {}
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "客户年龄精确为45岁",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "客户性别为女性",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "年缴保费十万及以上",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "多条件逻辑关系为AND",
+      "status": "fulfilled"
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "fulfilled",
+    "assessment_count": 4
+  },
+  "expected": {
+    "query_logic": "AND",
+    "expected_source": "not_available",
+    "reference_is_oracle": false
+  },
+  "actual": {
+    "query_logic": "AND"
+  },
+  "summary": {
+    "reason": "fulfilled · 4 blocking expectations all met · 用户查询'45岁女性保费10万以上'的三个筛选维度均被正确解析：年龄维度使用RANGE操作符精确匹配45岁（min=max=45），性别维度通过口语映射将'女性'转为标准枚举值'女'并正确使用MATCH操作符，保费维度将'10万以上'正确换算为GTE 100000（10万×10000）。三个条件以AND逻辑组合，完全覆盖用户的所有必要筛选意图，无遗漏、无冗余、无错误。actual 输出与 expected 完全一致，所有 blocking 期望均已 fulfilled。",
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "fulfilled",
+    "assessment_count": 4,
+    "blocking_count": 4,
+    "is_formal_attribution": true
+  }
+}

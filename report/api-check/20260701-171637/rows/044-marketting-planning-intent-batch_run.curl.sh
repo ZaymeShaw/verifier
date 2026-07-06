@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+curl -sS -X POST 'http://127.0.0.1:8021/api/batch_run' -H 'Content-Type: application/json' --data-raw '{"cases": [{"expected_intent": "", "id": "mpi-premium-growth-exact-1", "input": {"query": "我想看明年NBEV增长规划"}, "metadata": {"business_axis": "premium", "expected_error_type": "none"}, "reference": {"allow_fallback": false, "intent": "nbev_planning", "min_confidence": 0.7}, "scenario": "intent_recognition", "source": "data_mock_seed", "status": "pending"}], "concurrency": 1, "project": "marketting-planning-intent"}' --write-out '
+__HTTP_STATUS__:%{http_code}'

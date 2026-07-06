@@ -1,0 +1,47 @@
+{
+  "passed": false,
+  "issues": [
+    "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+    "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+    "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+    "RunTrace has ok status but no raw_response.",
+    "RunTrace missing execution_trace for source -> API -> adapter verification.",
+    "JudgeResult missing evidence.",
+    "JudgeResult missing evaluation_boundary; verdict boundary is unclear.",
+    "JudgeResult missing verdict_derivation; final verdict cannot be traced to comparison evidence and boundary decision.",
+    "Uncertain JudgeResult must identify blocking evidence gaps or carry self_check_failed/llm_call_failed; use correct/incorrect when expected-vs-actual is inspectable.",
+    "Failure attribution missing analysis_method; source of attribution is unclear.",
+    "Failure attribution missing analysis_quality gate.",
+    "JudgeResult single-point derivation violation: verdict=uncertain conflicts with fulfillment-derived verdict=incorrect",
+    "JudgeResult single-point derivation violation: overall_fulfillment.blocking_expectations conflicts with non-fulfilled assessments",
+    "JudgeResult fulfillment/verdict contradiction: verdict=uncertain conflicts with fulfillment-derived verdict=incorrect",
+    "JudgeResult fulfillment/verdict contradiction: overall_fulfillment.blocking_expectations conflicts with non-fulfilled assessments"
+  ],
+  "boundary_violations": [
+    "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+    "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+    "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py"
+  ],
+  "protocol_gaps": [
+    "RunTrace has ok status but no raw_response.",
+    "RunTrace missing execution_trace for source -> API -> adapter verification.",
+    "JudgeResult missing evidence.",
+    "JudgeResult missing evaluation_boundary; verdict boundary is unclear.",
+    "JudgeResult missing verdict_derivation; final verdict cannot be traced to comparison evidence and boundary decision.",
+    "Uncertain JudgeResult must identify blocking evidence gaps or carry self_check_failed/llm_call_failed; use correct/incorrect when expected-vs-actual is inspectable.",
+    "Failure attribution missing analysis_method; source of attribution is unclear.",
+    "Failure attribution missing analysis_quality gate."
+  ],
+  "consistency_gaps": [
+    "JudgeResult single-point derivation violation: verdict=uncertain conflicts with fulfillment-derived verdict=incorrect",
+    "JudgeResult single-point derivation violation: overall_fulfillment.blocking_expectations conflicts with non-fulfilled assessments",
+    "JudgeResult fulfillment/verdict contradiction: verdict=uncertain conflicts with fulfillment-derived verdict=incorrect",
+    "JudgeResult fulfillment/verdict contradiction: overall_fulfillment.blocking_expectations conflicts with non-fulfilled assessments"
+  ],
+  "recommended_fixes": [
+    "Derive verdict, overall_fulfillment, and blocking_expectations from fulfillment_assessments before trusting judge output.",
+    "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions.",
+    "Complete missing protocol outputs before treating the chain as valid.",
+    "Ensure all steps use the same trace_id and latest run output."
+  ]
+}

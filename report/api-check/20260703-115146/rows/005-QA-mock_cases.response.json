@@ -1,0 +1,83 @@
+{
+  "project_id": "QA",
+  "cases": [
+    {
+      "id": "mock-agent-QA-3a635643",
+      "input": {
+        "input": {
+          "query": "我去年买的那个百万医疗险，要是住院花了八万，社保报完我自己掏了三万，这保险能给我报多少啊？"
+        },
+        "metadata": {
+          "session_id": "sess_20250314_001",
+          "trace_id": "trace_qa_394857",
+          "user_id": "user_128905",
+          "product_type": "百万医疗险"
+        },
+        "scenario": "qa_gold_answer",
+        "data_quality_flags": [
+          "gold_answer_match",
+          "context_fidelity"
+        ]
+      },
+      "output": {
+        "actual_answer": "能报的，一般免赔额一万，剩下的两万能按比例报销，具体得看你合同里的报销比例，通常是100%，但进口药可能只报一部分。"
+      },
+      "scenario": "qa_gold_answer",
+      "expected_intent": "",
+      "reference": {
+        "actual_answer": "百万医疗险通常扣除社保报销后，剩余合理医疗费用减去1万元免赔额，按合同约定的报销比例（一般为100%）进行赔付，报销范围需符合合同约定的医院和用药目录，进口药若在目录内可报。"
+      },
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "ready": [
+          "output",
+          "reference"
+        ],
+        "live_request_mapped": true,
+        "schema_ok": false
+      }
+    },
+    {
+      "id": "mock-agent-QA-625b1ac3",
+      "input": {
+        "input": {
+          "query": "我买的那个百万医疗险，平时看门诊给报销吗？",
+          "product_type": "百万医疗险"
+        },
+        "metadata": {
+          "session_id": "sess_7a3f2b1d",
+          "trace_id": "trace_8e4d5c9a",
+          "user_id": "usr_10042",
+          "timestamp": "2025-03-27T10:15:30Z"
+        },
+        "scenario": "qa_weak_quality",
+        "data_quality_flags": [
+          "low_accuracy",
+          "vague_response",
+          "missing_coverage_detail"
+        ]
+      },
+      "output": {
+        "actual_answer": "可以报销的，具体看条款。"
+      },
+      "scenario": "qa_weak_quality",
+      "expected_intent": "",
+      "reference": {
+        "actual_answer": "您好，百万医疗险一般报销的是住院医疗费用，以及一些特殊门诊（比如门诊肾透析、门诊恶性肿瘤治疗等），普通感冒发烧看门诊的费用通常不在报销范围内，具体情况还是要看您那份保单的保障责任哦。"
+      },
+      "source": "mock_agent_llm",
+      "status": "pending",
+      "metadata": {
+        "source": "mock_agent_llm",
+        "ready": [
+          "output",
+          "reference"
+        ],
+        "live_request_mapped": true,
+        "schema_ok": false
+      }
+    }
+  ]
+}

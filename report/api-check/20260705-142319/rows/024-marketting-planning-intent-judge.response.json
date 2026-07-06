@@ -1,0 +1,100 @@
+{
+  "trace_id": "627755ab-24d8-4883-bb75-67ef8abb1f56",
+  "project_id": "marketting-planning-intent",
+  "verdict": "uncertain",
+  "score": 1.0,
+  "business_expectations": [
+    {
+      "expectation_id": "marketting-planning-intent:intent_contract",
+      "source_intent_id": "primary_intent",
+      "downstream_consumer": "marketing intent router",
+      "user_intent": "",
+      "expected_outcome": "single-turn intent recognition should return the expected label, required slots/entities, acceptable confidence, and permitted fallback behavior",
+      "required_capabilities": [
+        "intent_label",
+        "slot_extraction",
+        "confidence_threshold",
+        "fallback_control"
+      ],
+      "boundary": {
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ],
+        "scope": "single_turn_intent_recognition"
+      },
+      "priority": "normal",
+      "evidence_refs": [
+        {
+          "source": "",
+          "summary": ""
+        }
+      ]
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "intent_contract",
+      "status": "fulfilled",
+      "blocking": true,
+      "evidence": "intent=None; confidence=None; min_confidence=None",
+      "downstream_impact": "当前单轮意图识别满足 reference contract：intent=None，confidence=None 达到最低要求 None。"
+    },
+    {
+      "expectation_id": "marketting-planning-intent:intent_contract",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        {}
+      ],
+      "actual_evidence": [
+        {}
+      ],
+      "boundary_decision": {
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ],
+        "scope": "single_turn_intent_recognition"
+      },
+      "downstream_impact": "[judge] LLM 产出不符合结构化输出约束，已阻断（不放行假货）：\n  - 必填字段缺失：business_expectations\n  - 必填字段缺失：fulfillment_assessments\n  - 必填字段缺失：overall_fulfillment\n  - 必填字段缺失：intent_model\n  - 必填字段缺失：consumer_contract\n  - 必填字段缺失：reconstructed_intent\n  - 必填字段缺失：judge_basis\n  - 必填字段缺失：judge_method\n  - 必填字段缺失：semantic_equivalence_checks\n  - 必填字段缺失：reference_generation_basis\n  - 必填字段缺失：verdict_derivation\n  - 必填字段缺失：boundary_decision\n  - 必填字段缺失：evaluation_boundary\n  - 必填字段缺失：missing\n  - 必填字段缺失：wrong\n  - 必填字段缺失：extra\n  - 必填字段缺失：e",
+      "blocking": true,
+      "evidence_refs": [
+        {
+          "source": "",
+          "summary": ""
+        }
+      ]
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_evaluable",
+    "blocking_expectations": [
+      "marketting-planning-intent:intent_contract"
+    ],
+    "assessment_count": 2
+  },
+  "reasoning_summary": "[judge] LLM 产出不符合结构化输出约束，已阻断（不放行假货）：\n  - 必填字段缺失：business_expectations\n  - 必填字段缺失：fulfillment_assessments\n  - 必填字段缺失：overall_fulfillment\n  - 必填字段缺失：intent_model\n  - 必填字段缺失：consumer_contract\n  - 必填字段缺失：reconstructed_intent\n  - 必填字段缺失：judge_basis\n  - 必填字段缺失：judge_method\n  - 必填字段缺失：semantic_equivalence_checks\n  - 必填字段缺失：reference_generation_basis\n  - 必填字段缺失：verdict_derivation\n  - 必填字段缺失：boundary_decision\n  - 必填字段缺失：evaluation_boundary\n  - 必填字段缺失：missing\n  - 必填字段缺失：wrong\n  - 必填字段缺失：extra\n  - 必填字段缺失：e",
+  "judge_basis": "",
+  "judge_method": "current_case_llm_judge",
+  "verdict_derivation": {
+    "contract_gate": "passed"
+  },
+  "consumer_contract": {
+    "consumer": "marketing intent router",
+    "contract": "single-turn query must resolve to the expected intent, required slots/entities, confidence threshold, and fallback policy before planning starts",
+    "application_boundary": {
+      "excludes": [
+        "multi_turn_planning",
+        "sse_card_generation"
+      ],
+      "scope": "single_turn_intent_recognition"
+    }
+  },
+  "reconstructed_intent": "",
+  "scenario": "",
+  "needs_human_review": true,
+  "quality_flags": [
+    "llm_output_validation_failed",
+    "intent_contract_gate_passed"
+  ]
+}

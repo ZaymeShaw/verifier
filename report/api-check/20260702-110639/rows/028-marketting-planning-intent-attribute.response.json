@@ -1,0 +1,121 @@
+{
+  "trace_id": "2a9b8dbe-016b-4e6f-a50a-9fc6fd2318d8",
+  "project_id": "marketting-planning-intent",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图标签为客群分析而非其他意图",
+      "causal_category": "implementation_bug"
+    },
+    {
+      "expectation_id": "时间范围槽位被正确提取",
+      "causal_category": "implementation_bug"
+    },
+    {
+      "expectation_id": "目标对象槽位被正确提取",
+      "causal_category": "implementation_bug"
+    },
+    {
+      "expectation_id": "置信度反映意图确定性且达到阈值",
+      "causal_category": "implementation_bug"
+    },
+    {
+      "expectation_id": "不确定意图触发回退而非给出其他兜底",
+      "causal_category": "implementation_bug"
+    },
+    {
+      "expectation_id": "意图分派边界适配客户分析场景",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "intent_contract",
+      "causal_category": "implementation_bug"
+    }
+  ],
+  "causal_category": "implementation_bug",
+  "earliest_divergence": {
+    "node": "intent_contract_gate",
+    "expected": {
+      "intent": "客户群分析 (customer_audience_analysis)"
+    },
+    "actual": {
+      "ambiguous": false,
+      "confidence": 0.5,
+      "fallback": false,
+      "intent": "other",
+      "raw_intent": "4001"
+    },
+    "evidence": [
+      []
+    ],
+    "confidence": "medium"
+  },
+  "chain_nodes": [
+    {
+      "status": "failed",
+      "evidence": [
+        {},
+        {
+          "expected": {
+            "intent": "客户群分析 (customer_audience_analysis)"
+          }
+        },
+        {
+          "actual": {
+            "ambiguous": false,
+            "confidence": 0.5,
+            "fallback": false,
+            "intent": "other",
+            "raw_intent": "4001"
+          }
+        },
+        {}
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "failed"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": false,
+    "actual": true,
+    "expected": true,
+    "execution_trace": false
+  },
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': '客户群分析 (customer_audience_analysis)'}，实际 normalized intent evidence 为 {'ambiguous': False, 'confidence': 0.5, 'fallback': False, 'intent': 'other', 'raw_intent': '4001'}，最早差异位于 intent_contract_gate。",
+  "verification_steps": [
+    "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+  ],
+  "patch_direction": [
+    "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+  ],
+  "needs_human_review": false,
+  "scenario": "intent_recognition",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 7,
+    "probe_count": 5,
+    "summary_text": "用户查询「帮我看看最近半年来我们主要客户是哪些人群？」在语义上属于客户画像/客群分析（customer_portrait），但意图识别链路存在双重缺陷导致分类为 other：(1) 规则引擎 try_homepage_intent() 的正则 r\"客户.*(?:画像|分布|结构|分层)\" 不包含「人群」关键词，无法命中；(2) LLM prompt 中 customer_portrait 的描述和示例仅覆盖「画像/分布/结构/客温客价」，模型（qwen3-next-80b-a3b-instruct）未能将「人群」泛化为 customer_portrait 的同义表达，以 confidence=0.5 的低置信度输出 other。随后，(3) 缺少 confidence 阈值门控，0.5 的低置信度未触发 fallback；(4) prompt 中「不确定时倾向于 other」的设计导致 other 被当作兜底而非 unknown/fallback；(5) schema 缺少时间范围和目标对象槽位，即使意图分类正确也无法结构化管理这些信息。INTENT_MAPPING 层面 4001→other 的映射本身正确，根因全在上游意图识别和 prompt 设计。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

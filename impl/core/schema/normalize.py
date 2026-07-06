@@ -1,0 +1,740 @@
+from __future__ import annotations
+
+from dataclasses import asdict
+from typing import Any, Dict, Iterable, List, Optional
+
+from .attribute import AttributeResult, ChainNode, ExpectationAttribution
+from .check import CheckReport
+from .cluster import ClusterSummary
+from .fallback import FallbackDecision
+from .evidence import EvidenceRef, ExecutionTraceEvent, ProbeResult
+from .frontend import FrontendViewModel
+from .judge import BusinessExpectation, FulfillmentAssessment, GapItem, JudgeResult
+from .live import LiveRequest, LiveExecutionResult, LiveMultiTurnResult, LiveMultiTurnState
+from .mock import MockDataset, MockSpec, MultiTurnCase, MultiTurnInteraction, MultiTurnPolicy, MultiTurnTurnExpectation, SingleTurnCase
+from .table import CasePoolTable, ConversationTurn, TraceTableRow
+from .trace import MultiTurnTraceSummary, RunTrace, TraceExecutionContext
+
+
+def _as_dict(value: Any) -> Dict[str, Any]:
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        return value
+    if hasattr(value, "__dataclass_fields__"):
+        return asdict(value)
+    return {}
+
+
+def _as_list(value: Any) -> list[Any]:
+    return list(value or []) if isinstance(value, list) else []
+
+
+CALL_STATUSES = {"succeeded", "failed", "skipped"}
+TRACE_STATUSES = {"ok", "error", "skipped"}
+VERDICTS = {"correct", "incorrect", "uncertain", "not_evaluable"}
+FULFILLMENT_STATUSES = {"fulfilled", "not_fulfilled", "not_evaluable"}
+INTERACTION_MODES = {"single_turn", "static_turns", "interactive_intent"}
+EVENT_STATUSES = {"succeeded", "failed", "skipped", "not_verified", "suspicious"}
+CHAIN_STATUSES = {"verified", "failed", "not_verified", "partial", "suspicious"}
+FALLBACK_STATUSES = {"used", "not_used", "failed", "pending", "error", "needs_human_review"}
+
+
+def _one_of(value: Any, allowed: set[str], default: str, aliases: Optional[Dict[str, str]] = None) -> str:
+    raw = str(value or "").strip()
+    normalized = (aliases or {}).get(raw, raw)
+    return normalized if normalized in allowed else default
+
+
+def _normalize_call_status(value: Any) -> str:
+    return _one_of(value, CALL_STATUSES, "succeeded", {"ok": "succeeded", "success": "succeeded", "error": "failed"})
+
+
+def _normalize_trace_status(value: Any) -> str:
+    return _one_of(value, TRACE_STATUSES, "ok", {"succeeded": "ok", "success": "ok", "failed": "error"})
+
+
+def _normalize_verdict(value: Any) -> str:
+    return _one_of(value, VERDICTS, "uncertain", {"fulfilled": "correct", "failed": "incorrect", "error": "not_evaluable", "partial": "incorrect", "partially_correct": "incorrect"})
+
+
+def _normalize_fulfillment_status(value: Any) -> str:
+    return _one_of(value, FULFILLMENT_STATUSES, "not_evaluable", {"correct": "fulfilled", "incorrect": "not_fulfilled", "failed": "not_fulfilled", "uncertain": "not_evaluable", "partial": "not_fulfilled", "partially_fulfilled": "not_fulfilled", "contested": "not_evaluable"})
+
+
+def _normalize_interaction_mode(value: Any) -> str:
+    return _one_of(value, INTERACTION_MODES, "single_turn", {"multi_turn": "interactive_intent"})
+
+
+def _normalize_event_status(value: Any) -> str:
+    return _one_of(value, EVENT_STATUSES, "not_verified", {"ok": "succeeded", "success": "succeeded", "error": "failed"})
+
+
+def _normalize_chain_status(value: Any) -> str:
+    return _one_of(value, CHAIN_STATUSES, "not_verified", {"succeeded": "verified", "ok": "verified", "error": "failed"})
+
+
+def _normalize_fallback_status(value: Any) -> str:
+    return _one_of(value, FALLBACK_STATUSES, "pending", {"succeeded": "used", "success": "used", "skipped": "not_used"})
+
+
+def normalize_execution_trace_event(value: Any) -> Optional[ExecutionTraceEvent]:
+    if value is None:
+        return None
+    if isinstance(value, ExecutionTraceEvent):
+        value.status = _normalize_event_status(value.status)
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    return ExecutionTraceEvent(
+        stage=str(data.get("stage") or data.get("name") or ""),
+        status=_normalize_event_status(data.get("status")),
+        evidence=data.get("evidence"),
+        timestamp=str(data.get("timestamp") or data.get("time") or ""),
+        inputs=data.get("inputs") if isinstance(data.get("inputs"), dict) else {},
+        outputs=data.get("outputs") if isinstance(data.get("outputs"), dict) else {},
+        error=str(data.get("error") or ""),
+        metadata=data.get("metadata") if isinstance(data.get("metadata"), dict) else {key: item for key, item in data.items() if key not in {"stage", "name", "status", "evidence", "timestamp", "time", "inputs", "outputs", "error"}},
+    )
+
+
+def normalize_execution_trace_events(values: Iterable[Any]) -> List[ExecutionTraceEvent]:
+    return [item for item in (normalize_execution_trace_event(value) for value in values or []) if item is not None]
+
+
+def normalize_evidence_ref(value: Any) -> Optional[EvidenceRef]:
+    if value is None or isinstance(value, EvidenceRef):
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    return EvidenceRef(
+        ref_id=str(data.get("ref_id") or data.get("id") or data.get("key") or ""),
+        source=str(data.get("source") or ""),
+        kind=str(data.get("kind") or data.get("type") or ""),
+        stage=str(data.get("stage") or ""),
+        summary=str(data.get("summary") or data.get("description") or ""),
+        location=str(data.get("location") or data.get("path") or ""),
+        payload=data.get("payload") if "payload" in data else data.get("evidence"),
+        metadata=data.get("metadata") if isinstance(data.get("metadata"), dict) else {key: item for key, item in data.items() if key not in {"ref_id", "id", "key", "source", "kind", "type", "stage", "summary", "description", "location", "path", "payload", "evidence"}},
+    )
+
+
+def normalize_evidence_refs(values: Iterable[Any]) -> List[EvidenceRef]:
+    return [item for item in (normalize_evidence_ref(value) for value in values or []) if item is not None]
+
+
+def normalize_probe_result(value: Any) -> Optional[ProbeResult]:
+    if value is None:
+        return None
+    if isinstance(value, ProbeResult):
+        value.status = _normalize_event_status(value.status)
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    return ProbeResult(
+        probe_id=str(data.get("probe_id") or data.get("id") or ""),
+        status=_normalize_event_status(data.get("status")),
+        stage=str(data.get("stage") or ""),
+        evidence=_as_list(data.get("evidence")),
+        findings=data.get("findings") if isinstance(data.get("findings"), dict) else {},
+        error=str(data.get("error") or ""),
+        metadata=data.get("metadata") if isinstance(data.get("metadata"), dict) else {key: item for key, item in data.items() if key not in {"probe_id", "id", "status", "stage", "evidence", "findings", "error"}},
+    )
+
+
+def normalize_probe_results(values: Iterable[Any]) -> List[ProbeResult]:
+    return [item for item in (normalize_probe_result(value) for value in values or []) if item is not None]
+
+
+def normalize_fallback_decision(value: Any) -> Optional[FallbackDecision]:
+    if value is None:
+        return None
+    if isinstance(value, FallbackDecision):
+        value.status = _normalize_fallback_status(value.status)
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    return FallbackDecision(
+        fallback_id=str(data.get("fallback_id") or ""),
+        source_stage=str(data.get("source_stage") or ""),
+        fallback_type=str(data.get("fallback_type") or ""),
+        status=_normalize_fallback_status(data.get("status")),
+        reason=str(data.get("reason") or ""),
+        missing_evidence=_as_list(data.get("missing_evidence")),
+        recoverable=bool(data.get("recoverable")),
+        needs_human_review=bool(data.get("needs_human_review")),
+        quality_flags=_as_list(data.get("quality_flags")),
+        evidence_refs=_as_list(data.get("evidence_refs")),
+        failed_gate_ids=_as_list(data.get("failed_gate_ids")),
+        metadata=data.get("metadata") if isinstance(data.get("metadata"), dict) else {},
+    )
+
+
+def normalize_fallback_decisions(values: Iterable[Any]) -> List[FallbackDecision]:
+    return [item for item in (normalize_fallback_decision(value) for value in values or []) if item is not None]
+
+
+def normalize_conversation_turn(value: Any) -> Optional[ConversationTurn]:
+    if value is None or isinstance(value, ConversationTurn):
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    return ConversationTurn(
+        turn_index=int(data.get("turn_index") or data.get("turn") or 0),
+        role=str(data.get("role") or ""),
+        content=str(data.get("content") or ""),
+        stage=str(data.get("stage") or ""),
+        extracted_summary=str(data.get("extracted_summary") or ""),
+    )
+
+
+def normalize_conversation_turns(values: Iterable[Any]) -> List[ConversationTurn]:
+    return [item for item in (normalize_conversation_turn(value) for value in values or []) if item is not None]
+
+
+def normalize_trace_table_row(value: Any) -> Optional[TraceTableRow]:
+    if value is None or isinstance(value, TraceTableRow):
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    return TraceTableRow(
+        id=str(data.get("id") or ""),
+        input=str(data.get("input") or ""),
+        scenario=str(data.get("scenario") or ""),
+        output_summary=str(data.get("output_summary") or ""),
+        reference_summary=str(data.get("reference_summary") or ""),
+        status=_normalize_trace_status(data.get("status")),
+        execution_mode=str(data.get("execution_mode") or ""),
+        output_source=str(data.get("output_source") or ""),
+        verdict=_normalize_verdict(data.get("verdict")),
+        score=data.get("score"),
+        fulfillment_status=_normalize_fulfillment_status(data.get("fulfillment_status")),
+        judge_summary=data.get("judge_summary") if isinstance(data.get("judge_summary"), dict) else {},
+        attribution_summary=data.get("attribution_summary") if isinstance(data.get("attribution_summary"), dict) else {},
+        check_summary=data.get("check_summary") if isinstance(data.get("check_summary"), dict) else {},
+        fallback_summary=data.get("fallback_summary") if isinstance(data.get("fallback_summary"), dict) else {},
+        needs_human_review=bool(data.get("needs_human_review")),
+        quality_flags=_as_list(data.get("quality_flags")),
+        check_passed=data.get("check_passed"),
+        issue_count=int(data.get("issue_count") or 0),
+        fallback_count=int(data.get("fallback_count") or 0),
+        causal_category=str(data.get("causal_category") or ""),
+        divergence_stage=str(data.get("divergence_stage") or ""),
+        root_cause_summary=str(data.get("root_cause_summary") or ""),
+        created_at=str(data.get("created_at") or ""),
+        stop_reason=str(data.get("stop_reason") or ""),
+        interaction_mode=_normalize_interaction_mode(data.get("interaction_mode")),
+        conversation_summary=data.get("conversation_summary") if isinstance(data.get("conversation_summary"), dict) else {},
+        conversation_detail=normalize_conversation_turns(data.get("conversation_detail")) if isinstance(data.get("conversation_detail"), list) else None,
+        trace_id=str(data.get("trace_id") or ""),
+    )
+
+
+def normalize_trace_table_rows(values: Iterable[Any]) -> List[TraceTableRow]:
+    return [item for item in (normalize_trace_table_row(value) for value in values or []) if item is not None]
+
+
+def normalize_case_pool_table(value: Any) -> Optional[CasePoolTable]:
+    if value is None or isinstance(value, CasePoolTable):
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    rows = normalize_trace_table_rows(data.get("rows"))
+    return CasePoolTable(
+        project_id=str(data.get("project_id") or ""),
+        rows=rows,
+        total=int(data.get("total") or len(rows)),
+        summary=data.get("summary") if isinstance(data.get("summary"), dict) else {},
+    )
+
+
+def normalize_mock_case(value: Any) -> Optional[SingleTurnCase | MultiTurnCase]:
+    if value is None or isinstance(value, (SingleTurnCase, MultiTurnCase)):
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    input_data = data.get("input") if isinstance(data.get("input"), dict) else {key: item for key, item in data.items() if key not in {"id", "case_id", "source", "status", "scenario", "expected_intent", "reference", "metadata", "interaction", "mock_agent", "user_intent"}}
+    base = {
+        "id": str(data.get("id") or data.get("case_id") or ""),
+        "input": input_data,
+        "output": data.get("output") if isinstance(data.get("output"), dict) else None,
+        "scenario": str(data.get("scenario") or ""),
+        "expected_intent": str(data.get("expected_intent") or ""),
+        "reference": data.get("reference") if isinstance(data.get("reference"), dict) else None,
+        "source": str(data.get("source") or "user_written"),
+        "status": str(data.get("status") or "pending"),
+        "metadata": data.get("metadata") if isinstance(data.get("metadata"), dict) else {},
+    }
+    interaction = data.get("interaction") if isinstance(data.get("interaction"), dict) else {}
+    if interaction or isinstance(data.get("turns"), list) or isinstance(data.get("user_intent"), dict):
+        policy_data = interaction.get("policy") if isinstance(interaction.get("policy"), dict) else {}
+        policy = MultiTurnPolicy(max_turns=int(policy_data.get("max_turns") or 5), stop_when=_as_list(policy_data.get("stop_when")))
+        expectations = [
+            MultiTurnTurnExpectation(
+                turn=int(item.get("turn") or index + 1),
+                stage=str(item.get("stage") or ""),
+                missing_fields=_as_list(item.get("missing_fields")),
+                required_path_types=_as_list(item.get("required_path_types")),
+            )
+            for index, item in enumerate(_as_list(interaction.get("turn_expectations")))
+            if isinstance(item, dict)
+        ]
+        # 挂载 live_schema 校验
+        _check_normalized_case_with_live_schema(data)
+        return MultiTurnCase(
+            **base,
+            user_intent=data.get("user_intent") if isinstance(data.get("user_intent"), dict) else input_data,
+            interaction=MultiTurnInteraction(mode=str(interaction.get("mode") or ("static_turns" if isinstance(data.get("turns"), list) else "interactive_intent")), policy=policy, turn_expectations=expectations),
+            mock_agent=data.get("mock_agent") if isinstance(data.get("mock_agent"), dict) else {},
+        )
+    # 挂载 live_schema 校验
+    _check_normalized_case_with_live_schema(data)
+    return SingleTurnCase(**base)
+
+
+def _check_normalized_case_with_live_schema(data: Dict[str, Any]) -> None:
+    """normalize_mock_case 解析时校验 case 是否符合 live_schema。
+
+    校验不阻断。委托给 LiveSchemaCheck（统一从 SchemaValidator 取）。
+    """
+    try:
+        from impl.core.mock_agent import load_live_schema
+        meta = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}
+        pid = meta.get("project_id")
+        if not pid:
+            cid = str(data.get("id") or data.get("case_id") or "")
+            prefix = "mock-agent-"
+            if cid.startswith(prefix):
+                rest = cid[len(prefix):]
+                idx = rest.rfind("-")
+                if idx > 0:
+                    pid = rest[:idx]
+        if not pid:
+            return
+        ls = load_live_schema(pid)
+        if ls is not None and hasattr(ls, "check"):
+            ls.check.case(data)
+    except Exception:
+        pass
+
+
+def normalize_mock_dataset(value: Any) -> Optional[MockDataset]:
+    if value is None or isinstance(value, MockDataset):
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    cases = [case for case in (normalize_mock_case(item) for item in _as_list(data.get("cases"))) if case is not None]
+    return MockDataset(
+        dataset_id=str(data.get("dataset_id") or data.get("id") or ""),
+        name=str(data.get("name") or ""),
+        dimension_type=str(data.get("dimension_type") or data.get("type") or ""),
+        description=str(data.get("description") or ""),
+        cases=cases,
+        case_count=int(data.get("case_count") or len(cases)),
+    )
+
+
+def normalize_mock_spec(value: Any) -> Optional[MockSpec]:
+    if value is None or isinstance(value, MockSpec):
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    return MockSpec(
+        input_modes=_as_list(data.get("input_modes")),
+        case_sources=_as_list(data.get("case_sources")),
+        intent_generation_guidance=str(data.get("intent_generation_guidance") or data.get("mock_guidance") or ""),
+        expected_intent_format=str(data.get("expected_intent_format") or ""),
+    )
+
+
+def normalize_business_expectation(value: Any) -> Optional[BusinessExpectation]:
+    if value is None or isinstance(value, BusinessExpectation):
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    return BusinessExpectation(
+        expectation_id=str(data.get("expectation_id") or data.get("id") or ""),
+        downstream_consumer=str(data.get("downstream_consumer") or ""),
+        user_intent=str(data.get("user_intent") or ""),
+        expected_outcome=str(data.get("expected_outcome") or data.get("expectation") or ""),
+        required_capabilities=_as_list(data.get("required_capabilities")),
+        acceptance_criteria=_as_list(data.get("acceptance_criteria")),
+        boundary=data.get("boundary") if isinstance(data.get("boundary"), dict) else {},
+        priority=str(data.get("priority") or "normal"),
+        evidence_refs=_as_list(data.get("evidence_refs")),
+    )
+
+
+def normalize_fulfillment_assessment(value: Any) -> Optional[FulfillmentAssessment]:
+    if value is None:
+        return None
+    if isinstance(value, FulfillmentAssessment):
+        value.status = _normalize_fulfillment_status(value.status)
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    return FulfillmentAssessment(
+        expectation_id=str(data.get("expectation_id") or data.get("id") or ""),
+        status=_normalize_fulfillment_status(data.get("status")),
+        score=data.get("score"),
+        expected_evidence=_as_list(data.get("expected_evidence")),
+        actual_evidence=_as_list(data.get("actual_evidence")),
+        boundary_decision=data.get("boundary_decision") if isinstance(data.get("boundary_decision"), dict) else {},
+        downstream_impact=str(data.get("downstream_impact") or ""),
+        blocking=bool(data.get("blocking")),
+        confidence=data.get("confidence"),
+        evidence_refs=_as_list(data.get("evidence_refs")),
+    )
+
+
+def normalize_gap_item(value: Any, kind: str = "") -> GapItem:
+    if isinstance(value, GapItem):
+        return value
+    data = _as_dict(value)
+    if data:
+        return GapItem(kind=str(data.get("kind") or kind), error_type=str(data.get("error_type") or data.get("status") or ""), expected=data.get("expected"), actual=data.get("actual"), evidence_ref=str(data.get("evidence_ref") or ""), raw=data.get("raw", value), incomplete=bool(data.get("incomplete")))
+    return GapItem(kind=kind, raw=value)
+
+
+def normalize_expectation_attribution(value: Any) -> Optional[ExpectationAttribution]:
+    if value is None:
+        return None
+    if isinstance(value, ExpectationAttribution):
+        value.fulfillment_status = _normalize_fulfillment_status(value.fulfillment_status)
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    return ExpectationAttribution(
+        expectation_id=str(data.get("expectation_id") or data.get("id") or ""),
+        fulfillment_status=_normalize_fulfillment_status(data.get("fulfillment_status") or data.get("status")),
+        causal_category=str(data.get("causal_category") or "insufficient_evidence"),
+        earliest_divergence=data.get("earliest_divergence") if isinstance(data.get("earliest_divergence"), dict) else {},
+        causal_chain=_as_list(data.get("causal_chain")),
+        suspected_locations=_as_list(data.get("suspected_locations")),
+        improvement_direction=_as_list(data.get("improvement_direction")),
+        source_evidence=_as_list(data.get("source_evidence")),
+        probe_evidence=_as_list(data.get("probe_evidence")),
+        incomplete_reason=str(data.get("incomplete_reason") or ""),
+    )
+
+
+def normalize_chain_node(value: Any) -> Optional[ChainNode]:
+    if value is None:
+        return None
+    if isinstance(value, ChainNode):
+        value.status = _normalize_chain_status(value.status)
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    return ChainNode(name=str(data.get("name") or data.get("node") or ""), status=_normalize_chain_status(data.get("status")), evidence=_as_list(data.get("evidence")), reason=str(data.get("reason") or ""))
+
+
+def normalize_live_request(value: Any) -> Optional[LiveRequest]:
+    if value is None or isinstance(value, LiveRequest):
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    return LiveRequest(
+        project_id=str(data.get("project_id") or ""),
+        raw_input=data.get("raw_input") if isinstance(data.get("raw_input"), dict) else {},
+        case_id=str(data.get("case_id") or ""),
+        turns=list(data.get("turns") or []),
+        normalized_request=data.get("normalized_request") if isinstance(data.get("normalized_request"), dict) else {},
+        execution_mode=str(data.get("execution_mode") or "live_service"),
+        session_id=str(data.get("session_id") or ""),
+        timestamp=str(data.get("timestamp") or LiveRequest(project_id="", raw_input={}).timestamp),
+    )
+
+
+def normalize_live_execution_result(value: Any) -> Optional[LiveExecutionResult]:
+    if value is None:
+        return None
+    if isinstance(value, LiveExecutionResult):
+        value.call_status = _normalize_call_status(value.call_status)
+        value.interaction_mode = _normalize_interaction_mode(value.interaction_mode)
+        value.execution_trace = normalize_execution_trace_events(value.execution_trace)
+        value.evidence_refs = normalize_evidence_refs(value.evidence_refs)
+        value.multi_turn_state = normalize_live_multi_turn_state(value.multi_turn_state)
+        value.fallbacks = normalize_fallback_decisions(value.fallbacks)
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    return LiveExecutionResult(
+        project_id=str(data.get("project_id") or ""),
+        case_id=str(data.get("case_id") or ""),
+        session_id=str(data.get("session_id") or ""),
+        raw_input=data.get("raw_input") if isinstance(data.get("raw_input"), dict) else {},
+        normalized_request=data.get("normalized_request") if isinstance(data.get("normalized_request"), dict) else {},
+        call_status=_normalize_call_status(data.get("call_status")),
+        raw_response=data.get("raw_response"),
+        call_error=data.get("call_error"),
+        runtime_ms=data.get("runtime_ms"),
+        extracted_output=data.get("extracted_output") if isinstance(data.get("extracted_output"), dict) else {},
+        output_source=str(data.get("output_source") or "live_service"),
+        execution_trace=normalize_execution_trace_events(data.get("execution_trace")),
+        evidence_refs=normalize_evidence_refs(data.get("evidence_refs")),
+        project_fields=data.get("project_fields") if isinstance(data.get("project_fields"), dict) else {},
+        application_boundary=data.get("application_boundary") if isinstance(data.get("application_boundary"), dict) else {},
+        interaction_mode=_normalize_interaction_mode(data.get("interaction_mode")),
+        multi_turn_state=normalize_live_multi_turn_state(data.get("multi_turn_state")),
+        fallbacks=normalize_fallback_decisions(data.get("fallbacks")),
+    )
+
+
+def normalize_live_multi_turn_state(value: Any) -> Optional[LiveMultiTurnState]:
+    if value is None or isinstance(value, LiveMultiTurnState):
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    return LiveMultiTurnState(
+        session_id=str(data.get("session_id") or ""),
+        turn_index=int(data.get("turn_index") or 0),
+        transcript=_as_list(data.get("transcript")),
+        accumulated_fields=data.get("accumulated_fields") if isinstance(data.get("accumulated_fields"), dict) else {},
+        missing_fields=_as_list(data.get("missing_fields")),
+        stop_reason=str(data.get("stop_reason") or ""),
+    )
+
+
+def normalize_live_multi_turn_result(value: Any) -> Optional[LiveMultiTurnResult]:
+    if value is None or isinstance(value, LiveMultiTurnResult):
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    turn_results = [item for item in (normalize_live_execution_result(item) for item in _as_list(data.get("turn_results"))) if item is not None]
+    return LiveMultiTurnResult(
+        project_id=str(data.get("project_id") or ""),
+        case_id=str(data.get("case_id") or ""),
+        session_id=str(data.get("session_id") or ""),
+        turn_results=turn_results,
+        conversation_transcript=_as_list(data.get("conversation_transcript")),
+        stop_reason=str(data.get("stop_reason") or ""),
+        final_output=data.get("final_output") if isinstance(data.get("final_output"), dict) else {},
+    )
+
+
+def normalize_run_trace(value: Any) -> Optional[RunTrace]:
+    if value is None:
+        return None
+    if isinstance(value, RunTrace):
+        value.status = _normalize_trace_status(value.status)
+        value.interaction_mode = _normalize_interaction_mode(value.interaction_mode)
+        value.live_result = normalize_live_execution_result(value.live_result)
+        value.evidence_refs = normalize_evidence_refs(value.evidence_refs)
+        value.execution_trace = normalize_execution_trace_events(value.execution_trace)
+        value.fallbacks = normalize_fallback_decisions(value.fallbacks)
+        if not value.output_source and value.live_result:
+            value.output_source = value.live_result.output_source
+        if not value.application_boundary and value.live_result:
+            value.application_boundary = dict(value.live_result.application_boundary or {})
+        if not value.reference_contract:
+            input_data = value.input if isinstance(value.input, dict) else {}
+            request_data = value.normalized_request if isinstance(value.normalized_request, dict) else {}
+            value.reference_contract = input_data.get("reference") if isinstance(input_data.get("reference"), dict) else request_data.get("reference") if isinstance(request_data.get("reference"), dict) else {}
+            # 兜底：从 live_result.normalized_request.reference 补（前端直接传 trace 的场景）
+            if not value.reference_contract and value.live_result and isinstance(value.live_result.normalized_request, dict):
+                value.reference_contract = value.live_result.normalized_request.get("reference") if isinstance(value.live_result.normalized_request.get("reference"), dict) else {}
+        if not value.scenario:
+            input_data = value.input if isinstance(value.input, dict) else {}
+            request_data = value.normalized_request if isinstance(value.normalized_request, dict) else {}
+            value.scenario = str(input_data.get("scenario") or request_data.get("scenario") or "")
+        if not value.conversation_summary:
+            multi_turn_input = value.multi_turn_input if isinstance(value.multi_turn_input, dict) else {}
+            value.conversation_summary = multi_turn_input.get("conversation_summary") if isinstance(multi_turn_input.get("conversation_summary"), dict) else value.extracted_output.get("conversation_summary") if isinstance(value.extracted_output, dict) and isinstance(value.extracted_output.get("conversation_summary"), dict) else {}
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    live_result = normalize_live_execution_result(data.get("live_result"))
+    input_data = data.get("input") if isinstance(data.get("input"), dict) else {}
+    request_data = data.get("normalized_request") if isinstance(data.get("normalized_request"), dict) else {}
+    project_fields = data.get("project_fields") if isinstance(data.get("project_fields"), dict) else {}
+    reference_contract = data.get("reference_contract") if isinstance(data.get("reference_contract"), dict) else input_data.get("reference") if isinstance(input_data.get("reference"), dict) else request_data.get("reference") if isinstance(request_data.get("reference"), dict) else {}
+    if not reference_contract and live_result and isinstance(live_result.normalized_request, dict):
+        reference_contract = live_result.normalized_request.get("reference") if isinstance(live_result.normalized_request.get("reference"), dict) else {}
+    application_boundary = data.get("application_boundary") if isinstance(data.get("application_boundary"), dict) else live_result.application_boundary if live_result else {}
+    multi_turn_input = data.get("multi_turn_input") if isinstance(data.get("multi_turn_input"), dict) else None
+    conversation_summary = data.get("conversation_summary") if isinstance(data.get("conversation_summary"), dict) else multi_turn_input.get("conversation_summary") if isinstance(multi_turn_input, dict) and isinstance(multi_turn_input.get("conversation_summary"), dict) else data.get("extracted_output", {}).get("conversation_summary") if isinstance(data.get("extracted_output"), dict) and isinstance(data.get("extracted_output", {}).get("conversation_summary"), dict) else {}
+    return RunTrace(
+        trace_id=str(data.get("trace_id") or ""),
+        project_id=str(data.get("project_id") or ""),
+        case_id=str(data.get("case_id") or (live_result.case_id if live_result else "") or input_data.get("case_id") or ""),
+        input=input_data,
+        normalized_request=request_data,
+        raw_response=data.get("raw_response"),
+        extracted_output=data.get("extracted_output") if isinstance(data.get("extracted_output"), dict) else {},
+        live_result=live_result,
+        execution_mode=str(data.get("execution_mode") or request_data.get("execution_mode") or ""),
+        output_source=str(data.get("output_source") or (live_result.output_source if live_result else "") or ""),
+        scenario=str(data.get("scenario") or input_data.get("scenario") or request_data.get("scenario") or ""),
+        reference_contract=dict(reference_contract or {}),
+        application_boundary=dict(application_boundary or {}),
+        project_fields=project_fields,
+        runtime_logs=list(data.get("runtime_logs") or []),
+        evidence_refs=normalize_evidence_refs(data.get("evidence_refs")),
+        execution_trace=normalize_execution_trace_events(data.get("execution_trace")),
+        status=_normalize_trace_status(data.get("status")),
+        error=data.get("error"),
+        created_at=data.get("created_at") or RunTrace(trace_id="", project_id="", input={}, normalized_request={}).created_at,
+        state_history=list(data.get("state_history") or []),
+        gate_decisions=list(data.get("gate_decisions") or []),
+        transition_decisions=list(data.get("transition_decisions") or []),
+        stop_reason=str(data.get("stop_reason") or ""),
+        interaction_mode=_normalize_interaction_mode(data.get("interaction_mode")),
+        session_id=str(data.get("session_id") or ""),
+        turn_index=int(data.get("turn_index") or 0),
+        conversation_transcript=list(data.get("conversation_transcript") or []),
+        conversation_summary=dict(conversation_summary or {}),
+        multi_turn_input=multi_turn_input,
+        fallbacks=normalize_fallback_decisions(data.get("fallbacks")),
+        ready=list(data.get("ready") or []),
+    )
+
+
+def normalize_multi_turn_trace_summary(value: Any) -> Optional[MultiTurnTraceSummary]:
+    if value is None or isinstance(value, MultiTurnTraceSummary):
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    turn_traces = [item for item in (normalize_run_trace(item) for item in _as_list(data.get("turn_traces"))) if item is not None]
+    return MultiTurnTraceSummary(
+        trace_id=str(data.get("trace_id") or ""),
+        project_id=str(data.get("project_id") or ""),
+        session_id=str(data.get("session_id") or ""),
+        input=data.get("input") if isinstance(data.get("input"), dict) else {},
+        turn_traces=turn_traces,
+        conversation_transcript=_as_list(data.get("conversation_transcript")),
+        stop_reason=str(data.get("stop_reason") or ""),
+        final_output=data.get("final_output") if isinstance(data.get("final_output"), dict) else {},
+    )
+
+
+def normalize_judge_result(value: Any) -> Optional[JudgeResult]:
+    if value is None:
+        return None
+    if isinstance(value, JudgeResult):
+        data = asdict(value)
+    else:
+        data = _as_dict(value)
+    if not data:
+        return None
+    data = dict(data)
+    for legacy_key in ("primary_assessment", "condition_assessments", "intent_decomposition", "contrast_assessments", "score_details"):
+        data.pop(legacy_key, None)
+    data["verdict"] = _normalize_verdict(data.get("verdict"))
+    overall = data.get("overall_fulfillment")
+    if isinstance(overall, dict) and "status" in overall:
+        overall = dict(overall)
+        overall["status"] = _normalize_fulfillment_status(overall.get("status"))
+        data["overall_fulfillment"] = overall
+    data["business_expectations"] = [item for item in (normalize_business_expectation(item) for item in _as_list(data.get("business_expectations"))) if item is not None]
+    data["fulfillment_assessments"] = [item for item in (normalize_fulfillment_assessment(item) for item in _as_list(data.get("fulfillment_assessments"))) if item is not None]
+    data["wrong"] = [normalize_gap_item(item, "wrong") for item in _as_list(data.get("wrong"))]
+    data["missing"] = [normalize_gap_item(item, "missing") for item in _as_list(data.get("missing"))]
+    data["extra"] = [normalize_gap_item(item, "extra") for item in _as_list(data.get("extra"))]
+    data["fallbacks"] = normalize_fallback_decisions(data.get("fallbacks"))
+    if not data.get("summary"):
+        data["summary"] = _as_dict(data.get("summary"))
+    return JudgeResult(**data)
+
+
+def normalize_attribute_result(value: Any) -> Optional[AttributeResult]:
+    if value is None:
+        return None
+    if isinstance(value, AttributeResult):
+        value.expectation_attributions = [item for item in (normalize_expectation_attribution(item) for item in _as_list(value.expectation_attributions)) if item is not None]
+        value.chain_nodes = [item for item in (normalize_chain_node(item) for item in _as_list(value.chain_nodes)) if item is not None]
+        value.probe_results = normalize_probe_results(value.probe_results)
+        value.fallbacks = normalize_fallback_decisions(value.fallbacks)
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    data = dict(data)
+    data["expectation_attributions"] = [item for item in (normalize_expectation_attribution(item) for item in _as_list(data.get("expectation_attributions"))) if item is not None]
+    data["chain_nodes"] = [item for item in (normalize_chain_node(item) for item in _as_list(data.get("chain_nodes"))) if item is not None]
+    data["probe_results"] = normalize_probe_results(data.get("probe_results"))
+    data["fallbacks"] = normalize_fallback_decisions(data.get("fallbacks"))
+    if not data.get("summary"):
+        data["summary"] = _as_dict(data.get("summary"))
+    return AttributeResult(**data)
+
+
+def normalize_cluster_summary(value: Any) -> Optional[ClusterSummary]:
+    if value is None or isinstance(value, ClusterSummary):
+        return value
+    data = _as_dict(value)
+    return ClusterSummary(**data) if data else None
+
+
+def normalize_check_report(value: Any) -> Optional[CheckReport]:
+    if value is None:
+        return None
+    if isinstance(value, CheckReport):
+        data = asdict(value)
+    else:
+        data = _as_dict(value)
+    if not data:
+        return None
+    data = dict(data)
+    data["fallbacks"] = normalize_fallback_decisions(data.get("fallbacks"))
+    return CheckReport(**data)
+
+
+def normalize_frontend_view(value: Any) -> Optional[FrontendViewModel]:
+    if value is None:
+        return None
+    if isinstance(value, FrontendViewModel):
+        value.table_row = normalize_trace_table_row(value.table_row)
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    data = dict(data)
+    data["table_row"] = normalize_trace_table_row(data.get("table_row"))
+    return FrontendViewModel(**data)
+
+
+def normalize_trace_execution_context(value: Any) -> Optional[TraceExecutionContext]:
+    if value is None or isinstance(value, TraceExecutionContext):
+        return value
+    data = _as_dict(value)
+    if not data:
+        return None
+    return TraceExecutionContext(
+        project_id=str(data.get("project_id") or ""),
+        input_data=data.get("input_data") if isinstance(data.get("input_data"), dict) else {},
+        expected_intent=data.get("expected_intent"),
+        trace=normalize_run_trace(data.get("trace")),
+        judge_result=normalize_judge_result(data.get("judge_result")),
+        attribute_result=normalize_attribute_result(data.get("attribute_result")),
+        cluster_summary=normalize_cluster_summary(data.get("cluster_summary")),
+        check_report=normalize_check_report(data.get("check_report")),
+        state_history=list(data.get("state_history") or []),
+        executor_outputs=data.get("executor_outputs") if isinstance(data.get("executor_outputs"), dict) else {},
+        stop_reason=str(data.get("stop_reason") or ""),
+        metadata=data.get("metadata") if isinstance(data.get("metadata"), dict) else {},
+    )
+
+
+def normalize_attribute_results(values: Iterable[Any]) -> List[AttributeResult]:
+    return [item for item in (normalize_attribute_result(value) for value in values or []) if item is not None]

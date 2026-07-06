@@ -1,0 +1,63 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::no_issue::not_evaluable",
+      "mechanism": "no_issue::not_evaluable",
+      "causal_category": "no_issue",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "轻症多次赔付能力确认",
+        "每次赔付金额比例说明",
+        "赔付次数上限说明",
+        "间隔期要求提示",
+        "建议查阅保险合同"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "bbaa8756-368c-4337-8580-3b7b4af93d23"
+      ],
+      "representative_traces": [
+        "bbaa8756-368c-4337-8580-3b7b4af93d23"
+      ],
+      "common_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+      "shared_failure_pattern": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+      "representative_diffs": [
+        {
+          "case_id": "bbaa8756-368c-4337-8580-3b7b4af93d23",
+          "node": "fulfillment_assessment",
+          "evidence": [
+            {
+              "relevant_text": "一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。",
+              "source": "actual_answer"
+            },
+            {
+              "relevant_text": "轻症可以多次赔付，具体次数以合同约定为准（常见为3-5次）...每次轻症赔付的金额一般为基本保额的一定比例，常见比例为20%-30%...两次轻症确诊之间通常有间隔期",
+              "source": "golden_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "无需修改业务实现；若后续出现 not_evaluable 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+      ],
+      "verification_cases": [
+        "bbaa8756-368c-4337-8580-3b7b4af93d23"
+      ],
+      "next_actions": [
+        "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+      ]
+    }
+  ],
+  "common_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+  "impact": "",
+  "priority": "normal"
+}

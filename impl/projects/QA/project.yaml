@@ -2,7 +2,10 @@ project_id: QA
 name: QA 评估项目
 description: 评估已产出的问答输入、输出、参考答案或上下文证据，支持样本级 scenario。
 adapter: adapter.py
+source_project: ../../../projects/QA
 capabilities: ["live_run", "judge", "attribute", "cluster", "check", "scenario"]
+common:
+  ready: [output, reference]
 api:
   base_url: uploaded_output_evaluation
   endpoint: uploaded_output_evaluation
@@ -37,7 +40,7 @@ frontend_extensions:
       extractor: Adapter.extract_output normalizes provided answer/output and context evidence
       normalized_output: answer text with optional context and quality signals
     reference_handling:
-      source_priority: [input_reference, golden_answer, judge_generated, missing]
+      source_priority: [input_reference, actual_answer, judge_generated, missing]
       alignment: reference is normalized to the same QA answer/key-point shape as evaluated output
     judge_boundary:
       document: judge_boundary.md
@@ -58,8 +61,8 @@ frontend_extensions:
     require_scenario: true
     scenario_requirements:
       qa_gold_answer:
-        reference_field: golden_answer
+        reference_field: actual_answer
       qa_context_faithfulness:
         input_field: contexts
       qa_weak_quality:
-        project_field: estimated_quality_only
+        data_quality_flag: estimated_quality_only

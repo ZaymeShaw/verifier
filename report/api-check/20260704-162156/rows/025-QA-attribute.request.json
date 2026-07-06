@@ -1,0 +1,900 @@
+{
+  "project": "QA",
+  "trace": {
+    "trace_id": "bf09ba09-4650-45dc-9ae9-c968c0d0593d",
+    "project_id": "QA",
+    "case_id": "mock-agent-QA-87e78ff7",
+    "live_result": {
+      "project_id": "QA",
+      "case_id": "mock-agent-QA-87e78ff7",
+      "session_id": "",
+      "raw_input": {
+        "input": {
+          "query": "我买的那个重疾险，如果得了合同里写的轻症，是不是能赔多次？每次赔多少？"
+        },
+        "metadata": {
+          "session_id": "sess_abc123",
+          "trace_id": "trace_xyz789",
+          "user_id": "user_12345"
+        },
+        "scenario": "qa_gold_answer"
+      },
+      "normalized_request": {
+        "input": {
+          "question": "我买的那个重疾险，如果得了合同里写的轻症，是不是能赔多次？每次赔多少？"
+        },
+        "reference": {
+          "golden_answer": "通常情况下，您购买的重疾险合同中关于轻症责任的赔付规则如下：\n1. 轻症可以多次赔付，具体次数以合同约定为准（常见为3-5次）。每次确诊的轻症需满足合同定义的疾病标准，且两次轻症确诊之间通常有间隔期（如90天或180天）。\n2. 每次轻症赔付的金额一般为基本保额的一定比例，常见比例为20%-30%。例如保额50万，每次轻症可赔付10万-15万。部分产品轻症赔付后重疾保额不变，部分产品会相应减少。\n3. 需要注意，轻症责任可能设有分组限制，即同一组别的轻症只能赔付一次；另外，轻症赔付后合同继续有效，但累计赔付上限可能有限制。\n以上为一般规则，具体赔付条件、次数、金额比例请以您持有的保险合同条款为准。建议您查阅合同中的“保险责任”及“轻症疾病保险金”章节，或直接咨询保险公司客服获取准确信息。"
+        },
+        "metadata": {
+          "live_request_mapped": true,
+          "project_id": "QA",
+          "ready": [
+            "output",
+            "reference"
+          ],
+          "schema_ok": true,
+          "source": "mock_agent_llm"
+        },
+        "scenario": "qa_gold_answer",
+        "output": {
+          "actual_answer": "轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。"
+        }
+      },
+      "call_status": "succeeded",
+      "extracted_output": {
+        "actual_answer": "轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。"
+      },
+      "output_source": "provided_output",
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T08:21:56.331543+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T08:21:56.331551+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:21:56.331938+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:21:56.331953+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:25:37.188113+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:25:37.188204+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T08:25:37.188244+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:27:25.692544+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:29:12.557269+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T08:29:12.557337+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:29:12.571720+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence or blocked reason available"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "qa_gold_answer",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "created_at": "2026-07-04T08:21:56.331920+00:00"
+  },
+  "judge": {
+    "trace_id": "bf09ba09-4650-45dc-9ae9-c968c0d0593d",
+    "project_id": "QA",
+    "verdict": "incorrect",
+    "business_expectations": [
+      {
+        "expectation_id": "明确回答轻症是否可以多次赔付",
+        "downstream_consumer": "用户",
+        "user_intent": "确认轻症多次赔付的可行性",
+        "expected_outcome": "明确给出“可以多次赔付”的判断",
+        "acceptance_criteria": [
+          "文本中包含“轻症可以多次赔付”或等价肯定的表述"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "提供每次轻症赔付的典型金额比例",
+        "downstream_consumer": "用户",
+        "user_intent": "获取每次赔付的具体额度",
+        "expected_outcome": "回复中包含具体的比例数值，如“20%至30%”",
+        "acceptance_criteria": [
+          "文本中明确出现赔付比例，且比例在常见范围（如20%-30%）内"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "强调最终以个人保险合同为准",
+        "downstream_consumer": "用户",
+        "user_intent": "获得准确且无风险的参考信息",
+        "expected_outcome": "回复末尾或中间有明确的合同依据提示",
+        "acceptance_criteria": [
+          "文本中包含“以保险合同为准”、“查阅合同条款”或等效表述"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "提及可能存在赔付次数上限",
+        "downstream_consumer": "用户",
+        "user_intent": "对“多次”有更具体的认知",
+        "expected_outcome": "提及“次数上限”并给出例举",
+        "acceptance_criteria": [
+          "文本中出现“次数上限”或具体次数（如3次/5次）"
+        ],
+        "priority": "medium"
+      },
+      {
+        "expectation_id": "说明可能存在间隔期要求",
+        "downstream_consumer": "用户",
+        "user_intent": "全面理解赔付规则",
+        "expected_outcome": "回复中出现“间隔期”字样",
+        "acceptance_criteria": [
+          "文本中包含“间隔期”一词"
+        ],
+        "priority": "medium"
+      },
+      {
+        "expectation_id": "补充其他注意事项（分组限制、保额影响、累计上限等）",
+        "downstream_consumer": "用户",
+        "user_intent": "规避未来可能的理赔误解",
+        "expected_outcome": "回复中包含至少一项进阶注意事项",
+        "acceptance_criteria": [
+          "文本中出现“分组”、“保额不变”、“减少”、“累计上限”等任意相关关键词"
+        ],
+        "priority": "low"
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "明确回答轻症是否可以多次赔付",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "回答中应出现“轻症可以多次赔付”的肯定表述"
+        ],
+        "actual_evidence": [
+          "actual_answer包含“一般情况下，轻症可以赔付多次”"
+        ],
+        "downstream_impact": "用户获得确定性答复，核心疑虑消除",
+        "blocking": true
+      },
+      {
+        "expectation_id": "提供每次轻症赔付的典型金额比例",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "出现具体的赔付比例，如20%-30%"
+        ],
+        "actual_evidence": [
+          "actual_answer包含“每次赔付金额通常为基本保险金额的20%至30%”"
+        ],
+        "downstream_impact": "用户对赔付数额有了量化的预期",
+        "blocking": true
+      },
+      {
+        "expectation_id": "强调最终以个人保险合同为准",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "出现合同查阅提示"
+        ],
+        "actual_evidence": [
+          "actual_answer包含“轻症赔付次数和金额取决于具体保险合同”以及“建议查阅您的保险合同条款获取准确信息”"
+        ],
+        "downstream_impact": "降低用户将通用回答视为承诺的风险",
+        "blocking": true
+      },
+      {
+        "expectation_id": "提及可能存在赔付次数上限",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "提及次数上限或具体数字"
+        ],
+        "actual_evidence": [
+          "actual_answer中有“且可能有次数上限（如3次或5次）”"
+        ],
+        "downstream_impact": "用户对“多次”有了更清晰的范围认知",
+        "blocking": false
+      },
+      {
+        "expectation_id": "说明可能存在间隔期要求",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "提及间隔期"
+        ],
+        "actual_evidence": [
+          "actual_answer中有“和间隔期要求”"
+        ],
+        "downstream_impact": "用户知晓赔付可能受时间限制",
+        "blocking": false
+      },
+      {
+        "expectation_id": "补充其他注意事项（分组限制、保额影响、累计上限等）",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "出现分组、保额变化、累计上限等关键词"
+        ],
+        "actual_evidence": [
+          "actual_answer未涉及分组限制、保额影响或累计上限"
+        ],
+        "downstream_impact": "用户可能不了解某些潜在限制（如分组只赔一次、保额可能被削减），但对核心问题影响较小",
+        "blocking": false
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "not_fulfilled",
+      "assessment_count": 6
+    },
+    "expected": {
+      "golden_answer": "通常情况下，您购买的重疾险合同中关于轻症责任的赔付规则如下：\n1. 轻症可以多次赔付，具体次数以合同约定为准（常见为3-5次）。每次确诊的轻症需满足合同定义的疾病标准，且两次轻症确诊之间通常有间隔期（如90天或180天）。\n2. 每次轻症赔付的金额一般为基本保额的一定比例，常见比例为20%-30%。例如保额50万，每次轻症可赔付10万-15万。部分产品轻症赔付后重疾保额不变，部分产品会相应减少。\n3. 需要注意，轻症责任可能设有分组限制，即同一组别的轻症只能赔付一次；另外，轻症赔付后合同继续有效，但累计赔付上限可能有限制。\n以上为一般规则，具体赔付条件、次数、金额比例请以您持有的保险合同条款为准。建议您查阅合同中的“保险责任”及“轻症疾病保险金”章节，或直接咨询保险公司客服获取准确信息。"
+    },
+    "actual": {
+      "actual_answer": "轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。"
+    },
+    "reasoning_summary": "用户的核心意图是确认轻症能否多次赔及每次赔多少。actual_answer直接回答了这两个问题：明确表示可以多次赔付，给出了20%-30%的赔付比例，同时强调了以合同为准的建议，完全满足了三项阻塞性业务期望。此外，它还主动提到了次数上限和间隔期，增强了回答的实用性。尽管golden_answer中更详细的注意事项（如分组限制、保额变动等）未被覆盖，但这些内容并非用户直接询问的核心，其缺失未对回答的基本有效性构成实质影响。因此，整体评估为业务期望达成。",
+    "judge_basis": "将actual_answer与golden_answer进行比对：golden_answer提供了完整详细的说明，actual_answer在核心问点上给出了准确且一致的答案，虽缺少部分进阶细节，但已满足用户的基本信息需求并强调了合同依据。",
+    "judge_method": "场景化问答对比评估：基于golden_answer作为参考标准，检查actual_answer对用户核心问点的覆盖度、准确性与安全提示，同时对非核心细节的缺失记录但降低其对整体结论的影响权重。",
+    "verdict_derivation": {
+      "primary_boundary": "qa_gold_answer",
+      "assessment_summary": "用户的核心意图是确认轻症能否多次赔及每次赔多少。actual_answer直接回答了这两个问题：明确表示可以多次赔付，给出了20%-30%的赔付比例，同时强调了以合同为准的建议，完全满足了三项阻塞性业务期望。此外，它还主动提到了次数上限和间隔期，增强了回答的实用性。尽管golden_answer中更详细的注意事项（如分组限制、保额变动等）未被覆盖，但这些内容并非用户直接询问的核心，其缺失未对回答的基本有效性构成实质影响。因此，整体评估为业务期望达成。",
+      "why_verdict": "judge self-check failed; specific inconsistencies: [{\"kind\": \"overall_status_mismatch\", \"where\": \"overall_fulfillment.status\", \"value\": \"fulfilled\", \"derived\": \"not_fulfilled\"}]",
+      "taxonomy_error_types": [
+        "needs_human_review"
+      ],
+      "score_dimensions": [
+        {
+          "dimension": "correctness",
+          "evidence": [
+            {
+              "type": "golden_answer_comparison",
+              "matched_core": [
+                "多次赔付",
+                "赔付比例20%-30%",
+                "以合同为准"
+              ],
+              "partially_matched": [
+                "次数上限",
+                "间隔期"
+              ],
+              "unmatched": [
+                "分组限制",
+                "保额影响",
+                "累计上限"
+              ]
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "completeness",
+          "evidence": [
+            {
+              "type": "golden_answer_comparison",
+              "matched_core": [
+                "多次赔付",
+                "赔付比例20%-30%",
+                "以合同为准"
+              ],
+              "partially_matched": [
+                "次数上限",
+                "间隔期"
+              ],
+              "unmatched": [
+                "分组限制",
+                "保额影响",
+                "累计上限"
+              ]
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "key_point_coverage",
+          "evidence": [
+            {
+              "type": "golden_answer_comparison",
+              "matched_core": [
+                "多次赔付",
+                "赔付比例20%-30%",
+                "以合同为准"
+              ],
+              "partially_matched": [
+                "次数上限",
+                "间隔期"
+              ],
+              "unmatched": [
+                "分组限制",
+                "保额影响",
+                "累计上限"
+              ]
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "faithfulness",
+          "evidence": [
+            {
+              "type": "golden_answer_comparison",
+              "matched_core": [
+                "多次赔付",
+                "赔付比例20%-30%",
+                "以合同为准"
+              ],
+              "partially_matched": [
+                "次数上限",
+                "间隔期"
+              ],
+              "unmatched": [
+                "分组限制",
+                "保额影响",
+                "累计上限"
+              ]
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "relevance",
+          "evidence": [
+            {
+              "type": "golden_answer_comparison",
+              "matched_core": [
+                "多次赔付",
+                "赔付比例20%-30%",
+                "以合同为准"
+              ],
+              "partially_matched": [
+                "次数上限",
+                "间隔期"
+              ],
+              "unmatched": [
+                "分组限制",
+                "保额影响",
+                "累计上限"
+              ]
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "usefulness",
+          "evidence": [
+            {
+              "type": "golden_answer_comparison",
+              "matched_core": [
+                "多次赔付",
+                "赔付比例20%-30%",
+                "以合同为准"
+              ],
+              "partially_matched": [
+                "次数上限",
+                "间隔期"
+              ],
+              "unmatched": [
+                "分组限制",
+                "保额影响",
+                "累计上限"
+              ]
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "coherence",
+          "evidence": [
+            {
+              "type": "golden_answer_comparison",
+              "matched_core": [
+                "多次赔付",
+                "赔付比例20%-30%",
+                "以合同为准"
+              ],
+              "partially_matched": [
+                "次数上限",
+                "间隔期"
+              ],
+              "unmatched": [
+                "分组限制",
+                "保额影响",
+                "累计上限"
+              ]
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "risk_control",
+          "evidence": [
+            {
+              "type": "golden_answer_comparison",
+              "matched_core": [
+                "多次赔付",
+                "赔付比例20%-30%",
+                "以合同为准"
+              ],
+              "partially_matched": [
+                "次数上限",
+                "间隔期"
+              ],
+              "unmatched": [
+                "分组限制",
+                "保额影响",
+                "累计上限"
+              ]
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "clarity",
+          "evidence": [
+            {
+              "type": "golden_answer_comparison",
+              "matched_core": [
+                "多次赔付",
+                "赔付比例20%-30%",
+                "以合同为准"
+              ],
+              "partially_matched": [
+                "次数上限",
+                "间隔期"
+              ],
+              "unmatched": [
+                "分组限制",
+                "保额影响",
+                "累计上限"
+              ]
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        }
+      ],
+      "error_type": "needs_human_review"
+    },
+    "missing": [
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "轻症分组限制（同一组别只能赔一次）",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "轻症赔付后重疾保额可能不变或减少的说明",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "累计赔付上限的限制",
+        "incomplete": false
+      }
+    ],
+    "evidence": [
+      {
+        "type": "golden_answer_comparison",
+        "matched_core": [
+          "多次赔付",
+          "赔付比例20%-30%",
+          "以合同为准"
+        ],
+        "partially_matched": [
+          "次数上限",
+          "间隔期"
+        ],
+        "unmatched": [
+          "分组限制",
+          "保额影响",
+          "累计上限"
+        ]
+      },
+      "scenario=qa_gold_answer",
+      "question_present=True",
+      "actual_answer_present=True",
+      "golden_answer_present=True"
+    ],
+    "boundary_decision": {
+      "within_evaluable_scope": true,
+      "reasoning": "本次评估的所有所需信息（用户问题、actual_answer、golden_answer）均完整提供，无不可控因素干扰，可以直接进行对比判定。"
+    },
+    "evaluation_boundary": {
+      "primary_boundary_id": "qa_gold_answer",
+      "primary_boundary_name": "有标准答案的质量评估",
+      "judge_question": "actual_answer是否准确、完整地回应用户问题，并与golden_answer中的关键信息一致？",
+      "verdict_basis": "核心信息覆盖度、准确性、合同依据提示，不强制要求包含所有金标中的细节",
+      "boundary_sources": "project_qa_config + critical_intent_dimensions",
+      "conflict_policy": "当golden_answer与actual_answer存在细节差异但核心一致时，以核心满足度为优先，将细节缺失记录为non-blocking期望未满足"
+    },
+    "consumer_contract": {
+      "consumer": "QA评估系统",
+      "contract": "基于golden_answer作为参考标准，评估actual_answer对用户问题的实际满足程度，重点关注关键信息的覆盖、准确性与安全性。",
+      "reference_contract": {
+        "golden_answer": "通常情况下，您购买的重疾险合同中关于轻症责任的赔付规则如下：\n1. 轻症可以多次赔付，具体次数以合同约定为准（常见为3-5次）。每次确诊的轻症需满足合同定义的疾病标准，且两次轻症确诊之间通常有间隔期（如90天或180天）。\n2. 每次轻症赔付的金额一般为基本保额的一定比例，常见比例为20%-30%。例如保额50万，每次轻症可赔付10万-15万。部分产品轻症赔付后重疾保额不变，部分产品会相应减少。\n3. 需要注意，轻症责任可能设有分组限制，即同一组别的轻症只能赔付一次；另外，轻症赔付后合同继续有效，但累计赔付上限可能有限制。\n以上为一般规则，具体赔付条件、次数、金额比例请以您持有的保险合同条款为准。建议您查阅合同中的“保险责任”及“轻症疾病保险金”章节，或直接咨询保险公司客服获取准确信息。"
+      }
+    },
+    "intent_model": {
+      "raw_user_request": "我买的那个重疾险，如果得了合同里写的轻症，是不是能赔多次？每次赔多少？",
+      "explicit_intents": [
+        "确认轻症是否可以多次赔付",
+        "了解每次轻症赔付的具体金额或比例"
+      ],
+      "implicit_business_intents": [
+        "获得准确且安全的回答，避免误导",
+        "获取一般性规则，同时明确最终以个人合同为准",
+        "了解可能存在的限制条件（如次数上限、间隔期等）"
+      ],
+      "constraints": {
+        "禁止给出绝对承诺": "需强调以实际合同条款为准",
+        "需覆盖用户两个核心问点": "多次赔付可能性与每次赔付金额",
+        "答案需平衡通用性与准确性": "给出通用范围同时建议查阅合同"
+      },
+      "success_definition": "所提供回答能够清晰、准确地回应用户的两个核心问题（多次赔付？每次赔多少？），并辅以必要的注意事项与合同依据提示，无矛盾、不误导。",
+      "blocking_requirements": [
+        "明确回答轻症可以多次赔付",
+        "给出每次赔付金额的典型比例范围",
+        "提示用户最终以个人保险合同为准"
+      ],
+      "nice_to_have_requirements": [
+        "提及常见的赔付次数上限",
+        "提及间隔期要求",
+        "补充分组限制、保额变动等进阶注意事项"
+      ],
+      "intent_evidence": [
+        "用户问句直接包含两个问点",
+        "保险咨询场景需要审慎，避免用户将一般性回答当作合同承诺"
+      ]
+    },
+    "reconstructed_intent": "用户希望了解其所购重疾险中轻症责任的赔付规则，核心意图是确认轻症能否多次赔付以及每次赔付的具体金额，同时隐含期望获得安全、以合同为准的参考信息。",
+    "semantic_equivalence_checks": [
+      {
+        "expected_fragment": "轻症可以多次赔付",
+        "actual_fragment": "轻症可以赔付多次",
+        "equivalent": true,
+        "basis": "语义一致，仅语序略有不同"
+      },
+      {
+        "expected_fragment": "每次轻症赔付的金额一般为基本保额的一定比例，常见比例为20%-30%",
+        "actual_fragment": "每次赔付金额通常为基本保险金额的20%至30%",
+        "equivalent": true,
+        "basis": "比例范围完全一致，表述等价"
+      },
+      {
+        "expected_fragment": "轻症责任可能设有分组限制",
+        "equivalent": false,
+        "basis": "actual_answer未提及分组限制，信息缺失"
+      }
+    ],
+    "reference_generation_basis": {
+      "source": "golden_answer字段，为领域专家预设的参考答案",
+      "alignment_to_live_schema": "完全对齐，使用golden_answer作为评估基准"
+    },
+    "scenario": "qa_gold_answer",
+    "needs_human_review": true,
+    "quality_flags": [
+      "self_check_failed"
+    ],
+    "summary": {
+      "reason": "[self_check_failed] uncertain · judge self-check failed; specific inconsistencies: [{\"kind\": \"overall_status_mismatch\", \"where\": \"overall_fulfillment.status\", \"value\": \"fulfilled\", \"derived\": \"not_fulfilled\"}]",
+      "primary_failure_dimensions": [
+        {
+          "expectation_id": "补充其他注意事项（分组限制、保额影响、累计上限等）",
+          "status": "not_fulfilled",
+          "blocking": false,
+          "downstream_impact": "用户可能不了解某些潜在限制（如分组只赔一次、保额可能被削减），但对核心问题影响较小",
+          "within_evaluable_scope": true,
+          "evidence": "actual_answer未涉及分组限制、保额影响或累计上限 | 出现分组、保额变化、累计上限等关键词"
+        }
+      ],
+      "reason_source": "degradation_marker",
+      "fulfillment_status": "fulfilled",
+      "assessment_count": 6,
+      "blocking_count": 3,
+      "is_formal_attribution": false
+    }
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "project_id": "QA",
+  "rows": [
+    {
+      "id": "mock-agent-QA-caa80edc",
+      "input": "你好，我想问一下，如果我要退货的话，流程是怎么样的？",
+      "scenario": "qa_gold_answer",
+      "output_summary": "{\"actual_answer\": \"\"}",
+      "reference_summary": "{\"actual_answer\": \"应提供退货流程的详细说明\"}",
+      "status": "not_fulfilled",
+      "execution_mode": "",
+      "output_source": "live_service",
+      "verdict": "uncertain",
+      "fulfillment_status": "not_fulfilled",
+      "judge_summary": {
+        "status": "not_fulfilled",
+        "fulfillment_status": "not_fulfilled",
+        "verdict": "uncertain",
+        "reason": "not_fulfilled · blocking=[回答针对退货流程问题,流程描述准确且一致] · 用户无法获得所需信息，可能需要重新提问",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 3,
+        "blocking_count": 2,
+        "primary_failure_dimensions": [
+          {
+            "blocking": true,
+            "downstream_impact": "用户无法获得所需信息，可能需要重新提问",
+            "evidence": "",
+            "expectation_id": "回答针对退货流程问题",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "若存在回答，准确性未知；但当前缺失直接导致无法满足",
+            "evidence": "",
+            "expectation_id": "流程描述准确且一致",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": false,
+            "downstream_impact": "用户无法理解或执行退货",
+            "evidence": "",
+            "expectation_id": "回答清晰有用",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          }
+        ]
+      },
+      "attribution_summary": {
+        "attribution_count": 0,
+        "causal_category": "needs_human_review",
+        "is_complete": false,
+        "is_formal_attribution": false,
+        "probe_count": 0,
+        "summary_text": "incomplete_retry_limit"
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 2,
+        "protocol_gap_count": 1,
+        "consistency_gap_count": 1,
+        "recommended_fix_count": 2,
+        "issues": [
+          "QA qa_gold_answer requires reference.golden_answer.",
+          "Fallback decisions require human review before treating the chain as fully verified."
+        ]
+      },
+      "fallback_summary": {
+        "count": 1,
+        "needs_human_review": false,
+        "by_stage": {
+          "unknown": 1
+        },
+        "reasons": [
+          "incomplete_retry_limit"
+        ]
+      },
+      "needs_human_review": true,
+      "check_passed": false,
+      "issue_count": 4,
+      "fallback_count": 1,
+      "causal_category": "needs_human_review",
+      "divergence_stage": "state_machine",
+      "root_cause_summary": "incomplete_retry_limit",
+      "created_at": "2026-07-02T01:09:35.123829+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "23d84cb9-9d89-42b4-ad10-a93e484fe852"
+    }
+  ],
+  "total": 1,
+  "summary": {
+    "fulfilled_count": 0,
+    "not_fulfilled_count": 1,
+    "pending_count": 0,
+    "correct_count": 0,
+    "incorrect_count": 0,
+    "uncertain_count": 1,
+    "human_review_count": 1,
+    "check_failed_count": 1,
+    "issue_count": 4,
+    "fallback_count": 1,
+    "rows_with_fallback_count": 1,
+    "by_scenario": {
+      "qa_gold_answer": 1
+    }
+  }
+}

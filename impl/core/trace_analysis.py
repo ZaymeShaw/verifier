@@ -6,8 +6,10 @@
 from __future__ import annotations
 from typing import Optional, Dict, List, Any
 
+from .schema import ExecutionTraceEvent
 
-def analyze_execution_trace(trace: List[Dict]) -> Dict[str, Any]:
+
+def analyze_execution_trace(trace: List[ExecutionTraceEvent]) -> Dict[str, Any]:
     """解析 execution_trace，直接返回关键分析结果
 
     这是用户要求的"直接引用系统原函数"的核心 - 不让 agent 读文件推测，
@@ -50,15 +52,16 @@ def analyze_execution_trace(trace: List[Dict]) -> Dict[str, Any]:
     runtime_values = {}
 
     for step in trace:
-        node_name = step.get("stage") or step.get("node") or "unknown"
-        status = step.get("status", "unknown")
+        step_data = step.__dict__ if isinstance(step, ExecutionTraceEvent) else step
+        node_name = step_data.get("stage") or step_data.get("node") or "unknown"
+        status = step_data.get("status", "unknown")
 
         chain_entry = {"node": node_name, "status": status}
         divergence_chain.append(chain_entry)
 
         # 收集运行时实际值
-        if step.get("output"):
-            output = step["output"]
+        if step_data.get("output"):
+            output = step_data["output"]
             if isinstance(output, dict):
                 runtime_values.update({
                     k: v for k, v in output.items()
@@ -69,11 +72,11 @@ def analyze_execution_trace(trace: List[Dict]) -> Dict[str, Any]:
         if not first_failed and status in ["failed", "diverged", "error"]:
             first_failed = {
                 "name": node_name,
-                "stage": step.get("stage", node_name),
+                "stage": step_data.get("stage", node_name),
                 "status": status,
-                "expected": step.get("expected"),
-                "actual": step.get("actual"),
-                "evidence": step.get("evidence", "")
+                "expected": step_data.get("expected"),
+                "actual": step_data.get("actual"),
+                "evidence": step_data.get("evidence", "")
             }
 
     # 基于分歧点生成建议的 probe 方向

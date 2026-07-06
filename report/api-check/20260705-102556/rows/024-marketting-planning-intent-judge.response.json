@@ -1,0 +1,223 @@
+{
+  "trace_id": "2e110c89-9453-4662-8620-c497b5eeeacd",
+  "project_id": "marketting-planning-intent",
+  "verdict": "incorrect",
+  "score": 0.0,
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签正确识别客户分析需求",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "置信度不低于阈值且反映区分度",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "回退策略在不可识别时生效",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "输出包含必要的实体或槽位信息",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签正确识别客户分析需求",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "置信度不低于阈值且反映区分度",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "回退策略在不可识别时生效",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "输出包含必要的实体或槽位信息",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "not_fulfilled",
+      "downstream_impact": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=None，confidence=None，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "blocking_expectations": [
+      "intent_contract"
+    ],
+    "assessment_count": 5
+  },
+  "actual": {
+    "ambiguous": false,
+    "confidence": 0.5,
+    "fallback": false,
+    "intent": "other",
+    "raw_intent": "4001"
+  },
+  "reasoning_summary": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=None，confidence=None，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+  "judge_basis": "基于常识营销规划意图分类体系与通用评估准则，结合查询的明确业务指向进行判断。",
+  "judge_method": "语义匹配与业务合理性推理。",
+  "verdict_derivation": {
+    "logic": "因为意图标签错误（other）且未回退，置信度偏低，故核心期望未满足。",
+    "contract_gate": "failed"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "预期的具体意图标签（如客户分析）",
+        "reason": "实际输出为 other，缺少可执行意图。"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "从查询中提取的实体（产品:重疾险, 时间:上季度）",
+        "reason": "输出中未包含 target_value 或其它槽位信息。"
+      },
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "intent 标签",
+        "reason": "输出为 'other'，不符合查询意图。"
+      },
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "source": "run_trace.actual_output",
+      "key": "intent",
+      "value": "other"
+    },
+    {
+      "source": "run_trace.actual_output",
+      "key": "fallback",
+      "value": false
+    }
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true
+  },
+  "evaluation_boundary": {
+    "includes": "单轮意图识别标签及槽位正确性",
+    "excludes": "多轮规划、SSE生成、下游执行"
+  },
+  "consumer_contract": {
+    "expected_fields": [
+      "intent",
+      "confidence",
+      "target_value",
+      "fallback"
+    ],
+    "dispatch_requirements": "依据 intent 分发到对应的营销规划子流程，'other' 标签无法实现有效分发。"
+  },
+  "intent_model": {
+    "description": "用户希望获取上季度购买重疾险的客户群体画像或特征总结，属于业务分析/客户洞察类意图。",
+    "functional_requirements": "应识别为具体的分析类意图（如 customer_analysis），并提取产品类型和统计周期等关键参数。"
+  },
+  "reconstructed_intent": "用户想要分析上季度购买重疾险的客户特征，属于客户分析或营销洞察类意图。",
+  "semantic_equivalence_checks": [
+    {
+      "check": "查询核心动作是否为分析/了解客户群体",
+      "result": true,
+      "detail": "查询中包含“看看...都是啥样的”明确表达分析意愿。"
+    },
+    {
+      "check": "是否存在具体产品与时间约束",
+      "result": true,
+      "detail": "‘重疾险’与‘上季度’指定了分析范围。"
+    }
+  ],
+  "reference_generation_basis": {
+    "method": "根据查询字面与典型营销规划意图体系推断，假设存在客户分析类意图标签。",
+    "assumptions": "系统支持客户分析、营销洞察等意图分类。"
+  },
+  "scenario": "intent_recognition",
+  "needs_human_review": false,
+  "quality_flags": [
+    "intent_misclassification",
+    "low_confidence",
+    "fallback_not_triggered",
+    "missing_entity_extraction",
+    "intent_contract_gate_failed"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[(none)]",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "回退策略在不可识别时生效",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户查询明确表达了对上季度重疾险客户群体的分析需求，属于典型的客户分析/营销洞察意图。而系统返回的 intent 为 'other'，置信度仅 0.5 且未触发回退，同时未能提取任何时间、产品实体，完全无法满足业务调度与下游执行要求，因此整体评估为未满足预期。"
+      },
+      {
+        "expectation_id": "意图标签正确识别客户分析需求",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户查询明确表达了对上季度重疾险客户群体的分析需求，属于典型的客户分析/营销洞察意图。而系统返回的 intent 为 'other'，置信度仅 0.5 且未触发回退，同时未能提取任何时间、产品实体，完全无法满足业务调度与下游执行要求，因此整体评估为未满足预期。"
+      },
+      {
+        "expectation_id": "置信度不低于阈值且反映区分度",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户查询明确表达了对上季度重疾险客户群体的分析需求，属于典型的客户分析/营销洞察意图。而系统返回的 intent 为 'other'，置信度仅 0.5 且未触发回退，同时未能提取任何时间、产品实体，完全无法满足业务调度与下游执行要求，因此整体评估为未满足预期。"
+      },
+      {
+        "expectation_id": "输出包含必要的实体或槽位信息",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户查询明确表达了对上季度重疾险客户群体的分析需求，属于典型的客户分析/营销洞察意图。而系统返回的 intent 为 'other'，置信度仅 0.5 且未触发回退，同时未能提取任何时间、产品实体，完全无法满足业务调度与下游执行要求，因此整体评估为未满足预期。"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 4,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

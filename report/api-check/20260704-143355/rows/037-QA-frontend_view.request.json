@@ -1,0 +1,812 @@
+{
+  "project": "QA",
+  "trace": {
+    "trace_id": "d2a10fca-a7c8-4ee8-a9b7-9e3f34a3fca9",
+    "project_id": "QA",
+    "case_id": "mock-agent-QA-51db1c4c",
+    "live_result": {
+      "project_id": "QA",
+      "case_id": "mock-agent-QA-51db1c4c",
+      "session_id": "",
+      "raw_input": {
+        "data_quality_flags": [
+          "intent_clarity",
+          "context_faithfulness"
+        ],
+        "input": {
+          "query": "我买了这个重疾险，如果得了合同里约定的轻症，能赔多少钱啊？",
+          "user_text": "我买了这个重疾险，如果得了合同里约定的轻症，能赔多少钱啊？"
+        },
+        "metadata": {
+          "session_id": "sess_default_001",
+          "trace_id": "trace_default_001",
+          "user_id": "user_default_001"
+        },
+        "scenario": "qa_gold_answer"
+      },
+      "normalized_request": {
+        "input": {
+          "question": "我买了这个重疾险，如果得了合同里约定的轻症，能赔多少钱啊？"
+        },
+        "metadata": {
+          "live_request_mapped": true,
+          "project_id": "QA",
+          "ready": [
+            "output",
+            "reference"
+          ],
+          "schema_ok": true,
+          "source": "mock_agent_llm"
+        },
+        "scenario": "qa_gold_answer",
+        "data_quality_flags": [
+          "missing_golden_answer"
+        ],
+        "output": {
+          "actual_answer": "轻症的赔付金额通常为基本保额的20%-30%，具体比例需参考您购买的保险合同的约定条款。"
+        }
+      },
+      "call_status": "succeeded",
+      "extracted_output": {
+        "actual_answer": "轻症的赔付金额通常为基本保额的20%-30%，具体比例需参考您购买的保险合同的约定条款。"
+      },
+      "output_source": "provided_output",
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T06:33:55.736341+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T06:33:55.736347+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T06:33:55.737438+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T06:33:55.737458+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T06:35:24.806907+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T06:35:24.806973+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T06:35:24.807013+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T06:35:24.808763+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T06:35:24.809748+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T06:35:24.809780+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T06:35:24.821496+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence or blocked reason available"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "qa_gold_answer",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "created_at": "2026-07-04T06:33:55.737414+00:00"
+  },
+  "judge": {
+    "trace_id": "d2a10fca-a7c8-4ee8-a9b7-9e3f34a3fca9",
+    "project_id": "QA",
+    "verdict": "correct",
+    "business_expectations": [
+      {
+        "expectation_id": "提供轻症赔付比例范围",
+        "downstream_consumer": "保险消费者",
+        "user_intent": "了解轻症赔付金额",
+        "expected_outcome": "回答包含明确的百分比范围，如20%-30%",
+        "acceptance_criteria": [
+          "回答中出现了百分比数字",
+          "该百分比在行业公认的轻症赔付比例范围内"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "明确以合同约定为准",
+        "downstream_consumer": "保险消费者",
+        "user_intent": "了解轻症赔付金额",
+        "expected_outcome": "回答包含类似“具体比例需参考您购买的保险合同”的表述",
+        "acceptance_criteria": [
+          "回答明确提及合同条款或保险合同",
+          "表达出比例取决于具体合同的意思"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "回答信息与行业常识一致",
+        "downstream_consumer": "保险消费者",
+        "user_intent": "了解轻症赔付金额",
+        "expected_outcome": "20%-30% 是行业公认的常见范围",
+        "required_capabilities": [
+          "保险常识"
+        ],
+        "acceptance_criteria": [
+          "回答中的比例范围与通常的保险实践相符"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "回答直接相关且有用",
+        "downstream_consumer": "保险消费者",
+        "user_intent": "了解轻症赔付金额",
+        "expected_outcome": "回答内容紧密围绕轻症赔付，表达清晰",
+        "acceptance_criteria": [
+          "回答没有无关内容",
+          "回答结构清晰，易于理解"
+        ],
+        "priority": "medium"
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "提供轻症赔付比例范围",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "回答中包含轻症赔付比例范围"
+        ],
+        "actual_evidence": [
+          "回答：'轻症的赔付金额通常为基本保额的20%-30%'"
+        ],
+        "downstream_impact": "用户获得了比例范围，可初步了解赔付水平",
+        "blocking": true
+      },
+      {
+        "expectation_id": "明确以合同约定为准",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "回答提醒以合同为准"
+        ],
+        "actual_evidence": [
+          "回答：'具体比例需参考您购买的保险合同的约定条款'"
+        ],
+        "downstream_impact": "用户被正确引导至合同，避免误解",
+        "blocking": true
+      },
+      {
+        "expectation_id": "回答信息与行业常识一致",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "20%-30% 是常见轻症赔付比例"
+        ],
+        "actual_evidence": [
+          "回答提供了20%-30%"
+        ],
+        "downstream_impact": "信息准确，不会误导",
+        "blocking": true
+      },
+      {
+        "expectation_id": "回答直接相关且有用",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "回答聚焦轻症赔付，无无关内容"
+        ],
+        "actual_evidence": [
+          "整个回答直接回应问题，未出现跑题"
+        ],
+        "downstream_impact": "用户体验好",
+        "blocking": false
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "fulfilled",
+      "assessment_count": 4
+    },
+    "actual": {
+      "actual_answer": "轻症的赔付金额通常为基本保额的20%-30%，具体比例需参考您购买的保险合同的约定条款。"
+    },
+    "reasoning_summary": "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+    "judge_basis": "基于用户问题、回答文本、保险行业常识以及缺失具体合同信息的事实进行评估。",
+    "judge_method": "意图对齐与常识验证",
+    "verdict_derivation": {
+      "primary_boundary": "qa_gold_answer",
+      "assessment_summary": "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+      "why_verdict": "回答准确提供了轻症赔付的典型比例（20%-30%），并正确指出了具体比例需查阅合同，完全满足了用户了解赔付标准的核心意图。尽管缺少 golden_answer 无法验证绝对精确性，但回答符合保险常识，且无任何误导信息，因此判定为 fulfilled。",
+      "taxonomy_error_types": [
+        "none"
+      ],
+      "score_dimensions": [
+        {
+          "dimension": "correctness",
+          "score": 1.0,
+          "evidence": [
+            "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=False"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "completeness",
+          "score": 1.0,
+          "evidence": [
+            "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=False"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "key_point_coverage",
+          "score": 1.0,
+          "evidence": [
+            "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=False"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "faithfulness",
+          "score": 1.0,
+          "evidence": [
+            "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=False"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "relevance",
+          "score": 1.0,
+          "evidence": [
+            "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=False"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "usefulness",
+          "score": 1.0,
+          "evidence": [
+            "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=False"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "coherence",
+          "score": 1.0,
+          "evidence": [
+            "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=False"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "risk_control",
+          "score": 1.0,
+          "evidence": [
+            "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=False"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "clarity",
+          "score": 1.0,
+          "evidence": [
+            "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=False"
+          ],
+          "status": "judged"
+        }
+      ],
+      "error_type": "none"
+    },
+    "evidence": [
+      "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+      "scenario=qa_gold_answer",
+      "question_present=True",
+      "actual_answer_present=True",
+      "golden_answer_present=False"
+    ],
+    "boundary_decision": {
+      "within_evaluable_scope": true,
+      "uncontrollable_limits": [
+        "缺少 golden_answer 无法验证比例绝对准确性"
+      ],
+      "reasoning": "虽然 golden_answer 缺失，但我们可以基于保险行业常识判断回答是否提供了合理的、有用的信息，以及是否包含了必要的风险提示，因此评估属于可评估范围。"
+    },
+    "evaluation_boundary": {
+      "primary_boundary_id": "qa_gold_answer_弱化",
+      "primary_boundary_name": "缺失黄金答案的 QA 评估",
+      "judge_question": "该回答是否基于常识提供了合理且有用的轻症赔付信息，并明确边界？",
+      "verdict_basis": "行业常识与用户意图对齐",
+      "boundary_sources": "用户问题、回答、一般保险知识",
+      "conflict_policy": "无冲突"
+    },
+    "consumer_contract": {
+      "consumer": "保险消费者",
+      "contract": "回答应为用户提供准确、有用的保险理赔信息，在缺少具体合同时基于常识给出指导性回答，并明确边界。"
+    },
+    "intent_model": {
+      "raw_user_request": "我买了这个重疾险，如果得了合同里约定的轻症，能赔多少钱啊？",
+      "explicit_intents": [
+        "了解重疾险轻症赔付金额或比例"
+      ],
+      "implicit_business_intents": [
+        "评估保险保障范围",
+        "可能准备理赔申请"
+      ],
+      "constraints": {
+        "缺少具体合同信息": "无法提供精确金额",
+        "需基于保险行业常识回答": ""
+      },
+      "success_definition": "用户获得关于轻症赔付典型比例的信息，并被明确告知最终赔付以保险合同为准，回答有用且无误导性信息。",
+      "blocking_requirements": [
+        "提供轻症赔付的常见比例范围",
+        "提醒以合同条款为准",
+        "不提供错误或误导性信息"
+      ],
+      "nice_to_have_requirements": [
+        "解释轻症定义",
+        "说明理赔流程"
+      ],
+      "intent_evidence": [
+        "用户问题直接询问轻症赔付金额"
+      ]
+    },
+    "reconstructed_intent": "用户希望了解所购重疾险中轻症赔付的具体金额或比例，以便评估保障或准备理赔。",
+    "reference_generation_basis": {
+      "source": "无 golden_answer，基于常识生成期望",
+      "alignment_to_live_schema": "与 QA 场景无关"
+    },
+    "scenario": "qa_gold_answer",
+    "needs_human_review": false,
+    "quality_flags": [
+      "缺失 golden_answer，评估基于常识"
+    ],
+    "summary": {
+      "reason": "fulfilled · 3 blocking expectations all met · 回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+      "reason_source": "aggregated_fulfillment",
+      "fulfillment_status": "fulfilled",
+      "assessment_count": 4,
+      "blocking_count": 3,
+      "is_formal_attribution": true
+    }
+  },
+  "attribute": {
+    "trace_id": "d2a10fca-a7c8-4ee8-a9b7-9e3f34a3fca9",
+    "project_id": "QA",
+    "case_id": "",
+    "expectation_attributions": [
+      {
+        "expectation_id": "提供轻症赔付比例范围",
+        "causal_category": "no_issue"
+      },
+      {
+        "expectation_id": "明确以合同约定为准",
+        "causal_category": "no_issue"
+      },
+      {
+        "expectation_id": "回答信息与行业常识一致",
+        "causal_category": "no_issue"
+      },
+      {
+        "expectation_id": "回答直接相关且有用",
+        "causal_category": "no_issue"
+      }
+    ],
+    "causal_category": "no_issue",
+    "earliest_divergence": {
+      "node": "fulfillment_assessment",
+      "evidence": [
+        "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+        "scenario=qa_gold_answer",
+        "question_present=True",
+        "actual_answer_present=True",
+        "golden_answer_present=False"
+      ],
+      "confidence": "high"
+    },
+    "chain_nodes": [
+      {
+        "status": "verified",
+        "evidence": [
+          "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=True",
+          "golden_answer_present=False"
+        ]
+      }
+    ],
+    "probe_results": [
+      {
+        "probe_id": "fulfillment_assessment",
+        "status": "not_verified",
+        "evidence": [
+          "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=True",
+          "golden_answer_present=False"
+        ]
+      }
+    ],
+    "evidence_coverage": {
+      "judge_evidence": true,
+      "execution_trace": true
+    },
+    "root_cause_hypothesis": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+    "verification_steps": [
+      "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+    ],
+    "patch_direction": [
+      "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+    ],
+    "needs_human_review": false,
+    "scenario": "qa_gold_answer",
+    "summary": {
+      "causal_category": "no_issue",
+      "attribution_count": 4,
+      "probe_count": 1,
+      "summary_text": "业务预期已达成",
+      "is_complete": true,
+      "is_formal_attribution": true
+    },
+    "analysis_method": "fulfilled_expectation_attribution",
+    "analysis_quality": {
+      "passed": true
+    },
+    "incomplete_reason": ""
+  },
+  "cluster": {
+    "project_id": "QA",
+    "clusters": [
+      {
+        "cluster_id": "expectation::no_issue::fulfilled",
+        "mechanism": "no_issue::fulfilled",
+        "causal_category": "no_issue",
+        "fulfillment_statuses": [
+          "fulfilled"
+        ],
+        "expectation_ids": [
+          "提供轻症赔付比例范围",
+          "明确以合同约定为准",
+          "回答信息与行业常识一致",
+          "回答直接相关且有用"
+        ],
+        "needs_human_review": false,
+        "canonical_attribution": true,
+        "count": 1,
+        "representative_cases": [
+          "d2a10fca-a7c8-4ee8-a9b7-9e3f34a3fca9"
+        ],
+        "representative_traces": [
+          "d2a10fca-a7c8-4ee8-a9b7-9e3f34a3fca9"
+        ],
+        "common_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+        "shared_failure_pattern": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+        "representative_diffs": [
+          {
+            "case_id": "d2a10fca-a7c8-4ee8-a9b7-9e3f34a3fca9",
+            "node": "fulfillment_assessment",
+            "evidence": [
+              "回答提供了轻症赔付的常见比例范围（20%-30%），并明确提醒以保险合同约定为准，信息与行业常识一致，直接回应了用户问题，所有核心期望均已满足，因此整体评估为 fulfilled。",
+              "scenario=qa_gold_answer",
+              "question_present=True",
+              "actual_answer_present=True",
+              "golden_answer_present=False"
+            ]
+          }
+        ],
+        "minimal_fix_direction": [
+          "无需修改业务实现；若后续出现 contested 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+        ],
+        "verification_cases": [
+          "d2a10fca-a7c8-4ee8-a9b7-9e3f34a3fca9"
+        ],
+        "next_actions": [
+          "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+        ]
+      }
+    ],
+    "common_root_cause": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+    "impact": "",
+    "priority": "normal"
+  },
+  "check": {
+    "passed": false,
+    "issues": [
+      "QA qa_gold_answer requires reference.golden_answer."
+    ],
+    "protocol_gaps": [
+      "QA qa_gold_answer requires reference.golden_answer."
+    ],
+    "verification_results": [
+      "Check categories passed current audit."
+    ],
+    "recommended_fixes": [
+      "Complete missing protocol outputs before treating the chain as valid."
+    ]
+  }
+}

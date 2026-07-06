@@ -1,0 +1,227 @@
+{
+  "trace_id": "2708ec06-9402-4517-b387-faf3d0b9547c",
+  "project_id": "marketting-planning",
+  "verdict": "incorrect",
+  "business_expectations": [
+    {
+      "expectation_id": "意图识别正确识别为规划意图并包含NBEV指标",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "对缺失的目标缺口数值进行澄清",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "正确解析时间范围为今年",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "识别并采纳用户建议的分解维度",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "阶段路由正确进入规划阶段",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "生成可操作的规划建议",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "SSE事件流完整正常结束",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图识别正确识别为规划意图并包含NBEV指标",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "对缺失的目标缺口数值进行澄清",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "正确解析时间范围为今年",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "识别并采纳用户建议的分解维度",
+      "status": "not_evaluable",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "阶段路由正确进入规划阶段",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "生成可操作的规划建议",
+      "status": "not_evaluable",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "SSE事件流完整正常结束",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "summary": "系统在识别意图和完成事件流方面表现正常，但核心的“目标缺口澄清”阻塞性期望未满足，在没有获取具体缺口数值的情况下直接生成规划，导致整体上未能完全满足用户的业务需求。",
+    "assessment_count": 7
+  },
+  "expected": {
+    "code": 0,
+    "msg": "需要补充信息",
+    "robot_text": "为了更好地帮您规划NBEV缺口，请提供具体的缺口金额（例如还差多少万元）。",
+    "end_flag": 0
+  },
+  "actual": {
+    "code": 0,
+    "msg": "ok",
+    "robot_text": "已根据您的NBEV目标生成规划方案，包括增加理财师和优化产品建议。",
+    "end_flag": 1
+  },
+  "reasoning_summary": "整体而言，系统正确识别了规划意图和NBEV指标，且SSE事件流完整正常。然而，用户未提供具体的NBEV缺口数值，系统未进行澄清就直接生成规划，导致规划缺乏可量化基础，不符合目标值澄清的阻塞性期望。因此，整体判断为未满足用户意图。",
+  "judge_basis": "基于SSE事件流分析：会话以 intent_detected 开始，随后直接进入 planning_started，中间没有澄清事件。根据边界要求，系统应在缺少必要字段时澄清，因此判定未满足目标澄清期望。",
+  "judge_method": "通过检查事件序列和阶段流转来评估系统是否遵循预期的澄清-规划流程，并参考 critical_intent_dimensions 对关键维度逐项验证。",
+  "verdict_derivation": {
+    "logic": "存在一个 blocking 期望未满足（目标缺口澄清），导致整体状态为 not_fulfilled。其他期望已满足或无法评估，但不改变整体结果。"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "expectation_id": "对缺失的目标缺口数值进行澄清",
+        "description": "系统没有在规划前询问NBEV缺口金额"
+      },
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "expectation_id": "阶段路由正确进入规划阶段",
+        "description": "系统在缺少必要字段时直接进入规划阶段，违反澄清优先的原则"
+      },
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "event": "intent_detected",
+      "signifies": "意图被识别"
+    },
+    {
+      "event": "planning_started",
+      "signifies": "直接进入规划阶段，无澄清"
+    },
+    {
+      "event": "card_delta",
+      "signifies": "卡片生成完成"
+    },
+    {
+      "event": "done",
+      "signifies": "会话正常结束"
+    }
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true
+  },
+  "evaluation_boundary": {
+    "allow_fallback": false,
+    "dependency_status": "available",
+    "judge_scope": "system_responsibility_with_declared_external_boundary"
+  },
+  "consumer_contract": {
+    "description": "系统在接收到规划意图且缺少关键量化指标时，应在进入规划阶段前进行澄清；系统应识别用户建议的分解维度并融入规划；系统应生成可操作的规划卡片并正常结束会话。"
+  },
+  "intent_model": {
+    "primary_intent": "planning",
+    "metrics": [
+      "NBEV"
+    ],
+    "time_range": "今年",
+    "decomposition_dimensions": [
+      "advisor_headcount",
+      "product_optimization"
+    ],
+    "missing_required_fields": [
+      "NBEV_gap_amount"
+    ]
+  },
+  "reconstructed_intent": "用户希望系统帮助弥补今年NBEV目标的缺口，提供通过增加理财师人力或优化产品方案两种维度的规划建议。",
+  "reference_generation_basis": {
+    "method": "因为输入未提供 reference，根据 critical_intent_dimensions 和系统边界生成预期输出和期望",
+    "dimensions_used": [
+      "business_metric",
+      "target_value_and_unit",
+      "time_range",
+      "decomposition_dimensions",
+      "stage_routing",
+      "planning_actionability",
+      "sse_completion"
+    ]
+  },
+  "scenario": "intent_recognition",
+  "needs_human_review": true,
+  "quality_flags": [
+    "missing_clarification",
+    "premature_planning"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[(none)]",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "对缺失的目标缺口数值进行澄清",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "整体而言，系统正确识别了规划意图和NBEV指标，且SSE事件流完整正常。然而，用户未提供具体的NBEV缺口数值，系统未进行澄清就直接生成规划，导致规划缺乏可量化基础，不符合目标值澄清的阻塞性期望。因此，整体判断为未满足用户意图。"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 7,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

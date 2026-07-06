@@ -1,0 +1,49 @@
+{
+  "project": "marketting-planning",
+  "attributes": [
+    {
+      "trace_id": "26847f88-5ea2-4c6a-a5da-b6eb8ccdbd55",
+      "project_id": "marketting-planning",
+      "case_id": "",
+      "causal_category": "needs_human_review",
+      "earliest_divergence": {
+        "node": "state_machine",
+        "evidence": [
+          "incomplete_retry_limit"
+        ],
+        "confidence": "unknown"
+      },
+      "chain_nodes": [
+        {
+          "status": "not_verified",
+          "evidence": [
+            "incomplete_retry_limit"
+          ]
+        }
+      ],
+      "evidence_coverage": {
+        "query": true,
+        "actual": true,
+        "expected": false,
+        "execution_trace": true
+      },
+      "root_cause_hypothesis": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "verification_steps": [
+        "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+      ],
+      "patch_direction": [
+        "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+      ],
+      "needs_human_review": true,
+      "scenario": "intent_recognition",
+      "summary": {
+        "causal_category": "needs_human_review",
+        "attribution_count": 0,
+        "probe_count": 0,
+        "summary_text": "incomplete_retry_limit",
+        "is_complete": false,
+        "is_formal_attribution": false
+      }
+    }
+  ]
+}

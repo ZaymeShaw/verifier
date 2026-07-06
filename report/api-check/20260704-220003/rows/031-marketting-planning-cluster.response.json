@@ -1,0 +1,59 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "识别核心业务指标为NBEV",
+        "感知目标值缺口并尝试澄清",
+        "识别时间范围为今年",
+        "理解分解维度为增加理财师和优化产品方案",
+        "阶段路由正确进入澄清或规划阶段",
+        "生成可操作的规划方案卡片",
+        "SSE事件流完整且传达响应内容"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "19d8358c-7cc7-4ee4-8bea-8911dce91bc2"
+      ],
+      "representative_traces": [
+        "19d8358c-7cc7-4ee4-8bea-8911dce91bc2"
+      ],
+      "common_root_cause": "意图识别模块存在双重缺陷导致误判：一、规则引擎的planning关键词集和正则模板过于狭窄，仅覆盖'达成/规划/路径/测算/分析'等标准术语，无法匹配用户实际使用的'补上''通过……来补上'等口语化表达；二、LLM回落的prompt策略将'不明确倾向判为other'设为默认行为，但nbev_planning schema本身允许target_value为null(即不要求用户必须给出具体数字)，导致含NBEV但无具体目标值的合法规划请求被保守地推入other分类。两个缺陷叠加：规则引擎全层失配后，LLM在'不明确→other'的引导下放弃了正确分类。intent=4001触发stage=non_agent，致使下游所有业务阶段(field_clarification、planning_function、card生成)被整体跳过。",
+      "shared_failure_pattern": "意图识别模块存在双重缺陷导致误判：一、规则引擎的planning关键词集和正则模板过于狭窄，仅覆盖'达成/规划/路径/测算/分析'等标准术语，无法匹配用户实际使用的'补上''通过……来补上'等口语化表达；二、LLM回落的prompt策略将'不明确倾向判为other'设为默认行为，但nbev_planning schema本身允许target_value为null(即不要求用户必须给出具体数字)，导致含NBEV但无具体目标值的合法规划请求被保守地推入other分类。两个缺陷叠加：规则引擎全层失配后，LLM在'不明确→other'的引导下放弃了正确分类。intent=4001触发stage=non_agent，致使下游所有业务阶段(field_clarification、planning_function、card生成)被整体跳过。",
+      "representative_diffs": [
+        {
+          "case_id": "19d8358c-7cc7-4ee4-8bea-8911dce91bc2",
+          "node": "rule_based_shortcuts_tier_3",
+          "expected": "intent=nbev_planning, target_value=null(用户未给具体数字，应触发澄清), path_types=['队伍','产品'](理财师→队伍，产品方案→产品)",
+          "actual": "intent=4001(其他意图), target_value=null, path_types=null/空, stage=non_agent"
+        }
+      ],
+      "minimal_fix_direction": [
+        "方案A(规则引擎增强): 在intent_recognition.py Tier 3 planning关键词集中增加('补上','弥补','提升','优化','改善','增加','通过')，覆盖更多非标准规划表达；将homepage regex从`怎么达成.*NBEV.*目标`放宽为`怎么.*NBEV.*(目标|补|达成|规划|提升)`",
+        "方案B(LLM prompt修正): 在intent_prompt.py中修改nbev_planning定义，增加说明：'用户提及NBEV且表达如何达成/补上/提升的意图，即使未给出具体目标值数字，也应判为nbev_planning(后续由澄清阶段获取目标值)'；将'意图不明确倾向判为other'改为'仅在完全无关NBEV规划时才判为other'",
+        "方案C(维度同义词): 在path_types提取逻辑中增加同义词映射——'理财师/顾问/代理人'→队伍，'方案/组合/产品线'→产品，确保'增加理财师'和'优化产品方案'能正确提取为['队伍','产品']",
+        "方案D(架构级): 在intent_recognition与stage路由之间增加置信度阈值检查——当intent=other但confidence<0.7时，不直接进入non_agent而是触发二次确认或回退到通用澄清流程"
+      ],
+      "verification_cases": [
+        "19d8358c-7cc7-4ee4-8bea-8911dce91bc2"
+      ],
+      "next_actions": [
+        "1. 用原始query单独调用intent_recognition模块，观察规则引擎各Tier的命中日志，确认Tier 3 planning关键词是否全部失配",
+        "2. 将planning关键词临时扩展为(达成|规划|路径|测算|分析|补上|弥补|提升|优化)后重跑，验证是否命中nbev_planning",
+        "3. 调整prompt：将'意图不明确倾向判为other'改为'含NBEV关键词且表达规划意图的请求应优先判为nbev_planning，无目标值时通过澄清阶段获取'，对比LLM分类结果",
+        "4. 手动注入intent=nbev_planning后完整跑pipeline，验证field_clarification是否生成target_value澄清卡片、planning_function是否产出规划方案"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模块存在双重缺陷导致误判：一、规则引擎的planning关键词集和正则模板过于狭窄，仅覆盖'达成/规划/路径/测算/分析'等标准术语，无法匹配用户实际使用的'补上''通过……来补上'等口语化表达；二、LLM回落的prompt策略将'不明确倾向判为other'设为默认行为，但nbev_planning schema本身允许target_value为null(即不要求用户必须给出具体数字)，导致含NBEV但无具体目标值的合法规划请求被保守地推入other分类。两个缺陷叠加：规则引擎全层失配后，LLM在'不明确→other'的引导下放弃了正确分类。intent=4001触发stage=non_agent，致使下游所有业务阶段(field_clarification、planning_function、card生成)被整体跳过。",
+  "impact": "",
+  "priority": "high"
+}

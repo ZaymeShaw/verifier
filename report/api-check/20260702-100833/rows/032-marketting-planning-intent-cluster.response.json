@@ -1,0 +1,65 @@
+{
+  "project_id": "marketting-planning-intent",
+  "clusters": [
+    {
+      "cluster_id": "expectation::implementation_bug::not_evaluable",
+      "mechanism": "implementation_bug::not_evaluable",
+      "causal_category": "implementation_bug",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图标签准确映射",
+        "置信度满足业务阈值",
+        "关键实体提取",
+        "intent_contract"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "265d5011-d727-4310-a5ca-fcd46bddd90c"
+      ],
+      "representative_traces": [
+        "265d5011-d727-4310-a5ca-fcd46bddd90c"
+      ],
+      "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': '用户希望进行客户分析，了解现有客户的共同特点，但系统将其归为兜底意图。'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5}，最早差异位于 intent_contract_gate。",
+      "shared_failure_pattern": "当前 case 期望 intent/slots 为 {'intent': '用户希望进行客户分析，了解现有客户的共同特点，但系统将其归为兜底意图。'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5}，最早差异位于 intent_contract_gate。",
+      "representative_diffs": [
+        {
+          "case_id": "265d5011-d727-4310-a5ca-fcd46bddd90c",
+          "node": "intent_contract_gate",
+          "expected": {
+            "intent": "用户希望进行客户分析，了解现有客户的共同特点，但系统将其归为兜底意图。"
+          },
+          "actual": {
+            "confidence": 0.5,
+            "intent": "other"
+          },
+          "evidence": [
+            [
+              {
+                "kind": "missing"
+              },
+              {
+                "kind": "missing"
+              }
+            ]
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "verification_cases": [
+        "265d5011-d727-4310-a5ca-fcd46bddd90c"
+      ],
+      "next_actions": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ]
+    }
+  ],
+  "common_root_cause": "",
+  "impact": "",
+  "priority": ""
+}

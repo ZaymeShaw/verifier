@@ -1,0 +1,75 @@
+{
+  "trace_id": "b23bd711-5688-4aa6-ac75-b90b23af5901",
+  "project_id": "marketting-planning",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "marketting-planning:planning_output_contract",
+      "causal_category": "insufficient_evidence"
+    }
+  ],
+  "causal_category": "insufficient_evidence",
+  "earliest_divergence": {
+    "node": "semantic judge or attribute LLM",
+    "evidence": [
+      "Agent.__init__() got an unexpected keyword argument 'memory'"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "failed",
+      "evidence": [
+        "Agent.__init__() got an unexpected keyword argument 'memory'"
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "llm_call",
+      "status": "failed",
+      "evidence": [
+        "Agent.__init__() got an unexpected keyword argument 'memory'"
+      ]
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": false,
+    "execution_trace": false,
+    "project_docs": false,
+    "code_or_config": false
+  },
+  "root_cause_hypothesis": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+  "verification_steps": [
+    "检查 LLM API key、余额、网络和模型配置。",
+    "恢复 LLM 后重新运行 judge 和 attribute agent。"
+  ],
+  "patch_direction": [
+    "修复 LLM 调用配置或费用问题；不要把该兜底结果当作最终业务根因。"
+  ],
+  "needs_human_review": true,
+  "scenario": "intent_recognition",
+  "summary": {
+    "causal_category": "insufficient_evidence",
+    "attribution_count": 1,
+    "probe_count": 1,
+    "summary_text": "judge LLM 调用失败，不能产出正式根因。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  },
+  "analysis_method": "llm_call_failed",
+  "analysis_quality": {
+    "passed": false,
+    "missing": [
+      "semantic judge result"
+    ],
+    "standard": "归因必须基于当前 case 的 judge、trace 和可验证链路证据。"
+  },
+  "incomplete_reason": "judge LLM 调用失败，不能产出正式根因。",
+  "quality_flags": [
+    "llm_call_failed",
+    "attribute_blocked"
+  ]
+}

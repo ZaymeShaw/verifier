@@ -1,0 +1,61 @@
+{
+  "trace_id": "0c93ac76-c27d-413d-b1c7-f9f0bec63024",
+  "project_id": "QA",
+  "case_id": "",
+  "causal_category": "insufficient_evidence",
+  "earliest_divergence": {
+    "node": "qa_local_evidence_probe",
+    "evidence": [
+      "scenario=qa_gold_answer",
+      "actual_answer_present=True",
+      "golden_answer_present=True",
+      "contexts_present=False",
+      "data_quality_flags=[]"
+    ],
+    "confidence": "unknown"
+  },
+  "chain_nodes": [
+    {
+      "status": "not_verified",
+      "evidence": [
+        "scenario=qa_gold_answer",
+        "actual_answer_present=True",
+        "golden_answer_present=True",
+        "contexts_present=False",
+        "data_quality_flags=[]"
+      ]
+    }
+  ],
+  "evidence_coverage": {
+    "query": false,
+    "actual": false,
+    "expected": true,
+    "execution_trace": false,
+    "project_docs": true,
+    "code_or_config": false
+  },
+  "root_cause_hypothesis": "当前证据不足以定位 QA 业务根因，需要语义 judge 或人工复核补足证据。",
+  "verification_steps": [
+    "确认 semantic judge 可用后重新运行 QA judge 和 attribute。",
+    "检查样本是否提供 output.actual_answer 以及 reference.golden_answer 或 input.contexts。"
+  ],
+  "patch_direction": [
+    "补齐样本协议或恢复语义 judge；不要基于本地探针结果直接修改业务代码。"
+  ],
+  "needs_human_review": true,
+  "scenario": "qa_gold_answer",
+  "analysis_method": "qa_local_evidence_probe",
+  "analysis_quality": {
+    "passed": false,
+    "missing": [
+      "semantic_judge"
+    ],
+    "standard": "QA 正式归因必须建立在可解释的 semantic judge 结果和当前样本证据链上。"
+  },
+  "incomplete_reason": "QA 本地证据探针只能记录样本和输出是否存在；缺少可用语义 judge 时不能产出正式失败归因。",
+  "quality_flags": [
+    "llm_call_failed",
+    "qa_local_evidence_probe",
+    "semantic_judge_unavailable"
+  ]
+}

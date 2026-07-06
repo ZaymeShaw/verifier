@@ -1,0 +1,793 @@
+{
+  "project": "QA",
+  "trace": {
+    "trace_id": "f52b429e-a4ec-4291-81d5-3fb339965b15",
+    "project_id": "QA",
+    "case_id": "mock-agent-QA-723788bb",
+    "live_result": {
+      "project_id": "QA",
+      "case_id": "mock-agent-QA-723788bb",
+      "session_id": "",
+      "raw_input": {
+        "input": {
+          "generated_answer": "报销需要提供身份证、银行卡、医疗发票、费用清单、诊断书、出院小结等材料，请尽快提交以免过期。",
+          "question": "我在你们这买了那个百万医疗险，上个月住院花了好多钱，出院后我要准备哪些材料去报销啊？"
+        },
+        "metadata": {
+          "session_id": "sess_001",
+          "trace_id": "trace_001",
+          "user_id": "user_001"
+        },
+        "metrics": {
+          "cache_read_tokens": 0,
+          "cache_write_tokens": 0,
+          "input_tokens": 278,
+          "output_tokens": 1099,
+          "reasoning_tokens": 951,
+          "total_tokens": 1377
+        },
+        "scenario": "qa_gold_answer"
+      },
+      "normalized_request": {
+        "input": {
+          "question": "我在你们这买了那个百万医疗险，上个月住院花了好多钱，出院后我要准备哪些材料去报销啊？"
+        },
+        "reference": {
+          "golden_answer": "您好，理赔需准备以下材料：1. 理赔申请书（可在我司官网下载）；2. 被保险人身份证正反面复印件；3. 出院小结/诊断证明（盖章）；4. 住院医疗费用原始发票及费用明细清单；5. 银行卡复印件；6. 社保结算单（如已通过社保报销）。请通过官方APP上传，审核通过后3-5个工作日到账。"
+        },
+        "metadata": {
+          "live_request_mapped": true,
+          "ready": [
+            "output",
+            "reference"
+          ],
+          "schema_ok": false,
+          "source": "mock_agent_llm"
+        },
+        "scenario": "qa_gold_answer",
+        "output": {
+          "actual_answer": "您需要准备身份证、银行卡、住院发票和费用清单，然后在我们APP上提交就行。"
+        }
+      },
+      "call_status": "succeeded",
+      "extracted_output": {
+        "actual_answer": "您需要准备身份证、银行卡、住院发票和费用清单，然后在我们APP上提交就行。"
+      },
+      "output_source": "provided_output",
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T11:16:58.172840+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T11:16:58.172857+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T11:16:58.174482+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T11:16:58.174503+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T11:18:23.194694+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T11:18:23.194736+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T11:18:23.194758+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T11:19:45.823171+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T11:21:01.097841+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T11:21:01.097876+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T11:21:01.103223+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence missing"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "probe evidence missing",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "qa_gold_answer",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "created_at": "2026-07-03T11:16:58.174454+00:00"
+  },
+  "judge": {
+    "trace_id": "f52b429e-a4ec-4291-81d5-3fb339965b15",
+    "project_id": "QA",
+    "verdict": "incorrect",
+    "business_expectations": [
+      {
+        "expectation_id": "报销材料清单完整且无遗漏",
+        "downstream_consumer": "准备报销材料的用户",
+        "user_intent": "明确所有需要准备的材料",
+        "expected_outcome": "答案包含上述所有材料项，无重大遗漏",
+        "acceptance_criteria": [
+          "实际答案中提到的材料项数量和质量与金标准答案中的必要项目（理赔申请书、身份证、银行卡、发票、费用明细清单、出院小结/诊断证明、社保结算单）一一对应，缺少任一必要项即视为未通过"
+        ],
+        "priority": "highest",
+        "evidence_refs": [
+          {
+            "type": "qa_sample_boundary",
+            "reference": "golden_answer"
+          }
+        ]
+      },
+      {
+        "expectation_id": "材料格式要求明确（复印件、盖章等）",
+        "downstream_consumer": "准备报销材料的用户",
+        "user_intent": "材料不仅要列出，还要知道需要准备原件还是复印件、是否需要盖章等",
+        "expected_outcome": "答案明确说明至少一项材料的格式要求，或整体注明需要提供复印件及盖章材料",
+        "acceptance_criteria": [
+          "实际答案中包含身份证正反面复印件、诊断证明需盖章、银行卡复印件等格式指示中的一个或多个，若完全未提及格式要求则视为未通过"
+        ],
+        "priority": "high",
+        "evidence_refs": [
+          {
+            "type": "qa_sample_boundary",
+            "reference": "golden_answer"
+          }
+        ]
+      },
+      {
+        "expectation_id": "提供提交材料的渠道",
+        "downstream_consumer": "准备报销材料的用户",
+        "user_intent": "不仅要知道材料，还想知道接下来的流程",
+        "expected_outcome": "答案提及通过APP上传或提交",
+        "acceptance_criteria": [
+          "实际答案中包含“APP提交”或功能类似的表述"
+        ],
+        "priority": "medium",
+        "evidence_refs": [
+          {
+            "type": "qa_sample_boundary",
+            "reference": "golden_answer"
+          }
+        ]
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "报销材料清单完整且无遗漏",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "理赔申请书",
+          "身份证",
+          "银行卡",
+          "住院发票",
+          "费用明细清单",
+          "出院小结/诊断证明",
+          "社保结算单"
+        ],
+        "actual_evidence": [
+          "身份证",
+          "银行卡",
+          "住院发票",
+          "费用清单（等同于费用明细清单）"
+        ],
+        "downstream_impact": "用户若根据此清单准备材料，将缺少理赔申请书、出院小结/诊断证明和社保结算单，极大概率无法成功报销，需要二次补充材料",
+        "blocking": true,
+        "evidence_refs": [
+          {
+            "golden_answer": "理赔申请书、身份证正反面复印件、出院小结/诊断证明（盖章）、住院医疗费用原始发票及费用明细清单、银行卡复印件、社保结算单",
+            "actual": "身份证、银行卡、住院发票和费用清单"
+          }
+        ]
+      },
+      {
+        "expectation_id": "材料格式要求明确（复印件、盖章等）",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "身份证正反面复印件",
+          "诊断证明盖章",
+          "银行卡复印件",
+          "住院医疗费用原始发票"
+        ],
+        "downstream_impact": "用户可能只准备原件或不合规的复印件，导致材料被退回，延误报销",
+        "blocking": true,
+        "evidence_refs": [
+          {
+            "golden_answer": "身份证正反面复印件、出院小结/诊断证明（盖章）、银行卡复印件",
+            "actual": "无格式说明"
+          }
+        ]
+      },
+      {
+        "expectation_id": "提供提交材料的渠道",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "请通过官方APP上传"
+        ],
+        "downstream_impact": "用户能明确下一步提交途径，不会迷失",
+        "blocking": false,
+        "evidence_refs": [
+          {
+            "golden_answer": "请通过官方APP上传",
+            "actual": "在我们APP上提交"
+          }
+        ]
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "not_fulfilled",
+      "assessment_count": 3,
+      "blocking_expectations": [
+        "报销材料清单完整且无遗漏",
+        "材料格式要求明确（复印件、盖章等）"
+      ]
+    },
+    "expected": {
+      "actual_answer": "您好，理赔需准备以下材料：1. 理赔申请书（可在我司官网下载）；2. 被保险人身份证正反面复印件；3. 出院小结/诊断证明（盖章）；4. 住院医疗费用原始发票及费用明细清单；5. 银行卡复印件；6. 社保结算单（如已通过社保报销）。请通过官方APP上传，审核通过后3-5个工作日到账。"
+    },
+    "actual": {
+      "actual_answer": "您需要准备身份证、银行卡、住院发票和费用清单，然后在我们APP上提交就行。"
+    },
+    "reasoning_summary": "用户实际答案只列出了身份证、银行卡、住院发票和费用清单，并提示通过APP提交，但遗漏了理赔申请书、出院小结/诊断证明和社保结算单等关键材料，且完全没有说明身份证需复印件、诊断证明需盖章等格式要求。因此材料清单不完整且缺乏必要细节，无法满足用户一次性成功报销的需求。",
+    "judge_basis": "以提供的金标准答案（golden_answer）作为正确答案，逐项比对实际答案的材料完整性、格式要求准确性和提交渠道说明。",
+    "judge_method": "qa_gold_answer",
+    "verdict_derivation": {
+      "primary_boundary": "qa_gold_answer",
+      "assessment_summary": "用户实际答案只列出了身份证、银行卡、住院发票和费用清单，并提示通过APP提交，但遗漏了理赔申请书、出院小结/诊断证明和社保结算单等关键材料，且完全没有说明身份证需复印件、诊断证明需盖章等格式要求。因此材料清单不完整且缺乏必要细节，无法满足用户一次性成功报销的需求。",
+      "blocking_gaps": [
+        "缺少理赔申请书",
+        "缺少出院小结/诊断证明",
+        "缺少社保结算单",
+        "未说明身份证需要正反面复印件",
+        "未说明诊断证明需盖章",
+        "未说明银行卡需复印件"
+      ],
+      "why_verdict": "因为实际答案遗漏了多项核心报销材料（理赔申请书、出院小结、社保结算单），且未提供任何材料格式要求，导致用户无法正确准备报销材料，故核心期望未满足。",
+      "taxonomy_error_types": [
+        "answer_incomplete"
+      ],
+      "score_dimensions": [
+        {
+          "dimension": "correctness",
+          "score": 0.3333333333333333,
+          "evidence": [
+            "golden_answer 列出的材料项",
+            "actual_answer 列出的材料项",
+            "对比结果",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "completeness",
+          "score": 0.3333333333333333,
+          "evidence": [
+            "golden_answer 列出的材料项",
+            "actual_answer 列出的材料项",
+            "对比结果",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "key_point_coverage",
+          "score": 0.3333333333333333,
+          "evidence": [
+            "golden_answer 列出的材料项",
+            "actual_answer 列出的材料项",
+            "对比结果",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "faithfulness",
+          "score": 0.3333333333333333,
+          "evidence": [
+            "golden_answer 列出的材料项",
+            "actual_answer 列出的材料项",
+            "对比结果",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "relevance",
+          "score": 0.3333333333333333,
+          "evidence": [
+            "golden_answer 列出的材料项",
+            "actual_answer 列出的材料项",
+            "对比结果",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "usefulness",
+          "score": 0.3333333333333333,
+          "evidence": [
+            "golden_answer 列出的材料项",
+            "actual_answer 列出的材料项",
+            "对比结果",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "coherence",
+          "score": 0.3333333333333333,
+          "evidence": [
+            "golden_answer 列出的材料项",
+            "actual_answer 列出的材料项",
+            "对比结果",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "risk_control",
+          "score": 0.3333333333333333,
+          "evidence": [
+            "golden_answer 列出的材料项",
+            "actual_answer 列出的材料项",
+            "对比结果",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "clarity",
+          "score": 0.3333333333333333,
+          "evidence": [
+            "golden_answer 列出的材料项",
+            "actual_answer 列出的材料项",
+            "对比结果",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        }
+      ],
+      "error_type": "answer_incomplete"
+    },
+    "missing": [
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "理赔申请书",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "出院小结/诊断证明",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "社保结算单",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "身份证正反面复印件要求",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "诊断证明盖章要求",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "银行卡复印件要求",
+        "incomplete": false
+      }
+    ],
+    "evidence": [
+      "golden_answer 列出的材料项",
+      "actual_answer 列出的材料项",
+      "对比结果",
+      "scenario=qa_gold_answer",
+      "question_present=True",
+      "actual_answer_present=True",
+      "golden_answer_present=True"
+    ],
+    "boundary_decision": {
+      "within_evaluable_scope": "true",
+      "reasoning": "评估仅基于提供的golden_answer和actual answer，信息完整，无不可控限制。"
+    },
+    "evaluation_boundary": {
+      "primary_boundary_id": "qa_gold_answer",
+      "primary_boundary_name": "标准答案参照评估",
+      "judge_question": "实际答案是否完整、准确地包含了金标准答案中的必要报销材料及格式要求？",
+      "verdict_basis": "对比金标准答案和实际答案，找出遗漏和格式缺失",
+      "boundary_sources": "项目评分标准（critical_intent_dimensions中的faithfulness和completeness）",
+      "conflict_policy": "以金标准答案为准，无冲突"
+    },
+    "consumer_contract": {
+      "consumer": "终端用户",
+      "contract": "用户向客服或问答系统咨询报销材料清单，期望得到准确、可直接操作的解答",
+      "reference_contract": {
+        "golden_answer": "您好，理赔需准备以下材料：1. 理赔申请书（可在我司官网下载）；2. 被保险人身份证正反面复印件；3. 出院小结/诊断证明（盖章）；4. 住院医疗费用原始发票及费用明细清单；5. 银行卡复印件；6. 社保结算单（如已通过社保报销）。请通过官方APP上传，审核通过后3-5个工作日到账。"
+      }
+    },
+    "intent_model": {
+      "raw_user_request": "我在你们这买了那个百万医疗险，上个月住院花了好多钱，出院后我要准备哪些材料去报销啊？",
+      "explicit_intents": [
+        "了解申请医疗险报销需要准备的具体材料"
+      ],
+      "implicit_business_intents": [
+        "希望材料清单完整且准确，避免遗漏导致报销失败",
+        "可能需要材料的格式说明（如复印件、盖章等）",
+        "可能需要知道提交材料的渠道"
+      ],
+      "constraints": {
+        "产品": "百万医疗险",
+        "场景": "住院后报销"
+      },
+      "success_definition": "用户获得一份包含所有必要材料的清单，且材料的关键形式要求（如是否需要原件/复印件等）被明确告知，从而能够一次性准备齐全并顺利提交报销申请。",
+      "blocking_requirements": [
+        "材料清单必须包含全部必要报销项目（身份证、银行卡、医疗发票、费用明细清单、出院小结或诊断证明、理赔申请书、社保结算单等）",
+        "材料的形式要求必须明确（如身份证需要正反面复印件、诊断证明需要盖章等）"
+      ],
+      "nice_to_have_requirements": [
+        "说明提交材料的渠道（如官方APP）",
+        "提示审核到账的大致时间"
+      ],
+      "intent_evidence": [
+        "用户明确询问“准备哪些材料”，且场景为住院报销，说明最关心的就是材料项",
+        "保险报销通常对材料有严格要求，遗漏或格式不符合会导致报销失败，因此隐含了对完整性和准确性的需求"
+      ]
+    },
+    "reconstructed_intent": "用户因住院购买百万医疗险，需要报销，急需知道出院后应准备哪些材料，并希望材料齐全，能一次提交成功。",
+    "semantic_equivalence_checks": [
+      {
+        "expected_fragment": "理赔申请书",
+        "equivalent": false,
+        "basis": "实际答案未提及此项"
+      },
+      {
+        "expected_fragment": "出院小结/诊断证明（盖章）",
+        "equivalent": false,
+        "basis": "实际答案未提及此项"
+      },
+      {
+        "expected_fragment": "社保结算单",
+        "equivalent": false,
+        "basis": "实际答案未提及此项"
+      },
+      {
+        "expected_fragment": "费用明细清单",
+        "actual_fragment": "费用清单",
+        "equivalent": true,
+        "basis": "语义相近，可视为同一项"
+      }
+    ],
+    "reference_generation_basis": {
+      "source": "qa_sample_boundary",
+      "alignment_to_actual_shape": "gold_answer为逐条格式，actual为简短叙述，需补全遗漏项",
+      "evidence": [
+        "golden_answer包含7种必要项，actual仅列出4种，缺失3种关键项"
+      ]
+    },
+    "scenario": "qa_gold_answer",
+    "summary": {
+      "reason": "not_fulfilled · blocking=[报销材料清单完整且无遗漏,材料格式要求明确（复印件、盖章等）] · 用户若根据此清单准备材料，将缺少理赔申请书、出院小结/诊断证明和社保结算单，极大概率无法成功报销，需要二次补充材料",
+      "primary_failure_dimensions": [
+        {
+          "expectation_id": "报销材料清单完整且无遗漏",
+          "status": "not_fulfilled",
+          "blocking": true,
+          "downstream_impact": "用户若根据此清单准备材料，将缺少理赔申请书、出院小结/诊断证明和社保结算单，极大概率无法成功报销，需要二次补充材料",
+          "within_evaluable_scope": "true",
+          "evidence": "身份证 | 银行卡 | 住院发票 | 费用清单（等同于费用明细清单） | 理赔申请书 | 身份证 | 银行卡 | 住院发票 | 费用明细清单 | 出院小结/诊断证明 | 社保结算单"
+        },
+        {
+          "expectation_id": "材料格式要求明确（复印件、盖章等）",
+          "status": "not_fulfilled",
+          "blocking": true,
+          "downstream_impact": "用户可能只准备原件或不合规的复印件，导致材料被退回，延误报销",
+          "within_evaluable_scope": "true",
+          "evidence": "身份证正反面复印件 | 诊断证明盖章 | 银行卡复印件 | 住院医疗费用原始发票"
+        }
+      ],
+      "reason_source": "aggregated_fulfillment",
+      "fulfillment_status": "not_fulfilled",
+      "assessment_count": 3,
+      "blocking_count": 2,
+      "is_formal_attribution": true
+    }
+  }
+}

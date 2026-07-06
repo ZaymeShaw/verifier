@@ -1,0 +1,83 @@
+{
+  "project_id": "marketting-planning-intent",
+  "clusters": [
+    {
+      "cluster_id": "expectation::implementation_bug::not_evaluable",
+      "mechanism": "implementation_bug::not_evaluable",
+      "causal_category": "implementation_bug",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图标签准确反映目标调整请求",
+        "提取目标金额500万和上个月时间",
+        "置信度不应过低以致意图不可信",
+        "意图可分发至目标调整处理模块"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "8bef68cb-c3d1-4d06-ae5c-fce9249a37b1"
+      ],
+      "representative_traces": [
+        "8bef68cb-c3d1-4d06-ae5c-fce9249a37b1"
+      ],
+      "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': 'target_adjustment（目标调整）'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+      "shared_failure_pattern": "当前 case 期望 intent/slots 为 {'intent': 'target_adjustment（目标调整）'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+      "representative_diffs": [
+        {
+          "case_id": "8bef68cb-c3d1-4d06-ae5c-fce9249a37b1",
+          "node": "intent_contract_gate",
+          "expected": {
+            "intent": "target_adjustment（目标调整）"
+          },
+          "actual": {
+            "ambiguous": false,
+            "confidence": 0.5,
+            "fallback": false,
+            "intent": "other",
+            "raw_intent": "4001"
+          },
+          "evidence": [
+            [
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "正确的意图标签（target_adjustment）"
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "目标金额槽位（500万）"
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "时间槽位（上个月）"
+              }
+            ]
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "verification_cases": [
+        "8bef68cb-c3d1-4d06-ae5c-fce9249a37b1"
+      ],
+      "next_actions": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ]
+    }
+  ],
+  "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': 'target_adjustment（目标调整）'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'raw_intent': '4001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+  "impact": "",
+  "priority": "high"
+}

@@ -1,0 +1,330 @@
+{
+  "trace_id": "d2a10fca-a7c8-4ee8-a9b7-9e3f34a3fca9",
+  "project_id": "QA",
+  "verdict": "correct",
+  "business_expectations": [
+    {
+      "expectation_id": "提供轻症赔付的一般性比例范围",
+      "downstream_consumer": "用户",
+      "user_intent": "获取赔付金额信息",
+      "expected_outcome": "回答包含百分比数字范围",
+      "required_capabilities": [
+        "知识库中有轻症赔付的一般惯例"
+      ],
+      "acceptance_criteria": [
+        "实际回答中包含一个明确的百分比范围，例如20%-30%"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "明确提示需参考保险合同条款",
+      "downstream_consumer": "用户",
+      "user_intent": "获取准确且可靠的指导",
+      "expected_outcome": "回答包含提示性语句",
+      "required_capabilities": [
+        "合规与风险控制意识"
+      ],
+      "acceptance_criteria": [
+        "回答中包含明确的提醒，指出最终赔付以合同条款为准"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "回答与用户问题相关且不矛盾",
+      "downstream_consumer": "用户",
+      "user_intent": "问题主题相关性",
+      "expected_outcome": "回答围绕轻症赔付展开",
+      "required_capabilities": [
+        "意图识别"
+      ],
+      "acceptance_criteria": [
+        "回答主题是关于轻症赔付金额，没有偏移到其他保险概念或无关领域"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "回答内部无自相矛盾",
+      "downstream_consumer": "用户",
+      "user_intent": "避免误解",
+      "expected_outcome": "语句之间无矛盾",
+      "required_capabilities": [
+        "一致性"
+      ],
+      "acceptance_criteria": [
+        "回答中没有前后不一致的陈述"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "语言清晰易懂",
+      "downstream_consumer": "用户",
+      "user_intent": "易于消化信息",
+      "expected_outcome": "语句流畅、明白",
+      "required_capabilities": [
+        "语言生成质量"
+      ],
+      "acceptance_criteria": [
+        "回答语句通顺，无语法错误，专业术语适当解释"
+      ],
+      "priority": "medium"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "提供轻症赔付的一般性比例范围",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "存在一个百分比范围，如20%-30%"
+      ],
+      "actual_evidence": [
+        "回答中包含 '通常为基本保额的20%-30%'"
+      ],
+      "downstream_impact": "用户获得了有参考价值的一般性比例",
+      "blocking": true
+    },
+    {
+      "expectation_id": "明确提示需参考保险合同条款",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "包含类似'具体比例需参考合同'的语句"
+      ],
+      "actual_evidence": [
+        "回答末尾 '具体比例需参考您购买的保险合同的约定条款'"
+      ],
+      "downstream_impact": "用户被明确告知需查看合同，避免误解",
+      "blocking": true
+    },
+    {
+      "expectation_id": "回答与用户问题相关且不矛盾",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "回答内容聚焦于轻症赔付金额"
+      ],
+      "actual_evidence": [
+        "整个回答围绕轻症赔付金额展开，未涉及其他无关话题"
+      ],
+      "downstream_impact": "用户获得直接相关的信息",
+      "blocking": true
+    },
+    {
+      "expectation_id": "回答内部无自相矛盾",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "回答各部分逻辑一致"
+      ],
+      "actual_evidence": [
+        "回答先给出一般范围，再强调需以合同为准，逻辑一致，无矛盾"
+      ],
+      "downstream_impact": "用户不会因矛盾信息而困惑",
+      "blocking": true
+    },
+    {
+      "expectation_id": "语言清晰易懂",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "语句通顺，无歧义"
+      ],
+      "actual_evidence": [
+        "句子结构简单明了，词汇通俗"
+      ],
+      "downstream_impact": "用户能轻松理解",
+      "blocking": false
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "fulfilled",
+    "assessment_count": 5
+  },
+  "reasoning_summary": "实际回答有效地提供了轻症赔付的一般比例范围（20%-30%），并明确提醒用户具体赔付需以保险合同条款为准。回答完全紧扣问题，内部一致且语言清晰。尽管因无用户保单无法给出精确金额，但通过提供通用信息和风险提示，充分满足了用户的合理信息需求，因此整体业务期望得到满足。",
+  "judge_basis": "评估基于回答的实用性、风险控制和清晰度，而非绝对准确性（因缺少黄金答案和用户保单数据）。",
+  "judge_method": "逐条比对业务期望与实际输出内容。",
+  "verdict_derivation": {
+    "primary_boundary": "qa_gold_answer",
+    "assessment_summary": "实际回答有效地提供了轻症赔付的一般比例范围（20%-30%），并明确提醒用户具体赔付需以保险合同条款为准。回答完全紧扣问题，内部一致且语言清晰。尽管因无用户保单无法给出精确金额，但通过提供通用信息和风险提示，充分满足了用户的合理信息需求，因此整体业务期望得到满足。",
+    "why_verdict": "实际回答完整覆盖了业务期望的核心要求：给出了参考比例并强调了合同条款的优先性，未产生误导或无关信息，因此判定为满足。",
+    "taxonomy_error_types": [
+      "none"
+    ],
+    "score_dimensions": [
+      {
+        "dimension": "correctness",
+        "score": 1.0,
+        "evidence": [
+          "实际回答有效地提供了轻症赔付的一般比例范围（20%-30%），并明确提醒用户具体赔付需以保险合同条款为准。回答完全紧扣问题，内部一致且语言清晰。尽管因无用户保单无法给出精确金额，但通过提供通用信息和风险提示，充分满足了用户的合理信息需求，因此整体业务期望得到满足。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "completeness",
+        "score": 1.0,
+        "evidence": [
+          "实际回答有效地提供了轻症赔付的一般比例范围（20%-30%），并明确提醒用户具体赔付需以保险合同条款为准。回答完全紧扣问题，内部一致且语言清晰。尽管因无用户保单无法给出精确金额，但通过提供通用信息和风险提示，充分满足了用户的合理信息需求，因此整体业务期望得到满足。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "key_point_coverage",
+        "score": 1.0,
+        "evidence": [
+          "实际回答有效地提供了轻症赔付的一般比例范围（20%-30%），并明确提醒用户具体赔付需以保险合同条款为准。回答完全紧扣问题，内部一致且语言清晰。尽管因无用户保单无法给出精确金额，但通过提供通用信息和风险提示，充分满足了用户的合理信息需求，因此整体业务期望得到满足。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "faithfulness",
+        "score": 1.0,
+        "evidence": [
+          "实际回答有效地提供了轻症赔付的一般比例范围（20%-30%），并明确提醒用户具体赔付需以保险合同条款为准。回答完全紧扣问题，内部一致且语言清晰。尽管因无用户保单无法给出精确金额，但通过提供通用信息和风险提示，充分满足了用户的合理信息需求，因此整体业务期望得到满足。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "relevance",
+        "score": 1.0,
+        "evidence": [
+          "实际回答有效地提供了轻症赔付的一般比例范围（20%-30%），并明确提醒用户具体赔付需以保险合同条款为准。回答完全紧扣问题，内部一致且语言清晰。尽管因无用户保单无法给出精确金额，但通过提供通用信息和风险提示，充分满足了用户的合理信息需求，因此整体业务期望得到满足。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "usefulness",
+        "score": 1.0,
+        "evidence": [
+          "实际回答有效地提供了轻症赔付的一般比例范围（20%-30%），并明确提醒用户具体赔付需以保险合同条款为准。回答完全紧扣问题，内部一致且语言清晰。尽管因无用户保单无法给出精确金额，但通过提供通用信息和风险提示，充分满足了用户的合理信息需求，因此整体业务期望得到满足。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "coherence",
+        "score": 1.0,
+        "evidence": [
+          "实际回答有效地提供了轻症赔付的一般比例范围（20%-30%），并明确提醒用户具体赔付需以保险合同条款为准。回答完全紧扣问题，内部一致且语言清晰。尽管因无用户保单无法给出精确金额，但通过提供通用信息和风险提示，充分满足了用户的合理信息需求，因此整体业务期望得到满足。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "risk_control",
+        "score": 1.0,
+        "evidence": [
+          "实际回答有效地提供了轻症赔付的一般比例范围（20%-30%），并明确提醒用户具体赔付需以保险合同条款为准。回答完全紧扣问题，内部一致且语言清晰。尽管因无用户保单无法给出精确金额，但通过提供通用信息和风险提示，充分满足了用户的合理信息需求，因此整体业务期望得到满足。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "clarity",
+        "score": 1.0,
+        "evidence": [
+          "实际回答有效地提供了轻症赔付的一般比例范围（20%-30%），并明确提醒用户具体赔付需以保险合同条款为准。回答完全紧扣问题，内部一致且语言清晰。尽管因无用户保单无法给出精确金额，但通过提供通用信息和风险提示，充分满足了用户的合理信息需求，因此整体业务期望得到满足。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      }
+    ],
+    "error_type": "none"
+  },
+  "evidence": [
+    "实际回答有效地提供了轻症赔付的一般比例范围（20%-30%），并明确提醒用户具体赔付需以保险合同条款为准。回答完全紧扣问题，内部一致且语言清晰。尽管因无用户保单无法给出精确金额，但通过提供通用信息和风险提示，充分满足了用户的合理信息需求，因此整体业务期望得到满足。",
+    "scenario=qa_gold_answer",
+    "question_present=True",
+    "actual_answer_present=False",
+    "golden_answer_present=False"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "uncontrollable_limits": [
+      "缺少黄金标准答案用于准确性对比",
+      "无法获取用户具体保单条款"
+    ],
+    "reasoning": "尽管无法评估回答的绝对准确性，但可评估其是否提供了有用的一般信息、是否包含风险提示以及是否清晰。这些维度均在可评估范围内。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "qa_gold_answer",
+    "primary_boundary_name": "黄金答案对比评估",
+    "judge_question": "实际回答是否满足基于用户意图推导出的关键业务期望？",
+    "verdict_basis": "基于期望达成度而非黄金答案精确匹配",
+    "boundary_sources": "项目配置 scenario=qa_gold_answer，但数据质量标志 missing_golden_answer",
+    "conflict_policy": "当缺少黄金答案时，优先评估答案的有用性和风险控制，而非准确性"
+  },
+  "consumer_contract": {
+    "consumer": "投保人/被保险人",
+    "contract": "用户期望获得关于其保险责任的专业、准确的回答，但理解AI可能无法访问其个人保单数据。"
+  },
+  "intent_model": {
+    "raw_user_request": "我买了这个重疾险，如果得了合同里约定的轻症，能赔多少钱啊？",
+    "explicit_intents": [
+      "了解所购买重疾险的轻症赔付金额"
+    ],
+    "implicit_business_intents": [
+      "希望得到一个具体的数字或比例，以便理解保障范围"
+    ],
+    "constraints": {
+      "无具体合同信息": "无法提供精确的赔付金额",
+      "保险产品差异": "不同产品的轻症赔付比例可能不同"
+    },
+    "success_definition": "在不具备用户具体保单信息的情况下，提供行业通常的轻症赔付比例范围，并明确指示需以合同条款为准，避免误导用户。",
+    "blocking_requirements": [
+      "回答必须提供关于轻症赔付的一般性比例信息",
+      "回答必须明确提示用户参考具体保险合同条款",
+      "回答不得与用户问题无关或自相矛盾"
+    ],
+    "nice_to_have_requirements": [
+      "语言表达清晰易懂"
+    ],
+    "intent_evidence": [
+      "用户问题直接询问轻症赔付金额"
+    ]
+  },
+  "reconstructed_intent": "用户想知道其重疾险合同中约定的轻症具体能赔付多少钱。由于AI无法获取该用户的具体保单，最佳做法是提供一个行业通常的赔付比例范围，并强调最终以合同条款为准。",
+  "reference_generation_basis": {
+    "source": "无外部参考；基于通用知识和风险控制最佳实践生成期望",
+    "alignment_to_live_schema": "不适用"
+  },
+  "scenario": "qa_gold_answer",
+  "needs_human_review": false,
+  "quality_flags": [
+    "missing_golden_answer"
+  ],
+  "summary": {
+    "reason": "fulfilled · 4 blocking expectations all met · 实际回答有效地提供了轻症赔付的一般比例范围（20%-30%），并明确提醒用户具体赔付需以保险合同条款为准。回答完全紧扣问题，内部一致且语言清晰。尽管因无用户保单无法给出精确金额，但通过提供通用信息和风险提示，充分满足了用户的合理信息需求，因此整体业务期望得到满足。",
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 4,
+    "is_formal_attribution": true
+  }
+}

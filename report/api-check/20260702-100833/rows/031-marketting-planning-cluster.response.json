@@ -1,0 +1,65 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "needs_human_review::not_evaluable",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图识别与路由正确性",
+        "时间范围提取",
+        "缺失信息澄清",
+        "规划可执行性"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "a3b6420e-aafb-48a1-b644-af1ce50241e0"
+      ],
+      "representative_traces": [
+        "a3b6420e-aafb-48a1-b644-af1ce50241e0"
+      ],
+      "common_root_cause": "营销规划系统的意图分类体系（IntentType 枚举 + INTENT_RECOGNITION_PROMPT + try_rule_based_intent 规则）仅面向 NBEV 保险规划场景设计，缺乏通用营销计划（如促销方案）的意图类别。当用户请求'下个月促销的营销计划'时：1) 规则层 try_rule_based_intent 的正则表仅覆盖 NBEV/客户画像/队伍画像三类关键词，'营销计划''促销'不在匹配范围内；2) LLM 层的 system prompt 仅列出 team_portrait / customer_portrait / nbev_planning 三种业务意图，用户请求不与任一匹配，按 prompt 内置兜底策略被归为 other；3) adapter._extract_stage 将 intent '4001'（other）硬映射为 'non_agent' stage，导致后续 planning / clarification 流程全部跳过。这是一个系统能力边界的实现缺陷——项目名为 marketing-planning 但意图层未定义 marketing_planning 意图，意图分类与外层业务语义脱节。",
+      "shared_failure_pattern": "营销规划系统的意图分类体系（IntentType 枚举 + INTENT_RECOGNITION_PROMPT + try_rule_based_intent 规则）仅面向 NBEV 保险规划场景设计，缺乏通用营销计划（如促销方案）的意图类别。当用户请求'下个月促销的营销计划'时：1) 规则层 try_rule_based_intent 的正则表仅覆盖 NBEV/客户画像/队伍画像三类关键词，'营销计划''促销'不在匹配范围内；2) LLM 层的 system prompt 仅列出 team_portrait / customer_portrait / nbev_planning 三种业务意图，用户请求不与任一匹配，按 prompt 内置兜底策略被归为 other；3) adapter._extract_stage 将 intent '4001'（other）硬映射为 'non_agent' stage，导致后续 planning / clarification 流程全部跳过。这是一个系统能力边界的实现缺陷——项目名为 marketing-planning 但意图层未定义 marketing_planning 意图，意图分类与外层业务语义脱节。",
+      "representative_diffs": [
+        {
+          "case_id": "a3b6420e-aafb-48a1-b644-af1ce50241e0",
+          "node": "intent_recognition",
+          "expected": "意图识别结果应为营销规划相关意图，stage 为 planning 或 clarification",
+          "actual": "intent=IntentType.other (4001)，stage='non_agent'",
+          "evidence": [
+            "extracted_output.stage = 'non_agent'",
+            "raw_response intent: 4001, intent_name: 其他意图",
+            "IntentType 枚举仅含 NBEV 领域七类意图，无 marketing_planning",
+            "INTENT_RECOGNITION_PROMPT 仅描述队伍画像、客户画像、NBEV 规划三类业务意图及 other",
+            "try_rule_based_intent 的 _HOMEPAGE_RULES / Tier1-3 规则均不匹配营销计划请求"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "在 app/schemas/intent.py 的 IntentType 枚举中新增 marketing_planning = 'marketing_planning' 意图类型",
+        "在 app/workflow/prompts/intent_prompt.py 的 INTENT_RECOGNITION_PROMPT 中补充营销计划意图的描述、示例及字段提取规则（time_range、activity_type、budget 等）",
+        "在 app/workflow/steps/intent_recognition.py 的 _HOMEPAGE_RULES 或 try_rule_based_intent 中增加营销计划关键词正则（如'营销计划''促销方案''活动策划'），提供快速规则命中路径",
+        "在 adapter._extract_stage 中增加 marketing_planning → planning/clarification 的阶段映射",
+        "考虑在 IntentResult schema 中扩展 time_range、activity_type 等字段以承载营销计划特有参数"
+      ],
+      "verification_cases": [
+        "a3b6420e-aafb-48a1-b644-af1ce50241e0"
+      ],
+      "next_actions": [
+        "验证 IntentType 枚举是否确实缺少 marketing_planning：检查 app/schemas/intent.py 第 7-14 行",
+        "验证 INTENT_RECOGNITION_PROMPT 是否未描述营销计划意图：检查 app/workflow/prompts/intent_prompt.py 第 3-60 行",
+        "验证 try_rule_based_intent 的 _HOMEPAGE_RULES 无营销计划正则：检查 app/workflow/steps/intent_recognition.py 第 29-44 行",
+        "用相同 query 重新调用 recognize_intent，确认 LLM 输出为 IntentType.other（confidence 约 0.5）",
+        "检查 adapter._extract_stage 中 '4001'→'non_agent' 的映射逻辑是否仍为当前实现"
+      ]
+    }
+  ],
+  "common_root_cause": "",
+  "impact": "",
+  "priority": ""
+}

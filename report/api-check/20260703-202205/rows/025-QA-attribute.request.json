@@ -1,0 +1,663 @@
+{
+  "project": "QA",
+  "trace": {
+    "trace_id": "a007ee4a-6040-42f6-bc2d-5621485a0553",
+    "project_id": "QA",
+    "case_id": "mock-agent-QA-f8906092",
+    "live_result": {
+      "project_id": "QA",
+      "case_id": "mock-agent-QA-f8906092",
+      "session_id": "",
+      "raw_input": {
+        "input": {
+          "query": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+          "user_text": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+        },
+        "metadata": {
+          "channel": "在线客服",
+          "product_type": "重疾险",
+          "session_id": "sess_123456",
+          "timestamp": "2025-03-28T10:15:00Z",
+          "trace_id": "trace_qa_001",
+          "user_id": "user_98765"
+        },
+        "scenario": "qa_gold_answer"
+      },
+      "normalized_request": {
+        "input": {
+          "question": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+        },
+        "reference": {
+          "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+        },
+        "metadata": {
+          "live_request_mapped": true,
+          "ready": [
+            "output",
+            "reference"
+          ],
+          "schema_ok": true,
+          "source": "mock_agent_llm"
+        },
+        "scenario": "qa_gold_answer",
+        "output": {
+          "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+        }
+      },
+      "call_status": "succeeded",
+      "extracted_output": {
+        "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+      },
+      "output_source": "provided_output",
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T12:22:05.690448+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T12:22:05.690467+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T12:22:05.692224+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T12:22:05.692249+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T12:23:19.309362+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T12:23:19.309404+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T12:23:19.309425+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T12:23:19.310339+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T12:23:19.310863+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T12:23:19.310896+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T12:23:19.319051+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence or blocked reason available"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "qa_gold_answer",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "created_at": "2026-07-03T12:22:05.692183+00:00"
+  },
+  "judge": {
+    "trace_id": "a007ee4a-6040-42f6-bc2d-5621485a0553",
+    "project_id": "QA",
+    "verdict": "correct",
+    "business_expectations": [
+      {
+        "expectation_id": "提供理赔联系渠道",
+        "downstream_consumer": "用户",
+        "user_intent": "申请理赔需要首先联系保险公司",
+        "expected_outcome": "给出具体客服热线或明确的热线指引",
+        "required_capabilities": [
+          "信息准确性"
+        ],
+        "acceptance_criteria": [
+          "实际回答中必须包含客服热线或明确的拨打指引"
+        ],
+        "priority": "P0"
+      },
+      {
+        "expectation_id": "明确理赔所需材料",
+        "downstream_consumer": "用户",
+        "user_intent": "避免因材料不齐延误理赔",
+        "expected_outcome": "提供保单号和诊断证明的明确要求",
+        "required_capabilities": [
+          "信息完整性"
+        ],
+        "acceptance_criteria": [
+          "实际回答中必须提及保单号和诊断证明"
+        ],
+        "priority": "P0"
+      },
+      {
+        "expectation_id": "告知审核赔付时效",
+        "downstream_consumer": "用户",
+        "user_intent": "合理安排资金和心理预期",
+        "expected_outcome": "3个工作日内赔付的信息",
+        "required_capabilities": [
+          "信息准确性"
+        ],
+        "acceptance_criteria": [
+          "实际回答中必须包含3个工作日内完成审核并打款的表述"
+        ],
+        "priority": "P0"
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "提供理赔联系渠道",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "拨打客服热线"
+        ],
+        "actual_evidence": [
+          "您只需拨打我们24小时客服热线400-xxx-xxxx"
+        ],
+        "downstream_impact": "用户可以直接拨打电话启动理赔",
+        "blocking": true
+      },
+      {
+        "expectation_id": "明确理赔所需材料",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "提供保单号和诊断证明"
+        ],
+        "actual_evidence": [
+          "提供保单号和诊断证明"
+        ],
+        "downstream_impact": "用户知道准备哪些文件",
+        "blocking": true
+      },
+      {
+        "expectation_id": "告知审核赔付时效",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "审核通过后3个工作日内赔付"
+        ],
+        "actual_evidence": [
+          "一般3个工作日内完成审核并打款"
+        ],
+        "downstream_impact": "用户能预估赔付时间",
+        "blocking": true
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "fulfilled",
+      "assessment_count": 3
+    },
+    "expected": {
+      "actual_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+    },
+    "actual": {
+      "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+    },
+    "reasoning_summary": "用户询问重疾险癌症理赔流程。金标答案要求拨打客服热线、提供保单号和诊断证明、3个工作日内赔付。实际回答提供了24小时热线400-xxx-xxxx，同样要求保单号和诊断证明，并说明一般3个工作日内审核打款，还增加了专人跟进服务。所有关键信息点均与金标答案对齐，无错误或遗漏，仅增加了提升体验的服务承诺，完全满足用户需要。",
+    "judge_basis": "对比金标答案与模型实际输出，检查关键信息点覆盖度和准确性。",
+    "judge_method": "在qa_gold_answer场景下，以金标答案为参照，语义比较完整性、一致性。",
+    "verdict_derivation": {
+      "primary_boundary": "qa_gold_answer",
+      "assessment_summary": "用户询问重疾险癌症理赔流程。金标答案要求拨打客服热线、提供保单号和诊断证明、3个工作日内赔付。实际回答提供了24小时热线400-xxx-xxxx，同样要求保单号和诊断证明，并说明一般3个工作日内审核打款，还增加了专人跟进服务。所有关键信息点均与金标答案对齐，无错误或遗漏，仅增加了提升体验的服务承诺，完全满足用户需要。",
+      "why_verdict": "实际回答在联系渠道、材料要求、审核时效三个核心维度上与金标答案语义一致且信息更详细，无遗漏或矛盾，因此整体评估为完全满足。",
+      "taxonomy_error_types": [
+        "none"
+      ],
+      "score_dimensions": [
+        {
+          "dimension": "correctness",
+          "score": 1.0,
+          "evidence": [
+            "用户询问重疾险癌症理赔流程。金标答案要求拨打客服热线、提供保单号和诊断证明、3个工作日内赔付。实际回答提供了24小时热线400-xxx-xxxx，同样要求保单号和诊断证明，并说明一般3个工作日内审核打款，还增加了专人跟进服务。所有关键信息点均与金标答案对齐，无错误或遗漏，仅增加了提升体验的服务承诺，完全满足用户需要。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "completeness",
+          "score": 1.0,
+          "evidence": [
+            "用户询问重疾险癌症理赔流程。金标答案要求拨打客服热线、提供保单号和诊断证明、3个工作日内赔付。实际回答提供了24小时热线400-xxx-xxxx，同样要求保单号和诊断证明，并说明一般3个工作日内审核打款，还增加了专人跟进服务。所有关键信息点均与金标答案对齐，无错误或遗漏，仅增加了提升体验的服务承诺，完全满足用户需要。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "key_point_coverage",
+          "score": 1.0,
+          "evidence": [
+            "用户询问重疾险癌症理赔流程。金标答案要求拨打客服热线、提供保单号和诊断证明、3个工作日内赔付。实际回答提供了24小时热线400-xxx-xxxx，同样要求保单号和诊断证明，并说明一般3个工作日内审核打款，还增加了专人跟进服务。所有关键信息点均与金标答案对齐，无错误或遗漏，仅增加了提升体验的服务承诺，完全满足用户需要。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "faithfulness",
+          "score": 1.0,
+          "evidence": [
+            "用户询问重疾险癌症理赔流程。金标答案要求拨打客服热线、提供保单号和诊断证明、3个工作日内赔付。实际回答提供了24小时热线400-xxx-xxxx，同样要求保单号和诊断证明，并说明一般3个工作日内审核打款，还增加了专人跟进服务。所有关键信息点均与金标答案对齐，无错误或遗漏，仅增加了提升体验的服务承诺，完全满足用户需要。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "relevance",
+          "score": 1.0,
+          "evidence": [
+            "用户询问重疾险癌症理赔流程。金标答案要求拨打客服热线、提供保单号和诊断证明、3个工作日内赔付。实际回答提供了24小时热线400-xxx-xxxx，同样要求保单号和诊断证明，并说明一般3个工作日内审核打款，还增加了专人跟进服务。所有关键信息点均与金标答案对齐，无错误或遗漏，仅增加了提升体验的服务承诺，完全满足用户需要。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "usefulness",
+          "score": 1.0,
+          "evidence": [
+            "用户询问重疾险癌症理赔流程。金标答案要求拨打客服热线、提供保单号和诊断证明、3个工作日内赔付。实际回答提供了24小时热线400-xxx-xxxx，同样要求保单号和诊断证明，并说明一般3个工作日内审核打款，还增加了专人跟进服务。所有关键信息点均与金标答案对齐，无错误或遗漏，仅增加了提升体验的服务承诺，完全满足用户需要。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "coherence",
+          "score": 1.0,
+          "evidence": [
+            "用户询问重疾险癌症理赔流程。金标答案要求拨打客服热线、提供保单号和诊断证明、3个工作日内赔付。实际回答提供了24小时热线400-xxx-xxxx，同样要求保单号和诊断证明，并说明一般3个工作日内审核打款，还增加了专人跟进服务。所有关键信息点均与金标答案对齐，无错误或遗漏，仅增加了提升体验的服务承诺，完全满足用户需要。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "risk_control",
+          "score": 1.0,
+          "evidence": [
+            "用户询问重疾险癌症理赔流程。金标答案要求拨打客服热线、提供保单号和诊断证明、3个工作日内赔付。实际回答提供了24小时热线400-xxx-xxxx，同样要求保单号和诊断证明，并说明一般3个工作日内审核打款，还增加了专人跟进服务。所有关键信息点均与金标答案对齐，无错误或遗漏，仅增加了提升体验的服务承诺，完全满足用户需要。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "clarity",
+          "score": 1.0,
+          "evidence": [
+            "用户询问重疾险癌症理赔流程。金标答案要求拨打客服热线、提供保单号和诊断证明、3个工作日内赔付。实际回答提供了24小时热线400-xxx-xxxx，同样要求保单号和诊断证明，并说明一般3个工作日内审核打款，还增加了专人跟进服务。所有关键信息点均与金标答案对齐，无错误或遗漏，仅增加了提升体验的服务承诺，完全满足用户需要。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        }
+      ],
+      "error_type": "none"
+    },
+    "extra": [
+      {
+        "kind": "extra",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "安排专人跟进",
+        "incomplete": false
+      }
+    ],
+    "evidence": [
+      "用户询问重疾险癌症理赔流程。金标答案要求拨打客服热线、提供保单号和诊断证明、3个工作日内赔付。实际回答提供了24小时热线400-xxx-xxxx，同样要求保单号和诊断证明，并说明一般3个工作日内审核打款，还增加了专人跟进服务。所有关键信息点均与金标答案对齐，无错误或遗漏，仅增加了提升体验的服务承诺，完全满足用户需要。",
+      "scenario=qa_gold_answer",
+      "question_present=True",
+      "actual_answer_present=True",
+      "golden_answer_present=True"
+    ],
+    "boundary_decision": {
+      "within_evaluable_scope": "true",
+      "reasoning": "实际输出与金标答案明确可比，评估边界清晰，无不可评估因素。"
+    },
+    "evaluation_boundary": {
+      "primary_boundary_id": "qa_gold_answer",
+      "primary_boundary_name": "金标答案评估",
+      "judge_question": "实际回答是否准确、完整地覆盖了金标答案中关于理赔流程的核心信息？",
+      "verdict_basis": "以金标答案为基准，判断回答对必要步骤的覆盖情况和语义一致性。",
+      "boundary_sources": "项目数据集提供的reference.golden_answer",
+      "conflict_policy": "当实际回答与金标答案核心信息矛盾时视为不合格，补充性细节不扣分。"
+    },
+    "consumer_contract": {
+      "consumer": "在线客服用户",
+      "contract": "提供符合公司理赔流程的准确、易懂的指导",
+      "reference_contract": {
+        "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+      }
+    },
+    "intent_model": {
+      "raw_user_request": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+      "explicit_intents": [
+        "了解重疾险癌症理赔的具体申请流程"
+      ],
+      "implicit_business_intents": [
+        "获取明确的行动指引（电话、材料、时效）",
+        "希望理赔过程清晰、可靠"
+      ],
+      "constraints": {
+        "domain": "重疾险理赔",
+        "evidence_required": false
+      },
+      "success_definition": "用户获得可直接操作的理赔申请步骤，知晓联系渠道、所需材料以及预计赔付时间。",
+      "blocking_requirements": [
+        "必须提供可以联系的客服渠道（热线/电话）",
+        "必须明确告知需要准备的材料（保单号、诊断证明）",
+        "必须告知审核及赔付的预期时间（3个工作日内）"
+      ],
+      "nice_to_have_requirements": [
+        "安排专人跟进服务",
+        "使用安抚或亲切语气"
+      ],
+      "intent_evidence": [
+        "原问题明确要求了解确诊癌症后的理赔申请具体步骤"
+      ]
+    },
+    "reconstructed_intent": "用户想知道在确诊癌症后如何申请重疾险理赔，需要具体步骤，包括联系谁、准备什么材料、多长时间能赔。",
+    "semantic_equivalence_checks": [
+      {
+        "expected_fragment": "拨打客服热线",
+        "actual_fragment": "拨打我们24小时客服热线400-xxx-xxxx",
+        "equivalent": true,
+        "basis": "实际回答提供了更具体的电话号码，完全满足并优于金标的‘客服热线’指引"
+      },
+      {
+        "expected_fragment": "提供保单号和诊断证明",
+        "actual_fragment": "提供保单号和诊断证明",
+        "equivalent": true,
+        "basis": "完全一致"
+      },
+      {
+        "expected_fragment": "审核通过后3个工作日内赔付",
+        "actual_fragment": "一般3个工作日内完成审核并打款",
+        "equivalent": true,
+        "basis": "含义相同，均表示3个工作日内完成赔付"
+      }
+    ],
+    "reference_generation_basis": {
+      "source": "数据集提供的golden_answer字段",
+      "alignment_to_actual_shape": "金标答案作为规范答案，用于评估覆盖度与正确性"
+    },
+    "scenario": "qa_gold_answer",
+    "summary": {
+      "reason": "fulfilled · 3 blocking expectations all met · 用户询问重疾险癌症理赔流程。金标答案要求拨打客服热线、提供保单号和诊断证明、3个工作日内赔付。实际回答提供了24小时热线400-xxx-xxxx，同样要求保单号和诊断证明，并说明一般3个工作日内审核打款，还增加了专人跟进服务。所有关键信息点均与金标答案对齐，无错误或遗漏，仅增加了提升体验的服务承诺，完全满足用户需要。",
+      "reason_source": "aggregated_fulfillment",
+      "fulfillment_status": "fulfilled",
+      "assessment_count": 3,
+      "blocking_count": 3,
+      "is_formal_attribution": true
+    }
+  }
+}

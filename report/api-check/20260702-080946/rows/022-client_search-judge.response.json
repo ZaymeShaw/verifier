@@ -1,0 +1,38 @@
+{
+  "trace_id": "8ab8fab7-eb8a-4ade-8e11-c6f219f82ae6",
+  "project_id": "client_search",
+  "business_expectations": [
+    {},
+    {}
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "客户姓名条件正确筛选",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "不引入无关筛选条件",
+      "status": "fulfilled"
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "fulfilled",
+    "assessment_count": 2
+  },
+  "expected": {
+    "query_logic": "AND",
+    "expected_source": "not_available",
+    "reference_is_oracle": false
+  },
+  "actual": {
+    "query_logic": "AND"
+  },
+  "summary": {
+    "reason": "fulfilled · 1 blocking expectations all met · 用户意图为通过姓名'张三'搜索客户。parser 输出 searchClientName MATCH '张三'，字段语义正确（客户本人姓名），操作符 MATCH 在 capability_manifest 允许范围内，值'张三'完整保留了用户查询中的全名，未被截断或修改。'详细资料'是结果展示需求，未被错误转化为额外搜索条件。下游 ES 搜索不可用，但在 parser 条件语义层面，该输出与用户搜索意图完全等价。所有业务期望均 fulfilled，无 blocking gaps，无 missing/wrong/extra 条件。",
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "fulfilled",
+    "assessment_count": 2,
+    "blocking_count": 1,
+    "is_formal_attribution": true
+  }
+}

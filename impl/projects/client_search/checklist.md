@@ -5,10 +5,10 @@ Check this project through the generic protocol chain:
 1. The 8000 business API is reachable, or the run is explicitly marked mock/error.
 2. `RunTrace.raw_response` preserves the original response.
 3. `RunTrace.extracted_output` contains a generic summary and structured output.
-4. client_search-specific fields remain in `project_fields` or raw response.
+4. client_search-specific evaluated output fields remain in `RunTrace.extracted_output`; private debug-only details may appear under schema protocol extensions.
 5. judge uses the current trace, `evaluation.md`, implementation `impl/projects/client_search/judge_boundary_protocals.md`, project judge standard `impl/projects/client_search/judge.md`, the user-owned `projects/client_search/judge_boundary-template.md`, latest user-owned `projects/client_search` prompt/config references, and original business field/enum/value-mapping/rule source documents listed in `project.yaml`. The user-side `judge_boundary-template.md` is loaded via `source_judge_boundary` document key and referenced by `judge_boundary_protocals.md`; judge system prompt does not directly include the template — only the protocol mapping.
 6. judge treats the core target as whether the parser can retrieve the intended customers from the dependent ES/customer-search capability, not just whether fields match a historical answer.
-7. `project_fields.downstream_search` and the `client_search.downstream_search` trace stage preserve downstream-search status, payload, result or error.
+7. `RunTrace.extracted_output.downstream_search` and the `client_search.downstream_search` trace stage preserve downstream-search status, payload, result or error.
 8. if downstream search is unavailable, not configured, or skipped, judge/check must not claim ES actual result-set verification; `boundary_decision.result_set_verified` should remain false or absent with explicit evidence, and judge should still assess ES query semantic equivalence from parser conditions when possible.
 9. if downstream search is unavailable, judge must not degrade to mere prompt/config shape matching or automatic `uncertain`; it should explain whether condition semantics are enough to decide correctness.
 10. if downstream search succeeds, judge may use the returned result-set evidence for equivalence and should mark the result-set verification status consistently.

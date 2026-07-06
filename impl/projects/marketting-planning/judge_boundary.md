@@ -1,6 +1,6 @@
 # marketting-planning judge boundary
 
-边界判断由 adapter 在 judge 前写入 `RunTrace.project_fields.application_boundary`，judge 只消费当前 case 边界，不在 prompt 中重新猜测责任范围。
+边界判断由 adapter 在 live 层写入 `LiveExecutionResult.application_boundary`，judge 只消费当前 case 边界，不在 prompt 中重新猜测责任范围。
 
 ## 当前责任范围
 

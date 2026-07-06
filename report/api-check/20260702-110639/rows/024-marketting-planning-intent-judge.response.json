@@ -1,0 +1,99 @@
+{
+  "trace_id": "2a9b8dbe-016b-4e6f-a50a-9fc6fd2318d8",
+  "project_id": "marketting-planning-intent",
+  "business_expectations": [
+    {},
+    {},
+    {},
+    {},
+    {}
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签应为客户分析类别",
+      "status": "not_fulfilled"
+    },
+    {
+      "expectation_id": "时间实体应被识别或标注",
+      "status": "not_evaluable"
+    },
+    {
+      "expectation_id": "置信度达到业务可接受阈值",
+      "status": "not_fulfilled"
+    },
+    {
+      "expectation_id": "低置信度时触发回退策略",
+      "status": "not_fulfilled"
+    },
+    {
+      "expectation_id": "意图分类确保正确路由到数据分析能力",
+      "status": "not_fulfilled"
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "not_fulfilled"
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "blocking_expectations": [
+      "意图标签应为客户分析类别",
+      "低置信度时触发回退策略",
+      "意图分类确保正确路由到数据分析能力",
+      "intent_contract"
+    ],
+    "assessment_count": 6
+  },
+  "expected": {
+    "intent": "用户希望查询近半年主要客户人群的分布情况，预期系统识别为'客户分析'意图，并提取时间范围实体，在置信度不足时进行澄清。"
+  },
+  "actual": {
+    "ambiguous": false,
+    "confidence": 0.5,
+    "fallback": false,
+    "intent": "other",
+    "raw_intent": "4001"
+  },
+  "summary": {
+    "reason": "not_fulfilled · blocking=[低置信度时触发回退策略,意图分类确保正确路由到数据分析能力,意图标签应为客户分析类别] · 系统在不确定时仍错误地继续处理，可能给出无意义响应或静默失败",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "低置信度时触发回退策略",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "系统在不确定时仍错误地继续处理，可能给出无意义响应或静默失败",
+        "within_evaluable_scope": "true",
+        "evidence": ""
+      },
+      {
+        "expectation_id": "意图分类确保正确路由到数据分析能力",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "查询被发送至未知意图处理器，无法执行客户数据分析，用户目标完全落空",
+        "within_evaluable_scope": "true",
+        "evidence": ""
+      },
+      {
+        "expectation_id": "意图标签应为客户分析类别",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "查询被归类为未知意图，无法触发客户分析流程，导致用户需求不被响应",
+        "within_evaluable_scope": "true",
+        "evidence": ""
+      },
+      {
+        "expectation_id": "置信度达到业务可接受阈值",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "低置信度增加路由错误风险",
+        "within_evaluable_scope": "true",
+        "evidence": ""
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 3,
+    "is_formal_attribution": true
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "needs_human_review::not_evaluable",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图识别为营销规划意图",
+        "阶段路由进入planning阶段",
+        "生成与销售人员相关的规划卡片",
+        "SSE事件流包含规划卡片增量事件",
+        "识别时间约束并体现在分析中",
+        "销售人员作为可调整维度被分解展示"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "e1e69a4b-ea52-4464-a25a-383202f55081"
+      ],
+      "representative_traces": [
+        "e1e69a4b-ea52-4464-a25a-383202f55081"
+      ],
+      "common_root_cause": "意图识别模块存在双重缺陷导致用户明确的营销规划请求被误判为'其他意图'：\n\n1. 【规则层 - implementation_bug】意图识别的三层规则匹配（Tier 0 正则、Tier 2 结构化提取、Tier 3 关键词启发式）均无法覆盖用户使用的'提高NBEV'措辞。Tier 0 正则硬编码了'达成'（'怎么达成.*NBEV.*目标'），Tier 3 的关键词列表 ('达成','规划','路径','测算','分析') 缺少'提高''提升''增加'等语义等价动词，导致规则匹配在 LLM 调用前全线失败。\n\n2. 【模型层 - model_capability_gap】LLM prompt 存在两个问题：(a) nbev_planning 的所有 few-shot 示例均使用'达成/规划/测算'措辞，缺少'提高NBEV''增加销售人员提升NBEV'等口语化变体，导致 LLM 无法正确泛化；(b) prompt 明确指示'如果用户的意图不明确，倾向于判断为 other'，这种系统性保守倾向在用户使用非示例措辞时将本应明确的 NBEV 规划请求推向 other 分类。\n\n两种缺陷叠加：规则层先因关键词缺失放过消息，LLM 层再因 prompt 覆盖不足和保守策略误判。但核心根因在规则层的实现缺陷——关键词列表覆盖面不足是确定性可修复的 implementation_bug，若能命中规则则可绕过 LLM 的不确定性。",
+      "shared_failure_pattern": "意图识别模块存在双重缺陷导致用户明确的营销规划请求被误判为'其他意图'：\n\n1. 【规则层 - implementation_bug】意图识别的三层规则匹配（Tier 0 正则、Tier 2 结构化提取、Tier 3 关键词启发式）均无法覆盖用户使用的'提高NBEV'措辞。Tier 0 正则硬编码了'达成'（'怎么达成.*NBEV.*目标'），Tier 3 的关键词列表 ('达成','规划','路径','测算','分析') 缺少'提高''提升''增加'等语义等价动词，导致规则匹配在 LLM 调用前全线失败。\n\n2. 【模型层 - model_capability_gap】LLM prompt 存在两个问题：(a) nbev_planning 的所有 few-shot 示例均使用'达成/规划/测算'措辞，缺少'提高NBEV''增加销售人员提升NBEV'等口语化变体，导致 LLM 无法正确泛化；(b) prompt 明确指示'如果用户的意图不明确，倾向于判断为 other'，这种系统性保守倾向在用户使用非示例措辞时将本应明确的 NBEV 规划请求推向 other 分类。\n\n两种缺陷叠加：规则层先因关键词缺失放过消息，LLM 层再因 prompt 覆盖不足和保守策略误判。但核心根因在规则层的实现缺陷——关键词列表覆盖面不足是确定性可修复的 implementation_bug，若能命中规则则可绕过 LLM 的不确定性。",
+      "representative_diffs": [
+        {
+          "case_id": "e1e69a4b-ea52-4464-a25a-383202f55081",
+          "node": "intent_recognition",
+          "expected": "intent=nbev_planning，意图标识指向营销规划类别，触发后续 planning 流程",
+          "actual": "intent=other (intent_code=4001)，stage=non_agent，planning 流程完全跳过",
+          "evidence": [
+            "源码证据：Tier 3 关键词列表 ('达成','规划','路径','测算','分析') 不包含 '提高'，导致 has_planning_intent=False",
+            "源码证据：HOMEPAGE_RULES 正则 '怎么达成.*NBEV.*目标' 硬编码 '达成'，不匹配 '怎么提高'",
+            "源码证据：LLM prompt 所有 nbev_planning 示例使用 '达成/规划/测算' 措辞，缺少 '提高' 变体",
+            "源码证据：LLM prompt 中 '倾向于判断为 other' 的保守策略",
+            "运行证据：extracted_output.stage=non_agent, card_summary=[]",
+            "运行证据：judge 报告 intent_code=4001, intent_name=其他意图",
+            "项目文档证据：source_risks 坑点 7 确认 IntentType.other 返回 '非本agent意图' 标记"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        {
+          "change": "Tier 3 has_planning_intent 关键词列表从 ('达成','规划','路径','测算','分析') 扩展为 ('达成','规划','路径','测算','分析','提高','提升','增加','改善','优化')",
+          "priority": "high",
+          "rationale": "这是最小改动、最高收益的修复——扩关键词即可让规则匹配在 LLM 调用前拦截此类消息，完全绕过 LLM 不确定性",
+          "target_file": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/steps/intent_recognition.py"
+        },
+        {
+          "change": "HOMEPAGE_RULES nbev_planning 正则从 '怎么达成.*NBEV.*目标' 改为 '怎么(达成|提高|提升|增加|改善).*NBEV'",
+          "priority": "medium",
+          "rationale": "提升首页规则的覆盖面，但 Tier 3 修复已可覆盖该 case",
+          "target_file": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/steps/intent_recognition.py"
+        },
+        {
+          "change": "在 nbev_planning 示例中增加 '怎么提高今年的NBEV'、'从增加销售人员入手提升NBEV' 等口语化变体；将 '倾向于判断为 other' 改为更中性的表述如 '仅当用户问题与保险业务完全无关时才判断为 other'",
+          "priority": "medium",
+          "rationale": "提升 LLM 的泛化能力和降低假阴性率，作为规则修复的补充防御层",
+          "target_file": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/prompts/intent_prompt.py"
+        }
+      ],
+      "verification_cases": [
+        "e1e69a4b-ea52-4464-a25a-383202f55081"
+      ],
+      "next_actions": [
+        {
+          "action": "验证 Tier 3 关键词修复效果",
+          "expected": "has_planning_intent=True，返回 IntentType.nbev_planning",
+          "method": "在 has_planning_intent 关键词列表中添加'提高'后，用当前用户消息 '我想知道怎么提高今年的NBEV，能不能从多招些销售人员入手？' 重新运行 try_rule_based_intent，确认返回 nbev_planning",
+          "step": 1
+        },
+        {
+          "action": "验证 Tier 0 正则泛化效果",
+          "expected": "正则命中，返回 IntentType.nbev_planning, confidence=1.0",
+          "method": "将 HOMEPAGE_RULES 正则改为 '怎么(达成|提高|提升|增加).*NBEV'，用相同消息测试 try_homepage_intent，确认返回 nbev_planning",
+          "step": 2
+        },
+        {
+          "action": "验证 LLM prompt 优化效果",
+          "expected": "LLM 返回 intent=nbev_planning",
+          "method": "在 prompt 的 nbev_planning 示例中添加 '怎么提高今年的NBEV' 和 '能不能从增加销售人员入手提升NBEV'，移除或弱化 '倾向于判断为 other'，用相同消息调用 recognize_intent",
+          "step": 3
+        },
+        {
+          "action": "端到端回归测试",
+          "expected": "全链路正常，产出有效的营销规划卡片",
+          "method": "修复后通过 /api/v1/marketing-planning/stream 发送相同消息，验证 stage=planning、card_summary 非空、卡片包含队伍维度",
+          "step": 4
+        }
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模块存在双重缺陷导致用户明确的营销规划请求被误判为'其他意图'：\n\n1. 【规则层 - implementation_bug】意图识别的三层规则匹配（Tier 0 正则、Tier 2 结构化提取、Tier 3 关键词启发式）均无法覆盖用户使用的'提高NBEV'措辞。Tier 0 正则硬编码了'达成'（'怎么达成.*NBEV.*目标'），Tier 3 的关键词列表 ('达成','规划','路径','测算','分析') 缺少'提高''提升''增加'等语义等价动词，导致规则匹配在 LLM 调用前全线失败。\n\n2. 【模型层 - model_capability_gap】LLM prompt 存在两个问题：(a) nbev_planning 的所有 few-shot 示例均使用'达成/规划/测算'措辞，缺少'提高NBEV''增加销售人员提升NBEV'等口语化变体，导致 LLM 无法正确泛化；(b) prompt 明确指示'如果用户的意图不明确，倾向于判断为 other'，这种系统性保守倾向在用户使用非示例措辞时将本应明确的 NBEV 规划请求推向 other 分类。\n\n两种缺陷叠加：规则层先因关键词缺失放过消息，LLM 层再因 prompt 覆盖不足和保守策略误判。但核心根因在规则层的实现缺陷——关键词列表覆盖面不足是确定性可修复的 implementation_bug，若能命中规则则可绕过 LLM 的不确定性。",
+  "impact": "",
+  "priority": "high"
+}

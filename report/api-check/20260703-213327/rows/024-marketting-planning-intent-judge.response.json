@@ -1,0 +1,114 @@
+{
+  "trace_id": "7c4b187b-65e7-4bf4-9868-486bde15f2af",
+  "project_id": "marketting-planning-intent",
+  "verdict": "uncertain",
+  "score": 1.0,
+  "business_expectations": [
+    {
+      "expectation_id": "marketting-planning-intent:intent_contract",
+      "downstream_consumer": "marketing intent router",
+      "user_intent": "",
+      "expected_outcome": "single-turn intent recognition should return the expected label, required slots/entities, acceptable confidence, and permitted fallback behavior",
+      "required_capabilities": [
+        "intent_label",
+        "slot_extraction",
+        "confidence_threshold",
+        "fallback_control"
+      ],
+      "boundary": {
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ],
+        "scope": "single_turn_intent_recognition"
+      },
+      "priority": "normal",
+      "evidence_refs": [
+        {
+          "ref_id": "",
+          "source": "",
+          "kind": "",
+          "stage": "",
+          "summary": "",
+          "location": ""
+        }
+      ]
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "intent_contract",
+      "status": "fulfilled",
+      "downstream_impact": "当前单轮意图识别满足 reference contract：intent=None，confidence=None 达到最低要求 None。",
+      "blocking": true
+    },
+    {
+      "expectation_id": "marketting-planning-intent:intent_contract",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        {}
+      ],
+      "actual_evidence": [
+        {}
+      ],
+      "boundary_decision": {
+        "excludes": [
+          "multi_turn_planning",
+          "sse_card_generation"
+        ],
+        "scope": "single_turn_intent_recognition"
+      },
+      "downstream_impact": "当前单轮意图识别满足 reference contract：intent=None，confidence=None 达到最低要求 None。",
+      "blocking": true,
+      "evidence_refs": [
+        {
+          "ref_id": "",
+          "source": "",
+          "kind": "",
+          "stage": "",
+          "summary": "",
+          "location": ""
+        }
+      ]
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_evaluable",
+    "assessment_count": 2,
+    "blocking_expectations": [
+      "marketting-planning-intent:intent_contract"
+    ]
+  },
+  "reasoning_summary": "当前单轮意图识别满足 reference contract：intent=None，confidence=None 达到最低要求 None。",
+  "judge_basis": "",
+  "judge_method": "llm_call_failed",
+  "verdict_derivation": {
+    "why_verdict": "LLM 调用失败，未做出算法判断",
+    "contract_gate": "passed"
+  },
+  "consumer_contract": {
+    "consumer": "marketing intent router",
+    "contract": "single-turn query must resolve to the expected intent, required slots/entities, confidence threshold, and fallback policy before planning starts",
+    "application_boundary": {
+      "excludes": [
+        "multi_turn_planning",
+        "sse_card_generation"
+      ],
+      "scope": "single_turn_intent_recognition"
+    }
+  },
+  "reconstructed_intent": "",
+  "scenario": "",
+  "needs_human_review": true,
+  "quality_flags": [
+    "intent_contract_gate_passed"
+  ],
+  "summary": {
+    "reason": "[llm_call_failed] uncertain · LLM 调用失败，未做出算法判断",
+    "reason_source": "degradation_marker",
+    "fulfillment_status": "not_evaluable",
+    "assessment_count": 0,
+    "blocking_count": 0,
+    "is_formal_attribution": false
+  }
+}

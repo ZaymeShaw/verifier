@@ -10,9 +10,10 @@ from typing import Any, Dict, Optional
 from urllib.parse import urljoin
 
 from impl.core.adapter import ProjectAdapter
-from impl.core.schema import AttributeResult, JudgeResult, RunTrace
-from impl.projects.client_search.tools import ClientSearchConditionCompareTool
-from impl.tools import ToolContext, ToolRegistry
+from impl.core.interaction_protocol import ready_from_spec
+from impl.core.schema import AttributeResult, ExecutionTraceEvent, JudgeResult, LiveExecutionResult, LiveRequest, MockDataset, MultiTurnCase, RunTrace, SingleTurnCase, TraceExecutionContext
+from impl.projects.client_search.tools import ClientSearchConditionCompareTool, build_field_capability_tool, build_rule_verify_tool, build_search_api_tool
+from impl.tools import ToolContext, ToolRegistry, VerifiableTool
 
 import yaml as _yaml
 
@@ -127,6 +128,55 @@ class Adapter(ProjectAdapter):
         registry.register(ClientSearchConditionCompareTool())
         return registry
 
+    def get_verifiable_tools(self) -> list[VerifiableTool]:
+        """返回 client_search 的可执行验证 tool 集合（spec/tool2.md）。
+
+        通用层只管协议+编排，项目层在这里决定挑哪些函数/API 做成 tool。
+        每个 tool 的 execute_fn 真能跑、能产出 actual 作为归因证据。
+        tool 内部怎么拿 trace/spec 是实现细节，不由协议规定。
+        """
+        config_paths = self._source_config_paths()
+        api_config = self.spec.application.get("downstream_search") if isinstance(self.spec.application, dict) else None
+        # 用主解析 API（project.yaml.api）做 search_api tool，而非 downstream_search
+        api_spec = self.spec.api or {}
+        tools: list[VerifiableTool] = [
+            build_search_api_tool(
+                api_base=str(api_spec.get("base_url") or "http://localhost:8000"),
+                endpoint=str(api_spec.get("endpoint") or "/api/v1/client_search_query_parse_no_encipher"),
+                method=str(api_spec.get("method") or "POST"),
+                timeout=float(api_spec.get("timeout") or 10.0),
+            ),
+        ]
+        field_def_path = config_paths.get("source_field_definitions")
+        if field_def_path:
+            tools.append(build_field_capability_tool(field_def_path))
+        value_mappings_path = config_paths.get("source_value_mappings")
+        enhanced_rules_path = config_paths.get("source_enhanced_rules")
+        if value_mappings_path or enhanced_rules_path:
+            tools.append(build_rule_verify_tool(value_mappings_path or "", enhanced_rules_path or ""))
+
+        # spec/apitool_discover.md: 自动发现的 API endpoint tool（通用引擎扫描源码产出）
+        # 启动时扫描，合并到 tool 列表。execute_fn 为 None 的占位 tool 由
+        # 通用 ToolOrchestrator 在调用时拒绝（避免调到未实现的远程入口）。
+        try:
+            from impl.projects.client_search.tools.api_discover import load_api_discover_tools
+            discovered = load_api_discover_tools(self.spec)
+            # 去重：跳过已被手工 tool 覆盖的 endpoint（如 client_search_query_parse_no_encipher）
+            existing_ids = {t.tool_id for t in tools}
+            for vt in discovered:
+                if vt.tool_id not in existing_ids:
+                    tools.append(vt)
+            if discovered:
+                import logging as _logging
+                _logging.getLogger(__name__).info(
+                    f"[client_search] discovered {len(discovered)} api endpoints, "
+                    f"{len(tools) - len(existing_ids)} new merged into verifiable tools"
+                )
+        except Exception as e:
+            import logging as _logging
+            _logging.getLogger(__name__).warning(f"[client_search] api discover failed: {e}")
+        return tools
+
     def _source_config_paths(self) -> Dict[str, str]:
         paths = {}
         root = Path(self.spec.root)
@@ -138,27 +188,80 @@ class Adapter(ProjectAdapter):
     def _external_boundary_sources(self) -> Dict[str, Any]:
         return {"config_paths": self._source_config_paths()}
 
-    def build_request(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        nested_input = input_data.get("input") if isinstance(input_data.get("input"), dict) else {}
-        query = input_data.get("query") or input_data.get("user_text") or nested_input.get("query") or nested_input.get("user_text") or ""
-        extra = dict(input_data.get("extra_input_params") or nested_input.get("extra_input_params") or {})
-        return {
-            "user_text": query,
-            "user_id": input_data.get("user_id") or "eval-user",
-            "trace_id": input_data.get("trace_id") or f"general-eval-{int(time.time() * 1000)}",
-            "session_id": input_data.get("session_id") or "general-eval-session",
-            "source": input_data.get("source") or "askbob",
-            "extra_input_params": extra,
-        }
+    def build_request(self, case: SingleTurnCase | MultiTurnCase) -> LiveRequest:
+        input_data = dict(case.input or {})
+        # mock_agent 路径：case.input 已是 REQUEST_SHAPE 形状（user_text/trace_id/...），直接转发
+        if "user_text" in input_data:
+            normalized_request = {
+                "user_text": input_data.get("user_text"),
+                "user_id": input_data.get("user_id") or "eval-user",
+                "trace_id": input_data.get("trace_id") or f"general-eval-{int(time.time() * 1000)}",
+                "session_id": input_data.get("session_id") or "general-eval-session",
+                "source": input_data.get("source") or "askbob",
+                "extra_input_params": dict(input_data.get("extra_input_params") or {}),
+            }
+        else:
+            # 手动输入路径：旧格式 {query}，翻译成 REQUEST_SHAPE
+            nested_input = input_data.get("input") if isinstance(input_data.get("input"), dict) else {}
+            query = input_data.get("query") or input_data.get("user_text") or nested_input.get("query") or nested_input.get("user_text") or ""
+            extra = dict(input_data.get("extra_input_params") or nested_input.get("extra_input_params") or {})
+            normalized_request = {
+                "user_text": query,
+                "user_id": input_data.get("user_id") or "eval-user",
+                "trace_id": input_data.get("trace_id") or f"general-eval-{int(time.time() * 1000)}",
+                "session_id": input_data.get("session_id") or "general-eval-session",
+                "source": input_data.get("source") or "askbob",
+                "extra_input_params": extra,
+            }
+        return LiveRequest(
+            project_id=self.spec.project_id,
+            raw_input=input_data,
+            case_id=str(case.id or ""),
+            normalized_request=normalized_request,
+            execution_mode="live_service",
+            session_id=input_data.get("session_id") or "general-eval-session",
+        )
 
-    def call_or_prepare(self, request: Dict[str, Any]) -> Any:
+    def call_or_prepare(self, request: LiveRequest) -> LiveExecutionResult:
         with _SERVICE_LOCK:
             return super().call_or_prepare(request)
 
-    def to_run_trace(self, input_data: Dict[str, Any], request: Dict[str, Any], raw_response: Any):
-        if isinstance(raw_response, dict):
-            raw_response = {**raw_response, "_downstream_search": self._probe_downstream_search(raw_response)}
-        return super().to_run_trace(input_data, request, raw_response)
+    def provided_output_raw(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Any:
+        input_data = dict(case.input or {})
+        if "raw_response" in input_data:
+            return input_data["raw_response"]
+        if "response" in input_data:
+            return input_data["response"]
+        output = input_data.get("output") or {}
+        if not isinstance(output, dict):
+            return output
+        if "data" in output:
+            return output
+        conditions = output.get("conditions") or output.get("structured_output") or []
+        logic = output.get("query_logic") or output.get("logic") or "AND"
+        query = request.normalized_request.get("user_text") or output.get("source_query") or output.get("query") or ""
+        return {
+            "code": output.get("code", output.get("status_code", 0)),
+            "msg": output.get("msg") or output.get("message") or "provided client_search output",
+            "data": {
+                "robot_text": output.get("robot_text") or output.get("user_visible_text") or output.get("summary") or "provided output",
+                "extra_output_params": {
+                    "query": query,
+                    "query_logic": logic,
+                    "conditions": conditions,
+                    "matched_level": output.get("matched_level"),
+                    "intent_summary": output.get("intent_summary") or output.get("summary") or "provided output",
+                    "matched_patterns": output.get("matched_patterns") or [],
+                    "rewritten_query": output.get("rewritten_query") or output.get("source_query") or query,
+                },
+            },
+        }
+
+    def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any]) -> Dict[str, Any]:
+        if not isinstance(raw_response, dict):
+            return self._application_boundary({})
+        downstream_search = raw_response.get("_downstream_search") if isinstance(raw_response.get("_downstream_search"), dict) else {}
+        return self._application_boundary(downstream_search)
 
     def _probe_downstream_search(self, raw_response: Dict[str, Any]) -> Dict[str, Any]:
         config = self.spec.application.get("downstream_search") if isinstance(self.spec.application, dict) else None
@@ -192,36 +295,6 @@ class Adapter(ProjectAdapter):
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             return {"status": "unavailable", "url": url, "payload": payload, "error": str(exc)}
 
-    def provided_output_raw(self, input_data: Dict[str, Any], request: Dict[str, Any]) -> Any:
-        if "raw_response" in input_data:
-            return input_data["raw_response"]
-        if "response" in input_data:
-            return input_data["response"]
-        output = input_data.get("output") or {}
-        if not isinstance(output, dict):
-            return output
-        if "data" in output:
-            return output
-        conditions = output.get("conditions") or output.get("structured_output") or []
-        logic = output.get("query_logic") or output.get("logic") or "AND"
-        query = request.get("user_text") or output.get("source_query") or ""
-        return {
-            "code": output.get("status_code", 0),
-            "message": output.get("summary") or "provided client_search output",
-            "data": {
-                "query": query,
-                "robot_text": output.get("user_visible_text") or output.get("summary") or "provided output",
-                "extra_output_params": {
-                    "query_logic": logic,
-                    "conditions": conditions,
-                    "matched_level": output.get("matched_level"),
-                    "intent_summary": output.get("summary") or "provided output",
-                    "matched_patterns": output.get("matched_patterns") or [],
-                    "rewritten_query": output.get("source_query") or query,
-                },
-            },
-        }
-
     def _response_query(self, raw_response: Dict[str, Any], extra: Dict[str, Any]) -> str:
         data = raw_response.get("data") or {}
         return extra.get("rewritten_query") or extra.get("query") or data.get("query") or ""
@@ -235,51 +308,47 @@ class Adapter(ProjectAdapter):
 
     def extract_output(self, raw_response: Any) -> Dict[str, Any]:
         if not isinstance(raw_response, dict):
-            return {"raw_text": str(raw_response)}
+            return {"code": -1, "msg": str(raw_response), "query": "", "conditions": []}
         extra = (((raw_response.get("data") or {}).get("extra_output_params")) or {})
-        query = self._response_query(raw_response, extra)
-        empty_reason = self._empty_result_reason(query, extra)
+        data = raw_response.get("data") if isinstance(raw_response.get("data"), dict) else {}
         return {
-            "summary": extra.get("intent_summary") or raw_response.get("message") or raw_response.get("msg") or "",
-            "structured_output": extra.get("conditions") or [],
-            "logic": extra.get("query_logic"),
-            "status_code": raw_response.get("code"),
-            "user_visible_text": ((raw_response.get("data") or {}).get("robot_text")),
-            "empty_result_reason": empty_reason,
-            "is_empty_result": bool(empty_reason),
-            "source_query": query,
+            "code": int(raw_response.get("code") or 0),
+            "msg": str(raw_response.get("msg") or ""),
+            "robot_text": data.get("robot_text"),
+            "end_flag": data.get("end_flag"),
+            "trace_id": data.get("trace_id"),
+            "query": self._response_query(raw_response, extra),
+            "query_logic": extra.get("query_logic"),
+            "conditions": extra.get("conditions") or [],
+            "matched_level": extra.get("matched_level"),
+            "matched_patterns": extra.get("matched_patterns"),
+            "rewritten_query": extra.get("rewritten_query"),
+            "intent_summary": extra.get("intent_summary"),
+            "confidence": extra.get("confidence"),
+            "cost_times": extra.get("cost_times"),
         }
 
     def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any]) -> Dict[str, Any]:
-        if not isinstance(raw_response, dict):
-            return {}
-        extra = (((raw_response.get("data") or {}).get("extra_output_params")) or {})
-        downstream_search = raw_response.get("_downstream_search") if isinstance(raw_response.get("_downstream_search"), dict) else {}
-        application_boundary = self._application_boundary(downstream_search)
+        extra = {}
+        if isinstance(raw_response, dict):
+            data = raw_response.get("data") if isinstance(raw_response.get("data"), dict) else {}
+            extra = data.get("extra_output_params") if isinstance(data.get("extra_output_params"), dict) else {}
         return {
-            "query_logic": extra.get("query_logic"),
-            "conditions": extra.get("conditions"),
-            "matched_level": extra.get("matched_level"),
-            "intent_summary": extra.get("intent_summary"),
-            "matched_patterns": extra.get("matched_patterns"),
-            "rewritten_query": extra.get("rewritten_query"),
-            "source_query": extracted_output.get("source_query"),
-            "empty_result_reason": extracted_output.get("empty_result_reason"),
-            "is_empty_result": extracted_output.get("is_empty_result"),
-            "downstream_search": downstream_search,
-            "application_boundary": application_boundary,
+            "downstream_search": raw_response.get("_downstream_search") if isinstance(raw_response, dict) and isinstance(raw_response.get("_downstream_search"), dict) else {},
             "external_boundary_sources": self._external_boundary_sources(),
+            "empty_result_reason": self._empty_result_reason(extracted_output.get("query", ""), extra),
+            "is_empty_result": bool(self._empty_result_reason(extracted_output.get("query", ""), extra)),
         }
 
-    def build_execution_trace(self, input_data: Dict[str, Any], request: Dict[str, Any], raw_response: Any, extracted_output: Dict[str, Any]) -> list[Dict[str, Any]]:
+    def build_execution_trace(self, input_data: Dict[str, Any], request: Dict[str, Any], raw_response: Any, extracted_output: Dict[str, Any]) -> list[ExecutionTraceEvent]:
         extra = (((raw_response.get("data") or {}).get("extra_output_params")) or {}) if isinstance(raw_response, dict) else {}
         downstream_search = raw_response.get("_downstream_search") if isinstance(raw_response, dict) and isinstance(raw_response.get("_downstream_search"), dict) else {}
         return [
-            {"stage": "adapter.build_request", "status": "ok", "evidence": {"user_text": request.get("user_text"), "source": request.get("source")}},
-            {"stage": "client_search.api", "status": "ok" if isinstance(raw_response, dict) and raw_response.get("code") == 0 else "suspicious", "evidence": {"code": raw_response.get("code") if isinstance(raw_response, dict) else None}},
-            {"stage": "client_search.routing", "status": "ok" if extra.get("matched_level") is not None else "not_verified", "evidence": {"matched_level": extra.get("matched_level"), "matched_patterns": extra.get("matched_patterns")}},
-            {"stage": "client_search.downstream_search", "status": downstream_search.get("status") or "not_verified", "evidence": downstream_search},
-            {"stage": "adapter.extract_output", "status": "suspicious" if extracted_output.get("is_empty_result") else "ok", "evidence": {"logic": extracted_output.get("logic"), "condition_count": len(extracted_output.get("structured_output") or []), "empty_result_reason": extracted_output.get("empty_result_reason")}},
+            ExecutionTraceEvent(stage="adapter.build_request", status="ok", evidence={"user_text": request.get("user_text"), "source": request.get("source")}),
+            ExecutionTraceEvent(stage="client_search.api", status="ok" if isinstance(raw_response, dict) and raw_response.get("code") == 0 else "suspicious", evidence={"code": raw_response.get("code") if isinstance(raw_response, dict) else None}),
+            ExecutionTraceEvent(stage="client_search.routing", status="ok" if extra.get("matched_level") is not None else "not_verified", evidence={"matched_level": extra.get("matched_level"), "matched_patterns": extra.get("matched_patterns")}),
+            ExecutionTraceEvent(stage="client_search.downstream_search", status=downstream_search.get("status") or "not_verified", evidence=downstream_search),
+            ExecutionTraceEvent(stage="adapter.extract_output", status="ok", evidence={"logic": extracted_output.get("query_logic"), "condition_count": len(extracted_output.get("conditions") or [])}),
         ]
 
     def _hashable_value(self, value: Any) -> Any:
@@ -348,9 +417,9 @@ class Adapter(ProjectAdapter):
         return self.semantic_equivalence_rules()
 
     def _intent_expected_conditions(self, trace: RunTrace) -> Dict[str, Any]:
-        for source in (trace.project_fields.get("intent_expected") if trace.project_fields else None, trace.normalized_request.get("intent_expected") if trace.normalized_request else None):
-            if isinstance(source, dict) and source.get("conditions"):
-                return source
+        source = trace.normalized_request.get("intent_expected") if trace.normalized_request else None
+        if isinstance(source, dict) and source.get("conditions"):
+            return source
         return {}
 
     def _condition_comparison(self, trace: RunTrace) -> Dict[str, Any]:
@@ -388,7 +457,7 @@ class Adapter(ProjectAdapter):
             "run_only_for": ["incorrect", "uncertain with inspectable expected-vs-actual gap"],
             "block_when_judge_unavailable": True,
             "minimum_evidence": ["current query", "actual conditions/matched_level", "judge expected-vs-actual diff", "execution_trace or project chain nodes", "project docs/config evidence"],
-            "required_outputs": ["clear root_cause_hypothesis", "evidence-backed chain_nodes", "earliest_divergence", "suspected_locations only when evidenced", "specific verification_steps", "minimal patch_direction", "business_impact", "analysis_quality"],
+            "required_outputs": ["clear root_cause_hypothesis", "evidence-backed chain_nodes", "earliest_divergence", "suspected_locations only when evidenced", "specific verification_steps", "minimal patch_direction", "evidence_coverage", "analysis_quality"],
             "quality_standard": "必须围绕当前 query 产出明确根因、可核验证据链、疑似文件/配置位置、具体修改建议、明确修改方案和业务影响；期望条件和修改方案必须来自当前 query 或同 query 链路证据，不能引用无关历史 case 字段。",
         }
 
@@ -425,17 +494,45 @@ class Adapter(ProjectAdapter):
             judge_result.wrong = wrong
             judge_result.missing = missing
             judge_result.extra = extra
-        judge_result.condition_assessments = [
-            *[{**item, "status": "wrong"} for item in wrong if isinstance(item, dict)],
-            *[{**item, "status": "missing"} for item in missing if isinstance(item, dict)],
-            *[{**item, "status": "extra"} for item in extra if isinstance(item, dict)],
-        ] or judge_result.condition_assessments
+        if wrong or missing or extra:
+            assessment = {
+                "expectation_id": "client_search:search_condition_contract",
+                "status": "not_fulfilled",
+                "expected_evidence": [comparison.get("expected")],
+                "actual_evidence": [comparison.get("actual"), {"wrong": wrong, "missing": missing, "extra": extra}],
+                "boundary_decision": judge_result.boundary_decision or {},
+                "downstream_impact": "wrong/missing/extra conditions change the target customer population",
+                "blocking": True,
+                "confidence": judge_result.confidence,
+            }
+            judge_result.fulfillment_assessments = [assessment]
+        elif comparison and not judge_result.fulfillment_assessments:
+            judge_result.fulfillment_assessments = [{
+                "expectation_id": "client_search:search_condition_contract",
+                "status": "fulfilled",
+                "expected_evidence": [comparison.get("expected")],
+                "actual_evidence": [comparison.get("actual")],
+                "boundary_decision": judge_result.boundary_decision or {},
+                "downstream_impact": "search conditions cover the target customer population",
+                "blocking": True,
+                "confidence": judge_result.confidence,
+            }]
         expected = comparison.get("expected")
         actual = comparison.get("actual")
+        # comparison.expected / comparison.actual 是条件级判定证据，不是 live_schema 形状的 reference/actual。
+        # expected 必须保持 judge 产出的 EXTRACT_OUTPUT_SHAPE；actual 必须保持 live 的 trace.extracted_output。
+        derivation = dict(judge_result.verdict_derivation or {})
         if expected:
-            judge_result.expected = expected
+            derivation.setdefault("condition_comparison_expected", expected)
         if actual:
-            judge_result.actual = actual
+            derivation.setdefault("condition_comparison_actual", actual)
+        if derivation:
+            judge_result.verdict_derivation = derivation
+        if trace.extracted_output:
+            judge_result.actual = trace.extracted_output
+        # expected 必须保持 judge 产出的 EXTRACT_OUTPUT_SHAPE；仅当 LLM 失败且 judge_result.expected 为空时，才从 trace 补充。
+        if not judge_result.expected and trace.extracted_output:
+            judge_result.expected = trace.extracted_output
         basis = dict(judge_result.reference_generation_basis or {})
         basis.setdefault("source", comparison.get("expected_source") or "client_search_condition_compare")
         basis.setdefault("comparison_basis", comparison.get("comparison_basis"))
@@ -488,7 +585,7 @@ class Adapter(ProjectAdapter):
                 {
                     "user_intent": str((trace.normalized_request or {}).get("user_text") or (trace.extracted_output or {}).get("source_query") or trace.input or ""),
                     "expected_outcome": "current query should become complete, semantically correct, downstream-executable search conditions",
-                    "acceptance_criteria": list(judge_result.condition_assessments or judge_result.missing or judge_result.wrong or []),
+                    "acceptance_criteria": list(judge_result.missing or judge_result.wrong or []),
                 }
             )
         return expectation
@@ -518,20 +615,25 @@ class Adapter(ProjectAdapter):
             "evidence_refs": list(getattr(trace, "evidence_refs", []) or []),
         }
 
+    def _boundary_from_trace(self, trace: RunTrace, downstream: dict[str, Any] | None = None) -> dict[str, Any]:
+        live_result = getattr(trace, "live_result", None)
+        if live_result and isinstance(getattr(live_result, "application_boundary", None), dict) and live_result.application_boundary:
+            return live_result.application_boundary
+        return self._application_boundary(downstream or {})
+
     def build_judge_context(self, trace: RunTrace) -> Dict[str, Any]:
-        downstream = trace.project_fields.get("downstream_search") if isinstance(trace.project_fields, dict) else {}
-        application_boundary = trace.project_fields.get("application_boundary") if isinstance(trace.project_fields, dict) else None
+        application_boundary = self._boundary_from_trace(trace)
         condition_comparison = self._condition_comparison(trace)
         return {
             "semantic_equivalence_rules": self._semantic_equivalence_rules(),
             "field_patterns": self.field_patterns,
-            "application_boundary": application_boundary or self._application_boundary(downstream),
+            "application_boundary": application_boundary,
             "judge_governance": self._judge_governance(),
             "condition_comparison": condition_comparison,
             "protocol_tool_results": [condition_comparison],
             "client_search_judge_basis": "wrong/missing/extra customer-search condition coverage within current field/config boundary",
             "boundary_usage": "application adapter has already decided whether result-set verification is in scope; judge should evaluate only within application_boundary.judge_scope.",
-            "external_boundary_sources": trace.project_fields.get("external_boundary_sources") if isinstance(trace.project_fields, dict) else {},
+            "external_boundary_sources": self._external_boundary_sources(),
             "capability_manifest": self._capability_manifest(),
             "value_mappings": self._value_mappings(),
             "enhanced_rules": self._enhanced_rules(),
@@ -561,26 +663,30 @@ class Adapter(ProjectAdapter):
         }
 
     def build_attribute_context(self, trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:
-        project_fields = trace.project_fields if isinstance(trace.project_fields, dict) else {}
-        application_boundary = project_fields.get("application_boundary") or self._application_boundary(project_fields.get("downstream_search"))
+        project_output = trace.extracted_output if isinstance(trace.extracted_output, dict) else {}
+        application_boundary = self._boundary_from_trace(trace)
+        # chain_nodes_to_check 只保留节点名 + evidence_ref（指向 run_trace 中的字段），
+        # 不再内联 evidence 原始数据——这些数据已在 run_trace.normalized_request /
+        # extracted_output / matched_patterns 中提供，内联会造成 53% 的重复（量化见
+        # demand/context.md §1.2c）。attribute agent 按 evidence_ref 指针去 run_trace 取数。
         chain_nodes = [
-            {"name": "request_normalization", "evidence": trace.normalized_request},
-            {"name": "client_search_parse", "evidence": trace.extracted_output},
-            {"name": "routing_pattern_match", "evidence": project_fields.get("matched_patterns")},
+            {"name": "request_normalization", "evidence_ref": "run_trace.normalized_request"},
+            {"name": "client_search_parse", "evidence_ref": "run_trace.extracted_output"},
+            {"name": "routing_pattern_match", "evidence_ref": "run_trace.extracted_output.matched_patterns"},
             {"name": "judge_boundary", "evidence": judge_result.boundary_decision},
         ]
         if application_boundary.get("judge_scope") == "parser_and_result_set":
-            chain_nodes.insert(3, {"name": "downstream_result_set", "evidence": project_fields.get("downstream_search")})
+            chain_nodes.insert(3, {"name": "downstream_result_set", "evidence_ref": "run_trace.project_fields.downstream_search"})
         return {
             "chain_nodes_to_check": chain_nodes,
-            "conditions": project_fields.get("conditions"),
-            "query_logic": project_fields.get("query_logic"),
-            "matched_level": project_fields.get("matched_level"),
+            "conditions": project_output.get("conditions"),
+            "query_logic": project_output.get("query_logic"),
+            "matched_level": project_output.get("matched_level"),
             "application_boundary": application_boundary,
             "attribute_quality_gate": self._attribute_quality_gate(),
-            "external_boundary_sources": project_fields.get("external_boundary_sources"),
+            "external_boundary_sources": (trace.project_fields or {}).get("external_boundary_sources") if isinstance(trace.project_fields, dict) else {},
             "source_config_paths": self._source_config_paths(),
-            "attribute_instruction": "application_boundary 由 application adapter 在归因前判定；当 judge_scope=parser_condition_semantics_only 时，下游结果集验证不属于本次归因链路，归因只分析 query、parse 条件、matched_patterns、execution_trace 和项目文档中的可控解析问题；无法定位代码/配置时应标记 incomplete_reason。",
+            "attribute_instruction": "application_boundary 由 application adapter 在归因前判定；当 judge_scope=parser_condition_semantics_only 时，下游结果集验证不属于本次归因链路，归因只分析 query、parse 条件、matched_patterns、execution_trace 和项目文档中的可控解析问题；无法定位代码/配置时应标记 incomplete_reason。chain_nodes_to_check 中带 evidence_ref 的节点，其 evidence 已在 run_trace 对应字段中提供，直接引用即可，无需重复读取。",
         }
 
     def trace_state_graph(self) -> Dict[str, Any]:
@@ -589,17 +695,19 @@ class Adapter(ProjectAdapter):
     def state_executors(self) -> Dict[str, Any]:
         return {"client_search_boundary_evidence": self._client_search_boundary_evidence}
 
-    def _client_search_boundary_evidence(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def _client_search_boundary_evidence(self, context: TraceExecutionContext) -> Dict[str, Any]:
         trace = context.get("trace")
         if not trace:
             return {"status": "failed", "missing_evidence": ["trace"]}
-        fields = trace.project_fields or {}
+        project_output = trace.extracted_output if isinstance(trace.extracted_output, dict) else {}
+        project_fields = trace.project_fields if isinstance(trace.project_fields, dict) else {}
+        downstream_search = project_fields.get("downstream_search") if isinstance(project_fields.get("downstream_search"), dict) else {}
         evidence = {
-            "condition_count": len(fields.get("conditions") or []),
-            "query_logic": fields.get("query_logic"),
-            "downstream_status": (fields.get("downstream_search") or {}).get("status"),
-            "application_boundary": fields.get("application_boundary") or {},
-            "source_config_paths": (fields.get("external_boundary_sources") or {}).get("config_paths") or {},
+            "condition_count": len(project_output.get("conditions") or []),
+            "query_logic": project_output.get("query_logic"),
+            "downstream_status": downstream_search.get("status"),
+            "application_boundary": self._boundary_from_trace(trace),
+            "source_config_paths": (project_fields.get("external_boundary_sources") or {}).get("config_paths") or {},
         }
         return {
             "status": "succeeded",
@@ -608,12 +716,12 @@ class Adapter(ProjectAdapter):
             "claims": [{"client_search_boundary": evidence}],
         }
 
-    def collect_state_evidence(self, state_id: str, context: Dict[str, Any]) -> list[Dict[str, Any]]:
+    def collect_state_evidence(self, state_id: str, context: TraceExecutionContext) -> list[Dict[str, Any]]:
         trace = context.get("trace")
         if not trace:
             return []
-        fields = trace.project_fields or {}
-        return [{"type": "client_search_state_boundary", "state_id": state_id, "application_boundary": fields.get("application_boundary") or {}, "external_boundary_sources": fields.get("external_boundary_sources") or {}}]
+        project_fields = trace.project_fields if isinstance(trace.project_fields, dict) else {}
+        return [{"type": "client_search_state_boundary", "state_id": state_id, "application_boundary": self._boundary_from_trace(trace), "external_boundary_sources": project_fields.get("external_boundary_sources") or {}}]
 
     def _application_boundary(self, downstream: Any) -> Dict[str, Any]:
         status = downstream.get("status") if isinstance(downstream, dict) else None
@@ -629,9 +737,8 @@ class Adapter(ProjectAdapter):
 
     def reconcile_judge_result(self, trace: RunTrace, judge_result: JudgeResult) -> JudgeResult:
         self._apply_condition_comparison(trace, judge_result)
-        downstream = trace.project_fields.get("downstream_search") if isinstance(trace.project_fields, dict) else {}
-        application_boundary = trace.project_fields.get("application_boundary") if isinstance(trace.project_fields, dict) else self._application_boundary(downstream)
-        if isinstance(downstream, dict) and downstream.get("status") not in {None, "ok"}:
+        application_boundary = self._boundary_from_trace(trace)
+        if application_boundary.get("downstream_status") not in {None, "ok", "not_verified"}:
             flags = [
                 flag
                 for flag in (judge_result.quality_flags or [])
@@ -645,7 +752,7 @@ class Adapter(ProjectAdapter):
                 "result_set_verified": False,
                 "application_boundary": application_boundary,
             }
-        elif isinstance(downstream, dict) and downstream.get("status") == "ok":
+        elif application_boundary.get("result_set_verified") is True:
             flags = [flag for flag in (judge_result.quality_flags or []) if "downstream" not in str(flag)]
             if "downstream_search_verified" not in flags:
                 flags.append("downstream_search_verified")
@@ -659,164 +766,21 @@ class Adapter(ProjectAdapter):
                 judge_result.evidence = [*(judge_result.evidence or []), {"application_boundary": application_boundary}]
         return super().reconcile_judge_result(trace, judge_result)
 
-    def build_mock_cases(self) -> list[Dict[str, Any]]:
-        all_cases = []
-        # 1. Load original mock_cases from impl/data
-        legacy_path = Path(__file__).resolve().parents[2] / "data" / "client_search" / "mock_cases.json"
-        try:
-            legacy = json.loads(legacy_path.read_text(encoding="utf-8"))
-            if isinstance(legacy, list):
-                all_cases.extend(legacy)
-        except Exception:
-            pass
-        # 2. Load new dataset files from project-root data/
-        data_dir = Path(__file__).resolve().parents[3] / "data" / "client_search"
-        for fpath in sorted(data_dir.glob("*.json")):
-            name = fpath.name
-            if name in ("index.json",):
-                continue
-            try:
-                file_cases = json.loads(fpath.read_text(encoding="utf-8"))
-                if isinstance(file_cases, list):
-                    all_cases.extend(file_cases)
-            except Exception:
-                pass
-        return all_cases
+    # build_mock_cases / build_mock_datasets 已移除：
+    # pipeline.mock_cases / mock_datasets 全线走 mock_agent（LLM 生成），不再读 seed JSON / data/client_search/*.json。
+    # _strip_non_ready_fields 保留（pipeline.mock_cases 在 mock_agent 失败时可能仍需），但不再在 build_mock_cases 中使用。
+    # 详见 impl/core/mock_agent.py 与 impl/core/pipeline.py。
 
-    def build_mock_datasets(self) -> list[Dict[str, Any]]:
-        index_path = Path(__file__).resolve().parents[3] / "data" / "client_search" / "index.json"
-        try:
-            return json.loads(index_path.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-        dimensions = [
-            {
-                "dataset_id": "client_search_demographic_100",
-                "name": "客户基础画像筛选",
-                "dimension_type": "demographic_profile",
-                "description": "年龄、性别、婚姻、学历等客户基础画像查询。",
-                "templates": [
-                    "{age}岁{sex}性客户",
-                    "{age}岁以上{sex}性客户",
-                    "{age_min}到{age_max}岁的客户",
-                    "{marriage}客户",
-                    "{education}以上学历客户",
-                    "{age}岁{marriage}{sex}性客户",
-                ],
-                "values": {
-                    "age": [25, 30, 35, 40, 45, 50, 55, 60],
-                    "age_min": [20, 30, 40, 50],
-                    "age_max": [35, 45, 55, 65],
-                    "sex": ["男", "女"],
-                    "marriage": ["已婚", "未婚", "离异"],
-                    "education": ["大专", "本科", "硕士"],
-                },
-            },
-            {
-                "dataset_id": "client_search_premium_policy_100",
-                "name": "保费与保单状态筛选",
-                "dimension_type": "premium_policy",
-                "description": "年缴保费、保单状态、到期、缴费等保单经营查询。",
-                "templates": [
-                    "年缴保费超过{premium}的客户",
-                    "保费{premium}以上的{sex}性客户",
-                    "{status}保单客户",
-                    "保单{expire_window}到期的客户",
-                    "{age}岁以上年缴保费{premium}以上客户",
-                    "{pay_status}的客户",
-                ],
-                "values": {
-                    "premium": ["一万", "三万", "五万", "十万", "二十万"],
-                    "sex": ["男", "女"],
-                    "status": ["有效", "失效", "满期", "退保"],
-                    "expire_window": ["今年", "明年", "三个月内", "半年内"],
-                    "age": [30, 40, 50, 60],
-                    "pay_status": ["续期未缴费", "保费已缴清", "有欠缴保费"],
-                },
-            },
-            {
-                "dataset_id": "client_search_product_coverage_100",
-                "name": "险种与保障配置筛选",
-                "dimension_type": "product_coverage",
-                "description": "持有/未持有险种、保障类别、保额等产品配置查询。",
-                "templates": [
-                    "买了{product}的客户",
-                    "没有配置{product}的客户",
-                    "只买了{product}的客户",
-                    "买了{product_a}或{product_b}的客户",
-                    "{age}岁以上未配置{product}的客户",
-                    "{product}保额{coverage}以上的客户",
-                ],
-                "values": {
-                    "product": ["重疾险", "医疗险", "意外险", "年金险", "两全险", "终身寿险", "定期寿险"],
-                    "product_a": ["年金险", "重疾险", "医疗险"],
-                    "product_b": ["两全险", "意外险", "终身寿险"],
-                    "age": [30, 40, 50, 60],
-                    "coverage": ["10万", "30万", "50万", "100万"],
-                },
-            },
-            {
-                "dataset_id": "client_search_family_lifecycle_100",
-                "name": "家庭结构与生命周期筛选",
-                "dimension_type": "family_lifecycle",
-                "description": "子女、父母、配偶、上有老下有小、教育金等家庭场景查询。",
-                "templates": [
-                    "有{child}的客户",
-                    "子女{child_age}岁以上的客户",
-                    "父母{parent_age}岁以上的客户",
-                    "上有老下有小的客户",
-                    "{sex}性且有子女的客户",
-                    "{age}岁左右关注子女教育的客户",
-                ],
-                "values": {
-                    "child": ["儿子", "女儿", "未成年子女", "两个孩子"],
-                    "child_age": [3, 6, 10, 15, 18],
-                    "parent_age": [55, 60, 65, 70, 75],
-                    "sex": ["男", "女"],
-                    "age": [30, 35, 40, 45],
-                },
-            },
-            {
-                "dataset_id": "client_search_value_service_100",
-                "name": "客户价值与服务机会筛选",
-                "dimension_type": "value_service_opportunity",
-                "description": "VIP、客户价值、客户温度、生存金未领取、服务触达机会等经营动作查询。",
-                "templates": [
-                    "{vip}客户",
-                    "客户价值{value_level}的客户",
-                    "客户温度{temperature}的客户",
-                    "有生存金未领取的客户",
-                    "{age}岁以上{vip}客户",
-                    "客户价值{value_level}且持有{product}的客户",
-                ],
-                "values": {
-                    "vip": ["寿险VIP", "高净值", "钻石级", "铂金级"],
-                    "value_level": ["高", "中", "低", "A类", "B类"],
-                    "temperature": ["高", "中", "低", "活跃", "沉默"],
-                    "age": [35, 45, 55, 65],
-                    "product": ["重疾险", "年金险", "医疗险", "终身寿险"],
-                },
-            },
-        ]
-        return [self._build_dataset(item) for item in dimensions]
+    def _strip_non_ready_fields(self, case: Dict[str, Any]) -> Dict[str, Any]:
+        ready = ready_from_spec(self.spec)
+        if not isinstance(case, dict):
+            return case
+        if "output" not in ready and "output" in case:
+            case = {k: v for k, v in case.items() if k != "output"}
+        if "reference" not in ready and "reference" in case:
+            case = {k: v for k, v in case.items() if k != "reference"}
+        return case
 
-    def _build_dataset(self, spec: Dict[str, Any]) -> Dict[str, Any]:
-        cases = []
-        templates = spec["templates"]
-        values = spec["values"]
-        keys = list(values)
-        for index in range(100):
-            template = templates[index % len(templates)]
-            params = {key: values[key][(index + offset) % len(values[key])] for offset, key in enumerate(keys)}
-            query = template.format(**params)
-            cases.append({
-                "id": f"{spec['dataset_id']}-{index + 1:03d}",
-                "input": {"query": query},
-                "expected_intent": "",
-                "source": "mock_dataset_agent",
-                "status": "pending",
-                "dimension_type": spec["dimension_type"],
-                "dataset_id": spec["dataset_id"],
-            })
-        return {**{key: spec[key] for key in ["dataset_id", "name", "dimension_type", "description"]}, "case_count": len(cases), "cases": cases}
-
+    # build_mock_datasets / _build_dataset 已移除：
+    # pipeline.mock_datasets 全线走 mock_agent（LLM 生成），不再读 data/client_search/*.json 或硬编码模板。
+    # 详见 impl/core/mock_agent.py 与 impl/core/pipeline.py。

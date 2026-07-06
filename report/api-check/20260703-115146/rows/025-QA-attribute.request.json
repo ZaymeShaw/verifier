@@ -1,0 +1,640 @@
+{
+  "project": "QA",
+  "trace": {
+    "trace_id": "55add140-5115-42c5-83e7-3a50cb96ab64",
+    "project_id": "QA",
+    "case_id": "mock-agent-QA-3a635643",
+    "live_result": {
+      "project_id": "QA",
+      "case_id": "mock-agent-QA-3a635643",
+      "session_id": "",
+      "raw_input": {
+        "data_quality_flags": [
+          "gold_answer_match",
+          "context_fidelity"
+        ],
+        "input": {
+          "query": "我去年买的那个百万医疗险，要是住院花了八万，社保报完我自己掏了三万，这保险能给我报多少啊？"
+        },
+        "metadata": {
+          "product_type": "百万医疗险",
+          "session_id": "sess_20250314_001",
+          "trace_id": "trace_qa_394857",
+          "user_id": "user_128905"
+        },
+        "scenario": "qa_gold_answer"
+      },
+      "normalized_request": {
+        "input": {
+          "question": ""
+        },
+        "reference": {
+          "golden_answer": "{\"actual_answer\": \"百万医疗险通常扣除社保报销后，剩余合理医疗费用减去1万元免赔额，按合同约定的报销比例（一般为100%）进行赔付，报销范围需符合合同约定的医院和用药目录，进口药若在目录内可报。\"}"
+        },
+        "metadata": {
+          "live_request_mapped": true,
+          "ready": [
+            "output",
+            "reference"
+          ],
+          "schema_ok": false,
+          "source": "mock_agent_llm"
+        },
+        "scenario": "qa_gold_answer",
+        "data_quality_flags": [
+          "missing_question"
+        ],
+        "output": {
+          "actual_answer": "能报的，一般免赔额一万，剩下的两万能按比例报销，具体得看你合同里的报销比例，通常是100%，但进口药可能只报一部分。"
+        }
+      },
+      "call_status": "succeeded",
+      "extracted_output": {
+        "actual_answer": "能报的，一般免赔额一万，剩下的两万能按比例报销，具体得看你合同里的报销比例，通常是100%，但进口药可能只报一部分。"
+      },
+      "output_source": "provided_output",
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T03:51:46.778930+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T03:51:46.778944+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:51:46.780214+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "failed",
+        "started_at": "2026-07-03T03:51:46.780237+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:54:25.314968+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:54:25.315010+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T03:54:25.315308+00:00"
+      },
+      {
+        "attempt": 2,
+        "status": "failed",
+        "started_at": "2026-07-03T03:54:25.315346+00:00"
+      },
+      {
+        "attempt": 2,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:57:02.537430+00:00"
+      },
+      {
+        "attempt": 2,
+        "status": "succeeded",
+        "started_at": "2026-07-03T03:57:02.537469+00:00"
+      },
+      {
+        "attempt": 2,
+        "status": "skipped",
+        "started_at": "2026-07-03T03:57:02.537620+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-03T03:57:02.537632+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "unsupported claims require evidence"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "unsupported claims require evidence"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "collect_evidence",
+        "condition": "gate_failed_recoverable",
+        "reason": "unsupported claims require evidence",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 1,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 1,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 1,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "incomplete_or_human_review",
+        "condition": "retry_limit",
+        "reason": "state retry limit exceeded",
+        "retry_count": 1,
+        "stop_reason": "incomplete_retry_limit"
+      },
+      {
+        "from_state": "incomplete_or_human_review",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "incomplete_retry_limit"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      },
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "qa_gold_answer",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "created_at": "2026-07-03T03:51:46.780185+00:00"
+  },
+  "judge": {
+    "trace_id": "55add140-5115-42c5-83e7-3a50cb96ab64",
+    "project_id": "QA",
+    "verdict": "uncertain",
+    "score": 1.0,
+    "business_expectations": [
+      {
+        "expectation_id": "QA:answer_quality",
+        "downstream_consumer": "QA user",
+        "user_intent": "",
+        "expected_outcome": "actual answer should satisfy answer relevance, groundedness, and reference alignment for the current QA sample",
+        "required_capabilities": [
+          "answer_relevance",
+          "groundedness",
+          "reference_alignment"
+        ],
+        "boundary": {
+          "primary_boundary_id": "qa_gold_answer",
+          "primary_boundary_name": "QA semantic evaluation",
+          "verdict_basis": "question + actual answer + current-case reference"
+        },
+        "priority": "normal",
+        "evidence_refs": [
+          {
+            "type": "qa_sample_boundary",
+            "state_id": "collect_evidence",
+            "scenario": "qa_gold_answer",
+            "reference": {
+              "golden_answer": "{\"actual_answer\": \"百万医疗险通常扣除社保报销后，剩余合理医疗费用减去1万元免赔额，按合同约定的报销比例（一般为100%）进行赔付，报销范围需符合合同约定的医院和用药目录，进口药若在目录内可报。\"}"
+            },
+            "data_quality_flags": [
+              "missing_question"
+            ]
+          },
+          {
+            "type": "qa_sample_boundary",
+            "state_id": "collect_evidence",
+            "scenario": "qa_gold_answer",
+            "reference": {
+              "golden_answer": "{\"actual_answer\": \"百万医疗险通常扣除社保报销后，剩余合理医疗费用减去1万元免赔额，按合同约定的报销比例（一般为100%）进行赔付，报销范围需符合合同约定的医院和用药目录，进口药若在目录内可报。\"}"
+            },
+            "data_quality_flags": [
+              "missing_question"
+            ]
+          }
+        ]
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "answer_quality_for_qa_gold_answer",
+        "status": "fulfilled",
+        "expected_evidence": [
+          {
+            "golden_answer": "{\"actual_answer\": \"百万医疗险通常扣除社保报销后，剩余合理医疗费用减去1万元免赔额，按合同约定的报销比例（一般为100%）进行赔付，报销范围需符合合同约定的医院和用药目录，进口药若在目录内可报。\"}"
+          }
+        ],
+        "actual_evidence": [
+          {
+            "actual_answer": "能报的，一般免赔额一万，剩下的两万能按比例报销，具体得看你合同里的报销比例，通常是100%，但进口药可能只报一部分。"
+          }
+        ],
+        "downstream_impact": "QA answer quality judged for current sample",
+        "blocking": false
+      },
+      {
+        "expectation_id": "QA:answer_quality",
+        "status": "not_evaluable",
+        "expected_evidence": [
+          {
+            "golden_answer": "{\"actual_answer\": \"百万医疗险通常扣除社保报销后，剩余合理医疗费用减去1万元免赔额，按合同约定的报销比例（一般为100%）进行赔付，报销范围需符合合同约定的医院和用药目录，进口药若在目录内可报。\"}"
+          }
+        ],
+        "actual_evidence": [
+          {
+            "actual_answer": "能报的，一般免赔额一万，剩下的两万能按比例报销，具体得看你合同里的报销比例，通常是100%，但进口药可能只报一部分。"
+          }
+        ],
+        "boundary_decision": {
+          "primary_boundary_id": "qa_gold_answer",
+          "primary_boundary_name": "QA semantic evaluation",
+          "verdict_basis": "question + actual answer + current-case reference"
+        },
+        "downstream_impact": "QA user cannot rely on the answer quality for this sample",
+        "blocking": true,
+        "evidence_refs": [
+          {
+            "type": "qa_sample_boundary",
+            "state_id": "collect_evidence",
+            "scenario": "qa_gold_answer",
+            "reference": {
+              "golden_answer": "{\"actual_answer\": \"百万医疗险通常扣除社保报销后，剩余合理医疗费用减去1万元免赔额，按合同约定的报销比例（一般为100%）进行赔付，报销范围需符合合同约定的医院和用药目录，进口药若在目录内可报。\"}"
+            },
+            "data_quality_flags": [
+              "missing_question"
+            ]
+          },
+          {
+            "type": "qa_sample_boundary",
+            "state_id": "collect_evidence",
+            "scenario": "qa_gold_answer",
+            "reference": {
+              "golden_answer": "{\"actual_answer\": \"百万医疗险通常扣除社保报销后，剩余合理医疗费用减去1万元免赔额，按合同约定的报销比例（一般为100%）进行赔付，报销范围需符合合同约定的医院和用药目录，进口药若在目录内可报。\"}"
+            },
+            "data_quality_flags": [
+              "missing_question"
+            ]
+          }
+        ]
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "not_evaluable",
+      "assessment_count": 2,
+      "blocking_expectations": [
+        "QA:answer_quality"
+      ]
+    },
+    "expected": {
+      "actual_answer": "{\"actual_answer\": \"百万医疗险通常扣除社保报销后，剩余合理医疗费用减去1万元免赔额，按合同约定的报销比例（一般为100%）进行赔付，报销范围需符合合同约定的医院和用药目录，进口药若在目录内可报。\"}"
+    },
+    "actual": {
+      "actual_answer": "能报的，一般免赔额一万，剩下的两万能按比例报销，具体得看你合同里的报销比例，通常是100%，但进口药可能只报一部分。"
+    },
+    "reasoning_summary": "",
+    "judge_basis": "qa_semantic_judge",
+    "judge_method": "current_case_llm_judge",
+    "verdict_derivation": {
+      "taxonomy_error_types": [
+        "needs_human_review"
+      ],
+      "score_dimensions": [
+        {
+          "dimension": "correctness",
+          "evidence": [
+            "scenario=qa_gold_answer",
+            "question_present=False",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "completeness",
+          "evidence": [
+            "scenario=qa_gold_answer",
+            "question_present=False",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "key_point_coverage",
+          "evidence": [
+            "scenario=qa_gold_answer",
+            "question_present=False",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "faithfulness",
+          "evidence": [
+            "scenario=qa_gold_answer",
+            "question_present=False",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "relevance",
+          "evidence": [
+            "scenario=qa_gold_answer",
+            "question_present=False",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "usefulness",
+          "evidence": [
+            "scenario=qa_gold_answer",
+            "question_present=False",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "coherence",
+          "evidence": [
+            "scenario=qa_gold_answer",
+            "question_present=False",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "risk_control",
+          "evidence": [
+            "scenario=qa_gold_answer",
+            "question_present=False",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        },
+        {
+          "dimension": "clarity",
+          "evidence": [
+            "scenario=qa_gold_answer",
+            "question_present=False",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "needs_review"
+        }
+      ],
+      "primary_boundary": "qa_gold_answer",
+      "error_type": "needs_human_review",
+      "assessment_summary": ""
+    },
+    "evidence": [
+      "scenario=qa_gold_answer",
+      "question_present=False",
+      "actual_answer_present=True",
+      "golden_answer_present=True"
+    ],
+    "evaluation_boundary": {
+      "primary_boundary_id": "qa_gold_answer",
+      "primary_boundary_name": "QA semantic evaluation",
+      "verdict_basis": "question + actual answer + current-case reference"
+    },
+    "consumer_contract": {
+      "consumer": "QA user",
+      "contract": "answer must be relevant, grounded in current contexts/reference, and aligned with the golden answer when provided",
+      "reference_contract": {
+        "golden_answer": "{\"actual_answer\": \"百万医疗险通常扣除社保报销后，剩余合理医疗费用减去1万元免赔额，按合同约定的报销比例（一般为100%）进行赔付，报销范围需符合合同约定的医院和用药目录，进口药若在目录内可报。\"}"
+      },
+      "application_boundary": {
+        "scope": "qa_semantic_answer_evaluation",
+        "external_service_required": false
+      }
+    },
+    "reconstructed_intent": "",
+    "reference_generation_basis": {
+      "source": "case_reference",
+      "alignment_to_actual_shape": "expected was aligned to the current actual output shape when possible.",
+      "evidence": [
+        "input reference"
+      ],
+      "expected_present": true
+    },
+    "scenario": "qa_gold_answer",
+    "summary": {
+      "reason": "uncertain · current_case_llm_judge",
+      "reason_source": "reasoning_summary",
+      "fulfillment_status": "not_evaluable",
+      "assessment_count": 0,
+      "blocking_count": 0,
+      "is_formal_attribution": false
+    }
+  }
+}

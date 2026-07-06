@@ -1,6 +1,6 @@
 # Attribute Protocol
 
-`AttributeResult` explains the causal chain behind each business expectation’s fulfillment status. It must bind analysis to `expectation_attributions`: fulfilled expectations can produce `no_issue` attribution, while partially fulfilled, not fulfilled, not evaluable, or contested expectations require evidence-backed causal analysis or an explicit blocked reason. Legacy `failure_category` and `failure_stage` are compatibility summaries only.
+`AttributeResult` explains the causal chain behind each business expectation’s fulfillment status. It must bind analysis to `expectation_attributions`: fulfilled expectations can produce `no_issue` attribution, while not fulfilled or not evaluable expectations require evidence-backed causal analysis or an explicit blocked reason.
 
 Inputs:
 
@@ -12,18 +12,11 @@ Inputs:
 Fields:
 
 - `case_id`: optional case-pool identity preserved from batch/mock/uploaded datasets
-- `expectation_attributions`: one attribution per relevant business expectation with `expectation_id`, `fulfillment_status`, `- `severity` — 归因严重程度（如 blocking/normal/low）
-- `primary_error_type` — 主错误类型标签
-- causal_category`, evidence, and improvement direction
+- `expectation_attributions`: one attribution per relevant business expectation with `expectation_id`, `fulfillment_status`, `causal_category`, evidence, and improvement direction
 - `causal_category`: primary aggregate category such as `no_issue`, `implementation_bug`, `model_capability_gap`, `boundary_limitation`, `unclear_contract`, or `insufficient_evidence`
 - `probe_results`: deterministic or documented probes supporting the attribution, or blocked-probe reasons
-- `failure_category`: compatibility summary derived from expectation attribution when old callers need it
-- `failure_stage`: compatibility summary derived from earliest divergence when old callers need it
 - `analysis_method`: how attribution was produced, such as current-case LLM attribution, deterministic chain probe, local fallback, or incomplete because evidence is missing
-- `evidence_chain`
-- `trace_analysis`
 - `chain_nodes`: ordered executable or documented chain nodes with status `normal`, `suspicious`, `failed`, or `not_verified`
-- `local_verifications`: concrete local checks, probe results, imports, logs, config reads, or documented absence of such checks
 - `earliest_divergence`: earliest evidence-backed node where expected and actual behavior diverge, or an explicit unknown/incomplete marker
 - `evidence_coverage`: which current query/actual/expected/trace/project-doc/code evidence supports each root-cause claim
 - `analysis_quality`: quality-gate result, missing evidence list, and whether the attribution is complete enough for a developer to act
@@ -32,7 +25,6 @@ Fields:
 - `root_cause_hypothesis`
 - `verification_steps`
 - `patch_direction`
-- `business_impact`
 - `quality_flags`
 
 Rules:

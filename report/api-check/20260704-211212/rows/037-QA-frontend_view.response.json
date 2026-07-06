@@ -1,0 +1,606 @@
+{
+  "project_info": {
+    "project_id": "QA",
+    "name": "QA 评估项目",
+    "description": "评估已产出的问答输入、输出、参考答案或上下文证据，支持样本级 scenario。"
+  },
+  "run_trace_summary": {
+    "trace_id": "952e9ae8-ec65-45fb-ba2f-8223a4dfc9e4",
+    "project_id": "QA",
+    "case_id": "mock-agent-QA-87e78ff7",
+    "live_result": {
+      "project_id": "QA",
+      "case_id": "mock-agent-QA-87e78ff7",
+      "session_id": "",
+      "raw_input": {
+        "input": {
+          "query": "我买的那个重疾险，如果得了合同里写的轻症，是不是能赔多次？每次赔多少？"
+        },
+        "metadata": {
+          "session_id": "sess_abc123",
+          "trace_id": "trace_xyz789",
+          "user_id": "user_12345"
+        },
+        "scenario": "qa_gold_answer"
+      },
+      "normalized_request": {
+        "input": {
+          "question": "我买的那个重疾险，如果得了合同里写的轻症，是不是能赔多次？每次赔多少？"
+        },
+        "metadata": {
+          "live_request_mapped": true,
+          "project_id": "QA",
+          "ready": [
+            "output",
+            "reference"
+          ],
+          "schema_ok": true,
+          "source": "mock_agent_llm"
+        },
+        "output": {
+          "actual_answer": "轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。"
+        },
+        "reference": {
+          "golden_answer": "通常情况下，您购买的重疾险合同中关于轻症责任的赔付规则如下：\n1. 轻症可以多次赔付，具体次数以合同约定为准（常见为3-5次）。每次确诊的轻症需满足合同定义的疾病标准，且两次轻症确诊之间通常有间隔期（如90天或180天）。\n2. 每次轻症赔付的金额一般为基本保额的一定比例，常见比例为20%-30%。例如保额50万，每次轻症可赔付10万-15万。部分产品轻症赔付后重疾保额不变，部分产品会相应减少。\n3. 需要注意，轻症责任可能设有分组限制，即同一组别的轻症只能赔付一次；另外，轻症赔付后合同继续有效，但累计赔付上限可能有限制。\n以上为一般规则，具体赔付条件、次数、金额比例请以您持有的保险合同条款为准。建议您查阅合同中的“保险责任”及“轻症疾病保险金”章节，或直接咨询保险公司客服获取准确信息。"
+        },
+        "scenario": "qa_gold_answer"
+      },
+      "call_status": "succeeded",
+      "extracted_output": {
+        "actual_answer": "轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。"
+      },
+      "output_source": "provided_output",
+      "interaction_mode": "single_turn"
+    },
+    "execution_mode": "",
+    "output_source": "provided_output",
+    "scenario": "qa_gold_answer",
+    "evidence_refs": [
+      {
+        "ref_id": "",
+        "source": "",
+        "kind": "",
+        "stage": "",
+        "summary": "",
+        "location": ""
+      },
+      {
+        "ref_id": "",
+        "source": "",
+        "kind": "",
+        "stage": "",
+        "summary": "",
+        "location": ""
+      }
+    ],
+    "status": "ok",
+    "created_at": "2026-07-04T13:12:12.675813+00:00",
+    "state_history": [
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T13:12:12.674291+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T13:12:12.674302+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T13:12:12.675839+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T13:12:12.675859+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T13:12:12.678446+00:00",
+        "status": "failed"
+      },
+      {
+        "attempt": 2,
+        "started_at": "2026-07-04T13:12:12.678470+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 2,
+        "started_at": "2026-07-04T13:12:12.679857+00:00",
+        "status": "failed"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T13:12:12.679870+00:00",
+        "status": "skipped"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "reason": "trace exists",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": false,
+        "reason": "consumer contract missing",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": false,
+        "reason": "business expectations missing",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": false,
+        "reason": "consumer contract missing",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": false,
+        "reason": "business expectations missing",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      }
+    ],
+    "transition_decisions": [
+      {
+        "condition": "always",
+        "from_state": "prepare_trace",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "mock_or_input"
+      },
+      {
+        "condition": "always",
+        "from_state": "mock_or_input",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "execute_or_capture"
+      },
+      {
+        "condition": "always",
+        "from_state": "execute_or_capture",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "collect_evidence"
+      },
+      {
+        "condition": "always",
+        "from_state": "collect_evidence",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "build_business_expectations"
+      },
+      {
+        "condition": "gate_failed_recoverable",
+        "from_state": "build_business_expectations",
+        "reason": "consumer contract missing；business expectations missing",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "collect_evidence"
+      },
+      {
+        "condition": "always",
+        "from_state": "collect_evidence",
+        "reason": "always",
+        "retry_count": 1,
+        "stop_reason": "",
+        "to_state": "build_business_expectations"
+      },
+      {
+        "condition": "retry_limit",
+        "from_state": "build_business_expectations",
+        "reason": "state retry limit exceeded",
+        "retry_count": 1,
+        "stop_reason": "incomplete_retry_limit",
+        "to_state": "incomplete_or_human_review"
+      },
+      {
+        "condition": "stop",
+        "from_state": "incomplete_or_human_review",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "incomplete_retry_limit",
+        "to_state": "completed"
+      }
+    ],
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "turn_index": 0
+  },
+  "reference_panel": {
+    "reference": {
+      "golden_answer": "通常情况下，您购买的重疾险合同中关于轻症责任的赔付规则如下：\n1. 轻症可以多次赔付，具体次数以合同约定为准（常见为3-5次）。每次确诊的轻症需满足合同定义的疾病标准，且两次轻症确诊之间通常有间隔期（如90天或180天）。\n2. 每次轻症赔付的金额一般为基本保额的一定比例，常见比例为20%-30%。例如保额50万，每次轻症可赔付10万-15万。部分产品轻症赔付后重疾保额不变，部分产品会相应减少。\n3. 需要注意，轻症责任可能设有分组限制，即同一组别的轻症只能赔付一次；另外，轻症赔付后合同继续有效，但累计赔付上限可能有限制。\n以上为一般规则，具体赔付条件、次数、金额比例请以您持有的保险合同条款为准。建议您查阅合同中的“保险责任”及“轻症疾病保险金”章节，或直接咨询保险公司客服获取准确信息。"
+    },
+    "source": "input",
+    "actual": {
+      "actual_answer": "轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。"
+    }
+  },
+  "judge_panel": {
+    "trace_id": "952e9ae8-ec65-45fb-ba2f-8223a4dfc9e4",
+    "project_id": "QA",
+    "verdict": "uncertain",
+    "actual": {
+      "actual_answer": "轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。"
+    },
+    "reconstructed_intent": "",
+    "judge_basis": "trace_execution_incomplete",
+    "judge_method": "state_machine_human_review",
+    "verdict_derivation": {
+      "blocking_gaps": [
+        "incomplete_retry_limit"
+      ],
+      "why_verdict": "trace did not reach judge because execution failed or required human review"
+    },
+    "boundary_decision": {
+      "reasoning": "incomplete_retry_limit",
+      "within_evaluable_scope": false
+    },
+    "evaluation_boundary": {
+      "primary_boundary_id": "trace_execution_incomplete",
+      "verdict_basis": "judge skipped because trace execution did not complete"
+    },
+    "evidence": [
+      "incomplete_retry_limit"
+    ],
+    "reasoning_summary": "trace execution incomplete; human review required before judge",
+    "needs_human_review": true,
+    "scenario": "",
+    "quality_flags": [
+      "trace_execution_incomplete",
+      "human_review_required"
+    ],
+    "display_reason": "uncertain · trace did not reach judge because execution failed or required human review",
+    "wrong_missing_extra": {}
+  },
+  "attribute_panel": {
+    "trace_id": "952e9ae8-ec65-45fb-ba2f-8223a4dfc9e4",
+    "project_id": "QA",
+    "case_id": "",
+    "analysis_method": "llm_call_failed",
+    "chain_nodes": [
+      {
+        "name": "",
+        "status": "failed",
+        "evidence": [
+          "Circular reference detected",
+          "incomplete_retry_limit"
+        ],
+        "reason": ""
+      }
+    ],
+    "earliest_divergence": {
+      "confidence": "high",
+      "evidence": [
+        "Circular reference detected"
+      ],
+      "node": "semantic judge or attribute LLM"
+    },
+    "evidence_coverage": {
+      "actual": true,
+      "code_or_config": false,
+      "execution_trace": true,
+      "expected": false,
+      "project_docs": false,
+      "query": true
+    },
+    "analysis_quality": {
+      "missing": [
+        "attribute LLM result"
+      ],
+      "passed": false,
+      "standard": "归因必须基于当前 case 的 judge、trace 和可验证链路证据。"
+    },
+    "incomplete_reason": "attribute agent LLM 调用失败。",
+    "root_cause_hypothesis": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+    "verification_steps": [
+      "检查 LLM API key、余额、网络和模型配置。",
+      "恢复 LLM 后重新运行 judge 和 attribute agent。"
+    ],
+    "patch_direction": [
+      "修复 LLM 调用配置或费用问题；不要把该兜底结果当作最终业务根因。"
+    ],
+    "causal_category": "insufficient_evidence",
+    "probe_results": [
+      {
+        "probe_id": "llm_call",
+        "status": "failed",
+        "stage": "",
+        "evidence": [
+          "Circular reference detected"
+        ],
+        "error": ""
+      }
+    ],
+    "needs_human_review": true,
+    "scenario": "qa_gold_answer",
+    "quality_flags": [
+      "trace_execution_incomplete",
+      "human_review_required",
+      "attribute_blocked"
+    ],
+    "summary": {
+      "attribution_count": 0,
+      "causal_category": "insufficient_evidence",
+      "is_complete": false,
+      "is_formal_attribution": false,
+      "probe_count": 1,
+      "summary_text": "attribute agent LLM 调用失败。"
+    },
+    "display_causal_category": "insufficient_evidence",
+    "display_root_cause": "attribute agent LLM 调用失败。",
+    "display_verification_steps": [
+      "检查 LLM API key、余额、网络和模型配置。",
+      "恢复 LLM 后重新运行 judge 和 attribute agent。"
+    ],
+    "display_patch_direction": [
+      "修复 LLM 调用配置或费用问题；不要把该兜底结果当作最终业务根因。"
+    ],
+    "attribution_count": 0,
+    "probe_count": 1
+  },
+  "fulfillment_panel": {
+    "derived_verdict": "uncertain",
+    "verdict_derivation": {
+      "blocking_gaps": [
+        "incomplete_retry_limit"
+      ],
+      "why_verdict": "trace did not reach judge because execution failed or required human review"
+    }
+  },
+  "expectation_attribution_panel": {
+    "causal_category": "insufficient_evidence",
+    "probe_results": [
+      {
+        "probe_id": "llm_call",
+        "status": "failed",
+        "stage": "",
+        "evidence": [
+          "Circular reference detected"
+        ],
+        "error": ""
+      }
+    ],
+    "quality_flags": [
+      "trace_execution_incomplete",
+      "human_review_required",
+      "attribute_blocked"
+    ],
+    "incomplete_reason": "attribute agent LLM 调用失败。"
+  },
+  "cluster_panel": {
+    "project_id": "QA",
+    "clusters": [
+      {
+        "canonical_attribution": false,
+        "causal_category": "insufficient_evidence",
+        "cluster_id": "expectation::insufficient_evidence",
+        "common_root_cause": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+        "count": 1,
+        "mechanism": "insufficient_evidence_or_human_review",
+        "minimal_fix_direction": [
+          "修复 LLM 调用配置或费用问题；不要把该兜底结果当作最终业务根因。"
+        ],
+        "needs_human_review": true,
+        "next_actions": [
+          "检查 LLM API key、余额、网络和模型配置。",
+          "恢复 LLM 后重新运行 judge 和 attribute agent。"
+        ],
+        "representative_cases": [
+          "952e9ae8-ec65-45fb-ba2f-8223a4dfc9e4"
+        ],
+        "representative_diffs": [
+          {
+            "case_id": "952e9ae8-ec65-45fb-ba2f-8223a4dfc9e4",
+            "evidence": [
+              "Circular reference detected"
+            ],
+            "node": "semantic judge or attribute LLM"
+          }
+        ],
+        "representative_traces": [
+          "952e9ae8-ec65-45fb-ba2f-8223a4dfc9e4"
+        ],
+        "shared_failure_pattern": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+        "verification_cases": [
+          "952e9ae8-ec65-45fb-ba2f-8223a4dfc9e4"
+        ]
+      }
+    ],
+    "common_root_cause": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+    "impact": "",
+    "priority": "high"
+  },
+  "check_panel": {
+    "passed": false,
+    "issues": [
+      "JudgeResult missing fulfillment_assessments/overall_fulfillment for the selected evaluation boundary.",
+      "JudgeResult missing business_expectations/expected snapshot; verdict is not tied to current-query requirements.",
+      "JudgeResult missing reference_generation_basis; expected output source is unclear.",
+      "QA attribution causal_category outside taxonomy: insufficient_evidence",
+      "Fallback decisions require human review before treating the chain as fully verified."
+    ],
+    "protocol_gaps": [
+      "JudgeResult missing fulfillment_assessments/overall_fulfillment for the selected evaluation boundary.",
+      "JudgeResult missing business_expectations/expected snapshot; verdict is not tied to current-query requirements.",
+      "JudgeResult missing reference_generation_basis; expected output source is unclear.",
+      "QA attribution causal_category outside taxonomy: insufficient_evidence"
+    ],
+    "consistency_gaps": [
+      "Fallback decisions require human review before treating the chain as fully verified."
+    ],
+    "verification_results": [
+      "Structured fallback decisions recorded: 1.",
+      "Check categories passed current audit."
+    ],
+    "recommended_fixes": [
+      "Complete missing protocol outputs before treating the chain as valid.",
+      "Ensure all steps use the same trace_id and latest run output."
+    ],
+    "fallbacks": [
+      {
+        "fallback_id": "",
+        "source_stage": "",
+        "fallback_type": "",
+        "status": "needs_human_review",
+        "reason": "incomplete_retry_limit",
+        "recoverable": false,
+        "needs_human_review": false
+      }
+    ]
+  },
+  "table_row": {
+    "id": "mock-agent-QA-87e78ff7",
+    "input": "qa_gold_answer",
+    "scenario": "qa_gold_answer",
+    "output_summary": "{\"actual_answer\": \"轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。\"}",
+    "reference_summary": "",
+    "status": "uncertain",
+    "execution_mode": "",
+    "output_source": "provided_output",
+    "verdict": "uncertain",
+    "fulfillment_status": "uncertain",
+    "judge_summary": {
+      "status": "uncertain",
+      "fulfillment_status": "",
+      "verdict": "uncertain",
+      "reason": "uncertain · trace did not reach judge because execution failed or required human review",
+      "reason_source": "reasoning_summary",
+      "reason_stage": "judge",
+      "is_formal_attribution": false,
+      "assessment_count": 0,
+      "blocking_count": 0
+    },
+    "attribution_summary": {
+      "attribution_count": 0,
+      "causal_category": "insufficient_evidence",
+      "is_complete": false,
+      "is_formal_attribution": false,
+      "probe_count": 1,
+      "summary_text": "attribute agent LLM 调用失败。"
+    },
+    "check_summary": {
+      "passed": false,
+      "issue_count": 5,
+      "protocol_gap_count": 4,
+      "consistency_gap_count": 1,
+      "recommended_fix_count": 2,
+      "issues": [
+        "JudgeResult missing fulfillment_assessments/overall_fulfillment for the selected evaluation boundary.",
+        "JudgeResult missing business_expectations/expected snapshot; verdict is not tied to current-query requirements.",
+        "JudgeResult missing reference_generation_basis; expected output source is unclear.",
+        "QA attribution causal_category outside taxonomy: insufficient_evidence",
+        "Fallback decisions require human review before treating the chain as fully verified."
+      ]
+    },
+    "fallback_summary": {
+      "count": 1,
+      "needs_human_review": false,
+      "by_stage": {
+        "unknown": 1
+      },
+      "reasons": [
+        "incomplete_retry_limit"
+      ]
+    },
+    "needs_human_review": true,
+    "quality_flags": [
+      "trace_execution_incomplete",
+      "human_review_required",
+      "trace_execution_incomplete",
+      "human_review_required",
+      "attribute_blocked"
+    ],
+    "check_passed": false,
+    "issue_count": 10,
+    "fallback_count": 1,
+    "causal_category": "insufficient_evidence",
+    "divergence_stage": "semantic judge or attribute LLM",
+    "root_cause_summary": "attribute agent LLM 调用失败。",
+    "created_at": "2026-07-04T13:12:12.675813+00:00",
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "trace_id": "952e9ae8-ec65-45fb-ba2f-8223a4dfc9e4"
+  },
+  "project_extensions": {
+    "scenarios": [
+      "qa_gold_answer",
+      "qa_context_faithfulness",
+      "qa_weak_quality"
+    ],
+    "score_dimensions": [
+      "correctness",
+      "completeness",
+      "key_point_coverage",
+      "faithfulness",
+      "relevance",
+      "usefulness",
+      "coherence",
+      "risk_control",
+      "clarity"
+    ],
+    "error_taxonomy": [
+      "answer_incorrect",
+      "answer_incomplete",
+      "question_misunderstood",
+      "irrelevant_answer",
+      "unsupported_claim",
+      "hallucination",
+      "context_not_used",
+      "insufficient_context",
+      "context_noise",
+      "over_refusal",
+      "format_error",
+      "too_vague",
+      "contradiction",
+      "needs_human_review",
+      "none"
+    ],
+    "frontend_standard": {
+      "frontend_view": {
+        "live": "render Input, Output, Reference, Judge, Attribute, and scenario fields from protocol objects",
+        "summary": "render same QA case-pool shape with compact per-case judge and attribute summaries"
+      },
+      "batch_persistence": {
+        "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+        "transient_results": "do not persist full trace, judge, attribute, or frontend_view as durable case-pool source data"
+      }
+    },
+    "display_contract": {
+      "output_source": "trace.live_result.extracted_output",
+      "reference_source": "input",
+      "formatting": [
+        "json formatting",
+        "truncation",
+        "output/reference alignment"
+      ]
+    },
+    "verifiable_tools": {
+      "available": false,
+      "reason": "adapter has no get_verifiable_tools"
+    }
+  }
+}

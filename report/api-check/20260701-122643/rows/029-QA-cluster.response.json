@@ -1,0 +1,46 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "b0a55895-e74e-41a5-b8be-b3ac289ecd47"
+      ],
+      "representative_traces": [
+        "b0a55895-e74e-41a5-b8be-b3ac289ecd47"
+      ],
+      "common_root_cause": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "shared_failure_pattern": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "representative_diffs": [
+        {
+          "case_id": "b0a55895-e74e-41a5-b8be-b3ac289ecd47",
+          "node": "state_machine",
+          "evidence": [
+            "实际回答为空，无法满足用户获取保险犹豫期定义的需求，因此核心期望未满足。由于回答缺失，内容正确性无法评估。",
+            "scenario=invalid_sample",
+            "question_present=True",
+            "actual_answer_present=False",
+            "golden_answer_present=False"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+      ],
+      "verification_cases": [
+        "b0a55895-e74e-41a5-b8be-b3ac289ecd47"
+      ],
+      "next_actions": [
+        "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+      ]
+    }
+  ],
+  "common_root_cause": "",
+  "impact": "",
+  "priority": ""
+}

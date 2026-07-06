@@ -1,17 +1,61 @@
 """
-通用 Tool 协议：源码文件检索。
+通用 Tool 协议：源码文件检索（辅助 tool，已降级）。
+
+⚠️ 降级说明（spec/tool2.md）：
+此 tool 是"信息搬运"而非"可执行验证"，不作为归因主力。归因主力是各项目 adapter
+在 get_verifiable_tools() 里提供的可执行验证 tool（execute_fn 真能跑、能产出 actual）。
+本 tool 仅作为兜底辅助，供 judge/attr 在没有项目级源码验证 tool 时按需读取源码文件。
 
 与 field_retrieval.py 平行。提供 SourceFileProvider 协议 + 默认项目级 provider，
-供 attribute agent 按需读取项目 source_* 文档（避免在 user prompt 中全量加载）。
+供 attribute agent 按需读取项目 source_* 文档、原业务系统源码（application.external_repo /
+endpoint_discovery.source_roots / 绝对路径 source_* 文档），避免在 user prompt 中全量加载。
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Protocol, Optional, Dict, List, Any
 
 MAX_SOURCE_FILE_BYTES = 64000
 SOURCE_READABLE_SUFFIXES = {".py", ".yaml", ".yml", ".md", ".json", ".txt", ".cfg", ".toml", ".prompt"}
 DEFAULT_AGGREGATE_BYTE_BUDGET = 192_000
+# 原业务系统 repo walk 上限：避免大仓 catalog 失控
+MAX_CATALOG_ENTRIES = 80
+MAX_WALK_DEPTH = 6
+# 原业务系统 walk 排除目录
+EXCLUDE_DIRS = {"__pycache__", "node_modules", ".git", "venv", ".venv", "env", "dist", "build", "logs", "docs", "test", "tests", "migrations", ".claude", "docs_BAK", "archive", "backup", "fixtures", "data", "assets", "static", ".mypy_cache", ".pytest_cache", ".ruff_cache", "egg-info", ".eggs", "tmp", "temp", "output", "result", "checkpoint", "bin", "obj", "target", "vendor", "third_party", "thirdparty"}
+
+# 原业务系统关键词文件：优先纳入 catalog，加重点描述
+BUSINESS_KEYWORD_DESCRIPTIONS = {
+    "prompt": "🔍 BUSINESS PROMPT FILE - contains prompt templates, few-shot examples, and system instructions",
+    "intent": "📋 BUSINESS INTENT DEFINITION - contains intent schemas, types, and routing rules",
+    "config": "⚙️ BUSINESS CONFIG FILE - contains enums, mappings, constants, and thresholds",
+    "constant": "⚙️ BUSINESS CONSTANT FILE - contains enums, mappings, and value definitions",
+    "field_definition": "📐 BUSINESS FIELD DEFINITION - contains field schemas, operators, and value types",
+    "field_enums": "📐 BUSINESS FIELD ENUMS - contains valid enum values for search/client fields",
+    "value_mapping": "📐 BUSINESS VALUE MAPPING - contains field value normalization rules",
+    "enhanced_rule": "📐 BUSINESS ENHANCED RULES - contains field derivation and enhancement logic",
+    "enum": "⚙️ BUSINESS ENUM DEFINITION - contains valid value enumerations",
+    "mapping": "📐 BUSINESS MAPPING - contains field/value mapping rules",
+    "route": "🌐 BUSINESS API ROUTE - contains endpoint definitions and request handlers",
+    "template": "🔍 BUSINESS TEMPLATE - contains output templates and formatting rules",
+    "agent": "🤖 BUSINESS AGENT - contains agent logic, orchestration, and decision flow",
+    "orchestrat": "🤖 BUSINESS ORCHESTRATOR - contains multi-agent orchestration and routing",
+    "dispatch": "🤖 BUSINESS DISPATCHER - contains intent dispatch and routing logic",
+    "planning": "📋 BUSINESS PLANNING - contains planning logic, stage dispatch, and card generation",
+    "sse": "📡 BUSINESS SSE HANDLER - contains streaming event generation and protocol handling",
+    "session": "🔄 BUSINESS SESSION - contains session management, merge, and isolation logic",
+    "clarify": "🔄 BUSINESS CLARIFICATION - contains multi-turn field clarification logic",
+    "search": "🔎 BUSINESS SEARCH - contains search query construction and result parsing",
+    "query": "🔎 BUSINESS QUERY - contains query parsing, normalization, and rewriting",
+    "parse": "🔎 BUSINESS PARSER - contains input parsing and normalization logic",
+    "filter": "🔎 BUSINESS FILTER - contains search filter construction and validation",
+    "condition": "🔎 BUSINESS CONDITION - contains search condition building and optimization",
+    "evaluate": "📊 BUSINESS EVALUATOR - contains output evaluation and scoring logic",
+    "judge": "📊 BUSINESS JUDGE - contains judgment and verification logic",
+}
+# 原业务系统高优先级关键词：命中这些目录名时优先 walk 更深
+BUSINESS_PRIORITY_DIRS = {"src", "main", "python", "app", "api", "service", "core", "handler", "agent", "prompt", "config", "domain", "logic", "engine", "parser", "planner", "orchestrator", "dispatcher", "router", "server", "application", "business", "model", "evaluation", "search", "query", "filter", "session", "intent", "planning", "clarification", "sse", "stream", "chunk", "dispatch", "workflow", "pipeline", "stage", "run", "executor", "strategy", "decision", "generator", "assembler", "normalizer", "extractor", "validator", "resolver", "matcher", "ranker", "scorer"}
 
 
 class SourceFileProvider(Protocol):
@@ -49,8 +93,13 @@ class SourceFileProvider(Protocol):
 
 class ProjectSourceFileProvider:
     """
-    默认 provider：基于 ProjectSpec.documents + adapter + source_config_paths。
+    默认 provider：基于 ProjectSpec.documents + adapter + source_config_paths + 原业务系统路径。
+
     与 attribute._load_source_code_evidence() 逻辑对齐，但延迟读取。
+    新增原业务系统路径来源（project.yaml 中定位）：
+    - application.external_repo     → 原业务系统仓库根目录
+    - endpoint_discovery.source_roots → 原业务系统源码入口根列表
+    - 绝对路径形式的 source_* 文档    → 直读（如 source_field_definitions 等）
     """
 
     def __init__(self, spec, project_attribute_context: Optional[dict] = None,
@@ -61,6 +110,7 @@ class ProjectSourceFileProvider:
         self._bytes_returned = 0
         self._catalog: Optional[List[Dict[str, Any]]] = None
         self._content_cache: Dict[str, str] = {}
+        self._walk_count = 0  # 计数 walk 纳入的文件，防 catalog 溢出
 
     def _build_catalog(self) -> List[Dict[str, Any]]:
         project_root = Path(self.spec.root) if self.spec.root else None
@@ -74,31 +124,29 @@ class ProjectSourceFileProvider:
                 if not p.exists() and project_root:
                     p = project_root / path_str
                 if p.exists() and p.suffix in SOURCE_READABLE_SUFFIXES:
-                    # Enhanced description to highlight file type
-                    desc = f"adapter source config: {key}"
-                    if "prompt" in p.name.lower():
-                        desc = f"🔍 LLM PROMPT FILE: {key} - contains prompt templates and few-shot examples"
-                    elif "config" in p.name.lower() or "constant" in p.name.lower():
-                        desc = f"⚙️ CONFIG FILE: {key} - contains enums, mappings, and thresholds"
-                    elif "intent" in p.name.lower() and p.suffix == ".py":
-                        desc = f"📋 INTENT DEFINITION: {key} - contains intent schemas and types"
                     entries[f"config:{key}"] = {
                         "key": f"config:{key}",
                         "path": str(p),
-                        "description": desc,
+                        "description": self._describe_business_file(p, f"adapter config: {key}"),
                     }
 
         # 2. project documents (source_* prefixed)
         for doc_key, doc_rel in (self.spec.documents or {}).items():
             if not doc_key.startswith("source_"):
                 continue
-            p = Path(project_root or ".") / str(doc_rel)
+            doc_path = Path(str(doc_rel))
+            if doc_path.is_absolute():
+                p = doc_path
+            elif project_root:
+                p = project_root / str(doc_rel)
+            else:
+                p = doc_path
             if not p.exists() or p.suffix not in SOURCE_READABLE_SUFFIXES:
                 continue
             entries[f"project_doc:{doc_key}"] = {
                 "key": f"project_doc:{doc_key}",
                 "path": str(p),
-                "description": f"project document: {doc_key}",
+                "description": self._describe_business_file(p, f"project document: {doc_key}"),
             }
 
         # 3. adapter.py itself
@@ -108,8 +156,24 @@ class ProjectSourceFileProvider:
                 entries[f"project_adapter:{self.spec.adapter}"] = {
                     "key": f"project_adapter:{self.spec.adapter}",
                     "path": str(adapter_path),
-                    "description": "project adapter implementation",
+                    "description": "project adapter implementation (测评侧归一化层，非原业务系统根因落点)",
                 }
+
+        # 4. 原业务系统：application.external_repo (如 marketing-planning 的仓库根)
+        application = dict(getattr(self.spec, "application", None) or {})
+        external_repo = application.get("external_repo")
+        if external_repo and Path(external_repo).exists():
+            self._walk_business_repo(entries, Path(external_repo), "ext_repo", priority=True)
+
+        # 5. 原业务系统：endpoint_discovery.source_roots (如 client_search 的 llm_client_search_0513/...)
+        endpoint_cfg = dict(getattr(self.spec, "endpoint_discovery", None) or {})
+        source_roots = endpoint_cfg.get("source_roots") or []
+        for rel in source_roots:
+            p = Path(str(rel))
+            if not p.is_absolute() and project_root:
+                p = (project_root / p).resolve()
+            if p.exists():
+                self._walk_business_repo(entries, p, "endpoint_src", priority=True)
 
         # Compute size_chars for each entry
         catalog = []
@@ -122,6 +186,71 @@ class ProjectSourceFileProvider:
             catalog.append(entry)
 
         return catalog
+
+    @staticmethod
+    def _describe_business_file(p: Path, fallback: str) -> str:
+        """根据文件名关键词生成业务化描述，命中原业务系统关键词则加重点标记。"""
+        name_lower = p.name.lower()
+        for keyword, desc in BUSINESS_KEYWORD_DESCRIPTIONS.items():
+            if keyword in name_lower:
+                return desc
+        return fallback
+
+    def _walk_business_repo(self, entries: dict, root: Path, prefix: str, priority: bool = False, depth: int = 0):
+        """受控 walk 原业务系统仓库，将可读源码文件纳入 catalog。
+
+        Args:
+            entries: 累积的 catalog dict
+            root: walk 根目录
+            prefix: 文件 key 前缀 (如 "ext_repo" / "endpoint_src")
+            priority: 是否优先排序（priority 目录先 walk，非 priority 后 walk）
+            depth: 当前递归深度
+        """
+        if depth > MAX_WALK_DEPTH or self._walk_count >= MAX_CATALOG_ENTRIES:
+            return
+        try:
+            items = sorted(os.scandir(root), key=lambda x: (not x.is_dir(), x.name))
+        except (PermissionError, OSError):
+            return
+
+        dirs = []
+        files = []
+        for item in items:
+            if item.is_dir():
+                if item.name.startswith(".") or item.name in EXCLUDE_DIRS:
+                    continue
+                dirs.append(item)
+            elif item.is_file():
+                files.append(item)
+
+        # 优先 walk 业务关键词目录
+        priority_dirs = [d for d in dirs if d.name in BUSINESS_PRIORITY_DIRS]
+        other_dirs = [d for d in dirs if d.name not in BUSINESS_PRIORITY_DIRS]
+
+        # 先收文件
+        for f in files:
+            if self._walk_count >= MAX_CATALOG_ENTRIES:
+                return
+            if not f.name.endswith(tuple(SOURCE_READABLE_SUFFIXES)):
+                continue
+            if f.name.startswith("."):
+                continue
+            key = f"{prefix}:{f.name}"
+            if key in entries:
+                continue
+            entries[key] = {
+                "key": key,
+                "path": f.path,
+                "description": self._describe_business_file(Path(f.path), f"{prefix} source file: {f.name}"),
+            }
+            self._walk_count += 1
+
+        # 再递归子目录：优先 walk 业务关键词目录
+        walk_order = (priority_dirs + other_dirs) if priority else (other_dirs + priority_dirs)
+        for d in walk_order:
+            if self._walk_count >= MAX_CATALOG_ENTRIES:
+                return
+            self._walk_business_repo(entries, Path(d.path), f"{prefix}/{d.name}", priority, depth + 1)
 
     def list_files(self) -> List[Dict[str, Any]]:
         if self._catalog is None:

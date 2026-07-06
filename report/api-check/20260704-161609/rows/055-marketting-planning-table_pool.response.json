@@ -1,0 +1,140 @@
+{
+  "project_id": "marketting-planning",
+  "rows": [
+    {
+      "id": "mock-agent-marketting-planning-a9b1fc80",
+      "input": "org-001",
+      "scenario": "intent_recognition",
+      "output_summary": "{\"event_summary\": {\"canonical_names\": [\"intent_detected\", \"reasoning_message_content\", \"planning_started\", \"card_delta\", \"done\"], \"completed\": true, \"counts\": …",
+      "reference_summary": "{\"scenario\": \"intent_recognition\"}",
+      "status": "not_fulfilled",
+      "execution_mode": "",
+      "output_source": "live_service",
+      "verdict": "incorrect",
+      "fulfillment_status": "not_fulfilled",
+      "judge_summary": {
+        "status": "not_fulfilled",
+        "fulfillment_status": "not_fulfilled",
+        "verdict": "incorrect",
+        "reason": "not_fulfilled · blocking=[正确识别用户意图为营销规划,系统提取业务指标NBEV,系统生成可操作的规划卡片,系统识别分解维度增加队伍多找客户调整产品策略,系统识别时间范围下个季度,系统路由至规划或澄清阶段] · 直接导致后续所有营销规划步骤无法触发",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 8,
+        "blocking_count": 6,
+        "primary_failure_dimensions": [
+          {
+            "blocking": true,
+            "downstream_impact": "直接导致后续所有营销规划步骤无法触发",
+            "evidence": "raw_response 所有事件的 intent 均为 “4001”，intent_name 为 “其他意图” | extracted_output.stage 为 “non_agent” | intent_name 为营销规划相关 | stage 为 planning 或 clarification | raw_response 事件中的 intent_name 字段 | extracted_output.stage",
+            "expectation_id": "正确识别用户意图为营销规划",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "规划失去核心衡量标尺",
+            "evidence": "所有事件和卡片中均未出现 NBEV，card_list 为空 | 事件或卡片中包含 NBEV 字样或等同指标 | raw_response 中无 NBEV | extracted_output.card_summary 为空",
+            "expectation_id": "系统提取业务指标NBEV",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "用户未能获得任何可执行建议",
+            "evidence": "card_summary 为空数组 | card_summary 数组长度 > 0 | extracted_output.card_summary",
+            "expectation_id": "系统生成可操作的规划卡片",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "无法提供用户期望的具体入手方向",
+            "evidence": "无任何内容涉及这些维度 | 卡片或回答中涉及队伍、客户、产品策略 | card_list 为空 | raw_response 无相关文本",
+            "expectation_id": "系统识别分解维度增加队伍多找客户调整产品策略",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "规划失去时间边界，无法制定季度方案",
+            "evidence": "输出中无任何时间范围标记 | 输出中提及“下个季度”或对应时间 | raw_response 内容为空",
+            "expectation_id": "系统识别时间范围下个季度",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "规划流程完全未启动",
+            "evidence": "extracted_output.stage 为 “non_agent” | extracted_output.stage 为 “planning” 或 “clarification” | extracted_output.stage",
+            "expectation_id": "系统路由至规划或澄清阶段",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": false,
+            "downstream_impact": "若后续需要精确数值，需二次交互，但当前未影响体验（因整体规划失败）",
+            "evidence": "系统无任何有关目标值的输出 | 输出中出现了关于目标值的提问或说明 | raw_response 无相关文本",
+            "expectation_id": "系统对缺失目标值做出响应",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          }
+        ]
+      },
+      "attribution_summary": {
+        "attribution_count": 7,
+        "causal_category": "needs_human_review",
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 0,
+        "summary_text": "意图识别管线（规则匹配 + LLM fallback）均未能将用户的 NBEV 营销规划请求正确分类。规则层：Tier 0 正则仅覆盖 怎么达成.*NBEV.*目标 一种句式，Tier 3 关键词列表缺少 提升/调整/入手 等高频变体，Tier 2 因 target_value 缺失而丢弃了有效的 path_types 信号。LLM 层：qwen3-next-80b-a3b-instruct 在现有 prompt 下未能识别 无具体目标值但含队伍/客户/产品维度 的 nbev_planning 意图，输出 other。两个防御层同时失效导致整个规划链路中断。"
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 5,
+        "protocol_gap_count": 0,
+        "consistency_gap_count": 1,
+        "recommended_fix_count": 2,
+        "issues": [
+          "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+          "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+          "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+          "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+          "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: IntentType, IntentType.other, LLM, NBEV, Tier, Users"
+        ]
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": false,
+      "issue_count": 6,
+      "fallback_count": 0,
+      "causal_category": "needs_human_review",
+      "divergence_stage": "intent_recognition",
+      "root_cause_summary": "意图识别管线（规则匹配 + LLM fallback）均未能将用户的 NBEV 营销规划请求正确分类。规则层：Tier 0 正则仅覆盖 怎么达成.*NBEV.*目标 一种句式，Tier 3 关键词列表缺少 提升/调整/入手 等高频变体，Tier 2 因 target_value 缺失而丢弃了有效的 path_types 信号。LLM 层：qwen3-next-80b-a3b-instruct 在现有 prompt 下未能识别 无具体目标值但含队伍/客户/产品维度 的 nbev_planning 意图，输出 other。两个防御层同时失效导致整个规划链路中断。",
+      "created_at": "2026-07-04T08:16:10.750165+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "6a91aa20-aa71-4969-9550-1dce3d4502dc"
+    }
+  ],
+  "total": 1,
+  "summary": {
+    "fulfilled_count": 0,
+    "not_fulfilled_count": 1,
+    "pending_count": 0,
+    "correct_count": 0,
+    "incorrect_count": 1,
+    "uncertain_count": 0,
+    "human_review_count": 0,
+    "check_failed_count": 1,
+    "issue_count": 6,
+    "fallback_count": 0,
+    "rows_with_fallback_count": 0,
+    "by_scenario": {
+      "intent_recognition": 1
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "23d84cb9-9d89-42b4-ad10-a93e484fe852"
+      ],
+      "representative_traces": [
+        "23d84cb9-9d89-42b4-ad10-a93e484fe852"
+      ],
+      "common_root_cause": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "shared_failure_pattern": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "representative_diffs": [
+        {
+          "case_id": "23d84cb9-9d89-42b4-ad10-a93e484fe852",
+          "node": "state_machine",
+          "evidence": [
+            {
+              "description": "actual_answer 字段值为空字符串，没有任何文本内容。",
+              "type": "empty_actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=False",
+            "golden_answer_present=False"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+      ],
+      "verification_cases": [
+        "23d84cb9-9d89-42b4-ad10-a93e484fe852"
+      ],
+      "next_actions": [
+        "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+      ]
+    }
+  ],
+  "common_root_cause": "",
+  "impact": "",
+  "priority": ""
+}

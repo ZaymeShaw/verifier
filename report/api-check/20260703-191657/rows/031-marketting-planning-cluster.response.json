@@ -1,0 +1,80 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "needs_human_review::not_evaluable",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "业务指标识别正确性",
+        "时间范围识别",
+        "分解维度识别与采纳",
+        "阶段路由正确性",
+        "规划可操作性"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "a4676d78-676a-48fe-aa33-ce26716754e3"
+      ],
+      "representative_traces": [
+        "a4676d78-676a-48fe-aa33-ce26716754e3"
+      ],
+      "common_root_cause": "意图识别模块存在规则层和模型层的双重覆盖缺口：(1) 规则层：关键词白名单和正则模式仅覆盖领域术语（'达成规划''路径测算'），未覆盖用户自然语言中的同义表达（'提高''提升''入手'）；(2) 模型层：LLM prompt 中的 nbev_planning 示例均为领域术语，且含 '意图不明确倾向 other' 的偏置，导致 qwen3-next-80b-a3b-instruct 将语义上明确属于 NBEV 规划的消息（'怎么提高今年的NBEV，能不能从多招些销售人员入手？'）误判为 other。此误判在 workflow 中没有任何兜底机制，直接导致整个规划管线跳过，所有下游期望全部落空。",
+      "shared_failure_pattern": "意图识别模块存在规则层和模型层的双重覆盖缺口：(1) 规则层：关键词白名单和正则模式仅覆盖领域术语（'达成规划''路径测算'），未覆盖用户自然语言中的同义表达（'提高''提升''入手'）；(2) 模型层：LLM prompt 中的 nbev_planning 示例均为领域术语，且含 '意图不明确倾向 other' 的偏置，导致 qwen3-next-80b-a3b-instruct 将语义上明确属于 NBEV 规划的消息（'怎么提高今年的NBEV，能不能从多招些销售人员入手？'）误判为 other。此误判在 workflow 中没有任何兜底机制，直接导致整个规划管线跳过，所有下游期望全部落空。",
+      "representative_diffs": [
+        {
+          "case_id": "a4676d78-676a-48fe-aa33-ce26716754e3",
+          "node": "intent_recognition",
+          "expected": "IntentType.nbev_planning，stage 进入 planning 或 clarification",
+          "actual": "IntentType.other（SSE 协议编码为 4001），stage 进入 non_agent",
+          "evidence": [
+            "规则匹配源码：intent_recognition.py _HOMEPAGE_RULES (line 33-34) 正则 '怎么达成.*NBEV.*目标' 与用户消息 '怎么提高今年的NBEV' 不匹配",
+            "规则匹配源码：intent_recognition.py Tier 3 (line 106) 关键词白名单 ('达成','规划','路径','测算','分析') 均未在用户消息中出现",
+            "LLM 调用：intent_recognition.py recognize_intent (line 149-183) 返回 IntentType.other",
+            "intent_prompt.py nbev_planning 示例均为领域术语，缺少自然语言变体",
+            "intent_prompt.py 含偏置语句 '如果用户的意图不明确，倾向于判断为 other'"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        {
+          "change": "在 NBEV 规则中增加一条：re.compile(r'怎么(?:提高|提升|增加|改善|优化).*NBEV', re.IGNORECASE) → IntentType.nbev_planning",
+          "expected_effect": "用户消息 '怎么提高今年的NBEV' 在 Tier 0 被规则拦截，无需进入 LLM",
+          "target": "ext_repo:app/workflow/steps/intent_recognition.py:_HOMEPAGE_RULES"
+        },
+        {
+          "change": "关键词白名单从 ('达成','规划','路径','测算','分析') 扩充为 ('达成','规划','路径','测算','分析','提高','提升','增加','改善','优化','入手')",
+          "expected_effect": "即使用户未命中 Tier 0，Tier 3 也能捕获 'NBEV+提高' 模式",
+          "target": "ext_repo:app/workflow/steps/intent_recognition.py:has_planning_intent"
+        },
+        {
+          "change": "新增 '销售'→'队伍' 映射：if '销售' in normalized_message: paths.append('队伍')",
+          "expected_effect": "'从多招些销售人员入手' 可正确提取 path_types=['队伍']",
+          "target": "ext_repo:app/workflow/steps/intent_recognition.py:_extract_path_types_by_keywords"
+        },
+        {
+          "change": "在 nbev_planning 示例中增加：'怎么提高今年的NBEV'、'如何提升NBEV'；将 '如果用户的意图不明确，倾向于判断为 other' 修改为 '只有在用户明确表达与保险业务、队伍、客户、产品、NBEV 完全无关的问题时才判断为 other'",
+          "expected_effect": "LLM 获得从自然语言到 nbev_planning 的泛化能力，减少误判",
+          "target": "ext_repo:app/workflow/prompts/intent_prompt.py:INTENT_RECOGNITION_PROMPT"
+        }
+      ],
+      "verification_cases": [
+        "a4676d78-676a-48fe-aa33-ce26716754e3"
+      ],
+      "next_actions": [
+        "在 _HOMEPAGE_RULES 中新增正则后，用相同 query 测试是否在 Tier 0 被正确拦截为 nbev_planning",
+        "在 Tier 3 关键词白名单扩充后，验证 '怎么提高NBEV' 能否命中规则路径",
+        "用修改后的 intent_prompt（增加自然语言示例、弱化 other 偏置）重新调用 LLM，验证是否返回 nbev_planning",
+        "确认修复后 stage 从 non_agent 变为 planning 或 clarification，card_summary 非空"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模块存在规则层和模型层的双重覆盖缺口：(1) 规则层：关键词白名单和正则模式仅覆盖领域术语（'达成规划''路径测算'），未覆盖用户自然语言中的同义表达（'提高''提升''入手'）；(2) 模型层：LLM prompt 中的 nbev_planning 示例均为领域术语，且含 '意图不明确倾向 other' 的偏置，导致 qwen3-next-80b-a3b-instruct 将语义上明确属于 NBEV 规划的消息（'怎么提高今年的NBEV，能不能从多招些销售人员入手？'）误判为 other。此误判在 workflow 中没有任何兜底机制，直接导致整个规划管线跳过，所有下游期望全部落空。",
+  "impact": "",
+  "priority": "high"
+}

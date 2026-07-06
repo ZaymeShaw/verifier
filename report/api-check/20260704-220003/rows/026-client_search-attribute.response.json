@@ -1,0 +1,124 @@
+{
+  "trace_id": "cc09df56-5493-4184-8ac5-155b8c0c586c",
+  "project_id": "client_search",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "重疾险口语映射为疾病保险标准枚举值",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "使用正确的险种大类字段pCategorys进行筛选",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "不添加用户未表达的额外筛选条件",
+      "causal_category": "no_issue"
+    }
+  ],
+  "causal_category": "no_issue",
+  "earliest_divergence": {
+    "node": "fulfillment_assessment",
+    "evidence": [
+      {
+        "detail": "重疾险→疾病保险，确认口语到标准枚举的映射关系",
+        "source": "value_mappings.pCategorys",
+        "type": "value_mapping"
+      },
+      {
+        "detail": "pCategorys字段定义：表示客户持有的寿险险种大类，支持CONTAINS/NOT_CONTAINS操作符，枚举包含'疾病保险'",
+        "source": "capability_manifest.pCategorys",
+        "type": "field_capability"
+      },
+      {
+        "detail": "actual output: [{\"field\": \"pCategorys\", \"operator\": \"MATCH\", \"value\": \"疾病保险\"}]，logic: AND",
+        "type": "parser_output"
+      },
+      {
+        "detail": "prompt示例明确'买了重疾险和医疗险的客户'→pCategorys CONTAINS ['疾病保险','医疗保险']，确认重疾险应归入pCategorys",
+        "source": "matched_patterns.pCategorys示例",
+        "type": "prompt_rule"
+      }
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "verified",
+      "evidence": [
+        {
+          "detail": "重疾险→疾病保险，确认口语到标准枚举的映射关系",
+          "source": "value_mappings.pCategorys",
+          "type": "value_mapping"
+        },
+        {
+          "detail": "pCategorys字段定义：表示客户持有的寿险险种大类，支持CONTAINS/NOT_CONTAINS操作符，枚举包含'疾病保险'",
+          "source": "capability_manifest.pCategorys",
+          "type": "field_capability"
+        },
+        {
+          "detail": "actual output: [{\"field\": \"pCategorys\", \"operator\": \"MATCH\", \"value\": \"疾病保险\"}]，logic: AND",
+          "type": "parser_output"
+        },
+        {
+          "detail": "prompt示例明确'买了重疾险和医疗险的客户'→pCategorys CONTAINS ['疾病保险','医疗保险']，确认重疾险应归入pCategorys",
+          "source": "matched_patterns.pCategorys示例",
+          "type": "prompt_rule"
+        }
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "fulfillment_assessment",
+      "status": "not_verified",
+      "evidence": [
+        {
+          "detail": "重疾险→疾病保险，确认口语到标准枚举的映射关系",
+          "source": "value_mappings.pCategorys",
+          "type": "value_mapping"
+        },
+        {
+          "detail": "pCategorys字段定义：表示客户持有的寿险险种大类，支持CONTAINS/NOT_CONTAINS操作符，枚举包含'疾病保险'",
+          "source": "capability_manifest.pCategorys",
+          "type": "field_capability"
+        },
+        {
+          "detail": "actual output: [{\"field\": \"pCategorys\", \"operator\": \"MATCH\", \"value\": \"疾病保险\"}]，logic: AND",
+          "type": "parser_output"
+        },
+        {
+          "detail": "prompt示例明确'买了重疾险和医疗险的客户'→pCategorys CONTAINS ['疾病保险','医疗保险']，确认重疾险应归入pCategorys",
+          "source": "matched_patterns.pCategorys示例",
+          "type": "prompt_rule"
+        }
+      ]
+    }
+  ],
+  "evidence_coverage": {
+    "judge_evidence": true,
+    "execution_trace": false
+  },
+  "root_cause_hypothesis": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+  "verification_steps": [
+    "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+  ],
+  "patch_direction": [
+    "无需修改业务实现；若后续出现 not_evaluable 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+  ],
+  "needs_human_review": false,
+  "scenario": "",
+  "summary": {
+    "causal_category": "no_issue",
+    "attribution_count": 3,
+    "probe_count": 1,
+    "summary_text": "业务预期已达成",
+    "is_complete": true,
+    "is_formal_attribution": true
+  },
+  "analysis_method": "fulfilled_expectation_attribution",
+  "analysis_quality": {
+    "passed": true
+  },
+  "incomplete_reason": ""
+}

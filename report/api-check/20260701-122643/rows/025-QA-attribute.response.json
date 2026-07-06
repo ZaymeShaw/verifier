@@ -1,0 +1,78 @@
+{
+  "trace_id": "b0a55895-e74e-41a5-b8be-b3ac289ecd47",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "回答存在且非空",
+      "causal_category": "boundary_limitation"
+    },
+    {
+      "expectation_id": "回答内容正确解释犹豫期",
+      "causal_category": "insufficient_evidence"
+    }
+  ],
+  "causal_category": "需人工复核",
+  "earliest_divergence": {
+    "node": "qa.sample.normalize",
+    "expected": "样本包含非空 actual_answer，scenario 被推断为 qa_gold_answer / qa_context_faithfulness / qa_weak_quality 之一，系统进入正常 QA 评估流程",
+    "actual": "样本 actual_answer 为空，scenario 被推断为 invalid_sample，data_quality_flags 包含 missing_actual_answer，系统进入边界处理流程",
+    "evidence": [
+      "normalized_request.scenario: 'invalid_sample'",
+      "normalized_request.data_quality_flags: ['missing_actual_answer']",
+      "extracted_output.actual_answer: ''",
+      "adapter._infer_scenario 判断逻辑: if golden_answer → qa_gold_answer; elif contexts → qa_context_faithfulness; elif question and actual_answer → qa_weak_quality; else → invalid_sample"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "suspicious",
+      "evidence": [
+        "scenario=invalid_sample",
+        "data_quality_flags=['missing_actual_answer']"
+      ]
+    },
+    {
+      "status": "suspicious"
+    },
+    {
+      "status": "not_verified"
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": false,
+    "expected": false,
+    "execution_trace": true,
+    "project_docs": true,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "输入样本数据缺陷——用户问题为'什么是保险合同犹豫期？'，但上游数据未提供 actual_answer。adapter._normalize_sample 正确遍历 input/output/reference 的所有可能字段后均未找到有效回答文本，_infer_scenario 因缺乏 golden_answer、contexts 和有效 actual_answer 将场景推断为 invalid_sample，_quality_flags 准确标记 missing_actual_answer。系统在整个处理链路中行为完全符合设计预期：在数据输入边界上，因缺少必要字段导致后续 QA 评估无法进行。这不是系统实现缺陷或模型能力问题，而是上游数据管线未为该样本提供有效回答文本所致。",
+  "verification_steps": [
+    "检查 mock_cases.json 或对应数据源中该样本（问题：'什么是保险合同犹豫期？'）的 output.actual_answer 字段是否为空或被遗漏",
+    "确认该 invalid_sample 是否为故意构造的边界测试用例——若是，验证系统是否正确返回了 invalid_sample 场景和 missing_actual_answer 标记",
+    "若为数据管线问题，定位上游数据生成或导入环节中 actual_answer 缺失的根因"
+  ],
+  "patch_direction": [
+    "若为数据管线缺陷：修复上游数据生成/导入逻辑，为问题'什么是保险合同犹豫期？'补充有效的 actual_answer",
+    "若为边界测试用例：当前系统行为正确，无需修改代码；可在测试文档中明确 invalid_sample 场景的预期处理结果",
+    "若需增强用户体验：可在 judge 输出中为 invalid_sample 场景提供更明确的人类可读说明，而非仅标记为 uncertain"
+  ],
+  "needs_human_review": false,
+  "scenario": "invalid_sample",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 2,
+    "probe_count": 1,
+    "summary_text": "输入样本数据缺陷——用户问题为'什么是保险合同犹豫期？'，但上游数据未提供 actual_answer。adapter._normalize_sample 正确遍历 input/output/reference 的所有可能字段后均未找到有效回答文本，_infer_scenario 因缺乏 golden_answer、contexts 和有效 actual_answer 将场景推断为 invalid_sample，_quality_flags 准确标记 missing_actual_answer。系统在整个处理链路中行为完全符合设计预期：在数据输入边界上，因缺少必要字段导致后续 QA 评估无法进行。这不是系统实现缺陷或模型能力问题，而是上游数据管线未为该样本提供有效回答文本所致。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

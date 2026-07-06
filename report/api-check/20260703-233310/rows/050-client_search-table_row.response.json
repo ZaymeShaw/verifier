@@ -1,0 +1,86 @@
+{
+  "id": "mock-agent-client_search-348911af",
+  "input": "session_20260514_001",
+  "scenario": "",
+  "output_summary": "{\"empty_result_reason\": \"\", \"external_boundary_sources\": {\"config_paths\": {\"source_enhanced_rules\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/llm_clien…",
+  "reference_summary": "{\"empty_result_reason\": \"\", \"external_boundary_sources\": {\"config_paths\": {\"source_enhanced_rules\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/llm_clien…",
+  "status": "not_fulfilled",
+  "execution_mode": "",
+  "output_source": "live_service",
+  "verdict": "incorrect",
+  "fulfillment_status": "not_fulfilled",
+  "judge_summary": {
+    "status": "not_fulfilled",
+    "fulfillment_status": "not_fulfilled",
+    "verdict": "incorrect",
+    "reason": "not_fulfilled · blocking=[比较高语义被正确理解为等级过滤而非存在性判断,高等级VIP枚举值覆盖合理的高等级范围] · EXISTS会返回所有有VIP等级的客户（包括白银1-3等低等级），无法满足用户对'比较高'的筛选需求",
+    "reason_source": "aggregated_fulfillment",
+    "reason_stage": "judge",
+    "is_formal_attribution": true,
+    "assessment_count": 3,
+    "blocking_count": 3,
+    "primary_failure_dimensions": [
+      {
+        "blocking": true,
+        "downstream_impact": "EXISTS会返回所有有VIP等级的客户（包括白银1-3等低等级），无法满足用户对'比较高'的筛选需求",
+        "evidence": "actual output中conditions[0].operator = 'EXISTS' | actual output中conditions[0].value = ''（空值） | operator应为CONTAINS | value应为高等级VIP枚举值列表",
+        "expectation_id": "比较高语义被正确理解为等级过滤而非存在性判断",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "由于operator为EXISTS且value为空，实际查询无法区分高等级和低等级VIP客户",
+        "evidence": "actual output中value为空字符串，未提供任何枚举值 | value包含黄金V1、黄金V2、黄金V3、原黄金VIP、铂金V1、铂金V2、原铂金VIP、钻石VIP、金钻VIP、黑钻VIP等",
+        "expectation_id": "高等级VIP枚举值覆盖合理的高等级范围",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      }
+    ]
+  },
+  "attribution_summary": {
+    "attribution_count": 2,
+    "causal_category": "implementation_bug",
+    "is_complete": true,
+    "is_formal_attribution": true,
+    "probe_count": 2,
+    "summary_text": "系统在 enhanced_rules 层和 LLM prompt 层均缺乏对「比较高」「高」「高等级」等相对等级修饰语的覆盖。具体而言：(1) enhanced_rules 中 vipType 相关规则仅覆盖「黄金以上」「铂金及以上」等「具体等级名+方向词」模式，未覆盖用户使用相对形容词「比较高」表达等级过滤意图的场景；(2) 当查询在规则层未命中落入 LLM 后，prompt 中 vipType 的 EXISTS 示例（「寿险VIP客户」→ EXISTS）成为与「VIP等级比较高」最语义接近的参考，引导模型错误地将等级过滤意图映射为存在性判断。根因本质是规则/prompt 对用户口语化等级表达（「比较高」而非「黄金以上」）的覆盖率不足。"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 4,
+    "protocol_gap_count": 0,
+    "consistency_gap_count": 1,
+    "recommended_fix_count": 2,
+    "issues": [
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: API, LLM, SEARCH, matched, name, no"
+    ]
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": false,
+  "quality_flags": [
+    "downstream_result_set_unavailable",
+    "qualitative_intent_misinterpreted_as_existence_check",
+    "key_modifier_ignored",
+    "key_modifier_ignored",
+    "qualitative_intent_misinterpreted_as_existence_check",
+    "rule_coverage_gap",
+    "prompt_example_gap"
+  ],
+  "check_passed": false,
+  "issue_count": 5,
+  "fallback_count": 0,
+  "causal_category": "implementation_bug",
+  "divergence_stage": "client_search.routing",
+  "root_cause_summary": "系统在 enhanced_rules 层和 LLM prompt 层均缺乏对「比较高」「高」「高等级」等相对等级修饰语的覆盖。具体而言：(1) enhanced_rules 中 vipType 相关规则仅覆盖「黄金以上」「铂金及以上」等「具体等级名+方向词」模式，未覆盖用户使用相对形容词「比较高」表达等级过滤意图的场景；(2) 当查询在规则层未命中落入 LLM 后，prompt 中 vipType 的 EXISTS 示例（「寿险VIP客户」→ EXISTS）成为与「VIP等级比较高」最语义接近的参考，引导模型错误地将等级过滤意图映射为存在性判断。根因本质是规则/prompt 对用户口语化等级表达（「比较高」而非「黄金以上」）的覆盖率不足。",
+  "created_at": "2026-07-03T15:33:13.178240+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "ab09d934-cd68-4c65-a491-9a53b43bf567"
+}

@@ -1,0 +1,57 @@
+{
+  "trace_id": "4f47fe8c-2f66-447c-855b-6ff51ac62b05",
+  "project_id": "marketting-planning-intent",
+  "case_id": "",
+  "causal_category": "implementation_bug",
+  "earliest_divergence": {
+    "node": "intent_contract_gate",
+    "evidence": [
+      []
+    ],
+    "confidence": "medium"
+  },
+  "chain_nodes": [
+    {
+      "status": "failed",
+      "evidence": [
+        {},
+        {},
+        {},
+        {}
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": false,
+    "actual": false,
+    "expected": false,
+    "execution_trace": false
+  },
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {}，最早差异位于 intent_contract_gate。",
+  "verification_steps": [
+    "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+  ],
+  "patch_direction": [
+    "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+  ],
+  "needs_human_review": true,
+  "scenario": "intent_recognition",
+  "summary": {
+    "causal_category": "external_dependency",
+    "attribution_count": 0,
+    "probe_count": 2,
+    "summary_text": "本次 trace 失败的直接原因为外部依赖故障：marketing-planning intent service 不可达。adapter.py 的 call_or_prepare 方法通过 urllib.request.urlopen 向该服务发起 HTTP POST 请求时，遭遇 [Errno 61] Connection refused。在 TCP 层面，该错误意味着目标主机或端口上没有进程在监听——即 intent service 进程未启动、已崩溃、监听端口配置错误、或被防火墙阻断。由于服务完全不可用，intent_api_call 阶段即告失败，后续的 adapter_extraction 无数据可解析（extracted_output 为空），label_mapping 无法执行，judge 也因缺乏实际输出而无法评估业务预期（verdict=uncertain，business_expectations 为空）。此问题属于 external_dependency 范畴，非代码逻辑缺陷，但暴露了 adapter 层缺少对服务不可用的降级处理机制。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "trace_id": "75611da8-509e-4bd8-ba6d-9de499df9e6d",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "期望提供非空且相关的定义回答",
+      "causal_category": "boundary_limitation"
+    }
+  ],
+  "causal_category": "需人工复核",
+  "earliest_divergence": {
+    "node": "qa.sample.normalize",
+    "expected": "样本包含有效的 actual_answer，scenario 推断为 qa_gold_answer / qa_context_faithfulness / qa_weak_quality 之一",
+    "actual": "actual_answer 为空，scenario 推断为 invalid_sample，data_quality_flags=['missing_actual_answer']",
+    "evidence": [
+      "normalized_request.scenario = 'invalid_sample'",
+      "normalized_request.data_quality_flags = ['missing_actual_answer']",
+      "normalized_request.input.question = '什么是保险合同犹豫期？'"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "suspicious",
+      "evidence": [
+        "scenario 推断为 invalid_sample",
+        "data_quality_flags 包含 missing_actual_answer"
+      ]
+    },
+    {
+      "status": "suspicious",
+      "evidence": [
+        "extracted_output.actual_answer 为空字符串"
+      ]
+    },
+    {
+      "status": "failed",
+      "evidence": [
+        "actual_answer_present = false"
+      ]
+    },
+    {
+      "status": "failed",
+      "evidence": [
+        "actual_answer_present = false",
+        "unrecoverable_missing = ['actual_answer_present']"
+      ]
+    },
+    {
+      "status": "failed",
+      "evidence": [
+        "verdict = uncertain",
+        "expectation '期望提供非空且相关的定义回答' status = not_fulfilled"
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": false,
+    "expected": false,
+    "execution_trace": true,
+    "project_docs": true,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "输入样本的 actual_answer 字段为空，导致整个 QA 评估流水线无法执行语义评估。适配器在 _normalize_sample 阶段正确检测到该问题，将场景推断为 invalid_sample 并标记 missing_actual_answer 数据质量缺陷。judge 因缺少评估对象（actual_answer）而无法判定'什么是保险合同犹豫期？'的回答是否相关、正确，因此业务期望'提供非空且相关的定义回答'必然无法达成。根因在上游数据源——样本本身未携带实际回答内容，适配器和 judge 的行为均为对此边界条件的正确防御性响应，不存在实现缺陷。",
+  "verification_steps": [
+    "确认当前样本的数据来源（mock_cases.json 或数据导入管道），检查该样本的 output.actual_answer 为何为空",
+    "验证问题 '什么是保险合同犹豫期？' 是否本应有对应回答但因数据加工错误而丢失",
+    "若该样本为 mock_cases.json 中的种子数据，直接补充 actual_answer 字段；若来自外部导入，检查导入管道的字段映射是否正确",
+    "重新运行评估流水线，确认补充 actual_answer 后 scenario 不再为 invalid_sample 且 judge 可正常评估"
+  ],
+  "patch_direction": [
+    "短期：为当前无效样本补充 actual_answer（如 mock_cases.json 中为问题 '什么是保险合同犹豫期？' 添加实际回答内容）",
+    "中期：在 build_request 或 _normalize_sample 阶段增加早期拒绝逻辑——若 actual_answer 为空且非弱质量场景，直接返回 not_evaluable 而非继续消耗 judge 资源",
+    "长期：考虑新增 qa_empty_answer 场景类型，为'回答缺失'定义专门的评估语义（如区分'系统故障导致无回答'与'模型拒答'），避免将所有空回答统一归入 invalid_sample"
+  ],
+  "needs_human_review": false,
+  "scenario": "invalid_sample",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 1,
+    "probe_count": 4,
+    "summary_text": "输入样本的 actual_answer 字段为空，导致整个 QA 评估流水线无法执行语义评估。适配器在 _normalize_sample 阶段正确检测到该问题，将场景推断为 invalid_sample 并标记 missing_actual_answer 数据质量缺陷。judge 因缺少评估对象（actual_answer）而无法判定'什么是保险合同犹豫期？'的回答是否相关、正确，因此业务期望'提供非空且相关的定义回答'必然无法达成。根因在上游数据源——样本本身未携带实际回答内容，适配器和 judge 的行为均为对此边界条件的正确防御性响应，不存在实现缺陷。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

@@ -1,8 +1,12 @@
 """
-通用 Tool 协议：字段定义检索。
+通用 Tool 协议：字段定义检索（辅助 tool，已降级）。
 
-这是协议层，定义了 tool 的接口和标准格式。
-具体的字段查找逻辑由各项目实现。
+⚠️ 降级说明（spec/tool2.md）：
+此 tool 是"信息搬运"而非"可执行验证"，不作为归因主力。归因主力是各项目 adapter
+在 get_verifiable_tools() 里提供的可执行验证 tool（execute_fn 真能跑、能产出 actual）。
+本 tool 仅作为兜底辅助，供 judge/attr 在没有项目级字段能力 tool 时使用。
+
+具体字段能力验证应由项目层提供（如 client_search/tools/field_capability.py）。
 """
 from __future__ import annotations
 

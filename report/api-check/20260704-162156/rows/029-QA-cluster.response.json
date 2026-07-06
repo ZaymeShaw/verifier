@@ -1,0 +1,56 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::需人工复核::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "需人工复核",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "补充其他注意事项（分组限制、保额影响、累计上限等）"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "bf09ba09-4650-45dc-9ae9-c968c0d0593d"
+      ],
+      "representative_traces": [
+        "bf09ba09-4650-45dc-9ae9-c968c0d0593d"
+      ],
+      "common_root_cause": "实际回答由mock_agent_llm生成，模型采用了简洁回答策略：优先精确回应用户直接询问的两个核心问题（能否多次赔付→可以；每次赔多少→20%-30%），并主动附带次数上限和间隔期作为增值信息。未展开分组限制、保额影响、累计上限等进阶内容，根本原因在于该期望为low优先级非阻塞期望，合约表述模糊（'补充其他注意事项'），模型未被明确要求输出这些细节。同时judge的评估边界也确认'不强制要求包含所有金标中的细节'，因此该not_fulfilled状态属于合理的简洁性取舍，而非模型能力缺陷或系统故障。judge自身出现verdict与overall_fulfillment.status不一致的自检失败，进一步表明该期望的判定标准需要人工校准。",
+      "shared_failure_pattern": "实际回答由mock_agent_llm生成，模型采用了简洁回答策略：优先精确回应用户直接询问的两个核心问题（能否多次赔付→可以；每次赔多少→20%-30%），并主动附带次数上限和间隔期作为增值信息。未展开分组限制、保额影响、累计上限等进阶内容，根本原因在于该期望为low优先级非阻塞期望，合约表述模糊（'补充其他注意事项'），模型未被明确要求输出这些细节。同时judge的评估边界也确认'不强制要求包含所有金标中的细节'，因此该not_fulfilled状态属于合理的简洁性取舍，而非模型能力缺陷或系统故障。judge自身出现verdict与overall_fulfillment.status不一致的自检失败，进一步表明该期望的判定标准需要人工校准。",
+      "representative_diffs": [
+        {
+          "case_id": "bf09ba09-4650-45dc-9ae9-c968c0d0593d",
+          "node": "qa.output.read",
+          "expected": "回答内容覆盖golden_answer中所有关键信息点，包括分组限制、保额影响、累计上限",
+          "actual": "回答内容仅覆盖直接回应用户两个核心问点的信息及次数上限、间隔期，未展开进阶注意事项",
+          "evidence": [
+            "golden_answer vs actual_answer 全文对比",
+            "judge semantic_equivalence_checks中'轻症责任可能设有分组限制'的expected_fragment对应actual_fragment为null，equivalent=false",
+            "judge missing列表明确列出三项缺失内容"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "方案A（推荐）：若当前简洁风格符合产品定位，将'补充其他注意事项'的优先级从low调整为informational，或将该期望与已有medium期望（次数上限、间隔期）合并，避免产生无意义的not_fulfilled信号",
+        "方案B：若业务要求保险类回答必须详尽，在mock_agent_llm的prompt中增加结构化要求，例如'对于保险责任类问题，请按以下维度逐一说明：赔付条件、赔付比例、次数限制、间隔期、分组限制、保额影响、累计上限、合同依据'",
+        "修复judge自检逻辑：当所有blocking期望均fulfilled且无blocking_gaps时，verdict不应为incorrect"
+      ],
+      "verification_cases": [
+        "bf09ba09-4650-45dc-9ae9-c968c0d0593d"
+      ],
+      "next_actions": [
+        "检查mock_agent_llm的system prompt是否包含详尽性要求——若prompt未要求列出所有常见限制条件，则当前行为符合预期",
+        "统计同类保险咨询问题的其他回答，确认是否存在一致的简洁风格（核心+少量补充，不展开全部细节）",
+        "对judge进行校准：verdict=incorrect与所有阻塞期望fulfilled且无blocking_gaps之间存在逻辑矛盾，需人工确认正确的verdict应为fulfilled还是incorrect"
+      ]
+    }
+  ],
+  "common_root_cause": "实际回答由mock_agent_llm生成，模型采用了简洁回答策略：优先精确回应用户直接询问的两个核心问题（能否多次赔付→可以；每次赔多少→20%-30%），并主动附带次数上限和间隔期作为增值信息。未展开分组限制、保额影响、累计上限等进阶内容，根本原因在于该期望为low优先级非阻塞期望，合约表述模糊（'补充其他注意事项'），模型未被明确要求输出这些细节。同时judge的评估边界也确认'不强制要求包含所有金标中的细节'，因此该not_fulfilled状态属于合理的简洁性取舍，而非模型能力缺陷或系统故障。judge自身出现verdict与overall_fulfillment.status不一致的自检失败，进一步表明该期望的判定标准需要人工校准。",
+  "impact": "",
+  "priority": "high"
+}

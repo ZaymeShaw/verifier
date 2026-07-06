@@ -1,0 +1,70 @@
+{
+  "project_id": "client_search",
+  "clusters": [
+    {
+      "cluster_id": "expectation::model_capability_gap::not_evaluable",
+      "mechanism": "model_capability_gap::not_evaluable",
+      "causal_category": "model_capability_gap",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "VIP等级高端筛选而非全量存在性检查"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "0f221b20-2932-4a0f-8a6a-2e8f0bd8dadd"
+      ],
+      "representative_traces": [
+        "0f221b20-2932-4a0f-8a6a-2e8f0bd8dadd"
+      ],
+      "common_root_cause": "用户查询'VIP等级比较高的客户'中的'比较高'是一个模糊程度限定词，系统在处理该查询时存在双重缺失：(1) enhanced_rules 层缺乏对'比较高'/'高VIP等级'等泛化程度词的 regex 覆盖，导致规则匹配阶段直接跳过；(2) LLM prompt 中 vipType 字段的 few-shot 示例仅覆盖具体等级名（黄金客户/铂金客户），缺少'比较高'→层级映射的引导示例。LLM 在缺乏规则锚点和 prompt 引导的情况下，将查询中'VIP'与'客户'的组合匹配到了最接近的 prompt 示例'寿险VIP客户'→EXISTS，完全丢弃了'比较高'这一核心限定语义。此外，extra_input_params 中 vip_level='high' 的结构化信号未被 adapter 注入 parser 链路，错失了可用的消歧信息。根因本质是 prompt 的 few-shot 覆盖不足（模型能力在无示例时无法泛化推理模糊程度词）与 enhanced_rules 的覆盖面缺口（缺乏模糊程度词的正则规则）的叠加。",
+      "shared_failure_pattern": "用户查询'VIP等级比较高的客户'中的'比较高'是一个模糊程度限定词，系统在处理该查询时存在双重缺失：(1) enhanced_rules 层缺乏对'比较高'/'高VIP等级'等泛化程度词的 regex 覆盖，导致规则匹配阶段直接跳过；(2) LLM prompt 中 vipType 字段的 few-shot 示例仅覆盖具体等级名（黄金客户/铂金客户），缺少'比较高'→层级映射的引导示例。LLM 在缺乏规则锚点和 prompt 引导的情况下，将查询中'VIP'与'客户'的组合匹配到了最接近的 prompt 示例'寿险VIP客户'→EXISTS，完全丢弃了'比较高'这一核心限定语义。此外，extra_input_params 中 vip_level='high' 的结构化信号未被 adapter 注入 parser 链路，错失了可用的消歧信息。根因本质是 prompt 的 few-shot 覆盖不足（模型能力在无示例时无法泛化推理模糊程度词）与 enhanced_rules 的覆盖面缺口（缺乏模糊程度词的正则规则）的叠加。",
+      "representative_diffs": [
+        {
+          "case_id": "0f221b20-2932-4a0f-8a6a-2e8f0bd8dadd",
+          "node": "client_search.routing",
+          "expected": "enhanced_rules 匹配到'VIP等级比较高'→vipType CONTAINS [黄金V1及以上]，或 LLM 根据 prompt 推断出层级筛选",
+          "actual": "enhanced_rules 未匹配，LLM 输出 vipType EXISTS，语义退化为存在性检查",
+          "evidence": [
+            "rule_verify 确认 enhanced_rules 无'比较高'匹配规则",
+            "search_api 复现确认 EXISTS 输出",
+            "matched_patterns 中 prompt 缺少'比较高'→层级映射的 few-shot 示例"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        {
+          "change": "新增规则条目'寿险VIP-高等级'，patterns 包含'{SEARCH}VIP等级(?:比较)?高(?:的客户|客户)?'、'{SEARCH}高VIP等级(?:的客户|客户)?'等，field=vipType，operator=CONTAINS，value_type=static，value=['黄金V1','黄金V2','黄金V3','原黄金VIP','铂金V1','铂金V2','原铂金VIP','钻石VIP','金钻VIP','黑钻VIP']，priority=11（高于通用'寿险VIP'规则的 priority 8），merge_to_llm=False（直接生效，不依赖 LLM 二次推理）",
+          "file": "enhanced_rules_args.yaml",
+          "rationale": "正则规则确定性高，能精确拦截高频模糊表达，成本最低"
+        },
+        {
+          "change": "在 vipType 的 CONTAINS 操作符说明中增加 few-shot 示例：'VIP等级比较高的客户' → {\"field\":\"vipType\",\"operator\":\"CONTAINS\",\"value\":[\"黄金V1\",\"黄金V2\",\"黄金V3\",\"原黄金VIP\",\"铂金V1\",\"铂金V2\",\"原铂金VIP\",\"钻石VIP\",\"金钻VIP\",\"黑钻VIP\"]}，并在说明中标注'比较高在VIP等级体系中对应黄金及以上层级'",
+          "file": "field_definitions_args.yaml",
+          "rationale": "提升 LLM prompt 的 few-shot 覆盖率，作为正则规则的兜底"
+        },
+        {
+          "change": "在 build_request 或 prompt 构造逻辑中，当 extra_input_params.vip_level='high' 时，向 prompt 追加提示信息（如'系统提示：用户要求筛选VIP等级较高的客户，请在vipType字段使用CONTAINS操作符限定黄金及以上层级'），或将其转化为 enhanced_rules 匹配的触发信号",
+          "file": "adapter.py",
+          "rationale": "利用上游结构化信号减少 parser 歧义，实现端到端意图传递"
+        }
+      ],
+      "verification_cases": [
+        "0f221b20-2932-4a0f-8a6a-2e8f0bd8dadd"
+      ],
+      "next_actions": [
+        "1. 调用 client_search_search_api 查询'VIP等级比较高的客户'，确认当前仍返回 vipType EXISTS — 已通过 probe 复现确认",
+        "2. 在 enhanced_rules_args.yaml 中新增规则后，重启服务并调用 search_api 验证是否返回 vipType CONTAINS [黄金V1~黑钻VIP]",
+        "3. 同时测试相似查询如'VIP等级高的客户'、'高VIP客户'，确认新规则覆盖这些变体",
+        "4. 在 field_definitions_args.yaml 中补充'比较高'→CONTAINS 的 few-shot 示例后，用更模糊的变体（如'VIP等级不低的客户'）测试 LLM 泛化能力",
+        "5. 验证 extra_input_params.vip_level='high' 被正确注入后，是否能辅助提升 parser 准确率"
+      ]
+    }
+  ],
+  "common_root_cause": "用户查询'VIP等级比较高的客户'中的'比较高'是一个模糊程度限定词，系统在处理该查询时存在双重缺失：(1) enhanced_rules 层缺乏对'比较高'/'高VIP等级'等泛化程度词的 regex 覆盖，导致规则匹配阶段直接跳过；(2) LLM prompt 中 vipType 字段的 few-shot 示例仅覆盖具体等级名（黄金客户/铂金客户），缺少'比较高'→层级映射的引导示例。LLM 在缺乏规则锚点和 prompt 引导的情况下，将查询中'VIP'与'客户'的组合匹配到了最接近的 prompt 示例'寿险VIP客户'→EXISTS，完全丢弃了'比较高'这一核心限定语义。此外，extra_input_params 中 vip_level='high' 的结构化信号未被 adapter 注入 parser 链路，错失了可用的消歧信息。根因本质是 prompt 的 few-shot 覆盖不足（模型能力在无示例时无法泛化推理模糊程度词）与 enhanced_rules 的覆盖面缺口（缺乏模糊程度词的正则规则）的叠加。",
+  "impact": "",
+  "priority": "normal"
+}

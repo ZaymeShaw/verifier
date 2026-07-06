@@ -1,0 +1,419 @@
+{
+  "trace_id": "42f0031a-59ff-42f9-bb17-cd9d64b10a91",
+  "project_id": "marketting-planning-intent",
+  "verdict": "incorrect",
+  "score": 0.0,
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签识别为客户画像",
+      "downstream_consumer": "意图路由与调度模块",
+      "user_intent": "查询客户画像信息",
+      "expected_outcome": "intent 字段值为 customer_portrait",
+      "required_capabilities": [
+        "意图分类模型"
+      ],
+      "acceptance_criteria": [
+        "extracted_output.intent == 'customer_portrait'"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "产品类型槽位提取",
+      "downstream_consumer": "查询构建器",
+      "user_intent": "指定查询产品",
+      "expected_outcome": "槽位中包含 product_type 或等效字段，值为年金险",
+      "required_capabilities": [
+        "槽位提取"
+      ],
+      "acceptance_criteria": [
+        "输出中存在产品类型槽位",
+        "槽位值为年金险"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "时间范围槽位提取",
+      "downstream_consumer": "查询构建器",
+      "user_intent": "指定时间范围",
+      "expected_outcome": "槽位中包含 time_range 或等效字段，值为去年",
+      "required_capabilities": [
+        "槽位提取"
+      ],
+      "acceptance_criteria": [
+        "输出中存在时间范围槽位",
+        "槽位值为去年"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "分析维度槽位提取",
+      "downstream_consumer": "数据分析引擎",
+      "user_intent": "获取年龄分布和家庭结构",
+      "expected_outcome": "槽位中包含 analysis_dimensions 或等效字段，包含年龄分布和家庭结构",
+      "required_capabilities": [
+        "槽位提取"
+      ],
+      "acceptance_criteria": [
+        "输出中存在分析维度槽位",
+        "槽位值至少包含年龄分布和家庭结构"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "置信度满足阈值",
+      "downstream_consumer": "规划决策模块",
+      "user_intent": "获得高可信度意图",
+      "expected_outcome": "confidence >= 0.7",
+      "required_capabilities": [
+        "置信度评分"
+      ],
+      "acceptance_criteria": [
+        "extracted_output.confidence >= 0.7"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "非歧义性判断正确",
+      "downstream_consumer": "对话管理模块",
+      "user_intent": "清晰表达查询需求",
+      "expected_outcome": "ambiguous == false",
+      "required_capabilities": [
+        "歧义检测"
+      ],
+      "acceptance_criteria": [
+        "extracted_output.ambiguous == false"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "回退策略未错误触发",
+      "downstream_consumer": "兜底处理模块",
+      "user_intent": "获得正常响应",
+      "expected_outcome": "fallback == false",
+      "required_capabilities": [
+        "回退决策"
+      ],
+      "acceptance_criteria": [
+        "extracted_output.fallback == false"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "调度边界正确",
+      "downstream_consumer": "调度分发层",
+      "user_intent": "查询客户画像",
+      "expected_outcome": "调度目标为客户画像分析领域",
+      "required_capabilities": [
+        "意图分发配置"
+      ],
+      "acceptance_criteria": [
+        "意图标签 customer_portrait 对应的调度目标存在且正确"
+      ],
+      "priority": "medium"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签识别为客户画像",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "intent 字段为 customer_portrait"
+      ],
+      "actual_evidence": [
+        "extracted_output.intent = 'customer_portrait'"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "实际输出中明确包含意图标签，可直接比对。"
+      },
+      "downstream_impact": "下游能够正确路由到客户画像处理模块。",
+      "blocking": true
+    },
+    {
+      "expectation_id": "产品类型槽位提取",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "槽位中存在产品类型字段且值为年金险"
+      ],
+      "actual_evidence": [
+        "extracted_output 中无任何槽位信息，仅有 intent、confidence 等字段"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "evaluable_errors": [
+          "未提取产品类型槽位"
+        ],
+        "reasoning": "用户查询明确包含产品信息，但实际输出中未包含任何槽位，属于可评估的错误。"
+      },
+      "downstream_impact": "下游无法限定产品范围，可能导致查询全量产品数据或查询失败。",
+      "blocking": true
+    },
+    {
+      "expectation_id": "时间范围槽位提取",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "槽位中存在时间范围字段且值为去年"
+      ],
+      "actual_evidence": [
+        "extracted_output 中无任何槽位信息"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "evaluable_errors": [
+          "未提取时间范围槽位"
+        ],
+        "reasoning": "用户查询明确包含时间信息，但实际输出中未包含任何槽位，属于可评估的错误。"
+      },
+      "downstream_impact": "下游无法确定查询的时间窗口，可能导致数据不准确或默认全量。",
+      "blocking": true
+    },
+    {
+      "expectation_id": "分析维度槽位提取",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "槽位中存在分析维度字段，包含年龄分布和家庭结构"
+      ],
+      "actual_evidence": [
+        "extracted_output 中无任何槽位信息"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "evaluable_errors": [
+          "未提取分析维度槽位"
+        ],
+        "reasoning": "用户查询明确指定了分析维度，但实际输出中未包含，属于可评估的错误。"
+      },
+      "downstream_impact": "下游可能返回默认维度或不完整的结果集。",
+      "blocking": false
+    },
+    {
+      "expectation_id": "置信度满足阈值",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "confidence >= 0.7"
+      ],
+      "actual_evidence": [
+        "extracted_output.confidence = 1.0"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "置信度值明确，可直接与阈值比较。"
+      },
+      "downstream_impact": "高置信度增强下游对意图可靠性的信任，可减少确认环节。",
+      "blocking": false
+    },
+    {
+      "expectation_id": "非歧义性判断正确",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "ambiguous == false"
+      ],
+      "actual_evidence": [
+        "extracted_output.ambiguous = false"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "歧义状态明确，可直接比对。"
+      },
+      "downstream_impact": "系统可以直接处理，无需澄清，提升响应效率。",
+      "blocking": true
+    },
+    {
+      "expectation_id": "回退策略未错误触发",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "fallback == false"
+      ],
+      "actual_evidence": [
+        "extracted_output.fallback = false"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "回退标识明确，可直接比对。"
+      },
+      "downstream_impact": "避免不必要的兜底流程，保证流畅体验。",
+      "blocking": true
+    },
+    {
+      "expectation_id": "调度边界正确",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "customer_portrait 对应调度目标存在且正确"
+      ],
+      "actual_evidence": [
+        "无调度相关输出信息"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": false,
+        "uncontrollable_limits": [
+          "调度配置或映射关系未在当前 trace 中暴露",
+          "无法通过单次意图识别输出验证调度分发正确性"
+        ],
+        "reasoning": "缺少调度目标信息，无法判断意图到模块的映射是否正确，属于不可控的评估限制。"
+      },
+      "downstream_impact": "未知，可能影响最终任务分配。",
+      "blocking": false
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "not_fulfilled",
+      "downstream_impact": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=None，confidence=None，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "blocking_expectations": [
+      "产品类型槽位提取",
+      "时间范围槽位提取",
+      "intent_contract"
+    ],
+    "assessment_count": 9
+  },
+  "reasoning_summary": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=None，confidence=None，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+  "judge_basis": "基于用户查询中明确提及的业务约束，结合 critical_intent_dimensions（intent_label, required_slots_or_entities, confidence_threshold, fallback_policy, dispatch_boundary）逐项评估实际输出。",
+  "judge_method": "人工构建业务期望，比对实际输出与期望的符合度。",
+  "verdict_derivation": {
+    "primary_boundary": "single_turn_intent_recognition",
+    "assessment_summary": "意图标签正确，置信度高，无歧义、无回退；但产品类型、时间范围等关键业务槽位缺失，导致下游无法直接构建精确查询。",
+    "blocking_gaps": [
+      "产品类型槽位未提取",
+      "时间范围槽位未提取"
+    ],
+    "why_verdict": "核心意图标签识别正确且辅助指标（置信度、歧义、回退）均达标，但是两个对业务执行必不可少的槽位（产品类型、时间范围）缺失，使得下游消费者无法获取精确的限定条件，整体业务价值受损，因此整体未满足业务期望。",
+    "contract_gate": "failed"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "产品类型槽位",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "时间范围槽位",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "分析维度槽位",
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "ref_id": "",
+      "source": "run_trace.extracted_output",
+      "kind": "output",
+      "stage": "intent_recognition",
+      "summary": "意图识别返回：intent=customer_portrait, confidence=1.0, fallback=false, ambiguous=false，无槽位信息。",
+      "location": "extracted_output"
+    }
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "evaluable_errors": [
+      "产品类型槽位缺失",
+      "时间范围槽位缺失",
+      "分析维度槽位缺失"
+    ],
+    "reasoning": "评估所需的所有信息（用户输入、实际输出）均已提供，缺失的槽位是可观测且可归因于系统输出的错误，而非评估能力不足。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "intent_recognition_output",
+    "primary_boundary_name": "单轮意图识别输出评估",
+    "judge_question": "实际提取的意图标签及槽位是否满足用户查询的业务需求？",
+    "verdict_basis": "依据用户查询中的明确约束与系统输出的一致性，尤其关注意图标签准确性和关键槽位的提取。",
+    "boundary_sources": "run_trace 中的输入与 extracted_output",
+    "conflict_policy": "如有多个可能意图，以最能覆盖用户所提实体和约束的意图为优。"
+  },
+  "consumer_contract": {
+    "consumer": "下游数据分析或营销规划模块",
+    "contract": "期望接收意图标签与必要的查询参数（槽位），以便构建精准的数据查询或生成规划卡片。"
+  },
+  "intent_model": {
+    "raw_user_request": "我想了解一下去年买过我们年金险的客户，他们的大致年龄分布和家庭结构是什么样的？",
+    "explicit_intents": [
+      "查询客户画像",
+      "获取年龄分布",
+      "获取家庭结构"
+    ],
+    "implicit_business_intents": [
+      "支持营销策略分析",
+      "理解现有客户群特征"
+    ],
+    "constraints": {
+      "产品": "年金险",
+      "时间范围": "去年",
+      "客户类型": "购买者",
+      "分析维度": [
+        "年龄分布",
+        "家庭结构"
+      ]
+    },
+    "success_definition": "准确识别意图为客户画像查询，并提取关键查询约束（产品、时间范围、分析维度），以便下游数据服务正确响应并生成可视化或报告。",
+    "blocking_requirements": [
+      "意图标签正确",
+      "提取产品类型约束",
+      "提取时间范围约束"
+    ],
+    "nice_to_have_requirements": [
+      "提取分析维度",
+      "高置信度"
+    ],
+    "intent_evidence": [
+      "用户明确提及“年金险”指定产品",
+      "用户明确提及“去年”指定时间",
+      "用户明确提及“年龄分布”和“家庭结构”作为分析维度"
+    ]
+  },
+  "reconstructed_intent": "客户意图为查询去年购买年金险客户的年龄分布与家庭结构（客户画像分析），实际系统仅输出意图标签 customer_portrait，未提取关键业务槽位（产品、时间、分析维度）。",
+  "reference_generation_basis": {
+    "source": "judge_constructed_from_user_request",
+    "alignment_to_live_schema": "not_applicable"
+  },
+  "scenario": "intent_recognition",
+  "quality_flags": [
+    "intent_contract_gate_failed"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[产品类型槽位提取,时间范围槽位提取] · 下游无法限定产品范围，可能导致查询全量产品数据或查询失败。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "产品类型槽位提取",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "下游无法限定产品范围，可能导致查询全量产品数据或查询失败。",
+        "within_evaluable_scope": true,
+        "evidence": "extracted_output 中无任何槽位信息，仅有 intent、confidence 等字段 | 槽位中存在产品类型字段且值为年金险"
+      },
+      {
+        "expectation_id": "时间范围槽位提取",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "下游无法确定查询的时间窗口，可能导致数据不准确或默认全量。",
+        "within_evaluable_scope": true,
+        "evidence": "extracted_output 中无任何槽位信息 | 槽位中存在时间范围字段且值为去年"
+      },
+      {
+        "expectation_id": "分析维度槽位提取",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "下游可能返回默认维度或不完整的结果集。",
+        "within_evaluable_scope": true,
+        "evidence": "extracted_output 中无任何槽位信息 | 槽位中存在分析维度字段，包含年龄分布和家庭结构"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 8,
+    "blocking_count": 5,
+    "is_formal_attribution": true
+  }
+}

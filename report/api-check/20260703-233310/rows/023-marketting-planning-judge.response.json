@@ -1,0 +1,402 @@
+{
+  "trace_id": "7d604837-d5ba-4f51-ba1b-82ec6134f86e",
+  "project_id": "marketting-planning",
+  "verdict": "incorrect",
+  "business_expectations": [
+    {
+      "expectation_id": "识别业务指标NBEV",
+      "downstream_consumer": "规划卡片消费者",
+      "user_intent": "提高今年的NBEV",
+      "expected_outcome": "生成的卡片或澄清问题应明确针对NBEV指标",
+      "required_capabilities": [
+        "业务指标识别"
+      ],
+      "acceptance_criteria": [
+        "输出内容中包含'NBEV'或相关业务指标表述"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "澄清缺失目标值",
+      "downstream_consumer": "规划卡片消费者",
+      "user_intent": "提高NBEV",
+      "expected_outcome": "输出中包含针对目标值的追问，例如'您希望提高多少NBEV？'",
+      "required_capabilities": [
+        "槽位澄清"
+      ],
+      "acceptance_criteria": [
+        "输出中包含针对目标值的追问，如具体提高数值或百分比",
+        "未直接进入最终规划生成阶段"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "准确捕获时间范围",
+      "downstream_consumer": "规划卡片消费者",
+      "user_intent": "提高今年的NBEV",
+      "expected_outcome": "生成的卡片或澄清问题中包含或约束于当前年度",
+      "required_capabilities": [
+        "时间范围识别"
+      ],
+      "acceptance_criteria": [
+        "输出内容中体现'今年'或对应的年份约束"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "纳入销售人员维度",
+      "downstream_consumer": "规划卡片消费者",
+      "user_intent": "提高NBEV",
+      "expected_outcome": "系统在回应中提及或处理'招聘销售人员'这一分解维度",
+      "required_capabilities": [
+        "维度识别"
+      ],
+      "acceptance_criteria": [
+        "输出内容中提及'招聘'、'销售人员'或类似表述"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "路由至澄清阶段",
+      "downstream_consumer": "下游规划流程",
+      "user_intent": "提高NBEV",
+      "expected_outcome": "系统识别的阶段为clarification，事件序列中不出现planning_started等规划事件，而是提出澄清问题",
+      "required_capabilities": [
+        "阶段路由"
+      ],
+      "acceptance_criteria": [
+        "输出stage字段为clarification或事件序列包含明确的澄清提问",
+        "不存在未经澄清直接生成规划卡片的事件"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "规划可操作性",
+      "downstream_consumer": "规划卡片消费者",
+      "user_intent": "提高NBEV",
+      "expected_outcome": "如果生成了规划卡片，其内容应包含明确的目标值、时间范围、负责维度等信息，具备可操作性",
+      "required_capabilities": [
+        "规划生成"
+      ],
+      "acceptance_criteria": [
+        "若出现card_delta事件，其内容应包含具体目标数值、时间约束和行动分解"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "SSE事件流完整",
+      "downstream_consumer": "前端UI",
+      "user_intent": "提高NBEV",
+      "expected_outcome": "事件序列以done结束，completed为true，无杂乱或缺失事件",
+      "required_capabilities": [
+        "SSE管理"
+      ],
+      "acceptance_criteria": [
+        "event_summary.completed为true",
+        "event_summary.final_event为done",
+        "事件序列包含intent_detected、reasoning、card_delta等必要阶段（若进入规划）"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "无不当退避",
+      "downstream_consumer": "用户",
+      "user_intent": "提高NBEV",
+      "expected_outcome": "fallback.used为false，系统自身完成处理",
+      "required_capabilities": [
+        "稳定处理"
+      ],
+      "acceptance_criteria": [
+        "extracted_output.fallback.used为false",
+        "且allow_fallback为false时不应强迫退避"
+      ],
+      "priority": "high"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "识别业务指标NBEV",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "输出文本中提及NBEV"
+      ],
+      "actual_evidence": [
+        "无法获取卡片具体内容，无法验证是否提及NBEV"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "输出内容不可见，无法判断"
+      },
+      "downstream_impact": "可能影响指标对齐，但无法确认",
+      "blocking": true
+    },
+    {
+      "expectation_id": "澄清缺失目标值",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "输出中包含针对目标值的追问"
+      ],
+      "actual_evidence": [
+        "事件序列中无提问事件，直接包含planning_started和card_delta，未出现澄清问题"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": ""
+      },
+      "downstream_impact": "下游规划流程可能得到无具体目标的计划，影响可执行性",
+      "blocking": true,
+      "evidence_refs": [
+        {
+          "ref_id": "event_planning_started",
+          "source": "run_trace",
+          "kind": "sse_event",
+          "stage": "planning",
+          "summary": "存在planning_started事件，表明进入了规划阶段而非澄清",
+          "location": "extracted_output.event_summary.raw_names"
+        }
+      ]
+    },
+    {
+      "expectation_id": "准确捕获时间范围",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "输出文本中体现'今年'或对应年份"
+      ],
+      "actual_evidence": [
+        "无法获取卡片具体内容，无法验证时间范围是否被捕获"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "输出内容不可见"
+      },
+      "downstream_impact": "可能规划时未限定年份，但无法确认",
+      "blocking": true
+    },
+    {
+      "expectation_id": "纳入销售人员维度",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "输出中提及招聘销售人员相关表述"
+      ],
+      "actual_evidence": [
+        "无法获取卡片具体内容，无法验证"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "输出内容不可见"
+      },
+      "downstream_impact": "可能未纳入用户建议的策略，但无法确认",
+      "blocking": false
+    },
+    {
+      "expectation_id": "路由至澄清阶段",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "输出stage为clarification或事件序列包含澄清提问"
+      ],
+      "actual_evidence": [
+        "extracted_output.stage为'non_agent'，且事件包含planning_started、card_delta，表明进入了规划阶段而非澄清"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": ""
+      },
+      "downstream_impact": "直接规划导致缺失关键信息，降低输出可用性",
+      "blocking": true,
+      "evidence_refs": [
+        {
+          "ref_id": "stage_non_agent",
+          "source": "run_trace",
+          "kind": "output_field",
+          "stage": "overall",
+          "summary": "stage字段为non_agent，但实际事件进行规划",
+          "location": "extracted_output.stage"
+        }
+      ]
+    },
+    {
+      "expectation_id": "规划可操作性",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "卡片内容包含具体目标值和行动步骤"
+      ],
+      "actual_evidence": [
+        "虽然有card_delta事件，但内容未知，且缺失目标值澄清，推测可操作性可能不足，无法直接判定"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": "内容不可见，无法直接判定"
+      },
+      "downstream_impact": "如果卡片无目标值，则不可执行",
+      "blocking": false
+    },
+    {
+      "expectation_id": "SSE事件流完整",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "completed为true，事件流正常结束"
+      ],
+      "actual_evidence": [
+        "event_summary.completed: true, final_event: done, 事件序列包含reasoning和card_delta，结构完整"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": ""
+      },
+      "downstream_impact": "前端可以正常渲染结束",
+      "blocking": true,
+      "evidence_refs": [
+        {
+          "ref_id": "event_completed",
+          "source": "run_trace",
+          "kind": "sse_event",
+          "stage": "done",
+          "summary": "SSE流以done正常结束",
+          "location": "extracted_output.event_summary.completed"
+        }
+      ]
+    },
+    {
+      "expectation_id": "无不当退避",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "fallback.used为false"
+      ],
+      "actual_evidence": [
+        "extracted_output.fallback.used: false, allow_fallback: false"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reasoning": ""
+      },
+      "downstream_impact": "系统自主处理，无退避影响",
+      "blocking": true,
+      "evidence_refs": [
+        {
+          "ref_id": "fallback_used_false",
+          "source": "run_trace",
+          "kind": "output_field",
+          "stage": "overall",
+          "summary": "未使用fallback",
+          "location": "extracted_output.fallback.used"
+        }
+      ]
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "assessment_count": 8,
+    "blocking_expectations": [
+      "识别业务指标NBEV",
+      "澄清缺失目标值",
+      "准确捕获时间范围",
+      "路由至澄清阶段"
+    ]
+  },
+  "expected": {
+    "stage": "clarification",
+    "events_include_question": true,
+    "clarify_target_value": true
+  },
+  "actual": {
+    "stage": "non_agent",
+    "events": [
+      "reasoning",
+      "card_generation"
+    ],
+    "clarification_provided": false
+  },
+  "reasoning_summary": "评估发现，系统在缺失关键信息（NBEV目标值）时未进行澄清，而是直接进入规划阶段并生成卡片，这不符合营销规划系统的最佳实践，导致规划可能无目标不可执行。SSE事件流完整且无不当fallback，但核心期望未满足，整体判定为not_fulfilled。",
+  "judge_basis": "基于项目评判标准、critical_intent_dimensions 及系统责任边界，评估 agent 对用户意图的理解和阶段路由是否正确。",
+  "judge_method": "通过比对实际输出事件与业务期望，逐个评估原子期望的满足情况。",
+  "verdict_derivation": {
+    "primary_boundary": "系统责任边界（意图识别、澄清、规划）",
+    "assessment_summary": "核心期望“澄清缺失目标值”和“路由至澄清阶段”未满足，导致整体未完成用户意图。其他部分期望如SSE完整性满足，部分因信息不足无法评估。",
+    "blocking_gaps": [
+      "未针对缺失的目标值提出澄清",
+      "未将请求路由至澄清阶段而是直接生成规划"
+    ],
+    "why_verdict": "用户请求提高NBEV但未提供具体目标值，系统本应进入澄清阶段追问目标值，却直接生成了规划卡片，且整体阶段标记不当，未能满足业务核心要求。"
+  },
+  "evidence": [
+    "评估发现，系统在缺失关键信息（NBEV目标值）时未进行澄清，而是直接进入规划阶段并生成卡片，这不符合营销规划系统的最佳实践，导致规划可能无目标不可执行。SSE事件流完整且无不当fallback，但核心期望未满足，整体判定为not_fulfilled。"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "reasoning": "评估基于提供的run_trace和extracted_output，信息足以判定整体行为是否符合预期。某些具体内容维度的期望因缺少输出文本而无法评估，属于可评估范围内的信息不足，但不影响整体范围判定。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "marketing-planning-boundary",
+    "primary_boundary_name": "营销规划系统责任边界",
+    "judge_question": "系统是否正确识别意图并进入适当的澄清或规划阶段？",
+    "verdict_basis": "基于critical_intent_dimensions中的stage_routing和business_metric/target_value维度，判断系统行为。",
+    "boundary_sources": "user prompt中的critical_intent_dimensions和run_trace",
+    "conflict_policy": "无"
+  },
+  "consumer_contract": {
+    "consumer": "用户或下游规划流程",
+    "contract": "系统应正确处理意图并进入对应阶段",
+    "application_boundary": {
+      "allow_fallback": false,
+      "dependency_status": "available"
+    }
+  },
+  "intent_model": {
+    "raw_user_request": "我想知道怎么提高今年的NBEV，能不能从多招些销售人员入手？",
+    "explicit_intents": [
+      "提高NBEV"
+    ],
+    "implicit_business_intents": [
+      "寻求营销规划建议",
+      "探讨人员策略"
+    ],
+    "constraints": {
+      "time_range": "今年",
+      "strategy_suggestion": "多招销售人员"
+    },
+    "success_definition": "系统正确识别意图，若信息不全则澄清缺失字段，最终提供可操作的规划或建议",
+    "blocking_requirements": [
+      "必须澄清目标值",
+      "必须识别时间范围"
+    ],
+    "nice_to_have_requirements": [
+      "纳入销售人员维度",
+      "直接生成规划（当信息齐全时）"
+    ],
+    "intent_evidence": [
+      "用户输入文本"
+    ]
+  },
+  "reconstructed_intent": "用户希望提高今年的NBEV指标，并询问是否可以通过增加销售人员作为策略。这是一个营销规划请求，但缺失关键的目标值，因此需要先澄清目标值才能生成可执行的规划。",
+  "reference_generation_basis": {
+    "source": "judge-generated based on critical_intent_dimensions and user intent",
+    "alignment_to_actual_shape": "基于实际输出形态构造期望契约"
+  },
+  "scenario": "intent_recognition",
+  "summary": {
+    "reason": "not_fulfilled · blocking=[澄清缺失目标值,路由至澄清阶段] · 下游规划流程可能得到无具体目标的计划，影响可执行性",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "澄清缺失目标值",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "下游规划流程可能得到无具体目标的计划，影响可执行性",
+        "within_evaluable_scope": true,
+        "evidence": "事件序列中无提问事件，直接包含planning_started和card_delta，未出现澄清问题 | 输出中包含针对目标值的追问 | 存在planning_started事件，表明进入了规划阶段而非澄清"
+      },
+      {
+        "expectation_id": "路由至澄清阶段",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "直接规划导致缺失关键信息，降低输出可用性",
+        "within_evaluable_scope": true,
+        "evidence": "extracted_output.stage为'non_agent'，且事件包含planning_started、card_delta，表明进入了规划阶段而非澄清 | 输出stage为clarification或事件序列包含澄清提问 | stage字段为non_agent，但实际事件进行规划"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 8,
+    "blocking_count": 6,
+    "is_formal_attribution": true
+  }
+}

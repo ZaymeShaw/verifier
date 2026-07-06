@@ -1,0 +1,93 @@
+{
+  "trace_id": "55add140-5115-42c5-83e7-3a50cb96ab64",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "QA:answer_quality",
+      "causal_category": "insufficient_evidence"
+    }
+  ],
+  "causal_category": "需人工复核",
+  "earliest_divergence": {
+    "node": "qa.sample.normalize",
+    "expected": "input.question 为非空字符串",
+    "actual": "input.question=''",
+    "evidence": [
+      "data_quality_flags=['missing_question']",
+      "normalized_request.input.question 为空字符串",
+      "_quality_flags 方法检测到 question 缺失"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "suspicious",
+      "evidence": [
+        "data_quality_flags=['missing_question']",
+        "scenario=qa_gold_answer",
+        "question_present=False"
+      ]
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "failed"
+    },
+    {
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": false,
+    "actual": true,
+    "expected": true,
+    "execution_trace": true,
+    "project_docs": true,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "输入样本的 question 字段为空字符串，导致 QA answer_quality 评估链路在最早阶段（qa.sample.normalize → _quality_flags 标记 missing_question）即失去评估基线。_qa_case_contract_evidence 确认 question_present=False 后，语义 judge 无法建立「问题→答案」的对照关系，最终 verdict=uncertain、error_type=需人工复核，QA:answer_quality 变为 not_evaluable。这不是 adapter 代码缺陷——adapter 正确检测并标记了 question 缺失——而是上游数据管线未为该样本填充 question 字段。",
+  "verification_steps": [
+    "检查当前样本在 mock_cases 或数据导入阶段的原始输入，确认 question 字段是否被正确填充",
+    "验证数据管线中 question 字段的映射逻辑：_normalize_sample 依次尝试 data.question → input.question → input.query → input.user_input → ''，确认上游是否使用了非标准字段名",
+    "对比同批次其他 qa_gold_answer 样本的 question 字段，判断是单样本问题还是系统性缺失",
+    "如果 question 无法恢复，该样本应标记为 invalid_sample 而非 qa_gold_answer，避免阻塞评估流程"
+  ],
+  "patch_direction": [
+    "上游数据修复：为该样本补充 question 字段（如 '百万医疗险报销规则是什么？'），使评估链路恢复正常",
+    "防御性增强（可选）：在 _normalize_sample 中，当 question 为空且 scenario=qa_gold_answer 时，将 scenario 降级为 invalid_sample 并追加 'missing_question_for_evaluation' 标志，避免静默进入不可评估状态",
+    "监控告警：对 missing_question 标志出现频率设置阈值告警，及时发现数据管线异常"
+  ],
+  "needs_human_review": true,
+  "scenario": "qa_gold_answer",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 1,
+    "probe_count": 0,
+    "summary_text": "输入样本的 question 字段为空字符串，导致 QA answer_quality 评估链路在最早阶段（qa.sample.normalize → _quality_flags 标记 missing_question）即失去评估基线。_qa_case_contract_evidence 确认 question_present=False 后，语义 judge 无法建立「问题→答案」的对照关系，最终 verdict=uncertain、error_type=needs_human_review，QA:answer_quality 变为 not_evaluable。这不是 adapter 代码缺陷——adapter 正确检测并标记了 question 缺失——而是上游数据管线未为该样本填充 question 字段。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  },
+  "analysis_method": "source_code_static_analysis_with_execution_trace_correlation",
+  "analysis_quality": {
+    "passed": false,
+    "missing": [
+      "local_verification"
+    ],
+    "standard": "通过源码静态分析确认 question 缺失是 QA:answer_quality 不可评估的唯一根因，因果链完整且可验证",
+    "status": "next_verification_step"
+  },
+  "incomplete_reason": "归因需要下一步验证：local_verification",
+  "suspected_locations": [
+    "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py:_quality_flags",
+    "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py:_qa_case_contract_evidence",
+    "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py:_normalize_sample"
+  ],
+  "quality_flags": [
+    "missing_question"
+  ]
+}

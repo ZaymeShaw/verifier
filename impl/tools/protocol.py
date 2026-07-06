@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Iterable, Protocol
+from typing import Any, Callable, Dict, Iterable, Optional, Protocol
 
 from agno.tools import Function, Toolkit
 
@@ -20,10 +20,11 @@ class ToolContext:
 @dataclass
 class ToolResult:
     tool_id: str
-    tool_type: str
-    status: str = "succeeded"
+    tool_type: str = "verifiable"
+    status: str = "succeeded"  # passed | diverged | inconclusive | failed
+    actual: Dict[str, Any] = field(default_factory=dict)
+    evidence: str = ""  # 执行日志，机器填充的事实记录
     outputs: Dict[str, Any] = field(default_factory=dict)
-    evidence: list[Any] = field(default_factory=list)
     missing_evidence: list[Any] = field(default_factory=list)
     boundary_limits: list[Any] = field(default_factory=list)
     error: str = ""
@@ -63,6 +64,25 @@ class ProtocolTool(Protocol):
 
     def run(self, context: ToolContext) -> ToolResult:
         ...
+
+
+@dataclass
+class VerifiableTool:
+    """可执行可验证 tool 的统一抽象（spec/tool2.md 最终方案）。
+
+    核心理念：tool 真去调业务系统跑出 actual 作为证据，不是搬运静态信息。
+    归因不是"全知判断对错"，而是"信息不全时拿能拿到的信息做最可能正确的判断，
+    并用执行验证来证明这个判断"——证据是 actual，不是 expected。
+
+    - parameters：入参定义，直接对齐 agno/OpenAI function calling 格式，不自己发明
+    - execute_fn：真正能跑的函数；签名 (params: dict) -> ToolResult
+    - tool 内部怎么拿 trace/spec 是实现细节（可闭包持有），不由协议规定
+    """
+    tool_id: str
+    description: str
+    applicable_scenario: str = "general"
+    parameters: Dict[str, Any] = field(default_factory=dict)
+    execute_fn: Optional[Callable[[Dict[str, Any]], ToolResult]] = None
 
 
 @dataclass

@@ -1,0 +1,158 @@
+{
+  "trace_id": "a4676d78-676a-48fe-aa33-ce26716754e3",
+  "project_id": "marketting-planning",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "业务指标识别正确性",
+      "causal_category": "implementation_bug"
+    },
+    {
+      "expectation_id": "时间范围识别",
+      "causal_category": "implementation_bug"
+    },
+    {
+      "expectation_id": "分解维度识别与采纳",
+      "causal_category": "implementation_bug"
+    },
+    {
+      "expectation_id": "阶段路由正确性",
+      "causal_category": "implementation_bug"
+    },
+    {
+      "expectation_id": "规划可操作性",
+      "causal_category": "implementation_bug"
+    }
+  ],
+  "causal_category": "needs_human_review",
+  "earliest_divergence": {
+    "node": "intent_recognition → try_rule_based_intent Tier 3 keyword heuristic",
+    "expected": "has_planning_intent=True（因 '提高NBEV' 表达的是规划意图），返回 IntentType.nbev_planning",
+    "actual": "has_planning_intent=False（'提高' 不在关键字集中），返回 None，回退 LLM 后返回 IntentType.other",
+    "evidence": [
+      "源码 L140-148: has_planning_intent = any(keyword in normalized_message for keyword in ('达成','规划','路径','测算','分析'))",
+      "用户查询 normalized: '我想知道怎么提高今年的NBEV，能不能从多招些销售人员入手？'",
+      "'提高' ∉ ('达成','规划','路径','测算','分析') → has_planning_intent=False",
+      "has_nbev=True 但不足以触发规则命中，因 Tier 3 要求两者同时为 True"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "not_verified",
+      "evidence": [
+        "normalized_request 中 query 正常拆解，boundary 为 available"
+      ]
+    },
+    {
+      "status": "failed",
+      "evidence": [
+        "try_rule_based_intent Tier 3: has_nbev=True 但 has_planning_intent=False，关键字集中无 '提高'",
+        "recognize_intent (LLM): 返回 IntentType.other，intent_name='其他意图'，intent=4001",
+        "extracted_output 中无任何 nbev_planning 信号"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "extracted_output 中无任何字段澄清记录",
+        "stage='non_agent' 表明澄清阶段被跳过"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "extracted_output 中无 session_fields"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "无 path_types 提取或路径调度记录"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "card_summary 为空数组",
+        "card_list 全部为空"
+      ]
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "suspicious",
+      "evidence": [
+        "raw_events 包含 reasoning_start → reasoning_message_content → reasoning_end → card_start → card_message_content → card_end",
+        "card_message_content 存在但内容为空，仅输出空壳卡片"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "extracted_output.stage='non_agent'",
+        "event_summary.completed=true"
+      ]
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": true,
+    "execution_trace": true,
+    "project_docs": true,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "意图识别模块存在双重缺陷导致误判：(1) 规则层 Tier 3 的规划意图关键字集 ('达成','规划','路径','测算','分析') 缺少语义等价词 '提高'/'提升'/'入手'，使得 '怎么提高今年的NBEV，能不能从多招些销售人员入手' 虽含 NBEV 但因缺少关键字而未被规则命中；(2) LLM prompt 中 nbev_planning 的 few-shot 示例偏向 '达成规划'/'测算' 措辞，未覆盖 '怎么提高NBEV + 从XX入手' 的口语化变体，且保守指令 '如果用户的意图不明确，倾向于判断为 other' 将边界 case 推向 other。规则层本应是第一道防线却因关键字不全而失效，LLM 层本应兜底却因 prompt 设计不足而误判，最终导致全部 5 项业务期望均因意图识别错误而级联失败。",
+  "verification_steps": [
+    "在 intent_recognition.py 的 Tier 3 关键字集中临时加入 '提高'，重新运行相同 query，验证规则层能否返回 nbev_planning（预期：has_planning_intent=True → 返回 nbev_planning with confidence=0.95）",
+    "用相同 query 直接调用 /api/v1/marketing-planning/intent-recognition 接口，观察 LLM 当前是否稳定返回 other（确认模型行为）",
+    "在 INTENT_RECOGNITION_PROMPT 的 nbev_planning 示例中增加 '怎么提高今年的NBEV，能不能从多招些销售人员入手？' 后，重新测试 LLM 分类结果",
+    "回归测试：确保关键字扩展不会导致非规划意图（如 'NBEV是什么'）被误判为 nbev_planning"
+  ],
+  "patch_direction": [
+    {
+      "target": "app/workflow/steps/intent_recognition.py L145",
+      "change": "将 has_planning_intent 的关键字集从 ('达成','规划','路径','测算','分析') 扩展为 ('达成','规划','路径','测算','分析','提高','提升','增加','入手','怎么')",
+      "risk": "低。'提高'/'提升'/'增加' 在非 NBEV 上下文中 very unlikely 出现，且有 has_nbev 作为前置条件保驾护航"
+    },
+    {
+      "target": "app/workflow/steps/intent_recognition.py L38-42",
+      "change": "在 homepage 规则中增加一条：re.compile(r'怎么(提高|提升|增加).*NBEV', re.IGNORECASE) → nbev_planning",
+      "risk": "极低。homepage 规则优先级高且精确匹配 NBEV+提高 共现模式"
+    },
+    {
+      "target": "app/workflow/prompts/intent_prompt.py INTENT_RECOGNITION_PROMPT",
+      "change": "在 nbev_planning 示例中增加 '怎么提高今年的NBEV'、'从销售人员入手提升NBEV'；将 '倾向于判断为 other' 改为 '若用户同时提到NBEV和业务维度（队伍/客户/产品）分析，应优先归为nbev_planning'",
+      "risk": "中。需测试确保不会将 'NBEV是什么' 等纯知识问答误分到 nbev_planning"
+    }
+  ],
+  "needs_human_review": false,
+  "scenario": "intent_recognition",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 5,
+    "probe_count": 0,
+    "summary_text": "意图识别模块存在双重缺陷导致误判：(1) 规则层 Tier 3 的规划意图关键字集 ('达成','规划','路径','测算','分析') 缺少语义等价词 '提高'/'提升'/'入手'，使得 '怎么提高今年的NBEV，能不能从多招些销售人员入手' 虽含 NBEV 但因缺少关键字而未被规则命中；(2) LLM prompt 中 nbev_planning 的 few-shot 示例偏向 '达成规划'/'测算' 措辞，未覆盖 '怎么提高NBEV + 从XX入手' 的口语化变体，且保守指令 '如果用户的意图不明确，倾向于判断为 other' 将边界 case 推向 other。规则层本应是第一道防线却因关键字不全而失效，LLM 层本应兜底却因 prompt 设计不足而误判，最终导致全部 5 项业务期望均因意图识别错误而级联失败。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  },
+  "analysis_method": "源码回溯分析：从 execution_trace 出发，逐阶段检查 intent_recognition → field_clarification → path_dispatch → planning_function 的执行路径。通过读取 intent_recognition.py 的规则匹配逻辑和 intent_prompt.py 的 LLM prompt，定位规则层和模型层的双重失败点。",
+  "analysis_quality": {
+    "passed": true,
+    "standard": "所有归因均基于当前 case 的源码、prompt、配置文件和 judge 评估结果，未引用历史 case 或编造路径。证据链从规则层代码逐行追溯到 LLM prompt 设计，定位到确切的代码行和 prompt 段落。",
+    "status": "supported_root_cause"
+  },
+  "incomplete_reason": "",
+  "suspected_locations": [
+    "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/steps/intent_recognition.py:L140-L148",
+    "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/prompts/intent_prompt.py:INTENT_RECOGNITION_PROMPT"
+  ],
+  "quality_flags": [
+    "规则层关键字集语义覆盖不足，导致明确的营销规划查询无法被确定性规则命中",
+    "LLM prompt 的 few-shot 示例偏向正式规划术语，对口语化变体泛化不足",
+    "保守指令 '倾向于判断为 other' 在边界 case 上加剧误判风险",
+    "全部 5 项业务期望的失败均为同一根因（意图识别错误）的级联效应"
+  ]
+}

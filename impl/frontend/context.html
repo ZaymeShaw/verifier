@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LLM 上下文追踪</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f1f5f9;color:#1e293b;line-height:1.5}
+    header{background:linear-gradient(135deg,#0f172a,#1e40af);color:white;padding:28px 32px;box-shadow:0 4px 20px rgba(15,23,42,.15)}
+    header h1{margin:0 0 6px;font-size:24px}
+    header p{margin:0;opacity:.85;font-size:14px}
+    main{max-width:1500px;margin:0 auto;padding:20px}
+    .card{background:white;border:1px solid #e2e8f0;border-radius:16px;padding:20px;margin-bottom:18px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+    .card>h2{margin:0 0 16px;font-size:18px;color:#0f172a;border-bottom:2px solid #e2e8f0;padding-bottom:10px}
+    .card>h3{margin:0 0 12px;font-size:15px;color:#334155}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+    label{font-weight:600;font-size:13px;color:#475569}
+    select,input{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:14px;background:white;color:#1e293b;min-width:90px}
+    select:focus,input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+    button{background:#2563eb;color:white;border:0;border-radius:8px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+    button:hover{background:#1d4ed8}
+    button.secondary{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
+    button.secondary:hover{background:#e2e8f0}
+    table{width:100%;border-collapse:collapse;background:white;font-size:13px}
+    th,td{border-bottom:1px solid #f1f5f9;padding:10px;text-align:left;vertical-align:top}
+    th{background:#f8fafc;color:#475569;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0;z-index:1}
+    tbody tr{transition:background .12s}
+    tbody tr:hover{background:#f8fafc}
+    .pill{display:inline-block;border-radius:999px;background:#e2e8f0;color:#334155;font-size:12px;font-weight:600;padding:3px 9px}
+    .pill.ok{background:#dcfce7;color:#166534}
+    .pill.warn{background:#fef3c7;color:#92400e}
+    .pill.bad{background:#fee2e2;color:#991b1b}
+    pre{white-space:pre-wrap;word-break:break-word;background:#0b1220;color:#e2e8f0;border-radius:10px;padding:14px;overflow:auto;font-size:12.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;line-height:1.6;border:1px solid #1e293b}
+    .muted{color:#64748b;font-size:13px}
+    .chain{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+    .chain-item{border:1px solid #cbd5e1;background:white;border-radius:10px;padding:10px 14px;cursor:pointer;font-size:13px;transition:all .15s}
+    .chain-item:hover{background:#eff6ff;border-color:#3b82f6}
+    .chain-item.selected{background:#2563eb;color:white;border-color:#2563eb;box-shadow:0 2px 8px rgba(37,99,235,.3)}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:16px 0}
+    .stat{background:linear-gradient(135deg,#f8fafc,#f1f5f9);border:1px solid #e2e8f0;border-radius:14px;padding:16px}
+    .stat b{display:block;font-size:26px;margin-bottom:4px;color:#0f172a;font-weight:700}
+    .stat span{color:#64748b;font-size:12px}
+    a.button{display:inline-block;background:white;color:#334155;text-decoration:none;border:1px solid #cbd5e1;border-radius:8px;padding:9px 14px;font-weight:600;font-size:14px;transition:all .15s}
+    a.button:hover{background:#f1f5f9;border-color:#3b82f6;color:#2563eb}
+    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+    .detail-panel{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;display:flex;flex-direction:column;height:640px;min-width:0;overflow:hidden}
+    .detail-panel h3{margin:0 0 10px;font-size:14px;color:#334155;display:flex;align-items:center;gap:8px;flex-shrink:0}
+    .detail-panel h3 .badge{font-size:11px;font-weight:600;color:#64748b;background:#e2e8f0;border-radius:6px;padding:2px 8px}
+    .detail-panel pre{flex:1;min-height:0;margin:0;overflow:auto}
+    .detail-panel #responseMeta{flex-shrink:0;margin-top:8px}
+    /* messages 列表：可滚动，展开的卡片用 max-height 限制 + 内部滚动，其他卡片保持折叠尺寸 */
+    .msg-list{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+    .msg-item{background:white;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;flex-shrink:0}
+    .msg-item .msg-head{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;cursor:pointer;user-select:none}
+    .msg-item.collapsed .msg-body{display:none}
+    .msg-item.collapsed .msg-preview{display:block}
+    .msg-item .msg-preview{display:none;color:#64748b;font-size:12px;margin-left:auto;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,monospace}
+    .msg-item .msg-role{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+    .msg-item .msg-meta{color:#64748b;font-size:11px;font-family:ui-monospace,monospace}
+    .msg-item .msg-meta.push{margin-left:auto}
+    .msg-item .msg-chev{color:#94a3b8;font-size:10px;transition:transform .15s}
+    .msg-item.collapsed .msg-chev{transform:rotate(-90deg)}
+    .msg-item .msg-body{padding:10px 12px;max-height:440px;overflow:auto}
+    .msg-body pre{margin:0;background:#0b1220;color:#e2e8f0;border-radius:8px;padding:10px;overflow:auto;font-size:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+    .msg-body .msg-section{font-size:11px;color:#64748b;font-weight:600;margin:8px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+    .msg-body .msg-section:first-child{margin-top:0}
+    .msg-role.system{color:#1d4ed8}
+    .msg-role.user{color:#15803d}
+    .msg-role.assistant{color:#7c3aed}
+    .msg-role.tool{color:#b45309}
+    @media(max-width:1100px){.detail-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header><h1>LLM 上下文追踪</h1><p>通用上下文追踪体系：覆盖所有 LLM 调用，按 agent / project / trace 三级检索。</p></header>
+<main>
+  <section class="card">
+    <div class="toolbar">
+      <a class="button" href="index.html">返回首页</a>
+      <label>Project</label>
+      <select id="projectSelect" onchange="loadSummary()"></select>
+      <label>Caller</label>
+      <select id="callerSelect" onchange="loadSummary()">
+        <option value="">全部</option>
+      </select>
+      <button onclick="loadSummary()">刷新摘要</button>
+    </div>
+    <div class="stats" id="statsRow"></div>
+  </section>
+
+  <section class="card" id="tracePanel" style="display:none">
+    <div class="toolbar">
+      <h3 style="margin:0">Trace：<span id="traceIdLabel"></span></h3>
+      <button class="secondary" onclick="closeTrace()">关闭</button>
+    </div>
+    <div class="chain" id="chainRow"></div>
+    <div class="detail-grid">
+      <div class="detail-panel">
+        <h3>📥 输入 <span class="badge" id="promptBadge">prompt</span></h3>
+        <ul class="msg-list" id="promptView"></ul>
+      </div>
+      <div class="detail-panel">
+        <h3>📊 输出 & Metrics <span class="badge" id="responseBadge">response</span></h3>
+        <pre id="responseView"></pre>
+        <div id="responseMeta"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>L1 统计概览（按 Caller 聚合）</h2>
+    <table id="statsTable">
+      <thead><tr><th>Caller</th><th>调用数</th><th>平均 Prompt</th><th>中位 Prompt</th><th>平均耗时</th><th>错误率</th><th>预算</th><th>超标比例</th></tr></thead>
+      <tbody id="statsBody"><tr><td colspan="8" class="muted">加载中...</td></tr></tbody>
+    </table>
+    <h3 style="margin-top:18px">预算审计</h3>
+    <div id="budgetBars"></div>
+  </section>
+
+  <section class="card">
+    <h2>L2 异常检测</h2>
+    <div class="toolbar">
+      <label>维度</label>
+      <select id="anomalyDim" onchange="renderAnomaly()">
+        <option value="prompt_size">Prompt 大小</option>
+        <option value="elapsed_ms">耗时</option>
+      </select>
+      <span class="muted">偏离同 caller 均值 >2σ 视为异常</span>
+    </div>
+    <table id="anomalyTable">
+      <thead><tr><th>时间</th><th>Caller</th><th>Trace ID</th><th>数值</th><th>同 caller 均值</th><th>偏离</th></tr></thead>
+      <tbody id="anomalyBody"><tr><td colspan="6" class="muted">加载中...</td></tr></tbody>
+    </table>
+    <h3 style="margin-top:18px">错误模式聚类</h3>
+    <div id="errorPatterns" class="muted">加载中...</div>
+    <h3 style="margin-top:18px">Caller 链路模式</h3>
+    <div id="chainPatterns" class="muted">加载中...</div>
+  </section>
+
+  <section class="card">
+    <h2>L3 LLM 内容分析</h2>
+    <div class="toolbar">
+      <label>Caller</label>
+      <select id="analyzeCaller"></select>
+      <label>分析类型</label>
+      <select id="analyzeType">
+        <option value="redundancy">Prompt 冗余检测</option>
+        <option value="quality">Response 质量分析</option>
+        <option value="consistency">跨 case 一致性</option>
+      </select>
+      <label>样本数</label>
+      <input id="analyzeSample" type="number" min="1" max="10" value="3" style="width:70px" />
+      <button onclick="runAnalyze()">开始分析</button>
+    </div>
+    <pre id="analyzeResult" class="muted">选择 caller 和分析类型后点击"开始分析"。</pre>
+  </section>
+
+  <section class="card">
+    <h2>最近调用记录</h2>
+    <table id="summaryTable">
+      <thead><tr><th>时间</th><th>Caller</th><th>Trace ID</th><th>Prompt 大小</th><th>耗时</th><th>模型</th><th>状态</th></tr></thead>
+      <tbody id="summaryBody"><tr><td colspan="7" class="muted">加载中...</td></tr></tbody>
+    </table>
+  </section>
+</main>
+<script>
+let currentProject = '';
+let currentTrace = null;
+
+async function loadProjects() {
+  const resp = await fetch('/projects');
+  const data = await resp.json();
+  const sel = document.getElementById('projectSelect');
+  sel.innerHTML = '';
+  const list = data.projects || [];
+  for (const p of list) {
+    const pid = typeof p === 'string' ? p : (p.project_id || p.id || '');
+    if (!pid) continue;
+    const opt = document.createElement('option');
+    opt.value = pid;
+    opt.textContent = pid;
+    sel.appendChild(opt);
+  }
+  currentProject = sel.value;
+  loadSummary();
+}
+
+async function loadSummary() {
+  const project = document.getElementById('projectSelect').value;
+  const caller = document.getElementById('callerSelect').value;
+  currentProject = project;
+  const url = `/api/context/summary?project_id=${encodeURIComponent(project)}&caller=${encodeURIComponent(caller)}&limit=50`;
+  const resp = await fetch(url);
+  const data = await resp.json();
+  const body = document.getElementById('summaryBody');
+  if (!data || !data.length) {
+    body.innerHTML = '<tr><td colspan="7" class="muted">暂无记录</td></tr>';
+    updateStats([]);
+    return;
+  }
+  body.innerHTML = data.map(r => {
+    const statusCls = r.error ? 'bad' : 'ok';
+    const statusText = r.error ? 'error' : 'ok';
+    return `<tr onclick="loadTrace('${esc(r.project_id)}','${esc(r.trace_id)}')" style="cursor:pointer">
+      <td>${esc(r.created_at || '-')}</td>
+      <td><span class="pill">${esc(r.caller || '-')}</span></td>
+      <td>${esc(short(r.trace_id, 16))}</td>
+      <td>${esc(fmtSize(r.prompt_size))}</td>
+      <td>${esc(fmtMs(r.elapsed_ms))}</td>
+      <td>${esc(r.llm_model || '-')}</td>
+      <td><span class="pill ${statusCls}">${statusText}</span></td>
+    </tr>`;
+  }).join('');
+  const callers = [...new Set(data.map(r => r.caller))].filter(Boolean);
+  const sel = document.getElementById('callerSelect');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">全部</option>' + callers.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  sel.value = current;
+  const analyzeSel = document.getElementById('analyzeCaller');
+  const analyzeCur = analyzeSel.value;
+  analyzeSel.innerHTML = callers.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  analyzeSel.value = analyzeCur || (callers[0] || '');
+  updateStats(data);
+  renderL1Stats(data);
+  renderAnomaly(data);
+  renderErrorPatterns(data);
+  renderChainPatterns(data);
+}
+
+// L1 预算表（caller → 预算 chars），通用约定，不绑 agent 语义
+const BUDGET = { judge: 40000, attribute: 80000, live: 40000, cluster: 40000, check: 40000 };
+
+function statsByCaller(data) {
+  const groups = {};
+  for (const r of data) {
+    const c = r.caller || '(unknown)';
+    if (!groups[c]) groups[c] = [];
+    groups[c].push(r);
+  }
+  return groups;
+}
+
+function mean(arr) { return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
+function median(arr) {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a,b)=>a-b);
+  const mid = Math.floor(s.length/2);
+  return s.length % 2 ? s[mid] : (s[mid-1]+s[mid])/2;
+}
+function std(arr) {
+  if (arr.length < 2) return 0;
+  const m = mean(arr);
+  return Math.sqrt(arr.reduce((a,b)=>a+(b-m)*(b-m),0)/arr.length);
+}
+
+function renderL1Stats(data) {
+  const groups = statsByCaller(data);
+  const body = document.getElementById('statsBody');
+  const rows = [];
+  for (const [caller, recs] of Object.entries(groups)) {
+    const sizes = recs.map(r => r.prompt_size || 0);
+    const mss = recs.map(r => r.elapsed_ms || 0);
+    const errCount = recs.filter(r => r.error).length;
+    const budget = BUDGET[caller] || 0;
+    const overrun = budget ? recs.filter(r => (r.prompt_size||0) > budget).length : 0;
+    const overrunPct = recs.length ? (overrun/recs.length*100).toFixed(0) : 0;
+    rows.push(`<tr>
+      <td><span class="pill">${esc(caller)}</span></td>
+      <td>${recs.length}</td>
+      <td>${fmtSize(mean(sizes))}</td>
+      <td>${fmtSize(median(sizes))}</td>
+      <td>${fmtMs(mean(mss))}</td>
+      <td>${errCount}/${recs.length} (${recs.length?(errCount/recs.length*100).toFixed(0):0}%)</td>
+      <td>${budget ? fmtSize(budget) : '-'}</td>
+      <td>${budget ? overrunPct+'%' : '-'}</td>
+    </tr>`);
+  }
+  body.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="8" class="muted">暂无数据</td></tr>';
+  // 预算审计条
+  const bars = [];
+  for (const [caller, recs] of Object.entries(groups)) {
+    const sizes = recs.map(r => r.prompt_size || 0);
+    const avg = mean(sizes);
+    const budget = BUDGET[caller] || 0;
+    if (!budget) continue;
+    const pct = Math.min(100, avg/budget*100);
+    const cls = pct > 100 ? 'bad' : pct > 80 ? 'warn' : 'ok';
+    bars.push(`<div style="margin:6px 0"><span class="pill">${esc(caller)}</span> ${fmtSize(avg)} / ${fmtSize(budget)}
+      <div style="height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:4px"><div style="height:100%;width:${pct}%;background:${cls==='bad'?'#ef4444':cls==='warn'?'#f59e0b':'#22c55e'}"></div></div></div>`);
+  }
+  document.getElementById('budgetBars').innerHTML = bars.length ? bars.join('') : '<span class="muted">无预算配置</span>';
+}
+
+// L2 异常检测：偏离同 caller 均值 >2σ
+function renderAnomaly(data) {
+  const dim = document.getElementById('anomalyDim').value;
+  const groups = statsByCaller(data);
+  const anomalies = [];
+  for (const [caller, recs] of Object.entries(groups)) {
+    const vals = recs.map(r => r[dim] || 0);
+    const m = mean(vals);
+    const s = std(vals);
+    if (s === 0) continue;
+    for (const r of recs) {
+      const v = r[dim] || 0;
+      if (Math.abs(v - m) > 2 * s) {
+        anomalies.push({ ...r, _mean: m, _delta: v - m });
+      }
+    }
+  }
+  anomalies.sort((a,b) => Math.abs(b._delta) - Math.abs(a._delta));
+  const body = document.getElementById('anomalyBody');
+  const fmt = dim === 'prompt_size' ? fmtSize : fmtMs;
+  body.innerHTML = anomalies.length ? anomalies.map(r => `<tr onclick="loadTrace('${esc(r.project_id)}','${esc(r.trace_id)}')" style="cursor:pointer">
+    <td>${esc(r.created_at || '-')}</td>
+    <td><span class="pill">${esc(r.caller)}</span></td>
+    <td>${esc(short(r.trace_id, 16))}</td>
+    <td>${fmt(r[dim]||0)}</td>
+    <td>${fmt(r._mean)}</td>
+    <td>${r._delta>0?'+':''}${fmt(r._delta)}</td>
+  </tr>`).join('') : '<tr><td colspan="6" class="muted">无异常</td></tr>';
+}
+
+function renderErrorPatterns(data) {
+  const errs = data.filter(r => r.error);
+  if (!errs.length) { document.getElementById('errorPatterns').innerHTML = '<span class="muted">无错误记录</span>'; return; }
+  // 按 error 文本前缀聚类（避免完全相同的稀有串）
+  const clusters = {};
+  for (const r of errs) {
+    const key = String(r.error).slice(0, 60);
+    if (!clusters[key]) clusters[key] = [];
+    clusters[key].push(r);
+  }
+  const items = Object.entries(clusters).sort((a,b)=>b[1].length-a[1].length).map(([k,recs]) =>
+    `<div style="margin:6px 0"><span class="pill bad">${recs.length}</span> <code>${esc(k)}</code></div>`);
+  document.getElementById('errorPatterns').innerHTML = items.join('') || '<span class="muted">无</span>';
+}
+
+function renderChainPatterns(data) {
+  // 按 trace 聚合 caller 顺序
+  const traces = {};
+  for (const r of data) {
+    if (!traces[r.trace_id]) traces[r.trace_id] = [];
+    traces[r.trace_id].push(r);
+  }
+  const chains = {};
+  for (const recs of Object.values(traces)) {
+    recs.sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||''));
+    const key = recs.map(r => r.caller).join(' → ');
+    chains[key] = (chains[key] || 0) + 1;
+  }
+  const items = Object.entries(chains).sort((a,b)=>b[1]-a[1]).map(([k,n]) =>
+    `<div style="margin:6px 0"><span class="pill">${n}</span> ${esc(k)}</div>`);
+  document.getElementById('chainPatterns').innerHTML = items.length ? items.join('') : '<span class="muted">无</span>';
+}
+
+// L3 LLM 内容分析
+async function runAnalyze() {
+  const project = document.getElementById('projectSelect').value;
+  const caller = document.getElementById('analyzeCaller').value;
+  const analysisType = document.getElementById('analyzeType').value;
+  const sampleSize = parseInt(document.getElementById('analyzeSample').value) || 3;
+  if (!caller) { alert('请先选择 caller'); return; }
+  const pre = document.getElementById('analyzeResult');
+  pre.textContent = '分析中...';
+  try {
+    const resp = await fetch('/api/context/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project_id: project, caller, analysis_type: analysisType, sample_size: sampleSize }),
+    });
+    const data = await resp.json();
+    pre.textContent = data.analysis || data.error || JSON.stringify(data, null, 2);
+  } catch (e) {
+    pre.textContent = '分析失败：' + e.message;
+  }
+}
+
+function updateStats(data) {
+  const callers = {};
+  let totalSize = 0, totalMs = 0, errors = 0;
+  for (const r of data) {
+    callers[r.caller] = (callers[r.caller] || 0) + 1;
+    totalSize += r.prompt_size || 0;
+    totalMs += r.elapsed_ms || 0;
+    if (r.error) errors++;
+  }
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat"><b>${data.length}</b><span>总调用</span></div>
+    <div class="stat"><b>${Object.keys(callers).length}</b><span>Caller 类型</span></div>
+    <div class="stat"><b>${fmtSize(totalSize)}</b><span>总 Prompt</span></div>
+    <div class="stat"><b>${errors}</b><span>错误</span></div>
+  `;
+}
+
+async function loadTrace(projectId, traceId) {
+  const url = `/api/context/${encodeURIComponent(traceId)}?project_id=${encodeURIComponent(projectId)}`;
+  const resp = await fetch(url);
+  const data = await resp.json();
+  currentTrace = { projectId, traceId, records: data || [] };
+  document.getElementById('tracePanel').style.display = 'block';
+  document.getElementById('traceIdLabel').textContent = traceId;
+  const chain = document.getElementById('chainRow');
+  chain.innerHTML = (data || []).map((r, i) => {
+    const cls = (i === 0) ? 'selected' : '';
+    return `<div class="chain-item ${cls}" onclick="showDetail(${i})">${esc(r.caller)}<br><span class="muted">${esc(fmtSize(r.prompt_size))} · ${esc(fmtMs(r.elapsed_ms))}</span></div>`;
+  }).join('');
+  if (data && data.length) showDetail(0);
+}
+
+function showDetail(index) {
+  if (!currentTrace || !currentTrace.records) return;
+  const r = currentTrace.records[index];
+  const chain = document.getElementById('chainRow');
+  for (let i = 0; i < chain.children.length; i++) {
+    chain.children[i].classList.toggle('selected', i === index);
+  }
+  // 输入：按标准 OpenAI messages 协议渲染为可折叠卡片列表
+  const msgs = r.messages || [];
+  const roleSize = {};
+  let promptTotal = 0;
+  const list = document.getElementById('promptView');
+  list.innerHTML = '';
+  // 去掉最后一条 assistant（它就是 LLM 输出，已在 metrics 面板展示）
+  const lastIdx = msgs.length - 1;
+  msgs.forEach((m, i) => {
+    if (i === lastIdx && m.role === 'assistant') return; // 跳过最后一条 assistant
+    const role = m.role || 'unknown';
+    const content = m.content;
+    let contentStr = '';
+    if (typeof content === 'string') contentStr = content;
+    else if (Array.isArray(content)) contentStr = content.map(c => typeof c === 'string' ? c : JSON.stringify(c, null, 2)).join('\n');
+    else if (content != null) contentStr = JSON.stringify(content, null, 2);
+    const size = contentStr.length;
+    roleSize[role] = (roleSize[role] || 0) + size;
+    promptTotal += size;
+    const item = document.createElement('li');
+    item.className = 'msg-item';
+    const big = size > 3000;
+    if (big) item.classList.add('collapsed');
+    const head = document.createElement('div');
+    head.className = 'msg-head';
+    head.onclick = () => item.classList.toggle('collapsed');
+    const roleEl = document.createElement('span');
+    roleEl.className = `msg-role ${role}`;
+    roleEl.textContent = role;
+    head.appendChild(roleEl);
+    if (m.name) {
+      const nameEl = document.createElement('span');
+      nameEl.className = 'msg-role';
+      nameEl.style.cssText = 'font-weight:400;opacity:.7';
+      nameEl.textContent = `(${m.name})`;
+      head.appendChild(nameEl);
+    }
+    if (m.tool_call_id) {
+      const tcid = document.createElement('span');
+      tcid.className = 'msg-role';
+      tcid.style.cssText = 'font-weight:400;opacity:.6;font-size:10px';
+      tcid.textContent = `← ${m.tool_call_id}`;
+      head.appendChild(tcid);
+    }
+    const preview = document.createElement('span');
+    preview.className = 'msg-preview';
+    preview.textContent = contentStr ? contentStr.replace(/\n/g, ' ').slice(0, 120) : '';
+    head.appendChild(preview);
+    const meta = document.createElement('span');
+    meta.className = 'msg-meta push';
+    meta.textContent = fmtSize(size);
+    head.appendChild(meta);
+    const chev = document.createElement('span');
+    chev.className = 'msg-chev';
+    chev.textContent = '▼';
+    head.appendChild(chev);
+    item.appendChild(head);
+    const body = document.createElement('div');
+    body.className = 'msg-body';
+    if (contentStr) {
+      const pre = document.createElement('pre');
+      pre.textContent = contentStr;
+      body.appendChild(pre);
+    }
+    if (m.tool_calls) {
+      const sec = document.createElement('div');
+      sec.className = 'msg-section';
+      sec.textContent = 'tool_calls';
+      body.appendChild(sec);
+      const pre = document.createElement('pre');
+      pre.textContent = JSON.stringify(m.tool_calls, null, 2);
+      body.appendChild(pre);
+    }
+    item.appendChild(body);
+    list.appendChild(item);
+  });
+  const breakdown = Object.entries(roleSize).map(([k, v]) => `${k} ${fmtSize(v)}`).join(' + ');
+  document.getElementById('promptBadge').textContent = `messages ${msgs.length} 条 · 共 ${fmtSize(promptTotal)}${breakdown ? ' · ' + breakdown : ''}`;
+
+  // 输出面板改为 metrics 面板：显示该次 LLM 调用的 token 计数 + 原始输出
+  const resp = r.response || {};
+  const hasContent = typeof resp.content === 'string' && resp.content;
+  const hasMetrics = resp.metrics && typeof resp.metrics === 'object';
+  const outputText = hasContent ? resp.content : JSON.stringify(resp, null, 2);
+  const metaItems = [];
+  if (hasContent) metaItems.push(`输出 ${fmtSize(resp.content.length)}`);
+  if (hasMetrics) {
+    const m = resp.metrics;
+    const tokens = [];
+    if (m.input_tokens) tokens.push(`input ${m.input_tokens}`);
+    if (m.output_tokens) tokens.push(`output ${m.output_tokens}`);
+    if (tokens.length) metaItems.push(`tokens ${tokens.join('/')}`);
+    if (m.total_tokens && !tokens.length) metaItems.push(`total tokens ${m.total_tokens}`);
+  }
+  metaItems.push(`耗时 ${fmtMs(r.elapsed_ms)}`);
+  document.getElementById('responseBadge').textContent = metaItems.join(' · ');
+  document.getElementById('responseView').textContent = outputText;
+  document.getElementById('responseMeta').innerHTML = hasContent && hasMetrics
+    ? `<div class="muted" style="margin-top:6px">metrics: ${JSON.stringify(resp.metrics)}</div>`
+    : '';
+}
+
+function closeTrace() {
+  currentTrace = null;
+  document.getElementById('tracePanel').style.display = 'none';
+}
+
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function short(s, n) { return String(s||'').slice(0, n) + (String(s||'').length > n ? '…' : ''); }
+function fmtSize(n) { n = n||0; return n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(0)+'k' : n+''; }
+function fmtMs(n) { n = n||0; return n >= 60000 ? (n/60000).toFixed(1)+'min' : n >= 1000 ? (n/1000).toFixed(1)+'s' : n+'ms'; }
+
+loadProjects();
+</script>
+</body>
+</html>

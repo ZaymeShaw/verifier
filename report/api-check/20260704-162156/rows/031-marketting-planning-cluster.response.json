@@ -1,0 +1,77 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "阶段路由至规划阶段",
+        "业务指标识别为NBEV",
+        "分解维度覆盖队伍客户产品策略",
+        "规划结果可行动",
+        "SSE事件序列完整且有意义",
+        "时间范围识别为下个季度",
+        "提升方向被识别"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "c4c03177-5b2f-4218-90bb-54e10fbc063c"
+      ],
+      "representative_traces": [
+        "c4c03177-5b2f-4218-90bb-54e10fbc063c"
+      ],
+      "common_root_cause": "本案中，用户使用口语化表达（'帮我看看从哪些方面入手'、'把NBEV目标再提一提'）提出明确的 NBEV 战略规划请求。系统意图识别流水线存在双重缺口：(1) 规则层 Tier 3 关键词集合仅覆盖书面化规划术语（达成/规划/路径/测算/分析），未能匹配口语化规划信号词，导致规则流水线全线失败；(2) LLM 兜底层的 prompt 将 nbev_planning 定义为偏重 '测算' 的语义，且 '意图不明确倾向other' 的保守策略使 LLM 在遇到无具体目标值的口语化请求时倾向于归类为 other。两个缺口叠加，导致一个明确包含 NBEV + 三路径维度（队伍/客户/产品）的规划请求被最终分类为 '其他意图'，后续所有规划流程被跳过，7 项业务期望全部落空。另外，IntentResult schema 缺乏 time_range 和 direction 字段，即使意图分类正确，'下个季度' 和 '再提一提' 的语义维度也无法结构化传递至下游。",
+      "shared_failure_pattern": "本案中，用户使用口语化表达（'帮我看看从哪些方面入手'、'把NBEV目标再提一提'）提出明确的 NBEV 战略规划请求。系统意图识别流水线存在双重缺口：(1) 规则层 Tier 3 关键词集合仅覆盖书面化规划术语（达成/规划/路径/测算/分析），未能匹配口语化规划信号词，导致规则流水线全线失败；(2) LLM 兜底层的 prompt 将 nbev_planning 定义为偏重 '测算' 的语义，且 '意图不明确倾向other' 的保守策略使 LLM 在遇到无具体目标值的口语化请求时倾向于归类为 other。两个缺口叠加，导致一个明确包含 NBEV + 三路径维度（队伍/客户/产品）的规划请求被最终分类为 '其他意图'，后续所有规划流程被跳过，7 项业务期望全部落空。另外，IntentResult schema 缺乏 time_range 和 direction 字段，即使意图分类正确，'下个季度' 和 '再提一提' 的语义维度也无法结构化传递至下游。",
+      "representative_diffs": [
+        {
+          "case_id": "c4c03177-5b2f-4218-90bb-54e10fbc063c",
+          "node": "intent_recognition",
+          "expected": "IntentType.nbev_planning，confidence≥0.95，stage 路由至 planning",
+          "actual": "IntentType.other (4001)，stage 路由至 non_agent",
+          "evidence": [
+            "extracted_output.stage == 'non_agent'",
+            "judge verdict 确认 intent=4001, intent_name='其他意图'",
+            "execution_trace planning_function card_count=0",
+            "source 分析：Tier 3 关键词 ['达成','规划','路径','测算','分析'] 未能匹配用户消息中的 '帮我看看从哪些方面入手'",
+            "LLM prompt 分析：nbev_planning 描述偏重 '测算' 语义 + '意图不明确倾向other' 保守策略"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        {
+          "change": "Tier 3 关键词扩展：在 has_planning_intent 条件中增加 '入手'、'方面'、'提升'、'怎么做'、'策略'、'调整' 等口语化规划信号词；或增加替代分支：当 NBEV 存在且维度关键词（队伍/客户/产品）同时出现≥2个时，直接判定为 nbev_planning",
+          "expected_effect": "本案用户消息将被 Tier 3 直接命中，跳过 LLM 调用，confidence≥0.95 返回 nbev_planning",
+          "target_file": "app/workflow/steps/intent_recognition.py"
+        },
+        {
+          "change": "在 nbev_planning 描述中补充 '用户咨询如何提升/达成 NBEV 目标的策略性请求，即使未给出具体目标值也属此类'；将 '意图不明确倾向other' 改为 '仅在明显不属于上述任何意图时才归类为 other'；增加 2-3 条口语化 NBEV 规划请求的 few-shot 示例",
+          "expected_effect": "LLM 兜底时对口语化 NBEV 规划请求的分类准确率显著提升，降低 other 误判",
+          "target_file": "app/workflow/prompts/intent_prompt.py"
+        },
+        {
+          "change": "IntentResult 增加 time_range: Optional[str] 和 direction: Optional[str] 字段；INTENT_RECOGNITION_PROMPT 增加对应提取指令",
+          "expected_effect": "'下个季度' 时间约束和 '再提一提' 增长方向可结构化传递至规划函数，提升规划精准度",
+          "target_file": "app/schemas/intent.py"
+        }
+      ],
+      "verification_cases": [
+        "c4c03177-5b2f-4218-90bb-54e10fbc063c"
+      ],
+      "next_actions": [
+        "1. 用本案用户消息在开发环境重跑 intent_recognition，在 try_rule_based_intent 各 Tier 加日志确认命中/未命中路径",
+        "2. 单独测试 extract_path_types_from_text('增加队伍还是多找客户，或者调整产品策略') 的返回结果，确认 Tier 2 是否因 path_type 提取成功而本应命中",
+        "3. 对 LLM 做 controlled test：用同一 prompt 但删除 '意图不明确倾向other' 后重跑，观察分类是否变为 nbev_planning",
+        "4. 验证修复后：将 '帮我看看'、'从哪些方面入手' 等加入 Tier 3 关键词后，规则层是否能直接命中 nbev_planning"
+      ]
+    }
+  ],
+  "common_root_cause": "本案中，用户使用口语化表达（'帮我看看从哪些方面入手'、'把NBEV目标再提一提'）提出明确的 NBEV 战略规划请求。系统意图识别流水线存在双重缺口：(1) 规则层 Tier 3 关键词集合仅覆盖书面化规划术语（达成/规划/路径/测算/分析），未能匹配口语化规划信号词，导致规则流水线全线失败；(2) LLM 兜底层的 prompt 将 nbev_planning 定义为偏重 '测算' 的语义，且 '意图不明确倾向other' 的保守策略使 LLM 在遇到无具体目标值的口语化请求时倾向于归类为 other。两个缺口叠加，导致一个明确包含 NBEV + 三路径维度（队伍/客户/产品）的规划请求被最终分类为 '其他意图'，后续所有规划流程被跳过，7 项业务期望全部落空。另外，IntentResult schema 缺乏 time_range 和 direction 字段，即使意图分类正确，'下个季度' 和 '再提一提' 的语义维度也无法结构化传递至下游。",
+  "impact": "",
+  "priority": "high"
+}

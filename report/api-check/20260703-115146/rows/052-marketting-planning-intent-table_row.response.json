@@ -1,0 +1,105 @@
+{
+  "id": "mock-agent-marketting-planning-intent-29f4cb69",
+  "input": "org_001",
+  "scenario": "intent_recognition",
+  "output_summary": "{\"ambiguous\": false, \"confidence\": 1.0, \"fallback\": false, \"intent\": \"customer_portrait\", \"raw_intent\": \"1001\"}",
+  "reference_summary": "{\"intent\": \"{'intent': 'customer_portrait', 'slots': {'time_range': '最近三个月', 'product': '重疾险', 'dimensions': ['年龄分布', '性别比例']}, 'confidence': 'high', 'fallback…",
+  "status": "not_fulfilled",
+  "execution_mode": "",
+  "output_source": "live_service",
+  "verdict": "incorrect",
+  "score": 0.0,
+  "fulfillment_status": "not_fulfilled",
+  "judge_summary": {
+    "status": "not_fulfilled",
+    "fulfillment_status": "not_fulfilled",
+    "verdict": "incorrect",
+    "score": 0.0,
+    "reason": "not_fulfilled · blocking=[提取产品槽位,提取时间范围槽位] · 无法生成针对重疾险客户的画像计划",
+    "reason_source": "aggregated_fulfillment",
+    "reason_stage": "judge",
+    "is_formal_attribution": true,
+    "assessment_count": 8,
+    "blocking_count": 5,
+    "primary_failure_dimensions": [
+      {
+        "blocking": true,
+        "downstream_impact": "无法生成针对重疾险客户的画像计划",
+        "evidence": "slots 为空 | entities 为空 | slots 中包含产品字段，如 product: '重疾险'",
+        "expectation_id": "提取产品槽位",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": "true"
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "数据查询无法限定时间，可能返回全量数据或查询失败",
+        "evidence": "slots 为空字典 | entities 为空列表 | slots 中包含时间范围字段，如 time_range",
+        "expectation_id": "提取时间范围槽位",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": "true"
+      },
+      {
+        "blocking": false,
+        "downstream_impact": "分析结果中可能不包含年龄分布，偏离用户需求",
+        "evidence": "slots 和 entities 均为空 | slots 或 entities 中包含年龄分布维度标识",
+        "expectation_id": "提取年龄分布维度槽位",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": "true"
+      },
+      {
+        "blocking": false,
+        "downstream_impact": "分析结果中可能不包含性别比例，偏离用户需求",
+        "evidence": "slots 和 entities 均为空 | slots 或 entities 中包含性别比例维度标识",
+        "expectation_id": "提取性别比例维度槽位",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": "true"
+      }
+    ]
+  },
+  "attribution_summary": {
+    "attribution_count": 5,
+    "causal_category": "needs_human_review",
+    "is_complete": true,
+    "is_formal_attribution": true,
+    "probe_count": 0,
+    "summary_text": "意图识别系统的设计和实现存在三重合一的缺陷，导致 customer_portrait 意图的所有业务槽位全部丢失：(1) Schema 层 — IntentResult Pydantic 模型仅定义 intent/confidence/target_value/path_types 四个字段，不存在任何通用槽位承载机制；(2) Prompt 层 — INTENT_RECOGNITION_PROMPT 仅对 nbev_planning 意图描述字段提取规则（target_value、path_types），对 customer_portrait 无任何槽位提取指引；(3) 规则层 — try_homepage_intent 中正则 r'客户.*(?:画像|分布|结构|分层)' 命中用户查询后立即返回，完全绕过 LLM 调用，导致 schema 和 prompt 即使将来被修复，当前查询路径也无法受益。三层缺陷叠加使得用户查询中明确表达的'最近三个月'(时间)、'重疾险'(产品)、'年龄分布、性别比例'(维度) 全部丢失，仅意图标签正确。"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 8,
+    "protocol_gap_count": 3,
+    "consistency_gap_count": 1,
+    "recommended_fix_count": 4,
+    "issues": [
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/normalize.py",
+      "Failure attribution passed quality gate with suspected_locations but no code/config or local verification evidence.",
+      "attribution has unsupported root-cause/location claims",
+      "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug",
+      "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: None, Users, WorkSpace, ambiguous, app, case"
+    ]
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": false,
+  "quality_flags": [
+    "intent_contract_gate_failed",
+    "schema_field_missing",
+    "prompt_insufficient_coverage",
+    "rule_bypasses_llm_extraction"
+  ],
+  "check_passed": false,
+  "issue_count": 12,
+  "fallback_count": 0,
+  "causal_category": "needs_human_review",
+  "divergence_stage": "intent_contract_gate",
+  "root_cause_summary": "意图识别系统的设计和实现存在三重合一的缺陷，导致 customer_portrait 意图的所有业务槽位全部丢失：(1) Schema 层 — IntentResult Pydantic 模型仅定义 intent/confidence/target_value/path_types 四个字段，不存在任何通用槽位承载机制；(2) Prompt 层 — INTENT_RECOGNITION_PROMPT 仅对 nbev_planning 意图描述字段提取规则（target_value、path_types），对 customer_portrait 无任何槽位提取指引；(3) 规则层 — try_homepage_intent 中正则 r'客户.*(?:画像|分布|结构|分层)' 命中用户查询后立即返回，完全绕过 LLM 调用，导致 schema 和 prompt 即使将来被修复，当前查询路径也无法受益。三层缺陷叠加使得用户查询中明确表达的'最近三个月'(时间)、'重疾险'(产品)、'年龄分布、性别比例'(维度) 全部丢失，仅意图标签正确。",
+  "created_at": "2026-07-03T03:55:09.900618+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "be79fe4a-3772-42dc-8241-92c0135fc017"
+}

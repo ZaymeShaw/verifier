@@ -1,0 +1,51 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::需人工复核::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "需人工复核",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "分组限制说明",
+        "合同持续有效及累计上限提醒"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "5019735f-61f7-4711-b24b-c93c126dbb25"
+      ],
+      "representative_traces": [
+        "5019735f-61f7-4711-b24b-c93c126dbb25"
+      ],
+      "common_root_cause": "LLM在qa_gold_answer场景下生成的答案存在信息完整性不足。实际答案相比gold_answer遗漏了2项关键信息：(1)轻症分组限制——同一组别轻症只能赔付一次，这直接关系到用户核心疑问'是不是能赔多次'的正确理解，缺失可能导致用户形成错误预期；(2)合同持续有效及累计上限提醒——补充性信息虽非核心但降低了答案全面性。根因属于模型能力缺陷：LLM在无明确prompt约束时倾向于简洁输出，未能系统性地覆盖保险条款问答的全维度信息。适配器代码逻辑正确无缺陷，问题定位于LLM生成环节。",
+      "shared_failure_pattern": "LLM在qa_gold_answer场景下生成的答案存在信息完整性不足。实际答案相比gold_answer遗漏了2项关键信息：(1)轻症分组限制——同一组别轻症只能赔付一次，这直接关系到用户核心疑问'是不是能赔多次'的正确理解，缺失可能导致用户形成错误预期；(2)合同持续有效及累计上限提醒——补充性信息虽非核心但降低了答案全面性。根因属于模型能力缺陷：LLM在无明确prompt约束时倾向于简洁输出，未能系统性地覆盖保险条款问答的全维度信息。适配器代码逻辑正确无缺陷，问题定位于LLM生成环节。",
+      "representative_diffs": [
+        {
+          "case_id": "5019735f-61f7-4711-b24b-c93c126dbb25",
+          "node": "LLM答案生成"
+        }
+      ],
+      "minimal_fix_direction": [
+        "增强LLM prompt模板：对保险条款类问答场景，在system prompt中明确列出必须覆盖的信息维度清单（赔付次数与条件、金额比例、间隔期、分组限制、合同状态、累计上限、查阅建议），要求逐项检查",
+        "增加输出完整性校验层：对qa_gold_answer场景，自动提取reference中的约束性关键词（如'分组'、'限制'、'上限'），检查actual_answer是否包含对应概念",
+        "考虑引入多轮自查机制：LLM生成初版答案后，自动追问'是否遗漏了任何限制条件或例外情况'以触发补充"
+      ],
+      "verification_cases": [
+        "5019735f-61f7-4711-b24b-c93c126dbb25"
+      ],
+      "next_actions": [
+        "对比actual_answer（188字符/3信息点）与reference.actual_answer（350字符/5信息点）的信息点覆盖矩阵，确认分组限制与累计上限两项缺失",
+        "检查LLM生成prompt是否包含完整性约束（当前可能仅要求回答用户问题而未要求系统性覆盖所有关键维度）",
+        "在mock_agent或LLM调用层增加qa_gold_answer场景的输出后校验：自动检测actual_answer对reference中关键约束性信息的覆盖率",
+        "评估是否需要在prompt中显式要求'请检查你的回答是否涵盖了分组限制、合同持续有效状态、累计赔付上限等限制条件'"
+      ]
+    }
+  ],
+  "common_root_cause": "LLM在qa_gold_answer场景下生成的答案存在信息完整性不足。实际答案相比gold_answer遗漏了2项关键信息：(1)轻症分组限制——同一组别轻症只能赔付一次，这直接关系到用户核心疑问'是不是能赔多次'的正确理解，缺失可能导致用户形成错误预期；(2)合同持续有效及累计上限提醒——补充性信息虽非核心但降低了答案全面性。根因属于模型能力缺陷：LLM在无明确prompt约束时倾向于简洁输出，未能系统性地覆盖保险条款问答的全维度信息。适配器代码逻辑正确无缺陷，问题定位于LLM生成环节。",
+  "impact": "",
+  "priority": "high"
+}

@@ -48,7 +48,8 @@ The QA first version expects JSON. Supported shapes:
   {
     "question": "...",
     "actual_answer": "...",
-    "golden_answer": "..."
+    "actual_answer": "...",
+    "reference_answer": "..."
   }
 ]
 ```
@@ -60,7 +61,7 @@ or protocol-shaped samples:
   {
     "input": {"question": "...", "contexts": []},
     "output": {"actual_answer": "..."},
-    "reference": {"golden_answer": "..."},
+    "reference": {"actual_answer": "..."},
     "metadata": {"category": "..."}
   }
 ]

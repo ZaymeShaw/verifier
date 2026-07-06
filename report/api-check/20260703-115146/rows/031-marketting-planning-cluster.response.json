@@ -1,0 +1,64 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "needs_human_review::not_evaluable",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "业务指标NBEV识别",
+        "时间范围提取",
+        "驱动维度增员识别",
+        "阶段路由至规划场景",
+        "规划可操作性（卡片产出）"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "c87d7fc5-d986-46ce-b0fe-f5c5be6267de"
+      ],
+      "representative_traces": [
+        "c87d7fc5-d986-46ce-b0fe-f5c5be6267de"
+      ],
+      "common_root_cause": "意图识别阶段发生双路径失效：(1) 规则层 try_rule_based_intent 的 Tier 3 关键词启发式逻辑上应命中当前 query（含 'NBEV' 和 '分析'），但实际未生效——最可能原因是工作流编排未调用此函数或 LLM 结果覆盖了规则结果；(2) LLM 层 recognize_intent 的 prompt（INTENT_RECOGNITION_PROMPT）中 nbev_planning 示例均为直接结构化表述（如'帮我做NBEV达成规划'），缺少口语化/间接规划请求的 few-shot 覆盖，且 prompt 中'意图不明确时倾向于判断为 other'的指令加剧了误判倾向。用户消息'我们团队今年的NBEV目标还差不少，要是多招些销售员...帮我分析下'被 LLM 判为 other(4001)，adapter._extract_stage 据此路由至 non_agent，导致所有 five 期望全部落空。",
+      "shared_failure_pattern": "意图识别阶段发生双路径失效：(1) 规则层 try_rule_based_intent 的 Tier 3 关键词启发式逻辑上应命中当前 query（含 'NBEV' 和 '分析'），但实际未生效——最可能原因是工作流编排未调用此函数或 LLM 结果覆盖了规则结果；(2) LLM 层 recognize_intent 的 prompt（INTENT_RECOGNITION_PROMPT）中 nbev_planning 示例均为直接结构化表述（如'帮我做NBEV达成规划'），缺少口语化/间接规划请求的 few-shot 覆盖，且 prompt 中'意图不明确时倾向于判断为 other'的指令加剧了误判倾向。用户消息'我们团队今年的NBEV目标还差不少，要是多招些销售员...帮我分析下'被 LLM 判为 other(4001)，adapter._extract_stage 据此路由至 non_agent，导致所有 five 期望全部落空。",
+      "representative_diffs": [
+        {
+          "case_id": "c87d7fc5-d986-46ce-b0fe-f5c5be6267de",
+          "node": "intent_recognition",
+          "expected": "IntentType.nbev_planning（规则层 Tier3 应命中：NBEV + 分析 → nbev_planning confidence=0.95）",
+          "actual": "intent=4001 (other/其他意图)，导致 stage=non_agent",
+          "evidence": [
+            "源码: try_rule_based_intent Tier3 → has_nbev=True, has_planning_intent=True → 应返回 nbev_planning",
+            "实际: extracted_output.stage='non_agent'，adapter._extract_stage 检测到 intent_values & {'4001'}",
+            "LLM prompt: nbev_planning 示例均为直接表述，无口语化规划请求覆盖",
+            "用户消息: '我们团队今年的NBEV目标还差不少，要是多招些销售员，大概能提升多少？帮我分析下这条路行不行' —— 含 NBEV + 分析 + 招人 等明显规划信号"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "【高优先级】确保规则层 try_rule_based_intent 的 Tier 0-3 结果优先于 LLM：规则命中时直接返回，不调用 LLM；或至少将规则结果作为 strong hint 注入 LLM prompt 约束其输出",
+        "【高优先级】丰富 INTENT_RECOGNITION_PROMPT 的 nbev_planning few-shot 示例，增加口语化/间接表达：如'目标差不少，招人能不能补上'→ nbev_planning，'帮我分析下这条路行不行'→ nbev_planning",
+        "【中优先级】修改 prompt 中'意图不明确时倾向于判断为 other'为更保守的策略：仅在完全无 NBEV/规划/分析关键词时才判 other；含 NBEV + 分析/提升/招人等信号应倾向 nbev_planning",
+        "【中优先级】Tier 3 关键词列表扩展：增加'提升'、'招'、'补'、'差'、'能不能'等口语化规划信号词",
+        "【低优先级】adapter._extract_stage 增加二次校验：即使 intent=4001，若 query 含 NBEV 关键词，记录告警并考虑降级到 planning 而非直接 non_agent"
+      ],
+      "verification_cases": [
+        "c87d7fc5-d986-46ce-b0fe-f5c5be6267de"
+      ],
+      "next_actions": [
+        "确认工作流编排中 try_shortcut_intent(try_rule_based_intent) 是否在 recognize_intent 之前被调用，且其结果是否被正确使用而非被 LLM 覆盖",
+        "用当前 query 单独调用 try_rule_based_intent（contexts=None）验证 Tier 3 是否返回 nbev_planning",
+        "用当前 query 单独调用 recognize_intent（LLM）观察原始 IntentResult.intent 值是否为 other",
+        "检查 config JSON 中 INTENT_MAPPING 是否包含 4001→other 映射及该映射的触发条件"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别阶段发生双路径失效：(1) 规则层 try_rule_based_intent 的 Tier 3 关键词启发式逻辑上应命中当前 query（含 'NBEV' 和 '分析'），但实际未生效——最可能原因是工作流编排未调用此函数或 LLM 结果覆盖了规则结果；(2) LLM 层 recognize_intent 的 prompt（INTENT_RECOGNITION_PROMPT）中 nbev_planning 示例均为直接结构化表述（如'帮我做NBEV达成规划'），缺少口语化/间接规划请求的 few-shot 覆盖，且 prompt 中'意图不明确时倾向于判断为 other'的指令加剧了误判倾向。用户消息'我们团队今年的NBEV目标还差不少，要是多招些销售员...帮我分析下'被 LLM 判为 other(4001)，adapter._extract_stage 据此路由至 non_agent，导致所有 five 期望全部落空。",
+  "impact": "",
+  "priority": "high"
+}

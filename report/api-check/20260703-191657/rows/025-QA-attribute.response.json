@@ -1,0 +1,94 @@
+{
+  "trace_id": "f52b429e-a4ec-4291-81d5-3fb339965b15",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "报销材料清单完整且无遗漏",
+      "causal_category": "model_capability_gap"
+    },
+    {
+      "expectation_id": "材料格式要求明确（复印件、盖章等）",
+      "causal_category": "model_capability_gap"
+    }
+  ],
+  "causal_category": "needs_human_review",
+  "earliest_divergence": {
+    "node": "mock_agent_llm 回答生成",
+    "expected": "包含完整报销材料清单（理赔申请书、身份证正反面复印件、出院小结/诊断证明（盖章）、住院医疗费用原始发票及费用明细清单、银行卡复印件、社保结算单）及材料格式要求",
+    "actual": "仅列出身份证、银行卡、住院发票和费用清单四项，完全遗漏格式要求",
+    "evidence": [
+      "run_trace.source='mock_agent_llm' 表明答案由 LLM 生成",
+      "adapter.call_or_prepare 从 normalized_request.output 直接读取，不做内容校验或补全",
+      "execution_trace 所有节点状态为 ok，排除了 adapter 运行时故障"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "not_verified",
+      "evidence": [
+        "scenario=qa_gold_answer",
+        "flags=[]"
+      ]
+    },
+    {
+      "status": "suspicious",
+      "evidence": [
+        "actual_answer 仅含 4 项材料，缺失理赔申请书、出院小结/诊断证明、社保结算单",
+        "无材料格式说明"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "actual_answer_present=true"
+      ]
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": true,
+    "execution_trace": true,
+    "project_docs": true,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "当前 case 的 actual_answer 由 mock_agent_llm 预生成，LLM 在回答'住院后百万医疗险报销材料'时，仅给出了身份证、银行卡、住院发票、费用清单四项通用材料，遗漏了保险报销场景特有的理赔申请书、出院小结/诊断证明（盖章）、社保结算单，且完全未提及任何材料的格式要求（复印件、盖章等）。执行链路中 adapter 的 call_or_prepare 只是透传预生成答案，execution_trace 所有节点均为 ok，排除了代码层面的运行时故障。根因在于 LLM 对保险报销领域的材料清单和格式要求缺乏完整的领域知识覆盖，属于模型能力缺陷（model_capability_gap），而非代码实现缺陷或边界限制。",
+  "verification_steps": [
+    "检查 mock_agent_llm 使用的 system prompt 是否包含保险报销材料清单的领域知识或 RAG 召回指令",
+    "用相同问题（'百万医疗险住院后报销材料'）对 mock_agent_llm 重新生成 10 次，统计材料完整率和格式要求覆盖率，确认是否为系统性缺陷",
+    "对比 golden_answer 中的完整材料清单，确认 mock_agent_llm 的训练数据或 prompt 中是否缺失这些保险领域知识",
+    "检查是否有 RAG 或知识库可以补充保险理赔材料清单知识"
+  ],
+  "patch_direction": [
+    "在 mock_agent_llm 的 system prompt 中注入保险报销材料清单的完整领域知识，包含：理赔申请书、身份证正反面复印件、出院小结/诊断证明（盖章）、住院医疗费用原始发票及费用明细清单、银行卡复印件、社保结算单及各材料的形式要求",
+    "将 golden_answer 作为 few-shot 示例加入 prompt，帮助 LLM 学习保险报销场景的完整回答模式",
+    "在 prompt 中增加约束：当用户询问报销材料时，必须列出完整材料清单并注明每项材料的形式要求（原件/复印件/盖章）",
+    "长期方案：引入 RAG 机制，在生成回答前从保险理赔知识库中检索材料清单作为 prompt 上下文"
+  ],
+  "needs_human_review": false,
+  "scenario": "qa_gold_answer",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 2,
+    "probe_count": 0,
+    "summary_text": "当前 case 的 actual_answer 由 mock_agent_llm 预生成，LLM 在回答'住院后百万医疗险报销材料'时，仅给出了身份证、银行卡、住院发票、费用清单四项通用材料，遗漏了保险报销场景特有的理赔申请书、出院小结/诊断证明（盖章）、社保结算单，且完全未提及任何材料的格式要求（复印件、盖章等）。执行链路中 adapter 的 call_or_prepare 只是透传预生成答案，execution_trace 所有节点均为 ok，排除了代码层面的运行时故障。根因在于 LLM 对保险报销领域的材料清单和格式要求缺乏完整的领域知识覆盖，属于模型能力缺陷（model_capability_gap），而非代码实现缺陷或边界限制。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  },
+  "analysis_method": "source_code_trace_attribution",
+  "analysis_quality": {
+    "passed": true,
+    "standard": "基于 judge 产出的 expected/actual evidence、execution_trace 和 adapter 源码完成归因；actual_answer 与 golden_answer 的差异明确，根因定位于 LLM 生成阶段的知识覆盖不足",
+    "status": "supported_root_cause"
+  },
+  "incomplete_reason": "",
+  "suspected_locations": [
+    {
+      "file": "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py",
+      "function": "call_or_prepare",
+      "reason": "该函数是预生成答案进入评估管道的入口点。答案内容取决于上游 LLM（mock_agent_llm），adapter 不做材料完整性校验，问题根因在上游 LLM 生成阶段而非 adapter"
+    }
+  ]
+}

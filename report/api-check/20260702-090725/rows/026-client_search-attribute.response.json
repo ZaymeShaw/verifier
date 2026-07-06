@@ -1,0 +1,123 @@
+{
+  "trace_id": "07d6a92a-01a9-4a3a-918c-47e9b81ea73e",
+  "project_id": "client_search",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "客户名称字段用于搜索",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "搜索值为科技",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "操作符支持包含匹配语义",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "无额外无关条件",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "公司类型限定（隐式期望）",
+      "causal_category": "boundary_limitation"
+    }
+  ],
+  "causal_category": "boundary_limitation",
+  "earliest_divergence": {
+    "node": "client_search_parse",
+    "expected": "若系统存在客户类型字段：输出类似 {\"field\": \"clientType\", \"operator\": \"MATCH\", \"value\": \"企业\"} 或类似条件来限定公司客户。若系统不存在该字段：prompt/配置中应有明确说明，告知用户'公司'限定无法在当前系统中表达",
+    "actual": "'公司'限定被静默丢弃，输出仅含 searchClientName MATCH 科技，summary 为'客户姓名为科技的客户'，未体现公司限定",
+    "evidence": [
+      "structured_output 仅一条条件，无公司相关字段",
+      "summary: '客户姓名为科技的客户' — 未提及'公司'"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "not_verified",
+      "evidence": [
+        "run_trace.normalized_request 中 user_text 完整保留原始查询'帮我查一下客户名称里带'科技'的公司'"
+      ]
+    },
+    {
+      "status": "suspicious",
+      "evidence": [
+        "structured_output 仅输出 [{\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"科技\"}]",
+        "查询中的'公司'限定词被静默丢弃，未输出任何对应条件或警告"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "matched_level: 4，matched_patterns 中正确召回了 searchClientName 字段定义及相关示例",
+        "enhanced_rules 中'姓名-模糊匹配'规则（priority 1）通过模式 {SEARCH}([\\u4e00-\\u9fa5]{1,3}) 命中了'科技'"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "judge 对四个显式期望均评定为 fulfilled",
+        "verdict 为 uncertain，表明 judge 察觉到了隐式问题但未能在当前评估框架内明确归因"
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": true,
+    "execution_trace": true,
+    "project_docs": true,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "当前系统字段定义中不存在区分'公司客户'与'个人客户'的字段（如 clientType、isEnterprise 等）。当用户查询'客户名称里带'科技'的公司'时，系统正确地将'客户名称里带科技'映射到 searchClientName MATCH 科技，但'公司'这一限定词因找不到对应字段而被 prompt 规则'若查询意图找不到匹配的字段，该意图对应的条件必须忽略'静默丢弃。这不是解析逻辑的 bug，而是系统字段覆盖面的边界限制——searchClientName 字段定义为'客户本人完整姓名'，在语义上涵盖了个人与公司的名称，但无法区分二者。最终结果可能导致返回个人客户名称含'科技'的记录，而用户实际只想要公司客户，造成召回范围的语义偏差。",
+  "verification_steps": [
+    "1. 确认下游 ES 索引中是否存在客户类型字段（如 customer_type、is_enterprise、client_category 等），检查其枚举值是否包含'企业/个人/个体'等",
+    "2. 若存在该字段，在 field_definitions_args.yaml 中新增 intent，定义 retrieval_text 包含'公司/企业/个人/个体户/组织'等关键词",
+    "3. 在 enhanced_rules_args.yaml 中新增 L2 规则，将'XX公司''XX企业''个人客户'等模式映射到客户类型字段",
+    "4. 用相同查询'帮我查一下客户名称里带'科技'的公司'重新测试，验证输出是否同时包含 searchClientName MATCH 科技 和 clientType 相关条件",
+    "5. 若下游不存在该字段，在 prompt 的'核心约束'或字段说明中增加免责声明，告知用户当前系统不支持按客户类型（公司/个人）筛选，避免用户产生误解"
+  ],
+  "patch_direction": [
+    {
+      "target": "field_definitions_args.yaml",
+      "action": "新增客户类型字段 intent",
+      "example": "若下游有 clientType 字段且枚举为 ['个人','企业','组织']: 新增 intent id=customer_type，retrieval_text='公司 企业 个人 个体户 组织 单位 公司客户 个人客户'，field=clientType，operator=MATCH，value_type=enum",
+      "precondition": "下游 ES 索引中存在可映射的客户类型字段"
+    },
+    {
+      "target": "enhanced_rules_args.yaml",
+      "action": "新增客户类型匹配规则",
+      "example": "新增规则'客户类型-公司': patterns=['{SEARCH}(公司|企业|单位|组织)(?:客户)?']，field=clientType，operator=MATCH，value='企业'",
+      "precondition": "field_definitions 中已存在对应字段定义"
+    },
+    {
+      "target": "prompt.md",
+      "action": "补充边界说明",
+      "example": "在'核心约束'节追加：'当前系统不区分客户类型（个人/公司/组织），所有客户均通过 searchClientName 字段按名称搜索。若查询中包含'公司''企业'等限定词且无可映射字段，该限定将被忽略。'",
+      "precondition": "下游确实不支持客户类型区分时采用此方案"
+    }
+  ],
+  "needs_human_review": true,
+  "scenario": "用户查询含'公司'限定词，但系统无客户类型字段支持——属于已知边界限制。需产品/数据团队确认下游数据模型是否支持客户类型区分，以决定是新增字段配置还是补充文档说明。",
+  "summary": {
+    "causal_category": "boundary_limitation",
+    "attribution_count": 5,
+    "probe_count": 2,
+    "summary_text": "当前系统字段定义中不存在区分'公司客户'与'个人客户'的字段（如 clientType、isEnterprise 等）。当用户查询'客户名称里带'科技'的公司'时，系统正确地将'客户名称里带科技'映射到 searchClientName MATCH 科技，但'公司'这一限定词因找不到对应字段而被 prompt 规则'若查询意图找不到匹配的字段，该意图对应的条件必须忽略'静默丢弃。这不是解析逻辑的 bug，而是系统字段覆盖面的边界限制——searchClientName 字段定义为'客户本人完整姓名'，在语义上涵盖了个人与公司的名称，但无法区分二者。最终结果可能导致返回个人客户名称含'科技'的记录，而用户实际只想要公司客户，造成召回范围的语义偏差。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

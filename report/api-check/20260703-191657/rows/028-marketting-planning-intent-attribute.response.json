@@ -1,0 +1,188 @@
+{
+  "trace_id": "8bef68cb-c3d1-4d06-ae5c-fce9249a37b1",
+  "project_id": "marketting-planning-intent",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图标签准确反映目标调整请求",
+      "causal_category": "model_capability_gap"
+    },
+    {
+      "expectation_id": "提取目标金额500万和上个月时间",
+      "causal_category": "model_capability_gap"
+    },
+    {
+      "expectation_id": "置信度不应过低以致意图不可信",
+      "causal_category": "model_capability_gap"
+    },
+    {
+      "expectation_id": "意图可分发至目标调整处理模块",
+      "causal_category": "model_capability_gap"
+    }
+  ],
+  "causal_category": "implementation_bug",
+  "earliest_divergence": {
+    "node": "intent_contract_gate",
+    "expected": {
+      "intent": "target_adjustment（目标调整）"
+    },
+    "actual": {
+      "ambiguous": false,
+      "confidence": 0.5,
+      "fallback": false,
+      "intent": "other",
+      "raw_intent": "4001"
+    },
+    "evidence": [
+      [
+        {
+          "kind": "missing",
+          "error_type": "",
+          "evidence_ref": "",
+          "raw": "正确的意图标签（target_adjustment）",
+          "incomplete": false
+        },
+        {
+          "kind": "missing",
+          "error_type": "",
+          "evidence_ref": "",
+          "raw": "目标金额槽位（500万）",
+          "incomplete": false
+        },
+        {
+          "kind": "missing",
+          "error_type": "",
+          "evidence_ref": "",
+          "raw": "时间槽位（上个月）",
+          "incomplete": false
+        }
+      ]
+    ],
+    "confidence": "medium"
+  },
+  "chain_nodes": [
+    {
+      "status": "failed",
+      "evidence": [
+        {},
+        {
+          "expected": {
+            "intent": "target_adjustment（目标调整）"
+          }
+        },
+        {
+          "actual": {
+            "ambiguous": false,
+            "confidence": 0.5,
+            "fallback": false,
+            "intent": "other",
+            "raw_intent": "4001"
+          }
+        },
+        {
+          "missing": [
+            {
+              "kind": "missing",
+              "error_type": "",
+              "evidence_ref": "",
+              "raw": "正确的意图标签（target_adjustment）",
+              "incomplete": false
+            },
+            {
+              "kind": "missing",
+              "error_type": "",
+              "evidence_ref": "",
+              "raw": "目标金额槽位（500万）",
+              "incomplete": false
+            },
+            {
+              "kind": "missing",
+              "error_type": "",
+              "evidence_ref": "",
+              "raw": "时间槽位（上个月）",
+              "incomplete": false
+            }
+          ],
+          "wrong": [
+            {
+              "kind": "wrong",
+              "error_type": "",
+              "evidence_ref": "",
+              "raw": "意图标签错误地设为'other'",
+              "incomplete": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "failed",
+      "evidence": [
+        "raw_intent=4001",
+        "actual_mapping=other",
+        "expected_intent=target_adjustment（目标调整）",
+        "INTENT_MAPPING 中 4001 → other，映射正确执行但上游输入错误",
+        "available_mapping enum: [team_portrait, customer_portrait, nbev_planning, target_value_adjustment, achievement_measurement_adjustment, nbev_planning_fallback, other]"
+      ]
+    }
+  ],
+  "evidence_coverage": {
+    "query": false,
+    "actual": true,
+    "expected": true,
+    "execution_trace": false
+  },
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': 'target_adjustment（目标调整）'}，实际 normalized intent evidence 为 {'ambiguous': False, 'confidence': 0.5, 'fallback': False, 'intent': 'other', 'raw_intent': '4001'}，最早差异位于 intent_contract_gate。",
+  "verification_steps": [
+    "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+  ],
+  "patch_direction": [
+    "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+  ],
+  "needs_human_review": false,
+  "scenario": "单轮意图识别：目标调整请求被错误分类为 other",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 4,
+    "probe_count": 1,
+    "summary_text": "本次意图识别错误的根因位于 intent_api_call 阶段，由两个叠加因素导致：(1) 规则匹配层（try_rule_based_intent）将 target_value_adjustment 等调整意图完全绑定在多轮上下文条件（_has_completed_planning_context）上，单轮场景下即使 query 含'调到500万'的明确调整语义也无法命中；(2) 当规则层未命中回退到 LLM 时，prompt 中 target_value_adjustment 的定义前置条件'已经完成NBEV目标值达成测算后'与'倾向于判断为 other'的保守指引共同作用，使模型将'帮我看看上个月的目标能不能调到500万'以低置信度（0.5）错误分类为 other。raw_intent=4001 经 INTENT_MAPPING 正确映射为 other，映射层行为无误但无法纠正上游错误。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  },
+  "analysis_method": "current_case_intent_contract_trace",
+  "analysis_quality": {
+    "passed": true,
+    "status": "supported_root_cause"
+  },
+  "incomplete_reason": "",
+  "suspected_locations": [
+    {
+      "path": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/prompts/intent_prompt.py",
+      "issue_type": "prompt_design_flaw",
+      "detail": "target_value_adjustment 意图定义（新增调整意图第5条）的前置条件'已经完成NBEV目标值达成测算后'在单轮无上下文场景下难以满足，且示例缺少'调到500万'等口语化变体；字段提取规则仅绑定 nbev_planning，target_value_adjustment 无独立槽位提取指导"
+    },
+    {
+      "path": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/steps/intent_recognition.py",
+      "issue_type": "rule_coverage_gap",
+      "detail": "try_rule_based_intent 中 target_value_adjustment / achievement_measurement_adjustment / nbev_planning_fallback 的命中完全依赖 _has_completed_planning_context=True，单轮首次请求即使语义明确也无法命中；缺少独立的'调到+数值+目标'正则规则"
+    },
+    {
+      "path": "projects/marketting-planning-intent/intent.py",
+      "issue_type": "mapping_source",
+      "detail": "INTENT_MAPPING 将 raw_intent=4001 正确映射到 other，但上游 LLM 输出 4001 本身即为分类错误；若 4001 代表上游服务的'未知意图'编码，则此映射无问题"
+    },
+    {
+      "path": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/schemas/intent.py",
+      "issue_type": "schema_gap",
+      "detail": "IntentResult 缺少 time_period 字段，无法承载'上个月'等调整类时间槽位"
+    }
+  ],
+  "quality_flags": [
+    "rule_coverage_gap_in_single_turn_adjustment",
+    "prompt_precondition_too_strict_for_target_adjustment",
+    "slot_extraction_not_bound_to_target_adjustment_intent"
+  ]
+}

@@ -1,0 +1,753 @@
+{
+  "project": "QA",
+  "trace": {
+    "trace_id": "52ed9e22-ea57-47bc-be4b-93737ac2257e",
+    "project_id": "QA",
+    "case_id": "mock-agent-QA-02a290c0",
+    "live_result": {
+      "project_id": "QA",
+      "case_id": "mock-agent-QA-02a290c0",
+      "session_id": "",
+      "raw_input": {
+        "input": {
+          "answer": "本产品对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。但需注意，若未经过社保报销，则按60%比例赔付。",
+          "query": "这款百万医疗险对癌症治疗能报销多少？需要先经过社保报销吗？"
+        },
+        "metadata": {
+          "session_id": "sess_qa_12345",
+          "trace_id": "trace_qa_67890",
+          "user_id": "user_001"
+        },
+        "scenario": "qa_gold_answer"
+      },
+      "normalized_request": {
+        "input": {
+          "question": "这款百万医疗险对癌症治疗能报销多少？需要先经过社保报销吗？"
+        },
+        "reference": {
+          "golden_answer": "该百万医疗险对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。通常需要先经过社保报销；若未经社保报销，则按60%比例赔付。具体以保险条款为准。"
+        },
+        "metadata": {
+          "live_request_mapped": true,
+          "project_id": "QA",
+          "ready": [
+            "output",
+            "reference"
+          ],
+          "schema_ok": false,
+          "source": "mock_agent_llm"
+        },
+        "scenario": "qa_gold_answer",
+        "output": {
+          "actual_answer": "本产品对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。但需注意，若未经过社保报销，则按60%比例赔付。"
+        }
+      },
+      "call_status": "succeeded",
+      "extracted_output": {
+        "actual_answer": "本产品对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。但需注意，若未经过社保报销，则按60%比例赔付。"
+      },
+      "output_source": "provided_output",
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T08:16:10.288289+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T08:16:10.288296+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:16:10.289182+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:16:10.289226+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:18:04.940328+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:18:04.940370+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T08:18:04.940394+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:19:21.867029+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:20:40.320527+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-04T08:20:40.320556+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-04T08:20:40.330176+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence missing"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "probe evidence missing",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "qa_gold_answer",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "created_at": "2026-07-04T08:16:10.289144+00:00"
+  },
+  "judge": {
+    "trace_id": "52ed9e22-ea57-47bc-be4b-93737ac2257e",
+    "project_id": "QA",
+    "verdict": "incorrect",
+    "business_expectations": [
+      {
+        "expectation_id": "回答癌症治疗报销比例为100%",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "acceptance_criteria": [
+          "包含'报销比例为100%'或同等意思的表述",
+          "数字准确"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "包含质子重离子治疗保障信息",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "acceptance_criteria": [
+          "提到质子重离子治疗",
+          "表述为在保障范围内"
+        ],
+        "priority": "medium"
+      },
+      {
+        "expectation_id": "明确说明是否需要先经过社保报销",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "acceptance_criteria": [
+          "存在'需要'、'必须先'、'通常需要'等肯定性表述",
+          "直接回答用户的是否问题"
+        ],
+        "priority": "high"
+      },
+      {
+        "expectation_id": "说明未经过社保报销时的赔付比例",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "acceptance_criteria": [
+          "提及未经过社保报销的情况",
+          "赔付比例为60%"
+        ],
+        "priority": "medium"
+      },
+      {
+        "expectation_id": "包含以保险条款为准等免责声明",
+        "downstream_consumer": "",
+        "user_intent": "",
+        "expected_outcome": "",
+        "acceptance_criteria": [
+          "存在免责声明或'以条款为准'等表述"
+        ],
+        "priority": "low"
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "回答癌症治疗报销比例为100%",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "报销比例为100%"
+        ],
+        "actual_evidence": [
+          "本产品对癌症治疗的报销比例为100%"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": ""
+        },
+        "downstream_impact": "",
+        "blocking": true
+      },
+      {
+        "expectation_id": "包含质子重离子治疗保障信息",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "质子重离子治疗在保障范围内"
+        ],
+        "actual_evidence": [
+          "质子重离子治疗也在保障范围内"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": ""
+        },
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "明确说明是否需要先经过社保报销",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "明确肯定需要先经过社保报销的表述，如'通常需要先经过社保报销'"
+        ],
+        "actual_evidence": [
+          "仅说明'若未经过社保报销，则按60%比例赔付'，未直接回答是否需要先经过社保"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": ""
+        },
+        "downstream_impact": "",
+        "blocking": true
+      },
+      {
+        "expectation_id": "说明未经过社保报销时的赔付比例",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "若未经社保报销，则按60%比例赔付"
+        ],
+        "actual_evidence": [
+          "若未经过社保报销，则按60%比例赔付"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": ""
+        },
+        "downstream_impact": "",
+        "blocking": false
+      },
+      {
+        "expectation_id": "包含以保险条款为准等免责声明",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "具体以保险条款为准等免责声明"
+        ],
+        "actual_evidence": [
+          "无相关表述"
+        ],
+        "boundary_decision": {
+          "within_evaluable_scope": true,
+          "reasoning": ""
+        },
+        "downstream_impact": "",
+        "blocking": false
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "not_fulfilled",
+      "assessment_count": 5,
+      "blocking_expectations": [
+        "明确说明是否需要先经过社保报销"
+      ]
+    },
+    "expected": {
+      "golden_answer": "该百万医疗险对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。通常需要先经过社保报销；若未经社保报销，则按60%比例赔付。具体以保险条款为准。"
+    },
+    "actual": {
+      "actual_answer": "本产品对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。但需注意，若未经过社保报销，则按60%比例赔付。"
+    },
+    "reasoning_summary": "实际答案准确提及了癌症治疗100%报销比例和质子重离子保障，以及未经过社保的赔付比例。但用户问题的第二部分'需要先经过社保报销吗？'未被直接回答，仅说明了如果未经过社保的后果，未明确肯定需要先经过社保。因此，核心业务期望'明确说明是否需要先经过社保报销'未满足，导致整体评估为不满足。",
+    "judge_basis": "以 golden_answer 为基准，比较 actual_answer 在回答用户两个问题时的准确性、完整性和直接性。",
+    "judge_method": "qa_gold_answer_comparison",
+    "verdict_derivation": {
+      "primary_boundary": "qa_gold_answer",
+      "assessment_summary": "实际答案准确提及了癌症治疗100%报销比例和质子重离子保障，以及未经过社保的赔付比例。但用户问题的第二部分'需要先经过社保报销吗？'未被直接回答，仅说明了如果未经过社保的后果，未明确肯定需要先经过社保。因此，核心业务期望'明确说明是否需要先经过社保报销'未满足，导致整体评估为不满足。",
+      "blocking_gaps": [
+        "明确说明是否需要先经过社保报销"
+      ],
+      "why_verdict": "答案虽然包含了报销比例和未经过社保的赔付比例，但用户明确询问'需要先经过社保报销吗？'，实际答案未给出直接、明确的肯定回答，仅说明了未经过社保的后果。这会导致用户无法确定是否需要先进行社保报销，未能满足用户的核心信息需求，因此整体不满足。",
+      "taxonomy_error_types": [
+        "answer_incomplete"
+      ],
+      "score_dimensions": [
+        {
+          "dimension": "correctness",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "completeness",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "key_point_coverage",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "faithfulness",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "relevance",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "usefulness",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "coherence",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "risk_control",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        },
+        {
+          "dimension": "clarity",
+          "score": 0.6,
+          "evidence": [
+            "来自样本的 golden_answer 和 actual_answer",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "status": "judged"
+        }
+      ],
+      "error_type": "answer_incomplete"
+    },
+    "missing": [
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "需要先经过社保报销的明确肯定性表述",
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "免责声明",
+        "incomplete": false
+      }
+    ],
+    "evidence": [
+      "来自样本的 golden_answer 和 actual_answer",
+      "scenario=qa_gold_answer",
+      "question_present=True",
+      "actual_answer_present=True",
+      "golden_answer_present=True"
+    ],
+    "boundary_decision": {
+      "within_evaluable_scope": true,
+      "reasoning": "场景为 qa_gold_answer，提供了标准答案，评估完全在可评估范围内。"
+    },
+    "evaluation_boundary": {
+      "primary_boundary_id": "qa_gold_answer",
+      "primary_boundary_name": "Gold Answer Comparison",
+      "judge_question": "actual_answer 是否准确、完整地回答了用户问题，与 golden_answer 一致？",
+      "verdict_basis": "golden_answer",
+      "boundary_sources": "样本提供的 reference.golden_answer",
+      "conflict_policy": "以 golden_answer 为准"
+    },
+    "consumer_contract": {
+      "consumer": "保险咨询用户",
+      "contract": "提供与产品条款一致的准确报销信息，包括报销比例、保障范围、报销条件。",
+      "reference_contract": "该百万医疗险对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。通常需要先经过社保报销；若未经社保报销，则按60%比例赔付。具体以保险条款为准。"
+    },
+    "intent_model": {
+      "raw_user_request": "这款百万医疗险对癌症治疗能报销多少？需要先经过社保报销吗？",
+      "explicit_intents": [
+        "了解百万医疗险对癌症治疗的报销比例",
+        "了解是否需要先经过社保报销"
+      ],
+      "implicit_business_intents": [
+        "期望得到准确、完整的答复",
+        "期望答案与保险产品实际条款一致"
+      ],
+      "success_definition": "答案准确给出癌症治疗报销比例为100%，包含质子重离子治疗，明确回答是否需要先经过社保报销，并说明未经过社保的赔付比例，最后提醒以正式条款为准。",
+      "blocking_requirements": [
+        "报销比例准确",
+        "明确回答是否需要先经过社保"
+      ],
+      "nice_to_have_requirements": [
+        "包含质子重离子保障说明",
+        "包含免责声明"
+      ]
+    },
+    "reconstructed_intent": "用户意图是获取该百万医疗险对癌症治疗的报销比例以及是否需要社保报销作为前提条件，期望得到明确、准确的信息。",
+    "semantic_equivalence_checks": [
+      {
+        "expected_fragment": "报销比例为100%",
+        "actual_fragment": "报销比例为100%",
+        "equivalent": true,
+        "basis": "文字表述一致"
+      },
+      {
+        "expected_fragment": "质子重离子治疗也在保障范围内",
+        "actual_fragment": "质子重离子治疗也在保障范围内",
+        "equivalent": true,
+        "basis": "文字表述一致"
+      },
+      {
+        "expected_fragment": "通常需要先经过社保报销",
+        "equivalent": false,
+        "basis": "缺少对应表述"
+      },
+      {
+        "expected_fragment": "若未经社保报销，则按60%比例赔付",
+        "actual_fragment": "若未经过社保报销，则按60%比例赔付",
+        "equivalent": true,
+        "basis": "意思相同"
+      },
+      {
+        "expected_fragment": "具体以保险条款为准",
+        "equivalent": false,
+        "basis": "缺少免责声明"
+      }
+    ],
+    "reference_generation_basis": {
+      "source": "golden_answer",
+      "alignment_to_live_schema": "直接使用样本提供的 golden_answer 作为参考基准"
+    },
+    "scenario": "qa_gold_answer",
+    "needs_human_review": false,
+    "summary": {
+      "reason": "not_fulfilled · blocking=[明确说明是否需要先经过社保报销]",
+      "primary_failure_dimensions": [
+        {
+          "expectation_id": "明确说明是否需要先经过社保报销",
+          "status": "not_fulfilled",
+          "blocking": true,
+          "downstream_impact": "",
+          "within_evaluable_scope": true,
+          "evidence": "仅说明'若未经过社保报销，则按60%比例赔付'，未直接回答是否需要先经过社保 | 明确肯定需要先经过社保报销的表述，如'通常需要先经过社保报销'"
+        },
+        {
+          "expectation_id": "包含以保险条款为准等免责声明",
+          "status": "not_fulfilled",
+          "blocking": false,
+          "downstream_impact": "",
+          "within_evaluable_scope": true,
+          "evidence": "无相关表述 | 具体以保险条款为准等免责声明"
+        }
+      ],
+      "reason_source": "aggregated_fulfillment",
+      "fulfillment_status": "not_fulfilled",
+      "assessment_count": 5,
+      "blocking_count": 2,
+      "is_formal_attribution": true
+    }
+  }
+}

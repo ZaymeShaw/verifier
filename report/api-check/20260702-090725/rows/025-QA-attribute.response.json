@@ -1,0 +1,112 @@
+{
+  "trace_id": "23d84cb9-9d89-42b4-ad10-a93e484fe852",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "回答针对退货流程问题",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "流程描述准确且一致",
+      "causal_category": "insufficient_evidence"
+    },
+    {
+      "expectation_id": "回答清晰有用",
+      "causal_category": "insufficient_evidence"
+    }
+  ],
+  "causal_category": "需人工复核",
+  "earliest_divergence": {
+    "node": "mock_agent 样本生成 → qa.sample.normalize",
+    "expected": "有效的 QA 样本应包含非空 question、非空 actual_answer，且在 qa_gold_answer 场景下还应包含非空 golden_answer",
+    "actual": "question=''、actual_answer=''、golden_answer=''，data_quality_flags 包含三个缺失标记",
+    "evidence": [
+      "run_trace.normalized_request.data_quality_flags = ['missing_question', 'missing_actual_answer', 'missing_golden_answer']",
+      "run_trace.normalized_request.metadata.source = 'mock_agent_llm'",
+      "execution_trace qa.output.read status = suspicious"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "suspicious",
+      "evidence": [
+        "data_quality_flags = ['missing_question', 'missing_actual_answer', 'missing_golden_answer']",
+        "scenario = 'qa_gold_answer'（非 invalid_sample，故 status 为 ok）"
+      ]
+    },
+    {
+      "status": "failed",
+      "evidence": [
+        "extracted_output.actual_answer = ''",
+        "actual_answer_present = false"
+      ]
+    },
+    {
+      "status": "suspicious",
+      "evidence": [
+        "actual_answer_present = false"
+      ]
+    },
+    {
+      "status": "failed",
+      "evidence": [
+        "verdict = 'uncertain'",
+        "reconstructed_intent = ''",
+        "三个 expectation_id 疑似 LLM 幻觉（'退货流程'相关内容与空 question 不匹配）"
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "suspicious"
+    }
+  ],
+  "evidence_coverage": {
+    "query": false,
+    "actual": false,
+    "expected": false,
+    "execution_trace": true,
+    "project_docs": true,
+    "code_or_config": true,
+    "unsupported_claims": [
+      "judge 产生的 expectation_id '回答针对退货流程问题'、'流程描述准确且一致' 与空样本无因果关系 — 疑似 LLM judge 基于 prompt 模板幻觉生成，当前样本中不存在任何退货流程相关内容"
+    ]
+  },
+  "root_cause_hypothesis": "mock_agent（source='mock_agent_llm'）生成了一个完全空的 QA 样本：question、actual_answer、golden_answer 均为空字符串。adapter 的 _quality_flags 正确检测并标记了三个数据质量缺陷，但 build_execution_trace 仅当 scenario='invalid_sample' 时才标记 qa.sample.normalize 为 suspicious，导致空样本以 ok 状态流入 LLM judge。judge 在无任何实际数据的情况下返回 uncertain 并产生三个与退货流程相关的幻觉 expectation ID。所有确定性 fallback（_gold_answer_exact_probe、_fallback_judge_from_sample_label）均因数据缺失而无法介入。根因在数据生成侧，暴露在 adapter 的早期拦截缺失和 judge 的空数据容错不足。",
+  "verification_steps": [
+    "检查 mock_agent 日志确认该 trace_id=23d84cb9-9d89-42b4-ad10-a93e484fe852 的样本为何生成为全空",
+    "在 adapter._quality_flags 返回非空列表时，在 build_execution_trace 中将 qa.sample.normalize 标记为 suspicious 或 failed",
+    "在 call_or_prepare 或 extract_output 中增加短路逻辑：若 question 和 actual_answer 同时为空，直接返回不可评估结果并跳过 LLM judge",
+    "审查 LLM judge prompt 确保其不会在 question 为空时生成领域特定的 expectation_id"
+  ],
+  "patch_direction": [
+    "修复 build_execution_trace：当 data_quality_flags 非空时，qa.sample.normalize 状态应至少为 suspicious，而非仅依赖 scenario 判断",
+    "在 call_or_prepare 中增加早期短路：检测到 missing_question 且 missing_actual_answer 时，直接产出 insufficient_evidence 结果，避免将空样本送入成本较高的 LLM judge",
+    "mock_agent 侧增加样本有效性校验：生成的 question 和 actual_answer 不得同时为空"
+  ],
+  "needs_human_review": true,
+  "scenario": "qa_gold_answer",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 3,
+    "probe_count": 4,
+    "summary_text": "mock_agent（source='mock_agent_llm'）生成了一个完全空的 QA 样本：question、actual_answer、golden_answer 均为空字符串。adapter 的 _quality_flags 正确检测并标记了三个数据质量缺陷，但 build_execution_trace 仅当 scenario='invalid_sample' 时才标记 qa.sample.normalize 为 suspicious，导致空样本以 ok 状态流入 LLM judge。judge 在无任何实际数据的情况下返回 uncertain 并产生三个与退货流程相关的幻觉 expectation ID。所有确定性 fallback（_gold_answer_exact_probe、_fallback_judge_from_sample_label）均因数据缺失而无法介入。根因在数据生成侧，暴露在 adapter 的早期拦截缺失和 judge 的空数据容错不足。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

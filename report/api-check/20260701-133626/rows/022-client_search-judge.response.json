@@ -1,0 +1,53 @@
+{
+  "trace_id": "83d0648d-803e-4989-8e08-d1f0bfcc8c06",
+  "project_id": "client_search",
+  "business_expectations": [
+    {},
+    {},
+    {},
+    {},
+    {}
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "精确年龄45岁条件",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "女性性别条件",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "年缴保费10万以上条件",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "条件逻辑为且关系",
+      "status": "fulfilled"
+    },
+    {
+      "expectation_id": "无多余条件",
+      "status": "fulfilled"
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "fulfilled",
+    "assessment_count": 5
+  },
+  "expected": {
+    "query_logic": "AND",
+    "expected_source": "not_available",
+    "reference_is_oracle": false
+  },
+  "actual": {
+    "query_logic": "AND"
+  },
+  "summary": {
+    "reason": "fulfilled · 4 blocking expectations all met · 用户查询'45岁女性保费10万以上'包含三个核心筛选维度：年龄45岁、性别女、保费10万以上。parser正确输出了三个结构化条件：(1) clientAge使用RANGE操作符精确匹配45岁（min=45,max=45），符合prompt中'精确年龄用RANGE {min:x,max:x}'的规则；(2) clientSex使用MATCH操作符匹配枚举值'女'，符合prompt中'女性→clientSex MATCH 女'的规则；(3) annPremSegNum使用GTE操作符值为100000，符合prompt中'保费→annPremSegNum、万=×10000、以上→GTE'的规则。三个条件以AND逻辑组合，正确表达了同时满足的语义。无任何缺失、错误或多余条件。所有blocking级期望全部满足。",
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 4,
+    "is_formal_attribution": true
+  }
+}

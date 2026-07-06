@@ -1,0 +1,87 @@
+{
+  "project_id": "client_search",
+  "clusters": [
+    {
+      "cluster_id": "expectation::model_capability_gap::not_evaluable",
+      "mechanism": "model_capability_gap::not_evaluable",
+      "causal_category": "model_capability_gap",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "比较高应筛选高等级VIP而非所有VIP",
+        "操作符应为CONTAINS以承载枚举值过滤"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "c616813e-2baf-46ff-8b01-9b55e891bdff"
+      ],
+      "representative_traces": [
+        "c616813e-2baf-46ff-8b01-9b55e891bdff"
+      ],
+      "common_root_cause": "用户查询'VIP等级比较高的客户'在 enhanced_rules 中无匹配规则（'比较高'不在现有 pattern 覆盖范围内），完全依赖 LLM 解析。LLM 虽然被提供了 vipType 的 CONTAINS 操作符、完整枚举排序（白银1<...<黑钻VIP）和正确示例（'铂金客户→CONTAINS'），但被 prompt 中'寿险VIP客户→EXISTS'示例锚定，将'比较高'这一等级过滤修饰语完全忽略，错误地将查询理解为'是否有VIP等级'，输出了 vipType EXISTS。这是 enhanced_rules 覆盖缺口（无抽象比较级规则）与 LLM 语义理解偏差（忽略'比较高'修饰语、被 EXISTS 示例锚定）叠加导致的复合型 model_capability_gap。",
+      "shared_failure_pattern": "用户查询'VIP等级比较高的客户'在 enhanced_rules 中无匹配规则（'比较高'不在现有 pattern 覆盖范围内），完全依赖 LLM 解析。LLM 虽然被提供了 vipType 的 CONTAINS 操作符、完整枚举排序（白银1<...<黑钻VIP）和正确示例（'铂金客户→CONTAINS'），但被 prompt 中'寿险VIP客户→EXISTS'示例锚定，将'比较高'这一等级过滤修饰语完全忽略，错误地将查询理解为'是否有VIP等级'，输出了 vipType EXISTS。这是 enhanced_rules 覆盖缺口（无抽象比较级规则）与 LLM 语义理解偏差（忽略'比较高'修饰语、被 EXISTS 示例锚定）叠加导致的复合型 model_capability_gap。",
+      "affected_fields": [
+        "vipType"
+      ],
+      "representative_diffs": [
+        {
+          "case_id": "c616813e-2baf-46ff-8b01-9b55e891bdff",
+          "node": "client_search.routing（LLM 解析阶段）",
+          "expected": {
+            "field": "vipType",
+            "operator": "CONTAINS",
+            "value": [
+              "黄金V1",
+              "黄金V2",
+              "黄金V3",
+              "原黄金VIP",
+              "铂金V1",
+              "铂金V2",
+              "原铂金VIP",
+              "钻石VIP",
+              "金钻VIP",
+              "黑钻VIP"
+            ]
+          },
+          "actual": {
+            "field": "vipType",
+            "operator": "EXISTS",
+            "value": ""
+          },
+          "evidence": [
+            "run_trace.extracted_output: {\"field\":\"vipType\",\"operator\":\"EXISTS\",\"value\":\"\"}",
+            "rule_verify: '比较高'不匹配任何 enhanced_rules 或 value_mappings",
+            "matched_patterns 包含 vipType CONTAINS 示例和枚举排序，LLM 有足够信息但选择错误"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        {
+          "change": "在 vipType 规则区域（'寿险VIP-及以上-铂金'规则之后）新增规则：\n\n- name: \"寿险VIP-比较高\"\n  patterns:\n    - '{SEARCH}VIP等级(?:比较|较|很|非常|特别)?高(?:的客户|客户|名单|的人|人|有哪些人|有哪些|的)?'\n    - '{SEARCH}(?:比较|较|很|非常|特别)?高(?:的)?VIP(?:等级)?(?:的客户|客户|名单|的人|人|有哪些人|有哪些|的)?'\n    - '{SEARCH}高等级VIP(?:的客户|客户|名单|的人|人|有哪些人|有哪些|的)?'\n    - '{SEARCH}VIP(?:等级)?高级别(?:的客户|客户|名单|的人|人|有哪些人|有哪些|的)?'\n  field: \"vipType\"\n  operator: \"CONTAINS\"\n  value_type: \"static\"\n  value:\n    - \"黄金V1\"\n    - \"黄金V2\"\n    - \"黄金V3\"\n    - \"原黄金VIP\"\n    - \"铂金V1\"\n    - \"铂金V2\"\n    - \"原铂金VIP\"\n    - \"钻石VIP\"\n    - \"金钻VIP\"\n    - \"黑钻VIP\"\n  priority: 11",
+          "file": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml",
+          "rationale": "priority=11 确保优先于'寿险VIP'基础规则（priority=8）和'寿险VIP-黄金客户'等具体等级规则（priority=10）。'黄金及以上'作为'比较高'的合理默认阈值（中位数以上），避免将白银1/2/3纳入结果。"
+        },
+        {
+          "change": "在 vipType 的 prompt 字段定义中增加：\n\n反例: \"VIP等级比较高的客户\" → 不输出 EXISTS；原因: '比较高'隐含等级过滤，应使用 CONTAINS 配合中高等级枚举值（如黄金V1~黑钻VIP），不应使用 EXISTS 匹配所有等级\n\n反例: \"VIP等级较高的客户\" → 同上",
+          "file": "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/client_search/../../../projects/client_search/prompt.md",
+          "rationale": "在 LLM prompt 中直接阻断 EXISTS 锚定效应，引导 LLM 在遇到模糊比较级时主动选择 CONTAINS + 合理阈值"
+        }
+      ],
+      "verification_cases": [
+        "c616813e-2baf-46ff-8b01-9b55e891bdff"
+      ],
+      "next_actions": [
+        "1. 在 enhanced_rules_args.yaml 中新增'寿险VIP-比较高'规则后，使用相同查询'帮我找出所有VIP等级比较高的客户信息'重新调用 client_search_query_parse API，验证输出是否为 vipType CONTAINS + 黄金及以上枚举值",
+        "2. 验证新增规则不会误匹配'VIP等级比较低的客户'等反方向查询——需确认'比较低'是否也需要独立规则",
+        "3. 检查 enhanced_rules 中是否还有其他枚举字段存在类似的抽象比较级覆盖缺口（如 jujiaClientGrade、kangyangClientGrade 的'比较高/比较低'），统一补齐",
+        "4. 考虑在 prompt 中为 vipType 增加反例：'VIP等级比较高的客户→不应使用 EXISTS，应使用 CONTAINS + 黄金及以上枚举值'，验证 LLM 在其他类似查询上是否改善"
+      ]
+    }
+  ],
+  "common_root_cause": "用户查询'VIP等级比较高的客户'在 enhanced_rules 中无匹配规则（'比较高'不在现有 pattern 覆盖范围内），完全依赖 LLM 解析。LLM 虽然被提供了 vipType 的 CONTAINS 操作符、完整枚举排序（白银1<...<黑钻VIP）和正确示例（'铂金客户→CONTAINS'），但被 prompt 中'寿险VIP客户→EXISTS'示例锚定，将'比较高'这一等级过滤修饰语完全忽略，错误地将查询理解为'是否有VIP等级'，输出了 vipType EXISTS。这是 enhanced_rules 覆盖缺口（无抽象比较级规则）与 LLM 语义理解偏差（忽略'比较高'修饰语、被 EXISTS 示例锚定）叠加导致的复合型 model_capability_gap。",
+  "impact": "",
+  "priority": "normal"
+}

@@ -1,0 +1,110 @@
+{
+  "id": "mock-agent-marketting-planning-intent-9e16256b",
+  "input": "default_org",
+  "scenario": "intent_recognition",
+  "output_summary": "{\"ambiguous\": false, \"confidence\": 0.5, \"fallback\": false, \"intent\": \"other\", \"raw_intent\": \"4001\"}",
+  "reference_summary": "",
+  "status": "not_fulfilled",
+  "execution_mode": "",
+  "output_source": "live_service",
+  "verdict": "incorrect",
+  "score": 0.0,
+  "fulfillment_status": "not_fulfilled",
+  "judge_summary": {
+    "status": "not_fulfilled",
+    "fulfillment_status": "not_fulfilled",
+    "verdict": "incorrect",
+    "score": 0.0,
+    "reason": "not_fulfilled · blocking=[(none)]",
+    "reason_source": "aggregated_fulfillment",
+    "reason_stage": "judge",
+    "is_formal_attribution": true,
+    "assessment_count": 4,
+    "blocking_count": 0,
+    "primary_failure_dimensions": [
+      {
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询明确表达了分析购买重疾险客户特征的需求，意图识别应输出客户分析类标签及必要的槽位信息（产品、时间）。实际输出返回了‘其他意图’且置信度0.5，未提取任何槽位，未触发回退机制，导致下游无法获取有效调度信息，严重偏离业务预期。因此所有阻塞性期望均未满足，整体判定为未满足。",
+        "expectation_id": "意图标签为客户分析类意图而非其他意图",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询明确表达了分析购买重疾险客户特征的需求，意图识别应输出客户分析类标签及必要的槽位信息（产品、时间）。实际输出返回了‘其他意图’且置信度0.5，未提取任何槽位，未触发回退机制，导致下游无法获取有效调度信息，严重偏离业务预期。因此所有阻塞性期望均未满足，整体判定为未满足。",
+        "expectation_id": "提取产品名称槽位",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询明确表达了分析购买重疾险客户特征的需求，意图识别应输出客户分析类标签及必要的槽位信息（产品、时间）。实际输出返回了‘其他意图’且置信度0.5，未提取任何槽位，未触发回退机制，导致下游无法获取有效调度信息，严重偏离业务预期。因此所有阻塞性期望均未满足，整体判定为未满足。",
+        "expectation_id": "提取时间范围槽位",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询明确表达了分析购买重疾险客户特征的需求，意图识别应输出客户分析类标签及必要的槽位信息（产品、时间）。实际输出返回了‘其他意图’且置信度0.5，未提取任何槽位，未触发回退机制，导致下游无法获取有效调度信息，严重偏离业务预期。因此所有阻塞性期望均未满足，整体判定为未满足。",
+        "expectation_id": "置信度满足阈值或触发降级回退",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      }
+    ]
+  },
+  "attribution_summary": {
+    "attribution_count": 5,
+    "causal_category": "needs_human_review",
+    "is_complete": true,
+    "is_formal_attribution": true,
+    "probe_count": 3,
+    "summary_text": "查询\"帮我看看上季度买了重疾险的客户都是啥样的？\"进入意图识别后，规则引擎 Tier 0 的 customer_portrait 正则 r\"客户.*(?:画像|分布|结构|分层)\" 因查询中客户后跟随的是口语化表达\"都是啥样的\"而非画像/分布/结构/分层等关键字而无法命中；Tier 1-3 的 NBEV 相关规则因查询不含 NBEV 信息同样未命中。所有规则层失效后进入 LLM 回退，而 INTENT_RECOGNITION_PROMPT 中 customer_portrait 的定义与 few-shot 示例未覆盖\"产品关联客户画像分析\"（如\"买了X产品的客户特征\"）这一查询模式，导致 LLM（qwen3-next-80b-a3b-instruct）无法将查询归类到 customer_portrait，最终返回 other/0.5。同时，低置信度(0.5)未触发 fallback 标志是因为 LLM 回退路径中 fallback 未被显式设为 True，且缺少基于 confidence 阈值的二次门控。整条因果链中，正则覆盖不足是规则层的直接根因，prompt 缺乏对应 few-shot 是 LLM 层的直接根因，两者形成双重防线同时失效。"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 4,
+    "protocol_gap_count": 1,
+    "consistency_gap_count": 0,
+    "recommended_fix_count": 2,
+    "issues": [
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+      "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug"
+    ]
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": true,
+  "quality_flags": [
+    "incorrect_intent",
+    "low_confidence",
+    "missing_slots",
+    "no_fallback",
+    "intent_contract_gate_failed",
+    "incorrect_intent",
+    "low_confidence",
+    "missing_slots",
+    "no_fallback",
+    "intent_contract_gate_failed",
+    "regex_coverage_gap",
+    "prompt_few_shot_deficiency",
+    "ungrounded_root_cause"
+  ],
+  "check_passed": false,
+  "issue_count": 5,
+  "fallback_count": 0,
+  "causal_category": "needs_human_review",
+  "divergence_stage": "intent_contract_gate",
+  "root_cause_summary": "查询\"帮我看看上季度买了重疾险的客户都是啥样的？\"进入意图识别后，规则引擎 Tier 0 的 customer_portrait 正则 r\"客户.*(?:画像|分布|结构|分层)\" 因查询中客户后跟随的是口语化表达\"都是啥样的\"而非画像/分布/结构/分层等关键字而无法命中；Tier 1-3 的 NBEV 相关规则因查询不含 NBEV 信息同样未命中。所有规则层失效后进入 LLM 回退，而 INTENT_RECOGNITION_PROMPT 中 customer_portrait 的定义与 few-shot 示例未覆盖\"产品关联客户画像分析\"（如\"买了X产品的客户特征\"）这一查询模式，导致 LLM（qwen3-next-80b-a3b-instruct）无法将查询归类到 customer_portrait，最终返回 other/0.5。同时，低置信度(0.5)未触发 fallback 标志是因为 LLM 回退路径中 fallback 未被显式设为 True，且缺少基于 confidence 阈值的二次门控。整条因果链中，正则覆盖不足是规则层的直接根因，prompt 缺乏对应 few-shot 是 LLM 层的直接根因，两者形成双重防线同时失效。",
+  "created_at": "2026-07-05T01:25:27.646867+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "ea904e3e-f067-4d12-8651-fff62f10c599"
+}

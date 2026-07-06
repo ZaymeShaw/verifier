@@ -1,0 +1,114 @@
+{
+  "project": "marketting-planning-intent",
+  "attributes": [
+    {
+      "trace_id": "7c4b187b-65e7-4bf4-9868-486bde15f2af",
+      "project_id": "marketting-planning-intent",
+      "case_id": "",
+      "expectation_attributions": [
+        {
+          "expectation_id": "intent_contract",
+          "causal_category": "insufficient_evidence"
+        },
+        {
+          "expectation_id": "marketting-planning-intent:intent_contract",
+          "causal_category": "insufficient_evidence"
+        }
+      ],
+      "causal_category": "implementation_bug",
+      "earliest_divergence": {
+        "node": "intent_contract_gate",
+        "actual": {
+          "intent": "customer_portrait",
+          "confidence": 1.0,
+          "raw_intent": "1001",
+          "ambiguous": false,
+          "fallback": false
+        },
+        "evidence": [
+          []
+        ],
+        "confidence": "medium"
+      },
+      "chain_nodes": [
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "failed",
+          "evidence": [
+            {
+              "query": "我想了解一下去年买过我们年金险的客户，他们的大致年龄分布和家庭结构是什么样的？"
+            },
+            {},
+            {
+              "actual": {
+                "intent": "customer_portrait",
+                "confidence": 1.0,
+                "raw_intent": "1001",
+                "ambiguous": false,
+                "fallback": false
+              }
+            },
+            {}
+          ]
+        }
+      ],
+      "probe_results": [
+        {
+          "probe_id": "llm_call",
+          "status": "failed",
+          "evidence": [
+            "Agent.__init__() got an unexpected keyword argument 'memory'"
+          ]
+        }
+      ],
+      "evidence_coverage": {
+        "query": true,
+        "actual": true,
+        "expected": false,
+        "execution_trace": true
+      },
+      "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'target_value': None, 'path_types': None, 'raw_intent': '1001', 'slots': {}, 'entities': [], 'ambiguous': False, 'fallback': False, 'errors': []}，最早差异位于 intent_contract_gate。",
+      "verification_steps": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ],
+      "patch_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "needs_human_review": true,
+      "scenario": "intent_recognition",
+      "summary": {
+        "causal_category": "insufficient_evidence",
+        "attribution_count": 2,
+        "probe_count": 1,
+        "summary_text": "attribute agent LLM 调用失败。",
+        "is_complete": false,
+        "is_formal_attribution": false
+      },
+      "analysis_method": "current_case_intent_contract_trace",
+      "analysis_quality": {
+        "passed": false,
+        "status": "next_verification_step",
+        "missing": [
+          "attribute LLM result",
+          "intent_recognition_internal_evidence"
+        ]
+      },
+      "incomplete_reason": "attribute agent LLM 调用失败。",
+      "quality_flags": [
+        "intent_contract_gate_passed",
+        "attribute_blocked"
+      ]
+    }
+  ]
+}

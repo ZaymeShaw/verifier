@@ -4,6 +4,7 @@ then retrieves relevant entries per query with semantic vector search."""
 
 from __future__ import annotations
 
+import logging
 import math
 import os
 from pathlib import Path
@@ -14,9 +15,22 @@ try:
 except ImportError:  # pragma: no cover - optional in test env
     dashscope = None
 import yaml
-from agno.knowledge.document import Document
-from agno.knowledge.embedder import Embedder
-from agno.vectordb.base import VectorDb
+from impl.core.config import load_bailian_env_md_key
+try:
+    from agno.knowledge.document import Document
+    from agno.knowledge.embedder import Embedder
+    from agno.vectordb.base import VectorDb
+except ImportError:  # pragma: no cover - optional in local schema/test env
+    class Document:
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+
+    class Embedder:
+        def __init__(self, dimensions: int = 0, **kwargs):
+            self.dimensions = dimensions
+
+    class VectorDb:
+        pass
 
 ROOT = Path(__file__).resolve().parents[2]
 KNOWLEDGE_ROOT = ROOT / "impl" / ".disabled_knowledge"  # Disabled to prevent Agno auto-persistence
@@ -28,7 +42,7 @@ DEFAULT_RETRIEVAL_TOP_K = 8
 class BailianEmbedder(Embedder):
     def __init__(self, api_key: Optional[str] = None, model: str = BAILIAN_EMBEDDING_MODEL):
         super().__init__(dimensions=BAILIAN_EMBEDDING_DIMENSIONS)
-        self.api_key = api_key or os.environ.get("BAILIAN_API_KEY") or os.environ.get("DASHSCOPE_API_KEY") or _load_bailian_key()
+        self.api_key = api_key or os.environ.get("BAILIAN_API_KEY") or os.environ.get("DASHSCOPE_API_KEY") or load_bailian_env_md_key()
         self.id = model
 
     def get_embedding(self, text: str) -> List[float]:
@@ -161,18 +175,6 @@ class SemanticVectorDb(VectorDb):
         return ["vector"]
 
 
-def _load_bailian_key() -> str:
-    path = ROOT / "env.md"
-    if not path.exists():
-        return ""
-    for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
-        lowered = line.lower()
-        if lowered.startswith("百炼key") and "：" in line:
-            return line.split("：", 1)[1].strip()
-        if lowered.startswith("百炼key") and ":" in line:
-            return line.split(":", 1)[1].strip()
-    return ""
-
 
 def _cosine_similarity(left: List[float], right: List[float]) -> float:
     if not left or not right or len(left) != len(right):
@@ -228,6 +230,9 @@ class FieldKnowledgeEntry:
         if self.enums:
             lines.append(f"  enum: {', '.join(str(value) for value in self.enums)}")
         return "\n".join(lines)
+
+
+logger = logging.getLogger(__name__)
 
 
 class ProjectKnowledgeBase:
@@ -304,16 +309,16 @@ class ProjectKnowledgeBase:
             if documents:
                 self.vector_db.upsert(f"{self.project_id}:project_knowledge", documents)
             self._built = True
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[knowledge_base] build_from_project failed for {self.project_id}: {e} — retrieve() will return empty results")
 
     def build(self, field_definitions_path: str) -> None:
         if self._built:
             return
+        path = Path(field_definitions_path)
+        if not path.exists():
+            return
         try:
-            path = Path(field_definitions_path)
-            if not path.exists():
-                return
             with open(path, encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
             intents = data.get("intents", [])
@@ -330,8 +335,8 @@ class ProjectKnowledgeBase:
             self.vector_db.create()
             self.vector_db.upsert(f"{self.project_id}:field_definitions", documents)
             self._built = True
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[knowledge_base] build failed for {self.project_id} from {field_definitions_path}: {e} — retrieve() will return empty results")
 
     def retrieve(self, query: str, num_documents: Optional[int] = None, **_: Any) -> List[Dict[str, Any]]:
         limit = int(num_documents or DEFAULT_RETRIEVAL_TOP_K)

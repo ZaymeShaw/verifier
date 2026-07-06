@@ -1,0 +1,338 @@
+{
+  "project": "QA",
+  "trace": {
+    "trace_id": "42a02b76-6337-4817-894b-2ce636e5a2ec",
+    "project_id": "QA",
+    "case_id": "mock-agent-QA-49433e84",
+    "live_result": {
+      "project_id": "QA",
+      "case_id": "mock-agent-QA-49433e84",
+      "session_id": "",
+      "raw_input": {
+        "query": "请问怎么联系人工客服？"
+      },
+      "normalized_request": {
+        "input": {
+          "question": ""
+        },
+        "metadata": {
+          "ready": [
+            "output",
+            "reference"
+          ],
+          "source": "mock_agent_llm"
+        },
+        "scenario": "qa_gold_answer",
+        "data_quality_flags": [
+          "missing_question",
+          "missing_actual_answer",
+          "missing_golden_answer"
+        ],
+        "output": {
+          "actual_answer": ""
+        }
+      },
+      "call_status": "succeeded",
+      "extracted_output": {
+        "actual_answer": ""
+      },
+      "output_source": "live_service",
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-01T17:06:47.631890+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-01T17:06:47.631907+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-01T17:06:47.710183+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "failed",
+        "started_at": "2026-07-01T17:06:47.710237+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "failed",
+        "started_at": "2026-07-01T17:06:47.713146+00:00"
+      },
+      {
+        "attempt": 2,
+        "status": "failed",
+        "started_at": "2026-07-01T17:06:47.713186+00:00"
+      },
+      {
+        "attempt": 2,
+        "status": "failed",
+        "started_at": "2026-07-01T17:06:47.934441+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-01T17:06:47.934478+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract missing"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations missing"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract missing"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": false,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations missing"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "collect_evidence",
+        "condition": "gate_failed_recoverable",
+        "reason": "consumer contract missing；business expectations missing",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 1,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "incomplete_or_human_review",
+        "condition": "retry_limit",
+        "reason": "state retry limit exceeded",
+        "retry_count": 1,
+        "stop_reason": "incomplete_retry_limit"
+      },
+      {
+        "from_state": "incomplete_or_human_review",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "incomplete_retry_limit"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      },
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "qa_gold_answer",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "created_at": "2026-07-01T17:06:47.710040+00:00"
+  },
+  "judge": {
+    "trace_id": "42a02b76-6337-4817-894b-2ce636e5a2ec",
+    "project_id": "QA",
+    "actual": {
+      "actual_answer": ""
+    }
+  },
+  "attribute": {
+    "trace_id": "42a02b76-6337-4817-894b-2ce636e5a2ec",
+    "project_id": "QA",
+    "case_id": "",
+    "causal_category": "needs_human_review",
+    "earliest_divergence": {
+      "node": "state_machine",
+      "evidence": [
+        "incomplete_retry_limit"
+      ],
+      "confidence": "unknown"
+    },
+    "chain_nodes": [
+      {
+        "status": "not_verified",
+        "evidence": [
+          "incomplete_retry_limit"
+        ]
+      }
+    ],
+    "evidence_coverage": {
+      "query": true,
+      "actual": true,
+      "expected": false,
+      "execution_trace": true
+    },
+    "root_cause_hypothesis": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+    "verification_steps": [
+      "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+    ],
+    "patch_direction": [
+      "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+    ],
+    "needs_human_review": true,
+    "scenario": "qa_gold_answer",
+    "summary": {
+      "causal_category": "needs_human_review",
+      "attribution_count": 0,
+      "probe_count": 0,
+      "summary_text": "incomplete_retry_limit",
+      "is_complete": false,
+      "is_formal_attribution": false
+    }
+  },
+  "cluster": {
+    "project_id": "QA",
+    "clusters": [
+      {
+        "cluster_id": "expectation::needs_human_review",
+        "mechanism": "insufficient_evidence_or_human_review",
+        "causal_category": "needs_human_review",
+        "needs_human_review": true,
+        "canonical_attribution": false,
+        "count": 1,
+        "representative_cases": [
+          "42a02b76-6337-4817-894b-2ce636e5a2ec"
+        ],
+        "representative_traces": [
+          "42a02b76-6337-4817-894b-2ce636e5a2ec"
+        ],
+        "common_root_cause": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+        "shared_failure_pattern": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+        "representative_diffs": [
+          {
+            "case_id": "42a02b76-6337-4817-894b-2ce636e5a2ec",
+            "node": "state_machine",
+            "evidence": [
+              "incomplete_retry_limit"
+            ]
+          }
+        ],
+        "minimal_fix_direction": [
+          "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+        ],
+        "verification_cases": [
+          "42a02b76-6337-4817-894b-2ce636e5a2ec"
+        ],
+        "next_actions": [
+          "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+        ]
+      }
+    ],
+    "common_root_cause": "",
+    "impact": "",
+    "priority": ""
+  },
+  "check": {
+    "passed": false,
+    "issues": [
+      "JudgeResult missing fulfillment_assessments/overall_fulfillment for the selected evaluation boundary.",
+      "JudgeResult missing business_expectations/expected snapshot; verdict is not tied to current-query requirements.",
+      "JudgeResult missing reference_generation_basis; expected output source is unclear.",
+      "QA qa_gold_answer requires reference.golden_answer.",
+      "Fallback decisions require human review before treating the chain as fully verified."
+    ],
+    "protocol_gaps": [
+      "JudgeResult missing fulfillment_assessments/overall_fulfillment for the selected evaluation boundary.",
+      "JudgeResult missing business_expectations/expected snapshot; verdict is not tied to current-query requirements.",
+      "JudgeResult missing reference_generation_basis; expected output source is unclear.",
+      "QA qa_gold_answer requires reference.golden_answer."
+    ],
+    "consistency_gaps": [
+      "Fallback decisions require human review before treating the chain as fully verified."
+    ],
+    "verification_results": [
+      "Structured fallback decisions recorded: 2.",
+      "Check categories passed current audit."
+    ],
+    "recommended_fixes": [
+      "Complete missing protocol outputs before treating the chain as valid.",
+      "Ensure all steps use the same trace_id and latest run output."
+    ],
+    "fallbacks": [
+      {
+        "reason": "incomplete_retry_limit",
+        "status": "needs_human_review"
+      },
+      {
+        "reason": "incomplete_retry_limit",
+        "status": "needs_human_review"
+      }
+    ]
+  }
+}

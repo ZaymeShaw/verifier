@@ -1,0 +1,80 @@
+{
+  "trace_id": "26847f88-5ea2-4c6a-a5da-b6eb8ccdbd55",
+  "project_id": "marketting-planning",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "marketting-planning:non_agent_routing",
+      "causal_category": "insufficient_evidence"
+    }
+  ],
+  "causal_category": "needs_human_review",
+  "earliest_divergence": {
+    "node": "intent_recognition",
+    "expected": "judge 未定义预期（business_expectations 为空）",
+    "actual": "stage=non_agent，系统将'市场推广计划'归类为非 agent 意图",
+    "evidence": [
+      "query='我们公司打算推出新产品，需要做一个市场推广计划，你能帮我规划一下吗？'",
+      "extracted_output.stage='non_agent'"
+    ],
+    "confidence": "low"
+  },
+  "chain_nodes": [
+    {
+      "status": "suspicious",
+      "evidence": [
+        "query 不含 NBEV、客户画像、队伍画像等系统已定义意图关键词",
+        "extracted_output.stage='non_agent' 表明系统将其路由为非 agent 意图",
+        "IntentType 枚举中无'产品推广计划'对应意图类型"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "extracted_output 含 planning_started + card_delta 事件",
+        "但 stage='non_agent' 下是否应触发 planning 流程无契约定义"
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        "event_summary.completed=true",
+        "canonical_names=['intent_detected','reasoning_message_content','planning_started','card_delta','done']"
+      ]
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": false,
+    "execution_trace": false,
+    "project_docs": true,
+    "code_or_config": true,
+    "unsupported_claims": [
+      "无法确认 non_agent 路由是否满足业务预期 — judge 未产出 business_expectations",
+      "无法确认 planning_started + card_delta 在 non_agent 阶段是否合理 — 无契约约束",
+      "无法获取系统实际回复内容 — extracted_output 仅含事件类型不含文本内容"
+    ]
+  },
+  "root_cause_hypothesis": "当前 case 的 query（'市场推广计划'）超出系统已定义意图范畴（NBEV 达成规划 / 队伍画像 / 客户画像），系统将其路由至 non_agent 阶段。由于 judge 未对该场景定义 business_expectations，无法确认系统行为是否满足业务预期。源码层面 intent_recognition 的规则匹配和 LLM prompt 均正确覆盖了已定义意图，但缺少对'产品推广/市场营销'类 out-of-scope query 的明确处理契约。",
+  "verification_steps": [
+    "确认系统在 non_agent 阶段返回的具体文案内容（需从 raw_response 或 SSE data 中提取）",
+    "定义 non_agent / out-of-scope 场景的 business_expectations：应返回拒识引导还是通用帮助",
+    "确认 planning_started + card_delta 在 non_agent 阶段是否违反设计意图"
+  ],
+  "patch_direction": [
+    "在 judge 侧补充 non_agent 场景的 business_expectations，明确该阶段应产生的事件类型和内容约束",
+    "若'产品推广计划'属于需支持的场景，扩展 IntentType 枚举和 intent_prompt 中的意图分类",
+    "在 intent_recognition 中为明确 out-of-scope query 增加快速拒识路径，避免进入 planning 流程"
+  ],
+  "needs_human_review": true,
+  "scenario": "intent_recognition",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 1,
+    "probe_count": 0,
+    "summary_text": "judge 未产出 business_expectations 与 fulfillment_assessments（verdict=uncertain），attribution_targets 为空；execution_trace 为空数组，无法追踪阶段内步骤；divergence_analysis 为 null。仅能基于源码静态分析确认系统将 query 路由至 non_agent 阶段，但无法判定该行为是否符合业务预期。需补充 judge 对 non_agent / out-of-scope 场景的 expectation 定义后方可完整归因。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  }
+}

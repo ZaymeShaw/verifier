@@ -1,0 +1,206 @@
+{
+  "trace_id": "6eb8e5b1-45dd-49ef-9449-2853cc1e720c",
+  "project_id": "client_search",
+  "verdict": "incorrect",
+  "business_expectations": [
+    {
+      "expectation_id": "VIP等级比较高应输出高等级筛选条件而非所有VIP",
+      "downstream_consumer": "ES搜索引擎",
+      "user_intent": "找出VIP等级比较高的客户",
+      "expected_outcome": "vipType字段使用CONTAINS操作符，值为黄金V1及以上等级（至少为[黄金V1,黄金V2,黄金V3,原黄金VIP,铂金V1,铂金V2,原铂金VIP,钻石VIP,金钻VIP,黑钻VIP]）或铂金及以上等级",
+      "required_capabilities": [
+        "vipType字段CONTAINS操作符",
+        "VIP等级枚举值",
+        "等级排序理解"
+      ],
+      "acceptance_criteria": [
+        "操作符不能是EXISTS（EXISTS会返回白银1等低等级客户，违背'比较高'语义）",
+        "值必须包含高等级VIP枚举（下限至少为黄金级别，不能包含白银1/2/3）",
+        "如果使用CONTAINS，枚举值列表应体现'比较高'的下限阈值"
+      ],
+      "boundary": {
+        "scope": "parser_condition_semantics_only"
+      },
+      "priority": "highest",
+      "evidence_refs": [
+        "vipType排序：白银1<白银2<白银3<黄金V1<黄金V2<黄金V3<原黄金VIP<铂金V1<铂金V2<原铂金VIP<钻石VIP<金钻VIP<黑钻VIP",
+        "extra_input_params中vip_level:high",
+        "enhanced_rules中'寿险VIP-及以上-黄金'规则：黄金及以上→[黄金V1...黑钻VIP]"
+      ]
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "VIP等级比较高应输出高等级筛选条件而非所有VIP",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "应输出vipType CONTAINS [黄金V1,黄金V2,黄金V3,原黄金VIP,铂金V1,铂金V2,原铂金VIP,钻石VIP,金钻VIP,黑钻VIP]或类似高等级范围",
+        "操作符应为CONTAINS配合枚举列表，体现下限阈值"
+      ],
+      "actual_evidence": [
+        "实际输出：{\"field\":\"vipType\",\"operator\":\"EXISTS\",\"value\":\"\"}",
+        "EXISTS操作符表示只要存在任意VIP等级即返回，包含最低等级白银1/2/3",
+        "未使用extra_input_params中的vip_level:high信号"
+      ],
+      "boundary_decision": {
+        "within_evaluable_scope": true,
+        "reason": "vipType字段、枚举值、排序关系和CONTAINS操作符均在ES数据库中可用，问题出在parser对'比较高'的语义理解，属于当前系统可优化范围"
+      },
+      "downstream_impact": "如果使用EXISTS，ES将返回所有VIP等级客户（包括白银1/2/3），用户会收到大量不符合'比较高'意图的低等级VIP客户",
+      "blocking": true,
+      "evidence_refs": [
+        "actual structured_output: [{\"field\":\"vipType\",\"operator\":\"EXISTS\",\"value\":\"\"}]",
+        "vipType枚举排序表明确显示白银等级处于最低端",
+        "extra_input_params.vip_level:'high'未被采纳"
+      ]
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "assessment_count": 1,
+    "blocking_expectations": [
+      "VIP等级比较高应输出高等级筛选条件而非所有VIP"
+    ]
+  },
+  "expected": {
+    "query_logic": "AND",
+    "expected_source": "not_available",
+    "reference_is_oracle": false
+  },
+  "actual": {
+    "query_logic": "AND"
+  },
+  "reasoning_summary": "用户query'VIP等级比较高'的核心意图是筛选等级处于较高档位的客户，需要设定下限阈值排除低等级VIP。parser输出vipType EXISTS仅判断是否存在VIP等级，会返回包括白银1/2/3在内的所有等级客户，与'比较高'的排序筛选语义存在根本性偏差。vipType字段在ES数据库中具备CONTAINS操作符和完整枚举排序能力，enhanced_rules中也定义了'以上/及以上'等排序筛选规则，extra_input_params更提供了vip_level:high信号，系统完全有能力输出正确的高等级筛选条件。该偏差属于parser语义理解问题，应判定为不满足用户意图。",
+  "judge_basis": "基于当前query、actual output、capability_manifest中vipType字段能力、enhanced_rules中的等级排序和'以上/及以上'规则，以及extra_input_params信号，判断parser条件语义是否满足用户意图。",
+  "judge_method": "intent-driven semantic evaluation。先理解用户'比较高'的语义→映射到VIP等级排序中的合理阈值→对比actual输出EXISTS是否等价。EXISTS语义为'存在任意VIP等级'，与'比较高'（需设定下限）存在根本性语义差异，不属于等价查询。",
+  "verdict_derivation": {
+    "primary_boundary": "parser_condition_semantics_only",
+    "assessment_summary": "唯一的blocking期望未满足：parser将'VIP等级比较高'解析为vipType EXISTS（存在任意VIP等级），这违背了'比较高'的核心筛选语义。EXISTS会返回白银1等最低等级客户，与用户意图根本冲突。",
+    "blocking_gaps": [
+      "VIP等级比较高应输出高等级筛选条件而非所有VIP：actual使用EXISTS返回所有VIP等级（含白银1/2/3低等级），未体现'比较高'的下限阈值语义"
+    ],
+    "why_verdict": "用户query'VIP等级比较高'明确要求筛选等级较高的客户，而非所有有VIP等级的客户。parser输出vipType EXISTS将所有等级（含最低白银1）的客户一并返回，与用户意图存在根本性偏差。vipType字段的CONTAINS操作符和完整枚举排序在ES数据库中均可用，extra_input_params也提供了vip_level:high信号，parser完全有能力输出更精确的高等级筛选条件。该偏差源于parser对程度修饰词'比较高'的理解不足，属于当前系统可优化的问题。",
+    "missing_evidence": [
+      "current intent/config expected conditions"
+    ]
+  },
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "field": "vipType",
+        "issue": "operator应为CONTAINS配合高等级枚举列表，actual为EXISTS",
+        "impact": "返回所有VIP等级客户（含白银1/2/3低等级），不符合'比较高'语义"
+      },
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    "query原文：'帮我找出所有VIP等级比较高的客户信息'",
+    "extra_input_params：vip_level:'high'",
+    "actual输出：vipType EXISTS",
+    "vipType排序：白银1<白银2<白银3<黄金V1<黄金V2<黄金V3<原黄金VIP<铂金V1<铂金V2<原铂金VIP<钻石VIP<金钻VIP<黑钻VIP",
+    "enhanced_rules'寿险VIP-及以上-黄金'：黄金及以上→[黄金V1...黑钻VIP]",
+    "enhanced_rules'寿险VIP-以上-黄金'：黄金以上→[铂金V1...黑钻VIP]"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "evaluable_errors": [
+      "parser将程度修饰词'比较高'错误理解为'存在任意VIP等级'，未将'比较高'映射为VIP等级排序中的下限阈值",
+      "parser未利用extra_input_params中vip_level:high信号来辅助确定阈值",
+      "EXISTS操作符语义为存在性判断，与'比较高'要求的排序筛选语义根本不同"
+    ],
+    "reasoning": "vipType字段、完整枚举值（白银1~黑钻VIP）、等级排序关系和CONTAINS操作符均在ES数据库中可用，不存在外部能力限制导致无法输出正确条件。问题完全在于parser对自然语言'比较高'的语义理解，属于当前系统可优化范围（大模型理解、prompt或后处理逻辑），应纳入评估。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "parser_condition_semantics_only",
+    "primary_boundary_name": "仅评估Parser条件语义",
+    "judge_question": "parser输出的vipType EXISTS条件是否在语义上等价于用户query'VIP等级比较高'的筛选意图？",
+    "verdict_basis": "对比parser条件语义与用户意图语义：EXISTS（存在任意等级）vs '比较高'（需设定下限阈值），两者不具语义等价性",
+    "boundary_sources": "projects/client_search/judge_boundary-template.md, projects/client_search/config.md, capability_manifest中vipType字段定义和排序",
+    "conflict_policy": "当parser条件形态与用户意图存在语义差异时，以用户意图为准判断是否正确筛选"
+  },
+  "consumer_contract": {
+    "consumer": "agent_portal",
+    "contract": "将自然语言查询解析为可执行的ES搜索条件",
+    "application_boundary": {
+      "downstream_result_set_available": false,
+      "judge_scope": "parser_condition_semantics_only"
+    }
+  },
+  "intent_model": {
+    "raw_user_request": "帮我找出所有VIP等级比较高的客户信息",
+    "explicit_intents": [
+      "筛选VIP等级较高的客户",
+      "获取符合条件的客户信息"
+    ],
+    "implicit_business_intents": [
+      "在VIP等级排序中设定下限阈值，排除低等级VIP（如白银等级）",
+      "利用extra_input_params中的vip_level:high信号辅助判断"
+    ],
+    "constraints": {
+      "extra_input_params": {
+        "vip_level": "high"
+      }
+    },
+    "success_definition": "仅返回VIP等级处于较高档位的客户（至少黄金及以上或铂金及以上），不包含白银等低等级VIP客户",
+    "blocking_requirements": [
+      "VIP等级筛选条件必须体现'比较高'的语义——即设定合理下限阈值，不能使用EXISTS返回所有等级"
+    ],
+    "nice_to_have_requirements": [
+      "明确具体的VIP等级阈值（如黄金及以上或铂金及以上）",
+      "结合extra_input_params的vip_level信号精确化阈值"
+    ],
+    "intent_evidence": [
+      "用户query中'比较高'是修饰VIP等级的程度副词，暗示需要排序筛选而非全量返回",
+      "extra_input_params中vip_level:high进一步确认用户期望高等级VIP"
+    ]
+  },
+  "reconstructed_intent": "用户希望找出寿险VIP等级处于较高档位的客户。'比较高'是程度修饰，暗示需要按VIP等级排序设定下限阈值（至少黄金级别以上），排除白银等低等级VIP。extra_input_params中vip_level:high进一步印证用户期望高等级筛选。合理输出应为vipType CONTAINS配合中高等级枚举列表，而非EXISTS返回全量VIP。",
+  "semantic_equivalence_checks": [
+    {
+      "expected_fragment": "vipType CONTAINS [较高等级枚举列表]",
+      "actual_fragment": "vipType EXISTS",
+      "equivalent": false,
+      "basis": "EXISTS返回所有VIP等级（含最低白银1），CONTAINS配合高等级列表仅返回中高等级。两者结果集完全不同，不存在语义等价。'比较高'暗示排序筛选，EXISTS不体现任何排序或阈值语义。"
+    }
+  ],
+  "reference_generation_basis": {
+    "source": "从当前query语义、vipType排序定义和enhanced_rules推导合理预期条件",
+    "alignment_to_actual_shape": "预期输出格式与actual一致（field/operator/value三元组），但operator应为CONTAINS且value应为高等级枚举列表",
+    "evidence": [
+      "vipType排序：白银1<白银2<白银3<黄金V1<黄金V2<黄金V3<原黄金VIP<铂金V1<铂金V2<原铂金VIP<钻石VIP<金钻VIP<黑钻VIP",
+      "enhanced_rules'寿险VIP-及以上-黄金'：黄金及以上→[黄金V1,黄金V2,黄金V3,原黄金VIP,铂金V1,铂金V2,原铂金VIP,钻石VIP,金钻VIP,黑钻VIP]",
+      "extra_input_params.vip_level:'high'"
+    ],
+    "comparison_basis": "client_search wrong/missing/extra customer-search coverage",
+    "expected_source": "not_available"
+  },
+  "scenario": "parser_condition_semantics_only",
+  "needs_human_review": false,
+  "quality_flags": [
+    "parser未能区分程度修饰词'比较高'与存在性判断的语义差异",
+    "extra_input_params中的vip_level信号未被利用",
+    "输出条件过于宽泛，会导致大量无关低等级VIP客户被返回"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[VIP等级比较高应输出高等级筛选条件而非所有VIP] · 如果使用EXISTS，ES将返回所有VIP等级客户（包括白银1/2/3），用户会收到大量不符合'比较高'意图的低等级VIP客户",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "VIP等级比较高应输出高等级筛选条件而非所有VIP",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "如果使用EXISTS，ES将返回所有VIP等级客户（包括白银1/2/3），用户会收到大量不符合'比较高'意图的低等级VIP客户",
+        "within_evaluable_scope": true,
+        "evidence": "实际输出：{\"field\":\"vipType\",\"operator\":\"EXISTS\",\"value\":\"\"} | EXISTS操作符表示只要存在任意VIP等级即返回，包含最低等级白银1/2/3 | 未使用extra_input_params中的vip_level:high信号 | 应输出vipType CONTAINS [黄金V1,黄金V2,黄金V3,原黄金VIP,铂金V1,铂金V2,原铂金VIP,钻石VIP,金钻VIP,黑钻VIP]或类似高等级范围 | 操作符应为CONTAINS配合枚举列表，体现下限阈值 | actual structured_output: [{\"field\":\"vipType\",\"operator\":\"EXISTS\",\"value\":\"\"}] | vipType枚举排序表明确显示白银等级处于最低端 | extra_input_params.vip_level:'high'未被采纳"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 1,
+    "blocking_count": 1,
+    "is_formal_attribution": true
+  }
+}

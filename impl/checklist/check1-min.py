@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 import time, json, os, re, sys
 from datetime import datetime
+from impl.core.config import get_uat_base_url
 
 TS = datetime.now().strftime("%Y%m%d-%H%M%S")
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -34,7 +35,7 @@ def main():
 
     try:
         # Load frontend
-        d.get('http://127.0.0.1:8020/frontend/summary.html')
+        d.get(f'{get_uat_base_url()}/frontend/summary.html')
         time.sleep(2)
 
         # Select project

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+curl -sS -X POST 'http://127.0.0.1:8020/api/live_run' -H 'Content-Type: application/json' --data-raw '{"input": {"expected_intent": "", "id": "mock-agent-marketting-planning-270c2529", "input": {"query": "那你说在Facebook和LinkedIn上，哪个更适合推B2B的课啊？", "turns": [{"content": "想请你帮忙推广我们的企业培训课程。", "role": "user"}, {"content": "好的，您希望重点在线上还是线下推广？", "role": "assistant"}, {"content": "先看看线上吧。", "role": "user"}, {"content": "线上推广可以考虑搜索引擎广告、社交媒体营销和邮件营销。您倾向于哪种？", "role": "assistant"}, {"content": "社交媒体吧。", "role": "user"}], "user_intent": {"expected_path_types": ["ask_comparison", "platform_selection"], "expected_stage": "inquiry"}}, "metadata": {"source": "mock_agent_llm"}, "scenario": "intent_recognition", "source": "mock_agent_llm", "status": "pending"}, "project": "marketting-planning"}' --write-out '
+__HTTP_STATUS__:%{http_code}'

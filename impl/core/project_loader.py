@@ -81,7 +81,18 @@ def load_simple_yaml(path: Path) -> Dict[str, Any]:
                 parsed = []
             elif value == "{}":
                 parsed = {}
-            elif value.startswith("[") or value.startswith("{"):
+            elif value.startswith("[") and value.endswith("]"):
+                inner = value[1:-1].strip()
+                if not inner:
+                    parsed = []
+                else:
+                    # flow-style scalar list: [a, b, c] → ['a','b','c']；JSON 合法值优先
+                    try:
+                        parsed = json.loads(value)
+                    except json.JSONDecodeError:
+                        items = [item.strip() for item in inner.split(",") if item.strip()]
+                        parsed = [_parse_scalar(item) for item in items]
+            elif value.startswith("{") and value.endswith("}"):
                 try:
                     parsed = json.loads(value)
                 except json.JSONDecodeError:
@@ -91,10 +102,57 @@ def load_simple_yaml(path: Path) -> Dict[str, Any]:
     return data
 
 
+def _merged_common(data: Dict[str, Any]) -> Dict[str, Any]:
+    common = dict(data.get("common") or {})
+
+    if data.get("api") and not common.get("api"):
+        common["api"] = dict(data.get("api") or {})
+
+    application = dict(data.get("application") or {})
+    source = dict(common.get("source") or {})
+    if not source.get("repo") and application.get("external_repo"):
+        source["repo"] = application.get("external_repo")
+    common["source"] = source
+
+    start = dict(common.get("start") or {})
+    if not start.get("command") and application.get("start"):
+        start["command"] = application.get("start")
+    common["start"] = start
+
+    return common
+
+
+def _default_documents(project_root: Path) -> Dict[str, str]:
+    candidates = {
+        "application": "application.md",
+        "mock": "mock.md",
+        "evaluation": "evaluation.md",
+        "judge_boundary": "judge_boundary.md",
+        "attribution": "attribution.md",
+        "checklist": "checklist.md",
+        "implementation_standard": "implementation_standard.md",
+    }
+    return {key: rel for key, rel in candidates.items() if (project_root / rel).exists()}
+
+
 def list_projects() -> List[str]:
     if not PROJECTS_DIR.exists():
         return []
     return sorted(path.name for path in PROJECTS_DIR.iterdir() if (path / "project.yaml").exists())
+
+
+def _resolve_source_project(data: Dict[str, Any], project_root: Path) -> str:
+    """解析用户侧项目目录为绝对路径。
+
+    impl 侧运行时不依赖用户侧 project.yaml，但 LLM 可据此查找需求材料。
+    """
+    rel = data.get("source_project")
+    if not rel:
+        return ""
+    path = Path(str(rel))
+    if not path.is_absolute():
+        path = (project_root / path).resolve()
+    return str(path) if path.exists() else ""
 
 
 def load_project(project_id: str) -> ProjectSpec:
@@ -103,17 +161,26 @@ def load_project(project_id: str) -> ProjectSpec:
     if not cfg_path.exists():
         raise FileNotFoundError(f"project config not found: {cfg_path}")
     data = load_simple_yaml(cfg_path)
+    common = _merged_common(data)
+    documents = _default_documents(project_root)
+    documents.update(dict(data.get("documents") or {}))
     return ProjectSpec(
         project_id=str(data.get("project_id") or project_id),
         name=str(data.get("name") or project_id),
         description=str(data.get("description") or ""),
-        adapter=str(data.get("adapter") or "adapter.py"),
+        adapter="adapter.py",
+        field_provider_module=str(data.get("field_provider_module") or ""),
+        field_provider_class=str(data.get("field_provider_class") or ""),
         capabilities=list(data.get("capabilities") or []),
-        documents=dict(data.get("documents") or {}),
-        api=dict(data.get("api") or {}),
+        common=common,
+        extra=dict(data.get("extra") or {}),
+        documents=documents,
+        api=dict(common.get("api") or data.get("api") or {}),
         application=dict(data.get("application") or {}),
         frontend_extensions=dict(data.get("frontend_extensions") or {}),
+        endpoint_discovery=dict(data.get("endpoint_discovery") or {}),
         root=str(project_root),
+        source_project=_resolve_source_project(data, project_root),
     )
 
 
@@ -127,6 +194,29 @@ def load_adapter(spec: ProjectSpec) -> ProjectAdapter:
     module_spec.loader.exec_module(module)
     adapter_cls = getattr(module, "Adapter")
     return adapter_cls(spec)
+
+
+def load_field_provider(spec: ProjectSpec) -> Optional[Any]:
+    """根据 ProjectSpec 声明动态加载项目专属字段定义 provider，未声明则返回 None。
+
+    项目在 project.yaml 里声明 field_provider_module + field_provider_class，
+    核心代码无需对 project_id 做分支判断。
+    """
+    if not spec.field_provider_module or not spec.field_provider_class:
+        return None
+    module_path = Path(spec.root) / spec.field_provider_module
+    if not module_path.exists():
+        return None
+    module_name = f"impl_project_{spec.project_id}_field_provider"
+    module_spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if module_spec is None or module_spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(module_spec)
+    module_spec.loader.exec_module(module)
+    provider_cls = getattr(module, spec.field_provider_class, None)
+    if provider_cls is None:
+        return None
+    return provider_cls(spec)
 
 
 def load_project_document(spec: ProjectSpec, key: str) -> str:

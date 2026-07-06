@@ -1,0 +1,295 @@
+{
+  "project_id": "client_search",
+  "datasets": [
+    {
+      "dataset_id": "client_search_single_condition",
+      "name": "single_condition mock 数据集",
+      "dimension_type": "single_condition",
+      "description": "mock_agent 生成的 single_condition 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-client_search-b4a575aa",
+          "input": {
+            "user_text": "帮我查一下所有买过年金险的客户",
+            "user_id": "user123",
+            "trace_id": "trace-12345",
+            "session_id": "session-12345",
+            "source": "web",
+            "extra_input_params": {
+              "pCategorys": [
+                "年金险"
+              ]
+            }
+          },
+          "scenario": "single_condition",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "client_search_multi_condition_and",
+      "name": "multi_condition_and mock 数据集",
+      "dimension_type": "multi_condition_and",
+      "description": "mock_agent 生成的 multi_condition_and 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-client_search-444c7ed4",
+          "input": {
+            "user_text": "帮我找找那些买了重疾险，每年交的保费超过 5000 块，年龄在 30 到 40 岁之间的女客户。",
+            "user_id": "default_user",
+            "trace_id": "trace_123",
+            "session_id": "session_456",
+            "source": "chat",
+            "extra_input_params": {
+              "clientSex": "女",
+              "clientAge": {
+                "min": 30,
+                "max": 40
+              },
+              "annPremSegNum": {
+                "min": 5000
+              },
+              "pCategorys": [
+                "重疾险"
+              ]
+            }
+          },
+          "scenario": "multi_condition_and",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "client_search_product_category_or",
+      "name": "product_category_or mock 数据集",
+      "dimension_type": "product_category_or",
+      "description": "mock_agent 生成的 product_category_or 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-client_search-b8ffeda0",
+          "input": {
+            "user_text": "我想找一下那些买了重疾险或者年金险的客户",
+            "user_id": "user_default",
+            "trace_id": "trace_001",
+            "session_id": "session_001",
+            "source": "web",
+            "extra_input_params": {
+              "pCategorys": [
+                "重疾险",
+                "年金险"
+              ]
+            }
+          },
+          "scenario": "product_category_or",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "client_search_product_exclusion",
+      "name": "product_exclusion mock 数据集",
+      "dimension_type": "product_exclusion",
+      "description": "mock_agent 生成的 product_exclusion 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-client_search-dfc33df9",
+          "input": {
+            "user_text": "帮我把所有55岁以上还没领取过生存金的女性年金险客户找出来，我想看看她们保单有没有到期没领钱的情况",
+            "user_id": "default_user_001",
+            "trace_id": "trace_20250327_001",
+            "session_id": "session_20250327_001",
+            "source": "customer_search_ui",
+            "extra_input_params": {
+              "clientAgeMin": 55,
+              "clientSex": "女",
+              "pCategorys": [
+                "年金险"
+              ],
+              "survivalBenefitStatus": "unclaimed"
+            }
+          },
+          "scenario": "product_exclusion",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "client_search_age_boundary",
+      "name": "age_boundary mock 数据集",
+      "dimension_type": "age_boundary",
+      "description": "mock_agent 生成的 age_boundary 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-client_search-63299bf3",
+          "input": {
+            "user_text": "帮我查一下所有年龄不到30岁的客户",
+            "user_id": "user_default_123",
+            "trace_id": "trace_abc_456",
+            "session_id": "session_xyz_789",
+            "source": "insurance_agent_portal",
+            "extra_input_params": {
+              "clientAge": {
+                "operator": "lt",
+                "value": 30
+              }
+            }
+          },
+          "scenario": "age_boundary",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "client_search_premium_unit_conversion",
+      "name": "premium_unit_conversion mock 数据集",
+      "dimension_type": "premium_unit_conversion",
+      "description": "mock_agent 生成的 premium_unit_conversion 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-client_search-414dbb80",
+          "input": {
+            "user_text": "帮我找一下所有年缴保费超过2万、购买了重疾险和年金险的VIP女性客户",
+            "user_id": "default_user",
+            "trace_id": "default_trace",
+            "session_id": "default_session",
+            "source": "premium_unit_conversion",
+            "extra_input_params": {
+              "annPremSegNum": {
+                "$gt": 20000
+              },
+              "pCategorys": {
+                "$all": [
+                  "重疾险",
+                  "年金险"
+                ]
+              },
+              "clientSex": "女",
+              "vipLevel": "VIP"
+            }
+          },
+          "scenario": "premium_unit_conversion",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "client_search_policy_status_filter",
+      "name": "policy_status_filter mock 数据集",
+      "dimension_type": "policy_status_filter",
+      "description": "mock_agent 生成的 policy_status_filter 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-client_search-04c1d0ef",
+          "input": {
+            "user_text": "帮我找一下所有保单已经失效的客户名单",
+            "user_id": "default_user",
+            "trace_id": "default_trace_id",
+            "session_id": "default_session_id",
+            "source": "search",
+            "extra_input_params": {
+              "policy_status": "失效"
+            }
+          },
+          "scenario": "policy_status_filter",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ]
+    },
+    {
+      "dataset_id": "client_search_unsupported_family_phrase",
+      "name": "unsupported_family_phrase mock 数据集",
+      "dimension_type": "unsupported_family_phrase",
+      "description": "mock_agent 生成的 unsupported_family_phrase 场景用例",
+      "case_count": 1,
+      "cases": [
+        {
+          "id": "mock-agent-client_search-41b144d3",
+          "input": {
+            "user_text": "帮我查一下所有买了重疾险，年龄在30岁以上的女性客户，年缴保费超过一万的那种",
+            "user_id": "user_001",
+            "trace_id": "trace_20250409_001",
+            "session_id": "session_abc123",
+            "source": "assistant",
+            "extra_input_params": {
+              "pCategorys": [
+                "重疾险"
+              ],
+              "clientAge": {
+                "min": 30
+              },
+              "clientSex": "女",
+              "annPremSegNum": {
+                "min": 10000
+              }
+            }
+          },
+          "scenario": "unsupported_family_phrase",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ]
+    }
+  ]
+}

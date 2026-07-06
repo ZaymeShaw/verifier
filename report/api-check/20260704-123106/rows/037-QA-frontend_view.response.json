@@ -1,0 +1,1461 @@
+{
+  "project_info": {
+    "project_id": "QA",
+    "name": "QA 评估项目",
+    "description": "评估已产出的问答输入、输出、参考答案或上下文证据，支持样本级 scenario。"
+  },
+  "run_trace_summary": {
+    "trace_id": "c260b933-cb70-496f-b6a4-a5b797d68a27",
+    "project_id": "QA",
+    "case_id": "mock-agent-QA-f8906092",
+    "live_result": {
+      "project_id": "QA",
+      "case_id": "mock-agent-QA-f8906092",
+      "session_id": "",
+      "raw_input": {
+        "input": {
+          "query": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+          "user_text": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+        },
+        "metadata": {
+          "channel": "在线客服",
+          "product_type": "重疾险",
+          "session_id": "sess_123456",
+          "timestamp": "2025-03-28T10:15:00Z",
+          "trace_id": "trace_qa_001",
+          "user_id": "user_98765"
+        },
+        "scenario": "qa_gold_answer"
+      },
+      "normalized_request": {
+        "input": {
+          "question": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？"
+        },
+        "metadata": {
+          "live_request_mapped": true,
+          "ready": [
+            "output",
+            "reference"
+          ],
+          "schema_ok": true,
+          "source": "mock_agent_llm"
+        },
+        "output": {
+          "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+        },
+        "reference": {
+          "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+        },
+        "scenario": "qa_gold_answer"
+      },
+      "call_status": "succeeded",
+      "extracted_output": {
+        "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+      },
+      "output_source": "provided_output",
+      "interaction_mode": "single_turn"
+    },
+    "execution_mode": "",
+    "output_source": "provided_output",
+    "scenario": "qa_gold_answer",
+    "evidence_refs": [
+      {
+        "ref_id": "",
+        "source": "",
+        "kind": "",
+        "stage": "",
+        "summary": "",
+        "location": ""
+      }
+    ],
+    "status": "ok",
+    "created_at": "2026-07-04T04:31:06.636816+00:00",
+    "state_history": [
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T04:31:06.634856+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T04:31:06.634870+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T04:31:06.636842+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T04:31:06.636863+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T04:36:31.243914+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T04:36:31.243995+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T04:36:31.244044+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T04:37:43.830334+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T04:39:24.901627+00:00",
+        "status": "succeeded"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T04:39:24.901707+00:00",
+        "status": "skipped"
+      },
+      {
+        "attempt": 1,
+        "started_at": "2026-07-04T04:39:24.922971+00:00",
+        "status": "succeeded"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "reason": "trace exists",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "reason": "consumer contract available",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "reason": "business expectations available",
+        "recommended_transition": "build_business_expectations",
+        "recoverable": true
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "reason": "fulfillment assessments cover expectations",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "reason": "fulfillment boundary available",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "reason": "derived verdict matches fulfillment state",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "reason": "no contradictions",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "reason": "no unsupported claims",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "reason": "fulfillment assessments cover expectations",
+        "recommended_transition": "evaluate_fulfillment",
+        "recoverable": true
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "reason": "attribute targets fulfillment gaps",
+        "recommended_transition": "finalize",
+        "recoverable": false
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "reason": "probe evidence or blocked reason available",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": true
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "reason": "expectation attribution evidence available",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": false
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "reason": "causal category supported",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": true
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "reason": "improvement direction available",
+        "recommended_transition": "run_attribution_probes",
+        "recoverable": true
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "reason": "finalization ready",
+        "recommended_transition": "",
+        "recoverable": false
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "reason": "no contradictions",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "reason": "no unsupported claims",
+        "recommended_transition": "collect_evidence",
+        "recoverable": true
+      }
+    ],
+    "transition_decisions": [
+      {
+        "condition": "always",
+        "from_state": "prepare_trace",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "mock_or_input"
+      },
+      {
+        "condition": "always",
+        "from_state": "mock_or_input",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "execute_or_capture"
+      },
+      {
+        "condition": "always",
+        "from_state": "execute_or_capture",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "collect_evidence"
+      },
+      {
+        "condition": "always",
+        "from_state": "collect_evidence",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "build_business_expectations"
+      },
+      {
+        "condition": "always",
+        "from_state": "build_business_expectations",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "evaluate_fulfillment"
+      },
+      {
+        "condition": "always",
+        "from_state": "evaluate_fulfillment",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "fulfillment_critic"
+      },
+      {
+        "condition": "fulfillment_requires_attribute",
+        "from_state": "fulfillment_critic",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "attribute_expectations"
+      },
+      {
+        "condition": "always",
+        "from_state": "attribute_expectations",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "run_attribution_probes"
+      },
+      {
+        "condition": "always",
+        "from_state": "run_attribution_probes",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "attribution_critic"
+      },
+      {
+        "condition": "always",
+        "from_state": "attribution_critic",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": "",
+        "to_state": "finalize"
+      },
+      {
+        "condition": "stop",
+        "from_state": "finalize",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed",
+        "to_state": "completed"
+      }
+    ],
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "turn_index": 0
+  },
+  "reference_panel": {
+    "reference": {
+      "golden_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+    },
+    "source": "input",
+    "actual": {
+      "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+    }
+  },
+  "judge_panel": {
+    "trace_id": "c260b933-cb70-496f-b6a4-a5b797d68a27",
+    "project_id": "QA",
+    "verdict": "incorrect",
+    "expected": {
+      "actual_answer": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+    },
+    "actual": {
+      "actual_answer": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。"
+    },
+    "consumer_contract": {
+      "application_boundary": "仅评估实际答复与标准答案的语义一致性及事实准确性，不验证外部联络方式的真实性。",
+      "consumer": "重疾险投保用户",
+      "contract": "客服需提供准确、完整的理赔申请指南，尤其是联系方式不能有误，避免延误用户获得赔付。",
+      "reference_contract": "golden_answer: 拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+    },
+    "intent_model": {
+      "blocking_requirements": [
+        "提供的客服联系方式必须真实可用",
+        "关键理赔步骤（联系、材料、时效）必须覆盖"
+      ],
+      "constraints": {
+        "domain": "重疾险理赔",
+        "information_accuracy": "联系方式与流程信息必须真实，不能虚构"
+      },
+      "explicit_intents": [
+        "获取重疾险确诊癌症后的理赔申请具体步骤",
+        "了解需要准备的材料和联系方式"
+      ],
+      "implicit_business_intents": [
+        "希望得到准确、可以直接操作的联系方式与流程",
+        "期望客服答复清晰、可靠，以便顺利获得赔付"
+      ],
+      "intent_evidence": [
+        "问题明确指向理赔申请操作流程",
+        "用户未提供具体保单信息，但期待通用流程"
+      ],
+      "nice_to_have_requirements": [
+        "语气友好、安抚用户情绪",
+        "补充额外的便民提示"
+      ],
+      "raw_user_request": "我买的重疾险，万一确诊了癌症，具体怎么申请理赔啊？",
+      "success_definition": "用户获得正确、完整的理赔申请步骤，包括准确的客服联系方式、所需材料和预期处理时间，且信息可执行、无错误。"
+    },
+    "business_expectations": [
+      {
+        "expectation_id": "覆盖理赔关键步骤",
+        "downstream_consumer": "用户",
+        "user_intent": "了解具体申请理赔的步骤",
+        "expected_outcome": "给出拨打热线、提供保单号和诊断证明、3个工作日内赔付的信息",
+        "required_capabilities": [
+          "信息覆盖完整性"
+        ],
+        "acceptance_criteria": [
+          "实际答复明确包含联系方式（如客服热线）",
+          "明确提及需要提供保单号与诊断证明",
+          "明确提及3个工作日左右的审核赔付时效"
+        ],
+        "priority": "最高",
+        "evidence_refs": [
+          "run_trace.reference_contract.golden_answer"
+        ]
+      },
+      {
+        "expectation_id": "信息准确无虚构",
+        "downstream_consumer": "用户",
+        "user_intent": "依靠答复内容完成理赔申请",
+        "expected_outcome": "给出的客服热线应为通用“客服热线”或经核实的真实号码，不得出现类似“400-xxx-xxxx”的占位符",
+        "required_capabilities": [
+          "事实准确性"
+        ],
+        "acceptance_criteria": [
+          "联系方式不包含占位符（如xxx）",
+          "若给出具体号码，应与金标准中的‘客服热线’语义等价，且不能是明显虚构的号码"
+        ],
+        "priority": "最高",
+        "evidence_refs": [
+          "run_trace.raw_response",
+          "run_trace.reference_contract.golden_answer"
+        ]
+      },
+      {
+        "expectation_id": "答复清晰礼貌",
+        "downstream_consumer": "用户",
+        "user_intent": "获取信息同时希望体验良好",
+        "expected_outcome": "使用礼貌用语，结构清晰，避免冰冷机械的表述",
+        "required_capabilities": [
+          "语言表达"
+        ],
+        "acceptance_criteria": [
+          "答复包含礼貌引导语（如‘您只需’、‘我们会安排专人跟进’）",
+          "信息组织有条理，易于理解"
+        ],
+        "priority": "中",
+        "evidence_refs": [
+          "run_trace.extracted_output"
+        ]
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "覆盖理赔关键步骤",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "金标准要求：拨打客服热线、提供保单号和诊断证明、3个工作日内赔付"
+        ],
+        "actual_evidence": [
+          "实际答复：拨打24小时客服热线、提供保单号和诊断证明、3个工作日内完成审核并打款"
+        ],
+        "downstream_impact": "用户能够获知完整的申请路径",
+        "blocking": true,
+        "evidence_refs": [
+          "run_trace.reference_contract.golden_answer",
+          "run_trace.extracted_output.actual_answer"
+        ]
+      },
+      {
+        "expectation_id": "信息准确无虚构",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "金标准中的联系方式应为‘客服热线’，无具体占位号码"
+        ],
+        "actual_evidence": [
+          "实际答复给出了‘400-xxx-xxxx’这一包含占位符的号码，属于虚构或不实信息"
+        ],
+        "downstream_impact": "用户若拨打此号码可能无法接通，导致理赔申请受阻，严重影响体验与信任",
+        "blocking": true,
+        "evidence_refs": [
+          "run_trace.extracted_output.actual_answer",
+          "run_trace.reference_contract.golden_answer"
+        ]
+      },
+      {
+        "expectation_id": "答复清晰礼貌",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "期望礼貌、易懂的表述"
+        ],
+        "actual_evidence": [
+          "实际答复使用‘您只需’‘我们会安排专人跟进’等亲切用语，表达清晰"
+        ],
+        "downstream_impact": "提升用户满意度，无负面影响",
+        "blocking": false,
+        "evidence_refs": [
+          "run_trace.extracted_output.actual_answer"
+        ]
+      }
+    ],
+    "overall_fulfillment": {
+      "assessment_count": 3,
+      "blocking_expectations": [
+        "信息准确无虚构"
+      ],
+      "status": "not_fulfilled"
+    },
+    "reconstructed_intent": "用户作为重疾险投保人，希望了解确诊癌症后申请理赔的具体操作流程，尤其关注联系方式、所需材料和审核时效，确保能够顺利、及时地获得赔付。",
+    "judge_basis": "基于 golden_answer 与实际答复进行语义一致性与事实准确性对比，判断是否满足业务期望。",
+    "judge_method": "采用关键信息提取与逐项比对法：拆分金标准为三个核心要素（联系方式、材料、时效），检查实际答复是否覆盖且无虚构信息。",
+    "semantic_equivalence_checks": [
+      {
+        "actual_fragment": "拨打我们24小时客服热线400-xxx-xxxx",
+        "basis": "实际答复添加了占位符号码，金标准仅为通用热线，语义上增加了未经证实的具体信息，不等价。",
+        "equivalent": false,
+        "expected_fragment": "拨打客服热线"
+      },
+      {
+        "actual_fragment": "提供保单号和诊断证明",
+        "basis": "完全一致",
+        "equivalent": true,
+        "expected_fragment": "提供保单号和诊断证明"
+      },
+      {
+        "actual_fragment": "一般3个工作日内完成审核并打款",
+        "basis": "语义一致，均表达3个工作日内完成赔付",
+        "equivalent": true,
+        "expected_fragment": "审核通过后3个工作日内赔付"
+      }
+    ],
+    "reference_generation_basis": {
+      "alignment_to_actual_shape": "均为自然语言步骤指导",
+      "evidence": [
+        "run_trace.reference_contract.golden_answer"
+      ],
+      "source": "人工标注的金标准答案"
+    },
+    "verdict_derivation": {
+      "assessment_summary": "根据金标准‘qa_gold_answer’场景评估，实际答复完整包含了理赔申请的三个核心动作（联系、材料、时效），语气礼貌，因此‘覆盖理赔关键步骤’与‘答复清晰礼貌’期望被满足。然而，在联系方式上新增了‘400-xxx-xxxx’这一占位符号码，金标准仅为‘客服热线’，该具体号码未经验证且极可能为虚构，无法确保用户能真正联系到客服，从而严重影响了核心业务的完成。因此‘信息准确无虚构’的阻断性期望未满足，导致整体评估为不通过。",
+      "blocking_gaps": [
+        "信息准确无虚构"
+      ],
+      "error_type": "answer_incorrect",
+      "primary_boundary": "qa_gold_answer",
+      "score_dimensions": [
+        {
+          "dimension": "correctness",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "completeness",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "key_point_coverage",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "faithfulness",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "relevance",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "usefulness",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "coherence",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "risk_control",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "clarity",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        }
+      ],
+      "taxonomy_error_types": [
+        "answer_incorrect"
+      ],
+      "why_verdict": "由于实际答复提供了‘400-xxx-xxxx’这一占位符号码，未能满足‘信息准确无虚构’的阻断性期望，导致用户可能因错误信息而无法顺利理赔，因此整体评估为未满足。"
+    },
+    "boundary_decision": {
+      "reasoning": "评估完全基于提供的金标准与实际输出，无外部依赖或不可控因素，因此属于可评估范围。",
+      "within_evaluable_scope": true
+    },
+    "evaluation_boundary": {
+      "boundary_sources": "project QA evaluation notes, scenario qa_gold_answer",
+      "conflict_policy": "以金标准答案为唯一事实参考；若实际答复添加未在标准答案中出现的具体细节，须评估其真实性，占位符或明显虚构视为不满足。",
+      "judge_question": "实际答复是否准确、完整地满足了用户关于理赔申请流程的询问，且不包含虚构信息？",
+      "primary_boundary_id": "qa_gold_answer",
+      "primary_boundary_name": "金标准答案对比",
+      "verdict_basis": "当阻断性期望（信息准确）未满足时，整体不通过。"
+    },
+    "wrong": [
+      {
+        "kind": "wrong",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "‘400-xxx-xxxx’为占位符或虚构号码，不是有效的客服电话",
+        "incomplete": false
+      }
+    ],
+    "extra": [
+      {
+        "kind": "extra",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "添加了具体客服热线号码（占位符）",
+        "incomplete": false
+      },
+      {
+        "kind": "extra",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": "添加了‘我们会安排专人跟进’的额外服务描述",
+        "incomplete": false
+      }
+    ],
+    "evidence": [
+      {
+        "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+        "type": "golden_answer"
+      },
+      {
+        "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+        "type": "actual_answer"
+      },
+      "scenario=qa_gold_answer",
+      "question_present=True",
+      "actual_answer_present=True",
+      "golden_answer_present=True"
+    ],
+    "reasoning_summary": "根据金标准‘qa_gold_answer’场景评估，实际答复完整包含了理赔申请的三个核心动作（联系、材料、时效），语气礼貌，因此‘覆盖理赔关键步骤’与‘答复清晰礼貌’期望被满足。然而，在联系方式上新增了‘400-xxx-xxxx’这一占位符号码，金标准仅为‘客服热线’，该具体号码未经验证且极可能为虚构，无法确保用户能真正联系到客服，从而严重影响了核心业务的完成。因此‘信息准确无虚构’的阻断性期望未满足，导致整体评估为不通过。",
+    "needs_human_review": false,
+    "scenario": "qa_gold_answer",
+    "summary": {
+      "assessment_count": 3,
+      "blocking_count": 2,
+      "fulfillment_status": "not_fulfilled",
+      "is_formal_attribution": true,
+      "primary_failure_dimensions": [
+        {
+          "blocking": true,
+          "downstream_impact": "用户若拨打此号码可能无法接通，导致理赔申请受阻，严重影响体验与信任",
+          "evidence": "实际答复给出了‘400-xxx-xxxx’这一包含占位符的号码，属于虚构或不实信息 | 金标准中的联系方式应为‘客服热线’，无具体占位号码 | run_trace.extracted_output.actual_answer | run_trace.reference_contract.golden_answer",
+          "expectation_id": "信息准确无虚构",
+          "status": "not_fulfilled",
+          "within_evaluable_scope": true
+        }
+      ],
+      "reason": "not_fulfilled · blocking=[信息准确无虚构] · 用户若拨打此号码可能无法接通，导致理赔申请受阻，严重影响体验与信任",
+      "reason_source": "aggregated_fulfillment"
+    },
+    "display_status": "not_fulfilled",
+    "display_reason": "not_fulfilled · blocking=[信息准确无虚构] · 用户若拨打此号码可能无法接通，导致理赔申请受阻，严重影响体验与信任",
+    "wrong_missing_extra": {
+      "wrong": [
+        {
+          "kind": "wrong",
+          "error_type": "",
+          "evidence_ref": "",
+          "raw": "‘400-xxx-xxxx’为占位符或虚构号码，不是有效的客服电话",
+          "incomplete": false
+        }
+      ],
+      "extra": [
+        {
+          "kind": "extra",
+          "error_type": "",
+          "evidence_ref": "",
+          "raw": "添加了具体客服热线号码（占位符）",
+          "incomplete": false
+        },
+        {
+          "kind": "extra",
+          "error_type": "",
+          "evidence_ref": "",
+          "raw": "添加了‘我们会安排专人跟进’的额外服务描述",
+          "incomplete": false
+        }
+      ]
+    },
+    "blocked_expectations": [
+      {
+        "expectation_id": "覆盖理赔关键步骤",
+        "status": "fulfilled",
+        "expected_evidence": [
+          "金标准要求：拨打客服热线、提供保单号和诊断证明、3个工作日内赔付"
+        ],
+        "actual_evidence": [
+          "实际答复：拨打24小时客服热线、提供保单号和诊断证明、3个工作日内完成审核并打款"
+        ],
+        "downstream_impact": "用户能够获知完整的申请路径",
+        "blocking": true,
+        "evidence_refs": [
+          "run_trace.reference_contract.golden_answer",
+          "run_trace.extracted_output.actual_answer"
+        ]
+      },
+      {
+        "expectation_id": "信息准确无虚构",
+        "status": "not_fulfilled",
+        "expected_evidence": [
+          "金标准中的联系方式应为‘客服热线’，无具体占位号码"
+        ],
+        "actual_evidence": [
+          "实际答复给出了‘400-xxx-xxxx’这一包含占位符的号码，属于虚构或不实信息"
+        ],
+        "downstream_impact": "用户若拨打此号码可能无法接通，导致理赔申请受阻，严重影响体验与信任",
+        "blocking": true,
+        "evidence_refs": [
+          "run_trace.extracted_output.actual_answer",
+          "run_trace.reference_contract.golden_answer"
+        ]
+      }
+    ]
+  },
+  "attribute_panel": {
+    "trace_id": "c260b933-cb70-496f-b6a4-a5b797d68a27",
+    "project_id": "QA",
+    "case_id": "",
+    "analysis_method": "llm_call_failed",
+    "chain_nodes": [
+      {
+        "name": "",
+        "status": "failed",
+        "evidence": [
+          "Now I have the full picture. Let me synthesize the attribution analysis.\n\n**What happened**: The actual answer contained \"400-xxx-xxxx\" — a placeholder/fictional phone number — while the golden answer only says \"客服热线\" (customer service hotline). The judge correctly flagged this as `not_fulfilled` for the \"信息准确无虚构\" expectation.\n\n**Root cause analysis**: The answer was generated by `mock_agent_llm` (metadata source). The LLM hallucinated a specific phone number with obvious placeholder characters (\"xxx\"), failing to recognize that it should either omit the number entirely or use a generic description. The adapter (`adapter.py`) passes the `actual_answer` through without any content validation — it's designed purely for extraction, not sanitization. No node in the execution trace failed because the pipeline itself operated correctly; the defect was in the upstream LLM generation.\n\nThis is a **model_capability_gap**: the LLM lacked the capability to avoid fabricating specific contact details. The adapter's design doesn't include placeholder detection or output sanitization, which is a secondary design gap but not the root cause.\n\n```json\n{\n  \"expectation_attributions\": [\n    {\n      \"expectation_id\": \"信息准确无虚构\",\n      \"fulfillment_status\": \"not_fulfilled\",\n      \"causal_category\": \"model_capability_gap\",\n      \"earliest_divergence\": {\n        \"node\": \"mock_agent_llm（上游 LLM 生成）\",\n        \"expected\": \"通用客服热线描述，不含具体号码或占位符\",\n        \"actual\": \"400-xxx-xxxx（含占位符 xxx 的虚构电话号码）\",\n        \"evidence\": [\n          \"golden_answer: '拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。'\",\n          \"actual_answer: '您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。'\",\n          \"metadata.source = 'mock_agent_llm' 表明答案由 LLM 生成\"\n        ],\n        \"confidence\": \"high\"\n      },\n      \"causal_chain\": [\n        {\n          \"step\": 1,\n          \"node\": \"mock_agent_llm 生成回答\",\n          \"description\": \"LLM 接收到用户理赔咨询后，生成了包含具体电话号码的回答，但该号码为占位符 '400-xxx-xxxx'，属于虚构信息。LLM 在缺乏真实电话号码知识的情况下，不应自行编造具体号码。\",\n          \"status\": \"suspicious\"\n        },\n        {\n          \"step\": 2,\n          \"node\": \"adapter.extract_output\",\n          \"description\": \"adapter 的 extract_output 方法原样提取 actual_answer，未对内容做任何真实性校验或占位符检测。该方法是纯提取器，设计上不负责内容验证。\",\n          \"status\": \"normal\",\n          \"code_ref\": \"adapter.py:extract_output → return {'actual_answer': str(raw_response.get('actual_answer') or ...)}\"\n        },\n        {\n          \"step\": 3,\n          \"node\": \"judge 语义比对\",\n          \"description\": \"judge 将 actual_answer 与 golden_answer 进行语义比对，发现 '400-xxx-xxxx' 为占位符/虚构号码，判定 '信息准确无虚构' 期望未满足。\",\n          \"status\": \"normal\"\n        }\n      ],\n      \"suspected_locations\": [\n        {\n          \"type\": \"code\",\n          \"path\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py\",\n          \"location\": \"extract_output 方法（第 74-77 行）\",\n          \"reason\": \"该方法原样透传 actual_answer，未检测占位符模式（如 'xxx'）。虽然这不是根因，但可在此增加防御性校验作为兜底。\",\n          \"relevance\": \"secondary\"\n        },\n        {\n          \"type\": \"upstream\",\n          \"location\": \"mock_agent_llm 的 prompt 或生成配置（不在当前 source_file_catalog 中）\",\n          \"reason\": \"LLM prompt 未明确禁止编造具体联系方式，导致模型在不确定时自行填充占位符号码。这是根因所在。\",\n          \"relevance\": \"primary\"\n        }\n      ],\n      \"improvement_direction\": [\n        {\n          \"target\": \"LLM prompt 优化\",\n          \"action\": \"在 mock_agent_llm 的 system prompt 中增加约束：'如果无法提供真实的客服电话号码，请使用通用表述如\"客服热线\"或\"官方客服电话\"，严禁编造包含 xxx 等占位符的具体号码。'\",\n          \"priority\": \"高\"\n        },\n        {\n          \"target\": \"输出后处理校验\",\n          \"action\": \"在 adapter.extract_output 或上游输出阶段增加占位符检测规则，匹配模式如 '\\\\d{3,4}-xxx-xxxx' 或含 'xxx'/'xxxx' 的电话号码格式，命中时标记 data_quality_flags 或触发重新生成。\",\n          \"priority\": \"中\"\n        },\n        {\n          \"target\": \"judge 规则强化\",\n          \"action\": \"当前 judge 已能识别占位符问题，可在 evaluation_boundary 中显式列出常见占位符模式（xxx、****、#### 等）作为不实信息的判定依据。\",\n          \"priority\": \"低\"\n        }\n      ],\n      \"source_evidence\": [\n        \"golden_answer: '拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。'\",\n        \"actual_answer: '您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。'\",\n        \"metadata.source = 'mock_agent_llm'\",\n        \"judge.semantic_equivalence_checks[0]: expected='拨打客服热线', actual='拨打我们24小时客服热线400-xxx-xxxx', equivalent=false\"\n      ],\n      \"probe_evidence\": [],\n      \"incomplete_reason\": \"\"\n    }\n  ],\n  \"causal_category\": \"model_capability_gap\",\n  \"probe_results\": [],\n  \"analysis_method\": \"基于 judge 语义比对结果、execution_trace 全链路成功状态、adapter.py 源码分析，定位根因为上游 LLM（mock_agent_llm）在生成回答时编造了含占位符的具体电话号码。adapter 链路为纯透传，无内容校验环节。\",\n  \"chain_nodes\": [\n    {\n      \"name\": \"qa.sample.normalize\",\n      \"status\": \"normal\",\n      \"evidence\": [\n        \"scenario=qa_gold_answer\",\n        \"data_quality_flags=[]\"\n      ],\n      \"reason\": \"样本归一化正常，正确识别为 qa_gold_answer 场景，无数据质量标记。\"\n    },\n    {\n      \"name\": \"qa.output.read\",\n      \"status\": \"normal\",\n      \"evidence\": [\n        \"actual_answer 存在且可读\"\n      ],\n      \"reason\": \"成功读取上传样本的输出内容，actual_answer 非空。\"\n    },\n    {\n      \"name\": \"adapter.extract_output\",\n      \"status\": \"suspicious\",\n      \"evidence\": [\n        \"actual_answer_present=true\",\n        \"extracted 内容包含占位符 '400-xxx-xxxx'\"\n      ],\n      \"reason\": \"extract_output 原样提取了含占位符的 actual_answer，未做任何内容校验。该节点设计上不负责验证，但它是实际内容进入评估链路的最后一道关口。\"\n    },\n    {\n      \"name\": \"mock_agent_llm（上游，不在 execution_trace 中）\",\n      \"status\": \"suspicious\",\n      \"evidence\": [\n        \"metadata.source = 'mock_agent_llm'\",\n        \"actual_answer 含 '400-xxx-xxxx' 占位符\"\n      ],\n      \"reason\": \"LLM 在生成回答时编造了具体电话号码，且使用了明显的占位符字符 'xxx'。这是整条链路的根因分歧点。\"\n    }\n  ],\n  \"earliest_divergence\": {\n    \"node\": \"mock_agent_llm（上游 LLM 生成）\",\n    \"expected\": \"通用客服热线表述，不含具体号码或占位符\",\n    \"actual\": \"400-xxx-xxxx（含占位符 xxx 的虚构电话号码）\",\n    \"evidence\": [\n      \"golden_answer 仅写 '拨打客服热线'，无具体号码\",\n      \"actual_answer 写 '拨打我们24小时客服热线400-xxx-xxxx'\",\n      \"metadata.source = 'mock_agent_llm' 确认答案来源为 LLM 生成\"\n    ],\n    \"confidence\": \"high\"\n  },\n  \"evidence_coverage\": {\n    \"query\": true,\n    \"actual\": true,\n    \"expected\": true,\n    \"execution_trace\": true,\n    \"project_docs\": true,\n    \"code_or_config\": true,\n    \"unsupported_claims\": []\n  },\n  \"analysis_quality\": {\n    \"passed\": true,\n    \"missing\": [],\n    \"standard\": \"基于 judge 语义比对结果（含 semantic_equivalence_checks）、execution_trace 全链路成功状态、adapter.py 源码分析完成归因。根因定位到上游 LLM 生成环节，adapter 链路为纯透传无校验。\"\n  },\n  \"incomplete_reason\": \"\",\n  \"suspected_locations\": [\n    {\n      \"type\": \"code\",\n      \"path\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py\",\n      \"location\": \"extract_output 方法\",\n      \"reason\": \"原样透传 actual_answer，无占位符检测。可作为防御性校验的兜底插入点。\"\n    },\n    {\n      \"type\": \"upstream_config\",\n      \"location\": \"mock_agent_llm 的 prompt/生成配置\",\n      \"reason\": \"LLM prompt 未约束不得编造具体联系方式，导致模型输出含占位符的虚构号码。这是根因所在，但该文件不在当前 source_file_catalog 中。\"\n    }\n  ],\n  \"root_cause_hypothesis\": \"上游 LLM（mock_agent_llm）在生成理赔咨询回答时，试图让回答更具体可信，于是在'客服热线'后自行补充了 '400-xxx-xxxx'。但该号码包含明显的占位符字符 'xxx'，属于虚构信息。LLM 缺乏'不确定时不编造具体细节'的能力边界意识，同时 prompt 未对此类行为做约束。adapter 链路为纯透传，将所有内容原样交给 judge 评估，无中间校验环节——这在设计上是合理的（adapter 不应篡改被测输出），但意味着所有内容质量责任落在上游生成环节。\",\n  \"verification_steps\": [\n    \"检查 mock_agent_llm 的 system prompt 是否包含'不得编造具体联系方式'的约束\",\n    \"在 mock_agent_llm 的生成日志中确认该条回答的完整 prompt 上下文\",\n    \"验证 golden_answer 中是否确实没有提供具体客服电话号码（已确认：仅写'拨打客服热线'）\",\n    \"检查是否存在其他类似含占位符（xxx/****/####）的回答样本，评估影响面\"\n  ],\n  \"patch_direction\": [\n    \"在 mock_agent_llm 的 prompt 中增加硬约束：'回答中的联系方式如果无法确认真实号码，必须使用通用描述如\\\"客服热线\\\"\\\"官方电话\\\"，严禁编造任何含占位符（如 xxx、****）的号码。'\",\n    \"在 adapter.extract_output 或 output 读取阶段增加占位符正则检测（如 \\\\d{3,4}-xxx-xxxx），命中时自动添加 data_quality_flag='placeholder_detected'，阻止该样本进入正式评估或触发重新生成。\",\n    \"将占位符检测规则纳入 judge 的 evaluation_boundary，作为'信息准确无虚构'期望的自动化判定依据之一。\"\n  ],\n  \"needs_human_review\": false,\n  \"scenario\": \"qa_gold_answer\",\n  \"quality_flags\": []\n}\n```",
+          {
+            "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+            "type": "golden_answer"
+          },
+          {
+            "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+            "type": "actual_answer"
+          },
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=True",
+          "golden_answer_present=True"
+        ],
+        "reason": ""
+      }
+    ],
+    "earliest_divergence": {
+      "confidence": "high",
+      "evidence": [
+        "Now I have the full picture. Let me synthesize the attribution analysis.\n\n**What happened**: The actual answer contained \"400-xxx-xxxx\" — a placeholder/fictional phone number — while the golden answer only says \"客服热线\" (customer service hotline). The judge correctly flagged this as `not_fulfilled` for the \"信息准确无虚构\" expectation.\n\n**Root cause analysis**: The answer was generated by `mock_agent_llm` (metadata source). The LLM hallucinated a specific phone number with obvious placeholder characters (\"xxx\"), failing to recognize that it should either omit the number entirely or use a generic description. The adapter (`adapter.py`) passes the `actual_answer` through without any content validation — it's designed purely for extraction, not sanitization. No node in the execution trace failed because the pipeline itself operated correctly; the defect was in the upstream LLM generation.\n\nThis is a **model_capability_gap**: the LLM lacked the capability to avoid fabricating specific contact details. The adapter's design doesn't include placeholder detection or output sanitization, which is a secondary design gap but not the root cause.\n\n```json\n{\n  \"expectation_attributions\": [\n    {\n      \"expectation_id\": \"信息准确无虚构\",\n      \"fulfillment_status\": \"not_fulfilled\",\n      \"causal_category\": \"model_capability_gap\",\n      \"earliest_divergence\": {\n        \"node\": \"mock_agent_llm（上游 LLM 生成）\",\n        \"expected\": \"通用客服热线描述，不含具体号码或占位符\",\n        \"actual\": \"400-xxx-xxxx（含占位符 xxx 的虚构电话号码）\",\n        \"evidence\": [\n          \"golden_answer: '拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。'\",\n          \"actual_answer: '您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。'\",\n          \"metadata.source = 'mock_agent_llm' 表明答案由 LLM 生成\"\n        ],\n        \"confidence\": \"high\"\n      },\n      \"causal_chain\": [\n        {\n          \"step\": 1,\n          \"node\": \"mock_agent_llm 生成回答\",\n          \"description\": \"LLM 接收到用户理赔咨询后，生成了包含具体电话号码的回答，但该号码为占位符 '400-xxx-xxxx'，属于虚构信息。LLM 在缺乏真实电话号码知识的情况下，不应自行编造具体号码。\",\n          \"status\": \"suspicious\"\n        },\n        {\n          \"step\": 2,\n          \"node\": \"adapter.extract_output\",\n          \"description\": \"adapter 的 extract_output 方法原样提取 actual_answer，未对内容做任何真实性校验或占位符检测。该方法是纯提取器，设计上不负责内容验证。\",\n          \"status\": \"normal\",\n          \"code_ref\": \"adapter.py:extract_output → return {'actual_answer': str(raw_response.get('actual_answer') or ...)}\"\n        },\n        {\n          \"step\": 3,\n          \"node\": \"judge 语义比对\",\n          \"description\": \"judge 将 actual_answer 与 golden_answer 进行语义比对，发现 '400-xxx-xxxx' 为占位符/虚构号码，判定 '信息准确无虚构' 期望未满足。\",\n          \"status\": \"normal\"\n        }\n      ],\n      \"suspected_locations\": [\n        {\n          \"type\": \"code\",\n          \"path\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py\",\n          \"location\": \"extract_output 方法（第 74-77 行）\",\n          \"reason\": \"该方法原样透传 actual_answer，未检测占位符模式（如 'xxx'）。虽然这不是根因，但可在此增加防御性校验作为兜底。\",\n          \"relevance\": \"secondary\"\n        },\n        {\n          \"type\": \"upstream\",\n          \"location\": \"mock_agent_llm 的 prompt 或生成配置（不在当前 source_file_catalog 中）\",\n          \"reason\": \"LLM prompt 未明确禁止编造具体联系方式，导致模型在不确定时自行填充占位符号码。这是根因所在。\",\n          \"relevance\": \"primary\"\n        }\n      ],\n      \"improvement_direction\": [\n        {\n          \"target\": \"LLM prompt 优化\",\n          \"action\": \"在 mock_agent_llm 的 system prompt 中增加约束：'如果无法提供真实的客服电话号码，请使用通用表述如\"客服热线\"或\"官方客服电话\"，严禁编造包含 xxx 等占位符的具体号码。'\",\n          \"priority\": \"高\"\n        },\n        {\n          \"target\": \"输出后处理校验\",\n          \"action\": \"在 adapter.extract_output 或上游输出阶段增加占位符检测规则，匹配模式如 '\\\\d{3,4}-xxx-xxxx' 或含 'xxx'/'xxxx' 的电话号码格式，命中时标记 data_quality_flags 或触发重新生成。\",\n          \"priority\": \"中\"\n        },\n        {\n          \"target\": \"judge 规则强化\",\n          \"action\": \"当前 judge 已能识别占位符问题，可在 evaluation_boundary 中显式列出常见占位符模式（xxx、****、#### 等）作为不实信息的判定依据。\",\n          \"priority\": \"低\"\n        }\n      ],\n      \"source_evidence\": [\n        \"golden_answer: '拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。'\",\n        \"actual_answer: '您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。'\",\n        \"metadata.source = 'mock_agent_llm'\",\n        \"judge.semantic_equivalence_checks[0]: expected='拨打客服热线', actual='拨打我们24小时客服热线400-xxx-xxxx', equivalent=false\"\n      ],\n      \"probe_evidence\": [],\n      \"incomplete_reason\": \"\"\n    }\n  ],\n  \"causal_category\": \"model_capability_gap\",\n  \"probe_results\": [],\n  \"analysis_method\": \"基于 judge 语义比对结果、execution_trace 全链路成功状态、adapter.py 源码分析，定位根因为上游 LLM（mock_agent_llm）在生成回答时编造了含占位符的具体电话号码。adapter 链路为纯透传，无内容校验环节。\",\n  \"chain_nodes\": [\n    {\n      \"name\": \"qa.sample.normalize\",\n      \"status\": \"normal\",\n      \"evidence\": [\n        \"scenario=qa_gold_answer\",\n        \"data_quality_flags=[]\"\n      ],\n      \"reason\": \"样本归一化正常，正确识别为 qa_gold_answer 场景，无数据质量标记。\"\n    },\n    {\n      \"name\": \"qa.output.read\",\n      \"status\": \"normal\",\n      \"evidence\": [\n        \"actual_answer 存在且可读\"\n      ],\n      \"reason\": \"成功读取上传样本的输出内容，actual_answer 非空。\"\n    },\n    {\n      \"name\": \"adapter.extract_output\",\n      \"status\": \"suspicious\",\n      \"evidence\": [\n        \"actual_answer_present=true\",\n        \"extracted 内容包含占位符 '400-xxx-xxxx'\"\n      ],\n      \"reason\": \"extract_output 原样提取了含占位符的 actual_answer，未做任何内容校验。该节点设计上不负责验证，但它是实际内容进入评估链路的最后一道关口。\"\n    },\n    {\n      \"name\": \"mock_agent_llm（上游，不在 execution_trace 中）\",\n      \"status\": \"suspicious\",\n      \"evidence\": [\n        \"metadata.source = 'mock_agent_llm'\",\n        \"actual_answer 含 '400-xxx-xxxx' 占位符\"\n      ],\n      \"reason\": \"LLM 在生成回答时编造了具体电话号码，且使用了明显的占位符字符 'xxx'。这是整条链路的根因分歧点。\"\n    }\n  ],\n  \"earliest_divergence\": {\n    \"node\": \"mock_agent_llm（上游 LLM 生成）\",\n    \"expected\": \"通用客服热线表述，不含具体号码或占位符\",\n    \"actual\": \"400-xxx-xxxx（含占位符 xxx 的虚构电话号码）\",\n    \"evidence\": [\n      \"golden_answer 仅写 '拨打客服热线'，无具体号码\",\n      \"actual_answer 写 '拨打我们24小时客服热线400-xxx-xxxx'\",\n      \"metadata.source = 'mock_agent_llm' 确认答案来源为 LLM 生成\"\n    ],\n    \"confidence\": \"high\"\n  },\n  \"evidence_coverage\": {\n    \"query\": true,\n    \"actual\": true,\n    \"expected\": true,\n    \"execution_trace\": true,\n    \"project_docs\": true,\n    \"code_or_config\": true,\n    \"unsupported_claims\": []\n  },\n  \"analysis_quality\": {\n    \"passed\": true,\n    \"missing\": [],\n    \"standard\": \"基于 judge 语义比对结果（含 semantic_equivalence_checks）、execution_trace 全链路成功状态、adapter.py 源码分析完成归因。根因定位到上游 LLM 生成环节，adapter 链路为纯透传无校验。\"\n  },\n  \"incomplete_reason\": \"\",\n  \"suspected_locations\": [\n    {\n      \"type\": \"code\",\n      \"path\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py\",\n      \"location\": \"extract_output 方法\",\n      \"reason\": \"原样透传 actual_answer，无占位符检测。可作为防御性校验的兜底插入点。\"\n    },\n    {\n      \"type\": \"upstream_config\",\n      \"location\": \"mock_agent_llm 的 prompt/生成配置\",\n      \"reason\": \"LLM prompt 未约束不得编造具体联系方式，导致模型输出含占位符的虚构号码。这是根因所在，但该文件不在当前 source_file_catalog 中。\"\n    }\n  ],\n  \"root_cause_hypothesis\": \"上游 LLM（mock_agent_llm）在生成理赔咨询回答时，试图让回答更具体可信，于是在'客服热线'后自行补充了 '400-xxx-xxxx'。但该号码包含明显的占位符字符 'xxx'，属于虚构信息。LLM 缺乏'不确定时不编造具体细节'的能力边界意识，同时 prompt 未对此类行为做约束。adapter 链路为纯透传，将所有内容原样交给 judge 评估，无中间校验环节——这在设计上是合理的（adapter 不应篡改被测输出），但意味着所有内容质量责任落在上游生成环节。\",\n  \"verification_steps\": [\n    \"检查 mock_agent_llm 的 system prompt 是否包含'不得编造具体联系方式'的约束\",\n    \"在 mock_agent_llm 的生成日志中确认该条回答的完整 prompt 上下文\",\n    \"验证 golden_answer 中是否确实没有提供具体客服电话号码（已确认：仅写'拨打客服热线'）\",\n    \"检查是否存在其他类似含占位符（xxx/****/####）的回答样本，评估影响面\"\n  ],\n  \"patch_direction\": [\n    \"在 mock_agent_llm 的 prompt 中增加硬约束：'回答中的联系方式如果无法确认真实号码，必须使用通用描述如\\\"客服热线\\\"\\\"官方电话\\\"，严禁编造任何含占位符（如 xxx、****）的号码。'\",\n    \"在 adapter.extract_output 或 output 读取阶段增加占位符正则检测（如 \\\\d{3,4}-xxx-xxxx），命中时自动添加 data_quality_flag='placeholder_detected'，阻止该样本进入正式评估或触发重新生成。\",\n    \"将占位符检测规则纳入 judge 的 evaluation_boundary，作为'信息准确无虚构'期望的自动化判定依据之一。\"\n  ],\n  \"needs_human_review\": false,\n  \"scenario\": \"qa_gold_answer\",\n  \"quality_flags\": []\n}\n```"
+      ],
+      "node": "semantic judge or attribute LLM"
+    },
+    "evidence_coverage": {
+      "actual": true,
+      "code_or_config": false,
+      "execution_trace": true,
+      "expected": true,
+      "project_docs": false,
+      "query": true
+    },
+    "analysis_quality": {
+      "missing": [
+        "attribute LLM result"
+      ],
+      "passed": false,
+      "standard": "归因必须基于当前 case 的 judge、trace 和可验证链路证据。"
+    },
+    "incomplete_reason": "attribute agent LLM 调用失败。",
+    "root_cause_hypothesis": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+    "verification_steps": [
+      "检查 LLM API key、余额、网络和模型配置。",
+      "恢复 LLM 后重新运行 judge 和 attribute agent。"
+    ],
+    "patch_direction": [
+      "修复 LLM 调用配置或费用问题；不要把该兜底结果当作最终业务根因。"
+    ],
+    "expectation_attributions": [
+      {
+        "expectation_id": "覆盖理赔关键步骤",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "insufficient_evidence",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "信息准确无虚构",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "insufficient_evidence",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "答复清晰礼貌",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "insufficient_evidence",
+        "incomplete_reason": ""
+      }
+    ],
+    "causal_category": "insufficient_evidence",
+    "probe_results": [
+      {
+        "probe_id": "llm_call",
+        "status": "failed",
+        "stage": "",
+        "evidence": [
+          "Now I have the full picture. Let me synthesize the attribution analysis.\n\n**What happened**: The actual answer contained \"400-xxx-xxxx\" — a placeholder/fictional phone number — while the golden answer only says \"客服热线\" (customer service hotline). The judge correctly flagged this as `not_fulfilled` for the \"信息准确无虚构\" expectation.\n\n**Root cause analysis**: The answer was generated by `mock_agent_llm` (metadata source). The LLM hallucinated a specific phone number with obvious placeholder characters (\"xxx\"), failing to recognize that it should either omit the number entirely or use a generic description. The adapter (`adapter.py`) passes the `actual_answer` through without any content validation — it's designed purely for extraction, not sanitization. No node in the execution trace failed because the pipeline itself operated correctly; the defect was in the upstream LLM generation.\n\nThis is a **model_capability_gap**: the LLM lacked the capability to avoid fabricating specific contact details. The adapter's design doesn't include placeholder detection or output sanitization, which is a secondary design gap but not the root cause.\n\n```json\n{\n  \"expectation_attributions\": [\n    {\n      \"expectation_id\": \"信息准确无虚构\",\n      \"fulfillment_status\": \"not_fulfilled\",\n      \"causal_category\": \"model_capability_gap\",\n      \"earliest_divergence\": {\n        \"node\": \"mock_agent_llm（上游 LLM 生成）\",\n        \"expected\": \"通用客服热线描述，不含具体号码或占位符\",\n        \"actual\": \"400-xxx-xxxx（含占位符 xxx 的虚构电话号码）\",\n        \"evidence\": [\n          \"golden_answer: '拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。'\",\n          \"actual_answer: '您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。'\",\n          \"metadata.source = 'mock_agent_llm' 表明答案由 LLM 生成\"\n        ],\n        \"confidence\": \"high\"\n      },\n      \"causal_chain\": [\n        {\n          \"step\": 1,\n          \"node\": \"mock_agent_llm 生成回答\",\n          \"description\": \"LLM 接收到用户理赔咨询后，生成了包含具体电话号码的回答，但该号码为占位符 '400-xxx-xxxx'，属于虚构信息。LLM 在缺乏真实电话号码知识的情况下，不应自行编造具体号码。\",\n          \"status\": \"suspicious\"\n        },\n        {\n          \"step\": 2,\n          \"node\": \"adapter.extract_output\",\n          \"description\": \"adapter 的 extract_output 方法原样提取 actual_answer，未对内容做任何真实性校验或占位符检测。该方法是纯提取器，设计上不负责内容验证。\",\n          \"status\": \"normal\",\n          \"code_ref\": \"adapter.py:extract_output → return {'actual_answer': str(raw_response.get('actual_answer') or ...)}\"\n        },\n        {\n          \"step\": 3,\n          \"node\": \"judge 语义比对\",\n          \"description\": \"judge 将 actual_answer 与 golden_answer 进行语义比对，发现 '400-xxx-xxxx' 为占位符/虚构号码，判定 '信息准确无虚构' 期望未满足。\",\n          \"status\": \"normal\"\n        }\n      ],\n      \"suspected_locations\": [\n        {\n          \"type\": \"code\",\n          \"path\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py\",\n          \"location\": \"extract_output 方法（第 74-77 行）\",\n          \"reason\": \"该方法原样透传 actual_answer，未检测占位符模式（如 'xxx'）。虽然这不是根因，但可在此增加防御性校验作为兜底。\",\n          \"relevance\": \"secondary\"\n        },\n        {\n          \"type\": \"upstream\",\n          \"location\": \"mock_agent_llm 的 prompt 或生成配置（不在当前 source_file_catalog 中）\",\n          \"reason\": \"LLM prompt 未明确禁止编造具体联系方式，导致模型在不确定时自行填充占位符号码。这是根因所在。\",\n          \"relevance\": \"primary\"\n        }\n      ],\n      \"improvement_direction\": [\n        {\n          \"target\": \"LLM prompt 优化\",\n          \"action\": \"在 mock_agent_llm 的 system prompt 中增加约束：'如果无法提供真实的客服电话号码，请使用通用表述如\"客服热线\"或\"官方客服电话\"，严禁编造包含 xxx 等占位符的具体号码。'\",\n          \"priority\": \"高\"\n        },\n        {\n          \"target\": \"输出后处理校验\",\n          \"action\": \"在 adapter.extract_output 或上游输出阶段增加占位符检测规则，匹配模式如 '\\\\d{3,4}-xxx-xxxx' 或含 'xxx'/'xxxx' 的电话号码格式，命中时标记 data_quality_flags 或触发重新生成。\",\n          \"priority\": \"中\"\n        },\n        {\n          \"target\": \"judge 规则强化\",\n          \"action\": \"当前 judge 已能识别占位符问题，可在 evaluation_boundary 中显式列出常见占位符模式（xxx、****、#### 等）作为不实信息的判定依据。\",\n          \"priority\": \"低\"\n        }\n      ],\n      \"source_evidence\": [\n        \"golden_answer: '拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。'\",\n        \"actual_answer: '您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。'\",\n        \"metadata.source = 'mock_agent_llm'\",\n        \"judge.semantic_equivalence_checks[0]: expected='拨打客服热线', actual='拨打我们24小时客服热线400-xxx-xxxx', equivalent=false\"\n      ],\n      \"probe_evidence\": [],\n      \"incomplete_reason\": \"\"\n    }\n  ],\n  \"causal_category\": \"model_capability_gap\",\n  \"probe_results\": [],\n  \"analysis_method\": \"基于 judge 语义比对结果、execution_trace 全链路成功状态、adapter.py 源码分析，定位根因为上游 LLM（mock_agent_llm）在生成回答时编造了含占位符的具体电话号码。adapter 链路为纯透传，无内容校验环节。\",\n  \"chain_nodes\": [\n    {\n      \"name\": \"qa.sample.normalize\",\n      \"status\": \"normal\",\n      \"evidence\": [\n        \"scenario=qa_gold_answer\",\n        \"data_quality_flags=[]\"\n      ],\n      \"reason\": \"样本归一化正常，正确识别为 qa_gold_answer 场景，无数据质量标记。\"\n    },\n    {\n      \"name\": \"qa.output.read\",\n      \"status\": \"normal\",\n      \"evidence\": [\n        \"actual_answer 存在且可读\"\n      ],\n      \"reason\": \"成功读取上传样本的输出内容，actual_answer 非空。\"\n    },\n    {\n      \"name\": \"adapter.extract_output\",\n      \"status\": \"suspicious\",\n      \"evidence\": [\n        \"actual_answer_present=true\",\n        \"extracted 内容包含占位符 '400-xxx-xxxx'\"\n      ],\n      \"reason\": \"extract_output 原样提取了含占位符的 actual_answer，未做任何内容校验。该节点设计上不负责验证，但它是实际内容进入评估链路的最后一道关口。\"\n    },\n    {\n      \"name\": \"mock_agent_llm（上游，不在 execution_trace 中）\",\n      \"status\": \"suspicious\",\n      \"evidence\": [\n        \"metadata.source = 'mock_agent_llm'\",\n        \"actual_answer 含 '400-xxx-xxxx' 占位符\"\n      ],\n      \"reason\": \"LLM 在生成回答时编造了具体电话号码，且使用了明显的占位符字符 'xxx'。这是整条链路的根因分歧点。\"\n    }\n  ],\n  \"earliest_divergence\": {\n    \"node\": \"mock_agent_llm（上游 LLM 生成）\",\n    \"expected\": \"通用客服热线表述，不含具体号码或占位符\",\n    \"actual\": \"400-xxx-xxxx（含占位符 xxx 的虚构电话号码）\",\n    \"evidence\": [\n      \"golden_answer 仅写 '拨打客服热线'，无具体号码\",\n      \"actual_answer 写 '拨打我们24小时客服热线400-xxx-xxxx'\",\n      \"metadata.source = 'mock_agent_llm' 确认答案来源为 LLM 生成\"\n    ],\n    \"confidence\": \"high\"\n  },\n  \"evidence_coverage\": {\n    \"query\": true,\n    \"actual\": true,\n    \"expected\": true,\n    \"execution_trace\": true,\n    \"project_docs\": true,\n    \"code_or_config\": true,\n    \"unsupported_claims\": []\n  },\n  \"analysis_quality\": {\n    \"passed\": true,\n    \"missing\": [],\n    \"standard\": \"基于 judge 语义比对结果（含 semantic_equivalence_checks）、execution_trace 全链路成功状态、adapter.py 源码分析完成归因。根因定位到上游 LLM 生成环节，adapter 链路为纯透传无校验。\"\n  },\n  \"incomplete_reason\": \"\",\n  \"suspected_locations\": [\n    {\n      \"type\": \"code\",\n      \"path\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py\",\n      \"location\": \"extract_output 方法\",\n      \"reason\": \"原样透传 actual_answer，无占位符检测。可作为防御性校验的兜底插入点。\"\n    },\n    {\n      \"type\": \"upstream_config\",\n      \"location\": \"mock_agent_llm 的 prompt/生成配置\",\n      \"reason\": \"LLM prompt 未约束不得编造具体联系方式，导致模型输出含占位符的虚构号码。这是根因所在，但该文件不在当前 source_file_catalog 中。\"\n    }\n  ],\n  \"root_cause_hypothesis\": \"上游 LLM（mock_agent_llm）在生成理赔咨询回答时，试图让回答更具体可信，于是在'客服热线'后自行补充了 '400-xxx-xxxx'。但该号码包含明显的占位符字符 'xxx'，属于虚构信息。LLM 缺乏'不确定时不编造具体细节'的能力边界意识，同时 prompt 未对此类行为做约束。adapter 链路为纯透传，将所有内容原样交给 judge 评估，无中间校验环节——这在设计上是合理的（adapter 不应篡改被测输出），但意味着所有内容质量责任落在上游生成环节。\",\n  \"verification_steps\": [\n    \"检查 mock_agent_llm 的 system prompt 是否包含'不得编造具体联系方式'的约束\",\n    \"在 mock_agent_llm 的生成日志中确认该条回答的完整 prompt 上下文\",\n    \"验证 golden_answer 中是否确实没有提供具体客服电话号码（已确认：仅写'拨打客服热线'）\",\n    \"检查是否存在其他类似含占位符（xxx/****/####）的回答样本，评估影响面\"\n  ],\n  \"patch_direction\": [\n    \"在 mock_agent_llm 的 prompt 中增加硬约束：'回答中的联系方式如果无法确认真实号码，必须使用通用描述如\\\"客服热线\\\"\\\"官方电话\\\"，严禁编造任何含占位符（如 xxx、****）的号码。'\",\n    \"在 adapter.extract_output 或 output 读取阶段增加占位符正则检测（如 \\\\d{3,4}-xxx-xxxx），命中时自动添加 data_quality_flag='placeholder_detected'，阻止该样本进入正式评估或触发重新生成。\",\n    \"将占位符检测规则纳入 judge 的 evaluation_boundary，作为'信息准确无虚构'期望的自动化判定依据之一。\"\n  ],\n  \"needs_human_review\": false,\n  \"scenario\": \"qa_gold_answer\",\n  \"quality_flags\": []\n}\n```"
+        ],
+        "error": ""
+      }
+    ],
+    "needs_human_review": true,
+    "scenario": "qa_gold_answer",
+    "quality_flags": [
+      "attribute_blocked"
+    ],
+    "summary": {
+      "attribution_count": 3,
+      "causal_category": "insufficient_evidence",
+      "is_complete": false,
+      "is_formal_attribution": false,
+      "probe_count": 1,
+      "summary_text": "attribute agent LLM 调用失败。"
+    },
+    "display_causal_category": "insufficient_evidence",
+    "display_root_cause": "attribute agent LLM 调用失败。",
+    "display_verification_steps": [
+      "检查 LLM API key、余额、网络和模型配置。",
+      "恢复 LLM 后重新运行 judge 和 attribute agent。"
+    ],
+    "display_patch_direction": [
+      "修复 LLM 调用配置或费用问题；不要把该兜底结果当作最终业务根因。"
+    ],
+    "attribution_count": 3,
+    "probe_count": 1
+  },
+  "fulfillment_panel": {
+    "consumer_contract": {
+      "application_boundary": "仅评估实际答复与标准答案的语义一致性及事实准确性，不验证外部联络方式的真实性。",
+      "consumer": "重疾险投保用户",
+      "contract": "客服需提供准确、完整的理赔申请指南，尤其是联系方式不能有误，避免延误用户获得赔付。",
+      "reference_contract": "golden_answer: 拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。"
+    },
+    "overall_fulfillment": {
+      "assessment_count": 3,
+      "blocking_expectations": [
+        "信息准确无虚构"
+      ],
+      "status": "not_fulfilled"
+    },
+    "matrix": [
+      {
+        "expectation_id": "覆盖理赔关键步骤",
+        "downstream_consumer": "用户",
+        "expected_outcome": "给出拨打热线、提供保单号和诊断证明、3个工作日内赔付的信息",
+        "required_capabilities": [
+          "信息覆盖完整性"
+        ],
+        "status": "fulfilled",
+        "blocking": true,
+        "downstream_impact": "用户能够获知完整的申请路径"
+      },
+      {
+        "expectation_id": "信息准确无虚构",
+        "downstream_consumer": "用户",
+        "expected_outcome": "给出的客服热线应为通用“客服热线”或经核实的真实号码，不得出现类似“400-xxx-xxxx”的占位符",
+        "required_capabilities": [
+          "事实准确性"
+        ],
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "用户若拨打此号码可能无法接通，导致理赔申请受阻，严重影响体验与信任"
+      },
+      {
+        "expectation_id": "答复清晰礼貌",
+        "downstream_consumer": "用户",
+        "expected_outcome": "使用礼貌用语，结构清晰，避免冰冷机械的表述",
+        "required_capabilities": [
+          "语言表达"
+        ],
+        "status": "fulfilled",
+        "blocking": false,
+        "downstream_impact": "提升用户满意度，无负面影响"
+      }
+    ],
+    "derived_verdict": "incorrect",
+    "verdict_derivation": {
+      "assessment_summary": "根据金标准‘qa_gold_answer’场景评估，实际答复完整包含了理赔申请的三个核心动作（联系、材料、时效），语气礼貌，因此‘覆盖理赔关键步骤’与‘答复清晰礼貌’期望被满足。然而，在联系方式上新增了‘400-xxx-xxxx’这一占位符号码，金标准仅为‘客服热线’，该具体号码未经验证且极可能为虚构，无法确保用户能真正联系到客服，从而严重影响了核心业务的完成。因此‘信息准确无虚构’的阻断性期望未满足，导致整体评估为不通过。",
+      "blocking_gaps": [
+        "信息准确无虚构"
+      ],
+      "error_type": "answer_incorrect",
+      "primary_boundary": "qa_gold_answer",
+      "score_dimensions": [
+        {
+          "dimension": "correctness",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "completeness",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "key_point_coverage",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "faithfulness",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "relevance",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "usefulness",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "coherence",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "risk_control",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        },
+        {
+          "dimension": "clarity",
+          "evidence": [
+            {
+              "content": "拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。",
+              "type": "golden_answer"
+            },
+            {
+              "content": "您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。",
+              "type": "actual_answer"
+            },
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=True",
+            "golden_answer_present=True"
+          ],
+          "score": 0.6666666666666666,
+          "status": "judged"
+        }
+      ],
+      "taxonomy_error_types": [
+        "answer_incorrect"
+      ],
+      "why_verdict": "由于实际答复提供了‘400-xxx-xxxx’这一占位符号码，未能满足‘信息准确无虚构’的阻断性期望，导致用户可能因错误信息而无法顺利理赔，因此整体评估为未满足。"
+    }
+  },
+  "expectation_attribution_panel": {
+    "attributions": [
+      {
+        "expectation_id": "覆盖理赔关键步骤",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "insufficient_evidence",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "信息准确无虚构",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "insufficient_evidence",
+        "incomplete_reason": ""
+      },
+      {
+        "expectation_id": "答复清晰礼貌",
+        "fulfillment_status": "not_evaluable",
+        "causal_category": "insufficient_evidence",
+        "incomplete_reason": ""
+      }
+    ],
+    "causal_category": "insufficient_evidence",
+    "probe_results": [
+      {
+        "probe_id": "llm_call",
+        "status": "failed",
+        "stage": "",
+        "evidence": [
+          "Now I have the full picture. Let me synthesize the attribution analysis.\n\n**What happened**: The actual answer contained \"400-xxx-xxxx\" — a placeholder/fictional phone number — while the golden answer only says \"客服热线\" (customer service hotline). The judge correctly flagged this as `not_fulfilled` for the \"信息准确无虚构\" expectation.\n\n**Root cause analysis**: The answer was generated by `mock_agent_llm` (metadata source). The LLM hallucinated a specific phone number with obvious placeholder characters (\"xxx\"), failing to recognize that it should either omit the number entirely or use a generic description. The adapter (`adapter.py`) passes the `actual_answer` through without any content validation — it's designed purely for extraction, not sanitization. No node in the execution trace failed because the pipeline itself operated correctly; the defect was in the upstream LLM generation.\n\nThis is a **model_capability_gap**: the LLM lacked the capability to avoid fabricating specific contact details. The adapter's design doesn't include placeholder detection or output sanitization, which is a secondary design gap but not the root cause.\n\n```json\n{\n  \"expectation_attributions\": [\n    {\n      \"expectation_id\": \"信息准确无虚构\",\n      \"fulfillment_status\": \"not_fulfilled\",\n      \"causal_category\": \"model_capability_gap\",\n      \"earliest_divergence\": {\n        \"node\": \"mock_agent_llm（上游 LLM 生成）\",\n        \"expected\": \"通用客服热线描述，不含具体号码或占位符\",\n        \"actual\": \"400-xxx-xxxx（含占位符 xxx 的虚构电话号码）\",\n        \"evidence\": [\n          \"golden_answer: '拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。'\",\n          \"actual_answer: '您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。'\",\n          \"metadata.source = 'mock_agent_llm' 表明答案由 LLM 生成\"\n        ],\n        \"confidence\": \"high\"\n      },\n      \"causal_chain\": [\n        {\n          \"step\": 1,\n          \"node\": \"mock_agent_llm 生成回答\",\n          \"description\": \"LLM 接收到用户理赔咨询后，生成了包含具体电话号码的回答，但该号码为占位符 '400-xxx-xxxx'，属于虚构信息。LLM 在缺乏真实电话号码知识的情况下，不应自行编造具体号码。\",\n          \"status\": \"suspicious\"\n        },\n        {\n          \"step\": 2,\n          \"node\": \"adapter.extract_output\",\n          \"description\": \"adapter 的 extract_output 方法原样提取 actual_answer，未对内容做任何真实性校验或占位符检测。该方法是纯提取器，设计上不负责内容验证。\",\n          \"status\": \"normal\",\n          \"code_ref\": \"adapter.py:extract_output → return {'actual_answer': str(raw_response.get('actual_answer') or ...)}\"\n        },\n        {\n          \"step\": 3,\n          \"node\": \"judge 语义比对\",\n          \"description\": \"judge 将 actual_answer 与 golden_answer 进行语义比对，发现 '400-xxx-xxxx' 为占位符/虚构号码，判定 '信息准确无虚构' 期望未满足。\",\n          \"status\": \"normal\"\n        }\n      ],\n      \"suspected_locations\": [\n        {\n          \"type\": \"code\",\n          \"path\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py\",\n          \"location\": \"extract_output 方法（第 74-77 行）\",\n          \"reason\": \"该方法原样透传 actual_answer，未检测占位符模式（如 'xxx'）。虽然这不是根因，但可在此增加防御性校验作为兜底。\",\n          \"relevance\": \"secondary\"\n        },\n        {\n          \"type\": \"upstream\",\n          \"location\": \"mock_agent_llm 的 prompt 或生成配置（不在当前 source_file_catalog 中）\",\n          \"reason\": \"LLM prompt 未明确禁止编造具体联系方式，导致模型在不确定时自行填充占位符号码。这是根因所在。\",\n          \"relevance\": \"primary\"\n        }\n      ],\n      \"improvement_direction\": [\n        {\n          \"target\": \"LLM prompt 优化\",\n          \"action\": \"在 mock_agent_llm 的 system prompt 中增加约束：'如果无法提供真实的客服电话号码，请使用通用表述如\"客服热线\"或\"官方客服电话\"，严禁编造包含 xxx 等占位符的具体号码。'\",\n          \"priority\": \"高\"\n        },\n        {\n          \"target\": \"输出后处理校验\",\n          \"action\": \"在 adapter.extract_output 或上游输出阶段增加占位符检测规则，匹配模式如 '\\\\d{3,4}-xxx-xxxx' 或含 'xxx'/'xxxx' 的电话号码格式，命中时标记 data_quality_flags 或触发重新生成。\",\n          \"priority\": \"中\"\n        },\n        {\n          \"target\": \"judge 规则强化\",\n          \"action\": \"当前 judge 已能识别占位符问题，可在 evaluation_boundary 中显式列出常见占位符模式（xxx、****、#### 等）作为不实信息的判定依据。\",\n          \"priority\": \"低\"\n        }\n      ],\n      \"source_evidence\": [\n        \"golden_answer: '拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。'\",\n        \"actual_answer: '您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。'\",\n        \"metadata.source = 'mock_agent_llm'\",\n        \"judge.semantic_equivalence_checks[0]: expected='拨打客服热线', actual='拨打我们24小时客服热线400-xxx-xxxx', equivalent=false\"\n      ],\n      \"probe_evidence\": [],\n      \"incomplete_reason\": \"\"\n    }\n  ],\n  \"causal_category\": \"model_capability_gap\",\n  \"probe_results\": [],\n  \"analysis_method\": \"基于 judge 语义比对结果、execution_trace 全链路成功状态、adapter.py 源码分析，定位根因为上游 LLM（mock_agent_llm）在生成回答时编造了含占位符的具体电话号码。adapter 链路为纯透传，无内容校验环节。\",\n  \"chain_nodes\": [\n    {\n      \"name\": \"qa.sample.normalize\",\n      \"status\": \"normal\",\n      \"evidence\": [\n        \"scenario=qa_gold_answer\",\n        \"data_quality_flags=[]\"\n      ],\n      \"reason\": \"样本归一化正常，正确识别为 qa_gold_answer 场景，无数据质量标记。\"\n    },\n    {\n      \"name\": \"qa.output.read\",\n      \"status\": \"normal\",\n      \"evidence\": [\n        \"actual_answer 存在且可读\"\n      ],\n      \"reason\": \"成功读取上传样本的输出内容，actual_answer 非空。\"\n    },\n    {\n      \"name\": \"adapter.extract_output\",\n      \"status\": \"suspicious\",\n      \"evidence\": [\n        \"actual_answer_present=true\",\n        \"extracted 内容包含占位符 '400-xxx-xxxx'\"\n      ],\n      \"reason\": \"extract_output 原样提取了含占位符的 actual_answer，未做任何内容校验。该节点设计上不负责验证，但它是实际内容进入评估链路的最后一道关口。\"\n    },\n    {\n      \"name\": \"mock_agent_llm（上游，不在 execution_trace 中）\",\n      \"status\": \"suspicious\",\n      \"evidence\": [\n        \"metadata.source = 'mock_agent_llm'\",\n        \"actual_answer 含 '400-xxx-xxxx' 占位符\"\n      ],\n      \"reason\": \"LLM 在生成回答时编造了具体电话号码，且使用了明显的占位符字符 'xxx'。这是整条链路的根因分歧点。\"\n    }\n  ],\n  \"earliest_divergence\": {\n    \"node\": \"mock_agent_llm（上游 LLM 生成）\",\n    \"expected\": \"通用客服热线表述，不含具体号码或占位符\",\n    \"actual\": \"400-xxx-xxxx（含占位符 xxx 的虚构电话号码）\",\n    \"evidence\": [\n      \"golden_answer 仅写 '拨打客服热线'，无具体号码\",\n      \"actual_answer 写 '拨打我们24小时客服热线400-xxx-xxxx'\",\n      \"metadata.source = 'mock_agent_llm' 确认答案来源为 LLM 生成\"\n    ],\n    \"confidence\": \"high\"\n  },\n  \"evidence_coverage\": {\n    \"query\": true,\n    \"actual\": true,\n    \"expected\": true,\n    \"execution_trace\": true,\n    \"project_docs\": true,\n    \"code_or_config\": true,\n    \"unsupported_claims\": []\n  },\n  \"analysis_quality\": {\n    \"passed\": true,\n    \"missing\": [],\n    \"standard\": \"基于 judge 语义比对结果（含 semantic_equivalence_checks）、execution_trace 全链路成功状态、adapter.py 源码分析完成归因。根因定位到上游 LLM 生成环节，adapter 链路为纯透传无校验。\"\n  },\n  \"incomplete_reason\": \"\",\n  \"suspected_locations\": [\n    {\n      \"type\": \"code\",\n      \"path\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py\",\n      \"location\": \"extract_output 方法\",\n      \"reason\": \"原样透传 actual_answer，无占位符检测。可作为防御性校验的兜底插入点。\"\n    },\n    {\n      \"type\": \"upstream_config\",\n      \"location\": \"mock_agent_llm 的 prompt/生成配置\",\n      \"reason\": \"LLM prompt 未约束不得编造具体联系方式，导致模型输出含占位符的虚构号码。这是根因所在，但该文件不在当前 source_file_catalog 中。\"\n    }\n  ],\n  \"root_cause_hypothesis\": \"上游 LLM（mock_agent_llm）在生成理赔咨询回答时，试图让回答更具体可信，于是在'客服热线'后自行补充了 '400-xxx-xxxx'。但该号码包含明显的占位符字符 'xxx'，属于虚构信息。LLM 缺乏'不确定时不编造具体细节'的能力边界意识，同时 prompt 未对此类行为做约束。adapter 链路为纯透传，将所有内容原样交给 judge 评估，无中间校验环节——这在设计上是合理的（adapter 不应篡改被测输出），但意味着所有内容质量责任落在上游生成环节。\",\n  \"verification_steps\": [\n    \"检查 mock_agent_llm 的 system prompt 是否包含'不得编造具体联系方式'的约束\",\n    \"在 mock_agent_llm 的生成日志中确认该条回答的完整 prompt 上下文\",\n    \"验证 golden_answer 中是否确实没有提供具体客服电话号码（已确认：仅写'拨打客服热线'）\",\n    \"检查是否存在其他类似含占位符（xxx/****/####）的回答样本，评估影响面\"\n  ],\n  \"patch_direction\": [\n    \"在 mock_agent_llm 的 prompt 中增加硬约束：'回答中的联系方式如果无法确认真实号码，必须使用通用描述如\\\"客服热线\\\"\\\"官方电话\\\"，严禁编造任何含占位符（如 xxx、****）的号码。'\",\n    \"在 adapter.extract_output 或 output 读取阶段增加占位符正则检测（如 \\\\d{3,4}-xxx-xxxx），命中时自动添加 data_quality_flag='placeholder_detected'，阻止该样本进入正式评估或触发重新生成。\",\n    \"将占位符检测规则纳入 judge 的 evaluation_boundary，作为'信息准确无虚构'期望的自动化判定依据之一。\"\n  ],\n  \"needs_human_review\": false,\n  \"scenario\": \"qa_gold_answer\",\n  \"quality_flags\": []\n}\n```"
+        ],
+        "error": ""
+      }
+    ],
+    "quality_flags": [
+      "attribute_blocked"
+    ],
+    "incomplete_reason": "attribute agent LLM 调用失败。"
+  },
+  "cluster_panel": {
+    "project_id": "QA",
+    "clusters": [
+      {
+        "canonical_attribution": false,
+        "causal_category": "insufficient_evidence",
+        "cluster_id": "expectation::insufficient_evidence::fulfilled",
+        "common_root_cause": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+        "count": 1,
+        "expectation_ids": [
+          "覆盖理赔关键步骤",
+          "信息准确无虚构",
+          "答复清晰礼貌"
+        ],
+        "fulfillment_statuses": [
+          "fulfilled",
+          "not_fulfilled"
+        ],
+        "mechanism": "insufficient_evidence_or_human_review",
+        "minimal_fix_direction": [
+          "修复 LLM 调用配置或费用问题；不要把该兜底结果当作最终业务根因。"
+        ],
+        "needs_human_review": true,
+        "next_actions": [
+          "检查 LLM API key、余额、网络和模型配置。",
+          "恢复 LLM 后重新运行 judge 和 attribute agent。"
+        ],
+        "representative_cases": [
+          "c260b933-cb70-496f-b6a4-a5b797d68a27"
+        ],
+        "representative_diffs": [
+          {
+            "case_id": "c260b933-cb70-496f-b6a4-a5b797d68a27",
+            "evidence": [
+              "Now I have the full picture. Let me synthesize the attribution analysis.\n\n**What happened**: The actual answer contained \"400-xxx-xxxx\" — a placeholder/fictional phone number — while the golden answer only says \"客服热线\" (customer service hotline). The judge correctly flagged this as `not_fulfilled` for the \"信息准确无虚构\" expectation.\n\n**Root cause analysis**: The answer was generated by `mock_agent_llm` (metadata source). The LLM hallucinated a specific phone number with obvious placeholder characters (\"xxx\"), failing to recognize that it should either omit the number entirely or use a generic description. The adapter (`adapter.py`) passes the `actual_answer` through without any content validation — it's designed purely for extraction, not sanitization. No node in the execution trace failed because the pipeline itself operated correctly; the defect was in the upstream LLM generation.\n\nThis is a **model_capability_gap**: the LLM lacked the capability to avoid fabricating specific contact details. The adapter's design doesn't include placeholder detection or output sanitization, which is a secondary design gap but not the root cause.\n\n```json\n{\n  \"expectation_attributions\": [\n    {\n      \"expectation_id\": \"信息准确无虚构\",\n      \"fulfillment_status\": \"not_fulfilled\",\n      \"causal_category\": \"model_capability_gap\",\n      \"earliest_divergence\": {\n        \"node\": \"mock_agent_llm（上游 LLM 生成）\",\n        \"expected\": \"通用客服热线描述，不含具体号码或占位符\",\n        \"actual\": \"400-xxx-xxxx（含占位符 xxx 的虚构电话号码）\",\n        \"evidence\": [\n          \"golden_answer: '拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。'\",\n          \"actual_answer: '您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。'\",\n          \"metadata.source = 'mock_agent_llm' 表明答案由 LLM 生成\"\n        ],\n        \"confidence\": \"high\"\n      },\n      \"causal_chain\": [\n        {\n          \"step\": 1,\n          \"node\": \"mock_agent_llm 生成回答\",\n          \"description\": \"LLM 接收到用户理赔咨询后，生成了包含具体电话号码的回答，但该号码为占位符 '400-xxx-xxxx'，属于虚构信息。LLM 在缺乏真实电话号码知识的情况下，不应自行编造具体号码。\",\n          \"status\": \"suspicious\"\n        },\n        {\n          \"step\": 2,\n          \"node\": \"adapter.extract_output\",\n          \"description\": \"adapter 的 extract_output 方法原样提取 actual_answer，未对内容做任何真实性校验或占位符检测。该方法是纯提取器，设计上不负责内容验证。\",\n          \"status\": \"normal\",\n          \"code_ref\": \"adapter.py:extract_output → return {'actual_answer': str(raw_response.get('actual_answer') or ...)}\"\n        },\n        {\n          \"step\": 3,\n          \"node\": \"judge 语义比对\",\n          \"description\": \"judge 将 actual_answer 与 golden_answer 进行语义比对，发现 '400-xxx-xxxx' 为占位符/虚构号码，判定 '信息准确无虚构' 期望未满足。\",\n          \"status\": \"normal\"\n        }\n      ],\n      \"suspected_locations\": [\n        {\n          \"type\": \"code\",\n          \"path\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py\",\n          \"location\": \"extract_output 方法（第 74-77 行）\",\n          \"reason\": \"该方法原样透传 actual_answer，未检测占位符模式（如 'xxx'）。虽然这不是根因，但可在此增加防御性校验作为兜底。\",\n          \"relevance\": \"secondary\"\n        },\n        {\n          \"type\": \"upstream\",\n          \"location\": \"mock_agent_llm 的 prompt 或生成配置（不在当前 source_file_catalog 中）\",\n          \"reason\": \"LLM prompt 未明确禁止编造具体联系方式，导致模型在不确定时自行填充占位符号码。这是根因所在。\",\n          \"relevance\": \"primary\"\n        }\n      ],\n      \"improvement_direction\": [\n        {\n          \"target\": \"LLM prompt 优化\",\n          \"action\": \"在 mock_agent_llm 的 system prompt 中增加约束：'如果无法提供真实的客服电话号码，请使用通用表述如\"客服热线\"或\"官方客服电话\"，严禁编造包含 xxx 等占位符的具体号码。'\",\n          \"priority\": \"高\"\n        },\n        {\n          \"target\": \"输出后处理校验\",\n          \"action\": \"在 adapter.extract_output 或上游输出阶段增加占位符检测规则，匹配模式如 '\\\\d{3,4}-xxx-xxxx' 或含 'xxx'/'xxxx' 的电话号码格式，命中时标记 data_quality_flags 或触发重新生成。\",\n          \"priority\": \"中\"\n        },\n        {\n          \"target\": \"judge 规则强化\",\n          \"action\": \"当前 judge 已能识别占位符问题，可在 evaluation_boundary 中显式列出常见占位符模式（xxx、****、#### 等）作为不实信息的判定依据。\",\n          \"priority\": \"低\"\n        }\n      ],\n      \"source_evidence\": [\n        \"golden_answer: '拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。'\",\n        \"actual_answer: '您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。'\",\n        \"metadata.source = 'mock_agent_llm'\",\n        \"judge.semantic_equivalence_checks[0]: expected='拨打客服热线', actual='拨打我们24小时客服热线400-xxx-xxxx', equivalent=false\"\n      ],\n      \"probe_evidence\": [],\n      \"incomplete_reason\": \"\"\n    }\n  ],\n  \"causal_category\": \"model_capability_gap\",\n  \"probe_results\": [],\n  \"analysis_method\": \"基于 judge 语义比对结果、execution_trace 全链路成功状态、adapter.py 源码分析，定位根因为上游 LLM（mock_agent_llm）在生成回答时编造了含占位符的具体电话号码。adapter 链路为纯透传，无内容校验环节。\",\n  \"chain_nodes\": [\n    {\n      \"name\": \"qa.sample.normalize\",\n      \"status\": \"normal\",\n      \"evidence\": [\n        \"scenario=qa_gold_answer\",\n        \"data_quality_flags=[]\"\n      ],\n      \"reason\": \"样本归一化正常，正确识别为 qa_gold_answer 场景，无数据质量标记。\"\n    },\n    {\n      \"name\": \"qa.output.read\",\n      \"status\": \"normal\",\n      \"evidence\": [\n        \"actual_answer 存在且可读\"\n      ],\n      \"reason\": \"成功读取上传样本的输出内容，actual_answer 非空。\"\n    },\n    {\n      \"name\": \"adapter.extract_output\",\n      \"status\": \"suspicious\",\n      \"evidence\": [\n        \"actual_answer_present=true\",\n        \"extracted 内容包含占位符 '400-xxx-xxxx'\"\n      ],\n      \"reason\": \"extract_output 原样提取了含占位符的 actual_answer，未做任何内容校验。该节点设计上不负责验证，但它是实际内容进入评估链路的最后一道关口。\"\n    },\n    {\n      \"name\": \"mock_agent_llm（上游，不在 execution_trace 中）\",\n      \"status\": \"suspicious\",\n      \"evidence\": [\n        \"metadata.source = 'mock_agent_llm'\",\n        \"actual_answer 含 '400-xxx-xxxx' 占位符\"\n      ],\n      \"reason\": \"LLM 在生成回答时编造了具体电话号码，且使用了明显的占位符字符 'xxx'。这是整条链路的根因分歧点。\"\n    }\n  ],\n  \"earliest_divergence\": {\n    \"node\": \"mock_agent_llm（上游 LLM 生成）\",\n    \"expected\": \"通用客服热线表述，不含具体号码或占位符\",\n    \"actual\": \"400-xxx-xxxx（含占位符 xxx 的虚构电话号码）\",\n    \"evidence\": [\n      \"golden_answer 仅写 '拨打客服热线'，无具体号码\",\n      \"actual_answer 写 '拨打我们24小时客服热线400-xxx-xxxx'\",\n      \"metadata.source = 'mock_agent_llm' 确认答案来源为 LLM 生成\"\n    ],\n    \"confidence\": \"high\"\n  },\n  \"evidence_coverage\": {\n    \"query\": true,\n    \"actual\": true,\n    \"expected\": true,\n    \"execution_trace\": true,\n    \"project_docs\": true,\n    \"code_or_config\": true,\n    \"unsupported_claims\": []\n  },\n  \"analysis_quality\": {\n    \"passed\": true,\n    \"missing\": [],\n    \"standard\": \"基于 judge 语义比对结果（含 semantic_equivalence_checks）、execution_trace 全链路成功状态、adapter.py 源码分析完成归因。根因定位到上游 LLM 生成环节，adapter 链路为纯透传无校验。\"\n  },\n  \"incomplete_reason\": \"\",\n  \"suspected_locations\": [\n    {\n      \"type\": \"code\",\n      \"path\": \"/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/QA/adapter.py\",\n      \"location\": \"extract_output 方法\",\n      \"reason\": \"原样透传 actual_answer，无占位符检测。可作为防御性校验的兜底插入点。\"\n    },\n    {\n      \"type\": \"upstream_config\",\n      \"location\": \"mock_agent_llm 的 prompt/生成配置\",\n      \"reason\": \"LLM prompt 未约束不得编造具体联系方式，导致模型输出含占位符的虚构号码。这是根因所在，但该文件不在当前 source_file_catalog 中。\"\n    }\n  ],\n  \"root_cause_hypothesis\": \"上游 LLM（mock_agent_llm）在生成理赔咨询回答时，试图让回答更具体可信，于是在'客服热线'后自行补充了 '400-xxx-xxxx'。但该号码包含明显的占位符字符 'xxx'，属于虚构信息。LLM 缺乏'不确定时不编造具体细节'的能力边界意识，同时 prompt 未对此类行为做约束。adapter 链路为纯透传，将所有内容原样交给 judge 评估，无中间校验环节——这在设计上是合理的（adapter 不应篡改被测输出），但意味着所有内容质量责任落在上游生成环节。\",\n  \"verification_steps\": [\n    \"检查 mock_agent_llm 的 system prompt 是否包含'不得编造具体联系方式'的约束\",\n    \"在 mock_agent_llm 的生成日志中确认该条回答的完整 prompt 上下文\",\n    \"验证 golden_answer 中是否确实没有提供具体客服电话号码（已确认：仅写'拨打客服热线'）\",\n    \"检查是否存在其他类似含占位符（xxx/****/####）的回答样本，评估影响面\"\n  ],\n  \"patch_direction\": [\n    \"在 mock_agent_llm 的 prompt 中增加硬约束：'回答中的联系方式如果无法确认真实号码，必须使用通用描述如\\\"客服热线\\\"\\\"官方电话\\\"，严禁编造任何含占位符（如 xxx、****）的号码。'\",\n    \"在 adapter.extract_output 或 output 读取阶段增加占位符正则检测（如 \\\\d{3,4}-xxx-xxxx），命中时自动添加 data_quality_flag='placeholder_detected'，阻止该样本进入正式评估或触发重新生成。\",\n    \"将占位符检测规则纳入 judge 的 evaluation_boundary，作为'信息准确无虚构'期望的自动化判定依据之一。\"\n  ],\n  \"needs_human_review\": false,\n  \"scenario\": \"qa_gold_answer\",\n  \"quality_flags\": []\n}\n```"
+            ],
+            "node": "semantic judge or attribute LLM"
+          }
+        ],
+        "representative_traces": [
+          "c260b933-cb70-496f-b6a4-a5b797d68a27"
+        ],
+        "shared_failure_pattern": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+        "verification_cases": [
+          "c260b933-cb70-496f-b6a4-a5b797d68a27"
+        ]
+      }
+    ],
+    "common_root_cause": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+    "impact": "",
+    "priority": "high"
+  },
+  "check_panel": {
+    "passed": false,
+    "issues": [
+      "QA attribution causal_category outside taxonomy: insufficient_evidence"
+    ],
+    "protocol_gaps": [
+      "QA attribution causal_category outside taxonomy: insufficient_evidence"
+    ],
+    "verification_results": [
+      "Check categories passed current audit."
+    ],
+    "recommended_fixes": [
+      "Complete missing protocol outputs before treating the chain as valid."
+    ]
+  },
+  "table_row": {
+    "id": "mock-agent-QA-f8906092",
+    "input": "qa_gold_answer",
+    "scenario": "qa_gold_answer",
+    "output_summary": "{\"actual_answer\": \"您只需拨打我们24小时客服热线400-xxx-xxxx，提供保单号和诊断证明，我们会安排专人跟进，一般3个工作日内完成审核并打款。\"}",
+    "reference_summary": "{\"actual_answer\": \"拨打客服热线，提供保单号和诊断证明，审核通过后3个工作日内赔付。\"}",
+    "status": "not_fulfilled",
+    "execution_mode": "",
+    "output_source": "provided_output",
+    "verdict": "incorrect",
+    "fulfillment_status": "not_fulfilled",
+    "judge_summary": {
+      "status": "not_fulfilled",
+      "fulfillment_status": "not_fulfilled",
+      "verdict": "incorrect",
+      "reason": "not_fulfilled · blocking=[信息准确无虚构] · 用户若拨打此号码可能无法接通，导致理赔申请受阻，严重影响体验与信任",
+      "reason_source": "aggregated_fulfillment",
+      "reason_stage": "judge",
+      "is_formal_attribution": true,
+      "assessment_count": 3,
+      "blocking_count": 2,
+      "primary_failure_dimensions": [
+        {
+          "blocking": true,
+          "downstream_impact": "用户若拨打此号码可能无法接通，导致理赔申请受阻，严重影响体验与信任",
+          "evidence": "实际答复给出了‘400-xxx-xxxx’这一包含占位符的号码，属于虚构或不实信息 | 金标准中的联系方式应为‘客服热线’，无具体占位号码 | run_trace.extracted_output.actual_answer | run_trace.reference_contract.golden_answer",
+          "expectation_id": "信息准确无虚构",
+          "status": "not_fulfilled",
+          "within_evaluable_scope": true
+        }
+      ]
+    },
+    "attribution_summary": {
+      "attribution_count": 3,
+      "causal_category": "insufficient_evidence",
+      "is_complete": false,
+      "is_formal_attribution": false,
+      "probe_count": 1,
+      "summary_text": "attribute agent LLM 调用失败。"
+    },
+    "check_summary": {
+      "passed": false,
+      "issue_count": 1,
+      "protocol_gap_count": 1,
+      "consistency_gap_count": 0,
+      "recommended_fix_count": 1,
+      "issues": [
+        "QA attribution causal_category outside taxonomy: insufficient_evidence"
+      ]
+    },
+    "fallback_summary": {
+      "count": 0,
+      "needs_human_review": false
+    },
+    "needs_human_review": true,
+    "quality_flags": [
+      "attribute_blocked"
+    ],
+    "check_passed": false,
+    "issue_count": 2,
+    "fallback_count": 0,
+    "causal_category": "insufficient_evidence",
+    "divergence_stage": "semantic judge or attribute LLM",
+    "root_cause_summary": "attribute agent LLM 调用失败。",
+    "created_at": "2026-07-04T04:31:06.636816+00:00",
+    "stop_reason": "",
+    "interaction_mode": "single_turn",
+    "trace_id": "c260b933-cb70-496f-b6a4-a5b797d68a27"
+  },
+  "project_extensions": {
+    "scenarios": [
+      "qa_gold_answer",
+      "qa_context_faithfulness",
+      "qa_weak_quality"
+    ],
+    "score_dimensions": [
+      "correctness",
+      "completeness",
+      "key_point_coverage",
+      "faithfulness",
+      "relevance",
+      "usefulness",
+      "coherence",
+      "risk_control",
+      "clarity"
+    ],
+    "error_taxonomy": [
+      "answer_incorrect",
+      "answer_incomplete",
+      "question_misunderstood",
+      "irrelevant_answer",
+      "unsupported_claim",
+      "hallucination",
+      "context_not_used",
+      "insufficient_context",
+      "context_noise",
+      "over_refusal",
+      "format_error",
+      "too_vague",
+      "contradiction",
+      "needs_human_review",
+      "none"
+    ],
+    "frontend_standard": {
+      "frontend_view": {
+        "live": "render Input, Output, Reference, Judge, Attribute, and scenario fields from protocol objects",
+        "summary": "render same QA case-pool shape with compact per-case judge and attribute summaries"
+      },
+      "batch_persistence": {
+        "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+        "transient_results": "do not persist full trace, judge, attribute, or frontend_view as durable case-pool source data"
+      }
+    },
+    "display_contract": {
+      "output_source": "trace.live_result.extracted_output",
+      "reference_source": "input",
+      "formatting": [
+        "json formatting",
+        "truncation",
+        "output/reference alignment"
+      ]
+    },
+    "verifiable_tools": {
+      "available": false,
+      "reason": "adapter has no get_verifiable_tools"
+    }
+  }
+}

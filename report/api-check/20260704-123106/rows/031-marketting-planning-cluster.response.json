@@ -1,0 +1,83 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "needs_human_review::not_evaluable",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "stage_routing 正确性",
+        "business_metric 识别正确性",
+        "time_range 提取",
+        "decomposition_dimensions 考虑",
+        "target_value_and_unit 提取",
+        "planning_actionability 满足",
+        "sse_completion 完整性"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "8b851329-12bf-4da9-87d8-16dfe3df8bb0"
+      ],
+      "representative_traces": [
+        "8b851329-12bf-4da9-87d8-16dfe3df8bb0"
+      ],
+      "common_root_cause": "意图识别模块存在双重故障：规则层（try_rule_based_intent）的正则和关键词集合设计过窄，无法覆盖用户以'怎么提高 NBEV + 从多招销售人员入手'这种自然口语表达的规划意图；LLM 层的 prompt 示例偏刚性且含有'不明确则判 other'的保守指令，进一步降低了非模板化表达的识别率。两者的交集失效导致该案例从根源上短路——intent 被误判为 other 后，path_dispatch 必然路由至 non_agent，planning_function 不被调用，所有下游期望（指标提取、时间范围、策略维度、卡片生成、SSE 业务内容）全部落空。这不是模型能力问题，而是规则引擎覆盖度不足和 prompt 设计偏差共同构成的实现缺陷。",
+      "shared_failure_pattern": "意图识别模块存在双重故障：规则层（try_rule_based_intent）的正则和关键词集合设计过窄，无法覆盖用户以'怎么提高 NBEV + 从多招销售人员入手'这种自然口语表达的规划意图；LLM 层的 prompt 示例偏刚性且含有'不明确则判 other'的保守指令，进一步降低了非模板化表达的识别率。两者的交集失效导致该案例从根源上短路——intent 被误判为 other 后，path_dispatch 必然路由至 non_agent，planning_function 不被调用，所有下游期望（指标提取、时间范围、策略维度、卡片生成、SSE 业务内容）全部落空。这不是模型能力问题，而是规则引擎覆盖度不足和 prompt 设计偏差共同构成的实现缺陷。",
+      "representative_diffs": [
+        {
+          "case_id": "8b851329-12bf-4da9-87d8-16dfe3df8bb0",
+          "node": "intent_recognition",
+          "expected": "IntentResult(intent=IntentType.nbev_planning, confidence>=0.9, target_value=None, path_types=['队伍'])",
+          "actual": "IntentResult(intent=IntentType.other, confidence≈0.5, target_value=None, path_types=None)",
+          "evidence": [
+            "execution_trace[1].stage='intent_recognition', evidence.actual_stage='non_agent'",
+            "judge_result.evidence[0]: raw_response intent='4001', intent_name='其他意图'",
+            "源码 intent_recognition.py L35: 正则 r'怎么达成.*NBEV.*目标' 不匹配'怎么提高今年的NBEV'",
+            "源码 intent_recognition.py L114: 关键词集合缺少'提高''提升''入手'",
+            "源码 intent_prompt.py: '如果用户的意图不明确，倾向于判断为 other'"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        {
+          "action": "增加正则条目覆盖'提高''提升''增加''优化'等动词，如 re.compile(r'怎么(?:提高|提升|增加|优化|改善).*NBEV', re.IGNORECASE)",
+          "expected_effect": "本 case 将在 Tier 0 被规则直接命中，无需进入 LLM，返回 nbev_planning + confidence=1.0",
+          "target": "intent_recognition.py:_HOMEPAGE_RULES"
+        },
+        {
+          "action": "扩展 has_planning_intent 关键词集合为 {达成,规划,路径,测算,分析,提高,提升,增加,招,入手,优化,改善,增长,目标,策略}",
+          "expected_effect": "即使 Tier 0 漏过，Tier 3 也能捕获含 NBEV 和业务动词的自然语言表达",
+          "target": "intent_recognition.py:Tier 3 keyword heuristic"
+        },
+        {
+          "action": "在 nbev_planning 示例中增加'怎么提高今年的NBEV''从销售入手怎么提升NBEV'等口语化表达；将'不明确则判 other'改为'若用户提及 NBEV 或业务指标且无明确非规划信号，优先考虑 nbev_planning'",
+          "expected_effect": "LLM 对口语化规划意图的召回率提升",
+          "target": "intent_prompt.py:INTENT_RECOGNITION_PROMPT"
+        },
+        {
+          "action": "增加'销售人员→队伍''招人→队伍''增员→队伍'等语义映射引导",
+          "expected_effect": "LLM 能在识别 intent 的同时正确提取 path_types=['队伍']",
+          "target": "intent_prompt.py:path_types 映射"
+        }
+      ],
+      "verification_cases": [
+        "8b851329-12bf-4da9-87d8-16dfe3df8bb0"
+      ],
+      "next_actions": [
+        "1. 在 intent_recognition.py 的 _HOMEPAGE_RULES 中增加正则 r'怎么(?:提高|提升|增加|优化|改善).*NBEV'，重新运行本 case 验证 Tier 0 命中",
+        "2. 在 Tier 3 关键词集合中追加'提高''提升''增加''招''入手'，重新运行本 case 验证 Tier 3 命中（无需 LLM）",
+        "3. 仅修改步骤 1-2 后，预期 try_rule_based_intent 应返回 IntentType.nbev_planning，confidence≈0.95",
+        "4. 若规则层修复后仍不命中，检查 extract_target_value_from_text / extract_path_types_from_text（Tier 2）的行为，确认'今年''销售人员'等能否被正确提取或合理留空",
+        "5. 修改 INTENT_RECOGNITION_PROMPT，增加口语化示例并调整保守指令为'当用户明确谈论 NBEV 或业务指标提升时，优先考虑 nbev_planning'，重新验证 LLM 通路"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模块存在双重故障：规则层（try_rule_based_intent）的正则和关键词集合设计过窄，无法覆盖用户以'怎么提高 NBEV + 从多招销售人员入手'这种自然口语表达的规划意图；LLM 层的 prompt 示例偏刚性且含有'不明确则判 other'的保守指令，进一步降低了非模板化表达的识别率。两者的交集失效导致该案例从根源上短路——intent 被误判为 other 后，path_dispatch 必然路由至 non_agent，planning_function 不被调用，所有下游期望（指标提取、时间范围、策略维度、卡片生成、SSE 业务内容）全部落空。这不是模型能力问题，而是规则引擎覆盖度不足和 prompt 设计偏差共同构成的实现缺陷。",
+  "impact": "",
+  "priority": "high"
+}

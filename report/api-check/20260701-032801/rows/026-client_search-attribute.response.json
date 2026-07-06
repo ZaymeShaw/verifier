@@ -1,0 +1,101 @@
+{
+  "trace_id": "3ebec47b-02e7-48e0-a831-30bab4fa4b41",
+  "project_id": "client_search",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "客户年龄字段使用正确",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "客户年龄操作符使用正确",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "客户性别字段使用正确",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "客户性别枚举值正确",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "保费字段映射正确",
+      "causal_category": "no_issue"
+    }
+  ],
+  "causal_category": "no_issue",
+  "earliest_divergence": {
+    "node": "",
+    "expected": "",
+    "actual": "",
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "not_verified",
+      "evidence": [
+        {
+          "user_text": "45岁女性保费10万以上",
+          "source": "askbob",
+          "trace_id": "general-eval-1782847682291"
+        }
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        {
+          "logic": "AND",
+          "matched_level": 4,
+          "is_empty_result": false
+        }
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        {
+          "matched_level": 4,
+          "matched_patterns_available": true
+        }
+      ]
+    },
+    {
+      "status": "not_verified",
+      "evidence": [
+        {
+          "judge_scope": "parser_condition_semantics_only",
+          "downstream_result_set_available": false,
+          "downstream_status": "not_verified"
+        }
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    },
+    {
+      "probe_id": "",
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "query": true,
+    "actual": true,
+    "expected": true,
+    "execution_trace": true,
+    "project_docs": true,
+    "code_or_config": true
+  },
+  "root_cause_hypothesis": "无需归因：查询 '45岁女性保费10万以上' 在 prompt.md 中有直接对应的标准输出示例，模型按 prompt 规则正确解析出 clientAge RANGE {min:45,max:45}、clientSex MATCH '女'、annPremSegNum GTE 100000，judge 五项评估全部 fulfilled。系统链路（request_normalization → client_search_parse → routing_pattern_match → judge_boundary）各节点均正常运行，无分歧点。judge verdict 标记为 'uncertain' 但所有具体评估项均为 fulfilled 且 overall_fulfillment.status 为 fulfilled，该不确定性仅反映 judge 对全局裁决标签的保守策略，不指向任何实际解析错误。",
+  "verification_steps": [
+    "确认 extracted_output 中的实际 conditions 数组与 prompt 示例一致：包含 clientAge RANGE {min:45,max:45}、clientSex MATCH '女'、annPremSegNum GTE 100000",
+    "如对 judge 的 uncertain 标签有疑虑，可在完整 trace 中检查 judge 的 verdict_derivation 字段，确认是否仅为全局保守策略而非具体条件差异",
+    "如需要下游搜索验证，可配置 downstream_search 端点使 application_boundary 扩展到 parser_and_result_set 范围"
+  ],
+  "needs_human_review": false,
+  "scenario": "标准用例无故障 — 查询在 prompt 中有直接示例，模型正确复现了示例输出，judge 五项评估全部 fulfilled"
+}

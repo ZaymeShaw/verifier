@@ -1,0 +1,41 @@
+{
+  "trace_id": "42f6e4a9-245a-4994-a12c-b9f185b32cb7",
+  "project_id": "client_search",
+  "business_expectations": [
+    {},
+    {}
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "按北京地区筛选客户",
+      "status": "not_evaluable"
+    },
+    {
+      "expectation_id": "parser在无可用字段时返回合理空条件而非错误条件",
+      "status": "fulfilled"
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_evaluable",
+    "assessment_count": 2,
+    "blocking_expectations": [
+      "按北京地区筛选客户"
+    ]
+  },
+  "expected": {
+    "query_logic": "AND",
+    "expected_source": "not_available",
+    "reference_is_oracle": false
+  },
+  "actual": {
+    "query_logic": "AND"
+  },
+  "summary": {
+    "reason": "uncertain · 用户查询'北京地区的客户'意图明确，但当前ES数据库字段定义中完全不包含地区、城市、地址、省份等地理位置相关字段。parser无法将'北京'映射到任何可查询字段，返回空条件是系统能力边界内的合理结果。此失败原因完全来自上游ES数据库能力缺失（uncontrollable_limits），不属于parser理解、prompt配置或后处理逻辑等可评价系统问题。parser未生成错误条件，安全降级行为正确。",
+    "reason_source": "reasoning_summary",
+    "fulfillment_status": "not_evaluable",
+    "assessment_count": 2,
+    "blocking_count": 1,
+    "is_formal_attribution": false
+  }
+}

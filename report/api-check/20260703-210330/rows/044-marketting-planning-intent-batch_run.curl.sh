@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+curl -sS -X POST 'http://127.0.0.1:8021/api/batch_run' -H 'Content-Type: application/json' --data-raw '{"cases": [{"expected_intent": "customer_portrait", "id": "mock-agent-marketting-planning-intent-a07d4099", "input": {"extra_input_params": {"agent_args": {"conversation_id": "default_conv", "message": {"content": "我想了解一下去年买过我们年金险的客户，他们的大致年龄分布和家庭结构是什么样的？", "content_type": "text"}}, "args": {}}, "org_id": "default_org", "session_id": "default_session", "trace_id": "default_trace", "user_text": "我想了解一下去年买过我们年金险的客户，他们的大致年龄分布和家庭结构是什么样的？"}, "metadata": {"live_request_mapped": true, "ready": ["reference"], "schema_ok": true, "source": "mock_agent_llm"}, "reference": {"confidence": 0.95, "intent": "customer_portrait"}, "scenario": "intent_recognition", "source": "mock_agent_llm", "status": "pending"}], "concurrency": 1, "project": "marketting-planning-intent"}' --write-out '
+__HTTP_STATUS__:%{http_code}'

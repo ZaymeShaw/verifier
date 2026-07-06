@@ -1,0 +1,73 @@
+{
+  "id": "mock-agent-QA-87e78ff7",
+  "input": "qa_gold_answer",
+  "scenario": "qa_gold_answer",
+  "output_summary": "{\"actual_answer\": \"轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。\"}",
+  "reference_summary": "{\"actual_answer\": \"通常情况下，您购买的重疾险合同中关于轻症责任的赔付规则如下：\\n1. 轻症可以多次赔付，具体次数以合同约定为准（常见为3-5次）。每次确诊的轻症需满足合同定义的疾病标准，且两次轻症确诊之间通常有间隔期（如90天或180天）。\\n2. 每次轻症赔付的金额一般为基本保额的一定比例，常…",
+  "status": "not_fulfilled",
+  "execution_mode": "",
+  "output_source": "provided_output",
+  "verdict": "incorrect",
+  "fulfillment_status": "not_fulfilled",
+  "judge_summary": {
+    "status": "not_fulfilled",
+    "fulfillment_status": "not_fulfilled",
+    "verdict": "incorrect",
+    "reason": "not_fulfilled · blocking=[(none)]",
+    "reason_source": "aggregated_fulfillment",
+    "reason_stage": "judge",
+    "is_formal_attribution": true,
+    "assessment_count": 5,
+    "blocking_count": 0,
+    "primary_failure_dimensions": [
+      {
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "实际答案正确回应了用户关于轻症是否可多次赔付及金额比例的询问，并提供了赔付次数上限的示例和建议查阅合同的提醒。然而，答案遗漏了轻症赔付关键的间隔期要求、分组限制、保额影响等重要限制条件，这些信息对于用户完整理解赔付规则至关重要。因此，整体满足程度为未满足。",
+        "expectation_id": "说明轻症赔付限制条件",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      }
+    ]
+  },
+  "attribution_summary": {
+    "attribution_count": 1,
+    "causal_category": "needs_human_review",
+    "is_complete": true,
+    "is_formal_attribution": true,
+    "probe_count": 2,
+    "summary_text": "mock_agent_llm 在生成 qa_gold_answer 场景的 actual_answer 时，未能覆盖 reference 中关于轻症赔付的全部限制条件。具体表现为：仅笼统提及'间隔期要求'而未给出 90 天/180 天的具体范围，且完全遗漏了轻症分组限制（同一组别只赔一次）、部分产品轻症赔付后重疾保额减少、以及累计赔付上限有限制这三项关键信息。流水线代码（normalize → output.read → extract_output）均正常运行，非根因所在。该问题属于模型生成能力缺陷：在 qa_gold_answer 场景下，模型未能产出与 reference 同等信息密度的回答，导致 judge 评估为 answer_incomplete。"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 1,
+    "protocol_gap_count": 0,
+    "consistency_gap_count": 1,
+    "recommended_fix_count": 1,
+    "issues": [
+      "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: N, Users, WorkSpace, adapter, adapter.py, branch"
+    ]
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": false,
+  "quality_flags": [
+    "完整性不足",
+    "遗漏重要限制条件",
+    "完整性不足：遗漏四项关键限制条件",
+    "mock_agent_llm 生成不完整",
+    "answer_incomplete"
+  ],
+  "check_passed": false,
+  "issue_count": 2,
+  "fallback_count": 0,
+  "causal_category": "needs_human_review",
+  "divergence_stage": "mock_agent_llm.answer_generation",
+  "root_cause_summary": "mock_agent_llm 在生成 qa_gold_answer 场景的 actual_answer 时，未能覆盖 reference 中关于轻症赔付的全部限制条件。具体表现为：仅笼统提及'间隔期要求'而未给出 90 天/180 天的具体范围，且完全遗漏了轻症分组限制（同一组别只赔一次）、部分产品轻症赔付后重疾保额减少、以及累计赔付上限有限制这三项关键信息。流水线代码（normalize → output.read → extract_output）均正常运行，非根因所在。该问题属于模型生成能力缺陷：在 qa_gold_answer 场景下，模型未能产出与 reference 同等信息密度的回答，导致 judge 评估为 answer_incomplete。",
+  "created_at": "2026-07-05T04:47:19.992205+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "5bf66983-8277-4e09-9872-fa9a541f4204"
+}

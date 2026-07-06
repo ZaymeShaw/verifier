@@ -1,0 +1,322 @@
+{
+  "trace_id": "55add140-5115-42c5-83e7-3a50cb96ab64",
+  "project_id": "QA",
+  "verdict": "incorrect",
+  "business_expectations": [
+    {
+      "expectation_id": "百万医疗险报销计算逻辑正确",
+      "downstream_consumer": "用户",
+      "user_intent": "计算报销金额",
+      "expected_outcome": "准确计算：30000-10000=20000，再乘以报销比例（如100%），得出约20000元。",
+      "required_capabilities": [
+        "数值运算",
+        "保险条款理解"
+      ],
+      "acceptance_criteria": [
+        "回答中明确计算逻辑或得出报销金额接近20000元（考虑报销比例100%时）",
+        "免赔额设定为1万元，从用户自付部分中扣除",
+        "报销比例说明为通常100%"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "解释免赔额和报销比例规则",
+      "downstream_consumer": "用户",
+      "user_intent": "了解报销规则",
+      "expected_outcome": "解释免赔额应用、报销比例、进口药限制等关键点。",
+      "required_capabilities": [
+        "保险知识解释"
+      ],
+      "acceptance_criteria": [
+        "提及免赔额1万元",
+        "说明报销比例通常100%",
+        "提到进口药报销限制"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "提供准确且有帮助的信息",
+      "downstream_consumer": "用户",
+      "user_intent": "获取可靠信息",
+      "expected_outcome": "信息准确，不虚构，并提示以合同为准。",
+      "required_capabilities": [
+        "信息准确性"
+      ],
+      "acceptance_criteria": [
+        "信息与常见百万医疗险规则一致",
+        "没有明显错误或误导",
+        "提示用户查阅合同（可接受隐含或明确）"
+      ],
+      "priority": "medium"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "百万医疗险报销计算逻辑正确",
+      "status": "not_fulfilled",
+      "score": 0,
+      "downstream_impact": "用户无法获得确切报销金额，需进一步询问或误解报销额度。",
+      "blocking": true,
+      "confidence": 0.9
+    },
+    {
+      "expectation_id": "解释免赔额和报销比例规则",
+      "status": "fulfilled",
+      "score": 1,
+      "downstream_impact": "用户理解了报销规则框架。",
+      "blocking": false,
+      "confidence": 1
+    },
+    {
+      "expectation_id": "提供准确且有帮助的信息",
+      "status": "fulfilled",
+      "score": 1,
+      "downstream_impact": "回答基本可靠。",
+      "blocking": false,
+      "confidence": 1
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "assessment_count": 3,
+    "blocking_expectations": [
+      "百万医疗险报销计算逻辑正确"
+    ]
+  },
+  "expected": {
+    "actual_answer": "用户希望了解其百万医疗险在社保报销后自付3万元情况下，能获得多少保险赔付，并需要理解报销规则。"
+  },
+  "reasoning_summary": "用户的核心意图是获取具体报销金额。回答解释了免赔额和报销比例，但没有完成关键的计算步骤：自付3万扣除1万免赔额后，乘以100%报销比例应得出2万元，但回答止于“剩下的两万能按比例报销”，未输出最终金额，导致金额不明确，未能完全满足用户需求。因此，核心期望未满足，整体判断为未满足。",
+  "judge_basis": "基于golden_answer和常见百万医疗险条款，评估回答是否准确计算出报销金额并提供规则解释。",
+  "judge_method": "对比实际回答与golden answer的计算逻辑和规则解释完整性。",
+  "verdict_derivation": {
+    "primary_boundary": "qa_gold_answer",
+    "assessment_summary": "用户的核心意图是获取具体报销金额。回答解释了免赔额和报销比例，但没有完成关键的计算步骤：自付3万扣除1万免赔额后，乘以100%报销比例应得出2万元，但回答止于“剩下的两万能按比例报销”，未输出最终金额，导致金额不明确，未能完全满足用户需求。因此，核心期望未满足，整体判断为未满足。",
+    "blocking_gaps": [
+      "回答未完成从自付3万扣除1万免赔额后按报销比例100%得出具体金额（2万）的计算，仅止于“剩下的两万能按比例报销”，未给出明确结果。"
+    ],
+    "why_verdict": "根据用户意图，计算报销金额是首要目标，但实际回答未完成最终金额计算，导致该核心期望未满足，因此整体评估为未满足。",
+    "taxonomy_error_types": [
+      "answer_incorrect"
+    ],
+    "score_dimensions": [
+      {
+        "dimension": "correctness",
+        "score": 0.6666666666666666,
+        "evidence": [
+          "golden_answer: 扣除社保后合理费用减去1万免赔额，按比例（一般100%）赔付。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "completeness",
+        "score": 0.6666666666666666,
+        "evidence": [
+          "golden_answer: 扣除社保后合理费用减去1万免赔额，按比例（一般100%）赔付。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "key_point_coverage",
+        "score": 0.6666666666666666,
+        "evidence": [
+          "golden_answer: 扣除社保后合理费用减去1万免赔额，按比例（一般100%）赔付。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "faithfulness",
+        "score": 0.6666666666666666,
+        "evidence": [
+          "golden_answer: 扣除社保后合理费用减去1万免赔额，按比例（一般100%）赔付。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "relevance",
+        "score": 0.6666666666666666,
+        "evidence": [
+          "golden_answer: 扣除社保后合理费用减去1万免赔额，按比例（一般100%）赔付。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "usefulness",
+        "score": 0.6666666666666666,
+        "evidence": [
+          "golden_answer: 扣除社保后合理费用减去1万免赔额，按比例（一般100%）赔付。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "coherence",
+        "score": 0.6666666666666666,
+        "evidence": [
+          "golden_answer: 扣除社保后合理费用减去1万免赔额，按比例（一般100%）赔付。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "risk_control",
+        "score": 0.6666666666666666,
+        "evidence": [
+          "golden_answer: 扣除社保后合理费用减去1万免赔额，按比例（一般100%）赔付。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "clarity",
+        "score": 0.6666666666666666,
+        "evidence": [
+          "golden_answer: 扣除社保后合理费用减去1万免赔额，按比例（一般100%）赔付。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=False",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      }
+    ],
+    "error_type": "answer_incorrect"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "明确的报销金额数字（如2万元）",
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    "golden_answer: 扣除社保后合理费用减去1万免赔额，按比例（一般100%）赔付。",
+    "scenario=qa_gold_answer",
+    "question_present=True",
+    "actual_answer_present=False",
+    "golden_answer_present=False"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "reasoning": "本次评估依赖golden_answer和常见保险规则，均在可评估范围内。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "qa_gold_answer",
+    "primary_boundary_name": "基于标准答案的QA评估",
+    "judge_question": "回答的报销金额计算和规则解释是否与golden_answer一致且准确？",
+    "verdict_basis": "golden_answer提供了正确计算逻辑和预期结果，回答虽解释规则但未完成金额计算，故不全满足。",
+    "boundary_sources": "golden_answer字段",
+    "conflict_policy": "以golden_answer为评判基准"
+  },
+  "consumer_contract": {
+    "consumer": "保险咨询用户",
+    "contract": "提供准确、清晰、有用的保险报销金额和规则解释"
+  },
+  "intent_model": {
+    "raw_user_request": "我去年买的那个百万医疗险，要是住院花了八万，社保报完我自己掏了三万，这保险能给我报多少啊？",
+    "explicit_intents": [
+      {
+        "intent_id": "query_reimbursement_amount",
+        "description": "询问百万医疗险的具体报销金额",
+        "parameters": {
+          "total_cost": 80000,
+          "social_security_reimbursed": 50000,
+          "out_of_pocket": 30000
+        }
+      }
+    ],
+    "implicit_business_intents": [
+      {
+        "intent_id": "understand_coverage_rules",
+        "description": "了解百万医疗险的报销规则和计算方式"
+      }
+    ],
+    "constraints": {
+      "product_type": "百万医疗险",
+      "deductible": 10000,
+      "reimbursement_ratio": "通常100%",
+      "imported_drug_coverage": "部分报销"
+    },
+    "success_definition": "根据用户提供的费用数据，准确计算出可报销金额，并解释报销规则和注意事项。",
+    "blocking_requirements": [
+      "报销金额计算必须准确（30000 - 10000 = 20000，按比例报销）",
+      "解释免赔额、报销比例等核心规则",
+      "说明进口药等特殊情况的报销限制"
+    ],
+    "nice_to_have_requirements": [
+      "提及合同约定的医院和用药目录等细节",
+      "提醒用户查看具体合同条款"
+    ],
+    "intent_evidence": [
+      "用户明确提供了住院总费用、社保报销和个人自付金额",
+      "问题直接询问保险报销金额"
+    ]
+  },
+  "reconstructed_intent": "用户希望了解其百万医疗险在社保报销后自付3万元情况下，能获得多少保险赔付，并需要理解报销规则。",
+  "semantic_equivalence_checks": [
+    {
+      "expected_fragment": "扣除社保报销后，剩余合理医疗费用减去1万元免赔额，按合同约定的报销比例（一般为100%）进行赔付",
+      "actual_fragment": "一般免赔额一万，剩下的两万能按比例报销，具体得看你合同里的报销比例，通常是100%，但进口药可能只报一部分。",
+      "equivalent": true,
+      "basis": "双方均描述了扣除免赔额后按比例报销的逻辑，比例均为通常100%，但实际回答未完成最终金额计算，故计算逻辑解释部分等价，但最终金额输出不等价。"
+    }
+  ],
+  "reference_generation_basis": {
+    "source": "golden_answer",
+    "alignment_to_actual_shape": "golden answer 提供了标准计算逻辑和规则，作为评估依据。",
+    "evidence": [
+      "golden_answer文本"
+    ]
+  },
+  "scenario": "qa_gold_answer",
+  "needs_human_review": false,
+  "summary": {
+    "reason": "not_fulfilled · blocking=[百万医疗险报销计算逻辑正确] · 用户无法获得确切报销金额，需进一步询问或误解报销额度。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "百万医疗险报销计算逻辑正确",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "用户无法获得确切报销金额，需进一步询问或误解报销额度。",
+        "within_evaluable_scope": true,
+        "evidence": "用户无法获得确切报销金额，需进一步询问或误解报销额度。"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 3,
+    "blocking_count": 1,
+    "is_formal_attribution": true
+  }
+}

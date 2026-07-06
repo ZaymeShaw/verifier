@@ -1,0 +1,121 @@
+{
+  "id": "mock-agent-marketting-planning-intent-03d1c9cd",
+  "input": "default_org",
+  "scenario": "intent_recognition",
+  "output_summary": "{\"ambiguous\": false, \"confidence\": 0.5, \"fallback\": false, \"intent\": \"other\", \"raw_intent\": \"4001\"}",
+  "reference_summary": "",
+  "status": "not_fulfilled",
+  "execution_mode": "",
+  "output_source": "live_service",
+  "verdict": "incorrect",
+  "score": 0.0,
+  "fulfillment_status": "not_fulfilled",
+  "judge_summary": {
+    "status": "not_fulfilled",
+    "fulfillment_status": "not_fulfilled",
+    "verdict": "incorrect",
+    "score": 0.0,
+    "reason": "not_fulfilled · blocking=[关键槽位提取（对象）,关键槽位提取（时间）,意图可被正常分发,意图标签准确性,置信度达到可用阈值] · 无法确定查询的对象粒度，无法正确生成报表",
+    "reason_source": "aggregated_fulfillment",
+    "reason_stage": "judge",
+    "is_formal_attribution": true,
+    "assessment_count": 6,
+    "blocking_count": 5,
+    "primary_failure_dimensions": [
+      {
+        "blocking": true,
+        "downstream_impact": "无法确定查询的对象粒度，无法正确生成报表",
+        "evidence": "extracted_output.slots = {}，无对象槽位 | slots中体现'团队'和'业务员'维度",
+        "expectation_id": "关键槽位提取（对象）",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "业绩查询将无法确定时间范围，可能返回错误数据或无法执行",
+        "evidence": "extracted_output.slots = {}，无任何槽位 | slots中包含时间槽位，值为'上个月'",
+        "expectation_id": "关键槽位提取（时间）",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "用户请求将无法进入正确的业务处理流程，最终获得无效响应",
+        "evidence": "意图为'other'，通常被路由到通用兜底模块，无法触发业绩查询逻辑 | 意图-槽位组合可路由到业绩查询业务模块",
+        "expectation_id": "意图可被正常分发",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "下游无法获知用户真实查询意图，可能会给出无关回复或失败",
+        "evidence": "extracted_output.intent = 'other'，对应意图名称为'其他意图' | 意图标签为业绩查询类，如performance_query",
+        "expectation_id": "意图标签准确性",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "低置信度增加下游误判风险，可能导致错误调度或回复",
+        "evidence": "extracted_output.confidence = 0.5 | confidence > 0.7",
+        "expectation_id": "置信度达到可用阈值",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": false,
+        "downstream_impact": "系统盲目输出了低置信度的错误意图，错失了通过反问用户来明确意图的机会",
+        "evidence": "extracted_output.fallback = false，且未返回任何澄清信息，直接输出'其他意图' | fallback == true 或 返回澄清提示",
+        "expectation_id": "低置信度时触发兜底策略",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      }
+    ]
+  },
+  "attribution_summary": {
+    "attribution_count": 7,
+    "causal_category": "needs_human_review",
+    "is_complete": true,
+    "is_formal_attribution": true,
+    "probe_count": 0,
+    "summary_text": "系统意图分类体系在设计时仅覆盖了 NBEV 目标规划（nbev_planning）及相关的队伍/客户画像（team_portrait、customer_portrait）和调整测算（target_value_adjustment、achievement_measurement_adjustment）场景，未纳入回顾型业绩查询（如'查看上个月业绩表现'、'各业务员达成情况'）这一常见业务需求。当用户发起回顾型查询时，LLM 在给定的7种意图中找不到匹配项 — nbev_planning 语义为'规划如何达成目标'（前向），与'查看已发生的达成情况'（后向）存在根本性语义鸿沟 — 因此返回 other。此根因导致全部6项阻塞性期望连锁失败：意图标签错误 → 槽位提取被跳过 → 置信度硬编码0.5 → fallback 未触发 → 无法分发到正确的业务模块。"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 7,
+    "protocol_gap_count": 3,
+    "consistency_gap_count": 1,
+    "recommended_fix_count": 4,
+    "issues": [
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+      "Failure attribution passed quality gate with suspected_locations but no code/config or local verification evidence.",
+      "attribution has unsupported root-cause/location claims",
+      "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug",
+      "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: IntentType, LLM, NBEV, Users, WorkSpace, app"
+    ]
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": false,
+  "quality_flags": [
+    "intent_contract_gate_failed",
+    "intent_taxonomy_gap",
+    "confidence_hardcoded",
+    "fallback_semantic_misalignment",
+    "slot_extraction_coupled_to_intent"
+  ],
+  "check_passed": false,
+  "issue_count": 11,
+  "fallback_count": 0,
+  "causal_category": "needs_human_review",
+  "divergence_stage": "intent_contract_gate",
+  "root_cause_summary": "系统意图分类体系在设计时仅覆盖了 NBEV 目标规划（nbev_planning）及相关的队伍/客户画像（team_portrait、customer_portrait）和调整测算（target_value_adjustment、achievement_measurement_adjustment）场景，未纳入回顾型业绩查询（如'查看上个月业绩表现'、'各业务员达成情况'）这一常见业务需求。当用户发起回顾型查询时，LLM 在给定的7种意图中找不到匹配项 — nbev_planning 语义为'规划如何达成目标'（前向），与'查看已发生的达成情况'（后向）存在根本性语义鸿沟 — 因此返回 other。此根因导致全部6项阻塞性期望连锁失败：意图标签错误 → 槽位提取被跳过 → 置信度硬编码0.5 → fallback 未触发 → 无法分发到正确的业务模块。",
+  "created_at": "2026-07-04T08:16:12.152208+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "1c896611-09d4-474f-b5ff-06bbc0c5a3bf"
+}

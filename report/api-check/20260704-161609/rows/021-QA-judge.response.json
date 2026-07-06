@@ -1,0 +1,393 @@
+{
+  "trace_id": "52ed9e22-ea57-47bc-be4b-93737ac2257e",
+  "project_id": "QA",
+  "verdict": "incorrect",
+  "business_expectations": [
+    {
+      "expectation_id": "癌症治疗报销比例准确",
+      "downstream_consumer": "用户",
+      "user_intent": "询问报销比例",
+      "expected_outcome": "实际回答中包含“报销比例为100%”或等效表述",
+      "required_capabilities": [
+        "数值准确性"
+      ],
+      "acceptance_criteria": [
+        "回答中包含'100%'或'全额报销'等表示100%比例的内容"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "社保报销要求明确回答",
+      "downstream_consumer": "用户",
+      "user_intent": "询问社保报销前置条件",
+      "expected_outcome": "实际回答中包含类似“需要先经过社保报销”或“通常需要”的肯定陈述",
+      "required_capabilities": [
+        "问题理解",
+        "清晰回答"
+      ],
+      "acceptance_criteria": [
+        "回答中包含明确的肯定性语句，如'需要先经过社保报销'，而非仅通过赔付比例暗示"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "质子重离子治疗保障说明",
+      "downstream_consumer": "用户",
+      "user_intent": "未明确询问，但保险条款相关",
+      "expected_outcome": "实际回答中包含“质子重离子治疗也在保障范围内”或等效表述",
+      "required_capabilities": [
+        "知识覆盖"
+      ],
+      "acceptance_criteria": [
+        "回答中明确提到质子重离子治疗被保障"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "未经社保报销的赔付比例说明",
+      "downstream_consumer": "用户",
+      "user_intent": "询问社保报销流程（隐含）",
+      "expected_outcome": "实际回答中包含“按60%比例赔付”或等效表述",
+      "required_capabilities": [
+        "详细说明"
+      ],
+      "acceptance_criteria": [
+        "回答中说明未经社保报销时的赔付比例为60%"
+      ],
+      "priority": "low"
+    },
+    {
+      "expectation_id": "免责声明",
+      "downstream_consumer": "用户",
+      "user_intent": "风险规避",
+      "expected_outcome": "实际回答中包含免责声明",
+      "required_capabilities": [
+        "合规性"
+      ],
+      "acceptance_criteria": [
+        "回答中包含'具体以保险条款为准'或等效免责表述"
+      ],
+      "priority": "low"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "癌症治疗报销比例准确",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "回答中包含报销比例为100%"
+      ],
+      "actual_evidence": [
+        "本产品对癌症治疗的报销比例为100%"
+      ],
+      "downstream_impact": "用户清楚报销比例",
+      "blocking": true
+    },
+    {
+      "expectation_id": "社保报销要求明确回答",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "回答中明确陈述需要先经过社保报销"
+      ],
+      "actual_evidence": [
+        "回答中仅说明'若未经过社保报销，则按60%比例赔付'，缺乏直接的肯定性回答"
+      ],
+      "downstream_impact": "用户无法直接确认是否需要社保报销，需自行推断",
+      "blocking": true
+    },
+    {
+      "expectation_id": "质子重离子治疗保障说明",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "回答中提及质子重离子治疗也在保障范围内"
+      ],
+      "actual_evidence": [
+        "质子重离子治疗也在保障范围内"
+      ],
+      "downstream_impact": "用户了解扩展保障",
+      "blocking": false
+    },
+    {
+      "expectation_id": "未经社保报销的赔付比例说明",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "回答中包含未经社保报销按60%赔付"
+      ],
+      "actual_evidence": [
+        "若未经过社保报销，则按60%比例赔付"
+      ],
+      "downstream_impact": "用户了解赔付差异",
+      "blocking": false
+    },
+    {
+      "expectation_id": "免责声明",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "回答中包含免责声明如'具体以保险条款为准'"
+      ],
+      "actual_evidence": [
+        "回答中未提及任何免责声明"
+      ],
+      "downstream_impact": "缺少合规性提示",
+      "blocking": false
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "assessment_count": 5,
+    "blocking_expectations": [
+      "社保报销要求明确回答"
+    ]
+  },
+  "expected": {
+    "golden_answer": "该百万医疗险对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。通常需要先经过社保报销；若未经社保报销，则按60%比例赔付。具体以保险条款为准。"
+  },
+  "actual": {
+    "actual_answer": "本产品对癌症治疗的报销比例为100%，质子重离子治疗也在保障范围内。但需注意，若未经过社保报销，则按60%比例赔付。"
+  },
+  "reasoning_summary": "实际回答准确提供了癌症治疗报销比例（100%）和质子重离子治疗保障，并说明了未经社保报销时的赔付比例（60%）。但针对用户第二个问题“需要先经过社保报销吗？”，回答未能给出直接的肯定答复，仅通过赔付条件暗示，缺少明确性。此外，golden answer中包含的免责声明也未出现。由于核心需求未完全满足，整体评估为not_fulfilled。",
+  "judge_basis": "基于 golden answer 和用户问题，逐项评估实际回答的完整性与准确性。",
+  "judge_method": "语义比对与关键信息覆盖",
+  "verdict_derivation": {
+    "primary_boundary": "qa_gold_answer",
+    "assessment_summary": "实际回答准确提供了癌症治疗报销比例（100%）和质子重离子治疗保障，并说明了未经社保报销时的赔付比例（60%）。但针对用户第二个问题“需要先经过社保报销吗？”，回答未能给出直接的肯定答复，仅通过赔付条件暗示，缺少明确性。此外，golden answer中包含的免责声明也未出现。由于核心需求未完全满足，整体评估为not_fulfilled。",
+    "blocking_gaps": [
+      "社保报销要求明确回答：回答未直接肯定需要先经过社保报销，仅通过赔付比例暗示，未满足用户对明确性的需求"
+    ],
+    "why_verdict": "由于核心期望“社保报销要求明确回答”未满足（blocking），整体评价为not_fulfilled。报销比例等信息准确，但关键问题回答不充分。",
+    "taxonomy_error_types": [
+      "answer_incomplete"
+    ],
+    "score_dimensions": [
+      {
+        "dimension": "correctness",
+        "score": 0.6,
+        "evidence": [
+          "实际回答准确提供了癌症治疗报销比例（100%）和质子重离子治疗保障，并说明了未经社保报销时的赔付比例（60%）。但针对用户第二个问题“需要先经过社保报销吗？”，回答未能给出直接的肯定答复，仅通过赔付条件暗示，缺少明确性。此外，golden answer中包含的免责声明也未出现。由于核心需求未完全满足，整体评估为not_fulfilled。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=True",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "completeness",
+        "score": 0.6,
+        "evidence": [
+          "实际回答准确提供了癌症治疗报销比例（100%）和质子重离子治疗保障，并说明了未经社保报销时的赔付比例（60%）。但针对用户第二个问题“需要先经过社保报销吗？”，回答未能给出直接的肯定答复，仅通过赔付条件暗示，缺少明确性。此外，golden answer中包含的免责声明也未出现。由于核心需求未完全满足，整体评估为not_fulfilled。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=True",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "key_point_coverage",
+        "score": 0.6,
+        "evidence": [
+          "实际回答准确提供了癌症治疗报销比例（100%）和质子重离子治疗保障，并说明了未经社保报销时的赔付比例（60%）。但针对用户第二个问题“需要先经过社保报销吗？”，回答未能给出直接的肯定答复，仅通过赔付条件暗示，缺少明确性。此外，golden answer中包含的免责声明也未出现。由于核心需求未完全满足，整体评估为not_fulfilled。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=True",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "faithfulness",
+        "score": 0.6,
+        "evidence": [
+          "实际回答准确提供了癌症治疗报销比例（100%）和质子重离子治疗保障，并说明了未经社保报销时的赔付比例（60%）。但针对用户第二个问题“需要先经过社保报销吗？”，回答未能给出直接的肯定答复，仅通过赔付条件暗示，缺少明确性。此外，golden answer中包含的免责声明也未出现。由于核心需求未完全满足，整体评估为not_fulfilled。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=True",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "relevance",
+        "score": 0.6,
+        "evidence": [
+          "实际回答准确提供了癌症治疗报销比例（100%）和质子重离子治疗保障，并说明了未经社保报销时的赔付比例（60%）。但针对用户第二个问题“需要先经过社保报销吗？”，回答未能给出直接的肯定答复，仅通过赔付条件暗示，缺少明确性。此外，golden answer中包含的免责声明也未出现。由于核心需求未完全满足，整体评估为not_fulfilled。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=True",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "usefulness",
+        "score": 0.6,
+        "evidence": [
+          "实际回答准确提供了癌症治疗报销比例（100%）和质子重离子治疗保障，并说明了未经社保报销时的赔付比例（60%）。但针对用户第二个问题“需要先经过社保报销吗？”，回答未能给出直接的肯定答复，仅通过赔付条件暗示，缺少明确性。此外，golden answer中包含的免责声明也未出现。由于核心需求未完全满足，整体评估为not_fulfilled。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=True",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "coherence",
+        "score": 0.6,
+        "evidence": [
+          "实际回答准确提供了癌症治疗报销比例（100%）和质子重离子治疗保障，并说明了未经社保报销时的赔付比例（60%）。但针对用户第二个问题“需要先经过社保报销吗？”，回答未能给出直接的肯定答复，仅通过赔付条件暗示，缺少明确性。此外，golden answer中包含的免责声明也未出现。由于核心需求未完全满足，整体评估为not_fulfilled。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=True",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "risk_control",
+        "score": 0.6,
+        "evidence": [
+          "实际回答准确提供了癌症治疗报销比例（100%）和质子重离子治疗保障，并说明了未经社保报销时的赔付比例（60%）。但针对用户第二个问题“需要先经过社保报销吗？”，回答未能给出直接的肯定答复，仅通过赔付条件暗示，缺少明确性。此外，golden answer中包含的免责声明也未出现。由于核心需求未完全满足，整体评估为not_fulfilled。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=True",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      },
+      {
+        "dimension": "clarity",
+        "score": 0.6,
+        "evidence": [
+          "实际回答准确提供了癌症治疗报销比例（100%）和质子重离子治疗保障，并说明了未经社保报销时的赔付比例（60%）。但针对用户第二个问题“需要先经过社保报销吗？”，回答未能给出直接的肯定答复，仅通过赔付条件暗示，缺少明确性。此外，golden answer中包含的免责声明也未出现。由于核心需求未完全满足，整体评估为not_fulfilled。",
+          "scenario=qa_gold_answer",
+          "question_present=True",
+          "actual_answer_present=True",
+          "golden_answer_present=False"
+        ],
+        "status": "judged"
+      }
+    ],
+    "error_type": "answer_incomplete"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "直接回答是否需要先经过社保报销的陈述",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "免责声明",
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    "实际回答准确提供了癌症治疗报销比例（100%）和质子重离子治疗保障，并说明了未经社保报销时的赔付比例（60%）。但针对用户第二个问题“需要先经过社保报销吗？”，回答未能给出直接的肯定答复，仅通过赔付条件暗示，缺少明确性。此外，golden answer中包含的免责声明也未出现。由于核心需求未完全满足，整体评估为not_fulfilled。",
+    "scenario=qa_gold_answer",
+    "question_present=True",
+    "actual_answer_present=True",
+    "golden_answer_present=False"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "reasoning": "有明确的golden_answer和用户问题，可评估实际回答的完整性和准确性。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "qa_gold_answer",
+    "primary_boundary_name": "QA Gold Answer",
+    "judge_question": "实际回答是否完整且正确地满足了用户问题和golden answer的期望？",
+    "verdict_basis": "对比用户问题、golden answer与实际回答的关键信息覆盖",
+    "boundary_sources": "用户问题、golden_answer",
+    "conflict_policy": "以golden answer为参考基准，但以用户意图为核心"
+  },
+  "consumer_contract": {
+    "consumer": "QA评估场景",
+    "contract": "基于golden_answer评估实际回答的完整性和准确性"
+  },
+  "intent_model": {
+    "raw_user_request": "这款百万医疗险对癌症治疗能报销多少？需要先经过社保报销吗？",
+    "explicit_intents": [
+      "询问百万医疗险对癌症治疗的报销比例",
+      "询问是否需要先经过社保报销"
+    ],
+    "implicit_business_intents": [
+      "希望获得质子重离子治疗等扩展保障的信息",
+      "希望了解未经社保报销时的赔付规则",
+      "希望获得免责提示以确保信息准确性"
+    ],
+    "success_definition": "回答需准确提供癌症治疗报销比例，并明确、直接地说明是否需要先经过社保报销；如有相关赔付规则和免责信息应一并提供。",
+    "blocking_requirements": [
+      "必须给出报销比例",
+      "必须明确回答是否需要先经过社保报销"
+    ],
+    "nice_to_have_requirements": [
+      "提及质子重离子治疗保障",
+      "说明未经社保报销的赔付比例",
+      "包含免责声明"
+    ],
+    "intent_evidence": [
+      "用户问题包含两个核心问句"
+    ]
+  },
+  "reconstructed_intent": "用户希望了解这款百万医疗险对癌症治疗的报销比例，以及是否需要先经过社保报销。",
+  "semantic_equivalence_checks": [
+    {
+      "expected_fragment": "该百万医疗险对癌症治疗的报销比例为100%",
+      "actual_fragment": "本产品对癌症治疗的报销比例为100%",
+      "equivalent": true,
+      "basis": "语义一致，均表示报销比例100%"
+    },
+    {
+      "expected_fragment": "通常需要先经过社保报销",
+      "actual_fragment": "若未经过社保报销，则按60%比例赔付",
+      "equivalent": false,
+      "basis": "期望着明确肯定回答，实际回答仅陈述未经过社保的结果，未直接回答'需要'"
+    },
+    {
+      "expected_fragment": "具体以保险条款为准",
+      "actual_fragment": "无",
+      "equivalent": false,
+      "basis": "实际回答缺失免责声明"
+    }
+  ],
+  "reference_generation_basis": {
+    "source": "golden_answer",
+    "alignment_to_live_schema": "直接引用",
+    "evidence": [
+      "golden_answer文本"
+    ]
+  },
+  "scenario": "qa_gold_answer",
+  "needs_human_review": false,
+  "summary": {
+    "reason": "not_fulfilled · blocking=[社保报销要求明确回答] · 用户无法直接确认是否需要社保报销，需自行推断",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "社保报销要求明确回答",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "用户无法直接确认是否需要社保报销，需自行推断",
+        "within_evaluable_scope": true,
+        "evidence": "回答中仅说明'若未经过社保报销，则按60%比例赔付'，缺乏直接的肯定性回答 | 回答中明确陈述需要先经过社保报销"
+      },
+      {
+        "expectation_id": "免责声明",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "缺少合规性提示",
+        "within_evaluable_scope": true,
+        "evidence": "回答中未提及任何免责声明 | 回答中包含免责声明如'具体以保险条款为准'"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 2,
+    "is_formal_attribution": true
+  }
+}

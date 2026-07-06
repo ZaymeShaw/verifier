@@ -1,0 +1,116 @@
+{
+  "project_id": "marketting-planning",
+  "rows": [
+    {
+      "id": "mock-agent-marketting-planning-d1642b58",
+      "input": "org_001",
+      "scenario": "intent_recognition",
+      "output_summary": "{\"code\": 0, \"end_flag\": 1, \"extra_output_params\": {\"card_result\": {\"answer\": \"\", \"event\": \"card_end\", \"extensions\": {\"session_id\": \"eval-mock-agent-marketting-…",
+      "reference_summary": "{\"scenario\": \"intent_recognition\"}",
+      "status": "not_fulfilled",
+      "execution_mode": "",
+      "output_source": "live_service",
+      "verdict": "incorrect",
+      "fulfillment_status": "not_fulfilled",
+      "judge_summary": {
+        "status": "not_fulfilled",
+        "fulfillment_status": "not_fulfilled",
+        "verdict": "incorrect",
+        "reason": "not_fulfilled · blocking=[(none)]",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 3,
+        "blocking_count": 0,
+        "primary_failure_dimensions": [
+          {
+            "blocking": false,
+            "downstream_impact": "",
+            "evidence": "系统未能满足用户业务期望：意图识别错误导致进入non_agent并直接终止，未进行任何规划或澄清，输出无实质内容。因此总体判定为未完成。",
+            "expectation_id": "意图准确识别为营销规划",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": false,
+            "downstream_impact": "",
+            "evidence": "系统未能满足用户业务期望：意图识别错误导致进入non_agent并直接终止，未进行任何规划或澄清，输出无实质内容。因此总体判定为未完成。",
+            "expectation_id": "输出包含规划相关卡片或澄清提示",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          },
+          {
+            "blocking": false,
+            "downstream_impact": "",
+            "evidence": "系统未能满足用户业务期望：意图识别错误导致进入non_agent并直接终止，未进行任何规划或澄清，输出无实质内容。因此总体判定为未完成。",
+            "expectation_id": "进入规划或澄清阶段而非直接结束",
+            "status": "not_fulfilled",
+            "within_evaluable_scope": true
+          }
+        ]
+      },
+      "attribution_summary": {
+        "attribution_count": 3,
+        "causal_category": "needs_human_review",
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 4,
+        "summary_text": "双重根因：(1) 规则链覆盖不足——Tier 0首页正则 r'怎么达成.*NBEV.*目标' 要求特定句式，无法匹配'怎么通过...来补上'的口语化表述；Tier 3关键词列表('达成','规划','路径','测算','分析')缺少'补上''增加''优化''改进'等语义等价词，导致has_planning_intent=False。(2) LLM模型能力缺口——qwen3-next-80b-a3b-instruct（激活3B）在规则未命中时未能正确理解'还差不少''怎么补上'等表述属于nbev_planning意图，prompt中'不确定归other'的兜底策略加剧了误判。两者叠加导致明确的营销规划请求被最终识别为'其他意图'，使系统进入non_agent路径并直接结束交互。"
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 6,
+        "protocol_gap_count": 2,
+        "consistency_gap_count": 0,
+        "recommended_fix_count": 2,
+        "issues": [
+          "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+          "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+          "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+          "generic core contains project-specific marker marketting-planning: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+          "JudgeResult missing evaluation_boundary; verdict boundary is unclear.",
+          "JudgeResult missing verdict_derivation; final verdict cannot be traced to comparison evidence and boundary decision."
+        ]
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "quality_flags": [
+        "规则覆盖不足导致明确意图被误判",
+        "LLM prompt缺少口语化few-shot示例",
+        "小模型语义泛化能力有限",
+        "兜底策略过于保守（不确定归other而非归nbev_planning）",
+        "ungrounded_root_cause"
+      ],
+      "check_passed": false,
+      "issue_count": 8,
+      "fallback_count": 0,
+      "causal_category": "needs_human_review",
+      "divergence_stage": "intent_recognition",
+      "root_cause_summary": "双重根因：(1) 规则链覆盖不足——Tier 0首页正则 r'怎么达成.*NBEV.*目标' 要求特定句式，无法匹配'怎么通过...来补上'的口语化表述；Tier 3关键词列表('达成','规划','路径','测算','分析')缺少'补上''增加''优化''改进'等语义等价词，导致has_planning_intent=False。(2) LLM模型能力缺口——qwen3-next-80b-a3b-instruct（激活3B）在规则未命中时未能正确理解'还差不少''怎么补上'等表述属于nbev_planning意图，prompt中'不确定归other'的兜底策略加剧了误判。两者叠加导致明确的营销规划请求被最终识别为'其他意图'，使系统进入non_agent路径并直接结束交互。",
+      "created_at": "2026-07-05T13:24:18.856856+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "9e230598-22ad-461e-b789-62cdf57a430e"
+    }
+  ],
+  "total": 1,
+  "summary": {
+    "fulfilled_count": 0,
+    "not_fulfilled_count": 1,
+    "pending_count": 0,
+    "correct_count": 0,
+    "incorrect_count": 1,
+    "uncertain_count": 0,
+    "human_review_count": 0,
+    "check_failed_count": 1,
+    "issue_count": 8,
+    "fallback_count": 0,
+    "rows_with_fallback_count": 0,
+    "by_scenario": {
+      "intent_recognition": 1
+    }
+  }
+}

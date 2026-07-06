@@ -1,0 +1,46 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "44872ff8-77eb-4db8-908e-385ffadfe5e4"
+      ],
+      "representative_traces": [
+        "44872ff8-77eb-4db8-908e-385ffadfe5e4"
+      ],
+      "common_root_cause": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "shared_failure_pattern": "状态机未完成归因质量门，当前只能保留待复核失败归因。",
+      "representative_diffs": [
+        {
+          "case_id": "44872ff8-77eb-4db8-908e-385ffadfe5e4",
+          "node": "state_machine",
+          "evidence": [
+            "用户意图为获取世界最高山峰名称，但被评估的模型输出为空字符串。由于没有任何实质性内容，无法满足提供正确名称、保持相关性和提供有用信息等核心业务期望。因此整体评估为未满足。",
+            "scenario=qa_gold_answer",
+            "question_present=True",
+            "actual_answer_present=False",
+            "golden_answer_present=False"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "补足当前 case 的归因证据后重新运行；不要在缺少 AttributeResult 时静默通过。"
+      ],
+      "verification_cases": [
+        "44872ff8-77eb-4db8-908e-385ffadfe5e4"
+      ],
+      "next_actions": [
+        "检查 state_history 和 gate_decisions，确认 run_attribution_probes 未完成的原因。"
+      ]
+    }
+  ],
+  "common_root_cause": "",
+  "impact": "",
+  "priority": ""
+}

@@ -1,0 +1,108 @@
+{
+  "trace_id": "74e156c7-f19d-41c0-b6e5-faa54b81f87f",
+  "project_id": "marketting-planning",
+  "business_expectations": [
+    {},
+    {},
+    {},
+    {},
+    {}
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "阶段路由正确性",
+      "status": "not_fulfilled"
+    },
+    {
+      "expectation_id": "路径类型覆盖",
+      "status": "not_fulfilled"
+    },
+    {
+      "expectation_id": "目标值解析正确性",
+      "status": "not_fulfilled"
+    },
+    {
+      "expectation_id": "规划可操作性",
+      "status": "not_fulfilled"
+    },
+    {
+      "expectation_id": "事件序列完整性",
+      "status": "not_fulfilled"
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "assessment_count": 5,
+    "blocking_expectations": [
+      "阶段路由正确性",
+      "路径类型覆盖",
+      "目标值解析正确性",
+      "事件序列完整性"
+    ]
+  },
+  "expected": {
+    "allow_fallback": false,
+    "expected_stage": "planning",
+    "required_events": [
+      "intent_detected",
+      "planning_started",
+      "card_delta",
+      "done"
+    ],
+    "required_path_types": [
+      "premium_growth",
+      "customer_growth"
+    ],
+    "scenario": "execution_planning"
+  },
+  "summary": {
+    "reason": "uncertain · 由于营销规划服务不可用（连接被拒绝），系统未能返回任何规划内容，无法满足用户规划需求。失败原因属于外部依赖不可控，系统本身未产生可评估错误，但在结果上用户意图未实现。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "事件序列完整性",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "前端无法获知任务进度与结束状态，体验断裂",
+        "within_evaluable_scope": false,
+        "evidence": ""
+      },
+      {
+        "expectation_id": "目标值解析正确性",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "目标值缺失导致规划无法量化，无参考意义",
+        "within_evaluable_scope": false,
+        "evidence": ""
+      },
+      {
+        "expectation_id": "路径类型覆盖",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "无法获得队伍与客户维度的达成路径，规划完全不可用",
+        "within_evaluable_scope": false,
+        "evidence": ""
+      },
+      {
+        "expectation_id": "阶段路由正确性",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "无法启动规划流程，后续所有环节中断",
+        "within_evaluable_scope": false,
+        "evidence": ""
+      },
+      {
+        "expectation_id": "规划可操作性",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "即使有卡片也因无内容而无法指导行动",
+        "within_evaluable_scope": false,
+        "evidence": ""
+      }
+    ],
+    "reason_source": "reasoning_summary",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 4,
+    "is_formal_attribution": false
+  }
+}

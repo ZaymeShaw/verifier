@@ -1,204 +1,108 @@
 [
   {
-    "id": "qa-gold-exact-1",
+    "id": "mock-agent-QA-87e78ff7",
+    "input": {
+      "input": {
+        "query": "我买的那个重疾险，如果得了合同里写的轻症，是不是能赔多次？每次赔多少？"
+      },
+      "metadata": {
+        "user_id": "user_12345",
+        "session_id": "sess_abc123",
+        "trace_id": "trace_xyz789"
+      },
+      "scenario": "qa_gold_answer",
+      "data_quality_flags": null
+    },
     "scenario": "qa_gold_answer",
-    "input": {
-      "question": "什么是保险合同犹豫期？"
+    "expected_intent": "",
+    "source": "mock_agent_llm",
+    "status": "pending",
+    "metadata": {
+      "source": "mock_agent_llm",
+      "ready": [
+        "output",
+        "reference"
+      ],
+      "project_id": "QA",
+      "live_request_mapped": true,
+      "schema_ok": true
+    },
+    "output": {
+      "actual_answer": "轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。"
     },
     "reference": {
-      "golden_answer": "犹豫期是投保人收到保险合同后，在合同约定期限内可以申请解除合同，保险公司通常退还已交保费的期间。"
-    },
-    "metadata": {
-      "category": "insurance_contract",
-      "expected_error_type": "none",
-      "quality_dimension": "correctness",
-      "previous_output": {
-        "actual_answer": "犹豫期是投保人收到保险合同后，在合同约定期限内可以申请解除合同，保险公司通常退还已交保费的期间。"
-      }
-    },
-    "expected_quality": "correct",
-    "source": "data_mock_seed",
-    "status": "pending",
-    "output": {
-      "actual_answer": "犹豫期是投保人收到保险合同后，在合同约定期限内可以申请解除合同，保险公司通常退还已交保费的期间。"
+      "actual_answer": "通常情况下，您购买的重疾险合同中关于轻症责任的赔付规则如下：\n1. 轻症可以多次赔付，具体次数以合同约定为准（常见为3-5次）。每次确诊的轻症需满足合同定义的疾病标准，且两次轻症确诊之间通常有间隔期（如90天或180天）。\n2. 每次轻症赔付的金额一般为基本保额的一定比例，常见比例为20%-30%。例如保额50万，每次轻症可赔付10万-15万。部分产品轻症赔付后重疾保额不变，部分产品会相应减少。\n3. 需要注意，轻症责任可能设有分组限制，即同一组别的轻症只能赔付一次；另外，轻症赔付后合同继续有效，但累计赔付上限可能有限制。\n以上为一般规则，具体赔付条件、次数、金额比例请以您持有的保险合同条款为准。建议您查阅合同中的“保险责任”及“轻症疾病保险金”章节，或直接咨询保险公司客服获取准确信息。"
     }
   },
   {
-    "id": "qa-gold-incomplete-1",
-    "scenario": "qa_gold_answer",
+    "id": "mock-agent-QA-d42c998f",
     "input": {
-      "question": "等待期内因疾病出险是否赔付？"
+      "input": {
+        "query": "我买的这个医疗险，如果住院花了钱，能报销多少？每次住院是不是都有免赔额？",
+        "answer": "您购买的医疗险每次住院有1000元免赔额，超过部分按90%报销。"
+      },
+      "metadata": {
+        "session_id": "sess_qa_001",
+        "trace_id": "trace_12345",
+        "user_id": "user_001"
+      },
+      "scenario": "qa_context_faithfulness",
+      "data_quality_flags": []
     },
-    "reference": {
-      "golden_answer": "等待期内因疾病发生保险事故通常不承担保险责任；但意外事故通常不受等待期限制，且合同另有约定时应按合同执行。"
-    },
-    "metadata": {
-      "category": "insurance_claim",
-      "expected_error_type": "answer_incomplete",
-      "quality_dimension": "completeness",
-      "previous_output": {
-        "actual_answer": "等待期内疾病出险一般不赔。"
-      }
-    },
-    "expected_quality": "incorrect",
-    "source": "data_mock_seed",
-    "status": "pending",
-    "output": {
-      "actual_answer": "等待期内疾病出险一般不赔。"
-    }
-  },
-  {
-    "id": "qa-context-supported-1",
     "scenario": "qa_context_faithfulness",
-    "input": {
-      "question": "材料中疾病责任等待期多久？",
-      "contexts": [
-        "产品条款写明：疾病责任等待期为90天，意外伤害责任无等待期。"
-      ]
+    "expected_intent": "",
+    "source": "mock_agent_llm",
+    "status": "pending",
+    "metadata": {
+      "source": "mock_agent_llm",
+      "ready": [
+        "output",
+        "reference"
+      ],
+      "project_id": "QA",
+      "live_request_mapped": true,
+      "schema_ok": true
+    },
+    "output": {
+      "actual_answer": "您购买的医疗险每次住院有1000元免赔额，超过部分按90%报销。"
     },
     "reference": {
-      "golden_answer": "材料明确疾病责任等待期为90天，意外伤害责任无等待期。"
-    },
-    "metadata": {
-      "category": "rag_faithfulness",
-      "expected_error_type": "none",
-      "quality_dimension": "faithfulness",
-      "previous_output": {
-        "actual_answer": "疾病责任等待期为90天，意外伤害责任无等待期。"
-      }
-    },
-    "expected_quality": "correct",
-    "source": "data_mock_seed",
-    "status": "pending",
-    "output": {
-      "actual_answer": "疾病责任等待期为90天，意外伤害责任无等待期。"
+      "actual_answer": "非常抱歉，我暂时无法获取到您所购买医疗险的具体条款信息。根据一般市场情况，医疗险通常会设置每次住院的免赔额，常见额度有500元、1000元甚至更高，超出免赔额部分的医疗费用可按一定比例报销，比例通常在80%至100%之间，具体以您的保单约定为准。\n\n为了获得准确答案，建议您：\n1. 登录所投保保险公司的官方APP或微信公众号，查看电子保单中的“保障责任”或“免赔额与赔付比例”章节；\n2. 或者致电保险公司客服热线，提供您的保单号进行查询。\n\n如果您能告诉我具体的保险产品名称，我也可以尝试帮您查找公开的保障信息。"
     }
   },
   {
-    "id": "qa-context-hallucination-1",
-    "scenario": "qa_context_faithfulness",
+    "id": "mock-agent-QA-9efd1947",
     "input": {
-      "question": "材料中住院医疗免赔额是多少？",
-      "contexts": [
-        "保障责任包含住院医疗、特殊门诊和住院前后门急诊。材料未提及免赔额。"
-      ]
+      "input": {
+        "query": "我上个月买的那个重疾险，如果真得了癌症，具体能赔多少钱啊？"
+      },
+      "metadata": {
+        "session_id": "sess_0001",
+        "trace_id": "trace_0001",
+        "user_id": "user_0001"
+      },
+      "scenario": "qa_weak_quality",
+      "data_quality_flags": null
     },
-    "reference": {
-      "golden_answer": "材料未提及免赔额，不能给出1万元免赔额结论。"
-    },
-    "metadata": {
-      "category": "rag_faithfulness",
-      "expected_error_type": "unsupported_claim",
-      "quality_dimension": "risk_control",
-      "previous_output": {
-        "actual_answer": "住院医疗免赔额是1万元。"
-      }
-    },
-    "expected_quality": "incorrect",
-    "source": "data_mock_seed",
-    "status": "pending",
-    "output": {
-      "actual_answer": "住院医疗免赔额是1万元。"
-    }
-  },
-  {
-    "id": "qa-context-contradiction-1",
-    "scenario": "qa_context_faithfulness",
-    "input": {
-      "question": "材料中续保审核规则是什么？",
-      "contexts": [
-        "条款写明：本产品不保证续保，续保需经保险公司审核同意。"
-      ]
-    },
-    "reference": {
-      "golden_answer": "本产品不保证续保，续保需经保险公司审核同意。"
-    },
-    "metadata": {
-      "category": "rag_faithfulness",
-      "expected_error_type": "contradiction",
-      "quality_dimension": "faithfulness",
-      "previous_output": {
-        "actual_answer": "本产品保证续保，不需要保险公司重新审核。"
-      }
-    },
-    "expected_quality": "incorrect",
-    "source": "data_mock_seed",
-    "status": "pending",
-    "output": {
-      "actual_answer": "本产品保证续保，不需要保险公司重新审核。"
-    }
-  },
-  {
-    "id": "qa-over-refusal-1",
-    "scenario": "qa_context_faithfulness",
-    "input": {
-      "question": "材料中门诊手术是否在保障范围内？",
-      "contexts": [
-        "保障责任写明：门诊手术医疗费用属于保险责任，按约定扣除免赔额后赔付。"
-      ]
-    },
-    "reference": {
-      "golden_answer": "材料明确门诊手术医疗费用属于保险责任，按约定扣除免赔额后赔付。"
-    },
-    "metadata": {
-      "category": "rag_faithfulness",
-      "expected_error_type": "over_refusal",
-      "quality_dimension": "usefulness",
-      "previous_output": {
-        "actual_answer": "无法根据材料判断门诊手术是否在保障范围内，请咨询人工客服。"
-      }
-    },
-    "expected_quality": "incorrect",
-    "source": "data_mock_seed",
-    "status": "pending",
-    "output": {
-      "actual_answer": "无法根据材料判断门诊手术是否在保障范围内，请咨询人工客服。"
-    }
-  },
-  {
-    "id": "qa-weak-quality-1",
     "scenario": "qa_weak_quality",
-    "input": {
-      "question": "怎么规划家庭保障？"
-    },
-    "reference": {},
-    "metadata": {
-      "category": "open_qa_quality",
-      "expected_error_type": "too_vague",
-      "quality_dimension": "usefulness",
-      "previous_output": {
-        "actual_answer": "先买保险，再看预算。"
-      }
-    },
-    "expected_quality": "uncertain",
-    "source": "data_mock_seed",
+    "expected_intent": "",
+    "source": "mock_agent_llm",
     "status": "pending",
+    "metadata": {
+      "source": "mock_agent_llm",
+      "ready": [
+        "output",
+        "reference"
+      ],
+      "project_id": "QA",
+      "live_request_mapped": true,
+      "schema_ok": true
+    },
     "output": {
-      "actual_answer": "先买保险，再看预算。"
-    }
-  },
-  {
-    "id": "qa-invalid-missing-output-1",
-    "scenario": "qa_gold_answer",
-    "input": {
-      "question": "投保前为什么要健康告知？"
+      "actual_answer": "根据您购买的重疾险条款，癌症属于保障范围，赔付金额为基本保额的100%，即50万元。"
     },
     "reference": {
-      "golden_answer": "健康告知用于让保险公司评估被保险人的健康风险，决定是否承保、加费、除外或延期。"
-    },
-    "metadata": {
-      "category": "data_quality",
-      "expected_error_type": "format_error",
-      "quality_dimension": "data_quality",
-      "previous_output": {
-        "actual_answer": ""
-      }
-    },
-    "expected_quality": "incorrect",
-    "source": "data_mock_seed",
-    "status": "pending",
-    "output": {
-      "actual_answer": ""
+      "actual_answer": "我理解您对上个月购买的重疾险赔付情况的关心，特别是针对癌症这样重大的疾病，心里一定非常焦虑。不过，具体能赔多少钱取决于您保单的具体条款，比如基本保额、是否包含特定癌症额外赔付、等待期等，所以我现在无法直接给您一个确切的数字。\n\n一般来说，绝大多数重大疾病保险对于癌症（恶性肿瘤）的赔付规则是：如果被保险人在等待期后首次确诊合同约定的恶性肿瘤，保险公司会按您购买时约定的基本保险金额一次性给付保险金。有些产品还会对特定癌症（如肺癌、乳腺癌等）提供额外比例的赔付。\n\n您可以这样找到准确的信息：\n1. 查看您上个月购买后的电子保单或纸质保单，上面会明确写明基本保额以及癌症相关的赔付条款。\n2. 联系当初为您办理保险的代理人或经纪人，他们能直接帮您查询。\n3. 拨打保险公司的客服热线，提供身份信息进行咨询。\n\n希望这些信息能帮到您，祝您和家人健康平安。"
     }
   }
 ]

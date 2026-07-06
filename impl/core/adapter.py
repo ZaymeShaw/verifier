@@ -1,12 +1,34 @@
 from __future__ import annotations
 
 import json
+import time
 import uuid
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Optional
 
-from .schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace
+from .schema import AttributeResult, EvidenceRef, ExecutionTraceEvent, JudgeResult, LiveExecutionResult, LiveRequest, MultiTurnCase, ProbeResult, ProjectSpec, RunTrace, SingleTurnCase, TraceExecutionContext, judge_expected_actual_gaps, trace_execution_trace, trace_extracted_output, trace_input, trace_normalized_request, trace_project_fields
+from .interaction_protocol import ReadyDecision, resolve_ready, ready_from_spec
 from impl.tools import ToolContext, ToolRegistry, ToolResult
+
+
+def _assessment_value(item: Any, key: str, default: Any = None) -> Any:
+    if isinstance(item, dict):
+        return item.get(key, default)
+    return getattr(item, key, default)
+
+
+def _derive_overall_fulfillment(assessments: list[Any]) -> Dict[str, Any]:
+    statuses = [str(_assessment_value(item, "status") or "").strip().lower() for item in assessments]
+    from .judge import _derive_overall_status
+    return {
+        "status": _derive_overall_status(statuses),
+        "assessment_count": len(assessments),
+        "blocking_expectations": [
+            _assessment_value(item, "expectation_id")
+            for item in assessments
+            if _assessment_value(item, "status") != "fulfilled" and _assessment_value(item, "blocking", False)
+        ],
+    }
 
 
 class ProjectAdapter(ABC):
@@ -14,22 +36,51 @@ class ProjectAdapter(ABC):
         self.spec = spec
 
     @abstractmethod
-    def build_request(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def build_request(self, case: SingleTurnCase | MultiTurnCase) -> LiveRequest:
         raise NotImplementedError
 
-    def call_or_prepare(self, request: Dict[str, Any]) -> Any:
+    def call_or_prepare(self, request: LiveRequest) -> LiveExecutionResult:
         from .http_client import call_project_api
 
-        return call_project_api(self.spec, request)
+        start = time.time()
+        try:
+            raw_response = call_project_api(self.spec, request.normalized_request)
+            call_status = "succeeded"
+            call_error = None
+        except Exception as exc:
+            raw_response = None
+            call_status = "failed"
+            call_error = str(exc)
+        extracted_output = self.extract_output(raw_response) if call_status == "succeeded" else {}
+        return LiveExecutionResult(
+            project_id=self.spec.project_id,
+            case_id=request.case_id,
+            session_id=request.session_id,
+            raw_input=request.raw_input,
+            normalized_request=request.normalized_request,
+            call_status=call_status,
+            raw_response=raw_response,
+            call_error=call_error,
+            runtime_ms=int((time.time() - start) * 1000),
+            extracted_output=extracted_output,
+            output_source=request.execution_mode,
+            execution_trace=self.build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output),
+            project_fields=self.project_fields(raw_response, extracted_output),
+            application_boundary=self.application_boundary(raw_response, extracted_output),
+        )
 
-    def has_provided_output(self, input_data: Dict[str, Any], request: Dict[str, Any]) -> bool:
-        for key in ("raw_response", "response", "output"):
-            value = input_data.get(key)
-            if value is not None and value != {}:
-                return True
-        return False
+    def has_provided_output(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest | None) -> bool:
+        # 协议层 ready gate：仅当项目声明 output 就绪且 case 携带 output 时走 provided 模式。
+        # 未声明 output ready 的项目（client_search/mpi/mp）一律走 live 模式调真实 API。
+        # 真值只来自 common.ready 一处，禁止子类 override 此方法或内联判定。
+        return resolve_ready(self.spec, case).output
 
-    def provided_output_raw(self, input_data: Dict[str, Any], request: Dict[str, Any]) -> Any:
+    def provided_output_raw(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest | None) -> Any:
+        # 从 case 顶层取 output（SingleTurnCase.output），不再猜 input key。
+        output = getattr(case, "output", None)
+        if isinstance(output, dict) and output:
+            return output
+        input_data = dict(case.input or {})
         for key in ("raw_response", "response", "output"):
             if key in input_data:
                 return input_data[key]
@@ -42,8 +93,11 @@ class ProjectAdapter(ABC):
     def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any]) -> Dict[str, Any]:
         return {}
 
+    def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any]) -> Dict[str, Any]:
+        return {}
+
     def build_frontend_extensions(self, trace: RunTrace) -> Dict[str, Any]:
-        return {"project_fields": trace.project_fields}
+        return {"schema_protocol_extensions": trace_project_fields(trace)}
 
     def trace_state_graph(self) -> Dict[str, Any]:
         return {}
@@ -64,39 +118,78 @@ class ProjectAdapter(ABC):
         }
         return graph
 
-    def state_executors(self) -> Dict[str, Callable[[Dict[str, Any]], Dict[str, Any]]]:
+    def state_executors(self) -> Dict[str, Callable[[TraceExecutionContext], Dict[str, Any]]]:
         return {}
 
-    def collect_state_evidence(self, state_id: str, context: Dict[str, Any]) -> list[Dict[str, Any]]:
+    def collect_state_evidence(self, state_id: str, context: TraceExecutionContext) -> list[EvidenceRef]:
         return []
 
-    def run_state_probe(self, probe_id: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        return {}
+    def run_state_probe(self, probe_id: str, context: TraceExecutionContext) -> ProbeResult:
+        return ProbeResult(probe_id=probe_id, status="skipped", stage="adapter.run_state_probe")
 
-    def normalize_state_result(self, state_id: str, context: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
+    def normalize_state_result(self, state_id: str, context: TraceExecutionContext, result: Dict[str, Any]) -> Dict[str, Any]:
         return result
 
-    def build_execution_trace(self, input_data: Dict[str, Any], request: Dict[str, Any], raw_response: Any, extracted_output: Dict[str, Any]) -> list[Dict[str, Any]]:
+    def build_execution_trace(self, input_data: Dict[str, Any], request: Dict[str, Any], raw_response: Any, extracted_output: Dict[str, Any]) -> list[ExecutionTraceEvent]:
         return [
-            {"stage": "adapter.build_request", "status": "ok", "evidence": "normalized request built"},
-            {"stage": "project.call", "status": "ok", "evidence": "raw response captured"},
-            {"stage": "adapter.extract_output", "status": "ok", "evidence": "generic extracted_output built"},
+            ExecutionTraceEvent(stage="adapter.build_request", status="ok", evidence="normalized request built"),
+            ExecutionTraceEvent(stage="project.call", status="ok", evidence="raw response captured"),
+            ExecutionTraceEvent(stage="adapter.extract_output", status="ok", evidence="generic extracted_output built"),
         ]
 
-    def to_run_trace(self, input_data: Dict[str, Any], request: Dict[str, Any], raw_response: Any) -> RunTrace:
-        extracted_output = self.extract_output(raw_response)
+    def to_run_trace(self, result: LiveExecutionResult) -> RunTrace:
+        # LiveExecutionResult 是调用事实原件；RunTrace 顶层字段只作为后续链路的稳定索引。
+        project_fields = dict(result.project_fields or {})
+        raw_input = result.raw_input if isinstance(result.raw_input, dict) else {}
+        normalized_request = result.normalized_request if isinstance(result.normalized_request, dict) else {}
+        reference_contract = raw_input.get("reference") if isinstance(raw_input.get("reference"), dict) else normalized_request.get("reference") if isinstance(normalized_request.get("reference"), dict) else {}
+        scenario = str(raw_input.get("scenario") or normalized_request.get("scenario") or "")
+        multi_turn_state = result.multi_turn_state
         return RunTrace(
             trace_id=str(uuid.uuid4()),
-            project_id=self.spec.project_id,
-            input=input_data,
-            normalized_request=request,
-            raw_response=raw_response,
-            extracted_output=extracted_output,
-            project_fields=self.project_fields(raw_response, extracted_output),
-            runtime_logs=[],
-            evidence_refs=[],
-            execution_trace=self.build_execution_trace(input_data, request, raw_response, extracted_output),
-            status="ok",
+            project_id=result.project_id or self.spec.project_id,
+            case_id=result.case_id,
+            input=result.raw_input,
+            normalized_request=result.normalized_request,
+            raw_response=result.raw_response,
+            extracted_output=result.extracted_output,
+            live_result=result,
+            execution_mode=str(normalized_request.get("execution_mode") or result.output_source or ""),
+            output_source=result.output_source,
+            scenario=scenario,
+            reference_contract=dict(reference_contract or {}),
+            application_boundary=dict(result.application_boundary or {}),
+            project_fields=project_fields,
+            ready=ready_from_spec(self.spec),
+            runtime_logs=[] if result.call_status == "succeeded" else ["business service call failed"],
+            evidence_refs=list(result.evidence_refs or []),
+            execution_trace=list(result.execution_trace or []),
+            status="ok" if result.call_status == "succeeded" else "error",
+            error=result.call_error,
+            interaction_mode=result.interaction_mode,
+            session_id=result.session_id,
+            conversation_transcript=list(multi_turn_state.transcript or []) if multi_turn_state else [],
+            conversation_summary=(
+                {
+                    "session_id": multi_turn_state.session_id,
+                    "turn_count": multi_turn_state.turn_index,
+                    "missing_fields": list(multi_turn_state.missing_fields or []),
+                    "stop_reason": str(multi_turn_state.stop_reason or ""),
+                }
+                if multi_turn_state
+                else {}
+            ),
+            stop_reason=str(multi_turn_state.stop_reason or "") if multi_turn_state else "",
+            multi_turn_input=(
+                {
+                    "session_id": multi_turn_state.session_id,
+                    "turn_count": multi_turn_state.turn_index,
+                    "missing_fields": list(multi_turn_state.missing_fields or []),
+                    "accumulated_fields": dict(multi_turn_state.accumulated_fields or {}),
+                }
+                if multi_turn_state
+                else None
+            ),
         )
 
     def get_runtime_checks(self, runtime_values: Dict[str, Any], context: Dict[str, Any] | None = None) -> Dict[str, Any]:
@@ -130,7 +223,7 @@ class ProjectAdapter(ABC):
 
     def build_intent_frame(self, trace: RunTrace) -> Dict[str, Any]:
         request_candidates = []
-        for source_name, source_value in (("normalized_request", trace.normalized_request), ("input", trace.input)):
+        for source_name, source_value in (("normalized_request", trace_normalized_request(trace)), ("input", trace_input(trace))):
             if isinstance(source_value, dict):
                 for key in ("query", "user_intent", "question", "input"):
                     value = source_value.get(key)
@@ -139,11 +232,12 @@ class ProjectAdapter(ABC):
             elif source_value:
                 request_candidates.append({"source": source_name, "value": source_value})
         context = self.build_judge_context(trace)
+        live_boundary = trace.live_result.application_boundary if trace.live_result else {}
         return {
             "project_id": self.spec.project_id,
             "downstream_consumer": context.get("project_type") or self.spec.project_id,
             "request_candidates": request_candidates,
-            "boundary_hints": context.get("application_boundary") or (trace.project_fields or {}).get("application_boundary") or {},
+            "boundary_hints": context.get("application_boundary") or live_boundary or {},
             "output_semantics": "current trace output should let the user or downstream system continue the project task",
         }
 
@@ -288,7 +382,7 @@ class ProjectAdapter(ABC):
             )
         if judge_result.missing or judge_result.wrong or judge_result.extra:
             return judge_result
-        actual = judge_result.actual or trace.extracted_output
+        actual = judge_result.actual or trace_extracted_output(trace)
         if not self.judge_items_equivalent(judge_result.expected, actual):
             return judge_result
         expected_items = self.normalize_judge_items(judge_result.expected)
@@ -301,8 +395,12 @@ class ProjectAdapter(ABC):
         if isinstance(actual, dict):
             actual_logic = actual.get(logic_key) or actual.get("logic") or actual_logic
         condition_key = "condition" + "s"
-        judge_result.expected = {logic_key: expected_logic, condition_key: expected_items}
-        judge_result.actual = {logic_key: actual_logic, condition_key: actual_items}
+        # 语义等价归一结果是判定证据，不是 live_schema 形状的 expected/actual；禁止覆盖主字段。
+        judge_result.verdict_derivation = {
+            **(judge_result.verdict_derivation or {}),
+            "semantic_equivalence_expected": {logic_key: expected_logic, condition_key: expected_items},
+            "semantic_equivalence_actual": {logic_key: actual_logic, condition_key: actual_items},
+        }
         judge_result.reasoning_summary = judge_result.reasoning_summary or "按项目语义等价规则归一后，actual 与 expected 条件一致。"
         judge_result.judge_basis = judge_result.judge_basis or "semantic_equivalence_reconciliation"
         # Flip prior not_fulfilled blocking assessments to fulfilled (preserve evidence).
@@ -331,23 +429,9 @@ class ProjectAdapter(ABC):
                 "semantic_equivalence_reconciled",
                 "reconcile_equivalent_judge_result",
             )
-        # Sync overall_fulfillment.status after modifying fulfillment_assessments
-        all_statuses = [
-            str(item.get("status") or "").strip().lower()
-            for item in judge_result.fulfillment_assessments or []
-            if isinstance(item, dict)
-        ]
-        from .judge import _derive_overall_status
-        recalculated_status = _derive_overall_status(all_statuses)
         judge_result.overall_fulfillment = {
             **(judge_result.overall_fulfillment or {}),
-            "status": recalculated_status,
-            "assessment_count": len(judge_result.fulfillment_assessments),
-            "blocking_expectations": [
-                item.get("expectation_id")
-                for item in judge_result.fulfillment_assessments
-                if isinstance(item, dict) and item.get("status") != "fulfilled" and item.get("blocking")
-            ],
+            **_derive_overall_fulfillment(judge_result.fulfillment_assessments or []),
         }
         judge_result.quality_flags = [flag for flag in (judge_result.quality_flags or []) if flag not in {"operator_mismatch", "llm_call_failed"}]
         if "semantic_equivalence_reconciled" not in judge_result.quality_flags:
@@ -366,11 +450,12 @@ class ProjectAdapter(ABC):
 
     def _default_consumer_contract(self, trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:
         context = self.build_judge_context(trace)
+        live_boundary = trace.live_result.application_boundary if trace.live_result else {}
         return {
             "consumer": context.get("project_type") or self.spec.project_id,
             "contract": "current trace output must satisfy the current user or downstream business expectation",
-            "reference_contract": context.get("reference_contract") or (trace.project_fields or {}).get("reference") or {},
-            "application_boundary": context.get("application_boundary") or (trace.project_fields or {}).get("application_boundary") or judge_result.evaluation_boundary or {},
+            "reference_contract": context.get("reference_contract") or trace.reference_contract or {},
+            "application_boundary": context.get("application_boundary") or live_boundary or judge_result.evaluation_boundary or {},
         }
 
     def _intent_text_from_model(self, intent_model: Dict[str, Any], trace: RunTrace) -> str:
@@ -379,7 +464,7 @@ class ProjectAdapter(ABC):
                 return str(item.get("goal"))
             if isinstance(item, str) and item:
                 return item
-        return str(intent_model.get("raw_user_request") or (trace.normalized_request or {}).get("query") or (trace.normalized_request or {}).get("user_intent") or trace.input or "")
+        return str(intent_model.get("raw_user_request") or trace_normalized_request(trace).get("query") or trace_normalized_request(trace).get("user_intent") or trace_input(trace) or "")
 
     def _source_intent_id(self, intent_model: Dict[str, Any]) -> str:
         for collection in ("blocking_requirements", "explicit_intents", "implicit_business_intents"):
@@ -394,7 +479,7 @@ class ProjectAdapter(ABC):
             value = intent_model.get(key)
             if value:
                 criteria.append({key: value})
-        return criteria or list(judge_result.condition_assessments or judge_result.score_details or [])
+        return criteria or list(judge_result.business_expectations or [])
 
     def _default_business_expectation(self, trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:
         expectation_id = f"{self.spec.project_id}:primary_business_expectation"
@@ -410,7 +495,7 @@ class ProjectAdapter(ABC):
             "expectation_id": expectation_id,
             "source_intent_id": source_intent_id,
             "downstream_consumer": (judge_result.consumer_contract or {}).get("consumer") or intent_frame.get("downstream_consumer") or self.spec.project_id,
-            "user_intent": self._intent_text_from_model(intent_model, trace) if intent_model else str((trace.normalized_request or {}).get("query") or (trace.normalized_request or {}).get("user_intent") or trace.input or ""),
+            "user_intent": self._intent_text_from_model(intent_model, trace) if intent_model else str(trace_normalized_request(trace).get("query") or trace_normalized_request(trace).get("user_intent") or trace_input(trace) or ""),
             "expected_outcome": expected_outcome,
             "required_capabilities": [item.get("requirement") for item in (intent_model.get("blocking_requirements") or []) if isinstance(item, dict) and item.get("requirement")],
             "acceptance_criteria": self._intent_acceptance_criteria(intent_model, judge_result) if intent_model else [],
@@ -424,12 +509,13 @@ class ProjectAdapter(ABC):
             status = "not_evaluable"
         else:
             status = self._expectation_status_from_verdict(judge_result)
+        gaps = judge_expected_actual_gaps(judge_result)
         return {
             "expectation_id": expectation.get("expectation_id"),
             "status": status,
             "score": judge_result.score,
-            "expected_evidence": list(judge_result.missing or []) or [judge_result.expected] if judge_result.expected is not None else [],
-            "actual_evidence": list(judge_result.wrong or []) or [judge_result.actual or trace.extracted_output],
+            "expected_evidence": list(gaps.get("missing") or []) or [judge_result.expected] if judge_result.expected is not None else [],
+            "actual_evidence": list(gaps.get("wrong") or []) or [judge_result.actual or trace_extracted_output(trace)],
             "boundary_decision": judge_result.boundary_decision or judge_result.evaluation_boundary or {},
             "downstream_impact": "business expectation satisfied" if status == "fulfilled" else (judge_result.reasoning_summary or "business expectation not fully satisfied or not evaluable"),
             "blocking": status in {"not_fulfilled", "not_evaluable"},
@@ -458,35 +544,10 @@ class ProjectAdapter(ABC):
                     judge_result.fulfillment_assessments.append(
                         self._default_fulfillment_assessment(trace, judge_result, expectation if isinstance(expectation, dict) else {"expectation_id": exp_id})
                     )
-        if not judge_result.overall_fulfillment:
-            statuses = [item.get("status") for item in judge_result.fulfillment_assessments if isinstance(item, dict)]
-            if any(status == "not_fulfilled" for status in statuses):
-                overall_status = "not_fulfilled"
-            elif any(status in {"partially_fulfilled", "not_evaluable"} for status in statuses):
-                overall_status = "partially_fulfilled" if "partially_fulfilled" in statuses else "not_evaluable"
-            else:
-                overall_status = "fulfilled"
-            judge_result.overall_fulfillment = {
-                "status": overall_status,
-                "assessment_count": len(judge_result.fulfillment_assessments),
-                "blocking_expectations": [item.get("expectation_id") for item in judge_result.fulfillment_assessments if isinstance(item, dict) and item.get("status") != "fulfilled" and item.get("blocking")],
-            }
-        else:
-            # Recalculate overall_fulfillment to include contract-injected assessments
-            overall = judge_result.overall_fulfillment
-            all_blocking = [item.get("expectation_id") for item in judge_result.fulfillment_assessments
-                           if isinstance(item, dict) and item.get("status") != "fulfilled" and item.get("blocking")]
-            all_statuses = [item.get("status") for item in judge_result.fulfillment_assessments if isinstance(item, dict)]
-            if any(s == "not_fulfilled" for s in all_statuses):
-                recalculated_status = "not_fulfilled"
-            elif any(s in {"partially_fulfilled", "not_evaluable"} for s in all_statuses):
-                recalculated_status = "partially_fulfilled" if "partially_fulfilled" in all_statuses else "not_evaluable"
-            else:
-                recalculated_status = "fulfilled"
-            if isinstance(overall, dict):
-                overall["status"] = recalculated_status
-                overall["blocking_expectations"] = all_blocking
-                overall["assessment_count"] = len(judge_result.fulfillment_assessments)
+        judge_result.overall_fulfillment = {
+            **(judge_result.overall_fulfillment or {}),
+            **_derive_overall_fulfillment(judge_result.fulfillment_assessments or []),
+        }
         overall_status = (judge_result.overall_fulfillment or {}).get("status") or "not_evaluable"
         from .judge import _compute_verdict, _compute_score
         judge_result.verdict = _compute_verdict(overall_status, judge_result.boundary_decision)
@@ -508,7 +569,6 @@ class ProjectAdapter(ABC):
         probes = [item for item in self.attribution_probes(trace, judge_result) if isinstance(item, dict)]
         if not probes:
             return attribute_result
-        attribute_result.local_verifications = list(attribute_result.local_verifications or []) + probes
         existing_probe_results = list(attribute_result.probe_results or [])
         for item in probes:
             existing_probe_results.append(
@@ -521,13 +581,12 @@ class ProjectAdapter(ABC):
                 }
             )
         attribute_result.probe_results = existing_probe_results
-        attribute_result.evidence_chain = list(attribute_result.evidence_chain or []) + probes
         coverage = dict(attribute_result.evidence_coverage or {})
         coverage["local_probe"] = True
         coverage["query"] = bool(trace.input) or coverage.get("query", False)
-        coverage["actual"] = bool(trace.extracted_output) or coverage.get("actual", False)
+        coverage["actual"] = bool(trace_extracted_output(trace)) or coverage.get("actual", False)
         coverage["expected"] = bool(judge_result.expected) or coverage.get("expected", False)
-        coverage["execution_trace"] = bool(trace.execution_trace) or coverage.get("execution_trace", False)
+        coverage["execution_trace"] = bool(trace_execution_trace(trace)) or coverage.get("execution_trace", False)
         coverage.setdefault("unsupported_claims", [])
         attribute_result.evidence_coverage = coverage
         quality = dict(attribute_result.analysis_quality or {})

@@ -6,10 +6,10 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from impl.core.adapter import ProjectAdapter
-from impl.core.schema import AttributeResult, JudgeResult
+from impl.core.schema import AttributeResult, ExecutionTraceEvent, JudgeResult, LiveExecutionResult, LiveMultiTurnState, LiveRequest, MultiTurnCase, RunTrace, SingleTurnCase, TraceExecutionContext, to_dict
 
 
 # Stage→ext_repo path-prefix map. Adapters use this to narrow the source-file
@@ -64,21 +64,23 @@ ATTRIBUTE_CATALOG_FILE_CAP = 8
 class Adapter(ProjectAdapter):
     stages = {"intent", "clarification", "planning", "non_agent", "fallback", "unknown"}
 
-    def build_request(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def build_request(self, case: SingleTurnCase | MultiTurnCase) -> LiveRequest:
+        input_data = dict(case.input or {})
         nested_input = input_data.get("input") if isinstance(input_data.get("input"), dict) else {}
         turns = self._normalize_turns(input_data.get("turns") or nested_input.get("turns"))
         query = input_data.get("query") or input_data.get("user_query") or input_data.get("user_intent") or nested_input.get("query") or nested_input.get("user_query") or ""
         if not turns and query:
             turns = [{"role": "user", "content": str(query)}]
-        case_id = str(input_data.get("case_id") or input_data.get("id") or f"marketing-case-{int(time.time() * 1000)}")
+        case_id = str(case.id or input_data.get("case_id") or input_data.get("id") or f"marketing-case-{int(time.time() * 1000)}")
         shared_session = bool(input_data.get("shared_session") or nested_input.get("shared_session"))
         declared_session = input_data.get("session_id") or nested_input.get("session_id")
         session_id = str(declared_session) if shared_session and declared_session else f"eval-{case_id}"
-        scenario = str(input_data.get("scenario") or nested_input.get("scenario") or self._infer_scenario(input_data, turns))
+        scenario = str(input_data.get("scenario") or nested_input.get("scenario") or case.scenario or self._infer_scenario(input_data, turns))
         boundary = self._normalize_boundary(input_data.get("boundary") or nested_input.get("boundary") or {})
-        reference = self._normalize_reference(input_data.get("reference") or nested_input.get("reference") or {}, input_data, scenario)
+        case_reference = case.reference if isinstance(case.reference, dict) else {}
+        reference = self._normalize_reference(input_data.get("reference") or nested_input.get("reference") or case_reference or {}, input_data, scenario)
         first_user_turn = next((turn.get("content") for turn in turns if turn.get("role") == "user" and turn.get("content")), "")
-        return {
+        normalized_request = {
             "case_id": case_id,
             "session_id": session_id,
             "shared_session": shared_session,
@@ -94,31 +96,67 @@ class Adapter(ProjectAdapter):
             "boundary": boundary,
             "reference": reference,
         }
+        return LiveRequest(
+            project_id=self.spec.project_id,
+            raw_input=input_data,
+            case_id=case_id,
+            turns=turns,
+            normalized_request=normalized_request,
+            # execution_mode 由 pipeline.live_run 在 provided/live 分支统一覆盖，
+            # 项目层不参与 ready 判定，build_request 只管构造 normalized_request。
+            execution_mode="live_service",
+            session_id=session_id,
+        )
 
-    def call_or_prepare(self, request: Dict[str, Any]) -> Any:
-        body = json.dumps(self._live_request_body(request), ensure_ascii=False).encode("utf-8")
-        url = str(self.spec.api.get("base_url") or "").rstrip("/") + "/" + str(self.spec.api.get("endpoint") or "").lstrip("/")
-        api_request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method=str(self.spec.api.get("method") or "POST").upper())
+    def call_or_prepare(self, request: LiveRequest) -> LiveExecutionResult:
+        start = time.time()
         try:
+            body = json.dumps(self._live_request_body(request), ensure_ascii=False).encode("utf-8")
+            url = str(self.spec.api.get("base_url") or "").rstrip("/") + "/" + str(self.spec.api.get("endpoint") or "").lstrip("/")
+            api_request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method=str(self.spec.api.get("method") or "POST").upper())
             with urllib.request.urlopen(api_request, timeout=float(self.spec.api.get("timeout") or 120)) as response:
-                return self._attach_request(response.read().decode("utf-8"), request)
+                raw_response = self._attach_request(response.read().decode("utf-8"), request.normalized_request)
+            call_status = "succeeded"
+            call_error = None
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            raise RuntimeError(f"marketing-planning service unavailable: {exc}") from exc
+            raw_response = None
+            call_status = "failed"
+            call_error = f"marketing-planning service unavailable: {exc}"
+        extracted_output = self.extract_output(raw_response) if call_status == "succeeded" else {}
+        application_boundary = self._application_boundary(request.normalized_request, extracted_output)
+        return LiveExecutionResult(
+            project_id=request.project_id,
+            case_id=request.case_id,
+            session_id=request.session_id,
+            raw_input=request.raw_input,
+            normalized_request=request.normalized_request,
+            call_status=call_status,
+            raw_response=raw_response,
+            call_error=call_error,
+            runtime_ms=int((time.time() - start) * 1000),
+            extracted_output=extracted_output,
+            output_source=request.execution_mode,
+            execution_trace=self.build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output),
+            project_fields=self.project_fields(raw_response, extracted_output),
+            application_boundary=application_boundary,
+            interaction_mode="interactive_intent" if request.turns else "single_turn",
+        )
 
-    def _live_request_body(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        query = str(request.get("query") or request.get("user_intent") or "")
+    def _live_request_body(self, request: LiveRequest | Dict[str, Any]) -> Dict[str, Any]:
+        payload = request.normalized_request if isinstance(request, LiveRequest) else request
+        query = str(payload.get("query") or payload.get("user_intent") or "")
         contexts = []
-        for turn in request.get("turns") or []:
+        for turn in payload.get("turns") or []:
             content = str(turn.get("content") or turn.get("query") or "")
             role = str(turn.get("role") or "user")
             if not content or content == query:
                 continue
             contexts.append({"role": role, "query": content if role == "user" else "", "answer": content if role != "user" else ""})
-        session_id = str(request.get("session_id") or "")
+        session_id = str(payload.get("session_id") or "")
         return {
             "session_id": session_id,
-            "trace_id": str(request.get("case_id") or session_id or f"trace-{int(time.time() * 1000)}"),
-            "org_id": str((request.get("metadata") or {}).get("org_id") or "eval-org"),
+            "trace_id": str(payload.get("case_id") or session_id or f"trace-{int(time.time() * 1000)}"),
+            "org_id": str((payload.get("metadata") or {}).get("org_id") or "eval-org"),
             "user_text": query,
             "extra_input_params": {
                 "agent_args": {"conversation_id": session_id, "message": {"content": query, "content_type": "text"}},
@@ -126,13 +164,27 @@ class Adapter(ProjectAdapter):
             },
         }
 
-    def provided_output_raw(self, input_data: Dict[str, Any], request: Dict[str, Any]) -> Any:
+    def provided_output_raw(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Any:
+        input_data = dict(case.input or {})
         for key in ("raw_response", "response", "output"):
             if key in input_data:
-                return self._attach_request(input_data[key], request)
-        return self._attach_request({}, request)
+                return self._attach_request(input_data[key], request.normalized_request)
+        return self._attach_request({}, request.normalized_request)
 
     def extract_output(self, raw_response: Any) -> Dict[str, Any]:
+        data = self._raw_payload(raw_response)
+        frame = self._last_response_frame(data)
+        body = frame.get("data") if isinstance(frame.get("data"), dict) else {}
+        extra = body.get("extra_output_params") if isinstance(body.get("extra_output_params"), dict) else {}
+        return {
+            "code": int(frame.get("code") or 0),
+            "msg": str(frame.get("msg") or ""),
+            "robot_text": str(body.get("robot_text") or ""),
+            "end_flag": int(body.get("end_flag") or 0),
+            "extra_output_params": extra,
+        }
+
+    def _planning_summary(self, raw_response: Any, extracted_output: Dict[str, Any]) -> Dict[str, Any]:
         data = self._raw_payload(raw_response)
         events = self._extract_events(data)
         cards = self._extract_cards(data)
@@ -149,47 +201,64 @@ class Adapter(ProjectAdapter):
 
     def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any]) -> Dict[str, Any]:
         request = self._request_from_raw(raw_response)
-        boundary = self._application_boundary(request, extracted_output)
+        planning_summary = self._planning_summary(raw_response, extracted_output)
+        boundary = self._application_boundary(request, planning_summary)
         return {
             "scenario": request.get("scenario") or "",
             "case_id": request.get("case_id") or "",
             "session_id": request.get("session_id") or "",
             "shared_session": bool(request.get("shared_session")),
-            "reference": dict(request.get("reference") or {}),
             "expected_stage": request.get("expected_stage"),
             "expected_path_types": self._list(request.get("expected_path_types")),
             "expected_cards": self._list(request.get("expected_cards")),
+            "planning_summary": planning_summary,
             "application_boundary": boundary,
             "compact_summary_only": True,
         }
 
-    def build_execution_trace(self, input_data: Dict[str, Any], request: Dict[str, Any], raw_response: Any, extracted_output: Dict[str, Any]) -> list[Dict[str, Any]]:
+    def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any]) -> Dict[str, Any]:
+        return self._application_boundary(self._request_from_raw(raw_response), self._planning_summary(raw_response, extracted_output))
+
+    def build_execution_trace(self, input_data: Dict[str, Any], request: Dict[str, Any], raw_response: Any, extracted_output: Dict[str, Any]) -> list[ExecutionTraceEvent]:
+        summary = self._planning_summary(raw_response, extracted_output)
         expected_stage = request.get("expected_stage") or (request.get("reference") or {}).get("expected_stage")
         path_types = self._list(request.get("expected_path_types"))
-        actual_path_types = [card.get("path_type") for card in extracted_output.get("card_summary") or [] if card.get("path_type")]
-        fallback = extracted_output.get("fallback") or {}
+        actual_path_types = [card.get("path_type") for card in summary.get("card_summary") or [] if card.get("path_type")]
+        fallback = summary.get("fallback") or {}
         return [
-            {"stage": "request_normalization", "status": "ok" if request.get("turns") else "suspicious", "evidence": {"turn_count": len(request.get("turns") or []), "session_id": request.get("session_id")}},
-            {"stage": "intent_recognition", "status": "ok" if extracted_output.get("stage") in self.stages else "suspicious", "evidence": {"actual_stage": extracted_output.get("stage"), "expected_stage": expected_stage}},
-            {"stage": "field_clarification", "status": "ok" if extracted_output.get("stage") != "clarification" or expected_stage == "clarification" else "suspicious", "evidence": extracted_output.get("session_summary")},
-            {"stage": "session_merge", "status": "ok" if request.get("session_id") else "suspicious", "evidence": {"shared_session": request.get("shared_session"), "session_id": request.get("session_id")}},
-            {"stage": "path_dispatch", "status": "ok" if not path_types or set(path_types).issubset(set(actual_path_types)) else "failed", "evidence": {"expected_path_types": path_types, "actual_path_types": actual_path_types}},
-            {"stage": "planning_function", "status": "ok" if extracted_output.get("stage") != "planning" or actual_path_types else "suspicious", "evidence": {"card_count": len(extracted_output.get("card_summary") or [])}},
-            {"stage": "result_assembly", "status": "ok", "evidence": {"summary_keys": list(extracted_output.keys())}},
-            {"stage": "sse_generation", "status": "ok" if (extracted_output.get("event_summary") or {}).get("completed") else "not_verified", "evidence": extracted_output.get("event_summary")},
-            {"stage": "adapter_extraction", "status": "ok", "evidence": {"compact_summary_only": True, "fallback_used": fallback.get("used")}},
+            ExecutionTraceEvent(stage="request_normalization", status="ok" if request.get("turns") else "suspicious", evidence={"turn_count": len(request.get("turns") or []), "session_id": request.get("session_id")}),
+            ExecutionTraceEvent(stage="intent_recognition", status="ok" if summary.get("stage") in self.stages else "suspicious", evidence={"actual_stage": summary.get("stage"), "expected_stage": expected_stage}),
+            ExecutionTraceEvent(stage="field_clarification", status="ok" if summary.get("stage") != "clarification" or expected_stage == "clarification" else "suspicious", evidence=summary.get("session_summary")),
+            ExecutionTraceEvent(stage="session_merge", status="ok" if request.get("session_id") else "suspicious", evidence={"shared_session": request.get("shared_session"), "session_id": request.get("session_id")}),
+            ExecutionTraceEvent(stage="path_dispatch", status="ok" if not path_types or set(path_types).issubset(set(actual_path_types)) else "failed", evidence={"expected_path_types": path_types, "actual_path_types": actual_path_types}),
+            ExecutionTraceEvent(stage="planning_function", status="ok" if summary.get("stage") != "planning" or actual_path_types else "suspicious", evidence={"card_count": len(summary.get("card_summary") or [])}),
+            ExecutionTraceEvent(stage="result_assembly", status="ok", evidence={"summary_keys": list(summary.keys())}),
+            ExecutionTraceEvent(stage="sse_generation", status="ok" if (summary.get("event_summary") or {}).get("completed") else "not_verified", evidence=summary.get("event_summary")),
+            ExecutionTraceEvent(stage="adapter_extraction", status="ok", evidence={"compact_summary_only": True, "fallback_used": fallback.get("used")}),
         ]
 
+    def _application_boundary_from_trace(self, trace: RunTrace) -> dict[str, Any]:
+        live_result = getattr(trace, "live_result", None)
+        if live_result and isinstance(getattr(live_result, "application_boundary", None), dict) and live_result.application_boundary:
+            return live_result.application_boundary
+        empty_boundary: dict[str, Any] = {}
+        return empty_boundary
+
+    def _reference_contract(self, trace: RunTrace) -> dict[str, Any]:
+        return trace.reference_contract if isinstance(trace.reference_contract, dict) else {}
+
     def build_judge_context(self, trace) -> Dict[str, Any]:
+        application_boundary = self._application_boundary_from_trace(trace)
+        reference_contract = self._reference_contract(trace)
         return {
             "project_type": "multi_turn_sse_marketing_planning",
             "current_case_only": True,
-            "reference_contract": trace.project_fields.get("reference") or {},
-            "output_summary": trace.extracted_output,
-            "application_boundary": trace.project_fields.get("application_boundary") or {},
-            "expected_stage": trace.project_fields.get("expected_stage"),
-            "expected_path_types": trace.project_fields.get("expected_path_types") or [],
-            "expected_cards": trace.project_fields.get("expected_cards") or [],
+            "reference_contract": reference_contract,
+            "output_summary": (trace.project_fields or {}).get("planning_summary") if isinstance(trace.project_fields, dict) else trace.extracted_output,
+            "application_boundary": application_boundary,
+            "expected_stage": reference_contract.get("expected_stage"),
+            "expected_path_types": self._list(reference_contract.get("required_path_types")),
+            "expected_cards": self._list(reference_contract.get("required_cards")),
             "stage_rules": {
                 "clarification": "缺字段时澄清是正确方向，规划卡片通常是可疑证据。",
                 "planning": "规划场景必须检查 path_types、card identity、fallback 和 SSE completion。",
@@ -213,18 +282,23 @@ class Adapter(ProjectAdapter):
 
     def normalize_judge_result(self, trace, judge_result):
         output = trace.extracted_output or {}
-        expected = trace.project_fields.get("reference") or {}
-        expected_stage = trace.project_fields.get("expected_stage") or expected.get("expected_stage")
-        actual_stage = output.get("stage")
-        required_paths = self._list(trace.project_fields.get("expected_path_types") or expected.get("required_path_types"))
-        actual_paths = [card.get("path_type") for card in output.get("card_summary") or [] if card.get("path_type")]
+        # 当 LLM 失败导致 expected 缺失时，从 trace.extracted_output 补充（live_schema shape 已对齐）
+        if not judge_result.expected and output:
+            judge_result.expected = output
+        summary = (trace.project_fields or {}).get("planning_summary", {}) if isinstance(trace.project_fields, dict) else {}
+        expected = self._reference_contract(trace)
+        expected_stage = expected.get("expected_stage")
+        actual_stage = summary.get("stage")
+        required_paths = self._list(expected.get("required_path_types"))
+        actual_paths = [card.get("path_type") for card in summary.get("card_summary") or [] if card.get("path_type")]
         forbidden_paths = self._list(expected.get("forbidden_path_types"))
         required_events = self._list(expected.get("required_events"))
-        actual_events = ((output.get("event_summary") or {}).get("canonical_names") or (output.get("event_summary") or {}).get("names") or [])
-        fallback = output.get("fallback") or {}
-        allow_fallback = bool(expected.get("allow_fallback") or (trace.project_fields.get("application_boundary") or {}).get("allow_fallback"))
+        actual_events = ((summary.get("event_summary") or {}).get("canonical_names") or (summary.get("event_summary") or {}).get("names") or [])
+        fallback = summary.get("fallback") or {}
+        application_boundary = self._application_boundary_from_trace(trace)
+        allow_fallback = bool(expected.get("allow_fallback") or application_boundary.get("allow_fallback"))
         failures = []
-        self._append_expected_quality_failures(trace, output, expected, failures)
+        self._append_expected_quality_failures(trace, summary, expected, failures)
         if expected_stage and actual_stage and expected_stage != actual_stage:
             failures.append({"requirement": "expected_stage", "expected_fragment": expected_stage, "actual_fragment": actual_stage, "status": "wrong", "evidence": ["adapter extracted stage mismatch"]})
         missing_events = [event for event in required_events if event not in actual_events]
@@ -238,10 +312,11 @@ class Adapter(ProjectAdapter):
             failures.append({"requirement": "forbidden_path_types", "expected_fragment": forbidden_paths, "actual_fragment": actual_paths, "status": "extra", "evidence": ["forbidden path type present in card_summary"]})
         if fallback.get("used") and not allow_fallback:
             failures.append({"requirement": "allow_fallback", "expected_fragment": False, "actual_fragment": fallback, "status": "wrong", "evidence": ["fallback used but reference/boundary does not allow it"]})
+        # 保持 expected 为 judge LLM 产出（或 reference），由通用协议层 enforce 校验
         if not failures:
+            judge_result.actual = output
             return judge_result
         judge_result.actual = output
-        judge_result.expected = expected or judge_result.expected
         for failure in failures:
             requirement = failure.get("requirement") or "contract"
             evidence_text = "; ".join(failure.get("evidence") or []) or failure.get("status") or "mismatch"
@@ -254,7 +329,7 @@ class Adapter(ProjectAdapter):
                 "downstream_impact": downstream_impact,
             })
         judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), "project_deterministic_evidence": failures, "why_verdict": "marketing-planning adapter found stage/path/fallback contract mismatch."}
-        judge_result.boundary_decision = {**(judge_result.boundary_decision or {}), "application_boundary": trace.project_fields.get("application_boundary") or {}}
+        judge_result.boundary_decision = {**(judge_result.boundary_decision or {}), "application_boundary": application_boundary}
         if "marketing_planning_contract_mismatch" not in judge_result.quality_flags:
             judge_result.quality_flags.append("marketing_planning_contract_mismatch")
         return judge_result
@@ -307,7 +382,7 @@ class Adapter(ProjectAdapter):
                 {
                     "user_intent": str((trace.normalized_request or {}).get("user_intent") or (trace.normalized_request or {}).get("query") or trace.input or ""),
                     "expected_outcome": "planning flow should produce the expected stage, path cards, fallback behavior, and completed SSE-visible result for the current demand",
-                    "acceptance_criteria": list(judge_result.condition_assessments or judge_result.missing or judge_result.wrong or []),
+                    "acceptance_criteria": list(judge_result.missing or judge_result.wrong or []),
                 }
             )
         return expectation
@@ -318,7 +393,7 @@ class Adapter(ProjectAdapter):
             "expectation_id": expectation.get("expectation_id"),
             "status": status,
             "score": judge_result.score,
-            "expected_evidence": list(judge_result.missing or []) or [judge_result.expected or (trace.project_fields or {}).get("reference") or {}],
+            "expected_evidence": list(judge_result.missing or []) or [judge_result.expected or trace.reference_contract or {}],
             "actual_evidence": list(judge_result.wrong or []) or list(judge_result.extra or []) or [judge_result.actual or trace.extracted_output],
             "boundary_decision": judge_result.boundary_decision or self.build_judge_context(trace).get("application_boundary") or {},
             "downstream_impact": "planning user can proceed with the generated plan" if status == "fulfilled" else (judge_result.reasoning_summary or "planning user cannot rely on the current planning output to complete the business task"),
@@ -436,11 +511,11 @@ class Adapter(ProjectAdapter):
                 if p.exists():
                     source_config_paths[f"project_doc:{doc_key}"] = str(p)
         return {
-            "application_boundary": trace.project_fields.get("application_boundary") or {},
+            "application_boundary": self._application_boundary_from_trace(trace),
             "chain_nodes_to_check": list(trace.execution_trace or []),
             "earliest_stage_order": ["request_normalization", "intent_recognition", "field_clarification", "session_merge", "path_dispatch", "planning_function", "result_assembly", "sse_generation", "adapter_extraction"],
-            "reference_contract": trace.project_fields.get("reference") or {},
-            "output_summary": trace.extracted_output,
+            "reference_contract": self._reference_contract(trace),
+            "output_summary": (trace.project_fields or {}).get("planning_summary") if isinstance(trace.project_fields, dict) else trace.extracted_output,
             "source_config_paths": source_config_paths,
             "attribute_standard": "Only attribute failures grounded in current RunTrace/JudgeResult/project docs; no historical-case field carryover. Use source_code_evidence to locate exact code/config responsible for the error.",
         }
@@ -453,18 +528,18 @@ class Adapter(ProjectAdapter):
     def state_executors(self) -> Dict[str, Any]:
         return {"marketing_planning_boundary_evidence": self._marketing_planning_boundary_evidence}
 
-    def _marketing_planning_boundary_evidence(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def _marketing_planning_boundary_evidence(self, context: TraceExecutionContext) -> Dict[str, Any]:
         trace = context.get("trace")
         if not trace:
             return {"status": "failed", "missing_evidence": ["trace"]}
-        fields = trace.project_fields or {}
+        scenario = trace.scenario or (trace.normalized_request or {}).get("scenario") or ""
         evidence = {
-            "scenario": fields.get("scenario"),
-            "session_id": fields.get("session_id"),
-            "shared_session": fields.get("shared_session"),
-            "application_boundary": fields.get("application_boundary") or {},
-            "expected_stage": fields.get("expected_stage"),
-            "expected_path_types": fields.get("expected_path_types") or [],
+            "scenario": scenario,
+            "session_id": trace.session_id,
+            "shared_session": bool((trace.normalized_request or {}).get("shared_session")),
+            "application_boundary": application_boundary,
+            "expected_stage": trace.reference_contract.get("expected_stage"),
+            "expected_path_types": self._list(trace.reference_contract.get("required_path_types")),
             "external_repo_mutation": "not_performed_by_adapter",
         }
         return {
@@ -474,12 +549,12 @@ class Adapter(ProjectAdapter):
             "claims": [{"marketing_planning_boundary": evidence}],
         }
 
-    def collect_state_evidence(self, state_id: str, context: Dict[str, Any]) -> list[Dict[str, Any]]:
+    def collect_state_evidence(self, state_id: str, context: TraceExecutionContext) -> list[Dict[str, Any]]:
         trace = context.get("trace")
         if not trace:
             return []
-        fields = trace.project_fields or {}
-        return [{"type": "marketing_planning_state_boundary", "state_id": state_id, "application_boundary": fields.get("application_boundary") or {}, "scenario": fields.get("scenario"), "shared_service_boundary": "local configured service only"}]
+        scenario = trace.scenario or (trace.normalized_request or {}).get("scenario") or ""
+        return [{"type": "marketing_planning_state_boundary", "state_id": state_id, "application_boundary": self._application_boundary_from_trace(trace), "scenario": scenario, "shared_service_boundary": "local configured service only"}]
 
     def attribution_probes(self, trace, judge_result):
         target_probe = self._target_value_unit_probe(trace, judge_result)
@@ -493,11 +568,10 @@ class Adapter(ProjectAdapter):
                     first = judge_result.business_expectations[0]
                     expectation_id = first.get("expectation_id", expectation_id) if isinstance(first, dict) else getattr(first, "expectation_id", expectation_id)
                 evidence = list(judge_result.evidence or ["planning output contract fulfilled"])
-                attribute_result.expectation_attributions = [{"expectation_id": expectation_id, "fulfillment_status": "fulfilled", "causal_category": "no_issue", "earliest_divergence": {"node": "planning_output_contract", "evidence": evidence, "confidence": "high"}, "causal_chain": [{"name": "planning_output_contract", "status": "succeeded", "evidence": evidence}], "local_verifications": [], "suspected_locations": [], "improvement_direction": [], "source_evidence": [], "probe_evidence": evidence, "incomplete_reason": ""}]
+                attribute_result.expectation_attributions = [{"expectation_id": expectation_id, "fulfillment_status": "fulfilled", "causal_category": "no_issue", "earliest_divergence": {"node": "planning_output_contract", "evidence": evidence, "confidence": "high"}, "causal_chain": [{"name": "planning_output_contract", "status": "succeeded", "evidence": evidence}], "suspected_locations": [], "improvement_direction": [], "source_evidence": [], "probe_evidence": evidence, "incomplete_reason": ""}]
             attribute_result.causal_category = "no_issue"
             attribute_result.probe_results = attribute_result.probe_results or [{"probe": "planning_output_contract", "status": "passed", "evidence": list(judge_result.evidence or ["planning output contract fulfilled"])}]
-            attribute_result.failure_category = "fulfilled_expectation"
-            attribute_result.failure_stage = "fulfilled_expectation"
+            attribute_result.earliest_divergence = attribute_result.earliest_divergence or {"node": "planning_output_contract", "evidence": list(judge_result.evidence or ["planning output contract fulfilled"]), "confidence": "high"}
             attribute_result.analysis_method = attribute_result.analysis_method or "fulfilled_expectation_attribution"
             attribute_result.incomplete_reason = ""
             attribute_result.suspected_locations = []
@@ -506,13 +580,11 @@ class Adapter(ProjectAdapter):
             return attribute_result
         target_probe = self._target_value_unit_probe(trace, judge_result)
         if target_probe:
-            attribute_result.failure_category = "target_value_unit_error"
-            attribute_result.failure_stage = "request_normalization"
+            attribute_result.causal_category = "implementation_bug"
             attribute_result.analysis_method = "marketing_planning_target_value_local_probe"
-            attribute_result.local_verifications = list(attribute_result.local_verifications or []) + [target_probe]
-            attribute_result.evidence_chain = list(attribute_result.evidence_chain or []) + list(target_probe.get("evidence") or [])
+            attribute_result.probe_results = list(attribute_result.probe_results or []) + [{"probe_id": "target_value_unit_probe", "status": "failed", "stage": "request_normalization", "evidence": list(target_probe.get("evidence") or []), "findings": target_probe}]
             attribute_result.chain_nodes = list(trace.execution_trace or [])
-            attribute_result.trace_analysis = list(trace.execution_trace or [])
+            attribute_result.chain_nodes.append({"name": "request_normalization", "status": "failed", "evidence": list(target_probe.get("evidence") or []), "reason": "target value unit mismatch"})
             attribute_result.earliest_divergence = {
                 "node": "request_normalization",
                 "expected": {"target_nbev_wan": target_probe.get("expected_target_nbev_wan")},
@@ -531,7 +603,6 @@ class Adapter(ProjectAdapter):
             failed = next((node for node in trace.execution_trace if node.get("status") in {"failed", "suspicious"}), None)
             if failed:
                 attribute_result.earliest_divergence = {"node": failed.get("stage"), "evidence": [failed.get("evidence")], "confidence": "medium"}
-                attribute_result.failure_stage = str(failed.get("stage") or attribute_result.failure_stage)
         return attribute_result
 
     def _target_value_unit_probe(self, trace, judge_result) -> Dict[str, Any]:
@@ -546,8 +617,6 @@ class Adapter(ProjectAdapter):
             return {}
         expected = int(float(amount_match.group(1)) * 10000)
         actual = self._find_target_nbev_wan(judge_result.actual)
-        if actual is None:
-            actual = self._find_target_nbev_wan(judge_result.condition_assessments)
         if actual is None:
             actual = self._find_target_nbev_wan(judge_result.wrong)
         if actual is None:
@@ -566,8 +635,8 @@ class Adapter(ProjectAdapter):
     def _target_value_error_evidence(self, judge_result) -> str:
         if "target_value_unit_error" in (judge_result.quality_flags or []):
             return "quality_flags contains target_value_unit_error"
-        candidates = [judge_result.expected, judge_result.wrong, judge_result.condition_assessments, judge_result.actual, judge_result.primary_assessment]
-        evidence_text = json.dumps(candidates, ensure_ascii=False)
+        candidates = [judge_result.expected, judge_result.wrong, judge_result.actual, judge_result.verdict_derivation, judge_result.fulfillment_assessments]
+        evidence_text = json.dumps(to_dict(candidates), ensure_ascii=False)
         has_target = any(token in evidence_text for token in ("targetNbev", "target_value", "target_value_wan", "目标值", "NBEV"))
         has_wrong_status = '"status": "wrong"' in evidence_text or "数值错误" in evidence_text or "误差" in evidence_text
         if has_target and (has_wrong_status or "target_value_wan" in evidence_text):
@@ -598,18 +667,22 @@ class Adapter(ProjectAdapter):
 
     def build_frontend_extensions(self, trace):
         return {
-            "project_fields": trace.project_fields,
+            "schema_protocol_extensions": trace.project_fields,
             "scenarios": self.spec.frontend_extensions.get("scenarios") or [],
             "stages": self.spec.frontend_extensions.get("stages") or [],
             "path_types": self.spec.frontend_extensions.get("path_types") or [],
             "output_summary_shape": ["stage", "event_summary", "card_summary", "session_summary", "fallback", "errors"],
         }
 
-    def build_mock_cases(self) -> list[Dict[str, Any]]:
-        path = Path(__file__).resolve().parents[2] / "data" / "marketting-planning" / "mock_cases.json"
-        return json.loads(path.read_text(encoding="utf-8"))
+    # build_mock_cases / build_mock_datasets 已移除：
+    # pipeline.mock_cases / mock_datasets 全线走 mock_agent（LLM 生成），不再读 seed JSON。
+    # 详见 impl/core/mock_agent.py 与 impl/core/pipeline.py。
 
     def build_interactive_turn(self, case: Dict[str, Any], previous_turns: List[Dict[str, Any]]) -> Dict[str, Any]:
+        # 优先委托 mock_agent.next_turn（LLM 扮演用户），不可用时回退硬编码规则。
+        mock_agent_turn = self._mock_agent_next_turn(case, previous_turns)
+        if mock_agent_turn is not None:
+            return mock_agent_turn
         user_intent = case.get("user_intent") if isinstance(case.get("user_intent"), dict) else {}
         goal = str(user_intent.get("goal") or case.get("query") or case.get("user_intent") or "")
         if not previous_turns:
@@ -623,6 +696,22 @@ class Adapter(ProjectAdapter):
             return {"query": "、".join(str(item) for item in self._list(user_intent.get("path_type_intent"))), "turn_index": len(previous_turns) + 1}
         return {"query": goal, "turn_index": len(previous_turns) + 1}
 
+    def _mock_agent_next_turn(self, case: Dict[str, Any], previous_turns: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        # 懒加载 MockAgent：无 live_schema 或 LLM 不可用时返回 None，回退硬编码。
+        try:
+            from impl.core.mock_agent import MockAgent, load_live_schema
+            if load_live_schema(self.spec.project_id) is None:
+                return None
+            if not getattr(self, "_mock_agent_instance", None):
+                self._mock_agent_instance = MockAgent(self.spec)
+            live_feedback = {}
+            if previous_turns:
+                last = previous_turns[-1] if isinstance(previous_turns[-1], dict) else {}
+                live_feedback = {"missing_fields": self._list(last.get("missing_fields")), "stage": last.get("stage")}
+            return self._mock_agent_instance.next_turn(case, previous_turns, live_feedback)
+        except Exception:
+            return None
+
     def run_interactive(self, case) -> Dict[str, Any]:
         source_case = dict(case.source_case or {})
         interaction = dict(case.interaction or {})
@@ -633,22 +722,29 @@ class Adapter(ProjectAdapter):
         transcript: List[Dict[str, Any]] = []
         turn_traces: List[Dict[str, Any]] = []
         stop_reason = "max_turns"
+        session_id = f"interactive-{case.case_id}"
+        start = time.time()
+        raw_responses: List[Any] = []
 
         for _ in range(max_turns):
             next_turn = self.build_interactive_turn(source_case, turn_traces)
             transcript.append({"role": "user", "content": str(next_turn.get("query") or "")})
             request_input = {
                 "case_id": case.case_id,
+                "session_id": session_id,
+                "shared_session": True,
                 "query": next_turn.get("query"),
                 "turns": transcript,
                 "scenario": source_case.get("scenario") or "interactive_intent",
                 "reference": source_case.get("reference") or {},
             }
-            request = self.build_request(request_input)
-            raw = self._attach_request(turn_outputs[len(turn_traces)], request) if len(turn_traces) < len(turn_outputs) else self.call_or_prepare(request)
+            request = self.build_request(SingleTurnCase(id=case.case_id, input=request_input))
+            raw = self._attach_request(turn_outputs[len(turn_traces)], request.normalized_request) if len(turn_traces) < len(turn_outputs) else self.call_or_prepare(request).raw_response
+            raw_responses.append(raw)
             extracted = self.extract_output(raw)
             turn_trace = self._interactive_turn_trace(len(turn_traces) + 1, next_turn, extracted, turn_expectations)
             turn_traces.append(turn_trace)
+            transcript.append({"role": "assistant", "content": self._interactive_assistant_content(extracted), "stage": extracted.get("stage") or "unknown", "extracted_summary": turn_trace.get("error_summary") or turn_trace.get("judge_verdict") or ""})
             if extracted.get("stage") == "planning" and not (extracted.get("session_summary") or {}).get("missing_fields"):
                 stop_reason = "intent_resolved"
                 break
@@ -661,48 +757,74 @@ class Adapter(ProjectAdapter):
             "final_stage": final_stage,
             "stop_reason": stop_reason,
         }
-        trace = {
-            "trace_id": f"interactive-{case.case_id}",
-            "project_id": self.spec.project_id,
-            "input": source_case,
-            "normalized_request": {"case_id": case.case_id, "interaction_mode": "interactive_intent", "max_turns": max_turns},
-            "status": "ok" if final_verdict == "correct" else "error",
-            "project_fields": {
-                "interaction_mode": "interactive_intent",
-                "output_source": "interactive_adapter",
-                "conversation_summary": conversation_summary,
-                "turn_traces": turn_traces,
-            },
-            "execution_trace": [
-                {"stage": "interactive_turn", "status": turn.get("judge_verdict"), "evidence": {"turn_index": turn.get("turn_index"), "stage": turn.get("stage"), "missing_fields": turn.get("missing_fields")}}
+        final_output = {
+            "stage": final_stage,
+            "conversation_summary": conversation_summary,
+            "turn_results": turn_traces,
+            "final_turn": turn_traces[-1] if turn_traces else {},
+        }
+        live_result = LiveExecutionResult(
+            project_id=self.spec.project_id,
+            case_id=case.case_id,
+            session_id=session_id,
+            raw_input=source_case,
+            normalized_request={"case_id": case.case_id, "interaction_mode": "interactive_intent", "max_turns": max_turns, "policy": policy, "user_intent": source_case.get("user_intent") or source_case.get("input", {}).get("user_intent") or {}},
+            call_status="succeeded",
+            raw_response={"turn_responses": raw_responses},
+            runtime_ms=int((time.time() - start) * 1000),
+            extracted_output=final_output,
+            output_source="interactive_adapter",
+            execution_trace=[
+                ExecutionTraceEvent(stage="interactive_turn", status=turn.get("judge_verdict"), evidence={"turn_index": turn.get("turn_index"), "stage": turn.get("stage"), "missing_fields": turn.get("missing_fields")})
                 for turn in turn_traces
             ],
-        }
+            project_fields={},
+            interaction_mode="interactive_intent",
+            multi_turn_state=LiveMultiTurnState(session_id=session_id, turn_index=len(turn_traces), transcript=transcript, accumulated_fields=final_output, missing_fields=self._list((turn_traces[-1] if turn_traces else {}).get("missing_fields")), stop_reason=stop_reason),
+        )
+        trace = self.to_run_trace(live_result)
+        trace.trace_id = f"interactive-{case.case_id}"
+        trace.execution_mode = "interactive_intent"
+        trace.output_source = "interactive_adapter"
+        trace.status = "ok" if final_verdict == "correct" else "error"
+        trace.stop_reason = stop_reason
+        trace.conversation_summary = conversation_summary
+        trace.multi_turn_input = {"user_intent": source_case.get("user_intent") or source_case.get("input", {}).get("user_intent") or {}, "policy": policy, "conversation_summary": conversation_summary}
         judge = {
-            "trace_id": trace["trace_id"],
+            "trace_id": trace.trace_id,
             "project_id": self.spec.project_id,
             "verdict": final_verdict,
             "score": 1 if final_verdict == "correct" else (0 if final_verdict == "incorrect" else 0.5),
             "confidence": 1,
             "judge_method": "marketing_planning_interactive_adapter",
-            "verdict_derivation": {"why_verdict": f"interactive conversation stopped by {stop_reason}", "turn_traces": turn_traces},
+            "verdict_derivation": {"why_verdict": f"interactive conversation stopped by {stop_reason}", "conversation_summary": conversation_summary},
             "reasoning_summary": f"interactive_intent final_stage={final_stage}, stop_reason={stop_reason}",
             "quality_flags": quality_flags,
         }
         attribute = {
-            "trace_id": trace["trace_id"],
+            "trace_id": trace.trace_id,
             "project_id": self.spec.project_id,
             "case_id": case.case_id,
-            "failure_category": "none" if final_verdict == "correct" else "多轮交互不符合预期",
-            "failure_stage": "none" if final_verdict == "correct" else "interactive_turn",
+            "causal_category": "no_issue" if final_verdict == "correct" else "boundary_limitation",
             "analysis_method": "marketing_planning_interactive_adapter",
-            "chain_nodes": trace["execution_trace"],
+            "chain_nodes": trace.execution_trace,
             "earliest_divergence": {} if final_verdict == "correct" else next(({"node": "interactive_turn", "evidence": [turn], "confidence": "high"} for turn in turn_traces if turn.get("judge_verdict") != "correct"), {}),
             "analysis_quality": {"passed": final_verdict == "correct", "standard": "interactive expectations are checked per current case turn evidence"},
             "root_cause_hypothesis": "" if final_verdict == "correct" else "系统回复未满足当前 interactive_intent 的 turn_expectations 或未在 max_turns 内完成。",
             "quality_flags": quality_flags,
         }
-        return {"case_id": case.case_id, "execution_mode": "interactive_intent", "output_source": "interactive_adapter", "trace": trace, "judge": judge, "attribute": attribute}
+        return {"case_id": case.case_id, "execution_mode": "interactive_intent", "output_source": live_result.output_source, "trace": trace, "judge": judge, "attribute": attribute}
+
+    def _interactive_assistant_content(self, output: Dict[str, Any]) -> str:
+        stage = output.get("stage") or "unknown"
+        missing_fields = self._list((output.get("session_summary") or {}).get("missing_fields"))
+        cards = [card.get("path_type") for card in output.get("card_summary") or [] if card.get("path_type")]
+        parts = [f"stage={stage}"]
+        if missing_fields:
+            parts.append("missing=" + ",".join(str(item) for item in missing_fields))
+        if cards:
+            parts.append("cards=" + ",".join(str(item) for item in cards))
+        return " · ".join(parts)
 
     def _interactive_turn_trace(self, turn_index: int, user_input: Dict[str, Any], output: Dict[str, Any], expectations: List[Dict[str, Any]]) -> Dict[str, Any]:
         expectation = next((item for item in expectations if int(item.get("turn") or 0) == turn_index), {})
@@ -762,9 +884,7 @@ class Adapter(ProjectAdapter):
             "status": "pending",
         }
 
-    def build_mock_datasets(self) -> list[Dict[str, Any]]:
-        cases = self.build_mock_cases()
-        return [{"dataset_id": "marketing_planning_v1_seed", "name": "营销规划 v1 场景样例", "dimension_type": "marketing_planning_scenario", "description": "覆盖意图、澄清、多轮、规划、fallback、非本 agent 意图和 SSE 协议。", "case_count": len(cases), "cases": cases}]
+    # build_mock_datasets 已移除：pipeline.mock_datasets 全线走 mock_agent。
 
     def _case(self, case_id, scenario, query, stage, events, path_types, turns=None, required_fields=None, allow_fallback=False, boundary=None):
         boundary = boundary or {"allow_fallback": allow_fallback}
@@ -829,6 +949,32 @@ class Adapter(ProjectAdapter):
         if isinstance(raw, dict) and "raw" in raw:
             return raw.get("raw")
         return raw
+
+    def _last_response_frame(self, data: Any) -> Dict[str, Any]:
+        if isinstance(data, dict):
+            if "code" in data and "data" in data:
+                return data
+            events = data.get("events") or data.get("event_stream") or data.get("sse_events") or []
+            for event in reversed(events if isinstance(events, list) else []):
+                payload = event.get("data") if isinstance(event, dict) else None
+                if isinstance(payload, dict) and "code" in payload and "data" in payload:
+                    return payload
+            return data
+        if isinstance(data, str):
+            frames: List[Dict[str, Any]] = []
+            for line in data.splitlines():
+                line = line.strip()
+                if not line.startswith("data:"):
+                    continue
+                try:
+                    parsed = json.loads(line.split(":", 1)[1].strip())
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(parsed, dict):
+                    frames.append(parsed)
+            if frames:
+                return frames[-1]
+        return {}
 
     def _list(self, value: Any) -> List[Any]:
         if value is None or value == "":

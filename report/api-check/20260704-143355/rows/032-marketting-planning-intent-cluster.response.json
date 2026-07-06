@@ -1,0 +1,78 @@
+{
+  "project_id": "marketting-planning-intent",
+  "clusters": [
+    {
+      "cluster_id": "expectation::implementation_bug::not_evaluable",
+      "mechanism": "implementation_bug::not_evaluable",
+      "causal_category": "implementation_bug",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "提取时间约束槽位",
+        "提取产品约束槽位",
+        "提取分析维度槽位",
+        "intent_contract"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "42f0031a-59ff-42f9-bb17-cd9d64b10a91"
+      ],
+      "representative_traces": [
+        "42f0031a-59ff-42f9-bb17-cd9d64b10a91"
+      ],
+      "common_root_cause": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'slots': {}, 'entities': [], 'fallback': False}，最早差异位于 intent_contract_gate。",
+      "shared_failure_pattern": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'slots': {}, 'entities': [], 'fallback': False}，最早差异位于 intent_contract_gate。",
+      "representative_diffs": [
+        {
+          "case_id": "42f0031a-59ff-42f9-bb17-cd9d64b10a91",
+          "node": "intent_contract_gate",
+          "actual": {
+            "confidence": 1.0,
+            "fallback": false,
+            "intent": "customer_portrait"
+          },
+          "evidence": [
+            [
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "时间槽位：去年"
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "产品槽位：年金险"
+              },
+              {
+                "error_type": "",
+                "evidence_ref": "",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": "分析维度槽位：年龄分布、家庭结构"
+              }
+            ]
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "verification_cases": [
+        "42f0031a-59ff-42f9-bb17-cd9d64b10a91"
+      ],
+      "next_actions": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ]
+    }
+  ],
+  "common_root_cause": "当前 case 期望 intent/slots 为 {}，实际 normalized intent evidence 为 {'intent': 'customer_portrait', 'confidence': 1.0, 'slots': {}, 'entities': [], 'fallback': False}，最早差异位于 intent_contract_gate。",
+  "impact": "",
+  "priority": "high"
+}

@@ -5,6 +5,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
+from .schema import MockDataset, normalize_mock_case, normalize_mock_dataset, to_dict
+
 ROOT = Path(__file__).resolve().parents[1]
 STORE_PATH = ROOT / "data" / "case_pools.json"
 
@@ -42,8 +44,7 @@ def compact_case_pool_store() -> Dict[str, Any]:
 
 
 def list_case_pools(project_id: str) -> List[Dict[str, Any]]:
-    pools = _read_store().get(project_id, [])
-    return [{key: value for key, value in pool.items() if key != "cases"} for pool in pools]
+    return [_pool_boundary_payload(project_id, pool, include_cases=False) for pool in _read_store().get(project_id, [])]
 
 
 TRANSIENT_CASE_FIELDS = {
@@ -54,7 +55,33 @@ TRANSIENT_CASE_FIELDS = {
 
 
 def _strip_transient(case: Dict[str, Any]) -> Dict[str, Any]:
-    return {key: value for key, value in case.items() if key not in TRANSIENT_CASE_FIELDS}
+    schema_case = normalize_mock_case(case)
+    durable = to_dict(schema_case) if schema_case is not None else dict(case or {})
+    return {key: value for key, value in durable.items() if key not in TRANSIENT_CASE_FIELDS}
+
+
+def _pool_schema(project_id: str, pool: Dict[str, Any]) -> MockDataset:
+    normalized = normalize_mock_dataset({
+        "dataset_id": pool.get("dataset_id") or pool.get("id") or f"pool-{project_id}",
+        "name": pool.get("name") or "",
+        "dimension_type": pool.get("dimension_type") or "case_pool",
+        "description": pool.get("description") or "",
+        "cases": pool.get("cases") or [],
+        "case_count": pool.get("case_count") or len(pool.get("cases") or []),
+    })
+    return normalized or MockDataset(dataset_id=str(pool.get("id") or ""), name=str(pool.get("name") or ""), dimension_type="case_pool")
+
+
+def _pool_boundary_payload(project_id: str, pool: Dict[str, Any], *, include_cases: bool) -> Dict[str, Any]:
+    dataset = to_dict(_pool_schema(project_id, pool))
+    payload = {
+        **dataset,
+        "id": pool.get("id") or dataset.get("dataset_id"),
+        "created_at": pool.get("created_at") or "",
+    }
+    if not include_cases:
+        payload.pop("cases", None)
+    return payload
 
 
 def save_case_pool(project_id: str, name: str, cases: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -67,16 +94,17 @@ def save_case_pool(project_id: str, name: str, cases: List[Dict[str, Any]]) -> D
         "case_count": len(durable_cases),
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "cases": durable_cases,
+        "dimension_type": "case_pool",
     }
     data[project_id] = [pool] + [item for item in pools if item.get("name") != pool["name"]]
     _write_store(data)
-    return pool
+    return _pool_boundary_payload(project_id, pool, include_cases=True)
 
 
 def load_case_pool(project_id: str, pool_id: str) -> Dict[str, Any]:
     for pool in _read_store().get(project_id, []):
         if pool.get("id") == pool_id:
-            return pool
+            return _pool_boundary_payload(project_id, pool, include_cases=True)
     raise KeyError(f"case pool not found: {pool_id}")
 
 

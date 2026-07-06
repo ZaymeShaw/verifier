@@ -1,0 +1,358 @@
+{
+  "trace_id": "ce25e78f-e17e-4fa0-af21-25dff0b262f8",
+  "project_id": "marketting-planning",
+  "verdict": "incorrect",
+  "business_expectations": [
+    {
+      "expectation_id": "意图检测事件触发",
+      "downstream_consumer": "前端UI",
+      "user_intent": "识别用户想要提高NBEV的意图",
+      "expected_outcome": "intent_detected事件出现",
+      "required_capabilities": [
+        "意图识别"
+      ],
+      "acceptance_criteria": [
+        "event_summary中包含'intent_detected'事件"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "阶段路由到规划阶段",
+      "downstream_consumer": "前端UI",
+      "user_intent": "进行营销规划",
+      "expected_outcome": "stage == 'planning' 且事件包含 planning_started",
+      "required_capabilities": [
+        "阶段路由"
+      ],
+      "acceptance_criteria": [
+        "extracted_output.stage 等于 'planning'",
+        "event_summary中包含 'planning_started' 事件"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "业务指标NBEV识别",
+      "downstream_consumer": "用户",
+      "user_intent": "提高NBEV",
+      "expected_outcome": "生成的内容中包含对NBEV指标的讨论",
+      "required_capabilities": [
+        "业务术语识别"
+      ],
+      "acceptance_criteria": [
+        "卡片消息内容或推理消息内容中包含'NBEV'或其相关概念"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "时间范围今年识别",
+      "downstream_consumer": "用户",
+      "user_intent": "针对今年的NBEV",
+      "expected_outcome": "生成的内容中提及或隐含今年",
+      "required_capabilities": [
+        "时间解析"
+      ],
+      "acceptance_criteria": [
+        "规划内容中提到'今年'或2025年或其他当前年份的表达"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "目标数值与单位处理",
+      "downstream_consumer": "用户",
+      "user_intent": "无具体目标值",
+      "expected_outcome": "无目标值提取错误",
+      "required_capabilities": [
+        "槽位提取"
+      ],
+      "acceptance_criteria": [
+        "未观察到错误的目标数值或单位输出"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "分解维度销售人员考虑",
+      "downstream_consumer": "用户",
+      "user_intent": "从多招销售人员入手",
+      "expected_outcome": "卡片内容涉及销售人员招聘或团队扩展",
+      "required_capabilities": [
+        "建议采纳"
+      ],
+      "acceptance_criteria": [
+        "规划卡片中提到'销售人员'、'招聘'、'团队'等关键词"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "规划可执行性",
+      "downstream_consumer": "用户",
+      "user_intent": "知道怎么提高NBEV",
+      "expected_outcome": "卡片内容有可操作的条目",
+      "required_capabilities": [
+        "规划生成"
+      ],
+      "acceptance_criteria": [
+        "卡片中提供至少一个具体的行动建议或资源配置"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "SSE事件流完整性",
+      "downstream_consumer": "前端基础设施",
+      "user_intent": "完成交互",
+      "expected_outcome": "event_summary.completed为true，final_event为done",
+      "required_capabilities": [
+        "SSE管理"
+      ],
+      "acceptance_criteria": [
+        "event_summary.completed == true",
+        "event_summary.final_event == 'done'",
+        "事件流包含 intent_detected, reasoning, planning_started, card_delta, done"
+      ],
+      "priority": "high"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图检测事件触发",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "event_summary中包含'intent_detected'"
+      ],
+      "actual_evidence": [
+        "event_summary.canonical_names包含'intent_detected'"
+      ],
+      "downstream_impact": "前端可以收到意图检测信号",
+      "blocking": true
+    },
+    {
+      "expectation_id": "阶段路由到规划阶段",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        "extracted_output.stage为'planning'",
+        "planning_started事件存在"
+      ],
+      "actual_evidence": [
+        "extracted_output.stage为'non_agent'",
+        "planning_started事件存在"
+      ],
+      "downstream_impact": "下游可能因stage错误无法展示规划卡片，影响用户体验",
+      "blocking": true
+    },
+    {
+      "expectation_id": "业务指标NBEV识别",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "推理或卡片内容中提及NBEV"
+      ],
+      "actual_evidence": [
+        "无内容文本提供"
+      ],
+      "downstream_impact": "无法确认业务准确性",
+      "blocking": true
+    },
+    {
+      "expectation_id": "时间范围今年识别",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "规划内容中提到今年"
+      ],
+      "actual_evidence": [
+        "无内容文本提供"
+      ],
+      "downstream_impact": "无法确认时间准确性",
+      "blocking": true
+    },
+    {
+      "expectation_id": "目标数值与单位处理",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "未观察到错误目标值输出"
+      ],
+      "actual_evidence": [
+        "无内容文本提供"
+      ],
+      "downstream_impact": "无重大影响，用户未提供目标值",
+      "blocking": false
+    },
+    {
+      "expectation_id": "分解维度销售人员考虑",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "卡片内容涉及销售人员招聘"
+      ],
+      "actual_evidence": [
+        "无内容文本提供"
+      ],
+      "downstream_impact": "无法确认是否采纳用户建议",
+      "blocking": true
+    },
+    {
+      "expectation_id": "规划可执行性",
+      "status": "not_evaluable",
+      "expected_evidence": [
+        "卡片包含具体行动建议"
+      ],
+      "actual_evidence": [
+        "无内容文本提供"
+      ],
+      "downstream_impact": "无法确认规划质量",
+      "blocking": true
+    },
+    {
+      "expectation_id": "SSE事件流完整性",
+      "status": "fulfilled",
+      "expected_evidence": [
+        "completed为true，final_event为done"
+      ],
+      "actual_evidence": [
+        "event_summary.completed为true",
+        "event_summary.final_event为'done'",
+        "关键事件均已出现"
+      ],
+      "downstream_impact": "前端可正常结束流",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "assessment_count": 8,
+    "blocking_expectations": [
+      "阶段路由到规划阶段",
+      "业务指标NBEV识别",
+      "时间范围今年识别",
+      "分解维度销售人员考虑",
+      "规划可执行性"
+    ]
+  },
+  "reasoning_summary": "本次评估根据用户查询重建了意图模型，并拆解为8项业务期望。系统触发了意图检测并完成了SSE事件流，但阶段路由失败：输出阶段为non_agent，而非期望的planning。尽管事件中出现了planning_started，但stage字段错误直接违反了前端消费契约。受限于内容不可见，有关内容准确性的5项期望无法评估，因此不能排除其他问题。基于已确认的阻塞性失败，整体判定为未满足。",
+  "judge_basis": "基于run_trace中的extracted_output和event_summary，评估系统是否满足从用户意图派生的业务期望。由于缺少卡片和推理的具体内容，部分期望无法评估。",
+  "judge_method": "通过分解用户意图为原子化业务期望，逐项比对实际输出来判定满足度",
+  "verdict_derivation": {
+    "primary_boundary": "系统责任边界内，评估意图识别、阶段路由和SSE事件流",
+    "assessment_summary": "8项业务期望中，2项满足（意图检测、SSE完整性），1项未满足（阶段路由到规划），5项因内容缺失无法评估。由于阶段路由是阻塞性需求，整体判定为未满足。",
+    "blocking_gaps": [
+      "阶段路由到规划阶段：extracted_output.stage为'non_agent'，未满足期望的'planning'，可能导致下游无法正确展示规划卡片",
+      "业务指标NBEV识别：无法评估因缺失内容，存在潜在风险",
+      "时间范围今年识别：无法评估",
+      "分解维度销售人员考虑：无法评估",
+      "规划可执行性：无法评估"
+    ],
+    "why_verdict": "核心需求“阶段路由到规划阶段”未满足：系统虽生成了规划事件，但输出阶段标记为non_agent，违反了用户意图和下游契约。尽管事件流显示规划已启动，但阶段标签错误意味着关键契约未达成，故整体判定为未满足。"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "正确的stage标签",
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "卡片内容证据",
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": "stage为non_agent而非planning",
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    "本次评估根据用户查询重建了意图模型，并拆解为8项业务期望。系统触发了意图检测并完成了SSE事件流，但阶段路由失败：输出阶段为non_agent，而非期望的planning。尽管事件中出现了planning_started，但stage字段错误直接违反了前端消费契约。受限于内容不可见，有关内容准确性的5项期望无法评估，因此不能排除其他问题。基于已确认的阻塞性失败，整体判定为未满足。"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "evaluable_errors": [
+      "extracted_output.stage 为 'non_agent' 而非 'planning'"
+    ],
+    "reasoning": "stage标签错误属于系统内部责任，且可评估，因此属于可评估范围。"
+  },
+  "evaluation_boundary": {
+    "primary_boundary_id": "system_responsibility_with_declared_external_boundary",
+    "primary_boundary_name": "系统责任边界（含声明外部边界）",
+    "judge_question": "系统是否在自身责任范围内正确完成了意图识别、阶段路由和规划生成？",
+    "verdict_basis": "依据extracted_output的stage字段和event_summary的事件序列",
+    "boundary_sources": "application_boundary.judge_scope, reference_contract为空",
+    "conflict_policy": "当存在不可评估项时，仅基于可评估的阻塞期望判定；内容缺失导致的不可评估项不视为系统错误，但已识别出的stage错误判定为阻塞性未满足"
+  },
+  "consumer_contract": {
+    "consumer": "前端UI或下游消费者",
+    "contract": "根据stage显示对应界面，planning阶段显示规划卡片，non_agent可能显示兜底或文本回复。",
+    "application_boundary": {
+      "allow_fallback": false,
+      "dependency_status": "available",
+      "fallback_used": false
+    }
+  },
+  "intent_model": {
+    "raw_user_request": "我想知道怎么提高今年的NBEV，能不能从多招些销售人员入手？",
+    "explicit_intents": [
+      "询问如何提高今年的NBEV",
+      "建议通过多招销售人员作为手段"
+    ],
+    "implicit_business_intents": [
+      "希望获得一个可执行的营销规划",
+      "需要具体的行动步骤或资源建议"
+    ],
+    "constraints": {
+      "time_range": "今年",
+      "business_metric": "NBEV",
+      "suggested_action": "增加销售人员"
+    },
+    "success_definition": "系统识别意图为营销规划请求，进入规划阶段，生成一个包含如何通过增加销售人员来提高今年NBEV的可执行计划卡片，并完整返回SSE事件流。",
+    "blocking_requirements": [
+      "识别为规划意图并路由到planning阶段",
+      "规划中讨论NBEV指标",
+      "规划中考虑增加销售人员的建议",
+      "生成可执行的计划卡片",
+      "SSE事件流完整且以done结束"
+    ],
+    "nice_to_have_requirements": [
+      "提供具体数值目标",
+      "量化招聘带来的NBEV提升"
+    ],
+    "intent_evidence": [
+      "用户消息内容：'我想知道怎么提高今年的NBEV，能不能从多招些销售人员入手？'"
+    ]
+  },
+  "reconstructed_intent": "用户希望获得一个关于如何提高今年NBEV的营销规划，并建议从增加销售人员入手。期望系统识别意图后进入规划阶段，生成一个包含该建议的可执行计划卡片，并返回完整的事件流。",
+  "reference_generation_basis": {
+    "source": "judge-generated",
+    "alignment_to_live_schema": "基于用户意图和critical_intent_dimensions生成业务期望，并与实际输出的stage和事件对齐",
+    "evidence": [
+      "extracted_output.stage",
+      "event_summary"
+    ]
+  },
+  "scenario": "intent_recognition",
+  "needs_human_review": false,
+  "quality_flags": [
+    "stage_mismatch",
+    "missing_content_evidence"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[阶段路由到规划阶段] · 下游可能因stage错误无法展示规划卡片，影响用户体验",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "阶段路由到规划阶段",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "下游可能因stage错误无法展示规划卡片，影响用户体验",
+        "within_evaluable_scope": true,
+        "evidence": "extracted_output.stage为'non_agent' | planning_started事件存在 | extracted_output.stage为'planning' | planning_started事件存在"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 8,
+    "blocking_count": 7,
+    "is_formal_attribution": true
+  }
+}

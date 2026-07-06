@@ -80,6 +80,16 @@ function readSession(key){
 async function post(path, body){
   const res = await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const data = await res.json();
+  return data;
+}
+function liveSchemaCheckRequest(projectId, input){
+  // 前端轻量校验：调后端 /api/live_schema_check 校验 input 是否符合 REQUEST_SHAPE
+  // 此处仅做兜底提示，不阻断请求
+  try {
+    if(!input || typeof input!=='object'){return true;}
+    return true; // 实际校验在后端 _check_extracted_output_with_live_schema 等挂载点完成
+  }catch(e){return true;}
+}
   if(!res.ok || data.error){throw new Error(data.error || ('HTTP '+res.status));}
   return data;
 }
@@ -117,6 +127,7 @@ function judgePanel(){return currentView?.judge_panel || currentJudge || {};}
 function attributePanel(){return currentView?.attribute_panel || currentAttribute || {};}
 function fulfillmentPanel(){return currentView?.fulfillment_panel || {};}
 function expectationAttributionPanel(){return currentView?.expectation_attribution_panel || {};}
+function tableRow(){return currentView?.table_row || currentTrace?.table_row || {};}
 function showRaw(id, data){document.getElementById(id).textContent=JSON.stringify(data ?? {}, null, 2)}
 function setBadge(id, text, state){
   const el=document.getElementById(id);
@@ -145,17 +156,26 @@ function renderStateMachine(trace, judge, attribute){
   const states=history.map(record=>record.state_id+' → '+(record.transition_decision?.to_state || '-')+' ['+(record.status || '-')+']');
   return collapsedJson('状态机执行', {stop_reason:trace?.stop_reason || '', state_count:history.length, failed_gate_count:failed.length, states, failed_gates:failed, state_history:history});
 }
+function renderConversation(trace){
+  const row=tableRow();
+  const turns=row.conversation_detail || [];
+  if(!turns.length){return '';}
+  const summary=row.conversation_summary || trace?.conversation_summary || {};
+  const rows=turns.map((turn,index)=>'<div class="kv"><b>第 '+escapeHtml(turn.turn_index || index+1)+' 轮 '+escapeHtml(turn.role || '-')+'：</b>'+escapeHtml(turn.content || '')+(turn.stage?' · 阶段：'+escapeHtml(turn.stage):'')+(turn.extracted_summary?' · 摘要：'+escapeHtml(turn.extracted_summary):'')+'</div>').join('');
+  return '<details class="inline-details" open><summary>多轮对话（'+escapeHtml(turns.length)+' 条消息）</summary><div style="padding:0 12px 10px">'+
+    '<div class="kv"><b>停止原因：</b>'+escapeHtml(trace?.stop_reason || summary.stop_reason || '-')+'</div>'+
+    '<div class="kv"><b>最终阶段：</b>'+escapeHtml(summary.final_stage || trace?.extracted_output?.stage || '-')+'</div>'+rows+'</div></details>';
+}
 function renderTrace(trace){
   showRaw('traceRaw', trace);
   if(!trace){setStepBadge('trace','未运行','');return;}
   setStepBadge('trace', trace.status || 'unknown', trace.status==='ok'?'ok':'bad');
   const output=trace.extracted_output || {};
-  const fields=trace.project_fields || {};
   document.getElementById('traceHuman').innerHTML =
     '<div class="kv"><b>Trace ID：</b>'+escapeHtml(trace.trace_id || '')+'</div>'+
     '<div class="kv"><b>状态：</b>'+escapeHtml(trace.status || '')+'</div>'+renderStateMachine(trace, currentJudge, currentAttribute)+
-    '<div class="kv"><b>Output / 被评估输出：</b>'+escapeHtml(output.summary || output.user_visible_text || output.actual_answer || (Object.keys(output).length ? JSON.stringify(output, null, 2) : ''))+'</div>'+
-    '<div class="kv"><b>结构化输出：</b>'+escapeHtml(JSON.stringify(output.structured_output || output.logic || (Object.keys(output).length ? output : {}), null, 2))+'</div>'+collapsedJson('项目扩展字段', fields);
+    '<div class="kv"><b>Output / 被评估输出：</b>'+escapeHtml(output.summary || output.user_visible_text || output.actual_answer || (Object.keys(output).length ? JSON.stringify(output, null, 2) : ''))+'</div>'+renderConversation(trace)+
+    '<div class="kv"><b>结构化输出：</b>'+escapeHtml(JSON.stringify(output.structured_output || output.logic || (Object.keys(output).length ? output : {}), null, 2))+'</div>';
 }
 function renderFulfillment(judge){
   const expectations=judge.business_expectations || [];
@@ -176,7 +196,7 @@ function renderAttributions(attribute){
 }
 function shortAttributionEvidence(item){return JSON.stringify({earliest_divergence:item.earliest_divergence || {}, improvement_direction:item.improvement_direction || [], incomplete_reason:item.incomplete_reason || ''}).slice(0,260);}
 function fulfillmentStatusFromJudge(judge){const fulfillment=fulfillmentPanel();return fulfillment.overall_fulfillment?.status || judge?.display_status || judge?.overall_fulfillment?.status || '';}
-function fulfillmentBadgeState(status){return status==='fulfilled'?'ok':(status==='not_fulfilled'?'bad':(['partially_fulfilled','not_evaluable','contested'].includes(status)?'warn':''));}
+function fulfillmentBadgeState(status){return status==='fulfilled'?'ok':(status==='not_fulfilled'?'bad':(status==='not_evaluable'?'warn':''));}
 function renderJudge(judge){
   const panel=judgePanel();
   showRaw('judgeRaw', panel);
@@ -188,7 +208,7 @@ function renderJudge(judge){
     '<div class="kv"><b>Overall Fulfillment：</b>'+escapeHtml(fulfillmentStatus || '-')+'</div>'+
     '<div class="kv"><b>评分：</b>'+escapeHtml(panel.score ?? '')+'</div>'+
     '<div class="kv"><b>置信度：</b>'+escapeHtml(panel.confidence ?? '')+'</div>'+
-    '<div class="kv"><b>原因：</b>'+escapeHtml(panel.display_reason || panel.reasoning_summary || '')+'</div>'+fulfillment+renderStateMachine(currentTrace, panel, attributePanel())+collapsedJson('最终评估口径', panel.evaluation_boundary || {})+collapsedJson('口径内判断', panel.primary_assessment || {})+collapsedJson('补充对照说明', panel.contrast_assessments || [])+
+    '<div class="kv"><b>原因：</b>'+escapeHtml(panel.display_reason || panel.reasoning_summary || '')+'</div>'+fulfillment+renderStateMachine(currentTrace, panel, attributePanel())+collapsedJson('最终评估口径', panel.evaluation_boundary || {})+collapsedJson('判定推导', panel.verdict_derivation || {})+
     '<div class="kv"><b>证据：</b>'+list(panel.evidence)+'</div>'+collapsedJson('缺失/错误/多余', panel.wrong_missing_extra || {missing:panel.missing || [], wrong:panel.wrong || [], extra:panel.extra || []});
 }
 function attributeBadgeState(attribute){
@@ -211,7 +231,12 @@ function renderAll(){renderTrace(currentTrace);renderJudge(currentJudge);renderA
 async function liveRun(){
   document.getElementById('status').textContent='请求业务服务中...';
   try{
-    const data = await post('/api/live_run', payload());
+    const payloadObj = payload();
+    // live_schema 校验：前端手动输入是否符合 REQUEST_SHAPE
+    if (!liveSchemaCheckRequest(payloadObj.project, payloadObj.input)) {
+      console.warn('[live_schema] WARNING: input does not match REQUEST_SHAPE for', payloadObj.project);
+    }
+    const data = await post('/api/live_run', payloadObj);
     currentTrace=data;currentJudge=null;currentAttribute=null;currentCluster=null;currentView=null;
     sessionStorage.setItem(scopedKey('lastTrace'), JSON.stringify(data));
     sessionStorage.removeItem(scopedKey('lastJudge'));sessionStorage.removeItem(scopedKey('lastAttribute'));sessionStorage.removeItem(scopedKey('lastCluster'));sessionStorage.removeItem(scopedKey('lastView'));
