@@ -3,7 +3,8 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from types import ModuleType
+from typing import Any, Dict, List, Optional
 
 from .adapter import ProjectAdapter
 from .schema import ProjectSpec
@@ -179,9 +180,52 @@ def load_project(project_id: str) -> ProjectSpec:
         application=dict(data.get("application") or {}),
         frontend_extensions=dict(data.get("frontend_extensions") or {}),
         endpoint_discovery=dict(data.get("endpoint_discovery") or {}),
+        attribute_draft=dict(data.get("attribute_draft") or {}),
         root=str(project_root),
         source_project=_resolve_source_project(data, project_root),
     )
+
+
+def _load_project_module(spec: ProjectSpec, filename: str, role: str) -> Optional[ModuleType]:
+    """Load optional project-layer protocol module.
+
+    spec/info-volume.md: core only defines the protocol and dispatch seam.  Project
+    judge/attribute strategies live in impl/projects/<project>/{role}.py when a
+    project opts in.  draft/ attribute is loaded only when project.yaml explicitly
+    enables attribute_draft for manual validation; default production never auto-loads draft.
+    """
+    module_path = Path(spec.root) / filename
+    if not module_path.exists():
+        return None
+    module_name = f"impl_project_{spec.project_id}_{role}"
+    module_spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if module_spec is None or module_spec.loader is None:
+        raise ImportError(f"cannot load project {role} module: {module_path}")
+    module = importlib.util.module_from_spec(module_spec)
+    module_spec.loader.exec_module(module)
+    return module
+
+
+def _safe_draft_attribute_filename(spec: ProjectSpec) -> Optional[str]:
+    draft_cfg = spec.attribute_draft if isinstance(spec.attribute_draft, dict) else {}
+    if draft_cfg.get("enabled") is not True:
+        return None
+    module = str(draft_cfg.get("module") or "draft/attribute.py")
+    module_path = Path(module)
+    if module_path.is_absolute() or ".." in module_path.parts or module_path.parts[:1] != ("draft",):
+        raise ValueError("attribute_draft.module must be a relative path under draft/")
+    return module
+
+
+def load_project_judge(spec: ProjectSpec) -> Optional[ModuleType]:
+    return _load_project_module(spec, "judge.py", "judge")
+
+
+def load_project_attribute(spec: ProjectSpec) -> Optional[ModuleType]:
+    draft_filename = _safe_draft_attribute_filename(spec)
+    if draft_filename:
+        return _load_project_module(spec, draft_filename, "attribute_draft")
+    return _load_project_module(spec, "attribute.py", "attribute")
 
 
 def load_adapter(spec: ProjectSpec) -> ProjectAdapter:

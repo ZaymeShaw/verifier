@@ -86,16 +86,16 @@ def build_search_api_tool(
             )
 
     execute.__name__ = tool_id.replace(".", "_")
-    execute.__doc__ = f"调业务搜索解析接口，传入自然语言查询，返回解析出的搜索条件、匹配级别、匹配模式。用于验证业务系统当前行为是否和 trace 记录一致。"
+    execute.__doc__ = "向客户搜索解析接口提交自然语言查询，返回解析后的搜索条件、逻辑关系、匹配级别、匹配模式和意图摘要。"
     return VerifiableTool(
         tool_id=tool_id,
-        description="调业务搜索解析接口，传入自然语言查询，返回解析出的搜索条件、匹配级别、匹配模式。用于验证业务系统当前行为是否和 trace 记录一致。",
+        description="向客户搜索解析接口提交自然语言查询并返回接口实际响应摘要。输入 query 和可选 user_id；输出 rewritten query、conditions、query_logic、matched_level、matched_patterns 和 intent_summary。该工具提供远程 API 行为证据，不解释源码、配置规则或根因。",
         applicable_scenario="attr",
         parameters={
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "自然语言搜索查询，如'45岁女性保费10万以上'"},
-                "user_id": {"type": "string", "description": "用户ID，默认 eval-verifier"},
+                "query": {"type": "string", "description": "必填。发送给客户搜索解析接口的自然语言查询文本，按业务接口支持的用户表达原样填写。"},
+                "user_id": {"type": "string", "description": "可选。请求客户搜索解析接口时携带的用户 ID；缺省值由工具执行函数提供。"},
             },
             "required": ["query"],
         },

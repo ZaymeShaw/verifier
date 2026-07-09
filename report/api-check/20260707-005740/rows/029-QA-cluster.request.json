@@ -1,0 +1,111 @@
+{
+  "project": "QA",
+  "attributes": [
+    {
+      "trace_id": "d24e50a4-a6d7-422a-908c-2111e4b06e01",
+      "project_id": "QA",
+      "case_id": "",
+      "expectation_attributions": [
+        {
+          "expectation_id": "说明两次轻症确诊间的间隔期",
+          "causal_category": "model_capability_gap"
+        },
+        {
+          "expectation_id": "说明轻症分组限制",
+          "causal_category": "model_capability_gap"
+        },
+        {
+          "expectation_id": "说明轻症赔付对重疾保额的影响",
+          "causal_category": "model_capability_gap"
+        },
+        {
+          "expectation_id": "说明轻症赔付后合同继续有效及累计赔付上限",
+          "causal_category": "model_capability_gap"
+        },
+        {
+          "expectation_id": "提供查阅保险合同中特定章节的建议",
+          "causal_category": "model_capability_gap"
+        }
+      ],
+      "causal_category": "需人工复核",
+      "earliest_divergence": {
+        "stage": "qa.output.read",
+        "description": "实际输出与参考答案的内容差异在 qa.output.read 阶段首次可观测。实际回答在间隔期上仅给出'间隔期要求'而非具体90/180天，且缺失分组限制、保额影响、累计上限、章节指引等多项信息。该阶段本身是读取操作而非生成操作，因此 earliest_divergence 标记的是分歧的可观测起点，根因则在上游的 answer 生成环节（mock_agent_llm）。"
+      },
+      "chain_nodes": [
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        }
+      ],
+      "evidence_coverage": {
+        "trace_nodes_analyzed": 5,
+        "reference_points_compared": 8,
+        "matched_points": 3,
+        "unmatched_points": 5,
+        "source_files_read": 0,
+        "probes_executed": 0,
+        "evidence_sufficiency": "sufficient——execution_trace 与 judge 的逐点对比证据充分支撑归因，无需额外探针"
+      },
+      "root_cause_hypothesis": "实际回答由 mock_agent_llm 生成，模型在保险条款类问答场景中倾向于输出简洁概括性回答，缺乏系统性的信息完整性保障机制。参考标准答案包含8个关键信息维度（多次赔付确认、赔付比例、次数上限、间隔期具体时长、分组限制、重疾保额影响、合同继续有效与累计上限、具体查阅章节），而实际回答仅完整覆盖其中3个维度，其余5个维度或被笼统化（间隔期）或完全缺失。根因并非测评链路故障（execution_trace 所有节点 succeeded），也非 adapter 归一化问题（extract_output 正确提取了 actual_answer），而是生成侧模型在无显式完整性约束的情况下，对信息密度和覆盖度的自发性取舍导致了关键细节遗漏。该问题属于 模型能力缺陷：模型具备生成这些内容的能力，但在实际推理中未将其纳入输出，反映出 prompt 设计或解码策略对'信息完整性'这一质量维度的约束不足。",
+      "verification_steps": [
+        "检查 mock_agent_llm 的生成 prompt 中是否包含保险条款类问题的关键信息维度清单",
+        "对比同模型在其他高信息密度问题上的完整度表现，确认是否为该类问题的系统性缺陷",
+        "若可访问模型输出 logits 或 token 级决策，分析模型在生成'间隔期要求'后为何未继续展开具体数值",
+        "用同样的参考标准输入其他模型（如 GPT-4）生成回答，对比完整度差异以确认是模型能力还是 prompt 设计问题"
+      ],
+      "patch_direction": [
+        "在 answer 生成的 system prompt 中嵌入 domain-specific 完整性规则：保险条款类回答必须逐项覆盖赔付条件、限制与免责、对主合同影响、合同持续性、具体查阅指引共5个维度",
+        "引入生成后 completeness checker：使用参考标准中的关键信息点列表对实际输出做 NLI/覆盖度检测，缺失项触发补充生成",
+        "采用结构化输出（如 JSON schema 约束字段）强制模型填充每个信息维度，而非依赖自由文本生成",
+        "若为开源模型微调场景，在训练数据中加入保险条款完整回答的 positive examples 以提升模型对细节覆盖的敏感度"
+      ],
+      "needs_human_review": false,
+      "scenario": "qa_gold_answer",
+      "summary": {
+        "causal_category": "needs_human_review",
+        "attribution_count": 5,
+        "probe_count": 0,
+        "summary_text": "实际回答由 mock_agent_llm 生成，模型在保险条款类问答场景中倾向于输出简洁概括性回答，缺乏系统性的信息完整性保障机制。参考标准答案包含8个关键信息维度（多次赔付确认、赔付比例、次数上限、间隔期具体时长、分组限制、重疾保额影响、合同继续有效与累计上限、具体查阅章节），而实际回答仅完整覆盖其中3个维度，其余5个维度或被笼统化（间隔期）或完全缺失。根因并非测评链路故障（execution_trace 所有节点 succeeded），也非 adapter 归一化问题（extract_output 正确提取了 actual_answer），而是生成侧模型在无显式完整性约束的情况下，对信息密度和覆盖度的自发性取舍导致了关键细节遗漏。该问题属于 model_capability_gap：模型具备生成这些内容的能力，但在实际推理中未将其纳入输出，反映出 prompt 设计或解码策略对'信息完整性'这一质量维度的约束不足。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      },
+      "analysis_method": "基于 judge 产出的 fulfillment_assessments、execution_trace 全链路节点状态分析、实际输出与参考答案的逐点对比，确定所有测评基础设施节点（normalize、output.read、adapter.extract、schema.validate）均正常通过，分歧唯一发生在 answer 生成环节。由于 divergence_analysis 为空且 source_file_catalog 中仅有 adapter.py（非根因落点），未执行额外 probe；归因完全基于 trace 内证据和 judge 对比结果推导。",
+      "analysis_quality": {
+        "confidence": "high",
+        "alternative_hypotheses_considered": [
+          "测评链路故障导致信息丢失——已排除，所有节点 succeeded",
+          "adapter 提取不完整——已排除，extract_output 正确保留了 actual_answer 全文",
+          "参考答案本身不可达——不适用，参考答案由测试方提供且 judge 已基于其评估"
+        ],
+        "limitations": [
+          "未直接检查 mock_agent_llm 的 prompt 或模型配置，因为相关文件不在 source_file_catalog 中",
+          "未执行可执行验证 tool，因为无可用业务系统 API 可探针"
+        ],
+        "passed": false,
+        "status": "insufficient_evidence",
+        "missing": [
+          "supported root-cause evidence"
+        ]
+      },
+      "incomplete_reason": "判定结果为 incorrect；关键差异字段：['actual_answer']；attribute agent 未能获取足够的源码/配置证据来支撑正式根因定位。；建议：检查 source_file_catalog 是否包含相关 prompt 文件和 adapter 源码。。",
+      "quality_flags": [
+        "信息完整度低",
+        "缺失重要条款说明",
+        "模型倾向于简洁输出导致关键细节遗漏",
+        "ungrounded_root_cause"
+      ]
+    }
+  ]
+}

@@ -6,7 +6,9 @@ from typing import Callable
 from unittest.mock import patch
 
 import impl.core.pipeline as pipeline
+from impl.core.live import build_live_request, interaction_contract, live_multi_turn_result, run_live, trace_from_live_result
 from impl.core.adapter import ProjectAdapter
+from impl.core.schema import normalize_multi_turn_trace_summary
 from impl.core.schema.attribute import AttributeResult
 from impl.core.schema.check import CheckReport
 from impl.core.schema.cluster import ClusterSummary
@@ -107,41 +109,53 @@ def _case_from_input() -> object:
 
 
 def _build_live_request() -> object:
-    return pipeline._build_live_request(_adapter(), load_fixture(SingleTurnCase), "fixture_project")
+    return build_live_request(_adapter(), load_fixture(SingleTurnCase), "fixture_project")
 
 
 def _call_live() -> object:
-    return pipeline._call_live(_adapter(), load_fixture("impl.core.schema.live.LiveRequest"))
+    spec = _spec()
+    adapter = _adapter()
+    request = load_fixture("impl.core.schema.live.LiveRequest")
+    return run_live(spec, adapter, load_fixture(SingleTurnCase), request)
 
 
 def _trace_from_live_result() -> object:
-    return pipeline._trace_from_live_result(_adapter(), load_fixture(LiveExecutionResult))
+    return trace_from_live_result(_adapter(), load_fixture(LiveExecutionResult))
 
 
 def _multi_turn_trace_summary() -> object:
     trace = _trace()
     trace.interaction_mode = "interactive_intent"
     trace.conversation_transcript = [{"role": "user", "content": "fixture"}]
-    return pipeline._multi_turn_trace_summary(trace)
+    return normalize_multi_turn_trace_summary({
+        "trace_id": trace.trace_id,
+        "project_id": trace.project_id,
+        "session_id": trace.session_id,
+        "input": trace.input,
+        "turn_traces": [trace],
+        "conversation_transcript": trace.conversation_transcript,
+        "stop_reason": trace.stop_reason,
+        "final_output": trace.extracted_output,
+    })
 
 
 def _live_multi_turn_result() -> object:
     result = load_fixture(LiveExecutionResult)
     result.interaction_mode = "interactive_intent"
     result.multi_turn_state = LiveMultiTurnState(session_id="fixture-session", transcript=[{"role": "user", "content": "fixture"}], accumulated_fields=result.extracted_output)
-    return pipeline._live_multi_turn_result(result)
+    return live_multi_turn_result(result)
 
 
 def _interaction_contract() -> object:
     case = load_fixture(SingleTurnCase)
     case.metadata["interaction"] = load_fixture("impl.core.schema.mock.MultiTurnInteraction", as_dict=True)
-    return pipeline._interaction_contract(case)
+    return interaction_contract(case)
 
 
 def _live_run() -> object:
     with _patched_project_runtime():
         case = load_fixture(SingleTurnCase, as_dict=True)
-        case["output"] = {"conditions": [{"field": "city", "op": "eq", "value": "上海"}]}
+        case["output"] = load_fixture(LiveExecutionResult).extracted_output
         return pipeline.live_run("fixture_project", case)
 
 
@@ -216,12 +230,12 @@ def _run_chain_with_patched_steps() -> object:
 
 FIXTURE_CHECKS = [
     FixtureCheck("pipeline.case_from_input", "impl.core.pipeline._case_from_input", "case 输入进入核心链路前先规范成 SingleTurnCase。", _case_from_input),
-    FixtureCheck("pipeline.build_live_request", "impl.core.pipeline._build_live_request", "mock case -> LiveRequest，是 live 执行入口。", _build_live_request),
-    FixtureCheck("pipeline.call_live", "impl.core.pipeline._call_live", "LiveRequest -> LiveExecutionResult，是业务系统调用/提取边界。", _call_live),
-    FixtureCheck("pipeline.trace_from_live", "impl.core.pipeline._trace_from_live_result", "LiveExecutionResult -> RunTrace，是 trace 层入口。", _trace_from_live_result),
-    FixtureCheck("pipeline.multi_turn_trace_summary", "impl.core.pipeline._multi_turn_trace_summary", "多轮 trace 汇总结构是 issue4/issue5 的关键链路。", _multi_turn_trace_summary),
-    FixtureCheck("pipeline.live_multi_turn_result", "impl.core.pipeline._live_multi_turn_result", "多轮 live result 聚合是 live/trace 边界。", _live_multi_turn_result),
-    FixtureCheck("pipeline.interaction_contract", "impl.core.pipeline._interaction_contract", "case metadata -> interaction contract，是多轮 mock 入口。", _interaction_contract),
+    FixtureCheck("live.build_live_request", "impl.core.live.build_live_request", "mock case -> LiveRequest，是 live 执行入口。", _build_live_request),
+    FixtureCheck("live.run_live", "impl.core.live.run_live", "LiveRequest -> LiveExecutionResult，是业务系统调用/提取边界。", _call_live),
+    FixtureCheck("live.trace_from_live_result", "impl.core.live.trace_from_live_result", "LiveExecutionResult -> RunTrace，是 trace 层入口。", _trace_from_live_result),
+    FixtureCheck("schema.multi_turn_trace_summary", "impl.core.schema.normalize_multi_turn_trace_summary", "多轮 trace 汇总结构是 issue4/issue5 的关键链路。", _multi_turn_trace_summary),
+    FixtureCheck("live.live_multi_turn_result", "impl.core.live.live_multi_turn_result", "多轮 live result 聚合是 live/trace 边界。", _live_multi_turn_result),
+    FixtureCheck("live.interaction_contract", "impl.core.live.interaction_contract", "case metadata -> interaction contract，是多轮 mock 入口。", _interaction_contract),
     FixtureCheck("pipeline.live_run", "impl.core.pipeline.live_run", "project case -> RunTrace，是核心链路第一段。", _live_run),
     FixtureCheck("pipeline.judge", "impl.core.pipeline.judge", "RunTrace -> JudgeResult，是评估链路入口。", _judge_chain_step),
     FixtureCheck("pipeline.attribute", "impl.core.pipeline.attribute", "Trace/Judge -> AttributeResult，是归因链路入口。", _attribute_chain_step),

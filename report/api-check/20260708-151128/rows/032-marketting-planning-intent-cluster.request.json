@@ -1,0 +1,95 @@
+{
+  "project": "marketting-planning-intent",
+  "attributes": [
+    {
+      "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783494691116",
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+      "expectation_attributions": [
+        {
+          "expectation_id": "意图标签正确识别为customer_portrait",
+          "fulfillment_status": "not_fulfilled",
+          "root_cause_hypothesis": "",
+          "evidence": [
+            "adapter_extraction阶段实际输出：intent=other",
+            "runtime_checks显示raw_intent=None，经项目映射得到other",
+            "reference_contract期望intent=customer_portrait，实际不符"
+          ]
+        },
+        {
+          "expectation_id": "识别置信度不低于预期阈值",
+          "fulfillment_status": "not_fulfilled",
+          "root_cause_hypothesis": "",
+          "evidence": [
+            "adapter_extraction实际输出：confidence=0.5",
+            "reference_contract期望confidence=0.95，实际偏低"
+          ]
+        },
+        {
+          "expectation_id": "关键实体重疾险被提取为target_value",
+          "fulfillment_status": "not_fulfilled",
+          "root_cause_hypothesis": "",
+          "evidence": [
+            "adapter_extraction实际输出：target_value=null",
+            "query中明确包含“重疾险”，但未提取",
+            "意图为other时通常不会执行细粒度实体提取"
+          ]
+        },
+        {
+          "expectation_id": "未错误触发其他意图兜底",
+          "fulfillment_status": "not_fulfilled",
+          "root_cause_hypothesis": "",
+          "evidence": [
+            "adapter_extraction实际输出：subIntent=其他意图",
+            "期望为非“其他意图”，实际落入兜底"
+          ]
+        }
+      ],
+      "suspected_locations": [
+        {
+          "location": "intent_contract_gate",
+          "evidence": [
+            [
+              {
+                "kind": "missing",
+                "error_type": "",
+                "expected": "重疾险",
+                "evidence_ref": "",
+                "raw": {
+                  "field": "target_value",
+                  "expected": "重疾险"
+                },
+                "incomplete": false
+              }
+            ]
+          ]
+        }
+      ],
+      "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': 'customer_portrait', 'confidence': 0.95, 'target_value': '重疾险', 'path_types': None, 'subIntent': '其他意图'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "evidence": [
+        [
+          {
+            "kind": "missing",
+            "error_type": "",
+            "expected": "重疾险",
+            "evidence_ref": "",
+            "raw": {
+              "field": "target_value",
+              "expected": "重疾险"
+            },
+            "incomplete": false
+          }
+        ]
+      ],
+      "evidence_strength": "medium",
+      "summary": {
+        "causal_category": "",
+        "attribution_count": 4,
+        "probe_count": 0,
+        "summary_text": "LLM在收到查询“帮我看看上季度买了重疾险的客户都是啥样的？”后，未能输出有效的customer_portrait意图，返回的原始意图字段为None或空；adapter_extraction阶段在解析响应时因无法获取有效意图，回退为兜底意图“other”，并将置信度设为默认低值0.5。同时，由于意图不是customer_portrait，后续实体提取逻辑未能运行，导致target_value缺失。根本原因可能是：1）意图识别提示中缺少与“客户画像”语义匹配的示例，模型无法将“客户都是啥样的”映射到customer_portrait；2）提示或模型对口语化、非标准表述的泛化能力不足；3）响应解析代码对缺失字段的处理过于粗糙，直接兜底而非重试或抛出异常。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      }
+    }
+  ]
+}

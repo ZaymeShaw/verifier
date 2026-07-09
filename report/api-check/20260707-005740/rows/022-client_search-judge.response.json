@@ -1,0 +1,320 @@
+{
+  "trace_id": "617c0bd4-f334-48c1-975d-20b715a855e3",
+  "project_id": "client_search",
+  "verdict": "correct",
+  "business_expectations": [
+    {
+      "expectation_id": "口语重疾险映射为系统枚举疾病保险",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "使用pCategorys字段表达险种大类检索意图",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "操作符语义可执行包含筛选",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "查询逻辑为AND单条件",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "无多余筛选条件",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "口语重疾险映射为系统枚举疾病保险",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "使用pCategorys字段表达险种大类检索意图",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "操作符语义可执行包含筛选",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "查询逻辑为AND单条件",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "无多余筛选条件",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "fulfilled",
+    "why_verdict": "所有业务期望均已满足：口语\"重疾险\"正确映射为系统枚举值\"疾病保险\"；字段pCategorys准确表达了险种大类的检索意图；操作符MATCH在语义上与CONTAINS等价（judge_boundary明确不纠结此差异）；单条件AND查询逻辑正确；无多余筛选条件。parser输出能够完整覆盖用户搜索意图。",
+    "assessment_count": 5
+  },
+  "expected": {
+    "code": 0,
+    "msg": "操作成功",
+    "query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+    "conditions": [
+      {
+        "field": "pCategorys",
+        "operator": "CONTAINS",
+        "value": [
+          "疾病保险"
+        ]
+      }
+    ],
+    "robot_text": "产品类别为疾病保险的客户",
+    "query_logic": "AND",
+    "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+    "end_flag": 1,
+    "intent_summary": "产品类别为疾病保险的客户"
+  },
+  "actual": {
+    "code": 0,
+    "conditions": [
+      {
+        "field": "pCategorys",
+        "operator": "MATCH",
+        "value": "疾病保险"
+      }
+    ],
+    "confidence": 0.8,
+    "cost_times": 1051.0,
+    "end_flag": 1,
+    "intent_summary": "产品类别为疾病保险的客户",
+    "matched_level": 4,
+    "matched_patterns": "### 当前时间\n2026-07-07 00:57:41 (Asia/Shanghai)\n### 今天星期\n周二\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁",
+    "msg": "操作成功",
+    "query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+    "query_logic": "AND",
+    "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+    "robot_text": "产品类别为疾病保险的客户",
+    "trace_id": "trace_001"
+  },
+  "reasoning_summary": "用户查询\"帮我看看公司里所有买了重疾险的客户都有谁\"的意图是检索持有重疾险（疾病保险）的客户。parser输出条件为pCategorys MATCH \"疾病保险\"，逐项分析：(1)口语\"重疾险\"通过value_mappings正确映射为\"疾病保险\"，value正确；(2)字段pCategorys准确对应险种大类检索需求，field正确；(3)操作符MATCH虽与capability_manifest声明的CONTAINS不同，但judge_boundary明确规定不纠结此差异，后处理可等价转换，且单值场景下两者ES查询语义一致，不构成业务偏差；(4)单条件AND逻辑符合用户仅表达一个筛选维度的实际；(5)无多余条件。下游搜索不可用，但在parser_condition_semantics_only评估范围内，所有核心业务期望均满足，parser输出能够覆盖用户搜索意图。",
+  "judge_basis": "基于capability_manifest中pCategorys字段的操作符与值类型约束、value_mappings中\"重疾险→疾病保险\"的映射规则、judge_boundary中CONTAINS/MATCH等价原则，以及enhanced_rules中险种-持有模式的CONTAINS操作符预期，综合判断parser输出条件是否在语义上覆盖用户搜索意图。",
+  "judge_method": "先通过value_mappings验证口语别名到标准枚举的映射正确性，再核对capability_manifest确认字段和操作符能力，最后依据judge_boundary的CONTAINS/MATCH等价规则判断操作符差异是否影响业务语义。下游搜索不可用，评估范围为parser_condition_semantics_only。",
+  "verdict_derivation": {
+    "core_conditions_correct": true,
+    "operator_equivalent": true,
+    "value_mapping_correct": true,
+    "no_extra_conditions": true,
+    "logic_correct": true,
+    "condition_comparison_expected": {
+      "query_logic": "AND",
+      "expected_source": "not_available",
+      "reference_is_oracle": false
+    },
+    "condition_comparison_actual": {
+      "query_logic": "AND"
+    },
+    "why_verdict": "client_search condition comparison has no current intent/config expected conditions; reference conditions are evidence only",
+    "missing_evidence": [
+      "current intent/config expected conditions"
+    ]
+  },
+  "evidence": [
+    {
+      "type": "value_mapping",
+      "source": "value_mappings.pCategorys",
+      "detail": "\"重疾险\" → \"疾病保险\"",
+      "matches_actual": true
+    },
+    {
+      "type": "capability_manifest",
+      "source": "capability_manifest.pCategorys",
+      "detail": "operators: [CONTAINS, NOT_CONTAINS], value_types: [enum]",
+      "matches_actual": "operator差异（MATCH vs CONTAINS）在judge_boundary等价范围内"
+    },
+    {
+      "type": "judge_boundary",
+      "source": "judge_boundary_protocals.md",
+      "detail": "不要纠结CONTAINS和MATCH的问题，原项目会通过后处理处置",
+      "matches_actual": true
+    },
+    {
+      "type": "enhanced_rules",
+      "source": "enhanced_rules.险种-持有",
+      "detail": "pattern使用pCategorys + CONTAINS + enum值，actual中operator为MATCH但语义等价",
+      "matches_actual": true
+    }
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "application_boundary": {
+      "downstream_result_set_available": false,
+      "downstream_status": "unavailable",
+      "judge_scope": "parser_condition_semantics_only",
+      "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics.",
+      "result_set_verified": false
+    },
+    "uncontrollable_limits": [
+      "下游ES客户搜索服务不可用，无法通过实际搜索结果验证条件是否能准确命中目标客户集"
+    ],
+    "result_set_verified": false
+  },
+  "evaluation_boundary": {
+    "scope": "parser_condition_semantics_only",
+    "can_verify_result_set": false,
+    "explanation": "下游搜索不可用，评估仅限parser输出条件的语义正确性。依据capability_manifest字段能力、value_mappings映射规则和judge_boundary等价原则进行判断。"
+  },
+  "consumer_contract": {
+    "consumer": "downstream client search",
+    "contract": "parsed field/operator/value conditions and query logic must be executable for downstream client search within the active application boundary",
+    "reference_contract": {
+      "clientAge": {
+        "field": "clientAge",
+        "operator": "RANGE/GTE/LTE/MATCH",
+        "value_type": "number",
+        "definition": "客户年龄字段，用于年龄精确值或边界条件筛选。",
+        "examples": [
+          "45岁女性保费10万以上",
+          "大于50岁的客户"
+        ]
+      },
+      "clientSex": {
+        "field": "clientSex",
+        "operator": "MATCH",
+        "value_type": "enum",
+        "enums": [
+          "男",
+          "女"
+        ],
+        "definition": "客户性别字段。",
+        "examples": [
+          "45岁女性保费10万以上"
+        ]
+      },
+      "annPremSegNum": {
+        "field": "annPremSegNum",
+        "operator": "GTE/LTE/RANGE/MATCH",
+        "value_type": "number",
+        "definition": "年缴保费金额字段，中文金额单位需要换算成数值。",
+        "examples": [
+          "45岁女性保费10万以上",
+          "年缴保费一万以上的客户"
+        ]
+      },
+      "polNoInfo.payamountdue": {
+        "field": "polNoInfo.payamountdue",
+        "operator": "MATCH",
+        "value_type": "enum",
+        "enums": [
+          "是",
+          "否"
+        ],
+        "definition": "生存金未领取金额是否大于0；是表示存在未领取生存金。",
+        "examples": [
+          "有未领生存金的",
+          "有生存金未领取的客户"
+        ]
+      },
+      "pCategorys": {
+        "field": "pCategorys",
+        "operator": "CONTAINS/NOT_CONTAINS",
+        "value_type": "list",
+        "definition": "险种大类字段，用于年金险、两全险、重疾险等保险类别筛选。",
+        "examples": [
+          "买了年金险或两全险的客户",
+          "只有重疾险的客户"
+        ]
+      }
+    },
+    "application_boundary": {
+      "downstream_result_set_available": false,
+      "downstream_status": "unavailable",
+      "judge_scope": "parser_condition_semantics_only",
+      "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics.",
+      "result_set_verified": false
+    }
+  },
+  "intent_model": {
+    "original_query": "帮我看看公司里所有买了重疾险的客户都有谁",
+    "primary_intent": "按险种大类筛选客户",
+    "extracted_slots": {
+      "insurance_category": {
+        "raw_value": "重疾险",
+        "normalized_value": "疾病保险",
+        "field": "pCategorys"
+      }
+    },
+    "query_type": "单维度筛选",
+    "negation": false
+  },
+  "reconstructed_intent": "查询公司中所有持有疾病保险（用户口语：重疾险）的客户，不涉及其他筛选维度。",
+  "semantic_equivalence_checks": [
+    {
+      "check": "CONTAINS与MATCH操作符等价性",
+      "actual_form": {
+        "field": "pCategorys",
+        "operator": "MATCH",
+        "value": "疾病保险"
+      },
+      "canonical_form": {
+        "field": "pCategorys",
+        "operator": "CONTAINS",
+        "value": [
+          "疾病保险"
+        ]
+      },
+      "is_equivalent": true,
+      "basis": "judge_boundary明确规定不纠结CONTAINS和MATCH差异，原项目后处理会处置；单值场景下两者ES查询语义等价"
+    },
+    {
+      "check": "重疾险到疾病保险的值映射",
+      "user_expression": "重疾险",
+      "actual_value": "疾病保险",
+      "is_equivalent": true,
+      "basis": "value_mappings中明确\"重疾险\"→\"疾病保险\""
+    }
+  ],
+  "reference_generation_basis": {
+    "primary_source": "capability_manifest与value_mappings",
+    "secondary_source": "enhanced_rules中险种-持有模式（pCategorys + CONTAINS）",
+    "notes": "expected中的operator使用CONTAINS、value使用数组形式，这是系统规范的标准形态；actual使用MATCH+字符串在judge_boundary下等价可接受",
+    "source": "not_available",
+    "comparison_basis": "client_search wrong/missing/extra customer-search coverage",
+    "expected_source": "not_available"
+  },
+  "scenario": "单维度险种大类检索，口语别名映射，CONTAINS/MATCH等价判断",
+  "needs_human_review": false,
+  "quality_flags": [
+    "operator_equivalent_per_boundary",
+    "value_mapping_applied_correctly",
+    "application_boundary_parser_only"
+  ],
+  "summary": {
+    "reason": "fulfilled · 0 blocking expectations all met · 用户查询\"帮我看看公司里所有买了重疾险的客户都有谁\"的意图是检索持有重疾险（疾病保险）的客户。parser输出条件为pCategorys MATCH \"疾病保险\"，逐项分析：(1)口语\"重疾险\"通过value_mappings正确映射为\"疾病保险\"，value正确；(2)字段pCategorys准确对应险种大类检索需求，field正确；(3)操作符MATCH虽与capability_manifest声明的CONTAINS不同，但judge_boundary明确规定不纠结此差异，后处理可等价转换，且单值场景下两者ES查询语义一致，不构成业务偏差；(4)单条件AND逻辑符合用户仅表达一个筛选维度的实际；(5)无多余条件。下游搜索不可用，但在parser_condition_semantics_only评估范围内，所有核心业务期望均满足，parser输出能够覆盖用户搜索意图。",
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

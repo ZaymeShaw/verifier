@@ -75,14 +75,14 @@ class VerifiableTool:
     并用执行验证来证明这个判断"——证据是 actual，不是 expected。
 
     - parameters：入参定义，直接对齐 agno/OpenAI function calling 格式，不自己发明
-    - execute_fn：真正能跑的函数；签名 (params: dict) -> ToolResult
+    - execute_fn：真正能跑的函数；由 Agno 按 parameters 以关键字参数方式调用
     - tool 内部怎么拿 trace/spec 是实现细节（可闭包持有），不由协议规定
     """
     tool_id: str
     description: str
     applicable_scenario: str = "general"
     parameters: Dict[str, Any] = field(default_factory=dict)
-    execute_fn: Optional[Callable[[Dict[str, Any]], ToolResult]] = None
+    execute_fn: Optional[Callable[..., ToolResult]] = None
 
 
 @dataclass
@@ -171,6 +171,47 @@ class ToolRegistry:
 
     def run_type(self, tool_type: str, context: ToolContext) -> list[ToolResult]:
         return self.run_selected(context, tool_type)
+
+
+def _normalize_agno_parameters(parameters: Dict[str, Any] | None) -> Dict[str, Any]:
+    if not parameters:
+        return {"type": "object", "properties": {}, "required": []}
+    normalized = dict(parameters)
+    normalized.setdefault("properties", {})
+    normalized.setdefault("required", [])
+    return normalized
+
+
+def _validate_agno_tool_schema(tool: VerifiableTool, parameters: Dict[str, Any]) -> None:
+    if not tool.description or not str(tool.description).strip():
+        raise ValueError(f"VerifiableTool.description is required: {tool.tool_id}")
+    if parameters.get("type") != "object":
+        raise ValueError(f"VerifiableTool.parameters.type must be object: {tool.tool_id}")
+    properties = parameters.get("properties") or {}
+    for field_name, field_schema in properties.items():
+        if not isinstance(field_schema, dict) or not str(field_schema.get("description") or "").strip():
+            raise ValueError(f"VerifiableTool parameter description is required: {tool.tool_id}.{field_name}")
+
+
+def build_agno_tools(verifiable_tools: Iterable[VerifiableTool]) -> list[Function]:
+    tools = []
+    for tool in verifiable_tools:
+        if tool.execute_fn is None:
+            continue
+        parameters = _normalize_agno_parameters(tool.parameters)
+        _validate_agno_tool_schema(tool, parameters)
+        entrypoint = tool.execute_fn
+        entrypoint.__name__ = tool.tool_id.replace(".", "_")
+        if not getattr(entrypoint, "__doc__", None):
+            entrypoint.__doc__ = tool.description
+        tools.append(Function(
+            name=entrypoint.__name__,
+            description=tool.description,
+            entrypoint=entrypoint,
+            parameters=parameters,
+            skip_entrypoint_processing=True,
+        ))
+    return tools
 
 
 def function_tool(tool_id: str, tool_type: str, func: Callable[[ToolContext], ToolResult]) -> ProtocolTool:

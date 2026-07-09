@@ -1,0 +1,39 @@
+{
+  "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783493358232",
+  "project_id": "client_search",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "重疾险口语映射为疾病保险枚举值",
+      "fulfillment_status": "not_evaluable",
+      "root_cause_hypothesis": "",
+      "evidence": [
+        "extracted_output.conditions 中 field=pCategorys, value=疾病保险",
+        "matched_patterns 说明中重疾险→疾病保险的映射示例"
+      ]
+    },
+    {
+      "expectation_id": "使用正确的险种大类字段",
+      "fulfillment_status": "not_evaluable",
+      "root_cause_hypothesis": "",
+      "evidence": [
+        "extracted_output.conditions 已使用 pCategorys 字段"
+      ]
+    }
+  ],
+  "root_cause_hypothesis": "judge agent 在生成 business_expectations JSON 时，某个字符串字段值包含未转义的双引号或特殊字符，导致在第 5 行第 31 列出现 JSON 格式中断，解析器无法提取完整结构，business_expectations 被置空，整体 fulfillment 判定为 not_evaluable。此问题属于 judge LLM 输出后处理环节的格式错误，不影响上游查询解析（重疾险→疾病保险）的语义正确性。",
+  "evidence": [
+    "judge_result.reasoning_summary 中的 LLM 输出预览截断，第 5 行第 31 列提示 Expecting ',' delimiter",
+    "judge_result.overall_fulfillment.status = not_evaluable",
+    "judge_result.business_expectations 为空数组"
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "causal_category": "",
+    "attribution_count": 2,
+    "probe_count": 0,
+    "summary_text": "judge agent 在生成 business_expectations JSON 时，某个字符串字段值包含未转义的双引号或特殊字符，导致在第 5 行第 31 列出现 JSON 格式中断，解析器无法提取完整结构，business_expectations 被置空，整体 fulfillment 判定为 not_evaluable。此问题属于 judge LLM 输出后处理环节的格式错误，不影响上游查询解析（重疾险→疾病保险）的语义正确性。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

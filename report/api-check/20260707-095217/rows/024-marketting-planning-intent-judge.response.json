@@ -1,0 +1,196 @@
+{
+  "trace_id": "dccca497-d9f6-430c-a9b5-47e8a11d94a4",
+  "project_id": "marketting-planning-intent",
+  "verdict": "uncertain",
+  "score": 0.0,
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签正确性",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "置信度合理性",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "槽位抽取完整性",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "兜底策略执行",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签正确性",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "置信度合理性",
+      "status": "not_evaluable",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "槽位抽取完整性",
+      "status": "not_evaluable",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "兜底策略执行",
+      "status": "not_evaluable",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "not_fulfilled",
+      "downstream_impact": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=None，confidence=None，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "blocking_expectations": [
+      "intent_contract"
+    ],
+    "assessment_count": 5
+  },
+  "expected": {
+    "intent": "客户特征分析",
+    "confidence": 0.9,
+    "subIntent": "客群画像查询"
+  },
+  "reasoning_summary": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=None，confidence=None，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+  "judge_basis": "基于用户查询的语义、营销领域常识以及当前提取输出进行对比",
+  "judge_method": "语义匹配与领域分类比对：将用户自然语言与预期意图类别进行对照，判断系统输出的标签是否准确。",
+  "verdict_derivation": {
+    "logic": "核心期望（意图标签正确性）未满足，且为blocking，因此整体status为not_fulfilled",
+    "contract_gate": "failed"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "field": "intent",
+        "detail": "正确的意图标签（如客户特征分析）缺失，系统返回other。"
+      },
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "expected": "客户特征分析或客群洞察类标签",
+      "actual": "other",
+      "evidence_ref": "",
+      "raw": {
+        "field": "intent",
+        "expected": "客户特征分析或客群洞察类标签",
+        "actual": "other",
+        "reason": "未能理解用户对客户特征的分析需求"
+      },
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "source": "extracted_output",
+      "content": {
+        "intent": "other",
+        "confidence": 0.5,
+        "subIntent": "其他意图"
+      }
+    }
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "evaluable_errors": [
+      "意图标签识别错误"
+    ]
+  },
+  "evaluation_boundary": {
+    "includes": [
+      "单轮意图识别API调用",
+      "intent标签及置信度提取"
+    ],
+    "excludes": [
+      "多轮对话状态",
+      "下游规划执行",
+      "槽位抽取结果"
+    ]
+  },
+  "consumer_contract": {
+    "downstream": "营销策划引擎",
+    "expectation": "接收明确的分析类意图标签以进行客户分群和策略匹配",
+    "failure_impact": "若返回other，下游无法确定执行路径，可能导致无响应或错误处理"
+  },
+  "intent_model": {
+    "primary_intent": "客户特征分析",
+    "constraints": {
+      "time": "上季度",
+      "product": "重疾险"
+    },
+    "expected_action": "返回已购买重疾险客户的统计特征或总结描述"
+  },
+  "reconstructed_intent": "查询上季度购买了重疾险的客户群体特征",
+  "semantic_equivalence_checks": [
+    {
+      "check": "用户是否明确要求分析客户特征？",
+      "result": "是，用户问“都是啥样的”即寻求特征描述。"
+    },
+    {
+      "check": "系统输出other是否表达了任何具体业务方向？",
+      "result": "否，other是未能分类的兜底标签。"
+    }
+  ],
+  "reference_generation_basis": {
+    "method": "基于用户输入的语义理解生成合理预期",
+    "assumptions": "项目意图体系中存在客户洞察或客群分析类别"
+  },
+  "scenario": "intent_misclassification",
+  "needs_human_review": true,
+  "quality_flags": [
+    "intent_label_incorrect",
+    "low_confidence",
+    "intent_contract_gate_failed",
+    "invalid_actual_shape"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[(none)] · 用户查询意图明确为分析特定客户群特征，系统却返回无法归类的other，核心意图识别失败，导致整体不满足业务需求。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "意图标签正确性",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户查询意图明确为分析特定客户群特征，系统却返回无法归类的other，核心意图识别失败，导致整体不满足业务需求。"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 4,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

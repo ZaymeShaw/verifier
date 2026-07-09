@@ -1,0 +1,278 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - heading "归因总结" [level=1] [ref=e3]
+    - paragraph [ref=e4]: 协议式单链路、用例池、批量归因、聚簇和 Check 审核视图。
+  - main [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - link "返回 Live 请求" [ref=e8] [cursor=pointer]:
+          - /url: live.html
+        - button "统一单链路" [ref=e9] [cursor=pointer]
+        - button "加载最近结果" [ref=e10] [cursor=pointer]
+        - button "构建 Mock 用例池" [active] [ref=e11] [cursor=pointer]
+        - button "加载 Mock 数据集" [ref=e12] [cursor=pointer]
+        - generic [ref=e13]:
+          - text: 并发数
+          - spinbutton "并发数" [ref=e14]: "4"
+        - button "批量归因" [ref=e15] [cursor=pointer]
+        - button "分析项目配置" [ref=e16] [cursor=pointer]
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - generic [ref=e19]: "8"
+          - text: 用例总数
+        - generic [ref=e20]:
+          - generic [ref=e21]: "8"
+          - text: 已选择
+        - generic [ref=e22]:
+          - generic [ref=e23]: "0"
+          - text: Fulfilled
+        - generic [ref=e24]:
+          - generic [ref=e25]: "0"
+          - text: Not Fulfilled
+        - generic [ref=e26]:
+          - generic [ref=e27]: "0"
+          - text: Clusters
+    - generic [ref=e28]:
+      - complementary [ref=e29]:
+        - generic [ref=e30]:
+          - heading "运行输入" [level=2] [ref=e31]
+          - generic [ref=e32]: Project
+          - combobox [ref=e33]:
+            - option "QA"
+            - option "client_search" [selected]
+            - option "marketting-planning"
+            - option "marketting-planning-intent"
+          - generic [ref=e34]: 单链路 Input JSON
+          - textbox [ref=e35]: "{ \"query\": \"45岁女性保费10万以上\" }"
+          - generic [ref=e36]: Expected Intent（可选）
+          - textbox "可留空；填写后会传给 judge agent。" [ref=e37]
+          - generic [ref=e38]: 上传/导入用例 JSON
+          - button "Choose File" [ref=e39]
+          - textbox [ref=e40]: "[{\"query\":\"45岁女性保费10万以上\"},{\"query\":\"有生存金未领取的客户\"}]"
+          - generic [ref=e41]:
+            - button "导入候选区" [ref=e42] [cursor=pointer]
+            - button "导出已选" [ref=e43] [cursor=pointer]
+            - button "清空" [ref=e44] [cursor=pointer]
+          - paragraph [ref=e45]: 参考 8011 页面后，这里把“上传/生成/选择/批量归因”集中成候选区；所有数据先转成通用 case 协议，再交给后端统一 batch 链路执行。
+        - generic [ref=e46]:
+          - heading "用例池库" [level=2] [ref=e47]
+          - generic [ref=e48]: 保存名称
+          - textbox "例如：生存金专项用例池" [ref=e49]
+          - generic [ref=e50]:
+            - button "保存当前候选区" [ref=e51] [cursor=pointer]
+            - button "刷新列表" [ref=e52] [cursor=pointer]
+          - paragraph [ref=e53]: 已完成的一批用例可以保存成命名用例池；之后可加载另一批继续分析，互不覆盖。
+          - generic [ref=e117]:
+            - generic [ref=e118]: 未命名用例池 2026/6/23 07:29:32
+            - generic [ref=e119]: 20 条 · 2026-06-22T23:29:32Z
+            - generic [ref=e120]:
+              - button "加载" [ref=e121] [cursor=pointer]
+              - button "删除" [ref=e122] [cursor=pointer]
+        - generic [ref=e54]:
+          - heading "聚簇概览" [level=2] [ref=e55]
+          - generic [ref=e56]: 尚未批量归因。
+      - generic [ref=e57]:
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - heading "用例池候选区" [level=2] [ref=e60]
+            - generic [ref=e61]:
+              - button "全选" [ref=e62] [cursor=pointer]
+              - button "取消全选" [ref=e63] [cursor=pointer]
+              - combobox [ref=e64]:
+                - option "全部场景" [selected]
+                - option "single_condition"
+                - option "multi_condition_and"
+                - option "product_category_or"
+                - option "product_exclusion"
+                - option "age_boundary"
+                - option "premium_unit_conversion"
+                - option "policy_status_filter"
+                - option "unsupported_family_phrase"
+              - combobox [ref=e65]:
+                - option "全部达成状态" [selected]
+                - option "pending"
+                - option "fulfilled"
+                - option "not_fulfilled"
+                - option "not_evaluable"
+          - generic [ref=e66]:
+            - text: 批量归因中
+            - generic [ref=e68]: 已通过统一 mock agent 构建用例池。
+          - table [ref=e71]:
+            - rowgroup [ref=e72]:
+              - row "选择 ID 来源 执行模式 Scenario Input Output / 被评估输出 Reference 状态 Score / Judge 归因摘要" [ref=e73]:
+                - columnheader "选择" [ref=e74]
+                - columnheader "ID" [ref=e75]
+                - columnheader "来源" [ref=e76]
+                - columnheader "执行模式" [ref=e77]
+                - columnheader "Scenario" [ref=e78]
+                - columnheader "Input" [ref=e79]
+                - columnheader "Output / 被评估输出" [ref=e80]
+                - columnheader "Reference" [ref=e81]
+                - columnheader "状态" [ref=e82]
+                - columnheader "Score / Judge" [ref=e83]
+                - columnheader "归因摘要" [ref=e84]
+            - rowgroup [ref=e85]:
+              - 'row "mock-agent-client_search-cdd7df11 mock_agent_llm - single_condition [object Object] user_text: 帮我看看公司里所有买了重疾险的客户都有谁, user_id: default_user, trace_id: trace_001, session_id: session_001, source: insurance_search, extra_input_params: Object - - pending 尚未评估 尚未归因" [ref=e123]':
+                - cell [ref=e124]:
+                  - checkbox [checked] [ref=e125]
+                - cell "mock-agent-client_search-cdd7df11" [ref=e126]
+                - cell "mock_agent_llm" [ref=e127]
+                - cell "-" [ref=e128]
+                - cell "single_condition" [ref=e129]
+                - 'cell "[object Object] user_text: 帮我看看公司里所有买了重疾险的客户都有谁, user_id: default_user, trace_id: trace_001, session_id: session_001, source: insurance_search, extra_input_params: Object" [ref=e130]':
+                  - text: "[object Object]"
+                  - text: "user_text: 帮我看看公司里所有买了重疾险的客户都有谁, user_id: default_user, trace_id: trace_001, session_id: session_001, source: insurance_search, extra_input_params: Object"
+                - cell "-" [ref=e131]:
+                  - generic [ref=e132]: "-"
+                - cell "-" [ref=e133]
+                - cell "pending" [ref=e134]:
+                  - generic [ref=e135]: pending
+                - cell "尚未评估" [ref=e136]
+                - cell "尚未归因" [ref=e137]
+              - 'row "mock-agent-client_search-a40d8081 mock_agent_llm - multi_condition_and [object Object] user_text: 帮我找一下所有女性客户，年龄在30到40岁之间，而且年缴保费超过2万，保单状态是有效的，还要包含重疾险的, user_id: user_123456, trace_id: trace-abc-789, session_id: sess-xyz-456, source: chat, extra_input_params: Object - - pending 尚未评估 尚未归因" [ref=e138]':
+                - cell [ref=e139]:
+                  - checkbox [checked] [ref=e140]
+                - cell "mock-agent-client_search-a40d8081" [ref=e141]
+                - cell "mock_agent_llm" [ref=e142]
+                - cell "-" [ref=e143]
+                - cell "multi_condition_and" [ref=e144]
+                - 'cell "[object Object] user_text: 帮我找一下所有女性客户，年龄在30到40岁之间，而且年缴保费超过2万，保单状态是有效的，还要包含重疾险的, user_id: user_123456, trace_id: trace-abc-789, session_id: sess-xyz-456, source: chat, extra_input_params: Object" [ref=e145]':
+                  - text: "[object Object]"
+                  - text: "user_text: 帮我找一下所有女性客户，年龄在30到40岁之间，而且年缴保费超过2万，保单状态是有效的，还要包含重疾险的, user_id: user_123456, trace_id: trace-abc-789, session_id: sess-xyz-456, source: chat, extra_input_params: Object"
+                - cell "-" [ref=e146]:
+                  - generic [ref=e147]: "-"
+                - cell "-" [ref=e148]
+                - cell "pending" [ref=e149]:
+                  - generic [ref=e150]: pending
+                - cell "尚未评估" [ref=e151]
+                - cell "尚未归因" [ref=e152]
+              - 'row "mock-agent-client_search-846eeb3a mock_agent_llm - product_category_or [object Object] user_text: 帮我查一下所有买了重疾险或者两全险的客户，男性也行，女性也行，年龄不限, user_id: user_12345, trace_id: trace_20250220120000_abcd, session_id: session_67890, source: insurance_search, extra_input_params: Object - - pending 尚未评估 尚未归因" [ref=e153]':
+                - cell [ref=e154]:
+                  - checkbox [checked] [ref=e155]
+                - cell "mock-agent-client_search-846eeb3a" [ref=e156]
+                - cell "mock_agent_llm" [ref=e157]
+                - cell "-" [ref=e158]
+                - cell "product_category_or" [ref=e159]
+                - 'cell "[object Object] user_text: 帮我查一下所有买了重疾险或者两全险的客户，男性也行，女性也行，年龄不限, user_id: user_12345, trace_id: trace_20250220120000_abcd, session_id: session_67890, source: insurance_search, extra_input_params: Object" [ref=e160]':
+                  - text: "[object Object]"
+                  - text: "user_text: 帮我查一下所有买了重疾险或者两全险的客户，男性也行，女性也行，年龄不限, user_id: user_12345, trace_id: trace_20250220120000_abcd, session_id: session_67890, source: insurance_search, extra_input_params: Object"
+                - cell "-" [ref=e161]:
+                  - generic [ref=e162]: "-"
+                - cell "-" [ref=e163]
+                - cell "pending" [ref=e164]:
+                  - generic [ref=e165]: pending
+                - cell "尚未评估" [ref=e166]
+                - cell "尚未归因" [ref=e167]
+              - 'row "mock-agent-client_search-71c39553 mock_agent_llm - product_exclusion [object Object] user_text: 帮我找一下年缴保费超过两万，而且买过重疾险但没买年金险的女性客户, user_id: default_user, trace_id: trace_123456, session_id: session_abcdef, source: insurance_search, extra_input_params: Object - - pending 尚未评估 尚未归因" [ref=e168]':
+                - cell [ref=e169]:
+                  - checkbox [checked] [ref=e170]
+                - cell "mock-agent-client_search-71c39553" [ref=e171]
+                - cell "mock_agent_llm" [ref=e172]
+                - cell "-" [ref=e173]
+                - cell "product_exclusion" [ref=e174]
+                - 'cell "[object Object] user_text: 帮我找一下年缴保费超过两万，而且买过重疾险但没买年金险的女性客户, user_id: default_user, trace_id: trace_123456, session_id: session_abcdef, source: insurance_search, extra_input_params: Object" [ref=e175]':
+                  - text: "[object Object]"
+                  - text: "user_text: 帮我找一下年缴保费超过两万，而且买过重疾险但没买年金险的女性客户, user_id: default_user, trace_id: trace_123456, session_id: session_abcdef, source: insurance_search, extra_input_params: Object"
+                - cell "-" [ref=e176]:
+                  - generic [ref=e177]: "-"
+                - cell "-" [ref=e178]
+                - cell "pending" [ref=e179]:
+                  - generic [ref=e180]: pending
+                - cell "尚未评估" [ref=e181]
+                - cell "尚未归因" [ref=e182]
+              - 'row "mock-agent-client_search-8ed9884a mock_agent_llm - age_boundary [object Object] user_text: 帮我找年龄在60岁以上的客户, user_id: agent_001, trace_id: trace_abc123, session_id: session_xyz789, source: chat, extra_input_params: Object - - pending 尚未评估 尚未归因" [ref=e183]':
+                - cell [ref=e184]:
+                  - checkbox [checked] [ref=e185]
+                - cell "mock-agent-client_search-8ed9884a" [ref=e186]
+                - cell "mock_agent_llm" [ref=e187]
+                - cell "-" [ref=e188]
+                - cell "age_boundary" [ref=e189]
+                - 'cell "[object Object] user_text: 帮我找年龄在60岁以上的客户, user_id: agent_001, trace_id: trace_abc123, session_id: session_xyz789, source: chat, extra_input_params: Object" [ref=e190]':
+                  - text: "[object Object]"
+                  - text: "user_text: 帮我找年龄在60岁以上的客户, user_id: agent_001, trace_id: trace_abc123, session_id: session_xyz789, source: chat, extra_input_params: Object"
+                - cell "-" [ref=e191]:
+                  - generic [ref=e192]: "-"
+                - cell "-" [ref=e193]
+                - cell "pending" [ref=e194]:
+                  - generic [ref=e195]: pending
+                - cell "尚未评估" [ref=e196]
+                - cell "尚未归因" [ref=e197]
+              - 'row "mock-agent-client_search-c52ad0bf mock_agent_llm - premium_unit_conversion [object Object] user_text: 帮我搜一下每年保费交1万以上的女性客户，年龄在30到40岁之间，最好是有重疾险的。, user_id: user_default, trace_id: trace_123456, session_id: session_789012, source: chat, extra_input_params: Object - - pending 尚未评估 尚未归因" [ref=e198]':
+                - cell [ref=e199]:
+                  - checkbox [checked] [ref=e200]
+                - cell "mock-agent-client_search-c52ad0bf" [ref=e201]
+                - cell "mock_agent_llm" [ref=e202]
+                - cell "-" [ref=e203]
+                - cell "premium_unit_conversion" [ref=e204]
+                - 'cell "[object Object] user_text: 帮我搜一下每年保费交1万以上的女性客户，年龄在30到40岁之间，最好是有重疾险的。, user_id: user_default, trace_id: trace_123456, session_id: session_789012, source: chat, extra_input_params: Object" [ref=e205]':
+                  - text: "[object Object]"
+                  - text: "user_text: 帮我搜一下每年保费交1万以上的女性客户，年龄在30到40岁之间，最好是有重疾险的。, user_id: user_default, trace_id: trace_123456, session_id: session_789012, source: chat, extra_input_params: Object"
+                - cell "-" [ref=e206]:
+                  - generic [ref=e207]: "-"
+                - cell "-" [ref=e208]
+                - cell "pending" [ref=e209]:
+                  - generic [ref=e210]: pending
+                - cell "尚未评估" [ref=e211]
+                - cell "尚未归因" [ref=e212]
+              - 'row "mock-agent-client_search-23321bb0 mock_agent_llm - policy_status_filter [object Object] user_text: 帮我找一下所有保单还在有效期的客户，最好是有重疾险的, user_id: default_user, trace_id: trace_policy_status_filter_001, session_id: session_001, source: insurance_crm, extra_input_params: Object - - pending 尚未评估 尚未归因" [ref=e213]':
+                - cell [ref=e214]:
+                  - checkbox [checked] [ref=e215]
+                - cell "mock-agent-client_search-23321bb0" [ref=e216]
+                - cell "mock_agent_llm" [ref=e217]
+                - cell "-" [ref=e218]
+                - cell "policy_status_filter" [ref=e219]
+                - 'cell "[object Object] user_text: 帮我找一下所有保单还在有效期的客户，最好是有重疾险的, user_id: default_user, trace_id: trace_policy_status_filter_001, session_id: session_001, source: insurance_crm, extra_input_params: Object" [ref=e220]':
+                  - text: "[object Object]"
+                  - text: "user_text: 帮我找一下所有保单还在有效期的客户，最好是有重疾险的, user_id: default_user, trace_id: trace_policy_status_filter_001, session_id: session_001, source: insurance_crm, extra_input_params: Object"
+                - cell "-" [ref=e221]:
+                  - generic [ref=e222]: "-"
+                - cell "-" [ref=e223]
+                - cell "pending" [ref=e224]:
+                  - generic [ref=e225]: pending
+                - cell "尚未评估" [ref=e226]
+                - cell "尚未归因" [ref=e227]
+              - 'row "mock-agent-client_search-1685e2e5 mock_agent_llm - unsupported_family_phrase [object Object] user_text: 帮我查一下，有哪些客户是给父母买了年金险的, user_id: default_user_001, trace_id: trace_unsupported_family_001, session_id: session_default_001, source: insurance_customer_search, extra_input_params: Object - - pending 尚未评估 尚未归因" [ref=e228]':
+                - cell [ref=e229]:
+                  - checkbox [checked] [ref=e230]
+                - cell "mock-agent-client_search-1685e2e5" [ref=e231]
+                - cell "mock_agent_llm" [ref=e232]
+                - cell "-" [ref=e233]
+                - cell "unsupported_family_phrase" [ref=e234]
+                - 'cell "[object Object] user_text: 帮我查一下，有哪些客户是给父母买了年金险的, user_id: default_user_001, trace_id: trace_unsupported_family_001, session_id: session_default_001, source: insurance_customer_search, extra_input_params: Object" [ref=e235]':
+                  - text: "[object Object]"
+                  - text: "user_text: 帮我查一下，有哪些客户是给父母买了年金险的, user_id: default_user_001, trace_id: trace_unsupported_family_001, session_id: session_default_001, source: insurance_customer_search, extra_input_params: Object"
+                - cell "-" [ref=e236]:
+                  - generic [ref=e237]: "-"
+                - cell "-" [ref=e238]
+                - cell "pending" [ref=e239]:
+                  - generic [ref=e240]: pending
+                - cell "尚未评估" [ref=e241]
+                - cell "尚未归因" [ref=e242]
+        - generic [ref=e88]:
+          - generic [ref=e89]:
+            - heading "RunTrace" [level=2] [ref=e90]
+            - generic [ref=e91]: 尚未加载。
+          - generic [ref=e92]:
+            - heading "Reference" [level=2] [ref=e93]
+            - generic [ref=e94]: 尚未加载。
+          - generic [ref=e95]:
+            - heading "Judge" [level=2] [ref=e96]
+            - generic [ref=e97]: 尚未加载。
+          - generic [ref=e98]:
+            - heading "Attribute" [level=2] [ref=e99]
+            - generic [ref=e100]: 尚未加载。
+          - generic [ref=e101]:
+            - heading "Cluster" [level=2] [ref=e102]
+            - generic [ref=e103]: 尚未加载。
+          - generic [ref=e104]:
+            - heading "Check Agent 审核" [level=2] [ref=e105]
+            - generic [ref=e106]: 尚未加载。
+          - generic [ref=e107]:
+            - heading "Frontend ViewModel" [level=2] [ref=e108]
+            - generic [ref=e109]: 尚未加载。
+          - generic [ref=e110]:
+            - heading "Project Analysis" [level=2] [ref=e111]
+            - generic [ref=e112]: 尚未加载。
+          - generic [ref=e113]:
+            - heading "Batch / Case Pool Raw" [level=2] [ref=e114]
+            - generic [ref=e115]: 尚未加载。

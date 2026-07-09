@@ -1,0 +1,54 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::需人工复核::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "需人工复核",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "说明两次轻症确诊间的间隔期",
+        "说明轻症分组限制",
+        "说明轻症赔付对重疾保额的影响",
+        "说明轻症赔付后合同继续有效及累计赔付上限",
+        "提供查阅保险合同中特定章节的建议"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "d24e50a4-a6d7-422a-908c-2111e4b06e01"
+      ],
+      "representative_traces": [
+        "d24e50a4-a6d7-422a-908c-2111e4b06e01"
+      ],
+      "common_root_cause": "实际回答由 mock_agent_llm 生成，模型在保险条款类问答场景中倾向于输出简洁概括性回答，缺乏系统性的信息完整性保障机制。参考标准答案包含8个关键信息维度（多次赔付确认、赔付比例、次数上限、间隔期具体时长、分组限制、重疾保额影响、合同继续有效与累计上限、具体查阅章节），而实际回答仅完整覆盖其中3个维度，其余5个维度或被笼统化（间隔期）或完全缺失。根因并非测评链路故障（execution_trace 所有节点 succeeded），也非 adapter 归一化问题（extract_output 正确提取了 actual_answer），而是生成侧模型在无显式完整性约束的情况下，对信息密度和覆盖度的自发性取舍导致了关键细节遗漏。该问题属于 模型能力缺陷：模型具备生成这些内容的能力，但在实际推理中未将其纳入输出，反映出 prompt 设计或解码策略对'信息完整性'这一质量维度的约束不足。",
+      "shared_failure_pattern": "实际回答由 mock_agent_llm 生成，模型在保险条款类问答场景中倾向于输出简洁概括性回答，缺乏系统性的信息完整性保障机制。参考标准答案包含8个关键信息维度（多次赔付确认、赔付比例、次数上限、间隔期具体时长、分组限制、重疾保额影响、合同继续有效与累计上限、具体查阅章节），而实际回答仅完整覆盖其中3个维度，其余5个维度或被笼统化（间隔期）或完全缺失。根因并非测评链路故障（execution_trace 所有节点 succeeded），也非 adapter 归一化问题（extract_output 正确提取了 actual_answer），而是生成侧模型在无显式完整性约束的情况下，对信息密度和覆盖度的自发性取舍导致了关键细节遗漏。该问题属于 模型能力缺陷：模型具备生成这些内容的能力，但在实际推理中未将其纳入输出，反映出 prompt 设计或解码策略对'信息完整性'这一质量维度的约束不足。",
+      "representative_diffs": [
+        {
+          "case_id": "d24e50a4-a6d7-422a-908c-2111e4b06e01"
+        }
+      ],
+      "minimal_fix_direction": [
+        "在 answer 生成的 system prompt 中嵌入 domain-specific 完整性规则：保险条款类回答必须逐项覆盖赔付条件、限制与免责、对主合同影响、合同持续性、具体查阅指引共5个维度",
+        "引入生成后 completeness checker：使用参考标准中的关键信息点列表对实际输出做 NLI/覆盖度检测，缺失项触发补充生成",
+        "采用结构化输出（如 JSON schema 约束字段）强制模型填充每个信息维度，而非依赖自由文本生成",
+        "若为开源模型微调场景，在训练数据中加入保险条款完整回答的 positive examples 以提升模型对细节覆盖的敏感度"
+      ],
+      "verification_cases": [
+        "d24e50a4-a6d7-422a-908c-2111e4b06e01"
+      ],
+      "next_actions": [
+        "检查 mock_agent_llm 的生成 prompt 中是否包含保险条款类问题的关键信息维度清单",
+        "对比同模型在其他高信息密度问题上的完整度表现，确认是否为该类问题的系统性缺陷",
+        "若可访问模型输出 logits 或 token 级决策，分析模型在生成'间隔期要求'后为何未继续展开具体数值",
+        "用同样的参考标准输入其他模型（如 GPT-4）生成回答，对比完整度差异以确认是模型能力还是 prompt 设计问题"
+      ]
+    }
+  ],
+  "common_root_cause": "实际回答由 mock_agent_llm 生成，模型在保险条款类问答场景中倾向于输出简洁概括性回答，缺乏系统性的信息完整性保障机制。参考标准答案包含8个关键信息维度（多次赔付确认、赔付比例、次数上限、间隔期具体时长、分组限制、重疾保额影响、合同继续有效与累计上限、具体查阅章节），而实际回答仅完整覆盖其中3个维度，其余5个维度或被笼统化（间隔期）或完全缺失。根因并非测评链路故障（execution_trace 所有节点 succeeded），也非 adapter 归一化问题（extract_output 正确提取了 actual_answer），而是生成侧模型在无显式完整性约束的情况下，对信息密度和覆盖度的自发性取舍导致了关键细节遗漏。该问题属于 模型能力缺陷：模型具备生成这些内容的能力，但在实际推理中未将其纳入输出，反映出 prompt 设计或解码策略对'信息完整性'这一质量维度的约束不足。",
+  "impact": "",
+  "priority": "high"
+}

@@ -1,0 +1,29 @@
+{
+  "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783494690843",
+  "project_id": "client_search",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "client_search:business_expectations_parsing",
+      "fulfillment_status": "not_evaluable",
+      "root_cause_hypothesis": ""
+    }
+  ],
+  "root_cause_hypothesis": "Judge 模块在生成 business_expectations JSON 时，LLM 输出被截断或格式错误（解析器报告行5列40缺少逗号），导致 whole response 无法解析为有效 JSON。可能原因：模型输出长度限制（max_tokens 不足）、生成过程提前终止或模型输出中包含了未转义的特殊字符。",
+  "evidence": [
+    "judge_result.evidence: ['llm_output_validation_failed']",
+    "judge_result.reasoning_summary: 'Expecting ',' delimiter at line 5 column 40 (char 120); bare JSON from first bracket: Expecting ',' delimiter...'",
+    "judge_result.business_expectations: []",
+    "judge_result.overall_fulfillment.status: 'not_evaluable'",
+    "judge_result.fulfillment_assessments 仅包含一条预定义期望的状态，缺少业务期望的评估"
+  ],
+  "evidence_strength": "strong",
+  "summary": {
+    "causal_category": "",
+    "attribution_count": 1,
+    "probe_count": 0,
+    "summary_text": "Judge 模块在生成 business_expectations JSON 时，LLM 输出被截断或格式错误（解析器报告行5列40缺少逗号），导致 whole response 无法解析为有效 JSON。可能原因：模型输出长度限制（max_tokens 不足）、生成过程提前终止或模型输出中包含了未转义的特殊字符。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

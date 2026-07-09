@@ -6,9 +6,7 @@
 内部委托给 SchemaValidator（协议级统一校验入口），
 不再自己写校验逻辑，不再临时写 _check_shape / _parse_descriptor / _type_matches。
 
-shape 参数接受两种格式：
-- dataclass 类型（如 QAExtractOutput）
-- 旧式简写 dict（如 {"actual_answer": "str"}），内部转成 StructuredOutputSpec
+schema 参数以 dataclass 类型为主（如 QAExtractOutput）。旧式简写 dict 仅作为兼容层保留，项目 live_schema 不再显式手写 dict schema。
 """
 from __future__ import annotations
 
@@ -19,8 +17,8 @@ from .schema_validator import SchemaValidator
 from .structured_output import StructuredOutputSpec
 
 
-def _to_spec(shape: Any) -> StructuredOutputSpec:
-    """将 shape 转成 StructuredOutputSpec。
+def _to_spec(schema: Any) -> StructuredOutputSpec:
+    """将 dataclass schema 转成 StructuredOutputSpec；dict 仅保留旧数据兼容。
 
     支持：
     - dataclass 类型 → StructuredOutputSpec.from_dataclass
@@ -32,16 +30,16 @@ def _to_spec(shape: Any) -> StructuredOutputSpec:
     - 有 |null 的字段（如 "str|null"）= 必填字段，但值允许 None/null
     所以这里只把必填字段加入 required，不加 required_nonempty（保持与旧版 _check_shape 一致）。
     """
-    if isinstance(shape, type) and dataclasses.is_dataclass(shape):
-        return StructuredOutputSpec.from_dataclass(shape)
-    if isinstance(shape, dict):
+    if isinstance(schema, type) and dataclasses.is_dataclass(schema):
+        return StructuredOutputSpec.from_dataclass(schema)
+    if isinstance(schema, dict):
         # 旧式简写 dict：必填字段（无 ? 后缀）加入 required，不加 required_nonempty
         required = []
-        for name, desc in shape.items():
+        for name, desc in schema.items():
             if not _is_optional(desc):
                 required.append(name)
         return StructuredOutputSpec.from_dataclass(
-            _dict_to_dataclass(shape),
+            _dict_to_dataclass(schema),
             required_nonempty=[],  # 旧式简写不强制非空，只校验字段存在
             description="live_schema 形状（旧式简写 dict）",
         )
@@ -118,27 +116,27 @@ def _desc_to_type(desc: Any) -> Any:
 
 
 class LiveSchemaCheck:
-    """live_schema 形状校验器。每个 live_schema.py 实例化一个，调用方零字段名知识。
+    """live_schema dataclass 校验器。每个 live_schema.py 实例化一个，调用方零字段名知识。
 
     用法（在 live_schema.py 末尾）：
-        check = LiveSchemaCheck(REQUEST_SHAPE, EXTRACT_OUTPUT_SHAPE, ready)
+        check = LiveSchemaCheck(REQUEST_SCHEMA, EXTRACT_OUTPUT_SCHEMA, ready)
     调用方：
         load_live_schema(pid).check.output(data)  → True/False
 
     ready 来源：live_schema 模块定义 READY 常量，或运行时从 project.yaml 读。
     """
 
-    def __init__(self, request_shape: Any, output_shape: Any, ready: Optional[list] = None):
-        self._request_validator = SchemaValidator(_to_spec(request_shape))
-        self._output_validator = SchemaValidator(_to_spec(output_shape))
+    def __init__(self, request_schema: Any, output_schema: Any, ready: Optional[list] = None):
+        self._request_validator = SchemaValidator(_to_spec(request_schema))
+        self._output_validator = SchemaValidator(_to_spec(output_schema))
         self._ready = set(ready or [])
 
     def request(self, data: Any) -> bool:
-        """校验 live 请求体是否符合 REQUEST_SHAPE。"""
+        """校验 live 请求体是否符合 REQUEST_SCHEMA。"""
         return self._request_validator.is_valid(data, strict=True, allow_extra=False)
 
     def output(self, data: Any) -> bool:
-        """校验 output 是否符合 EXTRACT_OUTPUT_SHAPE。"""
+        """校验 output 是否符合 EXTRACT_OUTPUT_SCHEMA。"""
         return self._output_validator.is_valid(data, strict=True, allow_extra=False)
 
     def reference(self, data: Any) -> bool:
@@ -181,13 +179,13 @@ class LiveSchemaCheck:
         cid = str(case.get("id") or case.get("case_id") or "")
         tag = f"[{cid}] " if cid else ""
         if not self.request(case.get("input")):
-            errors.append(f"{tag}input 不符合 REQUEST_SHAPE")
+            errors.append(f"{tag}input 不符合 REQUEST_SCHEMA")
         has_output = "output" in case and case.get("output") is not None
         if "output" in self._ready:
             if not has_output:
                 errors.append(f"{tag}ready 含 output 但 case 缺 output")
             elif not self.output(case.get("output")):
-                errors.append(f"{tag}output 不符合 EXTRACT_OUTPUT_SHAPE")
+                errors.append(f"{tag}output 不符合 EXTRACT_OUTPUT_SCHEMA")
         else:
             if has_output:
                 errors.append(f"{tag}ready 不含 output 但 case 携带了 output")
@@ -196,7 +194,7 @@ class LiveSchemaCheck:
             if not has_ref:
                 errors.append(f"{tag}ready 含 reference 但 case 缺 reference")
             elif not self.reference(case.get("reference")):
-                errors.append(f"{tag}reference 不符合 EXTRACT_OUTPUT_SHAPE")
+                errors.append(f"{tag}reference 不符合 EXTRACT_OUTPUT_SCHEMA")
         else:
             if has_ref:
                 errors.append(f"{tag}ready 不含 reference 但 case 携带了 reference")

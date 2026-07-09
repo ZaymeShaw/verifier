@@ -1,0 +1,194 @@
+{
+  "trace_id": "4547298e-8447-4602-8e72-a348e326d044",
+  "project_id": "client_search",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "口语重疾险映射为标准枚举值疾病保险",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "使用险种大类字段pCategorys进行筛选",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "操作符可正确检索持有疾病保险的客户",
+      "causal_category": "no_issue"
+    },
+    {
+      "expectation_id": "查询逻辑对单条件场景使用AND",
+      "causal_category": "no_issue"
+    }
+  ],
+  "causal_category": "no_issue",
+  "earliest_divergence": {
+    "node": "fulfillment_assessment",
+    "evidence": [
+      {
+        "enums": [
+          "意外伤害保险",
+          "医疗保险",
+          "护理保险",
+          "疾病保险",
+          "定期寿险",
+          "终身寿险"
+        ],
+        "field": "pCategorys",
+        "operators": [
+          "CONTAINS",
+          "NOT_CONTAINS"
+        ],
+        "source": "capability_manifest",
+        "value_types": [
+          "enum"
+        ]
+      },
+      {
+        "mapping": "重疾险 → 疾病保险",
+        "source": "value_mappings"
+      },
+      {
+        "source": "actual_output.conditions",
+        "value": [
+          {
+            "field": "pCategorys",
+            "operator": "MATCH",
+            "value": "疾病保险"
+          }
+        ]
+      },
+      {
+        "source": "actual_output.rewritten_query",
+        "value": "帮我看看公司里所有买了疾病保险的客户都有谁"
+      },
+      {
+        "excerpt": "不要纠结 CONTAINS 和 MATCH 的问题，因为原项目会通过后处理处置",
+        "source": "judge_boundary_protocol"
+      }
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "verified",
+      "evidence": [
+        {
+          "enums": [
+            "意外伤害保险",
+            "医疗保险",
+            "护理保险",
+            "疾病保险",
+            "定期寿险",
+            "终身寿险"
+          ],
+          "field": "pCategorys",
+          "operators": [
+            "CONTAINS",
+            "NOT_CONTAINS"
+          ],
+          "source": "capability_manifest",
+          "value_types": [
+            "enum"
+          ]
+        },
+        {
+          "mapping": "重疾险 → 疾病保险",
+          "source": "value_mappings"
+        },
+        {
+          "source": "actual_output.conditions",
+          "value": [
+            {
+              "field": "pCategorys",
+              "operator": "MATCH",
+              "value": "疾病保险"
+            }
+          ]
+        },
+        {
+          "source": "actual_output.rewritten_query",
+          "value": "帮我看看公司里所有买了疾病保险的客户都有谁"
+        },
+        {
+          "excerpt": "不要纠结 CONTAINS 和 MATCH 的问题，因为原项目会通过后处理处置",
+          "source": "judge_boundary_protocol"
+        }
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "fulfillment_assessment",
+      "status": "not_verified",
+      "evidence": [
+        {
+          "enums": [
+            "意外伤害保险",
+            "医疗保险",
+            "护理保险",
+            "疾病保险",
+            "定期寿险",
+            "终身寿险"
+          ],
+          "field": "pCategorys",
+          "operators": [
+            "CONTAINS",
+            "NOT_CONTAINS"
+          ],
+          "source": "capability_manifest",
+          "value_types": [
+            "enum"
+          ]
+        },
+        {
+          "mapping": "重疾险 → 疾病保险",
+          "source": "value_mappings"
+        },
+        {
+          "source": "actual_output.conditions",
+          "value": [
+            {
+              "field": "pCategorys",
+              "operator": "MATCH",
+              "value": "疾病保险"
+            }
+          ]
+        },
+        {
+          "source": "actual_output.rewritten_query",
+          "value": "帮我看看公司里所有买了疾病保险的客户都有谁"
+        },
+        {
+          "excerpt": "不要纠结 CONTAINS 和 MATCH 的问题，因为原项目会通过后处理处置",
+          "source": "judge_boundary_protocol"
+        }
+      ]
+    }
+  ],
+  "evidence_coverage": {
+    "judge_evidence": true,
+    "execution_trace": true
+  },
+  "root_cause_hypothesis": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+  "verification_steps": [
+    "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+  ],
+  "patch_direction": [
+    "无需修改业务实现；若后续出现 not_evaluable 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+  ],
+  "needs_human_review": false,
+  "scenario": "",
+  "summary": {
+    "causal_category": "no_issue",
+    "attribution_count": 4,
+    "probe_count": 1,
+    "summary_text": "业务预期已达成",
+    "is_complete": true,
+    "is_formal_attribution": true
+  },
+  "analysis_method": "fulfilled_expectation_attribution",
+  "analysis_quality": {
+    "passed": true
+  },
+  "incomplete_reason": ""
+}

@@ -1,0 +1,59 @@
+- generic [ref=f4e1]:
+  - banner [ref=f4e2]:
+    - heading "Live 请求" [level=1] [ref=f4e3]
+    - paragraph [ref=f4e4]: 单次请求链路：业务服务 → Judge → Attribute。Cluster 聚合在归因总结页处理。
+  - main [ref=f4e5]:
+    - generic [ref=f4e6]:
+      - generic [ref=f4e7]: Project
+      - combobox [ref=f4e8]:
+        - option "QA"
+        - option "client_search"
+        - option "marketting-planning" [selected]
+        - option "marketting-planning-intent"
+      - generic [ref=f4e9]: Input JSON
+      - textbox [ref=f4e10]: "{\"query\":\"帮我做NBEV规划\",\"turns\":[{\"role\":\"user\",\"content\":\"帮我做NBEV规划\"}]}"
+      - generic [ref=f4e11]: Expected Intent（可选，传给 judge agent）
+      - textbox "可留空；填写后用于 judge 当前 RunTrace。" [ref=f4e12]
+      - generic [ref=f4e13]:
+        - button "请求业务服务" [active] [ref=f4e14] [cursor=pointer]
+        - button "请求 Judge" [ref=f4e15] [cursor=pointer]
+        - button "请求 Attribute" [ref=f4e16] [cursor=pointer]
+        - button "统一全链路" [ref=f4e17] [cursor=pointer]
+      - generic [ref=f4e18]: 按顺序执行单步按钮会复用当前页面保存的 lastTrace / lastJudge。
+      - generic [ref=f4e19]: 业务请求完成，可继续请求 Judge。
+    - generic [ref=f4e20]:
+      - generic [ref=f4e21]:
+        - generic [ref=f4e22]:
+          - generic [ref=f4e23]: 业务请求
+          - generic [ref=f4e24]: ok
+        - generic [ref=f4e25]:
+          - generic [ref=f4e26]: Judge
+          - generic [ref=f4e27]: 未运行
+        - generic [ref=f4e28]:
+          - generic [ref=f4e29]: Attribute
+          - generic [ref=f4e30]: 未运行
+      - group [ref=f4e31]:
+        - generic "业务请求结果 ok 收起" [ref=f4e55] [cursor=pointer]:
+          - heading "业务请求结果" [level=2] [ref=f4e33]
+          - generic [ref=f4e34]: ok
+          - text: 收起
+        - generic [ref=f4e35]:
+          - generic [ref=f4e36]:
+            - generic [ref=f4e56]: Trace ID：2357e0c3-4bfd-4c9c-9d18-2f96253e17f9
+            - generic [ref=f4e57]: 状态：ok
+            - group [ref=f4e58]:
+              - generic "状态机执行（6项）" [ref=f4e59] [cursor=pointer]
+            - generic [ref=f4e60]: Output / 被评估输出：卡片生成完成
+            - generic [ref=f4e61]: "结构化输出：{ \"turns\": [ { \"code\": 0, \"msg\": \"success\", \"robot_text\": \"卡片生成完成\", \"end_flag\": 1, \"extra_output_params\": { \"intent\": \"1003\", \"intent_name\": \"达成路径规划\", \"card_result\": { \"event\": \"card_end\", \"sse_id\": \"marketing-case-1783331850253:card_end\", \"think\": \"用户希望进行NBEV达成路径规划，但当前还缺少必要输入，需要先追问NBEV目标值和达成路径类型。\", \"answer\": \"\", \"card_list\": [ { \"card_sort\": \"1\", \"card_position\": \"message\", \"card_code\": \"ASK_TARGET_VALUE\", \"card_style\": \"follow_up_card\", \"card_name\": \"NBEV追问卡片\", \"card_desc\": \"请补充本次NBEV目标值\", \"card_data\": { \"fieldKey\": \"target_value\", \"fieldName\": \"NBEV目标值\", \"fieldType\": \"text_input\", \"placeholder\": \"请输入NBEV目标值（万元）\", \"required\": true, \"unit\": \"万\" } }, { \"card_sort\": \"2\", \"card_position\": \"message\", \"card_code\": \"ACHIEVE_PATH_TYPE_QUESTION\", \"card_style\": \"follow_up_card\", \"card_name\": \"达成路径类型追问卡片\", \"card_desc\": \"请选择需要生成的达成路径类型\", \"card_data\": { \"fieldKey\": \"path_types\", \"fieldName\": \"达成路径类型\", \"fieldType\": \"multi_select\", \"options\": [ { \"label\": \"队伍\", \"value\": \"队伍\" }, { \"label\": \"客户\", \"value\": \"客户\" }, { \"label\": \"产品\", \"value\": \"产品\" } ], \"required\": true } } ], \"extensions\": { \"trace_id\": \"marketing-case-1783331850253\", \"session_id\": \"eval-marketing-case-1783331850253\" } } }, \"turn_index\": 0, \"input_turn\": { \"role\": \"user\", \"content\": \"帮我做NBEV规划\" } } ] }"
+          - generic [ref=f4e37]: Raw JSON
+          - generic [ref=f4e38]: "{ \"trace_id\": \"2357e0c3-4bfd-4c9c-9d18-2f96253e17f9\", \"project_id\": \"marketting-planning\", \"case_id\": \"marketing-case-1783331850253\", \"live_result\": { \"project_id\": \"marketting-planning\", \"case_id\": \"marketing-case-1783331850253\", \"session_id\": \"eval-marketing-case-1783331850253\", \"raw_input\": { \"query\": \"帮我做NBEV规划\", \"turns\": [ { \"role\": \"user\", \"content\": \"帮我做NBEV规划\" } ] }, \"normalized_request\": { \"case_id\": \"marketing-case-1783331850253\", \"session_id\": \"eval-marketing-case-1783331850253\", \"shared_session\": false, \"user_intent\": \"帮我做NBEV规划\", \"query\": \"帮我做NBEV规划\", \"turns\": [ { \"role\": \"user\", \"content\": \"帮我做NBEV规划\" } ], \"current_turn\": { \"role\": \"user\", \"content\": \"帮我做NBEV规划\" }, \"scenario\": \"execution_planning\", \"boundary\": { \"dependency_status\": \"available\", \"allow_fallback\": false, \"notes\": \"\" }, \"reference\": { \"scenario\": \"execution_planning\" } }, \"call_status\": \"succeeded\", \"runtime_ms\": 495, \"extracted_output\": { \"turns\": [ { \"code\": 0, \"msg\": \"success\", \"robot_text\": \"卡片生成完成\", \"end_flag\": 1, \"extra_output_params\": { \"intent\": \"1003\", \"intent_name\": \"达成路径规划\", \"card_result\": { \"event\": \"card_end\", \"sse_id\": \"marketing-case-1783331850253:card_end\", \"think\": \"用户希望进行NBEV达成路径规划，但当前还缺少必要输入，需要先追问NBEV目标值和达成路径类型。\", \"answer\": \"\", \"card_list\": [ { \"card_sort\": \"1\", \"card_position\": \"message\", \"card_code\": \"ASK_TARGET_VALUE\", \"card_style\": \"follow_up_card\", \"card_name\": \"NBEV追问卡片\", \"card_desc\": \"请补充本次NBEV目标值\", \"card_data\": { \"fieldKey\": \"target_value\", \"fieldName\": \"NBEV目标值\", \"fieldType\": \"text_input\", \"placeholder\": \"请输入NBEV目标值（万元）\", \"required\": true, \"unit\": \"万\" } }, { \"card_sort\": \"2\", \"card_position\": \"message\", \"card_code\": \"ACHIEVE_PATH_TYPE_QUESTION\", \"card_style\": \"follow_up_card\", \"card_name\": \"达成路径类型追问卡片\", \"card_desc\": \"请选择需要生成的达成路径类型\", \"card_data\": { \"fieldKey\": \"path_types\", \"fieldName\": \"达成路径类型\", \"fieldType\": \"multi_select\", \"options\": [ { \"label\": \"队伍\", \"value\": \"队伍\" }, { \"label\": \"客户\", \"value\": \"客户\" }, { \"label\": \"产品\", \"value\": \"产品\" } ], \"required\": true } } ], \"extensions\": { \"trace_id\": \"marketing-case-1783331850253\", \"session_id\": \"eval-marketing-case-1783331850253\" } } }, \"turn_index\": 0, \"input_turn\": { \"role\": \"user\", \"content\": \"帮我做NBEV规划\" } } ] }, \"output_source\": \"live_service\", \"application_boundary\": { \"dependency_status\": \"available\", \"allow_fallback\": false, \"fallback_used\": false, \"judge_scope\": \"system_responsibility_with_declared_external_boundary\" }, \"interaction_mode\": \"interactive_intent\", \"multi_turn_state\": { \"session_id\": \"eval-marketing-case-1783331850253\", \"turn_index\": 0, \"stop_reason\": \"\" } }, \"status\": \"ok\", \"scenario\": \"execution_planning\", \"interaction_mode\": \"interactive_intent\", \"session_id\": \"eval-marketing-case-1783331850253\", \"created_at\": \"2026-07-06T09:57:30.751436+00:00\" }"
+      - group [ref=f4e39]:
+        - generic "Judge 评估 未运行 展开" [ref=f4e40] [cursor=pointer]:
+          - heading "Judge 评估" [level=2] [ref=f4e41]
+          - generic [ref=f4e42]: 未运行
+          - text: 展开
+      - group [ref=f4e43]:
+        - generic "Attribute 归因 未运行 展开" [ref=f4e44] [cursor=pointer]:
+          - heading "Attribute 归因" [level=2] [ref=f4e45]
+          - generic [ref=f4e46]: 未运行
+          - text: 展开

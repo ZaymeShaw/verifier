@@ -1,0 +1,62 @@
+{
+  "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783491832664",
+  "project_id": "marketting-planning",
+  "case_id": "mock-agent-marketting-planning-d1642b58",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图识别准确性",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": ""
+    },
+    {
+      "expectation_id": "阶段路由正确性",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": ""
+    },
+    {
+      "expectation_id": "用户关键业务维度保留",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": ""
+    },
+    {
+      "expectation_id": "SSE事件内容匹配",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": ""
+    },
+    {
+      "expectation_id": "mp_contract:expected_stage",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": ""
+    }
+  ],
+  "suspected_locations": [
+    {
+      "file": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/steps/intent_recognition.py",
+      "function": "意图分类与路由逻辑（可能为 classify_intent 或 dispatch）",
+      "reason": "该模块负责根据用户输入判定意图并返回 stage，本次执行中错误地返回了 4001 和 non_agent。"
+    },
+    {
+      "file": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/prompts/intent_prompt.py",
+      "function": "意图分类 prompt 模板",
+      "reason": "分类 prompt 可能未包含营销规划场景的完备描述，导致模型无法将输入映射到正确的意图编码。"
+    }
+  ],
+  "root_cause_hypothesis": "意图识别阶段中，分类逻辑（可能由 LLM prompt 驱动）未能将用户关于“弥补团队 NBEV 目标缺口，增加理财师或优化产品方案”的请求映射到营销规划相关意图（如 4002），而是错误地输出“其他意图”(4001) 并路由至 non_agent 阶段。这导致系统跳过了必需的 intent/clarification 交互流程和后续的规划分解步骤，使得所有业务期望（关键维度保留、SSE 内容匹配、阶段合约）均无法达成。根本原因很可能在于意图分类 prompt 缺乏对营销规划复合意图的覆盖，或者分类后路由规则过于简单，未对此类意图设计兜底路径。",
+  "evidence": [
+    "用户输入：“我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？”",
+    "实际意图输出：4001，意图名称：其他意图",
+    "实际阶段：non_agent",
+    "预期阶段：intent 或 clarification",
+    "robot_text 仅输出“卡片生成完成”，无有效回复",
+    "judge 评估：意图识别、路由、维度保留、SSE 内容均未满足"
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "causal_category": "",
+    "attribution_count": 5,
+    "probe_count": 0,
+    "summary_text": "意图识别阶段中，分类逻辑（可能由 LLM prompt 驱动）未能将用户关于“弥补团队 NBEV 目标缺口，增加理财师或优化产品方案”的请求映射到营销规划相关意图（如 4002），而是错误地输出“其他意图”(4001) 并路由至 non_agent 阶段。这导致系统跳过了必需的 intent/clarification 交互流程和后续的规划分解步骤，使得所有业务期望（关键维度保留、SSE 内容匹配、阶段合约）均无法达成。根本原因很可能在于意图分类 prompt 缺乏对营销规划复合意图的覆盖，或者分类后路由规则过于简单，未对此类意图设计兜底路径。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

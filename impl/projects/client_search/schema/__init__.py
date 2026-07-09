@@ -1,7 +1,4 @@
-# client_search 项目 live schema — dataclass 形状定义（spec/struct_output.md）
-#
-# 来源：impl/projects/client_search/live_schema.py
-# 真实 API: POST http://localhost:8000/api/v1/client_search_query_parse_no_encipher
+# client_search 项目 dataclass schema（显式结构唯一来源）
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -19,7 +16,7 @@ class ClientSearchCaseInput:
 
 @dataclass
 class ClientSearchRequest:
-    """真实 API 请求形状（adapter.build_request 产出的 normalized_request）。"""
+    """adapter.build_request 产出的 normalized_request / 真实 API 请求体。"""
     user_text: str
     user_id: str = "eval-user"
     trace_id: str = ""
@@ -29,13 +26,23 @@ class ClientSearchRequest:
 
 
 @dataclass
-class ClientSearchExtractOutput:
-    """adapter.extract_output 产出的扁平化输出形状。
+class ClientSearchRawData:
+    robot_text: Optional[str] = None
+    end_flag: Optional[int] = None
+    trace_id: Optional[str] = None
+    extra_output_params: Dict[str, Any] = field(default_factory=dict)
 
-    真实 API 返回 {code, msg, data: {robot_text, end_flag, ...}}，adapter 扁平化后只保留这些字段。
-    链路必传字段不给 default；允许 null 的必传字段用 Optional[T] 且不设 default。
-    链路非必需字段给 default / default_factory，不阻断 verifier 主链路。
-    """
+
+@dataclass
+class ClientSearchRawResponse:
+    code: int
+    msg: str
+    data: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ClientSearchExtractOutput:
+    """adapter.extract_output 产出的扁平化输出形状。"""
     code: int
     msg: str
     query: str

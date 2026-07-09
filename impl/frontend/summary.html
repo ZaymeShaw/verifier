@@ -229,6 +229,7 @@ function shortText(value, limit=180){
   return text.length>limit?text.slice(0,limit)+'…':text;
 }
 function inputLabel(input){if(!input || typeof input!=='object'){return shortText(input);}if(input.user_intent && typeof input.user_intent==='object' && input.user_intent.goal){return String(input.user_intent.goal);}const values=Object.values(input).filter(v=>['string','number','boolean'].includes(typeof v));return values.length?String(values[0]):shortText(input);}
+function displayInputText(row,item){const value=row?.input;if(typeof value==='string'||typeof value==='number'||typeof value==='boolean'){return String(value);}return inputLabel(item?.input);}
 function caseFromInput(input,index,source){const expected_intent=input?.expected_intent||(input?.reference?.intent)||'';return {id:'case-'+Date.now()+'-'+index,selected:true,input,expected_intent,source,status:'pending',judge:null,attribute:null,trace:null};}
 function clearCaseResult(item,status='pending'){return {...item,status,trace:null,judge:null,attribute:null,frontend_view:null,cluster:null,check:null};}
 function comparableInput(input){
@@ -329,23 +330,23 @@ function attributePanel(item){return item.frontend_view?.attribute_panel || item
 function fulfillmentPanel(item){return item.frontend_view?.fulfillment_panel || {}; }
 function judgeSummary(item){const row=tableRow(item);return row.judge_summary || (item.judge && item.judge.summary) || (item.judge_summary) || null;}
 function attributionSummary(item){const row=tableRow(item);return row.attribution_summary || (item.attribute && item.attribute.summary) || (item.attribution_summary) || null;}
-function judgeReason(item){const panel=judgePanel(item);return panel.display_reason || panel.reasoning_summary || panel.verdict_derivation?.why_verdict || panel.verdict_derivation?.assessment_summary || '';}
+function judgeReason(item){const panel=judgePanel(item);return panel.display_reason || panel.reasoning_summary || '';}
 function _judgeSummaryFromNested(item){
   const panel=judgePanel(item), fulfillment=fulfillmentPanel(item);
   if(!panel || !Object.keys(panel).length){return null;}
   const assessments=fulfillment.matrix || panel.fulfillment_assessments || [];
   const status=fulfillment.overall_fulfillment?.status || panel.display_status || panel.overall_fulfillment?.status || '';
   const blocking=assessments.filter(x=>x.blocking).length;
-  return {status,fulfillment_status:status,verdict:fulfillment.derived_verdict || panel.verdict || '',score:panel.score,reason:judgeReason(item),assessment_count:assessments.length,blocking_count:blocking};
+  return {status,fulfillment_status:status,score:null,reason:judgeReason(item),assessment_count:assessments.length,blocking_count:blocking};
 }
 function renderCaseJudge(item){
   const row=tableRow(item);
   const summary=judgeSummary(item);
-  if(summary || row.verdict || row.score!==undefined){
+  if(summary){
     const status=row.fulfillment_status || summary?.fulfillment_status || summary?.status || row.status || '-';
     const counts=summary?'assessments='+escapeHtml(summary.assessment_count ?? 0)+' · blocking='+escapeHtml(summary.blocking_count ?? 0) : '';
     const reason=summary?.reason?'<div>'+escapeHtml(shortText(summary.reason,900))+'</div>':'';
-    return '<div><b>Fulfillment：</b>'+escapeHtml(status)+'</div><div class="muted">verdict='+escapeHtml(row.verdict || summary?.verdict || '-')+' · score='+escapeHtml(row.score ?? summary?.score ?? '-')+'</div>'+(counts?'<div class="muted">'+counts+'</div>':'')+reason;
+    return '<div><b>Fulfillment：</b>'+escapeHtml(status)+'</div>'+(counts?'<div class="muted">'+counts+'</div>':'')+reason;
   }
   return '<span class="muted">尚未评估</span>';
 }
@@ -381,7 +382,7 @@ function renderCasePool(){
   const emptyText=casePool.length?'当前筛选未命中用例，候选区仍有 '+casePool.length+' 条；请选择“全部状态/全部场景”查看跑完后的结果。':'候选区为空，可构建 Mock 用例池或导入自定义数据集。';
   rows.innerHTML=visible.length?page.map(x=>{
     const row=tableRow(x);
-    const inputText=row.input || inputLabel(x.input);
+    const inputText=displayInputText(row,x);
     const inputDetail=shortText(x.input,260);
     const referenceText=row.reference_summary || formatJsonCell(caseReference(x),1800);
     return '<tr><td><input type="checkbox" '+(x.selected?'checked':'')+' onchange="toggleCase(\''+escapeHtml(x.id)+'\',this.checked)"></td><td>'+escapeHtml(row.id || x.id)+'</td><td>'+escapeHtml(x.source||'')+'</td><td>'+escapeHtml(runModeLabel(x))+'</td><td>'+escapeHtml(inferCaseScenario(x) || '-')+'</td><td class="case-input">'+escapeHtml(inputText)+'<br><span class="muted">'+escapeHtml(inputDetail)+'</span></td><td class="case-output">'+renderOutputCell(x)+'</td><td class="case-reference">'+renderReferenceCell(x)+'</td><td>'+fulfillmentPill(fulfillmentStatus(x))+'</td><td class="case-summary">'+renderCaseJudge(x)+'</td><td class="case-summary">'+renderCaseAttribute(x)+'</td></tr>';
@@ -409,13 +410,12 @@ function renderAttributionSummary(item){
   const row=tableRow(item);
   const compact=row.attribution_summary || null;
   const attribute=attributePanel(item);
-  if(compact || row.causal_category || row.root_cause_summary){
-    const text=(row.root_cause_summary || compact?.summary_text || attribute.incomplete_reason || attribute.root_cause_hypothesis || '')?'<div>'+escapeHtml(shortText(row.root_cause_summary || compact?.summary_text || attribute.incomplete_reason || attribute.root_cause_hypothesis || '',900))+'</div>':'';
-    return renderFulfillmentSummary(item)+'<div><b>Causal：</b>'+escapeHtml(row.causal_category || compact?.causal_category || '-')+'</div><div class="muted">expectation attributions='+escapeHtml(compact?.attribution_count ?? (attribute.expectation_attributions || []).length)+' · probes='+escapeHtml(compact?.probe_count ?? (attribute.probe_results || []).length)+' · issues='+escapeHtml(row.issue_count ?? 0)+' · fallbacks='+escapeHtml(row.fallback_count ?? 0)+'</div>'+text;
+  if(compact || row.root_cause_summary){
+    const text=(row.root_cause_summary || compact?.summary_text || attribute.root_cause_hypothesis || '')?'<div>'+escapeHtml(shortText(row.root_cause_summary || compact?.summary_text || attribute.root_cause_hypothesis || '',900))+'</div>':'';
+    return renderFulfillmentSummary(item)+'<div class="muted">expectation attributions='+escapeHtml(compact?.attribution_count ?? (attribute.expectation_attributions || []).length)+' · issues='+escapeHtml(row.issue_count ?? 0)+' · fallbacks='+escapeHtml(row.fallback_count ?? 0)+'</div>'+text;
   }
   const attributions=attribute.expectation_attributions || [];
-  const causal=attribute.causal_category || '';
-  return renderFulfillmentSummary(item)+'<div><b>Causal：</b>'+escapeHtml(causal || '-')+'</div><div class="muted">expectation attributions='+escapeHtml(attributions.length)+' · probes='+escapeHtml((attribute.probe_results || []).length)+'</div><div>'+escapeHtml(shortText(attribute.incomplete_reason || attribute.root_cause_hypothesis || '',220))+'</div>';
+  return renderFulfillmentSummary(item)+'<div class="muted">expectation attributions='+escapeHtml(attributions.length)+'</div><div>'+escapeHtml(shortText(attribute.root_cause_hypothesis || '',220))+'</div>';
 }
 function updateStats(){
   document.getElementById('stat-total').textContent=casePool.length;
@@ -436,7 +436,7 @@ function setProgress(done,total,line){
   }
 }
 function stableCaseId(value){return value?.case_id || value?.id || value?.table_row?.id || value?.run?.case_id || value?.run?.id || value?.run?.table_row?.id || '';}
-function runStatus(run,eventStatus){const row=tableRow(run||{});const terminal=row.status&&row.status!=='done'?row.status:(run?.status&&run.status!=='done'?run.status:(eventStatus&&eventStatus!=='done'?eventStatus:''));return row.fulfillment_status || row.status || judgeSummary(run)?.fulfillment_status || judgeSummary(run)?.status || run?.judge?.overall_fulfillment?.status || terminal || row.verdict || run?.judge?.verdict || run?.status || eventStatus || (run?.error?'error':'done');}
+function runStatus(run,eventStatus){const row=tableRow(run||{});const terminal=row.status&&row.status!=='done'?row.status:(run?.status&&run.status!=='done'?run.status:(eventStatus&&eventStatus!=='done'?eventStatus:''));return row.fulfillment_status || row.status || judgeSummary(run)?.fulfillment_status || judgeSummary(run)?.status || run?.judge?.overall_fulfillment?.status || terminal || run?.status || eventStatus || (run?.error?'error':'done');}
 function applyRunToCase(item,run,eventStatus){
   const next={...item,status:runStatus(run,eventStatus),output:run.trace?.extracted_output || item.output || null,trace:run.trace||null,judge:run.judge||null,attribute:run.attribute||null,frontend_view:run.frontend_view||null,check:run.check||null,cluster:run.cluster||null,error:run.error||null,execution_mode:run.execution_mode || null,output_source:run.output_source || run.trace?.live_result?.output_source || null,table_row:run.table_row || null};
   const generatedRef=run.frontend_view?.reference_panel?.source==='judge_generated'?run.frontend_view?.reference_panel?.reference:null;
@@ -523,7 +523,7 @@ function renderClusterSummary(cluster){
   const el=document.getElementById('clusterSummary');
   if(!cluster){el.textContent='尚未批量归因。';return;}
   const clusters=cluster.clusters || [];
-  el.innerHTML=clusters.length?clusters.map((c,i)=>'<div class="cluster-card"><b>Cluster '+(i+1)+'</b><div>'+escapeHtml(c.title || c.causal_category || c.cluster_id || '未命名聚簇')+'</div><div class="muted">代表用例：'+escapeHtml(shortText(c.representative_cases || [],160))+'</div></div>').join(''):'<div class="muted">暂无聚簇。</div>';
+  el.innerHTML=clusters.length?clusters.map((c,i)=>'<div class="cluster-card"><b>Cluster '+(i+1)+'</b><div>'+escapeHtml(c.title || c.cluster_id || '未命名聚簇')+'</div><div class="muted">代表用例：'+escapeHtml(shortText(c.representative_cases || [],160))+'</div></div>').join(''):'<div class="muted">暂无聚簇。</div>';
 }
 function chainPayload(){safeSetSessionJson(scopedKey('input'),document.getElementById('input').value);const body={project:project(),input:JSON.parse(document.getElementById('input').value)};const expected=expectedIntent();if(expected){body.expected_intent=expected;}return body;}
 function chainOutput(data){return data.frontend_view?.run_trace_summary?.extracted_output || data.frontend_view?.judge_panel?.actual || data.trace?.extracted_output || data.judge?.actual || null;}
@@ -557,31 +557,26 @@ function renderStateMachineCard(trace, judge, attribute){
 function renderFulfillmentMatrix(panel, fulfillment){
   fulfillment=fulfillment || {};
   const rows=(fulfillment.matrix || []).map(item=>'<tr><td>'+escapeHtml(item.expectation_id || '')+'</td><td>'+escapeHtml(shortText(item.expected_outcome || '',180))+'</td><td>'+escapeHtml((item.required_capabilities || []).join(', '))+'</td><td>'+escapeHtml(item.status || '-')+'</td><td>'+escapeHtml(item.blocking?'是':'否')+'</td></tr>').join('');
-  const contract=fulfillment.consumer_contract || panel.consumer_contract || {};
   const overall=fulfillment.overall_fulfillment || panel.overall_fulfillment || {};
-  return '<details class="accordion" open><summary>业务预期达成矩阵</summary><div class="accordion-body"><div><b>Consumer Contract：</b>'+escapeHtml(shortText(contract,260))+'</div><div><b>Overall：</b>'+escapeHtml(JSON.stringify(overall || {}))+'</div><table style="width:100%;border-collapse:collapse"><thead><tr><th>Expectation</th><th>Expected</th><th>Capabilities</th><th>Status</th><th>Blocking</th></tr></thead><tbody>'+(rows || '<tr><td colspan="5" class="muted">无 fulfillment assessments</td></tr>')+'</tbody></table></div></details>';
+  return '<details class="accordion" open><summary>业务预期达成矩阵</summary><div class="accordion-body"><div><b>Overall：</b>'+escapeHtml(JSON.stringify(overall || {}))+'</div><table style="width:100%;border-collapse:collapse"><thead><tr><th>Expectation</th><th>Expected</th><th>Capabilities</th><th>Status</th><th>Blocking</th></tr></thead><tbody>'+(rows || '<tr><td colspan="5" class="muted">无 fulfillment assessments</td></tr>')+'</tbody></table></div></details>';
 }
 function renderExpectationAttributions(panel, attributionPanel){
   attributionPanel=attributionPanel || {};
   const attributions=attributionPanel.attributions || panel.expectation_attributions || [];
-  const rows=attributions.map(item=>'<tr><td>'+escapeHtml(item.expectation_id || '')+'</td><td>'+escapeHtml(item.fulfillment_status || '')+'</td><td>'+escapeHtml(item.causal_category || '')+'</td><td>'+escapeHtml(shortText(item.earliest_divergence || item.incomplete_reason || '',220))+'</td></tr>').join('');
-  return '<details class="accordion" open><summary>Expectation Attribution</summary><div class="accordion-body"><div><b>Causal Category：</b>'+escapeHtml(attributionPanel.causal_category || panel.display_causal_category || panel.causal_category || '')+'</div><div><b>Probe Results：</b>'+escapeHtml(shortText(attributionPanel.probe_results || panel.probe_results || [],300))+'</div><table style="width:100%;border-collapse:collapse"><thead><tr><th>Expectation</th><th>Fulfillment</th><th>Causal</th><th>Evidence</th></tr></thead><tbody>'+(rows || '<tr><td colspan="4" class="muted">无 expectation attribution</td></tr>')+'</tbody></table></div></details>';
+  const rows=attributions.map(item=>'<tr><td>'+escapeHtml(item.expectation_id || '')+'</td><td>'+escapeHtml(item.fulfillment_status || '')+'</td><td>'+escapeHtml(shortText(item.root_cause_hypothesis || '',220))+'</td></tr>').join('');
+  return '<details class="accordion" open><summary>Expectation Attribution</summary><div class="accordion-body"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Expectation</th><th>Fulfillment</th><th>Root Cause</th></tr></thead><tbody>'+(rows || '<tr><td colspan="3" class="muted">无 expectation attribution</td></tr>')+'</tbody></table></div></details>';
 }
 function renderJudgeCard(panel, fulfillment){
   if(!panel || !Object.keys(panel).length){return '<div class="muted">尚未评估。</div>';}
   const status=fulfillment?.overall_fulfillment?.status || panel.display_status || panel.overall_fulfillment?.status || '-';
   return '<div><b>Overall Fulfillment：</b>'+escapeHtml(status)+'</div>'+
-    '<div><b>评分：</b>'+escapeHtml(panel.score ?? '')+'</div>'+
-    '<div><b>置信度：</b>'+escapeHtml(panel.confidence ?? '')+'</div>'+renderFulfillmentMatrix(panel, fulfillment)+
+    '<div><b>评估：</b>'+escapeHtml(panel.display_status || '-')+'</div>'+renderFulfillmentMatrix(panel, fulfillment)+
     '<div><b>原因：</b>'+escapeHtml(panel.display_reason || panel.reasoning_summary || '')+'</div>'+collapsedJson('缺失/错误/多余', panel.wrong_missing_extra || {missing:panel.missing || [], wrong:panel.wrong || [], extra:panel.extra || []})+
     '<details class="accordion"><summary>Raw JudgeResult</summary><div class="accordion-body"><pre>'+escapeHtml(JSON.stringify(panel,null,2))+'</pre></div></details>';
 }
 function renderAttributeCard(panel, attributionPanel){
   if(!panel || !Object.keys(panel).length){return '<div class="muted">尚未归因。</div>';}
-  return '<div><b>因果类别：</b>'+escapeHtml(panel.display_causal_category || '')+'</div>'+renderExpectationAttributions(panel, attributionPanel)+
-    '<div><b>根因假设：</b>'+escapeHtml(panel.display_root_cause || '')+'</div>'+ 
-    '<div><b>验证步骤：</b>'+escapeHtml(shortText(panel.display_verification_steps || [],300))+'</div>'+ 
-    '<div><b>修改方向：</b>'+escapeHtml(shortText(panel.display_patch_direction || [],300))+'</div>'+ 
+  return '<div><b>根因假设：</b>'+escapeHtml(panel.display_root_cause || panel.root_cause_hypothesis || '')+'</div>'+renderExpectationAttributions(panel, attributionPanel)+
     '<details class="accordion"><summary>Raw AttributeResult</summary><div class="accordion-body"><pre>'+escapeHtml(JSON.stringify(panel,null,2))+'</pre></div></details>';
 }
 function renderChain(data,options={}){
@@ -593,7 +588,7 @@ function renderChain(data,options={}){
     showCompact('trace',{stale_empty_query:true,current_input:currentInput,result:chainOutput(data)});showCompact('reference',{});document.getElementById('judge').innerHTML='<div class="muted">旧 empty_query 结果已被阻止展示，请重新运行单链路。</div>';document.getElementById('attribute').innerHTML='<div class="muted">旧 empty_query 结果已被阻止展示，请重新运行单链路。</div>';showCompact('cluster',{});showCompact('check',{});showCompact('view',{});showCompact('batch',{});setStatus('旧 empty_query 结果已被阻止展示，请重新运行单链路。');return;
   }
   const trace=data.trace||{},judge=data.judge||{},attribute=data.attribute||{},cluster=data.cluster||{},check=data.check||{},view=data.frontend_view||{};
-  showCompact('trace',trace);showCompact('reference',view.reference_panel || {reference:judge.expected,source:judge.expected?'judge_generated':'missing',actual:judge.actual});document.getElementById('judge').innerHTML=renderJudgeCard(view.judge_panel || judge, view.fulfillment_panel || {});document.getElementById('attribute').innerHTML=renderAttributeCard(view.attribute_panel || attribute, view.expectation_attribution_panel || {})+renderStateMachineCard(trace,view.judge_panel || judge,view.attribute_panel || attribute);showCompact('cluster',cluster);showCompact('check',check);showCompact('view',view);showCompact('batch',{last_chain_summary:{case_id:data.case_id,trace_id:trace.trace_id,status:trace.status,stop_reason:trace.stop_reason,state_count:(trace.state_history||[]).length,failed_gate_count:(trace.gate_decisions||[]).filter(g=>!g.passed).length,verdict:(view.judge_panel || judge).verdict,score:(view.judge_panel || judge).score,root_cause:(view.attribute_panel || attribute).display_root_cause || attribute.root_cause_hypothesis}});
+  showCompact('trace',trace);showCompact('reference',view.reference_panel || {reference:judge.expected,source:judge.expected?'judge_generated':'missing',actual:judge.actual});document.getElementById('judge').innerHTML=renderJudgeCard(view.judge_panel || judge, view.fulfillment_panel || {});document.getElementById('attribute').innerHTML=renderAttributeCard(view.attribute_panel || attribute, view.expectation_attribution_panel || {})+renderStateMachineCard(trace,view.judge_panel || judge,view.attribute_panel || attribute);showCompact('cluster',cluster);showCompact('check',check);showCompact('view',view);showCompact('batch',{last_chain_summary:{case_id:data.case_id,trace_id:trace.trace_id,status:trace.status,stop_reason:trace.stop_reason,state_count:(trace.state_history||[]).length,failed_gate_count:(trace.gate_decisions||[]).filter(g=>!g.passed).length,root_cause:(view.attribute_panel || attribute).display_root_cause || attribute.root_cause_hypothesis}});
   if(cluster.clusters && !options.preserveBatchCluster){latestCluster=cluster;renderClusterSummary(cluster);updateStats();}
 }
 initProjects();

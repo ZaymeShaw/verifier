@@ -122,9 +122,8 @@ def _type_to_schema(tp: Any, _defs: dict, _seen: set) -> Dict[str, Any]:
 
     # 嵌套 dataclass
     if _is_dataclass_type(tp):
-        if tp.__name__ not in _seen:
-            _seen.add(tp.__name__)
-            _defs[tp.__name__] = _dataclass_to_schema(tp, _defs, _seen)
+        if tp.__name__ not in _defs:
+            _defs[tp.__name__] = _dataclass_to_schema(tp, _defs, _seen, include_defs=False)
         schema = {"$ref": f"#/$defs/{tp.__name__}"}
         if nullable:
             schema = {"anyOf": [{"$ref": f"#/$defs/{tp.__name__}"}, {"type": "null"}]}
@@ -134,7 +133,7 @@ def _type_to_schema(tp: Any, _defs: dict, _seen: set) -> Dict[str, Any]:
     return {}
 
 
-def _dataclass_to_schema(dc_type: Type, _defs: Optional[dict] = None, _seen: Optional[set] = None) -> Dict[str, Any]:
+def _dataclass_to_schema(dc_type: Type, _defs: Optional[dict] = None, _seen: Optional[set] = None, *, include_defs: bool = True) -> Dict[str, Any]:
     """从 dataclass 类型提取 JSON Schema。
 
     required 字段 = 没有 default 且不是 field(default=None) 的字段。
@@ -184,7 +183,7 @@ def _dataclass_to_schema(dc_type: Type, _defs: Optional[dict] = None, _seen: Opt
     }
     if required:
         schema["required"] = required
-    if _defs:
+    if include_defs and _defs:
         schema["$defs"] = _defs
     return schema
 
@@ -293,6 +292,16 @@ class StructuredOutputSpec:
         return schema
 
 
+def dataclass_to_output_spec(schema_cls: Type, *, description: str = "") -> StructuredOutputSpec:
+    """从项目 dataclass schema 生成结构化输出约束。"""
+    return StructuredOutputSpec.from_dataclass(schema_cls, description=description)
+
+
+def dataclass_to_json_schema(schema_cls: Type, *, description: str = "") -> Dict[str, Any]:
+    """从项目 dataclass schema 生成 JSON Schema；项目侧禁止手写等价 dict。"""
+    return dataclass_to_output_spec(schema_cls, description=description).json_schema()
+
+
 # ------------------------------------------------------------------
 # prompt 文案渲染
 # ------------------------------------------------------------------
@@ -371,10 +380,10 @@ def validate_output(data: Any, spec: StructuredOutputSpec) -> List[str]:
     """校验 LLM 产出，返回错误列表（空列表表示通过）。
 
     委托给 SchemaValidator（协议级统一校验入口）。
-    LLM 产出场景固定语义：strict=True, allow_extra=True（必填不能缺，LLM 多塞字段不阻断）。
+    LLM 产出场景固定语义：strict=True, allow_extra=False；当前输出必须严格遵循声明的最小协议。
     """
     from .schema_validator import SchemaValidator
-    return SchemaValidator(spec).validate(data, strict=True, allow_extra=True)
+    return SchemaValidator(spec).validate(data, strict=True, allow_extra=False)
 
 
 def enforce_output(data: Any, spec: StructuredOutputSpec, caller: str = "") -> None:
@@ -417,7 +426,7 @@ FREE_TEXT_OUTPUT = StructuredOutputSpec.from_dataclass(
 class _FreeDictOutput:
     """自由对象输出：任意键值，至少一个字段非空。
 
-    用于产出结构依赖运行时项目形状（如 mock_agent.build_live_request 按 REQUEST_SHAPE 产请求体）、
+    用于产出结构依赖运行时项目 dataclass schema 的场景（如 mock_agent.build_live_request）、
     无法静态定义 dataclass 的场景。仍过结构化协议——至少要求产出非空 dict。
     """
     pass  # 无字段 → additionalProperties 允许任意键

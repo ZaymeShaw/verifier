@@ -2,23 +2,18 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-import threading
 import time
-import urllib.error
-import urllib.request
-from typing import Any, Dict, Optional
-from urllib.parse import urljoin
+from typing import Any, Dict
 
 from impl.core.adapter import ProjectAdapter
 from impl.core.interaction_protocol import ready_from_spec
-from impl.core.schema import AttributeResult, ExecutionTraceEvent, JudgeResult, LiveExecutionResult, LiveRequest, MockDataset, MultiTurnCase, RunTrace, SingleTurnCase, TraceExecutionContext
+from impl.core.schema import AttributeResult, JudgeResult, LiveRequest, MockDataset, MultiTurnCase, RunTrace, SingleTurnCase, TraceExecutionContext
 from impl.projects.client_search.tools import ClientSearchConditionCompareTool, build_field_capability_tool, build_rule_verify_tool, build_search_api_tool
 from impl.tools import ToolContext, ToolRegistry, VerifiableTool
 
 import yaml as _yaml
 
-
-_SERVICE_LOCK = threading.Lock()
+from impl.projects.client_search.capability_manifest import build_capability_manifest
 
 
 class Adapter(ProjectAdapter):
@@ -66,34 +61,7 @@ class Adapter(ProjectAdapter):
         """Generate full field capability manifest from source YAML configs."""
         try:
             config_paths = self._source_config_paths()
-            definitions_path = config_paths.get('source_field_definitions')
-            if not definitions_path or not Path(definitions_path).exists():
-                return {}
-            with open(definitions_path) as f:
-                data = _yaml.safe_load(f)
-            intents = data.get('intents', [])
-            fields = {}
-            for item in intents:
-                fn = item.get('field', '')
-                if not fn:
-                    continue
-                if fn not in fields:
-                    fields[fn] = {
-                        'field': fn,
-                        'operators': set(),
-                        'value_types': set(),
-                        'description': item.get('description', ''),
-                        'definition': item.get('description', ''),
-                        'enums': item.get('enum') or [],
-                        'unit': item.get('unit') or '',
-                        'notes': item.get('notes', ''),
-                    }
-                fields[fn]['operators'].add(item.get('operator', ''))
-                fields[fn]['value_types'].add(item.get('value_type', ''))
-            for f in fields.values():
-                f['operators'] = sorted(f['operators'])
-                f['value_types'] = sorted(f['value_types'])
-            return {k: {**v, 'operators': v['operators'], 'value_types': v['value_types']} for k, v in fields.items()}
+            return build_capability_manifest(config_paths.get('source_field_definitions'))
         except Exception:
             return {}
 
@@ -190,29 +158,14 @@ class Adapter(ProjectAdapter):
 
     def build_request(self, case: SingleTurnCase | MultiTurnCase) -> LiveRequest:
         input_data = dict(case.input or {})
-        # mock_agent 路径：case.input 已是 REQUEST_SHAPE 形状（user_text/trace_id/...），直接转发
-        if "user_text" in input_data:
-            normalized_request = {
-                "user_text": input_data.get("user_text"),
-                "user_id": input_data.get("user_id") or "eval-user",
-                "trace_id": input_data.get("trace_id") or f"general-eval-{int(time.time() * 1000)}",
-                "session_id": input_data.get("session_id") or "general-eval-session",
-                "source": input_data.get("source") or "askbob",
-                "extra_input_params": dict(input_data.get("extra_input_params") or {}),
-            }
-        else:
-            # 手动输入路径：旧格式 {query}，翻译成 REQUEST_SHAPE
-            nested_input = input_data.get("input") if isinstance(input_data.get("input"), dict) else {}
-            query = input_data.get("query") or input_data.get("user_text") or nested_input.get("query") or nested_input.get("user_text") or ""
-            extra = dict(input_data.get("extra_input_params") or nested_input.get("extra_input_params") or {})
-            normalized_request = {
-                "user_text": query,
-                "user_id": input_data.get("user_id") or "eval-user",
-                "trace_id": input_data.get("trace_id") or f"general-eval-{int(time.time() * 1000)}",
-                "session_id": input_data.get("session_id") or "general-eval-session",
-                "source": input_data.get("source") or "askbob",
-                "extra_input_params": extra,
-            }
+        normalized_request = {
+            "user_text": input_data.get("user_text"),
+            "user_id": input_data.get("user_id") or "eval-user",
+            "trace_id": input_data.get("trace_id") or f"general-eval-{int(time.time() * 1000)}",
+            "session_id": input_data.get("session_id") or "general-eval-session",
+            "source": input_data.get("source") or "askbob",
+            "extra_input_params": dict(input_data.get("extra_input_params") or {}),
+        }
         return LiveRequest(
             project_id=self.spec.project_id,
             raw_input=input_data,
@@ -221,135 +174,6 @@ class Adapter(ProjectAdapter):
             execution_mode="live_service",
             session_id=input_data.get("session_id") or "general-eval-session",
         )
-
-    def call_or_prepare(self, request: LiveRequest) -> LiveExecutionResult:
-        with _SERVICE_LOCK:
-            return super().call_or_prepare(request)
-
-    def provided_output_raw(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Any:
-        input_data = dict(case.input or {})
-        if "raw_response" in input_data:
-            return input_data["raw_response"]
-        if "response" in input_data:
-            return input_data["response"]
-        output = input_data.get("output") or {}
-        if not isinstance(output, dict):
-            return output
-        if "data" in output:
-            return output
-        conditions = output.get("conditions") or output.get("structured_output") or []
-        logic = output.get("query_logic") or output.get("logic") or "AND"
-        query = request.normalized_request.get("user_text") or output.get("source_query") or output.get("query") or ""
-        return {
-            "code": output.get("code", output.get("status_code", 0)),
-            "msg": output.get("msg") or output.get("message") or "provided client_search output",
-            "data": {
-                "robot_text": output.get("robot_text") or output.get("user_visible_text") or output.get("summary") or "provided output",
-                "extra_output_params": {
-                    "query": query,
-                    "query_logic": logic,
-                    "conditions": conditions,
-                    "matched_level": output.get("matched_level"),
-                    "intent_summary": output.get("intent_summary") or output.get("summary") or "provided output",
-                    "matched_patterns": output.get("matched_patterns") or [],
-                    "rewritten_query": output.get("rewritten_query") or output.get("source_query") or query,
-                },
-            },
-        }
-
-    def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any]) -> Dict[str, Any]:
-        if not isinstance(raw_response, dict):
-            return self._application_boundary({})
-        downstream_search = raw_response.get("_downstream_search") if isinstance(raw_response.get("_downstream_search"), dict) else {}
-        return self._application_boundary(downstream_search)
-
-    def _probe_downstream_search(self, raw_response: Dict[str, Any]) -> Dict[str, Any]:
-        config = self.spec.application.get("downstream_search") if isinstance(self.spec.application, dict) else None
-        if not isinstance(config, dict) or not config.get("enabled", True):
-            return {"status": "not_configured"}
-        extra = (((raw_response.get("data") or {}).get("extra_output_params")) or {})
-        conditions = list(extra.get("conditions") or [])
-        query_logic = str(extra.get("query_logic") or "AND")
-        payload = {
-            "header": {"agent_id": "eval-user", "page": 1, "size": 20},
-            "query_logic": query_logic,
-            "conditions": conditions,
-        }
-        if not conditions:
-            return {"status": "skipped", "reason": "parse returned no conditions", "payload": payload}
-        base_url = str(config.get("base_url") or "").rstrip("/") + "/"
-        endpoint = str(config.get("endpoint") or "").lstrip("/")
-        if not base_url.strip("/") or not endpoint:
-            return {"status": "not_configured", "payload": payload}
-        url = urljoin(base_url, endpoint)
-        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        search_request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method=str(config.get("method") or "POST").upper())
-        try:
-            with urllib.request.urlopen(search_request, timeout=float(config.get("timeout") or 3)) as response:
-                text = response.read().decode("utf-8")
-            try:
-                result = json.loads(text)
-            except json.JSONDecodeError:
-                result = {"text": text}
-            return {"status": "ok", "url": url, "payload": payload, "result": result}
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            return {"status": "unavailable", "url": url, "payload": payload, "error": str(exc)}
-
-    def _response_query(self, raw_response: Dict[str, Any], extra: Dict[str, Any]) -> str:
-        data = raw_response.get("data") or {}
-        return extra.get("rewritten_query") or extra.get("query") or data.get("query") or ""
-
-    def _empty_result_reason(self, query: str, extra: Dict[str, Any]) -> str:
-        if extra.get("conditions"):
-            return ""
-        if not query:
-            return "empty_query"
-        return "service_returned_no_conditions"
-
-    def extract_output(self, raw_response: Any) -> Dict[str, Any]:
-        if not isinstance(raw_response, dict):
-            return {"code": -1, "msg": str(raw_response), "query": "", "conditions": []}
-        extra = (((raw_response.get("data") or {}).get("extra_output_params")) or {})
-        data = raw_response.get("data") if isinstance(raw_response.get("data"), dict) else {}
-        return {
-            "code": int(raw_response.get("code") or 0),
-            "msg": str(raw_response.get("msg") or ""),
-            "robot_text": data.get("robot_text"),
-            "end_flag": data.get("end_flag"),
-            "trace_id": data.get("trace_id"),
-            "query": self._response_query(raw_response, extra),
-            "query_logic": extra.get("query_logic"),
-            "conditions": extra.get("conditions") or [],
-            "matched_level": extra.get("matched_level"),
-            "matched_patterns": extra.get("matched_patterns"),
-            "rewritten_query": extra.get("rewritten_query"),
-            "intent_summary": extra.get("intent_summary"),
-            "confidence": extra.get("confidence"),
-            "cost_times": extra.get("cost_times"),
-        }
-
-    def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any]) -> Dict[str, Any]:
-        extra = {}
-        if isinstance(raw_response, dict):
-            data = raw_response.get("data") if isinstance(raw_response.get("data"), dict) else {}
-            extra = data.get("extra_output_params") if isinstance(data.get("extra_output_params"), dict) else {}
-        return {
-            "downstream_search": raw_response.get("_downstream_search") if isinstance(raw_response, dict) and isinstance(raw_response.get("_downstream_search"), dict) else {},
-            "external_boundary_sources": self._external_boundary_sources(),
-            "empty_result_reason": self._empty_result_reason(extracted_output.get("query", ""), extra),
-            "is_empty_result": bool(self._empty_result_reason(extracted_output.get("query", ""), extra)),
-        }
-
-    def build_execution_trace(self, input_data: Dict[str, Any], request: Dict[str, Any], raw_response: Any, extracted_output: Dict[str, Any]) -> list[ExecutionTraceEvent]:
-        extra = (((raw_response.get("data") or {}).get("extra_output_params")) or {}) if isinstance(raw_response, dict) else {}
-        downstream_search = raw_response.get("_downstream_search") if isinstance(raw_response, dict) and isinstance(raw_response.get("_downstream_search"), dict) else {}
-        return [
-            ExecutionTraceEvent(stage="adapter.build_request", status="ok", evidence={"user_text": request.get("user_text"), "source": request.get("source")}),
-            ExecutionTraceEvent(stage="client_search.api", status="ok" if isinstance(raw_response, dict) and raw_response.get("code") == 0 else "suspicious", evidence={"code": raw_response.get("code") if isinstance(raw_response, dict) else None}),
-            ExecutionTraceEvent(stage="client_search.routing", status="ok" if extra.get("matched_level") is not None else "not_verified", evidence={"matched_level": extra.get("matched_level"), "matched_patterns": extra.get("matched_patterns")}),
-            ExecutionTraceEvent(stage="client_search.downstream_search", status=downstream_search.get("status") or "not_verified", evidence=downstream_search),
-            ExecutionTraceEvent(stage="adapter.extract_output", status="ok", evidence={"logic": extracted_output.get("query_logic"), "condition_count": len(extracted_output.get("conditions") or [])}),
-        ]
 
     def _hashable_value(self, value: Any) -> Any:
         if isinstance(value, list):
@@ -457,7 +281,7 @@ class Adapter(ProjectAdapter):
             "run_only_for": ["incorrect", "uncertain with inspectable expected-vs-actual gap"],
             "block_when_judge_unavailable": True,
             "minimum_evidence": ["current query", "actual conditions/matched_level", "judge expected-vs-actual diff", "execution_trace or project chain nodes", "project docs/config evidence"],
-            "required_outputs": ["clear root_cause_hypothesis", "evidence-backed chain_nodes", "earliest_divergence", "suspected_locations only when evidenced", "specific verification_steps", "minimal patch_direction", "evidence_coverage", "analysis_quality"],
+            "required_outputs": ["clear root_cause_hypothesis", "evidence-backed suspected_locations", "evidence_strength", "current-case evidence", "business impact"],
             "quality_standard": "必须围绕当前 query 产出明确根因、可核验证据链、疑似文件/配置位置、具体修改建议、明确修改方案和业务影响；期望条件和修改方案必须来自当前 query 或同 query 链路证据，不能引用无关历史 case 字段。",
         }
 
@@ -481,16 +305,6 @@ class Adapter(ProjectAdapter):
         missing = list(comparison.get("missing") or [])
         extra = list(comparison.get("extra") or [])
         if wrong or missing or extra:
-            # Save LLM original gaps before replacing
-            derivation = dict(judge_result.verdict_derivation or {})
-            derivation["llm_original_gaps"] = {
-                "wrong": list(judge_result.wrong or []),
-                "missing": list(judge_result.missing or []),
-                "extra": list(judge_result.extra or []),
-            }
-            judge_result.verdict_derivation = derivation
-            if "condition_comparison_overrode_llm_gaps" not in (judge_result.quality_flags or []):
-                judge_result.quality_flags = list(judge_result.quality_flags or []) + ["condition_comparison_overrode_llm_gaps"]
             judge_result.wrong = wrong
             judge_result.missing = missing
             judge_result.extra = extra
@@ -500,10 +314,8 @@ class Adapter(ProjectAdapter):
                 "status": "not_fulfilled",
                 "expected_evidence": [comparison.get("expected")],
                 "actual_evidence": [comparison.get("actual"), {"wrong": wrong, "missing": missing, "extra": extra}],
-                "boundary_decision": judge_result.boundary_decision or {},
                 "downstream_impact": "wrong/missing/extra conditions change the target customer population",
                 "blocking": True,
-                "confidence": judge_result.confidence,
             }
             judge_result.fulfillment_assessments = [assessment]
         elif comparison and not judge_result.fulfillment_assessments:
@@ -512,83 +324,23 @@ class Adapter(ProjectAdapter):
                 "status": "fulfilled",
                 "expected_evidence": [comparison.get("expected")],
                 "actual_evidence": [comparison.get("actual")],
-                "boundary_decision": judge_result.boundary_decision or {},
                 "downstream_impact": "search conditions cover the target customer population",
                 "blocking": True,
-                "confidence": judge_result.confidence,
             }]
-        expected = comparison.get("expected")
-        actual = comparison.get("actual")
-        # comparison.expected / comparison.actual 是条件级判定证据，不是 live_schema 形状的 reference/actual。
-        # expected 必须保持 judge 产出的 EXTRACT_OUTPUT_SHAPE；actual 必须保持 live 的 trace.extracted_output。
-        derivation = dict(judge_result.verdict_derivation or {})
-        if expected:
-            derivation.setdefault("condition_comparison_expected", expected)
-        if actual:
-            derivation.setdefault("condition_comparison_actual", actual)
-        if derivation:
-            judge_result.verdict_derivation = derivation
         if trace.extracted_output:
             judge_result.actual = trace.extracted_output
-        # expected 必须保持 judge 产出的 EXTRACT_OUTPUT_SHAPE；仅当 LLM 失败且 judge_result.expected 为空时，才从 trace 补充。
         if not judge_result.expected and trace.extracted_output:
             judge_result.expected = trace.extracted_output
-        basis = dict(judge_result.reference_generation_basis or {})
-        basis.setdefault("source", comparison.get("expected_source") or "client_search_condition_compare")
-        basis.setdefault("comparison_basis", comparison.get("comparison_basis"))
-        basis.setdefault("expected_source", comparison.get("expected_source"))
-        judge_result.reference_generation_basis = basis
-        if comparison.get("evaluable") is False:
-            derivation = dict(judge_result.verdict_derivation or {})
-            derivation.setdefault("why_verdict", "client_search condition comparison has no current intent/config expected conditions; reference conditions are evidence only")
-            derivation.setdefault("missing_evidence", ["current intent/config expected conditions"])
-            judge_result.verdict_derivation = derivation
-        elif comparison.get("expected_source_label") == "reference_fallback" and not wrong and not missing and not extra:
-            # reference_fallback with no gaps → semantically equivalent, clear the uncertain path
-            derivation = dict(judge_result.verdict_derivation or {})
-            derivation.setdefault("why_verdict", "client_search condition comparison matched reference conditions (fallback); conditions are semantically equivalent")
-            judge_result.verdict_derivation = derivation
-        elif wrong or missing or extra:
-            derivation = dict(judge_result.verdict_derivation or {})
-            derivation.setdefault("blocking_gaps", [*(missing or []), *(wrong or []), *(extra or [])])
-            derivation.setdefault("why_verdict", "client_search condition comparison found wrong/missing/extra customer-search gaps")
-            judge_result.verdict_derivation = derivation
 
     def _default_business_expectation(self, trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:
-        expectation = super()._default_business_expectation(trace, judge_result)
         comparison = self._comparison_outputs(trace)
-        expectation.update(
-            {
-                "expectation_id": "client_search:search_condition_contract",
-                "downstream_consumer": "downstream client search",
-                "required_capabilities": expectation.get("required_capabilities") or ["field_operator_value_logic", "semantic_equivalence", "downstream_search_executability"],
-                "boundary": judge_result.boundary_decision or self.build_judge_context(trace).get("application_boundary") or expectation.get("boundary") or {},
-                "comparison_basis": comparison.get("comparison_basis") or "client_search wrong/missing/extra customer-search coverage",
-                "expected_source": comparison.get("expected_source"),
-            }
-        )
-        if comparison:
-            expectation.update(
-                {
-                    "user_intent": comparison.get("target_population") or expectation.get("user_intent"),
-                    "expected_outcome": "actual search conditions should cover the target customer population without wrong, missing, or extra conditions",
-                    "acceptance_criteria": {
-                        "expected": comparison.get("expected"),
-                        "wrong": comparison.get("wrong") or [],
-                        "missing": comparison.get("missing") or [],
-                        "extra": comparison.get("extra") or [],
-                    },
-                }
-            )
-        elif not judge_result.intent_model:
-            expectation.update(
-                {
-                    "user_intent": str((trace.normalized_request or {}).get("user_text") or (trace.extracted_output or {}).get("source_query") or trace.input or ""),
-                    "expected_outcome": "current query should become complete, semantically correct, downstream-executable search conditions",
-                    "acceptance_criteria": list(judge_result.missing or judge_result.wrong or []),
-                }
-            )
-        return expectation
+        return {
+            "expectation_id": "client_search:search_condition_contract",
+            "downstream_consumer": "downstream client search",
+            "required_capabilities": ["field_operator_value_logic", "semantic_equivalence", "downstream_search_executability"],
+            "comparison_basis": comparison.get("comparison_basis") or "client_search wrong/missing/extra customer-search coverage",
+            "expected_source": comparison.get("expected_source"),
+        }
 
     def _default_fulfillment_assessment(self, trace: RunTrace, judge_result: JudgeResult, expectation: Dict[str, Any]) -> Dict[str, Any]:
         comparison = self._comparison_outputs(trace)
@@ -596,23 +348,18 @@ class Adapter(ProjectAdapter):
         if comparison and comparison.get("evaluable") is False:
             status = "not_evaluable"
         elif comparison and comparison.get("expected_source_label") == "reference_fallback" and not gaps:
-            # reference_fallback conditions matched — semantically equivalent
             status = "fulfilled"
         elif comparison:
             status = "not_fulfilled" if gaps else "fulfilled"
         else:
-            status = self._expectation_status_from_verdict(judge_result)
+            status = "not_evaluable"
         return {
             "expectation_id": expectation.get("expectation_id"),
             "status": status,
-            "score": 0 if status == "not_fulfilled" else (1 if status == "fulfilled" else judge_result.score),
-            "expected_evidence": [comparison.get("expected")] if comparison else (list(judge_result.missing or []) or [judge_result.expected or self.field_patterns]),
-            "actual_evidence": [comparison.get("actual"), {"wrong_missing_extra": gaps}] if comparison else (list(judge_result.wrong or []) or [judge_result.actual or trace.extracted_output]),
-            "boundary_decision": judge_result.boundary_decision or self.build_judge_context(trace).get("application_boundary") or {},
+            "expected_evidence": [comparison.get("expected")] if comparison else [judge_result.expected or self.field_patterns],
+            "actual_evidence": [comparison.get("actual"), {"wrong_missing_extra": gaps}] if comparison else [judge_result.actual or trace.extracted_output],
             "downstream_impact": "search conditions cover the target customer population" if status == "fulfilled" else (judge_result.reasoning_summary or "wrong/missing/extra conditions change the target customer population"),
             "blocking": status in {"not_fulfilled", "not_evaluable"},
-            "confidence": judge_result.confidence,
-            "evidence_refs": list(getattr(trace, "evidence_refs", []) or []),
         }
 
     def _boundary_from_trace(self, trace: RunTrace, downstream: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -673,7 +420,7 @@ class Adapter(ProjectAdapter):
             {"name": "request_normalization", "evidence_ref": "run_trace.normalized_request"},
             {"name": "client_search_parse", "evidence_ref": "run_trace.extracted_output"},
             {"name": "routing_pattern_match", "evidence_ref": "run_trace.extracted_output.matched_patterns"},
-            {"name": "judge_boundary", "evidence": judge_result.boundary_decision},
+            {"name": "judge_boundary", "evidence": application_boundary},
         ]
         if application_boundary.get("judge_scope") == "parser_and_result_set":
             chain_nodes.insert(3, {"name": "downstream_result_set", "evidence_ref": "run_trace.project_fields.downstream_search"})
@@ -686,7 +433,7 @@ class Adapter(ProjectAdapter):
             "attribute_quality_gate": self._attribute_quality_gate(),
             "external_boundary_sources": (trace.project_fields or {}).get("external_boundary_sources") if isinstance(trace.project_fields, dict) else {},
             "source_config_paths": self._source_config_paths(),
-            "attribute_instruction": "application_boundary 由 application adapter 在归因前判定；当 judge_scope=parser_condition_semantics_only 时，下游结果集验证不属于本次归因链路，归因只分析 query、parse 条件、matched_patterns、execution_trace 和项目文档中的可控解析问题；无法定位代码/配置时应标记 incomplete_reason。chain_nodes_to_check 中带 evidence_ref 的节点，其 evidence 已在 run_trace 对应字段中提供，直接引用即可，无需重复读取。",
+            "attribute_instruction": "application_boundary 由 application adapter 在归因前判定；当 judge_scope=parser_condition_semantics_only 时，下游结果集验证不属于本次归因链路，归因只分析 query、parse 条件、matched_patterns、execution_trace 和项目文档中的可控解析问题；无法定位代码/配置时应将 evidence_strength 设为 none 或 weak，并在 root_cause_hypothesis 中说明缺失的当前证据。chain_nodes_to_check 中带 evidence_ref 的节点，其 evidence 已在 run_trace 对应字段中提供，直接引用即可，无需重复读取。",
         }
 
     def trace_state_graph(self) -> Dict[str, Any]:
@@ -724,46 +471,12 @@ class Adapter(ProjectAdapter):
         return [{"type": "client_search_state_boundary", "state_id": state_id, "application_boundary": self._boundary_from_trace(trace), "external_boundary_sources": project_fields.get("external_boundary_sources") or {}}]
 
     def _application_boundary(self, downstream: Any) -> Dict[str, Any]:
-        status = downstream.get("status") if isinstance(downstream, dict) else None
-        if status == "ok":
-            return {"downstream_result_set_available": True, "judge_scope": "parser_and_result_set", "result_set_verified": True}
-        return {
-            "downstream_result_set_available": False,
-            "downstream_status": status or "not_verified",
-            "judge_scope": "parser_condition_semantics_only",
-            "result_set_verified": False,
-            "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics.",
-        }
+        from impl.projects.client_search import live
+
+        return live._application_boundary(downstream)
 
     def reconcile_judge_result(self, trace: RunTrace, judge_result: JudgeResult) -> JudgeResult:
         self._apply_condition_comparison(trace, judge_result)
-        application_boundary = self._boundary_from_trace(trace)
-        if application_boundary.get("downstream_status") not in {None, "ok", "not_verified"}:
-            flags = [
-                flag
-                for flag in (judge_result.quality_flags or [])
-                if "downstream" not in str(flag) and "result_set" not in str(flag)
-            ]
-            if "application_boundary_parser_only" not in flags:
-                flags.append("application_boundary_parser_only")
-            judge_result.quality_flags = flags
-            judge_result.boundary_decision = {
-                **(judge_result.boundary_decision or {}),
-                "result_set_verified": False,
-                "application_boundary": application_boundary,
-            }
-        elif application_boundary.get("result_set_verified") is True:
-            flags = [flag for flag in (judge_result.quality_flags or []) if "downstream" not in str(flag)]
-            if "downstream_search_verified" not in flags:
-                flags.append("downstream_search_verified")
-            judge_result.quality_flags = flags
-            judge_result.boundary_decision = {
-                **(judge_result.boundary_decision or {}),
-                "result_set_verified": True,
-                "application_boundary": application_boundary,
-            }
-            if not any(isinstance(item, dict) and item.get("application_boundary") for item in (judge_result.evidence or [])):
-                judge_result.evidence = [*(judge_result.evidence or []), {"application_boundary": application_boundary}]
         return super().reconcile_judge_result(trace, judge_result)
 
     # build_mock_cases / build_mock_datasets 已移除：

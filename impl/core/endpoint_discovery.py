@@ -50,7 +50,32 @@ APP_DECORATOR_PREFIXES = {"app."}
 
 # HTTP 方法关键词
 HTTP_METHODS = {"get", "post", "put", "delete", "patch", "head", "options"}
+FRAMEWORK_PARAMETER_NAMES = {"request", "response", "background_tasks", "websocket"}
+REQUEST_BODY_PARAMETER_NAMES = {"body", "payload", "request", "data"}
 
+
+def _is_framework_parameter(arg: ast.arg) -> bool:
+    if arg.arg in FRAMEWORK_PARAMETER_NAMES:
+        return True
+    annotation = arg.annotation
+    if isinstance(annotation, ast.Name):
+        return annotation.id in {"Request", "Response", "BackgroundTasks", "WebSocket"}
+    if isinstance(annotation, ast.Attribute):
+        return annotation.attr in {"Request", "Response", "BackgroundTasks", "WebSocket"}
+    return False
+
+
+def _tool_description(method: str, route: str, function_name: str, docstring: str) -> str:
+    summary = docstring[:200] if docstring else "无函数文档"
+    return f"调用已发现的业务 API endpoint。输入该 endpoint 的路径参数和/或 body；输出 {method} {route} ({function_name}) 的 HTTP 响应内容。该工具提供远程 API 行为证据，不解释源码、配置规则或根因。接口说明：{summary}"
+
+
+def _parameter_description(method: str, route: str, parameter_name: str) -> str:
+    return f"业务 API 参数 {parameter_name}，来自 {method} {route} 的处理函数签名；按该接口原始业务协议填写。"
+
+
+def _body_description(method: str, route: str) -> str:
+    return f"请求体 JSON，对应 {method} {route} 的 request body；字段和值应按该业务接口原始协议填写。"
 
 def _match_pattern(path: str, pattern: str) -> bool:
     """简单 glob 匹配：支持 * 通配符。"""
@@ -94,12 +119,12 @@ class EndpointInfo:
         tool_id = f"{project_id}.api.{self.function_name}"
         params_properties: Dict[str, Any] = {}
         for p in self.params:
-            params_properties[p] = {"type": "string", "description": f"参数 {p}"}
+            params_properties[p] = {"type": "string", "description": _parameter_description(self.method, self.route, p)}
         if self.has_request_body:
-            params_properties["body"] = {"type": "object", "description": "请求体 JSON"}
+            params_properties["body"] = {"type": "object", "description": _body_description(self.method, self.route)}
         return {
             "tool_id": tool_id,
-            "description": f"API endpoint: {self.method} {self.route} ({self.function_name}) — {self.docstring[:200] if self.docstring else 'no docstring'}",
+            "description": _tool_description(self.method, self.route, self.function_name, self.docstring),
             "applicable_scenario": "attr",
             "method": self.method,
             "route": self.route,
@@ -262,8 +287,9 @@ class EndpointDiscovery:
             endpoint.docstring = ast.get_docstring(node) or ""
 
             for arg in node.args.args:
-                if arg.arg != "self" and arg.arg != "cls":
-                    endpoint.params.append(arg.arg)
+                if arg.arg in {"self", "cls"} or _is_framework_parameter(arg):
+                    continue
+                endpoint.params.append(arg.arg)
 
             for decorator in node.decorator_list:
                 decorator_str = self._decorator_to_string(decorator)
@@ -291,8 +317,8 @@ class EndpointDiscovery:
                         endpoint.route = route
 
                 endpoint.has_request_body = any(
-                    arg.arg for arg in node.args.args
-                    if arg.arg in ("body", "payload", "request", "data")
+                    arg.arg in REQUEST_BODY_PARAMETER_NAMES
+                    for arg in node.args.args
                 )
 
                 if endpoint.route:
@@ -348,13 +374,13 @@ class EndpointDiscovery:
         # 自动生成 execute_fn（占位，调远程 API）
         params_properties: Dict[str, Any] = {}
         for p in endpoint.params:
-            params_properties[p] = {"type": "string", "description": f"参数 {p}"}
+            params_properties[p] = {"type": "string", "description": _parameter_description(endpoint.method, endpoint.route, p)}
         if endpoint.has_request_body:
-            params_properties["body"] = {"type": "object", "description": "请求体 JSON"}
+            params_properties["body"] = {"type": "object", "description": _body_description(endpoint.method, endpoint.route)}
 
         return VerifiableTool(
             tool_id=tool_id,
-            description=f"API endpoint: {endpoint.method} {endpoint.route} ({endpoint.function_name}) — {endpoint.docstring[:100] if endpoint.docstring else 'no docstring'}",
+            description=_tool_description(endpoint.method, endpoint.route, endpoint.function_name, endpoint.docstring),
             applicable_scenario="attr",
             parameters={
                 "type": "object",
@@ -471,6 +497,16 @@ def load_discovered_tools(spec: Any) -> List[VerifiableTool]:
         route = entry.get("route", "")
         tool_id = entry["tool_id"]
         params_properties = entry.get("parameters", {}).get("properties", {})
+        for param_name, param_schema in params_properties.items():
+            if not isinstance(param_schema, dict):
+                continue
+            description = str(param_schema.get("description") or "")
+            if description.startswith("参数 ") or description.startswith("API 路由参数 "):
+                param_schema["description"] = _parameter_description(method, route, param_name)
+            elif description == "请求体 JSON" or description.startswith("请求体 JSON"):
+                param_schema["description"] = _body_description(method, route)
+        raw_required = entry.get("parameters", {}).get("required") or []
+        normalized_required = [item for item in raw_required if item in params_properties]
 
         # 为每个 api-discovered tool 生成远程调用 execute_fn
         def _make_execute_fn(m: str, r: str, tid: str, base: str) -> Any:
@@ -490,7 +526,8 @@ def load_discovered_tools(spec: Any) -> List[VerifiableTool]:
                     full_url = f"{url}?{qs}" if qs else url
                     req = _urllib_req.Request(full_url, method="GET")
                 else:
-                    body = _json.dumps(params, ensure_ascii=False).encode("utf-8")
+                    payload = params.get("body") if isinstance(params, dict) and "body" in params else params
+                    body = _json.dumps(payload, ensure_ascii=False).encode("utf-8")
                     req = _urllib_req.Request(url, data=body, headers={"Content-Type": "application/json"}, method=m.upper())
                 try:
                     with _urllib_req.urlopen(req, timeout=10.0) as resp:
@@ -513,7 +550,7 @@ def load_discovered_tools(spec: Any) -> List[VerifiableTool]:
                 tool_id=tool_id,
                 description=entry.get("description", ""),
                 applicable_scenario=entry.get("applicable_scenario", "attr"),
-                parameters=entry.get("parameters") or {},
+                parameters={**(entry.get("parameters") or {}), "properties": params_properties, "required": normalized_required},
                 execute_fn=execute_fn,
             )
         )

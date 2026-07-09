@@ -1,0 +1,55 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "识别出核心业务度量NBEV",
+        "识别出时间范围今年",
+        "识别出分解维度（增加理财师、优化产品方案）",
+        "意图路由至营销规划阶段",
+        "生成可操作的规划卡片"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "8cfb93ed-6eff-4e9f-94a7-9556bf864f55"
+      ],
+      "representative_traces": [
+        "8cfb93ed-6eff-4e9f-94a7-9556bf864f55"
+      ],
+      "common_root_cause": "意图识别模块（intent_recognition）采用“正则预筛选 + LLM 降级”的两层架构。用户 query“我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？”中：第一层正则要求同时命中 NBEV 与 {达成,规划,路径,测算,分析}，但用户使用“补上”表达缺口补足诉求，未命中任何触发词，正则层漏检；第二层 LLM（qwen3-next-80b-a3b-instruct + INTENT_RECOGNITION_PROMPT）由于 prompt 中 nbev_planning 的 few-shot 示例集中在“达成路径规划”句式，缺失“缺口分析+补足方案”的自然语言变体，LLM 无法泛化，将 query 归类为“其他意图”（intent=4001）。此单一分类错误导致 path_dispatch 路由至 non_agent，planning_function 不执行，最终 card_list 为空，所有 NBEV 相关的业务期望均未达成。",
+      "shared_failure_pattern": "意图识别模块（intent_recognition）采用“正则预筛选 + LLM 降级”的两层架构。用户 query“我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？”中：第一层正则要求同时命中 NBEV 与 {达成,规划,路径,测算,分析}，但用户使用“补上”表达缺口补足诉求，未命中任何触发词，正则层漏检；第二层 LLM（qwen3-next-80b-a3b-instruct + INTENT_RECOGNITION_PROMPT）由于 prompt 中 nbev_planning 的 few-shot 示例集中在“达成路径规划”句式，缺失“缺口分析+补足方案”的自然语言变体，LLM 无法泛化，将 query 归类为“其他意图”（intent=4001）。此单一分类错误导致 path_dispatch 路由至 non_agent，planning_function 不执行，最终 card_list 为空，所有 NBEV 相关的业务期望均未达成。",
+      "representative_diffs": [
+        {
+          "case_id": "8cfb93ed-6eff-4e9f-94a7-9556bf864f55",
+          "node": "intent_recognition"
+        }
+      ],
+      "minimal_fix_direction": [
+        "【正则层】在 intent_recognition.py 的 generic NBEV detection 中扩展触发词集合，从 {达成,规划,路径,测算,分析} 扩展为 {达成,规划,路径,测算,分析,补上,补足,缺口,差距,差,不足,追赶,弥补}，覆盖缺口语义的常见口语表达",
+        "【Prompt层】在 intent_prompt.py 的 INTENT_RECOGNITION_PROMPT 中为 nbev_planning 增加缺口补足场景的 few-shot 示例（至少 3 条），涵盖“差/缺口+补上”“不足+怎么调整”“还差XX万+增员/产品”等变体，并明确 nbev_planning 覆盖“缺口诊断+达成路径规划”双重语义",
+        "【兜底层】在 path_dispatch 或 path_planning.py 中增加 NBEV 关键词的 emergency routing：若 intent=other 但 query 包含 NBEV，则自动按 nbev_planning_fallback 处理，至少触发 field_clarification 尝试提取目标值和路径类型，避免完全空响应",
+        "【Schema层】考虑在 intent.py 中新增 nbev_gap_analysis 意图类型，或在 nbev_planning 的描述中明确其包含“缺口分析”语义，降低 LLM 分类时的语义歧义"
+      ],
+      "verification_cases": [
+        "8cfb93ed-6eff-4e9f-94a7-9556bf864f55"
+      ],
+      "next_actions": [
+        "在 intent_recognition.py 中临时扩展 generic NBEV detection 正则，加入“补上|缺口|差|不足|补足”等词，对相同 query 重跑验证是否命中 nbev_planning",
+        "在 INTENT_RECOGNITION_PROMPT 中增加 2-3 个缺口分析场景 few-shot 示例（如“NBEV还差50万，怎么通过增员和调产品补上 → nbev_planning, path_types=[队伍,产品]”），用相同 LLM 模型重跑对比分类结果",
+        "检查 config_dev.json 中 INTENT_MAPPING 的 4001→其他意图 映射是否正确，确认非配置错误导致",
+        "用脚本 eval_intent.py 对包含“补上”“缺口”关键词的 NBEV 边界 query 集做批量回归测试，量化当前正则+LLM 的覆盖率"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模块（intent_recognition）采用“正则预筛选 + LLM 降级”的两层架构。用户 query“我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？”中：第一层正则要求同时命中 NBEV 与 {达成,规划,路径,测算,分析}，但用户使用“补上”表达缺口补足诉求，未命中任何触发词，正则层漏检；第二层 LLM（qwen3-next-80b-a3b-instruct + INTENT_RECOGNITION_PROMPT）由于 prompt 中 nbev_planning 的 few-shot 示例集中在“达成路径规划”句式，缺失“缺口分析+补足方案”的自然语言变体，LLM 无法泛化，将 query 归类为“其他意图”（intent=4001）。此单一分类错误导致 path_dispatch 路由至 non_agent，planning_function 不执行，最终 card_list 为空，所有 NBEV 相关的业务期望均未达成。",
+  "impact": "",
+  "priority": "high"
+}

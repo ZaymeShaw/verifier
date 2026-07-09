@@ -119,27 +119,3 @@ def judge_primary_signal(judge: JudgeResult | None) -> Dict[str, Any]:
         "overall_fulfillment": dict(judge.overall_fulfillment or {}),
     }
 
-
-def attribute_causal_category(attribute: AttributeResult | None) -> str:
-    if not attribute:
-        return ""
-    return str(attribute.causal_category or "")
-
-
-def attribute_failure_stage(attribute: AttributeResult | None) -> str:
-    if not attribute:
-        return ""
-    earliest = attribute.earliest_divergence if isinstance(attribute.earliest_divergence, dict) else {}
-    return str(earliest.get("stage") or earliest.get("node") or "")
-
-
-def attribute_probe_evidence(attribute: AttributeResult | None) -> List[Any]:
-    if not attribute:
-        return []
-    return list(attribute.probe_results or [])
-
-
-def attribute_chain_evidence(attribute: AttributeResult | None) -> List[Any]:
-    if not attribute:
-        return []
-    return list(attribute.chain_nodes or [])

@@ -84,15 +84,15 @@ def build_field_capability_tool(field_definitions_path: str) -> VerifiableTool:
         )
 
     execute.__name__ = tool_id.replace(".", "_")
-    execute.__doc__ = "查询业务字段的能力定义：允许的操作符、值类型、枚举值、单位。用于验证 trace actual 里的 field/operator/value 是否在字段能力范围内。"
+    execute.__doc__ = "查询客户搜索字段能力定义，返回字段允许的操作符、值类型、枚举值、单位和说明。"
     return VerifiableTool(
         tool_id=tool_id,
-        description="查询业务字段的能力定义：允许的操作符、值类型、枚举值、单位。用于验证 trace actual 里的 field/operator/value 是否在字段能力范围内（actual 交叉对照）。",
+        description="查询客户搜索字段能力定义。输入字段标识 field；输出该字段在 source_field_definitions.yaml 中声明的 operators、value_types、enums、unit 和 description。该工具提供字段契约/配置证据，不执行搜索 API，也不判断根因。",
         applicable_scenario="attr",
         parameters={
             "type": "object",
             "properties": {
-                "field": {"type": "string", "description": "字段名，如 clientAge、annPremSegNum、pCategorys"},
+                "field": {"type": "string", "description": "必填。客户搜索字段标识，需与字段定义文件中的 field 值一致，如 clientAge、annPremSegNum、pCategorys。"},
             },
             "required": ["field"],
         },

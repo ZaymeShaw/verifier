@@ -20,14 +20,14 @@ judge 必须先消费项目 adapter 已确定的 `application_boundary`，再按
 ## 判定步骤
 
 1. 重新理解 query 的核心筛选意图：哪些条件必须满足，哪些只是弱修饰，哪些当前系统字段或枚举不支持。
-2. 读取 `project_judge_context.application_boundary` 或 `boundary_decision.application_boundary`，确定当前主评价范围：`parser_condition_semantics_only` 或 `parser_and_result_set`。
+2. 读取 `project_judge_context.application_boundary`，确定当前主评价范围：`parser_condition_semantics_only` 或 `parser_and_result_set`。
 3. 根据边界依据判断每个核心意图属于系统能力边界还是可评价系统范围。
 4. 从当前 API actual output 提取结构化条件、逻辑关系和关键返回字段。
 5. 在 `parser_and_result_set` 范围内，可把真实下游返回作为结果集验证证据，判断是否能搜到用户意图客户。
 6. 在 `parser_condition_semantics_only` 范围内，不能声称已验证 ES 实际结果集，也不要反复把下游不可用当作判定主因；应基于 parser 条件、ES 查询语法、字段语义、操作符语义、枚举能力和业务意图判断搜索语义是否等价，只有语义证据不足时才返回 `uncertain`。
 7. 比较 expected-vs-actual：字段业务含义、操作符、枚举值、单位换算、年龄/日期/金额边界、AND/OR 逻辑和条件覆盖是否正确。
 8. 如果条件形态不同但结果集证据或 ES 查询语义等价，应按“能否检索到正确客户”判定，而不是机械判字段/操作符不一致。
-9. 输出 `correct`、`incorrect` 或 `uncertain`，并给出 expected、actual、missing、wrong、extra、evidence、boundary_decision 和 reasoning_summary。
+9. 输出 fulfillment-first 结果，并给出 expected、actual、missing、wrong、extra、evidence 和 reasoning_summary。
 
 ## 正确性重点
 
@@ -42,7 +42,7 @@ judge 必须先消费项目 adapter 已确定的 `application_boundary`，再按
 
 - 不继承旧 case、上一轮归因、历史 cluster、页面状态或历史 expected conditions。
 - 不把 `review_verdict`、`root_cause_cluster`、`source`、`run_status`、match agent 状态等来源/状态字段当作正确性依据。
-- 不用 attribute 结论反推 judge verdict；正确性必须先从当前 query、当前 actual output 和当前 application boundary 判断。
+- 不用 attribute 结论反推 judge fulfillment；正确性必须先从当前 query、当前 actual output 和当前 application boundary 判断。
 - 不为了当前少数 case 写硬编码判定规则。
 - 不直接修改业务 parser、配置、prompt、标准答案或静态结果。
 

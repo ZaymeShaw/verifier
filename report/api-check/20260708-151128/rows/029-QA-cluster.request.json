@@ -1,0 +1,61 @@
+{
+  "project": "QA",
+  "attributes": [
+    {
+      "trace_id": "QA:mock-agent-QA-87e78ff7:1783494888049",
+      "project_id": "QA",
+      "case_id": "",
+      "expectation_attributions": [
+        {
+          "expectation_id": "涵盖轻症责任重要细则（分组限制、对重疾保额的影响等）",
+          "fulfillment_status": "not_fulfilled",
+          "root_cause_hypothesis": ""
+        }
+      ],
+      "root_cause_hypothesis": "生成语言模型在回答用户关于轻症赔付的问题时，其解码策略或上下文利用不足以触发对保险条款中重要细节（如分组限制、保额影响等）的全面检索与生成，导致回答仅覆盖了最核心的赔付次数和比例，而遗漏了同样重要的细则。可能的原因包括：模型微调数据中此类细则的覆盖不足，或者解码时温度/采样设置导致模型选择了更简短的回复。",
+      "evidence": [
+        {
+          "type": "output_comparison",
+          "actual_answer_excerpt": "轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。",
+          "reference_answer_excerpt": "需要注意，轻症责任可能设有分组限制...部分产品轻症赔付后重疾保额不变...每次确诊的轻症需满足合同定义的疾病标准...累计赔付上限可能有限制",
+          "gaps": [
+            "未说明轻症分组限制",
+            "未说明对重疾保额的影响",
+            "未说明确诊标准要求",
+            "未提及累计赔付上限"
+          ]
+        },
+        {
+          "type": "judge_missing_items",
+          "items": [
+            {
+              "gap_id": "未说明轻症分组限制",
+              "severity": "high"
+            },
+            {
+              "gap_id": "未说明对重疾保额的影响",
+              "severity": "high"
+            },
+            {
+              "gap_id": "未说明确诊标准要求",
+              "severity": "medium"
+            },
+            {
+              "gap_id": "未提及累计赔付上限",
+              "severity": "medium"
+            }
+          ]
+        }
+      ],
+      "evidence_strength": "strong",
+      "summary": {
+        "causal_category": "",
+        "attribution_count": 1,
+        "probe_count": 0,
+        "summary_text": "生成语言模型在回答用户关于轻症赔付的问题时，其解码策略或上下文利用不足以触发对保险条款中重要细节（如分组限制、保额影响等）的全面检索与生成，导致回答仅覆盖了最核心的赔付次数和比例，而遗漏了同样重要的细则。可能的原因包括：模型微调数据中此类细则的覆盖不足，或者解码时温度/采样设置导致模型选择了更简短的回复。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      }
+    }
+  ]
+}

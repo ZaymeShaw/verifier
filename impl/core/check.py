@@ -4,8 +4,7 @@ from pathlib import Path
 import re
 from typing import Any, Iterable, Optional
 
-from .schema import AttributeResult, CheckReport, ClusterSummary, FallbackDecision, JudgeResult, ProjectSpec, RunTrace, attribute_causal_category, attribute_chain_evidence, attribute_probe_evidence, judge_expected_actual_gaps, judge_primary_signal, trace_application_boundary, trace_execution_trace, trace_extracted_output, trace_input, trace_normalized_request, trace_raw_response
-from .state_machine import _derived_verdict_contradictions
+from .schema import AttributeResult, CheckReport, ClusterSummary, FallbackDecision, JudgeResult, ProjectSpec, RunTrace, judge_expected_actual_gaps, judge_primary_signal, trace_application_boundary, trace_execution_trace, trace_extracted_output, trace_input, trace_normalized_request, trace_raw_response
 
 DEFAULT_PROJECT_FIELD_MARKERS = []
 
@@ -269,17 +268,6 @@ def audit_demand_alignment(root: Path) -> list[str]:
 
 
 
-def _score_in_range(value: Any) -> bool:
-    if value is None:
-        return True
-    return isinstance(value, (int, float)) and 0 <= value <= 1
-
-
-def _attribute_taxonomy(spec: ProjectSpec) -> set[str]:
-    taxonomy = spec.frontend_extensions.get("error_taxonomy") if spec.frontend_extensions else None
-    return set(taxonomy or [])
-
-
 def _check_rules(spec: ProjectSpec) -> dict[str, Any]:
     rules = spec.frontend_extensions.get("check_rules") if spec.frontend_extensions else None
     return rules if isinstance(rules, dict) else {}
@@ -296,30 +284,12 @@ def _project_document_gaps(spec: ProjectSpec) -> list[str]:
 
 
 def _downstream_boundary_gaps(trace: RunTrace, judge: Optional[JudgeResult]) -> list[str]:
-    gaps = []
-    output = trace_extracted_output(trace)
-    downstream = output.get("downstream_search") if isinstance(output.get("downstream_search"), dict) else None
-    if not isinstance(downstream, dict) or not downstream:
-        return gaps
-    status = downstream.get("status")
-    boundary = judge.boundary_decision if judge else {}
-    if status == "ok":
-        if judge and boundary.get("result_set_verified") is not True:
-            gaps.append("Downstream search succeeded but JudgeResult does not mark boundary_decision.result_set_verified=true.")
-        return gaps
-    if judge:
-        if boundary.get("result_set_verified") is True:
-            gaps.append("Downstream search is unavailable/skipped but JudgeResult claims result_set_verified=true.")
-        application_boundary = boundary.get("application_boundary") if isinstance(boundary, dict) else {}
-        if not isinstance(application_boundary, dict):
-            application_boundary = {}
-        if application_boundary.get("judge_scope") != "parser_condition_semantics_only":
-            gaps.append("Downstream search is unavailable/skipped but JudgeResult does not constrain application_boundary.judge_scope to parser_condition_semantics_only.")
-        if judge and any(isinstance(item, dict) and item.get("application_boundary") for item in (judge.evidence or [])):
-            gaps.append("Downstream search is unavailable/skipped; application boundary should be recorded in boundary_decision, not repeated as judge evidence.")
-    if not downstream.get("payload") and status not in {"not_configured"}:
-        gaps.append("Downstream search evidence is missing the attempted payload.")
-    return gaps
+    """spec/info-volume.md 后 boundary_decision 已删除，此函数返回空。
+
+    保留函数签名是为了向后兼容 check 调用方；项目特有 boundary 检查已下沉到项目层。
+    """
+    return []
+
 
 
 def _field_values(value: Any) -> set[str]:
@@ -355,12 +325,8 @@ def _judge_fields(trace: Optional[RunTrace], judge: Optional[JudgeResult]) -> se
 def _attribute_claimed_fields(attribute: AttributeResult) -> set[str]:
     fields = set()
     fields.update(_field_values(attribute.suspected_locations))
-    fields.update(_field_values(attribute.earliest_divergence))
-    fields.update(_field_values(attribute.evidence_coverage))
-    fields.update(_field_values(attribute.chain_nodes))
     fields.update(_field_values(attribute.root_cause_hypothesis))
-    fields.update(_field_values(attribute.verification_steps))
-    fields.update(_field_values(attribute.patch_direction))
+    fields.update(_field_values(attribute.evidence))
     return fields
 
 
@@ -369,26 +335,13 @@ def _attribute_consistency_gaps(trace: Optional[RunTrace], judge: Optional[Judge
         return []
     gaps = []
     fulfillment_status = (judge.overall_fulfillment or {}).get("status") if isinstance(judge.overall_fulfillment, dict) else ""
-    if fulfillment_status == "fulfilled" or (judge.verdict == "correct" and bool(judge.fulfillment_assessments)):
+    if fulfillment_status == "fulfilled":
         attributions = list(attribute.expectation_attributions or [])
-        causal_categories = [item.get("causal_category") for item in attributions if isinstance(item, dict)]
         if not attributions:
             gaps.append("AttributeResult lacks expectation_attributions for fulfilled JudgeResult.")
-        if attributions and any(category and category != "no_issue" for category in causal_categories):
-            gaps.append("Fulfilled JudgeResult should produce no_issue expectation attribution unless disputed evidence is explicit.")
         return gaps
-    if judge.verdict == "uncertain" and "llm_call_failed" in (judge.quality_flags or []) and attribute.analysis_quality.get("passed") is True:
-        gaps.append("AttributeResult passed quality gate even though judge LLM failed; attribution should be incomplete or blocked.")
-    if attribute.incomplete_reason and attribute.analysis_quality.get("passed") is True:
-        gaps.append("AttributeResult has incomplete_reason but analysis_quality.passed=true.")
-    probe_evidence = attribute_probe_evidence(attribute)
-    if attribute.analysis_method and "fallback" in attribute.analysis_method and not probe_evidence:
-        gaps.append("Fallback attribution lacks probe evidence and should not be treated as canonical.")
-    judge_fields = _judge_fields(trace, judge)
-    claimed_fields = _attribute_claimed_fields(attribute)
-    unrelated = sorted(field for field in claimed_fields if judge_fields and field not in judge_fields)
-    if unrelated and attribute.analysis_quality.get("passed") is True:
-        gaps.append("AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: " + ", ".join(unrelated[:6]))
+    if not attribute.root_cause_hypothesis and not attribute.suspected_locations:
+        gaps.append("Failure attribution missing root_cause_hypothesis or suspected_locations.")
     return gaps
 
 def _semantic_rule_gaps(spec: ProjectSpec) -> list[str]:
@@ -501,11 +454,9 @@ def _value_contained_in(needle: Any, haystack: Any) -> bool:
 
 
 def _unsupported_root_cause_claims(unsupported_claims: list[Any], trace: Optional[RunTrace], judge: Optional[JudgeResult], attribute: AttributeResult) -> list[str]:
-    if attribute.incomplete_reason and (attribute.analysis_quality or {}).get("passed") is not True:
-        return []
     current_text = _as_text(trace_input(trace) if trace else {}) + " " + _as_text(trace_extracted_output(trace) if trace else {}) + " " + _as_text(judge.expected if judge else {}) + " " + _as_text(judge.actual if judge else {}) + " " + _as_text(judge.wrong if judge else {})
-    verification_text = _as_text(attribute_probe_evidence(attribute)) + " " + _as_text(attribute_chain_evidence(attribute)) + " " + _as_text(attribute.earliest_divergence)
-    root_cause_text = _as_text(attribute.suspected_locations) + " " + _as_text(attribute.root_cause_hypothesis) + " " + _as_text(attribute.patch_direction)
+    verification_text = _as_text(attribute.evidence) + " "
+    root_cause_text = _as_text(attribute.suspected_locations) + " " + _as_text(attribute.root_cause_hypothesis) + " "
     ungrounded = []
     for claim in unsupported_claims:
         claim_text = str(claim)
@@ -559,13 +510,6 @@ def build_check_category_report(
             evidence_locations.extend(["RunTrace.extracted_output", "JudgeResult.actual"])
         if trace.project_id != judge.project_id:
             _add_category(categories, "split_brain_flow", "RunTrace and JudgeResult use different project_id values")
-        judge_contradictions = _derived_verdict_contradictions(judge)
-        for contradiction in judge_contradictions:
-            _add_category(categories, "split_brain_flow", "JudgeResult fulfillment/verdict contradiction: " + contradiction)
-        if judge_contradictions:
-            evidence_locations.extend(["JudgeResult.verdict", "JudgeResult.fulfillment_assessments", "JudgeResult.overall_fulfillment"])
-            root_causes.append("Judge compatibility fields diverged from fulfillment assessment state.")
-            fixes.append("Derive verdict, overall_fulfillment, and blocking_expectations from fulfillment_assessments before trusting judge output.")
 
     if trace:
         declared_frontend = implementation_standard.get("frontend_view") if isinstance(implementation_standard.get("frontend_view"), dict) else {}
@@ -589,9 +533,8 @@ def build_check_category_report(
 
     if attribute:
         current_text = _as_text(trace.input if trace else {}) + " " + _as_text(judge.expected if judge else {}) + " " + _as_text(judge.actual if judge else {})
-        attr_text = _as_text(attribute.suspected_locations) + " " + _as_text(attribute.root_cause_hypothesis) + " " + _as_text(attribute.chain_nodes)
-        unsupported_claims = attribute.evidence_coverage.get("unsupported_claims") if isinstance(attribute.evidence_coverage, dict) else []
-        unsupported_claims = unsupported_claims or []
+        attr_text = _as_text(attribute.suspected_locations) + " " + _as_text(attribute.root_cause_hypothesis) + " " + _as_text(attribute.evidence)
+        unsupported_claims: list[Any] = []
         stale_markers = [str(marker) for marker in unsupported_claims if marker and str(marker) in attr_text and str(marker) not in current_text]
         if stale_markers:
             _add_category(categories, "overfit_rule", "attribution mentions fields from a historical case but not the current case: " + ", ".join(stale_markers))
@@ -599,16 +542,14 @@ def build_check_category_report(
             evidence_locations.append("AttributeResult.root_cause_hypothesis")
             root_causes.append("Attribution reused a historical rule/case pattern without grounding it in the current expected-vs-actual gap.")
             fixes.append("Reconstruct the current case gap first, then ground field/config/enum claims in current trace, judge, project docs, or local verification.")
-        unsupported = attribute.evidence_coverage.get("unsupported_claims") if isinstance(attribute.evidence_coverage, dict) else []
-        unsupported = unsupported or []
-        ungrounded_unsupported = _unsupported_root_cause_claims(unsupported, trace, judge, attribute)
-        has_location_evidence = bool(attribute.evidence_coverage.get("code_or_config") or attribute.evidence_coverage.get("project_docs") or attribute_probe_evidence(attribute)) if isinstance(attribute.evidence_coverage, dict) else bool(attribute_probe_evidence(attribute))
-        if ungrounded_unsupported or (attribute.analysis_quality.get("passed") is True and attribute.suspected_locations and not has_location_evidence):
+        ungrounded_unsupported = _unsupported_root_cause_claims([], trace, judge, attribute)
+        has_location_evidence = bool(attribute.evidence_strength in ("strong", "medium"))
+        if ungrounded_unsupported or (attribute.suspected_locations and not has_location_evidence):
             issue = "attribution has unsupported root-cause/location claims"
             if ungrounded_unsupported:
                 issue += ": " + ", ".join(str(item) for item in ungrounded_unsupported)
             _add_category(categories, "ungrounded_attribution", issue)
-            evidence_locations.append("AttributeResult.evidence_coverage")
+            evidence_locations.append("AttributeResult.evidence")
             root_causes.append("Attribute quality passed even though root-cause or suspected-location claims lack current-case evidence.")
             fixes.append("Downgrade to insufficient_evidence or next_verification_step until current-case chain evidence supports the root cause.")
 
@@ -688,10 +629,6 @@ def check_chain(
     fallbacks: list[FallbackDecision] = []
     if trace:
         fallbacks.extend(trace.fallbacks or [])
-    if judge:
-        fallbacks.extend(judge.fallbacks or [])
-    if attribute:
-        fallbacks.extend(attribute.fallbacks or [])
 
     if fallbacks:
         verification_results.append(f"Structured fallback decisions recorded: {len(fallbacks)}.")
@@ -725,83 +662,37 @@ def check_chain(
     if judge:
         if trace and judge.trace_id != trace.trace_id:
             consistency_gaps.append("JudgeResult trace_id does not match RunTrace.")
-        if judge.verdict not in {"correct", "incorrect", "uncertain"}:
-            protocol_gaps.append("JudgeResult verdict must be correct/incorrect/uncertain.")
-        if not _score_in_range(judge.score):
-            protocol_gaps.append("JudgeResult score must be within 0-1 when present.")
-        for contradiction in _derived_verdict_contradictions(judge):
-            consistency_gaps.append(
-                "JudgeResult single-point derivation violation: " + contradiction
-            )
         if not judge.evidence:
             protocol_gaps.append("JudgeResult missing evidence.")
-        if not judge.evaluation_boundary:
-            protocol_gaps.append("JudgeResult missing evaluation_boundary; verdict boundary is unclear.")
         primary_signal = judge_primary_signal(judge)
         has_fulfillment_record = bool(primary_signal.get("fulfillment_assessments")) or bool(primary_signal.get("overall_fulfillment"))
         if not has_fulfillment_record:
             protocol_gaps.append("JudgeResult missing fulfillment_assessments/overall_fulfillment for the selected evaluation boundary.")
+        overall_status = (judge.overall_fulfillment or {}).get("status") if isinstance(judge.overall_fulfillment, dict) else ""
         gaps = judge_expected_actual_gaps(judge)
-        if judge.verdict == "incorrect" and not primary_signal.get("fulfillment_assessments") and not (gaps.get("missing") or gaps.get("wrong") or gaps.get("extra")):
-            protocol_gaps.append("Incorrect JudgeResult should identify failing fulfillment_assessments or missing/wrong/extra output.")
-        if judge.verdict in {"incorrect", "uncertain"}:
+        if overall_status == "not_fulfilled" and not primary_signal.get("fulfillment_assessments") and not (gaps.get("missing") or gaps.get("wrong") or gaps.get("extra")):
+            protocol_gaps.append("Not-fulfilled JudgeResult should identify failing fulfillment_assessments or missing/wrong/extra output.")
+        if overall_status in {"not_fulfilled", "not_evaluable"}:
             if not has_fulfillment_record and not judge.expected:
-                protocol_gaps.append("JudgeResult missing business_expectations/expected snapshot; verdict is not tied to current-query requirements.")
-            if not judge.verdict_derivation:
-                protocol_gaps.append("JudgeResult missing verdict_derivation; final verdict cannot be traced to comparison evidence and boundary decision.")
-            if not judge.reference_generation_basis and not has_fulfillment_record:
-                protocol_gaps.append("JudgeResult missing reference_generation_basis; expected output source is unclear.")
-            quality_flags = list(judge.quality_flags or [])
-            uncertain_excused = (
-                bool((judge.verdict_derivation or {}).get("blocking_gaps"))
-                or "llm_call_failed" in quality_flags
-                or "self_check_failed" in quality_flags
-            )
-            if judge.verdict == "uncertain" and not uncertain_excused:
-                protocol_gaps.append("Uncertain JudgeResult must identify blocking evidence gaps or carry self_check_failed/llm_call_failed; use correct/incorrect when expected-vs-actual is inspectable.")
+                protocol_gaps.append("JudgeResult missing business_expectations/expected snapshot; fulfillment status is not tied to current-query requirements.")
             reason = (judge.reasoning_summary or "").lower()
-            if judge.verdict == "incorrect" and any(marker in reason for marker in ["最终评价为正确", "整体判定为 correct", "final verdict is correct", "overall verdict is correct", "does not affect correctness", "不影响正确性"]):
-                consistency_gaps.append("JudgeResult verdict is incorrect but reasoning_summary claims the output is correct or performance is unaffected.")
-            if judge.verdict == "correct" and any(marker in reason for marker in ["最终评价为错误", "整体判定为 incorrect", "final verdict is incorrect", "overall verdict is incorrect", "未满足", "错误", "incorrect"]):
-                consistency_gaps.append("JudgeResult verdict is correct but reasoning_summary describes problems suggesting incorrect output.")
+            if overall_status == "not_fulfilled" and any(marker in reason for marker in ["最终评价为正确", "整体判定为 correct", "final verdict is correct", "overall verdict is correct", "does not affect correctness", "不影响正确性"]):
+                consistency_gaps.append("JudgeResult overall_fulfillment is not_fulfilled but reasoning_summary claims the output is correct or performance is unaffected.")
     else:
         protocol_gaps.append("Missing JudgeResult; run -> judge part of chain is not verified.")
 
     if attribute:
         if trace and attribute.trace_id != trace.trace_id:
             consistency_gaps.append("AttributeResult trace_id does not match RunTrace.")
-        if not attribute_chain_evidence(attribute):
-            protocol_gaps.append("AttributeResult missing chain/evidence nodes.")
-        if judge and judge.verdict in {"incorrect", "uncertain"} and not attribute.chain_nodes and not attribute_chain_evidence(attribute):
-            protocol_gaps.append("Failure attribution missing executable chain evidence.")
-        if judge and judge.verdict in {"incorrect", "uncertain"} and not attribute.suspected_locations and not (attribute.root_cause_hypothesis or attribute.incomplete_reason):
-            protocol_gaps.append("Failure attribution missing suspected_locations or explicit hypotheses for developer verification.")
         if not attribute.root_cause_hypothesis:
             protocol_gaps.append("AttributeResult missing root_cause_hypothesis.")
-        if not attribute.verification_steps:
-            protocol_gaps.append("AttributeResult missing verification_steps.")
-        if not attribute.patch_direction:
-            protocol_gaps.append("AttributeResult missing patch_direction.")
-        if judge and judge.verdict in {"incorrect", "uncertain"}:
-            if not attribute.analysis_method:
-                protocol_gaps.append("Failure attribution missing analysis_method; source of attribution is unclear.")
-            if not attribute.chain_nodes:
-                protocol_gaps.append("Failure attribution missing chain_nodes; executable/documented path was not walked.")
-            if not attribute.earliest_divergence and not attribute.incomplete_reason:
-                protocol_gaps.append("Failure attribution missing earliest_divergence or explicit incomplete_reason.")
-            if not attribute.analysis_quality:
-                protocol_gaps.append("Failure attribution missing analysis_quality gate.")
-            elif attribute.analysis_quality.get("passed") is False and not attribute.incomplete_reason:
-                protocol_gaps.append("Failure attribution quality gate failed but incomplete_reason is missing.")
-            if not attribute.evidence_coverage:
-                protocol_gaps.append("Failure attribution missing evidence_coverage for current-case grounding.")
-            if attribute.analysis_quality.get("passed") is True and attribute.suspected_locations:
-                has_location_evidence = bool(attribute.evidence_coverage.get("code_or_config") or attribute_probe_evidence(attribute))
-                if not has_location_evidence:
-                    protocol_gaps.append("Failure attribution passed quality gate with suspected_locations but no code/config or local verification evidence.")
-        causal_category = attribute_causal_category(attribute)
+        if not attribute.suspected_locations and not attribute.root_cause_hypothesis:
+            protocol_gaps.append("Failure attribution missing suspected_locations or root_cause_hypothesis.")
+        if judge and (judge.overall_fulfillment or {}).get("status") in {"not_fulfilled", "not_evaluable"}:
+            if not attribute.expectation_attributions:
+                protocol_gaps.append("Failure attribution missing expectation_attributions for non-fulfilled JudgeResult.")
         consistency_gaps.extend(_attribute_consistency_gaps(trace, judge, attribute))
-    elif judge and judge.verdict in {"incorrect", "uncertain"}:
+    elif judge and (judge.overall_fulfillment or {}).get("status") in {"not_fulfilled", "not_evaluable"}:
         protocol_gaps.append("JudgeResult requires attribution, but AttributeResult is missing.")
 
     if cluster:
@@ -831,7 +722,6 @@ def check_chain(
         protocol_gaps.append("Non-trivial shared protocol or user-visible behavior changes require user confirmation: " + ", ".join(category_report.get("confirmation_items") or []))
 
     if check_rules:
-        taxonomy = _attribute_taxonomy(spec)
         scenario = trace.scenario if trace else ""
         normalized = trace_normalized_request(trace) if trace else {}
         reference_contract = trace.reference_contract if trace else {}
@@ -849,11 +739,6 @@ def check_chain(
                 protocol_gaps.append(f"{spec.project_id} {scenario} requires input.{input_field}.")
             if data_quality_flag and data_quality_flag not in list(normalized.get("data_quality_flags") or []):
                 protocol_gaps.append(f"{spec.project_id} {scenario} must be marked with normalized_request.data_quality_flags.{data_quality_flag}.")
-        if attribute and taxonomy:
-            causal_category = attribute_causal_category(attribute)
-            allowed_protocol_categories = {"no_issue"}
-            if causal_category and causal_category not in taxonomy and causal_category not in allowed_protocol_categories:
-                protocol_gaps.append(f"{spec.project_id} attribution causal_category outside taxonomy: " + causal_category)
 
     if boundary_violations:
         recommended_fixes.append("Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions.")

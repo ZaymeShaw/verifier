@@ -1,0 +1,333 @@
+{
+  "project": "marketting-planning-intent",
+  "attributes": [
+    {
+      "trace_id": "dccca497-d9f6-430c-a9b5-47e8a11d94a4",
+      "project_id": "marketting-planning-intent",
+      "case_id": "",
+      "expectation_attributions": [
+        {
+          "expectation_id": "意图标签准确性",
+          "causal_category": "implementation_bug"
+        },
+        {
+          "expectation_id": "置信度达标",
+          "causal_category": "implementation_bug"
+        },
+        {
+          "expectation_id": "关键实体提取",
+          "causal_category": "implementation_bug"
+        },
+        {
+          "expectation_id": "intent_contract",
+          "causal_category": "implementation_bug"
+        }
+      ],
+      "causal_category": "implementation_bug",
+      "earliest_divergence": {
+        "node": "intent_contract_gate",
+        "expected": {
+          "intent": "customer_insight",
+          "confidence": 0.8,
+          "target_value": "重疾险",
+          "path_types": [
+            "客户画像",
+            "上季度"
+          ],
+          "subIntent": "客户画像分析"
+        },
+        "actual": {
+          "intent": "other",
+          "confidence": 0.5,
+          "subIntent": "其他意图"
+        },
+        "evidence": [
+          [
+            {
+              "kind": "missing",
+              "error_type": "",
+              "expected": "customer_insight 或类似客户分析意图",
+              "actual": "other",
+              "evidence_ref": "",
+              "raw": {
+                "item": "correct_intent_label",
+                "expected": "customer_insight 或类似客户分析意图",
+                "actual": "other"
+              },
+              "incomplete": false
+            },
+            {
+              "kind": "missing",
+              "error_type": "",
+              "expected": ">=0.7",
+              "actual": "0.5",
+              "evidence_ref": "",
+              "raw": {
+                "item": "sufficient_confidence",
+                "expected": ">=0.7",
+                "actual": "0.5"
+              },
+              "incomplete": false
+            },
+            {
+              "kind": "missing",
+              "error_type": "",
+              "expected": "重疾险、上季度",
+              "actual": "null",
+              "evidence_ref": "",
+              "raw": {
+                "item": "extracted_entities",
+                "expected": "重疾险、上季度",
+                "actual": "null"
+              },
+              "incomplete": false
+            }
+          ]
+        ],
+        "confidence": "medium"
+      },
+      "chain_nodes": [
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "verified"
+        },
+        {
+          "status": "failed",
+          "evidence": [
+            {
+              "query": "帮我看看上季度买了重疾险的客户都是啥样的？"
+            },
+            {
+              "expected": {
+                "intent": "customer_insight",
+                "confidence": 0.8,
+                "target_value": "重疾险",
+                "path_types": [
+                  "客户画像",
+                  "上季度"
+                ],
+                "subIntent": "客户画像分析"
+              }
+            },
+            {
+              "actual": {
+                "intent": "other",
+                "confidence": 0.5,
+                "subIntent": "其他意图"
+              }
+            },
+            {
+              "missing": [
+                {
+                  "kind": "missing",
+                  "error_type": "",
+                  "expected": "customer_insight 或类似客户分析意图",
+                  "actual": "other",
+                  "evidence_ref": "",
+                  "raw": {
+                    "item": "correct_intent_label",
+                    "expected": "customer_insight 或类似客户分析意图",
+                    "actual": "other"
+                  },
+                  "incomplete": false
+                },
+                {
+                  "kind": "missing",
+                  "error_type": "",
+                  "expected": ">=0.7",
+                  "actual": "0.5",
+                  "evidence_ref": "",
+                  "raw": {
+                    "item": "sufficient_confidence",
+                    "expected": ">=0.7",
+                    "actual": "0.5"
+                  },
+                  "incomplete": false
+                },
+                {
+                  "kind": "missing",
+                  "error_type": "",
+                  "expected": "重疾险、上季度",
+                  "actual": "null",
+                  "evidence_ref": "",
+                  "raw": {
+                    "item": "extracted_entities",
+                    "expected": "重疾险、上季度",
+                    "actual": "null"
+                  },
+                  "incomplete": false
+                }
+              ],
+              "wrong": [
+                {
+                  "kind": "wrong",
+                  "error_type": "",
+                  "expected": "customer_insight",
+                  "actual": "other",
+                  "evidence_ref": "",
+                  "raw": {
+                    "item": "intent_label",
+                    "expected": "customer_insight",
+                    "actual": "other",
+                    "why_wrong": "未能匹配查询的客户分析语义"
+                  },
+                  "incomplete": false
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "probe_results": [
+        {
+          "probe_id": "",
+          "status": "not_verified"
+        },
+        {
+          "probe_id": "",
+          "status": "not_verified"
+        },
+        {
+          "probe_id": "",
+          "status": "not_verified"
+        },
+        {
+          "probe_id": "",
+          "status": "not_verified"
+        },
+        {
+          "probe_id": "",
+          "status": "not_verified"
+        }
+      ],
+      "evidence_coverage": {
+        "query": true,
+        "actual": true,
+        "expected": true,
+        "execution_trace": true
+      },
+      "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': 'customer_insight', 'confidence': 0.8, 'target_value': '重疾险', 'path_types': ['客户画像', '上季度'], 'subIntent': '客户画像分析'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "verification_steps": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ],
+      "patch_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "needs_human_review": false,
+      "scenario": "单轮意图识别：用户使用口语化表达“都是啥样的”查询客户特征，系统因正则覆盖不足和 LLM prompt 定义过窄将查询误分类为 other",
+      "summary": {
+        "causal_category": "needs_human_review",
+        "attribution_count": 4,
+        "probe_count": 5,
+        "summary_text": "意图识别模块存在双层缺陷：（1）规则层：_HOMEPAGE_RULES 中 customer_portrait 的正则关键词（画像/分布/结构/分层）偏正式，无法覆盖口语化表达“都是啥样的”，导致规则路径全部漏过；（2）LLM 层：INTENT_RECOGNITION_PROMPT 中 customer_portrait 仅被定义为“customer distribution”，语义覆盖过窄且缺少口语化 few-shot，导致 LLM 无法将“客户都是啥样的”映射到 customer_portrait。两条路径均失效后，系统触发硬编码兜底 IntentType.other（confidence=0.5），造成意图标签错误、置信度不达标、实体缺失三项契约失败。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      },
+      "analysis_method": "current_case_intent_contract_trace",
+      "analysis_quality": {
+        "passed": false,
+        "status": "next_verification_step",
+        "missing": [
+          "supported root-cause evidence",
+          "intent_recognition_internal_evidence"
+        ]
+      },
+      "incomplete_reason": "判定结果为 incorrect；关键差异字段：['intent', 'confidence', 'target_value']；attribute agent 未能获取足够的源码/配置证据来支撑正式根因定位。；建议：检查 source_file_catalog 是否包含相关 prompt 文件和 adapter 源码。。",
+      "quality_flags": [
+        "intent_misclassification_due_to_regex_gap",
+        "intent_misclassification_due_to_prompt_narrow_definition",
+        "llm_fallback_default_confidence_too_low",
+        "entity_schema_only_covers_nbev_domain",
+        "ungrounded_root_cause"
+      ],
+      "tool_call_log": [
+        {
+          "tool_name": "search_source_file",
+          "tool_call_id": "call_00_Zg7Phe76Re9u1pdM5dvG3269",
+          "arguments": {
+            "file_key": "ext_repo:app/workflow/steps:intent_recognition.py"
+          },
+          "result": "File 'ext_repo:app/workflow/steps:intent_recognition.py' not found in catalog"
+        },
+        {
+          "tool_name": "search_source_file",
+          "tool_call_id": "call_01_HGYg8f3t0CVIQf0TDJTm4412",
+          "arguments": {
+            "file_key": "ext_repo:app/workflow/prompts:intent_prompt.py"
+          },
+          "result": "File 'ext_repo:app/workflow/prompts:intent_prompt.py' not found in catalog"
+        },
+        {
+          "tool_name": "search_source_file",
+          "tool_call_id": "call_02_udyQlKXRAphfMQ7P68HR0219",
+          "arguments": {
+            "file_key": "ext_repo:app/schemas:intent.py"
+          },
+          "result": "File 'ext_repo:app/schemas:intent.py' not found in catalog"
+        },
+        {
+          "tool_name": "search_source_file",
+          "tool_call_id": "call_00_51x89d1e5HfkMp6x0cBk7869",
+          "arguments": {
+            "file_key": "config:ext_repo:app/workflow/steps/intent_recognition.py"
+          },
+          "result": "\"\"\"Step1: intent recognition.\"\"\"\n\nimport logging\nimport re\nfrom typing import Optional\n\nfrom agno.agent import Agent\nfrom agno.models.openai import OpenAILike\n\nfrom app.config import settings\nfrom app.schemas.intent import IntentResult, IntentType\nfrom app.schemas.request import ContextItem\nfrom app.workflow.path_types import extract_path_types_from_text, extract_target_value_from_text\nfrom app.workflow.prompts.intent_prompt import INTENT_RECOGNITION_PROMPT\n\nlogger = logging.getLogger(__name__)\n\n\ndef _build_model() -> OpenAILike:\n    \"\"\"Build DashScope compatible model instance.\"\"\"\n    return OpenAILike(\n        id=settings.MODEL_ID,\n        api_key=settings.DASHSCOPE_API_KEY,\n        base_url=settings.DASHSCOPE_BASE_URL,\n    )\n\n\n# ---------------------------------------------------------------------------\n# Homepage sample phrases — matched by regex before any LLM call.\n# Each entry is (compiled_regex, IntentType).\n#\n# Ordering matters: customer_portrait rules MUST precede team_portrait so that\n# \"我们团队的客户是怎么分布的\" matches customer, not team.\n# ---------------------------------------------------------------------------\n_HOMEPAGE_RULES: list[tuple[re.Pattern, IntentType]] = [\n    # --- NBEV Planning ---\n    (re.compile(r\"怎么达成.*NBEV.*目标\", re.IGNORECASE), IntentType.nbev_planning),\n    # --- Customer Portrait (before team_portrait) ---\n    (re.compile(r\"客户.*(?:画像|分布|结构|分层)\"), IntentType.customer_portrait),\n    (re.compile(r\"客群.*(?:画像|分布|结构)\"), IntentType.customer_portrait),\n    (re.compile(r\"(?:客温|客价).*(?:分布|画像)\"), IntentType.customer_portrait),\n    # --- Team Portrait ---\n    (re.compile(r\"(?:队伍|团队).*(?:画像|分布|结构|分层|人力)\"), IntentType.team_portrait),\n    (re.compile(r\"人力.*(?:画像|分布|结构)\"), IntentType.team_portrait),\n]\n\n\ndef try_homepage_intent(user_message: str) -> Optional[IntentResult]:\n    \"\"\"Match homepage sample phrases only (Tier 0).\n\n    When matched, the result is *final* — callers should return it\n    directly without LLM supplementation.\n    \"\"\"\n    normalized_message = re.sub(r\"\\s+\", \"\", user_message)\n    for pattern, intent_type in _HOMEPAGE_RULES:\n        if pattern.search(normalized_message):\n            logger.info(\"rule intent matched homepage phrase intent=%s\", intent_type.value)\n            return IntentResult(\n                intent=intent_type,\n                confidence=1.0,\n                target_value=None,\n                path_types=None,\n            )\n    return None\n\n\ndef try_rule_based_intent(\n    user_message: str,\n    contexts: Optional[list[ContextItem]] = None,\n) -> Optional[IntentResult]:\n    \"\"\"Recognize standard NBEV planning messages without calling the LLM.\"\"\"\n    normalized_message = re.sub(r\"\\s+\", \"\", user_message)\n    has_completed_planning_context = _has_completed_planning_context(contexts)\n\n    # --- Tier 1: adjustment intents after a completed NBEV planning round ---\n    if has_completed_planning_context and _is_target_adjustment_message(normalized_message):\n        return IntentResult(\n            intent=IntentType.target_value_adjustment,\n            confidence=1.0,\n            target_value=_extract_target_value_from_contexts(contexts),\n            path_types=None,\n        )\n\n    adjusted_paths = extract_path_types_from_text(user_message) or _extract_path_types_by_keywords(normalized_message)\n    if has_completed_planning_context and adjusted_paths and _is_measurement_adjustment_message(normalized_message):\n        return IntentResult(\n            intent=IntentType.achievement_measurement_adjustment,\n            confidence=1.0,\n            target_value=_extract_target_value_from_contexts(contexts),\n            path_types=adjusted_paths,\n        )\n\n    if has_completed_planning_context and _is_planning_fallback_message(normalized_message):\n        return IntentResult(\n            intent=IntentType.nbev_planning_fallback,\n            confidence=0.95,\n            target_value=_extract_target_value_from_contexts(contexts),\n            path_types=adjusted_paths,\n        )\n\n    # --- Tier 0: homepage sample phrases ---\n    homepage_result = try_homepage_intent(user_message)\n    if homepage_result:\n        return homepage_result\n\n    # --- Tier 2: structured extraction (target_value / path_types) ---\n    target_value = extract_target_value_from_text(user_message)\n    path_types = extract_path_types_from_text(user_message)\n\n    if target_value is not None or path_types is not None:\n        result = IntentResult(\n            intent=IntentType.nbev_planning,\n            confidence=1.0,\n            target_value=target_value,\n            path_types=path_types,\n        )\n        logger.info(\n            \"rule intent matched target_value=%s path_types=%s\",\n            result.target_value,\n            result.path_types,\n        )\n        return result\n\n    # --- Tier 3: keyword heuristic (NBEV + planning keyword) ---\n    has_nbev = \"NBEV\" in normalized_message.upper()\n    has_planning_intent = any(keyword in normalized_message for keyword in (\"达成\", \"规划\", \"路径\", \"测算\", \"分析\"))\n    if has_nbev and has_planning_intent:\n        logger.info(\"rule intent matched generic nbev planning message\")\n        return IntentResult(\n            intent=IntentType.nbev_planning,\n            confidence=0.95,\n            target_value=None,\n            path_types=None,\n        )\n\n    logger.info(\"rule intent not matched\")\n    return None\n\n\ntry_shortcut_intent = try_rule_based_intent\n\n\ndef _contexts_text(contexts: Optional[list[ContextItem]]) -> str:\n    parts: list[str] = []\n    for ctx in contexts or []:\n        if ctx.query:\n            parts.append(ctx.query)\n        if ctx.answer:\n            parts.append(ctx.answer)\n    return \"\\n\".join(parts)\n\n\ndef _has_completed_planning_context(contexts: Optional[list[ContextItem]]) -> bool:\n    text = _contexts_text(contexts)\n    if not text:\n        return False\n    markers = (\n        \"NEXT_STEP_CARD\",\n        \"TEAM_REACH_MEASUREMENT\",\n        \"CUSTOMER_REACH_MEASUREMEN\",\n        \"PRODUCT_REACH_MEASUREMENT\",\n        \"达成路径\",\n        \"达成测算\",\n        \"路径规划\",\n    )\n    return any(marker in text for marker in markers)\n\n\ndef _extract_target_value_from_contexts(contexts: Optional[list[ContextItem]]) -> Optional[str]:\n    text = _contexts_text(contexts)\n    for pattern in (\n        r'\"targetNbev\"\\s*:\\s*(\\d+(?:\\.\\d+)?)',\n        r'\"target_nbev\"\\s*:\\s*(\\d+(?:\\.\\d+)?)',\n        r'\"target_value\"\\s*:\\s*\"?(\\d+(?:\\.\\d+)?)\"?',\n        r\"目标值?[^\\d]*(\\d+(?:\\.\\d+)?)\\s*万\",\n        r\"NBEV目标[^\\d]*(\\d+(?:\\.\\d+)?)\\s*万\",\n    ):\n        match = re.search(pattern, text, re.IGNORECASE)\n        if match:\n            return match.group(1)\n    return extract_target_value_from_text(text)\n\n\ndef _is_target_adjustment_message(normalized_message: str) -> bool:\n    return any(\n        keyword in normalized_message\n        for keyword in (\"调整目标\", \"修改目标\", \"重设目标\", \"重新设置目标\", \"换个目标\")\n    )\n\n\ndef _extract_path_types_by_keywords(normalized_message: str) -> Optional[list[str]]:\n    paths: list[str] = []\n    if \"队伍\" in normalized_message or \"团队\" in normalized_message:\n        paths.append(\"队伍\")\n    if \"客户\" in normalized_message:\n        paths.append(\"客户\")\n    if \"产品\" in normalized_message:\n        paths.append(\"产品\")\n    return paths or None\n\n\ndef _is_measurement_adjustment_message(normalized_message: str) -> bool:\n    return any(keyword in normalized_message for keyword in (\"重新测算\", \"重新规划\", \"规划\", \"测算\")) and any(\n        path in normalized_message for path in (\"队伍\", \"团队\", \"客户\", \"产品\")\n    )\n\n\ndef _is_planning_fallback_message(normalized_message: str) -> bool:\n    if not any(keyword in normalized_message for keyword in (\"调整\", \"修改\", \"改\", \"AI研判\", \"研判\", \"分析结果\", \"达成路径\", \"测算\")):\n        return False\n    return any(keyword in normalized_message for keyword in (\"NBEV\", \"目标\", \"路径\", \"测算\", \"队伍\", \"团队\", \"客户\", \"产品\", \"分布\", \"研判\"))\n\n\nasync def recognize_intent(\n    user_message: str,\n    contexts: Optional[list[ContextItem]] = None,\n) -> IntentResult:\n    \"\"\"Call LLM Agent for intent recognition.\"\"\"\n    context_str = \"\"\n    if contexts:\n        context_parts = []\n        for ctx in contexts:\n            if ctx.query:\n                context_parts.append(f\"用户: {ctx.query}\")\n            if ctx.answer:\n                context_parts.append(f\"助手: {ctx.answer}\")\n        if context_parts:\n            context_str = \"\\n\\n## 对话上下文\\n\" + \"\\n\".join(context_parts)\n\n    agent = Agent(\n        name=\"IntentRecognizer\",\n        model=_build_model(),\n        instructions=INTENT_RECOGNITION_PROMPT,\n        output_schema=IntentResult,\n        markdown=False,\n        telemetry=False,\n    )\n\n    prompt = f\"用户消息：{user_message}{context_str}\"\n    logger.info(\"llm intent recognition started context_count=%s\", len(contexts or []))\n    response = await agent.arun(prompt)\n\n    if response and response.content and isinstance(response.content, IntentResult):\n        logger.info(\n            \"llm intent recognition finished intent=%s confidence=%s\",\n            response.content.intent,\n            response.content.confidence,\n        )\n        return response.content\n\n    logger.warning(\"llm intent recognition returned empty content, fallback to other\")\n    return IntentResult(intent=IntentType.other, confidence=0.5)\n"
+        },
+        {
+          "tool_name": "search_source_file",
+          "tool_call_id": "call_01_DUoePs0mAac3zVNeqKJX8386",
+          "arguments": {
+            "file_key": "config:ext_repo:app/workflow/prompts/intent_prompt.py"
+          },
+          "result": "\"\"\"意图识别 Agent 的 system prompt\"\"\"\n\nINTENT_RECOGNITION_PROMPT = \"\"\"你是平安寿险智能助手的意图识别模块。你需要根据用户的提问内容和对话上下文，判断用户的意图类型。\n\n## 意图分类\n\n一共有四种意图，请严格按照以下分类判断：\n\n1. **team_portrait**（队伍画像分析）：用户想了解队伍的人力结构、人力分布、职级分布、队伍画像等信息。\n   - 示例：\"帮我看看队伍画像\"、\"队伍人力分布情况\"、\"当前队伍结构怎样\"\n\n2. **customer_portrait**（客户画像分析）：用户想了解客户的分布、画像、客温客价等信息。\n   - 示例：\"分析一下客户画像\"、\"客户分布情况\"、\"看看客户结构\"\n\n3. **nbev_planning**（NBEV达成路径规划分析）：用户想进行NBEV达成路径的规划、测算或分析，包括从队伍、客户、产品维度分析如何达成NBEV目标。\n   - 示例：\"帮我做NBEV达成规划\"、\"分析一下达成路径\"、\"NBEV目标怎么达成\"、\"帮我做规划分析\"、\"达成路径测算\"\n   - 注意：当用户提供了\"NBEV目标值是xxx万\"或\"规划路径：xxx\"等信息时，也属于此意图。\n\n4. **other**（其他意图）：不属于以上三种意图的其他问题。\n   - 示例：\"今天天气怎样\"、\"帮我写一份报告\"\n\n## 字段提取\n\n当判断意图为 nbev_planning 时，请尝试从用户消息中提取以下字段（如果存在）：\n- target_value：NBEV目标值，单位为\"万\"，只提取数字部分，如用户说\"300万\"则提取\"300\"\n- path_types：达成路径类型，可选值为\"队伍\"、\"客户\"、\"产品\"，提取为列表\n\n### target_value 提取规则\n\n只要用户表达的是 NBEV 目标值，就应尽量提取 target_value，不要因为口语化修饰词而漏提。以下表达都应提取为 target_value=\"300\"：\n\n- \"NBEV目标300万\"\n- \"NBEV目标值是300万\"\n- \"NBEV的目标是300万\"\n- \"NBEV的目标大概300万\"\n- \"NBEV目标约300万\"\n- \"NBEV目标300万左右\"\n- \"目标300万，规划路径：队伍、客户\"\n\n请注意：\n- \"大概\"、\"约\"、\"大约\"、\"差不多\"、\"左右\"、\"预计\"、\"先按\" 这类词不会改变 target_value 的数值提取\n- 即使句子里同时出现路径信息，也要继续提取 target_value，不要因为已经识别出 path_types 就忽略目标值\n- 如果用户明确给出了数字和\"万\"这个单位，优先提取该数字作为 target_value\n- 如果用户没有表达目标值，才返回 null\n\n### path_types 提取规则\n\n- 如果用户提到\"规划路径：队伍、客户\"、\"从队伍和客户两个维度分析\"、\"看队伍、客户路径\"，都应提取为 [\"队伍\", \"客户\"]\n- 只提取实际出现的路径类型，不要臆造未出现的路径\n\n## 注意事项\n\n- 请结合对话上下文进行判断，不要只看当前消息\n- 如果用户的意图不明确，倾向于判断为 other\n- confidence 表示你对判断的确信程度，0-1之间\n- 当意图判断为 nbev_planning 时，应优先完整提取 target_value 和 path_types，避免遗漏必填字段\n- 请严格按照json格式输出\n\n## 新增调整意图\n\n除原有意图外，还需要识别以下NBEV达成路径规划调整类意图：\n\n5. **target_value_adjustment**（目标值调整）：已经完成NBEV目标值达成测算后，用户希望修改目标值并重新测算。示例：\"我要调整目标\"、\"调整目标值\"、\"把目标值改成500万重新测算\"。\n\n6. **achievement_measurement_adjustment**（达成测算调整）：用户已经完成某些路径的达成测算后，想重新测算新的路径。示例：\"规划产品达成路径\"、\"重新测算客户路径\"、\"再看队伍达成路径\"。\n\n7. **nbev_planning_fallback**（NBEV规划兜底）：仍属于NBEV目标值达成路径规划调整范畴，但当前智能体暂不支持的相关能力，例如直接修改达成路径测算中的各种数值、AI研判分析结果等。注意：兜底意图仍属于NBEV目标值达成路径规划范畴；完全超出该范畴的问题才归为 other。\n\"\"\"\n"
+        },
+        {
+          "tool_name": "search_source_file",
+          "tool_call_id": "call_02_wXYXdcdmwCFJOpNQuwnm5074",
+          "arguments": {
+            "file_key": "config:ext_repo:app/schemas/intent.py"
+          },
+          "result": "from enum import Enum\nfrom typing import Optional\n\nfrom pydantic import BaseModel, Field\n\n\nclass IntentType(str, Enum):\n    \"\"\"意图类型枚举\"\"\"\n    team_portrait = \"team_portrait\"           # 队伍画像（分布）分析\n    customer_portrait = \"customer_portrait\"   # 客户画像（分布）分析\n    nbev_planning = \"nbev_planning\"           # NBEV达成路径规划分析\n    target_value_adjustment = \"target_value_adjustment\"  # NBEV目标值调整\n    achievement_measurement_adjustment = \"achievement_measurement_adjustment\"  # 达成测算路径调整\n    nbev_planning_fallback = \"nbev_planning_fallback\"  # NBEV达成路径规划范围内的未支持意图\n    other = \"other\"                           # 其他意图\n\n\nclass IntentResult(BaseModel):\n    \"\"\"意图识别结果 - 作为 Agent 的 output_schema\"\"\"\n    intent: IntentType = Field(description=\"识别出的意图类型\")\n    confidence: float = Field(description=\"意图置信度, 0-1之间\")\n    target_value: Optional[str] = Field(\n        default=None,\n        description=\"从用户消息中提取的NBEV目标值(万), 如 '300'\",\n    )\n    path_types: Optional[list[str]] = Field(\n        default=None,\n        description=\"从用户消息中提取的达成路径类型列表, 如 ['队伍', '客户', '产品']\",\n    )\n\n\nclass FieldExtractionResult(BaseModel):\n    \"\"\"字段提取结果 - 作为字段澄清 Agent 的 output_schema\"\"\"\n    target_value: Optional[str] = Field(\n        default=None,\n        description=\"NBEV目标值(万), 如 '300'\",\n    )\n    path_types: Optional[list[str]] = Field(\n        default=None,\n        description=\"达成路径类型列表, 可选值: 队伍、客户、产品\",\n    )\n"
+        },
+        {
+          "tool_name": "search_source_file",
+          "tool_call_id": "call_00_rdh1b9u7FoE0f9fDOIe89076",
+          "arguments": {
+            "file_key": "config:ext_repo:app/config.py"
+          },
+          "result": "Tool call limit reached. Tool call search_source_file not executed. Don't try to execute it again."
+        },
+        {
+          "tool_name": "search_source_file",
+          "tool_call_id": "call_01_0bpQD1gPlwOMT4zWsBLJ9393",
+          "arguments": {
+            "file_key": "config:ext_repo:app/utils/llm_client.py"
+          },
+          "result": "Tool call limit reached. Tool call search_source_file not executed. Don't try to execute it again."
+        },
+        {
+          "tool_name": "search_source_file",
+          "tool_call_id": "call_00_7My3T86VHjRsbKPvjR0g7883",
+          "arguments": {
+            "file_key": "config:ext_repo:app/config.py"
+          },
+          "result": "Tool call limit reached. Tool call search_source_file not executed. Don't try to execute it again."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,259 @@
+{
+  "trace_id": "f3dc2a68-687c-428a-915a-713391364c2e",
+  "project_id": "marketting-planning",
+  "verdict": "uncertain",
+  "business_expectations": [
+    {
+      "expectation_id": "意图准确识别为规划相关",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "阶段正确路由至规划或澄清",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "提取业务指标与时间范围",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "捕获分解维度—理财师与产品方案",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "SSE事件流正确完成",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图准确识别为规划相关",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "阶段正确路由至规划或澄清",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "提取业务指标与时间范围",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "捕获分解维度—理财师与产品方案",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "SSE事件流正确完成",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "blocking_gaps": [
+      "意图识别为“其他意图”，未进入正确阶段",
+      "未提取业务指标NBEV和时间范围“今年”",
+      "未捕获用户提出的分解维度（理财师、产品方案）"
+    ],
+    "assessment_count": 5
+  },
+  "expected": {
+    "turns": [
+      {
+        "code": 0,
+        "end_flag": 1,
+        "extra_output_params": {
+          "card_result": {
+            "event": "card_end",
+            "extensions": {
+              "session_id": "eval-mock-agent-marketting-planning-d1642b58",
+              "trace_id": "mock-agent-marketting-planning-d1642b58"
+            },
+            "sse_id": "mock-agent-marketting-planning-d1642b58:card_end"
+          },
+          "intent": "<规划/澄清相关意图编号>",
+          "intent_name": "<规划/澄清相关意图名称>"
+        },
+        "msg": "success",
+        "robot_text": "卡片生成完成",
+        "turn_index": 0
+      }
+    ]
+  },
+  "reasoning_summary": "用户明确表达了基于NBEV目标差距的方案规划意图，包含业务指标、时间范围和具体分解维度，系统却将其识别为“其他意图”，并未进入规划或澄清阶段。虽然SSE流程正常结束，但核心意图识别失败，导致后续所有业务期望（指标提取、维度捕获、阶段路由）均未满足。因此整体评估为未满足。",
+  "judge_basis": "基于运行轨迹中意图识别结果与用户语义的对比。",
+  "judge_method": "语义比对与关键维度逐项核查",
+  "verdict_derivation": {
+    "reason": "意图识别错误导致后续所有规划相关期望无法满足，SSE完成本身符合预期但整体业务目标未达成。"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "expected": "规划或澄清相关意图编号",
+      "actual": "4001 其他意图",
+      "evidence_ref": "",
+      "raw": {
+        "description": "缺失正确的意图标识",
+        "expected": "规划或澄清相关意图编号",
+        "actual": "4001 其他意图"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "expected": "包含NBEV、今年的处理或询问",
+      "actual": "无相关信息",
+      "evidence_ref": "",
+      "raw": {
+        "description": "缺失对业务指标和时间的响应",
+        "expected": "包含NBEV、今年的处理或询问",
+        "actual": "无相关信息"
+      },
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "expected": "规划/澄清类意图",
+      "actual": "4001 其他意图",
+      "evidence_ref": "",
+      "raw": {
+        "description": "意图识别错误",
+        "expected": "规划/澄清类意图",
+        "actual": "4001 其他意图"
+      },
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "field": "intent",
+      "value": "4001",
+      "source": "extracted_output.turns[0].extra_output_params"
+    }
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true
+  },
+  "evaluation_boundary": {
+    "allow_fallback": false,
+    "dependency_status": "available",
+    "fallback_used": false,
+    "judge_scope": "system_responsibility_with_declared_external_boundary"
+  },
+  "consumer_contract": {
+    "expected_stage": "intent_recognition",
+    "required_path_types": [
+      "planning",
+      "clarification"
+    ],
+    "forbidden_path_types": [
+      "unknown",
+      "fallback"
+    ]
+  },
+  "intent_model": {
+    "primary_intent": "营销规划-目标差距方案补全",
+    "required_slots": [
+      "business_metric",
+      "target_value",
+      "time_range",
+      "decomposition_dimensions"
+    ],
+    "fallback_policy": "仅当无法理解才使用“其他意图”"
+  },
+  "reconstructed_intent": "用户希望实现今年NBEV目标差距，通过增加理财师或优化产品方案来弥补。",
+  "semantic_equivalence_checks": [
+    {
+      "dimension": "business_metric",
+      "expected_match": "NBEV",
+      "actual_match": "未出现"
+    },
+    {
+      "dimension": "decomposition_dimensions",
+      "expected_match": "理财师, 产品方案",
+      "actual_match": "无"
+    }
+  ],
+  "reference_generation_basis": {
+    "source": "用户问题与预期系统行为",
+    "method": "从意图关键维度反推正确意图标识与阶段"
+  },
+  "scenario": "intent_recognition",
+  "needs_human_review": true,
+  "quality_flags": [
+    "intent_misclassification",
+    "missing_slot_extraction",
+    "blocking_expectation_failure",
+    "invalid_actual_shape"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[(none)] · 用户明确表达了基于NBEV目标差距的方案规划意图，包含业务指标、时间范围和具体分解维度，系统却将其识别为“其他意图”，并未进入规划或澄清阶段。虽然SSE流程正常结束，但核心意图识别失败，导致后续所有业务期望（指标提取、维度捕获、阶段路由）均未满足。因此整体评估为未满足。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "意图准确识别为规划相关",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户明确表达了基于NBEV目标差距的方案规划意图，包含业务指标、时间范围和具体分解维度，系统却将其识别为“其他意图”，并未进入规划或澄清阶段。虽然SSE流程正常结束，但核心意图识别失败，导致后续所有业务期望（指标提取、维度捕获、阶段路由）均未满足。因此整体评估为未满足。"
+      },
+      {
+        "expectation_id": "捕获分解维度—理财师与产品方案",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户明确表达了基于NBEV目标差距的方案规划意图，包含业务指标、时间范围和具体分解维度，系统却将其识别为“其他意图”，并未进入规划或澄清阶段。虽然SSE流程正常结束，但核心意图识别失败，导致后续所有业务期望（指标提取、维度捕获、阶段路由）均未满足。因此整体评估为未满足。"
+      },
+      {
+        "expectation_id": "提取业务指标与时间范围",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户明确表达了基于NBEV目标差距的方案规划意图，包含业务指标、时间范围和具体分解维度，系统却将其识别为“其他意图”，并未进入规划或澄清阶段。虽然SSE流程正常结束，但核心意图识别失败，导致后续所有业务期望（指标提取、维度捕获、阶段路由）均未满足。因此整体评估为未满足。"
+      },
+      {
+        "expectation_id": "阶段正确路由至规划或澄清",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户明确表达了基于NBEV目标差距的方案规划意图，包含业务指标、时间范围和具体分解维度，系统却将其识别为“其他意图”，并未进入规划或澄清阶段。虽然SSE流程正常结束，但核心意图识别失败，导致后续所有业务期望（指标提取、维度捕获、阶段路由）均未满足。因此整体评估为未满足。"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

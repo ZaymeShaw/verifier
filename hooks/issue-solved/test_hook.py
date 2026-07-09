@@ -34,6 +34,9 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, List
 
+# This file is a standalone hook harness (see usage above), not a pytest module.
+__test__ = False
+
 # ---------- paths ----------
 HOOK_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = HOOK_DIR.parent.parent  # verifier/

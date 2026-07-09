@@ -1,0 +1,52 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::answer_incomplete::not_evaluable",
+      "mechanism": "answer_incomplete::not_evaluable",
+      "causal_category": "answer_incomplete",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "其他轻症赔付重要注意事项"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "d094d70f-939f-49cf-86ff-69d76e5bea0e"
+      ],
+      "representative_traces": [
+        "d094d70f-939f-49cf-86ff-69d76e5bea0e"
+      ],
+      "common_root_cause": "mock_agent_llm 在生成回答时采用了简洁风格，优先满足用户直接询问的'轻症能否多次赔付'和'每次赔付金额比例'两个核心问题。对于 gold reference 中属于'其他轻症赔付重要注意事项'范畴的辅助信息（间隔期具体时长如90天或180天、轻症分组限制规则、赔付后合同继续有效、累计赔付上限、重疾保额影响），LLM 未做展开说明。所有管线节点（normalize、read、extract_output、schema validation）均成功执行，adapter.py 的 extract_output 方法仅做透传无截断，排除系统管线异常。根因属于生成模型的简洁偏好导致的 answer_incomplete，而非系统缺陷或管线故障。",
+      "shared_failure_pattern": "mock_agent_llm 在生成回答时采用了简洁风格，优先满足用户直接询问的'轻症能否多次赔付'和'每次赔付金额比例'两个核心问题。对于 gold reference 中属于'其他轻症赔付重要注意事项'范畴的辅助信息（间隔期具体时长如90天或180天、轻症分组限制规则、赔付后合同继续有效、累计赔付上限、重疾保额影响），LLM 未做展开说明。所有管线节点（normalize、read、extract_output、schema validation）均成功执行，adapter.py 的 extract_output 方法仅做透传无截断，排除系统管线异常。根因属于生成模型的简洁偏好导致的 answer_incomplete，而非系统缺陷或管线故障。",
+      "representative_diffs": [
+        {
+          "case_id": "d094d70f-939f-49cf-86ff-69d76e5bea0e",
+          "node": "mock_agent_llm.content_generation",
+          "evidence": [
+            "actual_answer 含：多次赔付肯定、20%-30%比例、次数上限（3次/5次）、间隔期存在提示",
+            "actual_answer 缺失：90天/180天具体间隔期、同组轻症仅赔一次的分组限制、赔付后合同继续有效、累计赔付上限限制、重疾保额不变或减少的影响说明"
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "在 mock_agent_llm 的 system prompt 中增加完整性约束：'当存在参考回答时，你的回答应覆盖参考回答中的所有独立信息点，包括间隔期、分组限制、合同状态、累计上限、保额影响等延伸注意事项，不应仅回答用户直接询问的核心问题'",
+        "对 qa_gold_answer 场景增加后处理步骤：提取 gold reference 中的独立信息点列表，逐一检查 actual_answer 是否覆盖，对缺失项标记为 answer_incomplete 或触发补充生成"
+      ],
+      "verification_cases": [
+        "d094d70f-939f-49cf-86ff-69d76e5bea0e"
+      ],
+      "next_actions": [
+        "检查 mock_agent_llm 的 system prompt 或 generation config 中是否包含对 gold reference 信息点全覆盖的显式指令",
+        "对同类 qa_gold_answer 样本进行批量回归，统计 actual_answer 与 reference 的信息点覆盖率分布，确认是否为此 LLM 的普遍行为",
+        "如可复现，尝试在 prompt 中增加'请覆盖参考回答中所有独立信息点，包括次要细节'指令后重新生成并对比覆盖率"
+      ]
+    }
+  ],
+  "common_root_cause": "mock_agent_llm 在生成回答时采用了简洁风格，优先满足用户直接询问的'轻症能否多次赔付'和'每次赔付金额比例'两个核心问题。对于 gold reference 中属于'其他轻症赔付重要注意事项'范畴的辅助信息（间隔期具体时长如90天或180天、轻症分组限制规则、赔付后合同继续有效、累计赔付上限、重疾保额影响），LLM 未做展开说明。所有管线节点（normalize、read、extract_output、schema validation）均成功执行，adapter.py 的 extract_output 方法仅做透传无截断，排除系统管线异常。根因属于生成模型的简洁偏好导致的 answer_incomplete，而非系统缺陷或管线故障。",
+  "impact": "",
+  "priority": "normal"
+}

@@ -106,7 +106,16 @@ def main(argv=None):
         emit({"project_id": args.project, "datasets": pipeline.mock_datasets(args.project)})
     elif args.cmd == "mock-check":
         cases = load_json_arg(args.cases) if args.cases else None
-        result = pipeline.check_mock_data(project_id=args.project, data_path=args.path, cases=cases)
+        if args.project:
+            result = pipeline.check_mock_data(project_id=args.project, data_path=args.path, cases=cases)
+        else:
+            per_project = []
+            ok = True
+            for project_id in list_projects():
+                project_result = pipeline.check_mock_data(project_id=project_id, data_path=args.path, cases=cases)
+                per_project.append(project_result)
+                ok = ok and project_result.get("ok")
+            result = {"project_id": "", "data_path": args.path or "", "ok": ok, "items": per_project}
         if not args.verbose:
             for item in result.get("items") or []:
                 item.pop("details", None)
@@ -141,7 +150,7 @@ def main(argv=None):
 
 
 def _cli_check_request(project_id: str, input_data: Any) -> None:
-    """CLI 手动输入校验：输入是否符合 REQUEST_SHAPE。校验不阻断，不一致时打印警告。"""
+    """CLI 手动输入校验：输入是否符合 REQUEST_SCHEMA。校验不阻断，不一致时打印警告。"""
     import importlib
     import sys
     try:
@@ -156,7 +165,7 @@ def _cli_check_request(project_id: str, input_data: Any) -> None:
         return
     try:
         if not ls.check.request(input_data):
-            print(f"[live_schema] WARNING: CLI input does not match REQUEST_SHAPE for {project_id}", file=sys.stderr)
+            print(f"[live_schema] WARNING: CLI input does not match REQUEST_SCHEMA for {project_id}", file=sys.stderr)
     except Exception as e:
         print(f"[live_schema] WARNING: request check raised for {project_id}: {e}", file=sys.stderr)
 

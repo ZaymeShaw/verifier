@@ -1,0 +1,109 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783516553883",
+  "project_id": "marketting-planning-intent",
+  "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图标签为customer_portrait",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": ""
+    },
+    {
+      "expectation_id": "置信度不低于0.95",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": ""
+    },
+    {
+      "expectation_id": "提取到目标产品实体重疾险",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": ""
+    },
+    {
+      "expectation_id": "意图未回退到通用other",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": ""
+    }
+  ],
+  "suspected_locations": [
+    {
+      "location": "intent_contract_gate",
+      "evidence": [
+        [
+          {
+            "kind": "missing",
+            "error_type": "",
+            "evidence_ref": "",
+            "raw": {
+              "detail": "期望意图 customer_portrait，实际获得 other",
+              "expectation_id": "意图标签为customer_portrait"
+            },
+            "incomplete": false
+          },
+          {
+            "kind": "missing",
+            "error_type": "",
+            "evidence_ref": "",
+            "raw": {
+              "detail": "期望置信度 >=0.95，实际为 0.5",
+              "expectation_id": "置信度不低于0.95"
+            },
+            "incomplete": false
+          },
+          {
+            "kind": "missing",
+            "error_type": "",
+            "evidence_ref": "",
+            "raw": {
+              "detail": "期望 target_value='重疾险'，实际为 null",
+              "expectation_id": "提取到目标产品实体重疾险"
+            },
+            "incomplete": false
+          }
+        ]
+      ]
+    }
+  ],
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'confidence': 0.95, 'intent': 'customer_portrait', 'subIntent': '其他意图', 'target_value': '重疾险'}，实际 normalized intent evidence 为 {'confidence': 0.5, 'intent': 'other', 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+  "evidence": [
+    [
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": {
+          "detail": "期望意图 customer_portrait，实际获得 other",
+          "expectation_id": "意图标签为customer_portrait"
+        },
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": {
+          "detail": "期望置信度 >=0.95，实际为 0.5",
+          "expectation_id": "置信度不低于0.95"
+        },
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": {
+          "detail": "期望 target_value='重疾险'，实际为 null",
+          "expectation_id": "提取到目标产品实体重疾险"
+        },
+        "incomplete": false
+      }
+    ]
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "attribution_count": 4,
+    "probe_count": 0,
+    "summary_text": "意图识别 API 未能针对输入查询“帮我看看上季度买了重疾险的客户都是啥样的？”输出 customer_portrait 意图，raw intent 可能为空或置信度过低；adapter_extraction 提取后得到 intent=other、confidence=0.5，label_mapping 将 null 映射为 other。缺少对 customer_portrait 意图的模式匹配和实体提取逻辑，导致归因链整体失败。建议检查意图识别的 prompt 模板、 model 调用参数及 adapter 的意图映射表。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  }
+}

@@ -62,9 +62,9 @@
 </main>
 <script>
 const defaultInputs={
-  client_search:{query:'45岁女性保费10万以上'},
+  client_search:{user_text:'45岁女性保费10万以上'},
   QA:{question:'什么是犹豫期？',actual_answer:'犹豫期通常是投保人收到合同后的一段可无条件退保期限。',golden_answer:'犹豫期是投保人收到保险合同后，在规定天数内可申请解除合同并通常退还已交保费的期限。'},
-  'marketting-planning':{query:'规划NBEV增长路径',user_text:'规划NBEV增长路径'},
+  'marketting-planning':{query:'规划NBEV增长路径'},
   'marketting-planning-intent':{query:'我想提高保费规模'}
 };
 function scopedKey(key){return key+':'+project()}
@@ -80,16 +80,6 @@ function readSession(key){
 async function post(path, body){
   const res = await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const data = await res.json();
-  return data;
-}
-function liveSchemaCheckRequest(projectId, input){
-  // 前端轻量校验：调后端 /api/live_schema_check 校验 input 是否符合 REQUEST_SHAPE
-  // 此处仅做兜底提示，不阻断请求
-  try {
-    if(!input || typeof input!=='object'){return true;}
-    return true; // 实际校验在后端 _check_extracted_output_with_live_schema 等挂载点完成
-  }catch(e){return true;}
-}
   if(!res.ok || data.error){throw new Error(data.error || ('HTTP '+res.status));}
   return data;
 }
@@ -166,16 +156,30 @@ function renderConversation(trace){
     '<div class="kv"><b>停止原因：</b>'+escapeHtml(trace?.stop_reason || summary.stop_reason || '-')+'</div>'+
     '<div class="kv"><b>最终阶段：</b>'+escapeHtml(summary.final_stage || trace?.extracted_output?.stage || '-')+'</div>'+rows+'</div></details>';
 }
+function outputDisplayText(output){
+  if(!output || typeof output!=='object'){return output || '';}
+  if(Array.isArray(output.turns) && output.turns.length){return outputDisplayText(output.turns[output.turns.length-1]);}
+  if(output.summary || output.user_visible_text || output.actual_answer || output.robot_text){return output.summary || output.user_visible_text || output.actual_answer || output.robot_text;}
+  if(output.query && Array.isArray(output.conditions)){return output.query+' → '+output.conditions.map(item=>[item.field,item.operator,item.value].filter(v=>v!==undefined).join(' ')).join('; ');}
+  return Object.keys(output).length ? JSON.stringify(output, null, 2) : '';
+}
+function structuredDisplay(output){
+  if(!output || typeof output!=='object'){return {};}
+  if(Array.isArray(output.turns)){return {turns: output.turns};}
+  if(output.structured_output || output.logic){return output.structured_output || output.logic;}
+  if(Array.isArray(output.conditions)){return {query:output.query,query_logic:output.query_logic,conditions:output.conditions};}
+  return Object.keys(output).length ? output : {};
+}
 function renderTrace(trace){
   showRaw('traceRaw', trace);
   if(!trace){setStepBadge('trace','未运行','');return;}
   setStepBadge('trace', trace.status || 'unknown', trace.status==='ok'?'ok':'bad');
-  const output=trace.extracted_output || {};
+  const output=trace.extracted_output || trace.live_result?.extracted_output || {};
   document.getElementById('traceHuman').innerHTML =
     '<div class="kv"><b>Trace ID：</b>'+escapeHtml(trace.trace_id || '')+'</div>'+
     '<div class="kv"><b>状态：</b>'+escapeHtml(trace.status || '')+'</div>'+renderStateMachine(trace, currentJudge, currentAttribute)+
-    '<div class="kv"><b>Output / 被评估输出：</b>'+escapeHtml(output.summary || output.user_visible_text || output.actual_answer || (Object.keys(output).length ? JSON.stringify(output, null, 2) : ''))+'</div>'+renderConversation(trace)+
-    '<div class="kv"><b>结构化输出：</b>'+escapeHtml(JSON.stringify(output.structured_output || output.logic || (Object.keys(output).length ? output : {}), null, 2))+'</div>';
+    '<div class="kv"><b>Output / 被评估输出：</b>'+escapeHtml(outputDisplayText(output))+'</div>'+renderConversation(trace)+
+    '<div class="kv"><b>结构化输出：</b>'+escapeHtml(JSON.stringify(structuredDisplay(output), null, 2))+'</div>';
 }
 function renderFulfillment(judge){
   const expectations=judge.business_expectations || [];
@@ -184,17 +188,15 @@ function renderFulfillment(judge){
   assessments.forEach(item=>{byId[item.expectation_id || '']=item;});
   const rows=expectations.map(exp=>{const assessment=byId[exp.expectation_id || ''] || {};return '<tr><td>'+escapeHtml(exp.expectation_id || '')+'</td><td>'+escapeHtml(exp.expected_outcome || '')+'</td><td>'+escapeHtml((exp.required_capabilities || []).join(', '))+'</td><td>'+escapeHtml(assessment.status || '-')+'</td><td>'+escapeHtml(assessment.blocking?'是':'否')+'</td></tr>';}).join('');
   return '<details class="inline-details" open><summary>业务预期达成矩阵（'+expectations.length+'项）</summary>'+
-    '<div class="kv"><b>Consumer Contract：</b>'+escapeHtml(JSON.stringify(judge.consumer_contract || {}))+'</div>'+
     '<div class="kv"><b>Overall Fulfillment：</b>'+escapeHtml(JSON.stringify(judge.overall_fulfillment || {}))+'</div>'+
     '<table style="width:100%;border-collapse:collapse"><thead><tr><th>Expectation</th><th>Expected Outcome</th><th>Capabilities</th><th>Status</th><th>Blocking</th></tr></thead><tbody>'+(rows || '<tr><td colspan="5" class="muted">无 fulfillment assessments</td></tr>')+'</tbody></table></details>';
 }
 function renderAttributions(attribute){
-  const rows=(attribute.expectation_attributions || []).map(item=>'<tr><td>'+escapeHtml(item.expectation_id || '')+'</td><td>'+escapeHtml(item.fulfillment_status || '')+'</td><td>'+escapeHtml(item.causal_category || '')+'</td><td>'+escapeHtml(shortAttributionEvidence(item))+'</td></tr>').join('');
+  const rows=(attribute.expectation_attributions || []).map(item=>'<tr><td>'+escapeHtml(item.expectation_id || '')+'</td><td>'+escapeHtml(item.fulfillment_status || '')+'</td><td>'+escapeHtml(item.root_cause_hypothesis || '')+'</td><td>'+escapeHtml(shortAttributionEvidence(item))+'</td></tr>').join('');
   return '<details class="inline-details" open><summary>Expectation Attribution（'+(attribute.expectation_attributions || []).length+'项）</summary>'+
-    '<div class="kv"><b>Probe Results：</b>'+escapeHtml(JSON.stringify(attribute.probe_results || []))+'</div>'+
-    '<table style="width:100%;border-collapse:collapse"><thead><tr><th>Expectation</th><th>Fulfillment</th><th>Causal Category</th><th>Evidence</th></tr></thead><tbody>'+(rows || '<tr><td colspan="4" class="muted">无 expectation attribution</td></tr>')+'</tbody></table></details>';
+    '<table style="width:100%;border-collapse:collapse"><thead><tr><th>Expectation</th><th>Fulfillment</th><th>Root Cause</th><th>Evidence</th></tr></thead><tbody>'+(rows || '<tr><td colspan="4" class="muted">无 expectation attribution</td></tr>')+'</tbody></table></details>';
 }
-function shortAttributionEvidence(item){return JSON.stringify({earliest_divergence:item.earliest_divergence || {}, improvement_direction:item.improvement_direction || [], incomplete_reason:item.incomplete_reason || ''}).slice(0,260);}
+function shortAttributionEvidence(item){return JSON.stringify({suspected_locations:item.suspected_locations || [], evidence:item.evidence || []}).slice(0,260);}
 function fulfillmentStatusFromJudge(judge){const fulfillment=fulfillmentPanel();return fulfillment.overall_fulfillment?.status || judge?.display_status || judge?.overall_fulfillment?.status || '';}
 function fulfillmentBadgeState(status){return status==='fulfilled'?'ok':(status==='not_fulfilled'?'bad':(status==='not_evaluable'?'warn':''));}
 function renderJudge(judge){
@@ -202,40 +204,32 @@ function renderJudge(judge){
   showRaw('judgeRaw', panel);
   if(!panel || !Object.keys(panel).length){setStepBadge('judge','未运行','');return;}
   const fulfillmentStatus=fulfillmentStatusFromJudge(panel);
-  setStepBadge('judge', fulfillmentStatus || panel.verdict || 'unknown', fulfillmentBadgeState(fulfillmentStatus) || (panel.verdict==='correct'?'ok':(panel.verdict==='incorrect'?'bad':'warn')));
+  setStepBadge('judge', fulfillmentStatus || 'unknown', fulfillmentBadgeState(fulfillmentStatus) || 'warn');
   const fulfillment=renderFulfillment(panel);
   document.getElementById('judgeHuman').innerHTML =
     '<div class="kv"><b>Overall Fulfillment：</b>'+escapeHtml(fulfillmentStatus || '-')+'</div>'+
     '<div class="kv"><b>评分：</b>'+escapeHtml(panel.score ?? '')+'</div>'+
     '<div class="kv"><b>置信度：</b>'+escapeHtml(panel.confidence ?? '')+'</div>'+
-    '<div class="kv"><b>原因：</b>'+escapeHtml(panel.display_reason || panel.reasoning_summary || '')+'</div>'+fulfillment+renderStateMachine(currentTrace, panel, attributePanel())+collapsedJson('最终评估口径', panel.evaluation_boundary || {})+collapsedJson('判定推导', panel.verdict_derivation || {})+
+    '<div class="kv"><b>原因：</b>'+escapeHtml(panel.display_reason || panel.reasoning_summary || '')+'</div>'+fulfillment+renderStateMachine(currentTrace, panel, attributePanel())+
     '<div class="kv"><b>证据：</b>'+list(panel.evidence)+'</div>'+collapsedJson('缺失/错误/多余', panel.wrong_missing_extra || {missing:panel.missing || [], wrong:panel.wrong || [], extra:panel.extra || []});
 }
 function attributeBadgeState(attribute){
-  const attributions=attribute.expectation_attributions || [];
-  if(attribute.causal_category==='no_issue' || attributions.some(item=>item.fulfillment_status==='fulfilled' && item.causal_category==='no_issue')){return 'ok';}
-  return attribute.incomplete_reason || attribute.causal_category==='insufficient_evidence' ? 'warn' : 'bad';
+  return attribute.evidence_strength==='strong' || attribute.evidence_strength==='medium' ? 'bad' : 'warn';
 }
 function renderAttribute(attribute){
   const panel=attributePanel();
   showRaw('attributeRaw', panel);
   if(!panel || !Object.keys(panel).length){setStepBadge('attribute','未运行','');return;}
-  setStepBadge('attribute', panel.display_causal_category || panel.causal_category || 'unknown', attributeBadgeState(panel));
+  setStepBadge('attribute', panel.evidence_strength || 'unknown', attributeBadgeState(panel));
   document.getElementById('attributeHuman').innerHTML =
-    '<div class="kv"><b>因果类别：</b>'+escapeHtml(panel.display_causal_category || panel.causal_category || '')+'</div>'+renderAttributions({...panel, expectation_attributions: expectationAttributionPanel().attributions || panel.expectation_attributions || [], probe_results: expectationAttributionPanel().probe_results || panel.probe_results || []})+renderStateMachine(currentTrace, judgePanel(), panel)+
-    '<div class="kv"><b>根因假设：</b>'+escapeHtml(panel.display_root_cause || '')+'</div>'+
-    '<div class="kv"><b>验证步骤：</b>'+list(panel.display_verification_steps || panel.verification_steps)+'</div>'+
-    '<div class="kv"><b>修改方向：</b>'+list(panel.display_patch_direction || panel.patch_direction)+'</div>';
+    renderAttributions({...panel, expectation_attributions: expectationAttributionPanel().attributions || panel.expectation_attributions || []})+renderStateMachine(currentTrace, judgePanel(), panel)+
+    '<div class="kv"><b>根因假设：</b>'+escapeHtml(panel.display_root_cause || panel.root_cause_hypothesis || '')+'</div>';
 }
 function renderAll(){renderTrace(currentTrace);renderJudge(currentJudge);renderAttribute(currentAttribute)}
 async function liveRun(){
   document.getElementById('status').textContent='请求业务服务中...';
   try{
     const payloadObj = payload();
-    // live_schema 校验：前端手动输入是否符合 REQUEST_SHAPE
-    if (!liveSchemaCheckRequest(payloadObj.project, payloadObj.input)) {
-      console.warn('[live_schema] WARNING: input does not match REQUEST_SHAPE for', payloadObj.project);
-    }
     const data = await post('/api/live_run', payloadObj);
     currentTrace=data;currentJudge=null;currentAttribute=null;currentCluster=null;currentView=null;
     sessionStorage.setItem(scopedKey('lastTrace'), JSON.stringify(data));

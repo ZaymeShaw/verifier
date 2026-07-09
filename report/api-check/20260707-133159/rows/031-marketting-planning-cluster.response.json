@@ -1,0 +1,56 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::intent_recognition::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "intent_recognition",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图归为营销规划类别",
+        "阶段路由到澄清或规划",
+        "输出包含规划相关内容",
+        "关键业务度量NBEV被识别",
+        "策略维度初步体现",
+        "mp_contract:expected_stage"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "representative_traces": [
+        "1516720c-63c1-4e26-8113-e75962ac6536"
+      ],
+      "common_root_cause": "意图识别模块在四个层级上均存在覆盖缺口，导致用户查询'我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？'被误判为'其他意图(4001)'：\n\n1）**Tier0 首页正则** `怎么达成.*NBEV.*目标` 要求精确匹配'达成'，但用户使用'怎么通过…来补上'，正则过窄；\n2）**Tier2 结构化提取** `extract_target_value_from_text` 依赖'NBEV目标：数字万'格式，`extract_path_types_from_text` 依赖'规划路径：'前缀，均无法处理自然语言中的隐含实体；\n3）**Tier3 关键词启发式** 仅收录 ('达成','规划','路径','测算','分析')，漏掉了'补上''弥补''填补'等缺口场景高频词；\n4）**LLM 回退 Prompt** 将 nbev_planning 描述为'NBEV达成路径规划/测算/分析'，缺乏缺口弥补类 few-shot 示例，模型按'不确定时默认 other'的规则判为 4001。\n\n四个层级依次失败，最终导致意图路由至 non_agent、输出空卡片、NBEV 实体和策略维度均未被识别。根因在规则层关键词/正则覆盖不足与 LLM Prompt 示例缺位，而非外部依赖或模型能力硬限制。",
+      "shared_failure_pattern": "意图识别模块在四个层级上均存在覆盖缺口，导致用户查询'我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？'被误判为'其他意图(4001)'：\n\n1）**Tier0 首页正则** `怎么达成.*NBEV.*目标` 要求精确匹配'达成'，但用户使用'怎么通过…来补上'，正则过窄；\n2）**Tier2 结构化提取** `extract_target_value_from_text` 依赖'NBEV目标：数字万'格式，`extract_path_types_from_text` 依赖'规划路径：'前缀，均无法处理自然语言中的隐含实体；\n3）**Tier3 关键词启发式** 仅收录 ('达成','规划','路径','测算','分析')，漏掉了'补上''弥补''填补'等缺口场景高频词；\n4）**LLM 回退 Prompt** 将 nbev_planning 描述为'NBEV达成路径规划/测算/分析'，缺乏缺口弥补类 few-shot 示例，模型按'不确定时默认 other'的规则判为 4001。\n\n四个层级依次失败，最终导致意图路由至 non_agent、输出空卡片、NBEV 实体和策略维度均未被识别。根因在规则层关键词/正则覆盖不足与 LLM Prompt 示例缺位，而非外部依赖或模型能力硬限制。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-d1642b58",
+          "node": "try_homepage_intent"
+        }
+      ],
+      "minimal_fix_direction": [
+        "扩展 intent_recognition.py Tier0 正则覆盖：增加'怎么.*补上.*NBEV''怎么.*弥补.*NBEV'等模式",
+        "扩展 Tier3 关键词集合：增加'补上''弥补''填补''缩小差距''缺口'等缺口场景词",
+        "增强 INTENT_RECOGNITION_PROMPT：为 nbev_planning 增加缺口弥补类 few-shot 示例，并在描述中补充'NBEV缺口弥补/差距分析'等语义变体",
+        "增强 path_types.py extract_path_types_from_text：增加基于别名的语义映射表，使'理财师''增员'→队伍、'产品方案''产品组合'→产品"
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "next_actions": [
+        "在 intent_recognition.py 的 _HOMEPAGE_RULES 中新增正则 `怎么.*补上.*NBEV` 或 `怎么.*弥补.*NBEV.*目标`，用同一 query 验证是否命中",
+        "在 try_rule_based_intent 的关键词集合中追加 '补上''弥补''填补''完成'，验证 confidence≥0.95 的 nbev_planning 是否被触发",
+        "在 INTENT_RECOGNITION_PROMPT 中增加 2-3 个缺口弥补类 few-shot（如'我们NBEV还差2000万怎么补'→nbev_planning），重新调用 LLM 验证分类结果",
+        "在 extract_path_types_from_text 中增加基于关键词别名（理财师→队伍、产品方案→产品）的兜底映射，验证 path_types 提取"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模块在四个层级上均存在覆盖缺口，导致用户查询'我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？'被误判为'其他意图(4001)'：\n\n1）**Tier0 首页正则** `怎么达成.*NBEV.*目标` 要求精确匹配'达成'，但用户使用'怎么通过…来补上'，正则过窄；\n2）**Tier2 结构化提取** `extract_target_value_from_text` 依赖'NBEV目标：数字万'格式，`extract_path_types_from_text` 依赖'规划路径：'前缀，均无法处理自然语言中的隐含实体；\n3）**Tier3 关键词启发式** 仅收录 ('达成','规划','路径','测算','分析')，漏掉了'补上''弥补''填补'等缺口场景高频词；\n4）**LLM 回退 Prompt** 将 nbev_planning 描述为'NBEV达成路径规划/测算/分析'，缺乏缺口弥补类 few-shot 示例，模型按'不确定时默认 other'的规则判为 4001。\n\n四个层级依次失败，最终导致意图路由至 non_agent、输出空卡片、NBEV 实体和策略维度均未被识别。根因在规则层关键词/正则覆盖不足与 LLM Prompt 示例缺位，而非外部依赖或模型能力硬限制。",
+  "impact": "",
+  "priority": "high"
+}

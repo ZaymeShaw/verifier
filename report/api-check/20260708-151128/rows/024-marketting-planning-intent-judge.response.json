@@ -1,0 +1,244 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783494691116",
+  "project_id": "marketting-planning-intent",
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签为customer_portrait",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "提取目标实体target_value",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "置信度达到预期阈值",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "低置信度时fallback策略正确",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "意图分发至正确边界",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签为customer_portrait",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "提取目标实体target_value",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "置信度达到预期阈值",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "低置信度时fallback策略正确",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "意图分发至正确边界",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "not_fulfilled",
+      "downstream_impact": "当前单轮意图识别未满足 reference contract：query=帮我看看上季度买了重疾险的客户都是啥样的？，expected_intent=customer_portrait，actual_intent=other，confidence=0.5，min_confidence=None，失败项=['intent']，整体判定为 incorrect。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "blocking_expectations": [
+      "intent_contract"
+    ]
+  },
+  "expected": {
+    "intent": "customer_portrait",
+    "confidence": 0.95,
+    "target_value": "重疾险",
+    "subIntent": "其他意图"
+  },
+  "actual": {
+    "confidence": 0.5,
+    "intent": "other",
+    "subIntent": "其他意图"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "target_value实体",
+        "detail": "查询中明确提及“重疾险”，但未在输出中提取该实体。"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "正确的意图标签",
+        "detail": "期望的 'customer_portrait' 未被返回。"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "足够的置信度",
+        "detail": "未提供符合阈值的置信度以支撑意图判定。"
+      },
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "意图标签",
+        "detail": "错误地返回了 'other'，而正确标签应为 'customer_portrait'。"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "置信度数值",
+        "detail": "给出的 0.5 置信度与业务预期 0.95 严重不符。"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "wrong",
+      "error_type": "wrong",
+      "evidence_ref": "",
+      "raw": {
+        "requirement": "intent",
+        "expected_fragment": "customer_portrait",
+        "actual_fragment": "other",
+        "status": "wrong",
+        "evidence": [
+          "normalized intent differs from reference intent"
+        ]
+      },
+      "incomplete": false
+    }
+  ],
+  "extra": [
+    {
+      "kind": "extra",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "subIntent字段",
+        "detail": "返回了 '其他意图' 作为子意图，但该信息未提供有效决策价值，属于冗余输出。"
+      },
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "source": "reference_contract",
+      "data": {
+        "intent": "customer_portrait",
+        "confidence": 0.95,
+        "target_value": "重疾险"
+      }
+    },
+    {
+      "source": "extracted_output",
+      "data": {
+        "intent": "other",
+        "confidence": 0.5
+      }
+    },
+    {
+      "source": "query",
+      "data": "帮我看看上季度买了重疾险的客户都是啥样的？"
+    }
+  ],
+  "reasoning_summary": "当前单轮意图识别未满足 reference contract：query=帮我看看上季度买了重疾险的客户都是啥样的？，expected_intent=customer_portrait，actual_intent=other，confidence=0.5，min_confidence=None，失败项=['intent']，整体判定为 incorrect。",
+  "summary": {
+    "reason": "not_fulfilled · blocking=[(none)] · 用户问题明确询问购买重疾险的客户画像，但系统将其误判为其他意图，未提取产品实体，置信度严重偏低且无有效fallback，完全偏离了客户画像的业务需求。基于五个关键维度评估，所有期望均未满足，整体判定为未达成。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "低置信度时fallback策略正确",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户问题明确询问购买重疾险的客户画像，但系统将其误判为其他意图，未提取产品实体，置信度严重偏低且无有效fallback，完全偏离了客户画像的业务需求。基于五个关键维度评估，所有期望均未满足，整体判定为未达成。"
+      },
+      {
+        "expectation_id": "意图分发至正确边界",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户问题明确询问购买重疾险的客户画像，但系统将其误判为其他意图，未提取产品实体，置信度严重偏低且无有效fallback，完全偏离了客户画像的业务需求。基于五个关键维度评估，所有期望均未满足，整体判定为未达成。"
+      },
+      {
+        "expectation_id": "意图标签为customer_portrait",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户问题明确询问购买重疾险的客户画像，但系统将其误判为其他意图，未提取产品实体，置信度严重偏低且无有效fallback，完全偏离了客户画像的业务需求。基于五个关键维度评估，所有期望均未满足，整体判定为未达成。"
+      },
+      {
+        "expectation_id": "提取目标实体target_value",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户问题明确询问购买重疾险的客户画像，但系统将其误判为其他意图，未提取产品实体，置信度严重偏低且无有效fallback，完全偏离了客户画像的业务需求。基于五个关键维度评估，所有期望均未满足，整体判定为未达成。"
+      },
+      {
+        "expectation_id": "置信度达到预期阈值",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户问题明确询问购买重疾险的客户画像，但系统将其误判为其他意图，未提取产品实体，置信度严重偏低且无有效fallback，完全偏离了客户画像的业务需求。基于五个关键维度评估，所有期望均未满足，整体判定为未达成。"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

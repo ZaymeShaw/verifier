@@ -3,8 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+from impl.core.judge import _build_judge_output_spec
+from impl.core.schema import AttributeLLMOutput
 from impl.core.schema_validator import SchemaValidator
-from impl.core.structured_output import StructuredOutputSpec
+from impl.core.structured_output import StructuredOutputSpec, enforce_output
 
 
 @dataclass
@@ -73,3 +75,62 @@ def test_required_nonempty_adds_scene_required_and_nonempty_constraint():
         strict=True,
         allow_extra=True,
     ) == []
+
+
+def test_attribute_llm_schema_expands_expectation_attribution_items():
+    spec = StructuredOutputSpec.from_dataclass(
+        AttributeLLMOutput,
+        required_nonempty=["expectation_attributions", "root_cause_hypothesis"],
+    )
+
+    schema = spec.json_schema()
+
+    expectation_schema = schema["$defs"]["ExpectationAttribution"]
+    assert expectation_schema["type"] == "object"
+    assert set(expectation_schema["properties"]) == {
+        "expectation_id",
+        "fulfillment_status",
+        "suspected_locations",
+        "root_cause_hypothesis",
+        "evidence",
+    }
+    assert set(expectation_schema["required"]) == {"expectation_id", "fulfillment_status"}
+
+
+def test_structured_output_rejects_extra_fields():
+    spec = StructuredOutputSpec.from_dataclass(
+        AttributeLLMOutput,
+        required_nonempty=["expectation_attributions", "root_cause_hypothesis"],
+    )
+
+    try:
+        enforce_output(
+            {
+                "expectation_attributions": [
+                    {
+                        "expectation_id": "子女性别为男性",
+                        "fulfillment_status": "not_fulfilled",
+                        "attributed_to": "client_search_parse",
+                    }
+                ],
+                "root_cause_hypothesis": "缺失 familyInfo.familyclientsex=男",
+            },
+            spec,
+            caller="attribute",
+        )
+    except ValueError as exc:
+        assert "expectation_attributions.[0].额外字段不允许：attributed_to" in str(exc)
+    else:
+        raise AssertionError("extra attribute fields should be rejected")
+
+
+def test_judge_schema_defs_are_not_self_embedded():
+    schema = _build_judge_output_spec(True, project_id="client_search", has_reference=False).json_schema()
+
+    defs = schema["$defs"]
+    assert "$defs" not in defs["BusinessExpectation"]
+    assert "$defs" not in defs["FulfillmentAssessment"]
+    assert "$defs" not in defs["GapItem"]
+    assert defs["BusinessExpectation"]["type"] == "object"
+    assert defs["FulfillmentAssessment"]["type"] == "object"
+    assert defs["GapItem"]["type"] == "object"

@@ -1,4 +1,4 @@
-"""系统扮演模块：按 live_schema.EXTRACT_OUTPUT_SHAPE 构造合法 output。
+"""系统扮演模块：按 live_schema.EXTRACT_OUTPUT_SCHEMA dataclass 构造合法 output。
 
 用于 ready 含 output 但没有真实 live 可调的场景——让 LLM 扮演被测系统，
 根据用户意图产出"合理但不一定严谨"的回答（弱模型，不开深度思考）。
@@ -14,7 +14,7 @@ import dataclasses
 from typing import Any, Dict, List, Optional
 
 from .llm_client import LlmClient, project_llm_client
-from .mock_agent import get_extract_output_dataclass, get_extract_output_shape, load_live_schema
+from .mock_agent import load_live_schema
 from .structured_output import StructuredOutputSpec
 
 
@@ -68,25 +68,38 @@ def _sample_random_info(full_info: str, ratio: float = 0.1) -> str:
     return "\n".join(sampled)
 
 
+class LiveStubGenerationError(RuntimeError):
+    pass
+
+
+class LiveStubSchemaError(RuntimeError):
+    pass
+
+
+def _schema_errors(project_id: str, output: Dict[str, Any]) -> List[str]:
+    ls = load_live_schema(project_id)
+    if ls is None or not hasattr(ls, "check"):
+        return []
+    checker = ls.check
+    if hasattr(checker, "_output_validator"):
+        return checker._output_validator.errors(output, strict=True, allow_extra=False)
+    return [] if checker.output(output) else ["output 不符合 EXTRACT_OUTPUT_SCHEMA"]
+
+
 def generate_live_output(
     spec: Any,
     intent: Dict[str, Any],
     project_id: str,
     llm: Optional[LlmClient] = None,
 ) -> Optional[Dict[str, Any]]:
-    """LLM 扮演被测系统，按 EXTRACT_OUTPUT_SHAPE 产出合理回答（可能不严谨）。
+    """LLM 扮演被测系统，按 EXTRACT_OUTPUT_SCHEMA 产出合理回答（可能不严谨）。
     弱模型：model=deepseek-chat, reasoning_effort=low。
     输入信息量：固定一句话简介 + 10% 随机系统信息。
     """
-    # spec/struct_output.md：优先用项目 schema 的 dataclass，回退到旧 dict 形式的 shape
-    dataclass_cls = get_extract_output_dataclass(project_id)
+    live_schema = load_live_schema(project_id)
+    dataclass_cls = getattr(live_schema, "EXTRACT_OUTPUT_SCHEMA", None) if live_schema is not None else None
     if dataclass_cls is None:
-        # 旧兼容：仍有 dict 形式的 shape（live_schema 未迁移的项目）
-        shape = get_extract_output_shape(project_id)
-        if not shape:
-            return None
-    else:
-        shape = None  # 靠 output_spec 约束，不靠旧 dict
+        raise LiveStubGenerationError(f"{project_id} 缺少 EXTRACT_OUTPUT_SCHEMA")
 
     brief = _system_brief(project_id)
     full_info = _system_full_info(project_id, spec)
@@ -108,12 +121,10 @@ def generate_live_output(
     }, ensure_ascii=False)
 
     # spec/struct_output.md：构造 output_spec，传入 complete_json 做强制约束
-    output_spec = None
-    if dataclass_cls is not None:
-        output_spec = StructuredOutputSpec.from_dataclass(
-            dataclass_cls,
-            description="live_stub 系统扮演 output",
-        )
+    output_spec = StructuredOutputSpec.from_dataclass(
+        dataclass_cls,
+        description="live_stub 系统扮演 output",
+    )
 
     client = llm or LlmClient()
     client._project_id = project_id
@@ -126,14 +137,14 @@ def generate_live_output(
         output_spec=output_spec,
     )
     if data.get("error"):
-        return None
+        raise LiveStubGenerationError(str(data.get("error")))
     output = data.get("output")
     if not isinstance(output, dict) or not output:
-        # 兼容：LLM 可能直接把字段铺在顶层。用 dataclass 字段名或旧 shape 字段名兜底
-        field_names = [f.name for f in dataclasses.fields(dataclass_cls)] if dataclass_cls else list(shape or {})
+        # 兼容：LLM 可能直接把字段铺在顶层。用 dataclass 字段名兜底
+        field_names = [f.name for f in dataclasses.fields(dataclass_cls)]
         output = {k: data.get(k) for k in field_names if data.get(k) is not None}
     if not output:
-        return None
+        raise LiveStubGenerationError("live_stub 未生成 output")
     return output
 
 
@@ -143,12 +154,9 @@ def generate_live_output_with_check(
     project_id: str,
     llm: Optional[LlmClient] = None,
 ) -> Optional[Dict[str, Any]]:
-    """生成 output 并通过 live_schema.check.output() 强校验。校验失败返回 None。"""
+    """生成 output 并通过 live_schema.check.output() 强校验。"""
     output = generate_live_output(spec, intent, project_id, llm=llm)
-    if output is None:
-        return None
-    ls = load_live_schema(project_id)
-    if ls is not None and hasattr(ls, "check"):
-        if not ls.check.output(output):
-            return None
+    schema_errors = _schema_errors(project_id, output)
+    if schema_errors:
+        raise LiveStubSchemaError(f"{project_id} live_stub output 不符合 EXTRACT_OUTPUT_SCHEMA: {schema_errors}")
     return output

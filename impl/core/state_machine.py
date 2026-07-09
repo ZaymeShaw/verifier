@@ -1,10 +1,15 @@
+"""spec/info-volume.md：通用层 state machine。
+
+精简后：删除依赖被删 schema 字段（verdict/consumer_contract/incomplete_reason/analysis_quality/chain_nodes 等）
+的 gate 检查。state machine 只保留通用流程，项目特有 gate 由项目层 override。
+"""
 from __future__ import annotations
 
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable, Dict, Optional
 
-from .schema import GateDecision, SubagentResult, TraceExecutionContext, TraceStateRecord, TransitionDecision, attribute_causal_category, attribute_probe_evidence, judge_primary_signal, now_iso, to_dict
+from .schema import GateDecision, SubagentResult, TraceExecutionContext, TraceStateRecord, TransitionDecision, judge_primary_signal, now_iso, to_dict
 
 StateExecutor = Callable[[TraceExecutionContext], Dict[str, Any]]
 
@@ -19,13 +24,13 @@ DEFAULT_TRACE_GRAPH: Dict[str, Any] = {
         "mock_or_input": {"role": "mock_or_input"},
         "execute_or_capture": {"role": "execute_or_capture", "gates": ["trace_available"]},
         "collect_evidence": {"role": "collect_evidence"},
-        "build_business_expectations": {"role": "build_business_expectations", "gates": ["consumer_contract_present", "business_expectation_coverage"]},
-        "evaluate_fulfillment": {"role": "evaluate_fulfillment", "gates": ["fulfillment_assessment_coverage", "boundary_decision_present", "derived_verdict_consistency"]},
-        "fulfillment_critic": {"role": "fulfillment_critic", "gates": ["contradiction_free", "unsupported_claims_absent", "fulfillment_assessment_coverage"]},
+        "build_business_expectations": {"role": "build_business_expectations", "gates": ["business_expectation_coverage"]},
+        "evaluate_fulfillment": {"role": "evaluate_fulfillment", "gates": ["fulfillment_assessment_coverage"]},
+        "fulfillment_critic": {"role": "fulfillment_critic", "gates": ["contradiction_free"]},
         "attribute_expectations": {"role": "attribute_expectations", "gates": ["attribute_targets_expectation_gap"]},
-        "run_attribution_probes": {"role": "run_attribution_probes", "gates": ["probe_evidence_or_blocked_reason"]},
-        "attribution_critic": {"role": "attribution_critic", "gates": ["expectation_attribution_evidence", "causal_category_support", "improvement_direction_support"]},
-        "finalize": {"role": "finalize", "gates": ["finalization_ready", "contradiction_free", "unsupported_claims_absent"]},
+        "run_attribution_probes": {"role": "run_attribution_probes"},
+        "attribution_critic": {"role": "attribution_critic", "gates": ["expectation_attribution_evidence"]},
+        "finalize": {"role": "finalize", "gates": ["finalization_ready", "contradiction_free"]},
         "incomplete_or_human_review": {"role": "incomplete_or_human_review"},
     },
     "transitions": {
@@ -56,9 +61,7 @@ DEFAULT_TRACE_GRAPH: Dict[str, Any] = {
             {"to": "finalize", "condition": "gate_failed_unrecoverable"},
             {"to": "run_attribution_probes", "condition": "always"},
         ],
-        "run_attribution_probes": [
-            {"to": "attribution_critic", "condition": "always"},
-        ],
+        "run_attribution_probes": [{"to": "attribution_critic", "condition": "always"}],
         "attribution_critic": [
             {"to": "run_attribution_probes", "condition": "gate_failed_recoverable"},
             {"to": "incomplete_or_human_review", "condition": "gate_failed_unrecoverable"},
@@ -94,12 +97,6 @@ class TraceStateMachineRunner:
             failed_gates = [g for g in gates if not g.passed]
             if failed_gates:
                 _log.warning("state=%s attempt=%d failed_gates=%s -> %s", state_id, self._attempts[state_id], [(g.gate_id, g.reason, g.recoverable, g.missing_evidence) for g in failed_gates], transition.to_state)
-                if state_id in ("fulfillment_critic", "evaluate_fulfillment", "build_business_expectations"):
-                    judge = context.get("judge_result")
-                    if judge:
-                        exp_ids = [getattr(e, "expectation_id", e.get("expectation_id") if isinstance(e, dict) else None) for e in (getattr(judge, "business_expectations", []) or [])]
-                        ass_ids = [getattr(a, "expectation_id", a.get("expectation_id") if isinstance(a, dict) else None) for a in (getattr(judge, "fulfillment_assessments", []) or [])]
-                        _log.warning("  judge: exp_ids=%s ass_ids=%s verdict=%s overall=%s", exp_ids, ass_ids, getattr(judge, "verdict", ""), getattr(judge, "overall_fulfillment", {}))
             if self._retry_exceeded(state_id, transition):
                 transition = TransitionDecision(from_state=state_id, to_state="incomplete_or_human_review", condition="retry_limit", reason="state retry limit exceeded", gate_ids=transition.gate_ids, retry_count=transition.retry_count, stop_reason="incomplete_retry_limit")
                 _log.warning("RETRY_EXCEEDED state=%s retry_count=%d", state_id, transition.retry_count)
@@ -312,19 +309,6 @@ def _item_value(item: Any, key: str, default: Any = None) -> Any:
     return getattr(item, key, default)
 
 
-def _judge_has_intent(judge: Any) -> bool:
-    primary_signal = judge_primary_signal(judge)
-    return bool(judge and (_has_value(primary_signal.get("business_expectations")) or _has_value(getattr(judge, "reconstructed_intent", "")) or _has_value(getattr(judge, "expected", None))))
-
-
-def _judge_has_comparison(judge: Any) -> bool:
-    return bool(judge and _has_value(getattr(judge, "actual", None)) and (_has_value(getattr(judge, "expected", None)) or _has_value(getattr(judge, "reconstructed_intent", ""))))
-
-
-def _judge_has_derivation(judge: Any) -> bool:
-    return bool(judge and (_has_value(getattr(judge, "verdict_derivation", {})) or _has_value(getattr(judge, "reasoning_summary", "")) or _has_value(getattr(judge, "judge_basis", ""))))
-
-
 def _attribute_required(context: TraceExecutionContext) -> bool:
     judge = context.get("judge_result")
     if not judge:
@@ -342,54 +326,16 @@ def _attribute_required(context: TraceExecutionContext) -> bool:
         return True
     if assessments:
         return False
-    return bool(getattr(judge, "verdict", "") in {"incorrect", "uncertain"})
-
-
-def _judge_has_fulfillment(judge: Any) -> bool:
-    return bool(judge and _has_value(getattr(judge, "fulfillment_assessments", [])) and _has_value(getattr(judge, "overall_fulfillment", {})))
-
-
-def _expected_fulfillment_state(judge: Any) -> tuple[str, str, list[str]]:
-    assessments = list(getattr(judge, "fulfillment_assessments", []) or []) if judge else []
-    statuses = [_item_value(item, "status", "") for item in assessments]
-    failing_statuses = {"not_fulfilled", "not_evaluable"}
-    blocking_ids = [_item_value(item, "expectation_id") for item in assessments if _item_value(item, "status", "") in failing_statuses and _item_value(item, "blocking", False)]
-    if not statuses:
-        return "uncertain", "not_evaluable", []
-    if any(status == "not_fulfilled" for status in statuses):
-        return "incorrect", "not_fulfilled", blocking_ids
-    if any(status == "not_evaluable" for status in statuses):
-        return "uncertain", "not_evaluable", blocking_ids
-    return "correct", "fulfilled", []
-
-
-def _derived_verdict_contradictions(judge: Any) -> list[str]:
-    if not judge or not _judge_has_fulfillment(judge):
-        return []
-    expected_verdict, expected_status, expected_blocking = _expected_fulfillment_state(judge)
-    overall = getattr(judge, "overall_fulfillment", {}) or {}
-    actual_status = _item_value(overall, "status", "")
-    actual_blocking = list(_item_value(overall, "blocking_expectations", []) or [])
-    contradictions = []
-    if getattr(judge, "verdict", "") != expected_verdict:
-        contradictions.append(f"verdict={getattr(judge, 'verdict', '')} conflicts with fulfillment-derived verdict={expected_verdict}")
-    if actual_status != expected_status:
-        contradictions.append(f"overall_fulfillment.status={actual_status} conflicts with fulfillment-derived status={expected_status}")
-    if sorted(str(item) for item in actual_blocking) != sorted(str(item) for item in expected_blocking):
-        contradictions.append("overall_fulfillment.blocking_expectations conflicts with non-fulfilled assessments")
-    return contradictions
+    return False
 
 
 def evaluate_gate(gate_id: str, context: TraceExecutionContext, result: Dict[str, Any]) -> GateDecision:
+    """通用 gate 评估器。spec/info-volume.md 后只保留通用流程 gate。"""
     if gate_id == "trace_available":
         trace = context.get("trace")
         passed = bool(trace and getattr(trace, "status", "ok") != "error")
         missing = [] if passed else (["trace.status"] if trace else ["trace"])
         return GateDecision(gate_id=gate_id, gate_type="required_evidence", passed=passed, checked_inputs={"trace": bool(trace), "status": getattr(trace, "status", "") if trace else ""}, missing_evidence=missing, recoverable=False, reason="trace exists" if passed else "trace missing or errored")
-    if gate_id == "consumer_contract_present":
-        judge = context.get("judge_result")
-        passed = bool(judge and _has_value(getattr(judge, "consumer_contract", {})))
-        return GateDecision(gate_id=gate_id, gate_type="consumer_contract_present", passed=passed, checked_inputs={"has_judge": bool(judge)}, missing_evidence=[] if passed else ["consumer_contract"], recoverable=True, recommended_transition="build_business_expectations", reason="consumer contract available" if passed else "consumer contract missing")
     if gate_id == "business_expectation_coverage":
         judge = context.get("judge_result")
         expectations = list(getattr(judge, "business_expectations", []) or []) if judge else []
@@ -403,121 +349,27 @@ def evaluate_gate(gate_id: str, context: TraceExecutionContext, result: Dict[str
         assessed_ids = {_item_value(item, "expectation_id") for item in assessments if _item_value(item, "expectation_id")}
         missing_ids = sorted(expected_ids - assessed_ids)
         passed = bool(assessments) and not missing_ids and _has_value(getattr(judge, "overall_fulfillment", {}) if judge else {})
-        missing = [] if passed else [*( ["fulfillment_assessments"] if not assessments else []), *( ["overall_fulfillment"] if not (judge and _has_value(getattr(judge, "overall_fulfillment", {}))) else []), *missing_ids]
+        missing = [] if passed else [*(["fulfillment_assessments"] if not assessments else []), *(["overall_fulfillment"] if not (judge and _has_value(getattr(judge, "overall_fulfillment", {}))) else []), *missing_ids]
         return GateDecision(gate_id=gate_id, gate_type="fulfillment_assessment_coverage", passed=passed, checked_inputs={"expectation_count": len(expectations), "assessment_count": len(assessments), "missing_expectation_ids": missing_ids}, missing_evidence=missing, recoverable=True, recommended_transition="evaluate_fulfillment", reason="fulfillment assessments cover expectations" if passed else "fulfillment assessments incomplete")
-    if gate_id == "boundary_decision_present":
-        judge = context.get("judge_result")
-        assessments = list(getattr(judge, "fulfillment_assessments", []) or []) if judge else []
-        has_assessment_boundary = any(_has_value(_item_value(item, "boundary_decision", {})) for item in assessments)
-        passed = bool(judge and (has_assessment_boundary or _has_value(getattr(judge, "boundary_decision", None)) or _has_value(getattr(judge, "evaluation_boundary", None))))
-        return GateDecision(gate_id=gate_id, gate_type="boundary_decision_present", passed=passed, checked_inputs={"has_judge": bool(judge), "assessment_count": len(assessments)}, missing_evidence=[] if passed else ["boundary decision"], recoverable=False, reason="fulfillment boundary available" if passed else "fulfillment boundary missing")
-    if gate_id == "derived_verdict_consistency":
-        judge = context.get("judge_result")
-        contradictions = _derived_verdict_contradictions(judge)
-        passed = bool(judge and _judge_has_fulfillment(judge) and _has_value(getattr(judge, "verdict", "")) and not contradictions)
-        return GateDecision(gate_id=gate_id, gate_type="derived_verdict_consistency", passed=passed, checked_inputs={"has_judge": bool(judge), "has_fulfillment": _judge_has_fulfillment(judge)}, missing_evidence=[] if passed or contradictions else ["derived verdict from fulfillment"], contradictions=contradictions, recoverable=True, recommended_transition="evaluate_fulfillment", reason="derived verdict matches fulfillment state" if passed else "derived verdict conflicts with fulfillment state" if contradictions else "derived verdict lacks fulfillment basis")
-    if gate_id == "judge_intent_present":
-        judge = context.get("judge_result")
-        passed = _judge_has_intent(judge)
-        return GateDecision(gate_id=gate_id, gate_type="required_evidence", passed=passed, checked_inputs={"has_judge": bool(judge)}, missing_evidence=[] if passed else ["reconstructed_intent"], recoverable=True, recommended_transition="judge_compare", reason="judge intent available" if passed else "judge intent missing")
-    if gate_id == "judge_expected_actual":
-        judge = context.get("judge_result")
-        passed = _judge_has_comparison(judge)
-        return GateDecision(gate_id=gate_id, gate_type="expected_actual_coverage", passed=passed, checked_inputs={"has_judge": bool(judge), "has_actual": bool(judge and _has_value(getattr(judge, "actual", None))), "has_expected_or_intent": bool(judge and (_has_value(getattr(judge, "expected", None)) or _has_value(getattr(judge, "reconstructed_intent", ""))))}, missing_evidence=[] if passed else ["expected/actual comparison"], recoverable=True, recommended_transition="collect_evidence", reason="judge comparison covered" if passed else "judge comparison lacks expected/actual coverage")
-    if gate_id == "judge_verdict_derivation":
-        judge = context.get("judge_result")
-        passed = _judge_has_derivation(judge)
-        return GateDecision(gate_id=gate_id, gate_type="required_evidence", passed=passed, checked_inputs={"has_judge": bool(judge)}, missing_evidence=[] if passed else ["verdict_derivation"], recoverable=True, recommended_transition="judge_compare", reason="judge verdict derivation available" if passed else "judge verdict derivation missing")
-    if gate_id == "judge_boundary":
-        judge = context.get("judge_result")
-        passed = bool(judge and (_has_value(getattr(judge, "boundary_decision", None)) or _has_value(getattr(judge, "evaluation_boundary", None))))
-        return GateDecision(gate_id=gate_id, gate_type="boundary_decision_present", passed=passed, checked_inputs={"has_judge": bool(judge)}, missing_evidence=[] if passed else ["boundary decision"], recoverable=False, reason="judge boundary available" if passed else "judge boundary missing")
     if gate_id == "contradiction_free":
         contradictions = _context_contradictions(context, result)
         return GateDecision(gate_id=gate_id, gate_type="contradiction_free", passed=not contradictions, contradictions=contradictions, recoverable=True, recommended_transition="collect_evidence", reason="no contradictions" if not contradictions else "contradictions require critique or more evidence")
     if gate_id == "unsupported_claims_absent":
         unsupported_claims = _context_unsupported_claims(context, result)
         return GateDecision(gate_id=gate_id, gate_type="unsupported_claims_absent", passed=not unsupported_claims, unsupported_claims=unsupported_claims, recoverable=True, recommended_transition="collect_evidence", reason="no unsupported claims" if not unsupported_claims else "unsupported claims require evidence")
-    if gate_id == "attribute_judge_gap":
-        required = _attribute_required(context)
-        return GateDecision(gate_id=gate_id, gate_type="required_evidence", passed=required, checked_inputs={"judge_requires_attribute": required}, missing_evidence=[] if required else ["incorrect_or_uncertain_judge_gap"], recoverable=False, recommended_transition="finalize", reason="attribute has inspectable judge gap" if required else "attribute not required by judge verdict")
-    if gate_id == "probe_available_or_incomplete":
-        attribute = context.get("attribute_result")
-        probe_evidence = attribute_probe_evidence(attribute) if attribute else []
-        incomplete_reason = getattr(attribute, "incomplete_reason", "") if attribute else ""
-        passed = bool(probe_evidence or incomplete_reason or not _attribute_required(context))
-        return GateDecision(gate_id=gate_id, gate_type="probe_available_or_incomplete", passed=passed, checked_inputs={"probe_evidence_count": len(probe_evidence), "has_incomplete_reason": bool(incomplete_reason)}, missing_evidence=[] if passed else ["probe_evidence or incomplete_reason"], recoverable=True, recommended_transition="attribute_probe", reason="probe evidence or incomplete marker available" if passed else "probe evidence missing")
-    if gate_id == "attribute_evidence":
-        attribute = context.get("attribute_result")
-        if not attribute:
-            passed = not _attribute_required(context)
-            return GateDecision(gate_id=gate_id, gate_type="required_evidence", passed=passed, checked_inputs={"judge_requires_attribute": _attribute_required(context)}, missing_evidence=[] if passed else ["attribute_result"], recoverable=not passed, recommended_transition="attribute_probe", reason="attribute not required" if passed else "attribute result missing")
-        quality = getattr(attribute, "analysis_quality", {}) or {}
-        passed = quality.get("passed") is True or bool(getattr(attribute, "incomplete_reason", ""))
-        return GateDecision(gate_id=gate_id, gate_type="required_evidence", passed=passed, checked_inputs={"analysis_quality_passed": quality.get("passed"), "has_incomplete_reason": bool(getattr(attribute, "incomplete_reason", ""))}, missing_evidence=list(quality.get("missing") or []), recoverable=False, reason="attribute evidence resolved" if passed else "attribute evidence incomplete")
-    if gate_id == "attribute_chain_coverage":
-        attribute = context.get("attribute_result")
-        if not attribute and not _attribute_required(context):
-            return GateDecision(gate_id=gate_id, gate_type="required_evidence", passed=True, reason="attribute not required")
-        chain_nodes = list(getattr(attribute, "chain_nodes", []) or []) if attribute else []
-        earliest = getattr(attribute, "earliest_divergence", {}) if attribute else {}
-        suspected = list(getattr(attribute, "suspected_locations", []) or []) if attribute else []
-        incomplete = bool(getattr(attribute, "incomplete_reason", "")) if attribute else False
-        passed = bool((chain_nodes and earliest and (suspected or incomplete)) or incomplete)
-        missing = []
-        if not chain_nodes:
-            missing.append("chain_nodes")
-        if not earliest:
-            missing.append("earliest_divergence")
-        if not suspected and not incomplete:
-            missing.append("suspected_locations_or_incomplete_reason")
-        return GateDecision(gate_id=gate_id, gate_type="required_evidence", passed=passed, checked_inputs={"chain_node_count": len(chain_nodes), "has_earliest_divergence": bool(earliest), "suspected_location_count": len(suspected), "has_incomplete_reason": incomplete}, missing_evidence=[] if passed else missing, recoverable=True, recommended_transition="attribute_probe", reason="attribute chain coverage available" if passed else "attribute chain coverage incomplete")
-    if gate_id == "attribute_patch_direction":
-        attribute = context.get("attribute_result")
-        if not attribute and not _attribute_required(context):
-            return GateDecision(gate_id=gate_id, gate_type="required_evidence", passed=True, reason="attribute not required")
-        patch_direction = list(getattr(attribute, "patch_direction", []) or []) if attribute else []
-        incomplete = bool(getattr(attribute, "incomplete_reason", "")) if attribute else False
-        passed = bool(patch_direction or incomplete)
-        return GateDecision(gate_id=gate_id, gate_type="required_evidence", passed=passed, checked_inputs={"patch_direction_count": len(patch_direction), "has_incomplete_reason": incomplete}, missing_evidence=[] if passed else ["patch_direction_or_incomplete_reason"], recoverable=True, recommended_transition="attribute_probe", reason="attribute patch direction or incomplete marker available" if passed else "attribute patch direction missing")
     if gate_id == "attribute_targets_expectation_gap":
         required = _attribute_required(context)
         attribute = context.get("attribute_result")
         targets = list(getattr(attribute, "expectation_attributions", []) or []) if attribute else []
         passed = bool(not required or targets or not attribute)
         return GateDecision(gate_id=gate_id, gate_type="attribute_targets_expectation_gap", passed=passed, checked_inputs={"fulfillment_requires_attribute": required, "target_count": len(targets)}, missing_evidence=[] if passed else ["expectation_attributions"], recoverable=False, recommended_transition="finalize", reason="attribute targets fulfillment gaps" if required else "attribute not required by fulfillment")
-    if gate_id == "probe_evidence_or_blocked_reason":
-        attribute = context.get("attribute_result")
-        probe_evidence = attribute_probe_evidence(attribute) if attribute else []
-        incomplete_reason = getattr(attribute, "incomplete_reason", "") if attribute else ""
-        if not attribute:
-            import logging as _l; _l.getLogger("verifier.state_machine").warning(f"[gate:{gate_id}] attribute_result is None/missing in context keys={list(context.keys())}")
-        elif not incomplete_reason and not probe_evidence:
-            import logging as _l; _l.getLogger("verifier.state_machine").warning(f"[gate:{gate_id}] attribute has no probe evidence/incomplete_reason; causal_category={attribute_causal_category(attribute)}")
-        passed = bool(probe_evidence or incomplete_reason or not _attribute_required(context))
-        return GateDecision(gate_id=gate_id, gate_type="probe_evidence_or_blocked_reason", passed=passed, checked_inputs={"probe_evidence_count": len(probe_evidence), "has_incomplete_reason": bool(incomplete_reason)}, missing_evidence=[] if passed else ["probe_evidence or incomplete_reason"], recoverable=True, recommended_transition="run_attribution_probes", reason="probe evidence or blocked reason available" if passed else "probe evidence missing")
     if gate_id == "expectation_attribution_evidence":
         attribute = context.get("attribute_result")
         if not attribute and not _attribute_required(context):
             return GateDecision(gate_id=gate_id, gate_type="required_evidence", passed=True, reason="attribute not required")
         attributions = list(getattr(attribute, "expectation_attributions", []) or []) if attribute else []
-        passed = bool(attributions or (attribute and getattr(attribute, "incomplete_reason", "")))
+        passed = bool(attributions or (attribute and getattr(attribute, "root_cause_hypothesis", "")))
         return GateDecision(gate_id=gate_id, gate_type="expectation_attribution_evidence", passed=passed, checked_inputs={"attribution_count": len(attributions)}, missing_evidence=[] if passed else ["expectation_attributions"], recoverable=not passed, recommended_transition="run_attribution_probes", reason="expectation attribution evidence available" if passed else "expectation attribution evidence missing")
-    if gate_id == "causal_category_support":
-        attribute = context.get("attribute_result")
-        attributions = list(getattr(attribute, "expectation_attributions", []) or []) if attribute else []
-        supported = bool(attribute_causal_category(attribute) if attribute else "") or any(_has_value(_item_value(item, "causal_category", "")) for item in attributions)
-        incomplete = bool(getattr(attribute, "incomplete_reason", "") if attribute else "")
-        passed = bool(supported or incomplete or not _attribute_required(context))
-        return GateDecision(gate_id=gate_id, gate_type="causal_category_support", passed=passed, checked_inputs={"has_causal_category": supported, "has_incomplete_reason": incomplete}, missing_evidence=[] if passed else ["causal_category"], recoverable=True, recommended_transition="run_attribution_probes", reason="causal category supported" if passed else "causal category missing")
-    if gate_id == "improvement_direction_support":
-        attribute = context.get("attribute_result")
-        attributions = list(getattr(attribute, "expectation_attributions", []) or []) if attribute else []
-        directions = list(getattr(attribute, "patch_direction", []) or []) if attribute else []
-        directions.extend(direction for item in attributions for direction in (_item_value(item, "improvement_direction", []) or []))
-        incomplete = bool(getattr(attribute, "incomplete_reason", "") if attribute else "")
-        passed = bool(directions or incomplete or not _attribute_required(context))
-        return GateDecision(gate_id=gate_id, gate_type="improvement_direction_support", passed=passed, checked_inputs={"direction_count": len(directions), "has_incomplete_reason": incomplete}, missing_evidence=[] if passed else ["improvement_direction"], recoverable=True, recommended_transition="run_attribution_probes", reason="improvement direction available" if passed else "improvement direction missing")
     if gate_id == "finalization_ready":
         passed = bool(context.get("trace") and context.get("judge_result"))
         return GateDecision(gate_id=gate_id, gate_type="finalization_ready", passed=passed, checked_inputs={"has_trace": bool(context.get("trace")), "has_judge_result": bool(context.get("judge_result"))}, missing_evidence=[] if passed else ["trace", "judge_result"], recoverable=False, reason="finalization ready" if passed else "finalization missing trace or judge")

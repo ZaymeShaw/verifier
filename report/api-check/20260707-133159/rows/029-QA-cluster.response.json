@@ -1,0 +1,52 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "QA:answer_quality"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "35197077-298d-48d1-a3db-a0b5604a95fd"
+      ],
+      "representative_traces": [
+        "35197077-298d-48d1-a3db-a0b5604a95fd"
+      ],
+      "common_root_cause": "根因不在被测业务系统（actual answer 生成链路正常，所有 pipeline 节点均成功），而在 judge 基础设施的 LLM 输出解析环节。具体而言：judge LLM 在生成 business_expectations 时未遵循结构化输出约束，将业务预期以字符串数组形式输出（如“确认轻症可多次赔付”）而非 GapItem dataclass 对象数组。解析器检测到字段类型不匹配后阻断评估，verdict 置为 uncertain，导致 QA:answer_quality 评估状态为 not_evaluable。同时 adapter._enrich_semantic_judge 在原始 fulfillment_assessments 为空时错误地将 uncertain 映射为 fulfilled（仅当 verdict!=incorrect 即判定 fulfilled），与框架层 _default_fulfillment_assessment 基于 uncertain→not_evaluable 的映射产生矛盾，形成双评估冲突。",
+      "shared_failure_pattern": "根因不在被测业务系统（actual answer 生成链路正常，所有 pipeline 节点均成功），而在 judge 基础设施的 LLM 输出解析环节。具体而言：judge LLM 在生成 business_expectations 时未遵循结构化输出约束，将业务预期以字符串数组形式输出（如“确认轻症可多次赔付”）而非 GapItem dataclass 对象数组。解析器检测到字段类型不匹配后阻断评估，verdict 置为 uncertain，导致 QA:answer_quality 评估状态为 not_evaluable。同时 adapter._enrich_semantic_judge 在原始 fulfillment_assessments 为空时错误地将 uncertain 映射为 fulfilled（仅当 verdict!=incorrect 即判定 fulfilled），与框架层 _default_fulfillment_assessment 基于 uncertain→not_evaluable 的映射产生矛盾，形成双评估冲突。",
+      "representative_diffs": [
+        {
+          "case_id": "35197077-298d-48d1-a3db-a0b5604a95fd",
+          "node": "judge.structured_output_parse",
+          "evidence": "judge LLM 产出的 business_expectations 中首个元素为字符串而非预期的 GapItem dataclass 对象，触发字段类型不匹配校验。下游 impact：verdict=uncertain，QA:answer_quality 评估状态为 not_evaluable"
+        }
+      ],
+      "minimal_fix_direction": [
+        "增强 judge prompt：在结构化输出指令中明确 business_expectations 元素必须为 JSON 对象（含 expectation_id/description/acceptance_criteria 等字段），增加 few-shot 示例引导 LLM 产出正确格式",
+        "增加解析层容错：对字符串类型 business_expectations 元素自动包装为 {expectation_id: str, description: str, acceptance_criteria: ''} 结构作为降级处理，避免整个评估流程被阻断",
+        "修正 _enrich_semantic_judge 默认评估映射：将 verdict=uncertain 正确映射为 not_evaluable 而非 fulfilled，与框架层 _expectation_status_from_verdict 保持一致",
+        "考虑在 judge pipeline 增加 pre-parse validation step：在正式 dataclass 反序列化前用轻量 schema validator 检测常见格式偏差并尝试自动修复"
+      ],
+      "verification_cases": [
+        "35197077-298d-48d1-a3db-a0b5604a95fd"
+      ],
+      "next_actions": [
+        "人工对比 actual_answer 与 reference.actual_answer：确认 actual 是否覆盖用户问题的核心诉求（是否可多次赔付、每次赔付比例），判断精简版回答是否可接受",
+        "检查 judge LLM prompt 中的结构化输出指令是否明确要求 business_expectations 为对象数组（含 expectation_id/description/acceptance_criteria/blocking_level 等字段），以及是否存在格式示例引导 LLM 产出正确结构",
+        "复现 judge LLM 调用并捕获原始 model output，确认 business_expectations 的实际 JSON 结构以及截断位置",
+        "验证 judge 解析器对非标准 business_expectations 格式的容错能力——当前是否仅支持严格 dataclass 反序列化，还是已有字符串到对象的转换逻辑但未生效"
+      ]
+    }
+  ],
+  "common_root_cause": "根因不在被测业务系统（actual answer 生成链路正常，所有 pipeline 节点均成功），而在 judge 基础设施的 LLM 输出解析环节。具体而言：judge LLM 在生成 business_expectations 时未遵循结构化输出约束，将业务预期以字符串数组形式输出（如“确认轻症可多次赔付”）而非 GapItem dataclass 对象数组。解析器检测到字段类型不匹配后阻断评估，verdict 置为 uncertain，导致 QA:answer_quality 评估状态为 not_evaluable。同时 adapter._enrich_semantic_judge 在原始 fulfillment_assessments 为空时错误地将 uncertain 映射为 fulfilled（仅当 verdict!=incorrect 即判定 fulfilled），与框架层 _default_fulfillment_assessment 基于 uncertain→not_evaluable 的映射产生矛盾，形成双评估冲突。",
+  "impact": "",
+  "priority": "high"
+}

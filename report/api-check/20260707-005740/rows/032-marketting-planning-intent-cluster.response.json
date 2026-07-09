@@ -1,0 +1,107 @@
+{
+  "project_id": "marketting-planning-intent",
+  "clusters": [
+    {
+      "cluster_id": "expectation::implementation_bug::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "implementation_bug",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图标签应为具体的营销规划相关意图",
+        "关键业务实体应被提取并填入输出字段",
+        "意图识别置信度应不低于0.7",
+        "低置信度或无法确定时应触发回退策略",
+        "查询应被调度至营销规划领域而非跨域分派",
+        "intent_contract"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "d2b50f03-0a27-4442-9917-c7578c6437ca"
+      ],
+      "representative_traces": [
+        "d2b50f03-0a27-4442-9917-c7578c6437ca"
+      ],
+      "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': 'customer_analysis', 'confidence': 0.9, 'target_value': '重疾险', 'path_types': ['上季度'], 'subIntent': '客户特征查询'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "shared_failure_pattern": "当前 case 期望 intent/slots 为 {'intent': 'customer_analysis', 'confidence': 0.9, 'target_value': '重疾险', 'path_types': ['上季度'], 'subIntent': '客户特征查询'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "representative_diffs": [
+        {
+          "case_id": "d2b50f03-0a27-4442-9917-c7578c6437ca",
+          "node": "intent_contract_gate",
+          "expected": {
+            "confidence": 0.9,
+            "intent": "customer_analysis",
+            "path_types": [
+              "上季度"
+            ],
+            "subIntent": "客户特征查询",
+            "target_value": "重疾险"
+          },
+          "actual": {
+            "confidence": 0.5,
+            "intent": "other",
+            "subIntent": "其他意图"
+          },
+          "evidence": [
+            [
+              {
+                "actual": "other",
+                "error_type": "",
+                "evidence_ref": "",
+                "expected": "客户分析相关意图（如customer_analysis）",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": {
+                  "actual": "other",
+                  "expected": "客户分析相关意图（如customer_analysis）",
+                  "item": "意图标签"
+                }
+              },
+              {
+                "actual": "null",
+                "error_type": "",
+                "evidence_ref": "",
+                "expected": "重疾险",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": {
+                  "actual": "null",
+                  "expected": "重疾险",
+                  "item": "产品槽位（target_value）"
+                }
+              },
+              {
+                "actual": "null",
+                "error_type": "",
+                "evidence_ref": "",
+                "expected": "上季度",
+                "incomplete": false,
+                "kind": "missing",
+                "raw": {
+                  "actual": "null",
+                  "expected": "上季度",
+                  "item": "时间槽位（path_types）"
+                }
+              }
+            ]
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"
+      ],
+      "verification_cases": [
+        "d2b50f03-0a27-4442-9917-c7578c6437ca"
+      ],
+      "next_actions": [
+        "复查当前 query、reference 与 normalized intent evidence 是否一致。"
+      ]
+    }
+  ],
+  "common_root_cause": "当前 case 期望 intent/slots 为 {'intent': 'customer_analysis', 'confidence': 0.9, 'target_value': '重疾险', 'path_types': ['上季度'], 'subIntent': '客户特征查询'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+  "impact": "",
+  "priority": "high"
+}

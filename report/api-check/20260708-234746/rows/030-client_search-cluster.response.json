@@ -1,0 +1,87 @@
+{
+  "project_id": "client_search",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::业务预期已达成，无根因。::fulfilled",
+      "mechanism": "业务预期已达成，无根因。::fulfilled",
+      "fulfillment_statuses": [
+        "fulfilled"
+      ],
+      "expectation_ids": [
+        "重疾险到疾病保险的口语映射",
+        "使用险种大类字段pCategorys筛选",
+        "匹配类操作符语义正确",
+        "无额外条件引入"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "client_search:mock-agent-client_search-cdd7df11:1783525668001"
+      ],
+      "representative_traces": [
+        "client_search:mock-agent-client_search-cdd7df11:1783525668001"
+      ],
+      "common_root_cause": "业务预期已达成，无根因。",
+      "shared_failure_pattern": "业务预期已达成，无根因。",
+      "representative_diffs": [
+        {
+          "case_id": "client_search:mock-agent-client_search-cdd7df11:1783525668001",
+          "root_cause": "业务预期已达成，无根因。",
+          "evidence": [
+            {
+              "content": "重疾险 → 疾病保险",
+              "source": "value_mappings.pCategorys",
+              "type": "value_mapping"
+            },
+            {
+              "content": "operators: [CONTAINS, NOT_CONTAINS], value_types: [enum]",
+              "source": "capability_manifest.pCategorys",
+              "type": "capability_manifest"
+            },
+            {
+              "reason": "下游ES搜索服务不可用，仅基于parser条件语义判断",
+              "result_set_verified": false,
+              "status": "unavailable",
+              "type": "downstream_search"
+            },
+            {
+              "content": "买了重疾险和医疗险的客户 → pCategorys CONTAINS [疾病保险, 医疗保险]",
+              "source": "prompt.pCategorys",
+              "type": "prompt_example"
+            }
+          ]
+        }
+      ],
+      "verification_cases": [
+        "client_search:mock-agent-client_search-cdd7df11:1783525668001"
+      ],
+      "next_actions": [
+        {
+          "content": "重疾险 → 疾病保险",
+          "source": "value_mappings.pCategorys",
+          "type": "value_mapping"
+        },
+        {
+          "content": "operators: [CONTAINS, NOT_CONTAINS], value_types: [enum]",
+          "source": "capability_manifest.pCategorys",
+          "type": "capability_manifest"
+        },
+        {
+          "reason": "下游ES搜索服务不可用，仅基于parser条件语义判断",
+          "result_set_verified": false,
+          "status": "unavailable",
+          "type": "downstream_search"
+        },
+        {
+          "content": "买了重疾险和医疗险的客户 → pCategorys CONTAINS [疾病保险, 医疗保险]",
+          "source": "prompt.pCategorys",
+          "type": "prompt_example"
+        }
+      ]
+    }
+  ],
+  "common_root_cause": "业务预期已达成，无根因。",
+  "impact": "",
+  "priority": "normal"
+}

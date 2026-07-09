@@ -1,0 +1,289 @@
+{
+  "trace_id": "81da9b7f-eca1-484d-9a58-24d9f01d2960",
+  "project_id": "marketting-planning-intent",
+  "verdict": "uncertain",
+  "score": 0.0,
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签为customer_portrait",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "置信度满足业务阈值",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "关键实体“重疾险”被正确提取",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "在查询明确时不应触发兜底意图",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "输出意图在允许的意图范围内",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签为customer_portrait",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "置信度满足业务阈值",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "关键实体“重疾险”被正确提取",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "在查询明确时不应触发兜底意图",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "输出意图在允许的意图范围内",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "not_fulfilled",
+      "downstream_impact": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=customer_portrait，actual_intent=None，confidence=None，min_confidence=None，失败项=['intent']，整体判定为 incorrect。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "blocking_expectations": [
+      "intent_contract"
+    ],
+    "assessment_count": 6
+  },
+  "expected": {
+    "intent": "customer_portrait",
+    "confidence": 0.95,
+    "target_value": "重疾险"
+  },
+  "reasoning_summary": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=customer_portrait，actual_intent=None，confidence=None，min_confidence=None，失败项=['intent']，整体判定为 incorrect。",
+  "judge_basis": "基于 run_trace 中的 extracted_output（intent='other', confidence=0.5）与 reference_contract（intent='customer_portrait', confidence=0.95, target_value='重疾险'）进行对比",
+  "judge_method": "逐项评估意图标签正确性、置信度达标情况、实体提取完整性、fallback 策略适当性以及分发边界符合性，结合语义等价规则判定",
+  "verdict_derivation": {
+    "logic": "由于至少存在一个阻塞性期望未满足（意图标签错误），整体判定为未满足",
+    "contract_gate": "failed"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "expected": "customer_portrait",
+      "actual": "other",
+      "evidence_ref": "",
+      "raw": {
+        "item": "意图标签",
+        "expected": "customer_portrait",
+        "actual": "other"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "expected": "重疾险",
+      "actual": "未提取",
+      "evidence_ref": "",
+      "raw": {
+        "item": "关键实体",
+        "expected": "重疾险",
+        "actual": "未提取"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "expected": ">=0.7",
+      "actual": "0.5",
+      "evidence_ref": "",
+      "raw": {
+        "item": "高置信度",
+        "expected": ">=0.7",
+        "actual": "0.5"
+      },
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "expected": "customer_portrait",
+      "actual": "other",
+      "evidence_ref": "",
+      "raw": {
+        "item": "意图标签",
+        "actual": "other",
+        "expected": "customer_portrait"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "wrong",
+      "error_type": "wrong",
+      "evidence_ref": "",
+      "raw": {
+        "requirement": "intent",
+        "expected_fragment": "customer_portrait",
+        "status": "wrong",
+        "evidence": [
+          "normalized intent differs from reference intent"
+        ]
+      },
+      "incomplete": false
+    }
+  ],
+  "extra": [
+    {
+      "kind": "extra",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "subIntent",
+        "value": "其他意图"
+      },
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "source": "extracted_output.intent",
+      "value": "other"
+    },
+    {
+      "source": "extracted_output.confidence",
+      "value": 0.5
+    },
+    {
+      "source": "extracted_output.subIntent",
+      "value": "其他意图"
+    }
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "reason": "错误由意图识别模型的输出不准确导致，属于可评估范围，无不可控外部因素"
+  },
+  "evaluation_boundary": {
+    "scope": "single_turn_intent_recognition",
+    "excludes": [
+      "multi_turn_planning",
+      "sse_card_generation"
+    ]
+  },
+  "consumer_contract": {
+    "expected_intent": "customer_portrait",
+    "expected_confidence_threshold": 0.7,
+    "expected_entities": [
+      "重疾险"
+    ],
+    "fallback_policy": "仅在完全无法确定意图时返回'other'，且置信度低于阈值"
+  },
+  "intent_model": {
+    "primary_intent": "customer_portrait",
+    "description": "用户希望查看上季度购买重疾险的客户群体特征，涉及客户画像分析",
+    "entities": {
+      "product": "重疾险",
+      "time_period": "上季度"
+    }
+  },
+  "reconstructed_intent": "客户画像分析：上季度购买重疾险的客户特征",
+  "semantic_equivalence_checks": [
+    {
+      "field": "intent_label",
+      "reference": "customer_portrait",
+      "actual": "other",
+      "equivalent": false,
+      "reason": "“customer_portrait”表示客户画像分析，而“other”为兜底意图，语义完全不同，不满足等价条件"
+    }
+  ],
+  "reference_generation_basis": {
+    "source": "case.expected_intent 和 run_trace.reference_contract",
+    "note": "期望意图和置信度阈值为预设基准，实体为查询中关键信息"
+  },
+  "scenario": "intent_recognition",
+  "needs_human_review": true,
+  "quality_flags": [
+    "intent_misidentification",
+    "low_confidence",
+    "entity_extraction_failure",
+    "unnecessary_fallback",
+    "intent_contract_gate_failed",
+    "invalid_actual_shape"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[(none)] · 评估发现，系统将明确的“客户画像分析”查询错误识别为“other”意图，置信度仅 0.5，同时未提取任何关键实体（如“重疾险”）。意图错误为核心阻塞性失败，导致整体无法满足用户查询需求。置信度过低和实体缺失进一步加剧了不可用性。尽管系统在意图分发边界内，但查询明确时不应触发兜底意图。因此，整体评估为未满足。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "关键实体“重疾险”被正确提取",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "评估发现，系统将明确的“客户画像分析”查询错误识别为“other”意图，置信度仅 0.5，同时未提取任何关键实体（如“重疾险”）。意图错误为核心阻塞性失败，导致整体无法满足用户查询需求。置信度过低和实体缺失进一步加剧了不可用性。尽管系统在意图分发边界内，但查询明确时不应触发兜底意图。因此，整体评估为未满足。"
+      },
+      {
+        "expectation_id": "在查询明确时不应触发兜底意图",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "评估发现，系统将明确的“客户画像分析”查询错误识别为“other”意图，置信度仅 0.5，同时未提取任何关键实体（如“重疾险”）。意图错误为核心阻塞性失败，导致整体无法满足用户查询需求。置信度过低和实体缺失进一步加剧了不可用性。尽管系统在意图分发边界内，但查询明确时不应触发兜底意图。因此，整体评估为未满足。"
+      },
+      {
+        "expectation_id": "意图标签为customer_portrait",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "评估发现，系统将明确的“客户画像分析”查询错误识别为“other”意图，置信度仅 0.5，同时未提取任何关键实体（如“重疾险”）。意图错误为核心阻塞性失败，导致整体无法满足用户查询需求。置信度过低和实体缺失进一步加剧了不可用性。尽管系统在意图分发边界内，但查询明确时不应触发兜底意图。因此，整体评估为未满足。"
+      },
+      {
+        "expectation_id": "置信度满足业务阈值",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "评估发现，系统将明确的“客户画像分析”查询错误识别为“other”意图，置信度仅 0.5，同时未提取任何关键实体（如“重疾险”）。意图错误为核心阻塞性失败，导致整体无法满足用户查询需求。置信度过低和实体缺失进一步加剧了不可用性。尽管系统在意图分发边界内，但查询明确时不应触发兜底意图。因此，整体评估为未满足。"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

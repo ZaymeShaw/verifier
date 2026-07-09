@@ -1,0 +1,56 @@
+{
+  "project_id": "client_search",
+  "rows": [
+    {
+      "id": "mock-agent-client_search-cdd7df11",
+      "input": "session_001",
+      "scenario": "",
+      "output_summary": "{\"code\": 0, \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"MATCH\", \"value\": \"疾病保险\"}], \"confidence\": 0.8, \"cost_times\": 1096.0, \"end_flag\": 1, \"intent_summ…",
+      "reference_summary": "{\"code\": 0, \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"MATCH\", \"value\": \"疾病保险\"}], \"confidence\": 0.8, \"cost_times\": 1096.0, \"end_flag\": 1, \"intent_summ…",
+      "status": "not_evaluable",
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "verdict": "",
+      "fulfillment_status": "not_evaluable",
+      "judge_summary": {
+        "status": "not_evaluable",
+        "fulfillment_status": "not_evaluable",
+        "verdict": "",
+        "reason": "not_evaluable · [judge] LLM 输出不是合法 JSON，无法进入结构化校验。解析错误：whole response: Expecting ',' delimiter at line 5 column 40 (char 120); bare JSON from first bracket: Expecting ',' delimiter at line 5 column 40 (char 120)\n原始输出预览：{\n  \"business_expectations\": [\n    {\n      \"expectation_id\": \"重疾险口语映射为疾病保险标准枚举\",\n      \"expectation_description\": \"用户口语\"重疾险\"应被识别并映射为pCategorys字段的标准枚举值\"疾病保险\"\",\n      \"acceptance_criteria\": \"actual output的conditions中包含field=pCategorys且value=疾病保险，value_mappings中\"重疾险\"→\"疾病保险\"映射正确应用\"\n    },\n    {\n     ",
+        "reason_source": "reasoning_summary",
+        "reason_stage": "judge",
+        "is_formal_attribution": false,
+        "assessment_count": 1,
+        "blocking_count": 1
+      },
+      "attribution_summary": {
+        "attribution_count": 2,
+        "causal_category": "",
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 0,
+        "summary_text": "业务映射逻辑运行正常（重疾险→疾病保险），搜索条件生成无误。Judge 评估不可用根本原因在于 Judge 自身的 LLM 输出模块产生了非法 JSON（缺少逗号），导致业务期望解析中断，最终 overall_fulfillment 标记为 not_evaluable。下游搜索服务连接失败（[Errno 54] Connection reset by peer）不影响条件生成正确性，但可能导致 Judge 无法获取结果集进行完整验证，进一步加剧了不可评估状态。"
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 3
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": false,
+      "issue_count": 3,
+      "fallback_count": 0,
+      "causal_category": "",
+      "divergence_stage": "",
+      "root_cause_summary": "业务映射逻辑运行正常（重疾险→疾病保险），搜索条件生成无误。Judge 评估不可用根本原因在于 Judge 自身的 LLM 输出模块产生了非法 JSON（缺少逗号），导致业务期望解析中断，最终 overall_fulfillment 标记为 not_evaluable。下游搜索服务连接失败（[Errno 54] Connection reset by peer）不影响条件生成正确性，但可能导致 Judge 无法获取结果集进行完整验证，进一步加剧了不可评估状态。",
+      "created_at": "2026-07-08T07:11:30.843548+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783494690843"
+    }
+  ],
+  "total": 1
+}

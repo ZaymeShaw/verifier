@@ -95,7 +95,7 @@ class ToolOrchestrator:
                 error=f"tool has no execute_fn: {tool_id}",
             )
         try:
-            result = tool.execute_fn(params or {})
+            result = tool.execute_fn(**(params or {}))
             if isinstance(result, ToolResult):
                 if not result.tool_id:
                     result.tool_id = tool_id

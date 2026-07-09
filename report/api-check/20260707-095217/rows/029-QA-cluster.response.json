@@ -1,0 +1,55 @@
+{
+  "project_id": "QA",
+  "clusters": [
+    {
+      "cluster_id": "expectation::insufficient_evidence::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "insufficient_evidence",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "轻症多次赔付能力回答明确",
+        "轻症每次赔付金额比例回答明确",
+        "提及轻症赔付次数上限",
+        "提及轻症赔付间隔期要求及常见时长",
+        "提及轻症分组限制",
+        "提醒用户以合同为准",
+        "答案内容与参考信息一致无矛盾"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "15941479-1b94-44f5-b95d-27ffcf958207"
+      ],
+      "representative_traces": [
+        "15941479-1b94-44f5-b95d-27ffcf958207"
+      ],
+      "common_root_cause": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+      "shared_failure_pattern": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+      "representative_diffs": [
+        {
+          "case_id": "15941479-1b94-44f5-b95d-27ffcf958207",
+          "node": "semantic judge or attribute LLM",
+          "evidence": [
+            "[attribute] LLM 输出不是合法 JSON，无法进入结构化校验。解析错误：json fenced block: Expecting ',' delimiter at line 7 column 33 (char 226); any fenced block: Expecting ',' delimiter at line 7 column 33 (char 226); bare JSON from first bracket: Expecting ',' delimiter at line 7 column 33 (char 226)\n原始输出预览：基于对执行轨迹、judge 结果和源码的分析，我已明确归因结论。本次 QA 评估中两个未满足期望的根因均在 LLM 生成层（mock_agent_llm），模型回答覆盖了核心问题但遗漏了间隔期具体时长和分组限制两个参考细节。adapter.py 仅做归一化，非根因落点。\n\n```json\n{\n  \"expectation_attributions\": [\n    {\n      \"expectation_id\": \"提及轻症赔付间隔期要求及常见时长\",\n      \"fulfillment_status\": \"not_fulfilled\",\n      \"expected_behavior\": \"回答应提及轻症赔付有间隔期要求，并给出常见时长（如90天或180天）\",\n      \"actual_behavior\": \"回答仅提及\"间隔期要求\"，未给出任何具体时长数字\",\n      \"gap\": \"缺少间隔期常见具体时长（参考答案为90天或180天），用户无法获得时间维度的参考信息\",\n      \"causal_category\": \"answer_incomplete\",\n   "
+          ]
+        }
+      ],
+      "minimal_fix_direction": [
+        "修复 LLM 调用配置或费用问题；不要把该兜底结果当作最终业务根因。"
+      ],
+      "verification_cases": [
+        "15941479-1b94-44f5-b95d-27ffcf958207"
+      ],
+      "next_actions": [
+        "检查 LLM API key、余额、网络和模型配置。",
+        "恢复 LLM 后重新运行 judge 和 attribute agent。"
+      ]
+    }
+  ],
+  "common_root_cause": "语义 judge 或 attribute agent 调用失败，当前只能确认执行 trace，无法完成正式归因。",
+  "impact": "",
+  "priority": "high"
+}

@@ -86,7 +86,7 @@ def write_transcript(tmpdir: str, entries: list[dict]) -> str:
     return str(path)
 
 
-def test(tag: str, entries: list[dict], expect_block: bool, expect_desc: str, **kwargs):
+def run_case(tag: str, entries: list[dict], expect_block: bool, expect_desc: str, **kwargs):
     with tempfile.TemporaryDirectory() as tmpdir:
         transcript_path = write_transcript(tmpdir, entries)
         stdin = {
@@ -115,7 +115,7 @@ def test(tag: str, entries: list[dict], expect_block: bool, expect_desc: str, **
 # =========================
 
 # 1. 不达阈值：只有 2 次成功 Edit，改 2 个文件
-test(
+run_case(
     "1. 不达阈值（2次/2文件）",
     [
         make_jsonl_entry("user", [{"type": "text", "text": "改一下 a.py 和 b.py"}]),
@@ -129,7 +129,7 @@ test(
 )
 
 # 2. 达阈值：6 次成功 Edit，改 4 个不同文件
-test(
+run_case(
     "2. 达阈值（6次/4文件）",
     [
         make_jsonl_entry("user", [{"type": "text", "text": "重构整个项目"}]),
@@ -151,7 +151,7 @@ test(
 )
 
 # 3. 失败重试不算
-test(
+run_case(
     "3. 失败不算（5成功+3失败，3文件）",
     [
         make_jsonl_entry("user", [{"type": "text", "text": "改多个文件"}]),
@@ -177,7 +177,7 @@ test(
 )
 
 # 4. 够次数但文件不够（6次/2文件）
-test(
+run_case(
     "4. 够次数文件不够（6次/2文件）",
     [
         make_jsonl_entry("user", [{"type": "text", "text": "反复改同一个文件"}]),
@@ -199,7 +199,7 @@ test(
 )
 
 # 5. 跨轮：上一轮有改动，本轮只有 2 次
-test(
+run_case(
     "5. 跨轮切片（本轮2次，不触发）",
     [
         # 上一轮
@@ -226,7 +226,7 @@ test(
 )
 
 # 6. MultiEdit 和 NotebookEdit 也计入
-test(
+run_case(
     "6. MultiEdit/NotebookEdit 计入",
     [
         make_jsonl_entry("user", [{"type": "text", "text": "各种方式改文件"}]),
@@ -246,7 +246,7 @@ test(
 )
 
 # 7. 防死循环：stop_hook_active=true
-test(
+run_case(
     "7. 防死循环（stop_hook_active=true）",
     [
         make_jsonl_entry("user", [{"type": "text", "text": "大改动"}]),
@@ -267,7 +267,7 @@ test(
 )
 
 # 8. 全是失败
-test(
+run_case(
     "8. 全是失败",
     [
         make_jsonl_entry("user", [{"type": "text", "text": "改很多但全都失败"}]),
@@ -287,7 +287,7 @@ test(
 )
 
 # 9. 无真实用户消息（全是 tool_result 链）
-test(
+run_case(
     "9. 无真实用户消息",
     [
         make_jsonl_entry("assistant", [{"type": "tool_use", "id": "t1", "name": "Edit", "input": {"file_path": "a.py"}}]),
@@ -306,7 +306,7 @@ test(
 )
 
 # 10. 边界：刚好 5 次成功 + 3 文件
-test(
+run_case(
     "10. 边界（刚好5次/3文件）",
     [
         make_jsonl_entry("user", [{"type": "text", "text": "刚好到阈值"}]),
@@ -323,6 +323,34 @@ test(
     ],
     expect_block=True,
     expect_desc="刚好5次成功，3文件，触发",
+)
+# 11. 自动压缩 summary 不切断本轮工具统计
+run_case(
+    "11. 自动压缩 summary 不切断统计",
+    [
+        make_jsonl_entry("user", [{"type": "text", "text": "大改动，过程中触发自动压缩"}]),
+        make_jsonl_entry("assistant", [{"type": "tool_use", "id": "t1", "name": "Edit", "input": {"file_path": "a.py"}}]),
+        make_jsonl_entry("user", [{"type": "tool_result", "tool_use_id": "t1", "content": [{"type": "text", "text": "文件已更新。"}]}]),
+        make_jsonl_entry("assistant", [{"type": "tool_use", "id": "t2", "name": "Edit", "input": {"file_path": "b.py"}}]),
+        make_jsonl_entry("user", [{"type": "tool_result", "tool_use_id": "t2", "content": [{"type": "text", "text": "文件已更新。"}]}]),
+        make_jsonl_entry(
+            "user",
+            [
+                {
+                    "type": "text",
+                    "text": "This session is being continued from a previous conversation that ran out of context.\n\nSummary:\nEarlier edits happened.\n\nContinue the conversation from where it left off without asking the user any further questions.",
+                }
+            ],
+        ),
+        make_jsonl_entry("assistant", [{"type": "tool_use", "id": "t3", "name": "Write", "input": {"file_path": "c.py"}}]),
+        make_jsonl_entry("user", [{"type": "tool_result", "tool_use_id": "t3", "content": [{"type": "text", "text": "文件已写入。"}]}]),
+        make_jsonl_entry("assistant", [{"type": "tool_use", "id": "t4", "name": "Edit", "input": {"file_path": "d.py"}}]),
+        make_jsonl_entry("user", [{"type": "tool_result", "tool_use_id": "t4", "content": [{"type": "text", "text": "文件已更新。"}]}]),
+        make_jsonl_entry("assistant", [{"type": "tool_use", "id": "t5", "name": "Edit", "input": {"file_path": "e.py"}}]),
+        make_jsonl_entry("user", [{"type": "tool_result", "tool_use_id": "t5", "content": [{"type": "text", "text": "文件已更新。"}]}]),
+    ],
+    expect_block=True,
+    expect_desc="自动压缩 summary 不算真实用户消息，压缩前后5次成功5文件 → 触发",
 )
 
 

@@ -1,0 +1,121 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783525668639",
+  "project_id": "marketting-planning-intent",
+  "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图标签识别为customer_portrait",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_api_call",
+        "adapter_extraction",
+        "label_mapping"
+      ],
+      "root_cause_hypothesis": "API 返回的原始意图非 'customer_portrait'，或 adapter 提取时错误映射为 'other'；runtime_checks 显示 raw_intent=None，经 label_mapping 映射为 'other'，缺少上游正确意图证据。",
+      "evidence": [
+        "extracted_output.intent = 'other'",
+        "runtime_checks.raw_intent=None",
+        "intent_contract_probe.intent_match=false",
+        "execution_trace.stage=adapter_extraction intent=other"
+      ]
+    },
+    {
+      "expectation_id": "关键实体target_value提取为重疾险",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_api_call",
+        "adapter_extraction"
+      ],
+      "root_cause_hypothesis": "API 响应可能未返回目标产品字段，或 adapter 未正确提取 target_value，导致缺失关键筛选条件。",
+      "evidence": [
+        "extracted_output.target_value = null",
+        "reference_contract.target_value = '重疾险'",
+        "judge_result.missing.entity target_value"
+      ]
+    },
+    {
+      "expectation_id": "置信度达到高阈值",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_api_call"
+      ],
+      "root_cause_hypothesis": "意图识别模型本身输出置信度 0.5，远低于期望的 0.95，表明模型对当前查询的预测不确定。",
+      "evidence": [
+        "extracted_output.confidence = 0.5",
+        "reference_contract.confidence = 0.95"
+      ]
+    },
+    {
+      "expectation_id": "intent_contract",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_api_call",
+        "adapter_extraction",
+        "label_mapping"
+      ],
+      "root_cause_hypothesis": "整体意图识别链路未能满足参考合同：意图错误、实体缺失、置信度过低，上游 API 调用未能识别正确意图。",
+      "evidence": [
+        "judge_result.overall_fulfillment.blocking_expectations includes intent_contract",
+        "intent_contract_probe.intent_match=false"
+      ]
+    }
+  ],
+  "suspected_locations": [
+    {
+      "location": "intent_contract_gate",
+      "evidence": [
+        [
+          {
+            "kind": "intent",
+            "error_type": "incorrect_label",
+            "expected": "customer_portrait",
+            "actual": "other",
+            "evidence_ref": "extracted_output.intent",
+            "raw": {
+              "intent": "other"
+            },
+            "incomplete": false
+          },
+          {
+            "kind": "entity",
+            "error_type": "missing_value",
+            "expected": "重疾险",
+            "evidence_ref": "extracted_output.target_value",
+            "incomplete": false
+          }
+        ]
+      ]
+    }
+  ],
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'confidence': 0.95, 'intent': 'customer_portrait', 'subIntent': '其他意图', 'target_value': '重疾险'}，实际 normalized intent evidence 为 {'confidence': 0.5, 'intent': 'other', 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+  "evidence": [
+    [
+      {
+        "kind": "intent",
+        "error_type": "incorrect_label",
+        "expected": "customer_portrait",
+        "actual": "other",
+        "evidence_ref": "extracted_output.intent",
+        "raw": {
+          "intent": "other"
+        },
+        "incomplete": false
+      },
+      {
+        "kind": "entity",
+        "error_type": "missing_value",
+        "expected": "重疾险",
+        "evidence_ref": "extracted_output.target_value",
+        "incomplete": false
+      }
+    ]
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "attribution_count": 4,
+    "probe_count": 0,
+    "summary_text": "意图识别 API (intent_api_call) 未能将查询“帮我看看上季度买了重疾险的客户都是啥样的？”归类为 customer_portrait，而是返回了不确定或 other 结果；adapter_extraction 从中提取了错误的意图标签并丢失了实体 target_value；随后 label_mapping 在 raw_intent=None 时错误映射为 'other'，缺少与参考合同的对应。此外 API 响应置信度仅 0.5，远未达阈值。证据链缺少原始 API 响应详情，但整体指向 API 模型分类错误或提示词/配置不当。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  }
+}

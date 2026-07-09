@@ -1,0 +1,43 @@
+{
+  "_comment": {
+    "purpose": "这是 Claude Code Stop hook 配置。detect.py 达到 trigger 阈值后，会返回 decision/reason/systemMessage，让 Claude 下一轮先执行 action.prompt。",
+    "trigger.enabled": "总开关；false 时永远不触发。",
+    "trigger.successful_tool_names": "哪些工具调用算一次成功改文件；只有这些工具会被统计。",
+    "trigger.min_successful_edit_tools": "本轮成功改文件工具调用次数下限；少于这个次数就静默放行。",
+    "trigger.min_distinct_files": "本轮成功改动的不同文件数下限；少于这个文件数就静默放行。",
+    "trigger.distinct_file_keys": "从工具 input 的哪些字段取文件路径，用来计算不同文件数。",
+    "action.title": "本次 hook 的名称；会进入 systemMessage 标题，也可通过 {title} 显示在 block_reason。",
+    "action.prompt": "触发后真正要 Claude 执行的主指令；会原文放进 systemMessage 的 action 区域。如果要用 /check 或 /code-review，就直接写在这里。",
+    "action.decision": "Stop hook 返回给 Claude Code 的 decision；通常填 block，表示拦停本轮并注入 systemMessage。",
+    "action.block_reason": "终端里看到的 Stop hook feedback 模板；只负责展示，不是实际执行指令。",
+    "block_reason.{title}": "替换为 action.title。",
+    "block_reason.{action_preview}": "替换为 action.prompt 的单行短摘要；太长会截断，用来让终端 feedback 看见本次行动是什么。",
+    "block_reason.{stats}": "替换为本轮统计，例如成功改文件工具调用次数、涉及文件数。",
+    "block_reason.{config}": "替换为当前配置文件路径。",
+    "instructions.after_action": "action 执行完以后对最终输出的要求；如果是行动内容，请写进 action.prompt，不要写在这里。",
+    "debug.dump": "true 时把 Stop hook stdin 写入 dump_path，方便调试 Claude Code 传入了什么。",
+    "debug.dump_path": "debug.dump 为 true 时写入的文件路径。"
+  },
+  "trigger": {
+    "enabled": true,
+    "successful_tool_names": ["Edit", "MultiEdit", "Write", "NotebookEdit"],
+    "min_successful_edit_tools": 5,
+    "min_distinct_files": 3,
+    "distinct_file_keys": ["file_path", "notebook_path"]
+  },
+  "action": {
+    "title": "代码正确性审查",
+    "prompt": "本轮进行了大量代码改动。请先调用 /code-review 对当前 diff 做 correctness review。如果 /code-review 不可用，必须明确说明未调用原因，并手工指出最值得复查的正确性风险。审查输出要聚焦具体风险，不要泛泛总结。",
+    "decision": "block",
+    "block_reason": "📋 {title}：已触发；行动：{action_preview} {stats}"
+  },
+  "instructions": {
+    "after_action": [
+      "如果调用了 skill，以 skill 结果为主；如果没调用，至少指出一个最值得人工复查的点。"
+    ]
+  },
+  "debug": {
+    "dump": false,
+    "dump_path": "/tmp/review-hook-code-review-stdin.json"
+  }
+}

@@ -40,7 +40,7 @@ from impl.core.config import get_uat_base_url
 
 # Minimal test: QA + marketplan-intent only (2 cases each) for fix validation
 CONFIG = {
-    "projects": ["marketting-planning-intent", "QA","client_search"],
+    "projects": ["marketting-planning-intent", "QA","client_search","marketting-planning"],
     "case_counts": {"marketting-planning-intent": 4, "QA": 4,"client_search":10},
     "required_cases": {
         # mock_agent 产出的 case ID 是动态的，不再用旧 seed ID。
@@ -172,7 +172,8 @@ def run_project(proj, case_ids=None):
                 return (div.textContent || div.innerText || '').replace(/\\s+/g, ' ').trim();
             }
             return casePool.filter(function(c){return c.selected;}).map(function(c){
-                var inp = (typeof c.input === 'string') ? c.input : (c.input?.query || c.input?.question || '');
+                var row = (typeof tableRow === 'function') ? tableRow(c) : (c.table_row || c.frontend_view?.table_row || {});
+                var inp = (typeof displayInputText === 'function') ? displayInputText(row, c) : ((typeof c.input === 'string') ? c.input : '');
                 var out = c.trace?.extracted_output || c.output || '';
                 var ref = c.reference || '';
                 var js = c.judge_summary || {}; var ats = c.attribution_summary || {};

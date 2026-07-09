@@ -64,16 +64,16 @@ def build_rule_verify_tool(
         )
 
     execute.__name__ = tool_id.replace(".", "_")
-    execute.__doc__ = "验证配置映射规则生效情况：给定关键词/字段，返回 value_mappings 和 enhanced_rules 中匹配的实际配置内容。"
+    execute.__doc__ = "查询客户搜索配置规则片段，返回 value_mappings 和 enhanced_rules 中与关键词或字段匹配的内容。"
     return VerifiableTool(
         tool_id=tool_id,
-        description="验证配置映射规则生效情况：给定关键词/字段，返回 value_mappings 和 enhanced_rules 中匹配的实际配置内容。用于判断业务系统的规则是否被正确触发（actual 交叉对照）。",
+        description="查询客户搜索配置映射和增强规则。输入 keyword 或 field 作为过滤条件；输出 value_mappings 与 enhanced_rules 中匹配的配置片段，未提供过滤条件时返回完整配置。该工具提供静态配置证据，不执行搜索 API，也不判断规则是否已在某次运行中触发。",
         applicable_scenario="attr",
         parameters={
             "type": "object",
             "properties": {
-                "keyword": {"type": "string", "description": "关键词或字段名，用于过滤映射规则。如'年金'、'premium'、'clientAge'"},
-                "field": {"type": "string", "description": "字段名（同 keyword），用于过滤映射规则"},
+                "keyword": {"type": "string", "description": "可选。用于过滤 value_mappings 和 enhanced_rules 的业务关键词或字段名，如 年金、premium、clientAge；不传则不按该字段过滤。"},
+                "field": {"type": "string", "description": "可选。字段名过滤条件，与 keyword 等价；用于按客户搜索字段标识过滤配置片段。"},
             },
             "required": [],
         },

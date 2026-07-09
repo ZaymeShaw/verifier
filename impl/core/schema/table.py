@@ -25,7 +25,6 @@ class TraceTableRow:
     status: str = ""
     execution_mode: str = ""
     output_source: str = ""
-    verdict: str = ""
     score: Optional[float] = None
     fulfillment_status: str = ""
     judge_summary: Dict[str, Any] = field(default_factory=dict)
@@ -37,7 +36,6 @@ class TraceTableRow:
     check_passed: Optional[bool] = None
     issue_count: int = 0
     fallback_count: int = 0
-    causal_category: str = ""
     divergence_stage: str = ""
     root_cause_summary: str = ""
     created_at: str = ""

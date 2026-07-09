@@ -14,4 +14,4 @@
 8. sse_generation
 9. adapter_extraction
 
-attribute agent 应定位最早可观察 divergence。如果 judge verdict 是 correct，则不做失败归因。如果 evidence 不足或 judge 不可用，则输出 incomplete，而不是伪造根因。
+attribute agent 应定位最早可观察的 fulfillment gap 或 root-cause evidence。如果 `overall_fulfillment.status` 是 `fulfilled`，则不做失败归因。如果 evidence 不足或 judge 不可用，则将 `evidence_strength` 设为 `none` 或 `weak`，并在 `root_cause_hypothesis` 说明缺失证据，而不是伪造根因。

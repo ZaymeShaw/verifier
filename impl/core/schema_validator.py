@@ -4,7 +4,7 @@ SchemaValidator 是唯一的通用校验类，不关心业务场景。
 只暴露两个参数：strict 和 allow_extra，组合覆盖所有语义。
 
 调用方：
-- LLM 产出校验：strict=True, allow_extra=True（必填不能缺，LLM 多塞不阻断）
+- LLM 产出校验：strict=True, allow_extra=False（必填不能缺，额外字段阻断，保证最小协议）
 - 精确匹配：strict=True, allow_extra=False（live 系统输出、请求体）
 - 子集匹配：strict=False, allow_extra=False（reference，允许 missing 不允许 extra）
 
@@ -187,6 +187,7 @@ class SchemaValidator:
             ok, err = _match_type(value, tp)
             if not ok:
                 errors.append(f"字段类型不匹配：{name}，{err}")
+            errors.extend(self._validate_nested_dataclass_value(name, value, tp, strict=strict, allow_extra=allow_extra))
 
         # 校验额外字段
         if not allow_extra:
@@ -211,6 +212,27 @@ class SchemaValidator:
 
     def is_valid(self, data: Any, *, strict: bool = True, allow_extra: bool = False) -> bool:
         return not self.validate(data, strict=strict, allow_extra=allow_extra)
+
+    def _validate_nested_dataclass_value(self, name: str, value: Any, tp: Any, *, strict: bool, allow_extra: bool) -> list[str]:
+        if value is None:
+            return []
+        origin = get_origin(tp)
+        args = get_args(tp)
+        if origin in (list, List) and args and dataclasses.is_dataclass(args[0]):
+            if not isinstance(value, list):
+                return []
+            sub_validator = SchemaValidator(StructuredOutputSpec.from_dataclass(args[0]))
+            errors: list[str] = []
+            for index, item in enumerate(value):
+                if not isinstance(item, dict):
+                    continue
+                for err in sub_validator.validate(item, strict=strict, allow_extra=allow_extra):
+                    errors.append(f"{name}.[{index}].{err}")
+            return errors
+        if dataclasses.is_dataclass(tp) and isinstance(value, dict):
+            sub_validator = SchemaValidator(StructuredOutputSpec.from_dataclass(tp))
+            return [f"{name}.{err}" for err in sub_validator.validate(value, strict=strict, allow_extra=allow_extra)]
+        return []
 
     def _collect_required(self) -> list[str]:
         """收集 required 字段：dataclass 推断 + required_nonempty 显式声明。"""

@@ -1,0 +1,208 @@
+{
+  "trace_id": "7ff5e3a6-68d6-4d09-a60a-9278909770e6",
+  "project_id": "marketting-planning-intent",
+  "verdict": "uncertain",
+  "score": 0.0,
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签为客户洞察分析意图",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "意图置信度应达到明确水平",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "关键实体应被识别或保留",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "兜底策略应正确触发",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "意图应可分发至下游处理",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签为客户洞察分析意图",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "意图置信度应达到明确水平",
+      "status": "not_evaluable",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "关键实体应被识别或保留",
+      "status": "not_evaluable",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "兜底策略应正确触发",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "意图应可分发至下游处理",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "not_fulfilled",
+      "downstream_impact": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=None，confidence=None，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "blocking_expectations": [
+      "intent_contract"
+    ],
+    "assessment_count": 6
+  },
+  "expected": {
+    "intent": "customer_insight",
+    "confidence": 1.0,
+    "subIntent": "客户特征分析"
+  },
+  "reasoning_summary": "当前单轮意图识别未满足 reference contract：query=None，expected_intent=None，actual_intent=None，confidence=None，min_confidence=None，失败项=[]，整体判定为 incorrect。",
+  "judge_basis": "依据意图识别任务规范，对比实际输出意图标签与预期业务意图的匹配度。",
+  "judge_method": "通过语义分析和业务场景推断生成预期意图，然后逐项评估各维度的满足情况。",
+  "verdict_derivation": {
+    "process": "评估business_expectations中各维度满足状态：核心维度intent_label为not_fulfilled，导致整体not_fulfilled。",
+    "contract_gate": "failed"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "description": "缺少正确的意图标签，预期为customer_insight"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "description": "缺少对查询中时间实体“上季度”的识别"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "description": "缺少对产品实体“重疾险”的识别"
+      },
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "description": "错误地将意图识别为other"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "description": "错误地返回子意图“其他意图”"
+      },
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "source": "extracted_output",
+      "data": {
+        "intent": "other",
+        "confidence": 0.5,
+        "subIntent": "其他意图"
+      }
+    }
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "reason": "错误源于意图识别模型输出的意图标签不正确，属于可评估范围。"
+  },
+  "evaluation_boundary": {
+    "scope": "单轮意图识别，不涉及多轮规划或卡片生成。"
+  },
+  "consumer_contract": {
+    "description": "下游消费者期望获得明确的分析意图标签（如customer_insight）和必要的实体信息，以便进行数据查询和分析。"
+  },
+  "intent_model": {
+    "description": "用户意图模型：用户希望基于上季度购买重疾险的客户数据进行特征分析，属于客户洞察类意图。"
+  },
+  "reconstructed_intent": "分析上季度购买重疾险的客户特征",
+  "reference_generation_basis": {
+    "method": "基于用户查询的文本语义和营销规划意图分类体系推断预期意图应为客户洞察。"
+  },
+  "scenario": "intent_recognition",
+  "needs_human_review": true,
+  "quality_flags": [
+    "intent_contract_gate_failed",
+    "invalid_actual_shape"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[(none)] · 用户查询旨在分析上季度购买重疾险的客户特征，属于典型的客户洞察场景，但系统返回了other意图及低置信度0.5。核心期望“意图标签为客户洞察分析意图”未满足，同时导致意图无法分发至下游，因此整体判定为未满足。兜底策略虽然正确触发，但不符合用户真实需求。其他维度如置信度阈值和实体识别因缺乏明确标准而无法评估。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "意图应可分发至下游处理",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户查询旨在分析上季度购买重疾险的客户特征，属于典型的客户洞察场景，但系统返回了other意图及低置信度0.5。核心期望“意图标签为客户洞察分析意图”未满足，同时导致意图无法分发至下游，因此整体判定为未满足。兜底策略虽然正确触发，但不符合用户真实需求。其他维度如置信度阈值和实体识别因缺乏明确标准而无法评估。"
+      },
+      {
+        "expectation_id": "意图标签为客户洞察分析意图",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户查询旨在分析上季度购买重疾险的客户特征，属于典型的客户洞察场景，但系统返回了other意图及低置信度0.5。核心期望“意图标签为客户洞察分析意图”未满足，同时导致意图无法分发至下游，因此整体判定为未满足。兜底策略虽然正确触发，但不符合用户真实需求。其他维度如置信度阈值和实体识别因缺乏明确标准而无法评估。"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

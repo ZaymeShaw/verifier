@@ -1,0 +1,34 @@
+{
+  "description": "大活回顾 — 多配置模板。同一个 detect.py 底层脚本，按不同 config 同时触发多种 action。",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/xiaozijian/miniconda3/envs/agno/bin/python /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/hooks/review/detect.py --config=config-uncertainty.json",
+            "timeout": 30,
+            "statusMessage": "Review hook: Stop 事件触发，按 config-uncertainty.action 执行"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/xiaozijian/miniconda3/envs/agno/bin/python /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/hooks/review/detect.py --config=config-code-review.json",
+            "timeout": 30,
+            "statusMessage": "Review hook: Stop 事件触发，按 config-code-review.action 执行"
+          }
+        ]
+      }
+    ]
+  },
+  "review_hook_semantics": {
+    "trigger": "每个配置自己的 trigger 决定是否 block。",
+    "action": "每个配置自己的 action 决定触发后先调用 skill 还是执行 prompt。",
+    "instructions": "每个配置自己的 instructions 决定 action 后的补充要求。",
+    "debug": "每个配置自己的 debug 决定是否 dump Stop hook stdin。",
+    "combined_effect": "如果多个配置都触发，多个 Stop hook 都会 block，Claude Code 会合并反馈。"
+  }
+}

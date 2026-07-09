@@ -89,20 +89,15 @@ For QA:
 
 ## Judge requirements
 
-QA judge should output fulfillment-first generic fields plus multidimensional details:
+QA judge should output fulfillment-first generic fields plus QA-private multidimensional evidence:
 
 - `business_expectations`
 - `fulfillment_assessments`
 - `overall_fulfillment`
-- `verdict`
-- `score`
-- `confidence`
-- `reasoning_summary`
-- `verdict_derivation.score_dimensions`
-- `needs_human_review`
+- QA-private quality dimensions when useful
 - scenario-specific evidence fields when useful
 
-All scores are 0-1. Scenario dimensions live under `verdict_derivation.score_dimensions` when present.
+All QA-private quality scores are 0-1 and must be carried as fulfillment evidence or project display extensions, not as shared judge protocol fields.
 
 Gold answer metrics should not be applied to context-only or weak samples. Weak samples should not be reported as accuracy.
 
@@ -127,22 +122,20 @@ QA attribution should use structured error types. Initial taxonomy:
 
 Each failed or risky sample should have:
 
-- `causal_category`
 - `expectation_attributions`
-- `earliest_divergence`
-- `chain_nodes`
-- `probe_results`
-- `evidence_coverage`
-- `needs_human_review`
-- actionable reason and suggested fix
+- `suspected_locations`
+- `root_cause_hypothesis`
+- `evidence`
+- `evidence_strength`
+- actionable quality reason grounded in current QA evidence
 
 ## Cluster and summary requirements
 
 QA cluster/report should group by:
 
 - scenario
-- causal category
-- needs human review
+- root-cause evidence pattern
+- human-review recommendation
 - category/model metadata when available
 
 Metrics must be separated:
@@ -171,8 +164,8 @@ QA-specific check should verify:
 
 - scenario inference is consistent with sample fields;
 - samples without golden answer are not included in accuracy;
-- `verdict_derivation.score_dimensions` scores are 0-1 and match scenario dimensions;
-- `causal_category` comes from the QA taxonomy or generic attribution categories;
+- QA-private quality dimension scores are 0-1 when present;
+- AttributeResult root cause and evidence strength come from the current QA taxonomy-related evidence or current sample semantic evidence;
 - RAG/context scenario has non-empty contexts;
 - weak-quality scenario conclusions are marked as estimates, not accuracy;
-- human-review queue can be derived from confidence, boundary scores, evidence coverage, and `needs_human_review`.
+- human-review queue can be derived from confidence, boundary scores, current evidence strength, and fulfillment assessments.

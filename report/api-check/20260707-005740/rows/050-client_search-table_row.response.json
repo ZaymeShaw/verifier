@@ -1,0 +1,61 @@
+{
+  "id": "mock-agent-client_search-cdd7df11",
+  "input": "session_001",
+  "scenario": "",
+  "output_summary": "{\"code\": 0, \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"MATCH\", \"value\": \"疾病保险\"}], \"confidence\": 0.8, \"cost_times\": 1051.0, \"end_flag\": 1, \"intent_summ…",
+  "reference_summary": "{\"code\": 0, \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": \"疾病保险\"}], \"msg\": \"操作成功\", \"query\": \"帮我看看公司里所有买了重疾险的客户都有谁\", \"query_logic\": \"A…",
+  "status": "fulfilled",
+  "execution_mode": "",
+  "output_source": "live_service",
+  "verdict": "correct",
+  "fulfillment_status": "fulfilled",
+  "judge_summary": {
+    "status": "fulfilled",
+    "fulfillment_status": "fulfilled",
+    "verdict": "correct",
+    "reason": "fulfilled · 0 blocking expectations all met · 用户查询'帮我看看公司里所有买了重疾险的客户都有谁'的核心意图是查找持有重疾险的客户，属于单一筛选条件查询。parser正确地将口语'重疾险'映射为标准枚举值'疾病保险'（符合value_mappings），选用了正确的pCategorys字段表达险种大类查询，使用MATCH操作符表达正向持有语义。虽然capability_manifest标注pCategorys支持CONTAINS操作符而actual输出为MATCH，但judge边界明确不纠结两者差异，下游等价。rewritten_query也将'重疾险'改写为'疾病保险'，robot_text正确描述为'产品类别为疾病保险的客户'。三个业务期望全部满足，parser条件语义完全正确。下游搜索不可用但不影响对parser条件语义的评估。",
+    "reason_source": "aggregated_fulfillment",
+    "reason_stage": "judge",
+    "is_formal_attribution": true,
+    "assessment_count": 3,
+    "blocking_count": 0
+  },
+  "attribution_summary": {
+    "attribution_count": 3,
+    "causal_category": "no_issue",
+    "is_complete": true,
+    "is_formal_attribution": true,
+    "probe_count": 1,
+    "summary_text": "业务预期已达成"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 3,
+    "protocol_gap_count": 0,
+    "consistency_gap_count": 0,
+    "recommended_fix_count": 1,
+    "issues": [
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+    ]
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": false,
+  "quality_flags": [
+    "application_boundary_parser_only"
+  ],
+  "check_passed": false,
+  "issue_count": 3,
+  "fallback_count": 0,
+  "causal_category": "no_issue",
+  "divergence_stage": "fulfillment_assessment",
+  "root_cause_summary": "业务预期已达成",
+  "created_at": "2026-07-06T16:57:42.867367+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "617c0bd4-f334-48c1-975d-20b715a855e3"
+}

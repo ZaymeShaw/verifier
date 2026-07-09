@@ -1,0 +1,56 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::意图识别模型/规则未能将用户关于NBEV目标和增加理财师/优化产品方案的需求映射到营销规划意图类别，导致分类为“其他意图(4001)”。可能的原因包括：1）意图::not_fulfilled",
+      "mechanism": "意图识别模型/规则未能将用户关于NBEV目标和增加理财师/优化产品方案的需求映射到营销规划意图类别，导致分类为“其他意图(4001)”。可能的原因包括：1）意图::not_fulfilled",
+      "causal_category": "",
+      "fulfillment_statuses": [
+        "not_fulfilled",
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图识别准确",
+        "阶段路由正确",
+        "业务指标提取",
+        "SSE事件业务完整性",
+        "mp_contract:expected_stage"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "representative_traces": [
+        "marketting-planning:mock-agent-marketting-planning-d1642b58:1783493357580"
+      ],
+      "common_root_cause": "意图识别模型/规则未能将用户关于NBEV目标和增加理财师/优化产品方案的需求映射到营销规划意图类别，导致分类为“其他意图(4001)”。可能的原因包括：1）意图分类prompt或训练样本中未包含“NBEV”“理财师”等保险营销领域术语，导致模型无法关联到营销规划意图；2）营销规划意图的定义边界过窄，仅涵盖某些固定模式，无法泛化到本轮的泛营销规划需求。由于意图识别失败，下游的阶段路由无法进入预期的intent阶段，业务卡片生成被完全跳过，进而使得阶段路由、业务指标提取、SSE业务完整性等多个预期连锁未达成。",
+      "shared_failure_pattern": "意图识别模型/规则未能将用户关于NBEV目标和增加理财师/优化产品方案的需求映射到营销规划意图类别，导致分类为“其他意图(4001)”。可能的原因包括：1）意图分类prompt或训练样本中未包含“NBEV”“理财师”等保险营销领域术语，导致模型无法关联到营销规划意图；2）营销规划意图的定义边界过窄，仅涵盖某些固定模式，无法泛化到本轮的泛营销规划需求。由于意图识别失败，下游的阶段路由无法进入预期的intent阶段，业务卡片生成被完全跳过，进而使得阶段路由、业务指标提取、SSE业务完整性等多个预期连锁未达成。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-d1642b58",
+          "root_cause": "意图识别模型/规则未能将用户关于NBEV目标和增加理财师/优化产品方案的需求映射到营销规划意图类别，导致分类为“其他意图(4001)”。可能的原因包括：1）意图分类prompt或训练样本中未包含“NBEV”“理财师”等保险营销领域术语，导致模型无法关联到营销规划意图；2）营销规划意图的定义边界过窄，仅涵盖某些固定模式，无法泛化到本轮的泛营销规划需求。由于意图识别失败，下游的阶段路由无法进入预期的intent阶段，业务卡片生成被完全跳过，进而使得阶段路由、业务指标提取、SSE业务完整性等多个预期连锁未达成。",
+          "evidence": [
+            "trace中intent_recognition阶段实际输出：intent=4001, intent_name=其他意图, stage=non_agent",
+            "reference.expected_stage为intent，但actual_stage为non_agent",
+            "judge_result中missing/wrong字段显示预期营销规划意图，实际为4001",
+            "event_summary中card_summary为空数组，证实无业务卡片生成"
+          ]
+        }
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "next_actions": [
+        "trace中intent_recognition阶段实际输出：intent=4001, intent_name=其他意图, stage=non_agent",
+        "reference.expected_stage为intent，但actual_stage为non_agent",
+        "judge_result中missing/wrong字段显示预期营销规划意图，实际为4001",
+        "event_summary中card_summary为空数组，证实无业务卡片生成"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模型/规则未能将用户关于NBEV目标和增加理财师/优化产品方案的需求映射到营销规划意图类别，导致分类为“其他意图(4001)”。可能的原因包括：1）意图分类prompt或训练样本中未包含“NBEV”“理财师”等保险营销领域术语，导致模型无法关联到营销规划意图；2）营销规划意图的定义边界过窄，仅涵盖某些固定模式，无法泛化到本轮的泛营销规划需求。由于意图识别失败，下游的阶段路由无法进入预期的intent阶段，业务卡片生成被完全跳过，进而使得阶段路由、业务指标提取、SSE业务完整性等多个预期连锁未达成。",
+  "impact": "",
+  "priority": "normal"
+}

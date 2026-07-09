@@ -27,6 +27,7 @@ class ProjectSpec:
     # 配置 source_roots + framework 后，启动时通用引擎扫描业务系统源码，
     # 自动构建 VerifiableTool 注册到 ToolRegistry。不配置则跳过，完全兼容现有项目。
     endpoint_discovery: Dict[str, Any] = field(default_factory=dict)
+    attribute_draft: Dict[str, Any] = field(default_factory=dict)
     root: str = ""
     source_project: str = ""  # 用户侧项目目录（绝对路径），LLM 可据此查找需求材料
 

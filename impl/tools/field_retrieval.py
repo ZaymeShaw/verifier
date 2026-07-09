@@ -1,16 +1,14 @@
 """
-通用 Tool 协议：字段定义检索（辅助 tool，已降级）。
+通用 Tool 协议：字段定义检索。
 
-⚠️ 降级说明（spec/tool2.md）：
-此 tool 是"信息搬运"而非"可执行验证"，不作为归因主力。归因主力是各项目 adapter
-在 get_verifiable_tools() 里提供的可执行验证 tool（execute_fn 真能跑、能产出 actual）。
-本 tool 仅作为兜底辅助，供 judge/attr 在没有项目级字段能力 tool 时使用。
-
-具体字段能力验证应由项目层提供（如 client_search/tools/field_capability.py）。
+本模块将项目字段定义 provider 包装成统一 VerifiableTool，作为 judge 在 capability_manifest
+信息不足时的按需检索兜底。具体字段能力验证仍应优先由项目层可执行 tool 提供。
 """
 from __future__ import annotations
 
-from typing import Protocol, Optional
+from typing import Any, Protocol, Optional
+
+from impl.tools.protocol import ToolResult, VerifiableTool
 
 
 class FieldDefinitionProvider(Protocol):
@@ -43,70 +41,58 @@ class FieldDefinitionProvider(Protocol):
         ...
 
 
-def create_field_search_tool(provider: FieldDefinitionProvider):
-    """
-    协议通用：创建字段搜索 tool。
-
-    Args:
-        provider: 字段定义提供者（项目专属实现）
-
-    Returns:
-        search_field_definition 函数（用于 Agno Agent tools）
-    """
-
-    def search_field_definition(field_name: str) -> str:
-        """
-        Search for a specific field's definition from project source documents.
-
-        Args:
-            field_name: The field name to search (e.g., "clientAge", "annPremSegNum")
-
-        Returns:
-            Field definition including operators, value types, description, and examples.
-            Returns "Field not found" if the field doesn't exist.
-        """
+def create_field_search_verifiable_tool(provider: FieldDefinitionProvider) -> VerifiableTool:
+    def search_field_definition(**kwargs: Any) -> ToolResult:
+        field_name = str(kwargs.get("field_name") or kwargs.get("field") or "")
         try:
             field_def = provider.get_field_definition(field_name)
 
             if not field_def:
-                return f"Field '{field_name}' not found in field definitions"
+                return ToolResult(
+                    tool_id="field.search_definition",
+                    tool_type="field_retrieval",
+                    status="inconclusive",
+                    actual={"field_name": field_name, "found": False},
+                    evidence=f"field '{field_name}' not found in field definitions",
+                )
 
-            # 协议通用：格式化输出
-            lines = [f"Field: {field_def['field']}"]
-
-            if field_def.get('description'):
-                lines.append(f"Description: {field_def['description']}")
-
-            if field_def.get('operators'):
-                lines.append(f"Allowed operators: {', '.join(field_def['operators'])}")
-
-            if field_def.get('value_types'):
-                lines.append(f"Value types: {', '.join(field_def['value_types'])}")
-
-            if field_def.get('enums'):
-                lines.append(f"Valid values: {', '.join(field_def['enums'])}")
-
-            if field_def.get('unit'):
-                lines.append(f"Unit: {field_def['unit']}")
-
-            if field_def.get('examples'):
-                lines.append(f"Examples: {'; '.join(field_def['examples'])}")
-
-            if field_def.get('notes'):
-                lines.append(f"Notes: {field_def['notes']}")
-
-            return "\n".join(lines)
-
+            actual = {
+                "field": field_def.get("field"),
+                "description": field_def.get("description"),
+                "operators": field_def.get("operators") or [],
+                "value_types": field_def.get("value_types") or [],
+                "examples": field_def.get("examples") or [],
+                "enums": field_def.get("enums") or [],
+                "unit": field_def.get("unit"),
+                "notes": field_def.get("notes"),
+            }
+            return ToolResult(
+                tool_id="field.search_definition",
+                tool_type="field_retrieval",
+                status="succeeded",
+                actual=actual,
+                evidence=f"retrieved field definition for {field_name}",
+            )
         except Exception as e:
-            return f"Error retrieving field definition: {str(e)}"
+            return ToolResult(
+                tool_id="field.search_definition",
+                tool_type="field_retrieval",
+                status="failed",
+                error=f"Error retrieving field definition: {str(e)}",
+            )
 
-    # Tool metadata
-    search_field_definition.__name__ = "search_field_definition"
-    search_field_definition.__doc__ = (
-        "Search for a specific field's definition from project source documents. "
-        "Use this when you need to verify field capabilities, operators, or value types "
-        "that are not provided in the capability_manifest. "
-        "Returns field description, allowed operators, value types, and examples."
+    search_field_definition.__name__ = "field_search_definition"
+    return VerifiableTool(
+        tool_id="field.search_definition",
+        description="当 user prompt 中的 capability_manifest 不足以判断某个字段是否合法或如何取值时调用。输入字段名，返回该字段的业务含义、允许操作符、值类型、示例、枚举、单位和备注；如果 prompt 已包含该字段完整能力清单，应优先使用 prompt 信息。",
+        applicable_scenario="judge",
+        parameters={
+            "type": "object",
+            "properties": {
+                "field_name": {"type": "string", "description": "必填。需要查询定义的项目字段名，应使用项目文档或 actual output 中出现的原始字段标识，如 clientAge、annPremSegNum。"},
+                "field": {"type": "string", "description": "字段名别名，同 field_name；仅在调用方无法使用 field_name 参数名时作为兼容入口。"},
+            },
+            "required": ["field_name"],
+        },
+        execute_fn=search_field_definition,
     )
-
-    return search_field_definition

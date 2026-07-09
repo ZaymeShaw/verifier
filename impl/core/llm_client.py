@@ -7,6 +7,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import json_repair
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -85,10 +86,14 @@ def extract_json(text: str) -> Any:
             return json.loads(text[start:])
         except json.JSONDecodeError as exc:
             parse_errors.append(f"bare JSON from first bracket: {_json_error_summary(exc)}")
+    try:
+        return json_repair.repair_json(text, return_objects=True)
+    except Exception as exc:
+        parse_errors.append(f"json_repair: {type(exc).__name__}: {exc}")
     preview = text[:500]
-    detail = "; ".join(parse_errors[-3:]) if parse_errors else "no JSON object or array found"
+    detail = "; ".join(parse_errors[-4:]) if parse_errors else "no JSON object or array found"
     raise JsonExtractionError(
-        "LLM 输出不是合法 JSON，无法进入结构化校验。"
+        "LLM 输出不是合法 JSON，且标准 JSON repair 未能修复，无法进入结构化校验。"
         f"解析错误：{detail}\n原始输出预览：{preview}"
     )
 
@@ -415,9 +420,9 @@ class LlmClient:
         system = system + "\n\n" + render_output_constraint(enforce_spec)
 
         start_ts = time.time()
-        # Ensure OPENAI_API_KEY is set for this request (defensive, already set at module import)
-        original_openai_key = os.environ.get("OPENAI_API_KEY")
-        os.environ["OPENAI_API_KEY"] = self.api_key
+        # OPENAI_API_KEY is initialized once before Agno import above. Do not
+        # mutate process-global env per request: api-check runs LLM-heavy routes
+        # concurrently, and per-call restore can corrupt other in-flight calls.
 
         try:
             model_kwargs = {
@@ -485,19 +490,8 @@ class LlmClient:
                 }
                 print(f"[Token usage] {token_metrics['input_tokens']:,} in + {token_metrics['output_tokens']:,} out + {token_metrics['cache_read_tokens']:,} cache = {token_metrics['total_tokens']:,} total")
         except Exception as exc:
-            # Restore original OPENAI_API_KEY on error
-            if original_openai_key is None:
-                os.environ.pop("OPENAI_API_KEY", None)
-            else:
-                os.environ["OPENAI_API_KEY"] = original_openai_key
             _track_context(self, system, user, None, trace_id or "", {}, int((time.time() - start_ts) * 1000), str(exc))
             return {"error": "llm_request_failed", "raw_text": str(exc)}
-        finally:
-            # Always restore original OPENAI_API_KEY
-            if original_openai_key is None:
-                os.environ.pop("OPENAI_API_KEY", None)
-            else:
-                os.environ["OPENAI_API_KEY"] = original_openai_key
 
         try:
             content = _response_content(result)
@@ -505,10 +499,6 @@ class LlmClient:
         except JsonExtractionError as exc:
             raw_response = _raw_response(result)
             elapsed_ms = int((time.time() - start_ts) * 1000)
-            if original_openai_key is None:
-                os.environ.pop("OPENAI_API_KEY", None)
-            else:
-                os.environ["OPENAI_API_KEY"] = original_openai_key
             _track_context(self, system, user, result, trace_id or "", token_metrics, elapsed_ms, str(exc))
             raise ValueError(f"[{getattr(self, '_caller', '') or 'llm'}] {exc}") from exc
         raw_response = _raw_response(result)

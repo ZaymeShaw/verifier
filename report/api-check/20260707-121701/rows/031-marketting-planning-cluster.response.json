@@ -1,0 +1,58 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图识别准确性",
+        "阶段路由正确性",
+        "回复内容相关性",
+        "mp_contract:expected_stage"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "representative_traces": [
+        "1748fa3a-5877-4f9e-93a1-565a8cc331c3"
+      ],
+      "common_root_cause": "意图识别模块（intent_recognition.py）的规则层 Tier 3 关键词白名单设计过窄——仅覆盖 NBEV+(达成/规划/路径/测算/分析) 组合，导致“我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？”这类以“目标缺口描述+补足诉求”替代显式规划动词的常见业务表达无法被规则命中。同时，LLM prompt（intent_prompt.py）中 nbev_planning 的语义边界未充分覆盖目标缺口补足场景，LLM fallback 同样将其误判为 4001-其他意图。最终导致整个规划链路（阶段路由→路径规划→卡片生成）完全未被触发，用户得到空回复。",
+      "shared_failure_pattern": "意图识别模块（intent_recognition.py）的规则层 Tier 3 关键词白名单设计过窄——仅覆盖 NBEV+(达成/规划/路径/测算/分析) 组合，导致“我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？”这类以“目标缺口描述+补足诉求”替代显式规划动词的常见业务表达无法被规则命中。同时，LLM prompt（intent_prompt.py）中 nbev_planning 的语义边界未充分覆盖目标缺口补足场景，LLM fallback 同样将其误判为 4001-其他意图。最终导致整个规划链路（阶段路由→路径规划→卡片生成）完全未被触发，用户得到空回复。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-d1642b58",
+          "expected": {
+            "intent": "nbev_planning",
+            "stage": "intent 或 planning"
+          }
+        }
+      ],
+      "minimal_fix_direction": [
+        "扩展 Tier 3 关键词白名单：将“目标”“缺口”“差距”“差”“补”“补上”“补足”“追赶”等 NBEV 规划场景高频共现词加入触发词集合",
+        "增强 LLM prompt：在 nbev_planning 意图描述中显式加入“用户表达 NBEV 目标存在缺口/差距，希望获得补足方案或资源调整建议”的场景说明",
+        "补充 few-shot 示例：增加 2-3 条以目标缺口描述为主的 nbev_planning 示例（如“团队 NBEV 还差不少，怎么通过增员来补”→nbev_planning，path_types=[“队伍”]）",
+        "workflow 防御性增强：在 nbev_workflow.py 中增加 NBEV 关键词兜底检测——当 query 明确含 NBEV 但 intent 非规划类时，可降级进入 nbev_planning_fallback 或触发二次确认"
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "next_actions": [
+        "读取 intent_prompt.py 完整内容，确认 INTENT_RECOGNITION_PROMPT 中 nbev_planning 的语义描述和 few-shot 示例是否覆盖目标缺口补足场景",
+        "读取 intent_recognition.py 完整源码，确认 Tier 0-3 各层规则的确切匹配逻辑",
+        "使用同类 query（“NBEV还差200万怎么办”“NBEV缺口怎么通过增员来补”）进行端到端回归测试",
+        "检查 config_dev.json 中 INTENT_MAPPING 是否对 4001 有特殊处理",
+        "验证 nbev_workflow.py 中 IntentType.other→stage 的映射是否为硬编码 non_agent"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模块（intent_recognition.py）的规则层 Tier 3 关键词白名单设计过窄——仅覆盖 NBEV+(达成/规划/路径/测算/分析) 组合，导致“我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？”这类以“目标缺口描述+补足诉求”替代显式规划动词的常见业务表达无法被规则命中。同时，LLM prompt（intent_prompt.py）中 nbev_planning 的语义边界未充分覆盖目标缺口补足场景，LLM fallback 同样将其误判为 4001-其他意图。最终导致整个规划链路（阶段路由→路径规划→卡片生成）完全未被触发，用户得到空回复。",
+  "impact": "",
+  "priority": "high"
+}

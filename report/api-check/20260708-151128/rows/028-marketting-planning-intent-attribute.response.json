@@ -1,0 +1,57 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783494691116",
+  "project_id": "marketting-planning-intent",
+  "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+  "expectation_attributions": [
+    {
+      "expectation_id": "intent_contract",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": ""
+    }
+  ],
+  "suspected_locations": [
+    {
+      "location": "intent_contract_gate",
+      "evidence": [
+        [
+          {
+            "kind": "missing",
+            "error_type": "",
+            "expected": "重疾险",
+            "evidence_ref": "",
+            "raw": {
+              "expected": "重疾险",
+              "field": "target_value"
+            },
+            "incomplete": false
+          }
+        ]
+      ]
+    }
+  ],
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'confidence': 0.95, 'intent': 'customer_portrait', 'subIntent': '其他意图', 'target_value': '重疾险'}，实际 normalized intent evidence 为 {'confidence': 0.5, 'intent': 'other', 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+  "evidence": [
+    [
+      {
+        "kind": "missing",
+        "error_type": "",
+        "expected": "重疾险",
+        "evidence_ref": "",
+        "raw": {
+          "expected": "重疾险",
+          "field": "target_value"
+        },
+        "incomplete": false
+      }
+    ]
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "causal_category": "",
+    "attribution_count": 1,
+    "probe_count": 0,
+    "summary_text": "意图识别API（可能为LLM）在接收query='帮我看看上季度买了重疾险的客户都是啥样的？'后，返回的意图类别为other而非customer_portrait，导致下游映射和输出均为other，且置信度仅0.5、实体target_value缺失。深层原因推测为：1) 意图识别的prompt模板未将“客户画像”的询问方式作为customer_portrait的典型案例进行教学；2) 关键实体“重疾险”未能被提取并作为意图推断的上下文特征；3) 当上游无法给出有效意图时，label_mapping及兜底逻辑未设专门的纠正机制，直接映射为other。由于未拿到API原始响应，无法完全排除模型随机性或API服务临时故障。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

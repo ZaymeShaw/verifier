@@ -20,6 +20,7 @@ def test_runtime_config_loads_defaults(monkeypatch):
         "LLM_API_KEY",
     ):
         monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(runtime_config, "_load_yaml_config", lambda path=runtime_config.CONFIG_PATH: {})
     monkeypatch.setattr(runtime_config, "ENV_MD_PATH", runtime_config.ROOT / "missing-env.md")
 
     loaded = runtime_config.get_runtime_config()

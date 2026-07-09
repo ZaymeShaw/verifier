@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
-from .schema import AttributeResult, CheckReport, ClusterSummary, FrontendViewModel, JudgeResult, ProjectSpec, RunTrace, _non_empty_reference, attribute_causal_category, to_dict, trace_extracted_output, trace_normalized_request, trace_raw_response
+from .schema import AttributeResult, CheckReport, ClusterSummary, FrontendViewModel, JudgeResult, ProjectSpec, RunTrace, _non_empty_reference, to_dict, trace_extracted_output, trace_normalized_request, trace_raw_response
 from .table_view import build_trace_table_row
 from .summary import summary_from_fulfillment
 
@@ -26,7 +26,6 @@ def _reference_panel(trace: Optional[RunTrace], judge: Optional[JudgeResult]) ->
     provided = _trace_reference(trace)
     generated = judge.expected if judge and provided is None else None
     reference = provided if provided is not None else generated
-    # reference 已按 live_schema 产出/校验，形状必然合规，不再做 actual 整形。
     return {
         "reference": reference,
         "source": "input" if provided is not None else ("judge_generated" if generated is not None else "missing"),
@@ -81,15 +80,11 @@ def _fulfillment_panel(judge: Optional[JudgeResult]) -> dict:
                 "score": _item_value(assessment, "score"),
                 "blocking": bool(_item_value(assessment, "blocking", False)),
                 "downstream_impact": _item_value(assessment, "downstream_impact", ""),
-                "boundary_decision": _item_value(assessment, "boundary_decision", {}),
             }
         )
     return {
-        "consumer_contract": to_dict(judge.consumer_contract or {}),
         "overall_fulfillment": to_dict(judge.overall_fulfillment or {}),
         "matrix": to_dict(matrix),
-        "derived_verdict": judge.verdict,
-        "verdict_derivation": to_dict(judge.verdict_derivation or {}),
     }
 
 
@@ -117,12 +112,8 @@ def _attribute_panel(attribute: Optional[AttributeResult]) -> dict:
     panel = to_dict(attribute)
     panel.update(
         {
-            "display_causal_category": attribute_causal_category(attribute),
-            "display_root_cause": attribute.incomplete_reason or attribute.root_cause_hypothesis,
-            "display_verification_steps": list(attribute.verification_steps or []),
-            "display_patch_direction": list(attribute.patch_direction or []),
+            "display_root_cause": attribute.root_cause_hypothesis,
             "attribution_count": len(attribute.expectation_attributions or []),
-            "probe_count": len(attribute.probe_results or []),
         }
     )
     return panel
@@ -134,19 +125,10 @@ def _expectation_attribution_panel(attribute: Optional[AttributeResult]) -> dict
     attributions = list(attribute.expectation_attributions or [])
     return {
         "attributions": to_dict(attributions),
-        "causal_category": attribute.causal_category,
-        "probe_results": to_dict(attribute.probe_results or []),
-        "quality_flags": list(attribute.quality_flags or []),
-        "incomplete_reason": attribute.incomplete_reason,
     }
 
 
 def _verifiable_tool_panel(spec: ProjectSpec) -> dict:
-    """spec/tool2.md: 收集项目 adapter 暴露的可执行验证 tool 目录。
-
-    只返回 tool 目录（tool_id + description + applicable_scenario + parameters），
-    不执行 execute_fn。执行记录由 attribute agent 调用时产生，挂在 tool_call_log 上。
-    """
     try:
         from .project_loader import load_adapter
         adapter = load_adapter(spec)
@@ -163,7 +145,7 @@ def _verifiable_tool_panel(spec: ProjectSpec) -> dict:
                 "has_execute_fn": vt.execute_fn is not None,
             })
         return {"available": bool(catalog), "catalog": catalog}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"available": False, "catalog": [], "reason": f"failed to load verifiable tools: {exc}"}
 
 
@@ -197,5 +179,5 @@ def build_frontend_view(
         check_panel=to_dict(check) if check else {},
         table_row=table_row,
         project_extensions=extensions,
-        tool_call_log=attribute.tool_call_log if attribute else [],
+        tool_call_log=[],
     )

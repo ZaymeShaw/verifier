@@ -1,0 +1,90 @@
+{
+  "trace_id": "35197077-298d-48d1-a3db-a0b5604a95fd",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "QA:answer_quality",
+      "causal_category": "needs_human_review"
+    }
+  ],
+  "causal_category": "需人工复核",
+  "earliest_divergence": {
+    "stage": "judge.llm_evaluate",
+    "description": "Judge LLM 在生成结构化评估结果时，business_expectations 字段内的数组元素类型与 dataclass GapItem schema 不匹配（期望 object，实际 string），导致反序列化失败，评估流程被阻断。",
+    "error_detail": "字段类型不匹配：missing，[0]: 期望 object（dataclass GapItem），实际 str。LLM 输出预览中 business_expectations 的第一个元素为字符串 \"确认轻症可多次赔付\"。"
+  },
+  "chain_nodes": [
+    {
+      "status": "verified"
+    },
+    {
+      "status": "verified"
+    },
+    {
+      "status": "verified"
+    },
+    {
+      "status": "verified"
+    },
+    {
+      "status": "verified"
+    },
+    {
+      "status": "failed"
+    }
+  ],
+  "evidence_coverage": {
+    "execution_trace_nodes_analyzed": 5,
+    "judge_assessments_analyzed": 2,
+    "source_files_read": 0,
+    "probes_executed": 0,
+    "gaps": [
+      "Judge LLM 的完整原始输出未被保留，仅有截断预览，无法确认是否所有 business_expectations 元素均为字符串",
+      "Judge prompt 的具体内容不可见，无法判断 schema 约束是否已正确注入 prompt"
+    ]
+  },
+  "root_cause_hypothesis": "Judge LLM 在评估 QA 样本时，其输出的 business_expectations 数组中混入了字符串元素（如「确认轻症可多次赔付」），而评测框架的结构化输出解析层严格要求每个元素为 dataclass GapItem 对象。LLM 未能遵循预期的嵌套对象结构，可能原因：(1) prompt 中对 GapItem 的 schema 描述不够显式或约束力不足，(2) LLM 在生成长 JSON 时发生了结构坍塌（将对象简化为字符串描述），(3) 未使用 function-calling / JSON mode 等强制结构化输出机制。该格式校验失败导致整个评估被阻断，actual answer 与 reference answer 的语义质量对比未能完成，需要人工介入复核。",
+  "verification_steps": [
+    "提取 Judge LLM 调用的完整原始输出（非截断版本），确认 business_expectations 数组中所有元素的类型分布",
+    "审查 Judge prompt 模板，检查 GapItem schema 是否以 JSON Schema 或 dataclass 定义形式注入，以及约束强度",
+    "复现：用相同 question + actual answer + reference answer 重新触发 Judge 评估，观察 LLM 输出是否稳定复现格式错误",
+    "检查 Judge 框架是否启用了 function-calling 或 response_format 参数来约束 LLM 输出结构"
+  ],
+  "patch_direction": [
+    "在 Judge LLM 调用中启用结构化输出模式（如 OpenAI 的 response_format={'type': 'json_schema', 'json_schema': {...}}），将 GapItem dataclass 转换为 JSON Schema 并注入请求",
+    "在解析侧增加防御性降级：当 business_expectations 元素为字符串时，自动包装为 {description: <string>} 的最小 GapItem 对象，同时记录 warning 而非直接阻断",
+    "在 Judge prompt 中增加 few-shot 示例，明确展示 business_expectations 的正确嵌套对象格式",
+    "增加 Judge 输出的 pre-validation 步骤，在 dataclass 反序列化前先用 jsonschema 校验顶层结构，给出更友好的错误信息"
+  ],
+  "needs_human_review": true,
+  "scenario": "qa_gold_answer",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 1,
+    "probe_count": 0,
+    "summary_text": "Judge LLM 在评估 QA 样本时，其输出的 business_expectations 数组中混入了字符串元素（如「确认轻症可多次赔付」），而评测框架的结构化输出解析层严格要求每个元素为 dataclass GapItem 对象。LLM 未能遵循预期的嵌套对象结构，可能原因：(1) prompt 中对 GapItem 的 schema 描述不够显式或约束力不足，(2) LLM 在生成长 JSON 时发生了结构坍塌（将对象简化为字符串描述），(3) 未使用 function-calling / JSON mode 等强制结构化输出机制。该格式校验失败导致整个评估被阻断，actual answer 与 reference answer 的语义质量对比未能完成，需要人工介入复核。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  },
+  "analysis_method": "基于 judge_result 中的 fulfillment_assessments、downstream_impact 错误信息以及 execution_trace 的节点状态进行归因。divergence_analysis 为空，无需读取源码文件（问题定位在 judge 基础设施内部而非业务系统或 adapter）。execution_trace 显示所有预处理节点均成功，分歧点位于 judge LLM 的结构化输出校验环节。",
+  "analysis_quality": {
+    "confidence": "high",
+    "limitations": [
+      "归因基于 judge_result 中的错误信息和输出预览，未直接访问 judge LLM 调用的完整日志",
+      "无法确认 LLM 输出格式错误是由 prompt 约束不足、模型能力限制还是采样随机性导致"
+    ],
+    "passed": false,
+    "status": "insufficient_evidence",
+    "missing": [
+      "supported root-cause evidence"
+    ]
+  },
+  "incomplete_reason": "判定结果为 uncertain，证据不足以做出确定性判断；attribute agent 未能获取足够的源码/配置证据来支撑正式根因定位。；建议：检查 source_file_catalog 是否包含相关 prompt 文件和 adapter 源码。。",
+  "quality_flags": [
+    "llm_output_validation_failed",
+    "judge_evaluation_blocked",
+    "actual_vs_reference_comparison_pending",
+    "ungrounded_root_cause"
+  ]
+}

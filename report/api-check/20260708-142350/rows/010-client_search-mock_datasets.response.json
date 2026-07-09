@@ -1,0 +1,115 @@
+{
+  "project_id": "client_search",
+  "datasets": [
+    {
+      "dataset_id": "client_search_single_condition",
+      "name": "single_condition mock 数据集",
+      "dimension_type": "single_condition",
+      "description": "mock_agent 生成或固化的 single_condition 场景用例",
+      "cases": [
+        {
+          "id": "mock-agent-client_search-cdd7df11",
+          "input": {
+            "user_text": "帮我看看公司里所有买了重疾险的客户都有谁",
+            "user_id": "default_user",
+            "trace_id": "trace_001",
+            "session_id": "session_001",
+            "source": "insurance_search",
+            "extra_input_params": {
+              "pCategorys": "重疾险"
+            }
+          },
+          "scenario": "single_condition",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "project_id": "client_search",
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ],
+      "case_count": 1
+    },
+    {
+      "dataset_id": "client_search_multi_condition_and",
+      "name": "multi_condition_and mock 数据集",
+      "dimension_type": "multi_condition_and",
+      "description": "mock_agent 生成或固化的 multi_condition_and 场景用例",
+      "cases": [
+        {
+          "id": "mock-agent-client_search-a40d8081",
+          "input": {
+            "user_text": "帮我找一下所有女性客户，年龄在30到40岁之间，而且年缴保费超过2万，保单状态是有效的，还要包含重疾险的",
+            "user_id": "user_123456",
+            "trace_id": "trace-abc-789",
+            "session_id": "sess-xyz-456",
+            "source": "chat",
+            "extra_input_params": {
+              "clientSex": "女",
+              "clientAge": {
+                "min": 30,
+                "max": 40
+              },
+              "annPremSegNum": {
+                "min": 20000
+              },
+              "policyStatus": "有效",
+              "pCategorys": [
+                "重疾险"
+              ]
+            }
+          },
+          "scenario": "multi_condition_and",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "project_id": "client_search",
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ],
+      "case_count": 1
+    },
+    {
+      "dataset_id": "client_search_product_category_or",
+      "name": "product_category_or mock 数据集",
+      "dimension_type": "product_category_or",
+      "description": "mock_agent 生成或固化的 product_category_or 场景用例",
+      "cases": [
+        {
+          "id": "mock-agent-client_search-846eeb3a",
+          "input": {
+            "user_text": "帮我查一下所有买了重疾险或者两全险的客户，男性也行，女性也行，年龄不限",
+            "user_id": "user_12345",
+            "trace_id": "trace_20250220120000_abcd",
+            "session_id": "session_67890",
+            "source": "insurance_search",
+            "extra_input_params": {
+              "pCategorys": [
+                "重疾险",
+                "两全险"
+              ]
+            }
+          },
+          "scenario": "product_category_or",
+          "expected_intent": "",
+          "source": "mock_agent_llm",
+          "status": "pending",
+          "metadata": {
+            "source": "mock_agent_llm",
+            "project_id": "client_search",
+            "live_request_mapped": true,
+            "schema_ok": true
+          }
+        }
+      ],
+      "case_count": 1
+    }
+  ]
+}

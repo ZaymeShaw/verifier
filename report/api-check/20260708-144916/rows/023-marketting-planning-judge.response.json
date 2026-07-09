@@ -1,0 +1,231 @@
+{
+  "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783493357580",
+  "project_id": "marketting-planning",
+  "business_expectations": [
+    {
+      "expectation_id": "用户意图被正确识别为营销规划相关意图",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "系统阶段输出符合 expected_stage 要求",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "用户意图被正确识别为营销规划相关意图",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "系统阶段输出符合 expected_stage 要求",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "reasoning": "核心意图识别完全失败：用户明确的营销规划需求被误判为“其他意图”，系统进入了与业务无关的 non_agent 阶段，导致用户无法获得所需的规划支持，且 stage 输出与预期严重偏离。"
+  },
+  "expected": {
+    "turns": [
+      {
+        "stage": "intent",
+        "intent": "1001",
+        "intent_name": "营销规划意图",
+        "event_summary": {
+          "names": [
+            "intent_detected",
+            "reasoning_message_content",
+            "planning_started",
+            "card_delta",
+            "done"
+          ],
+          "counts": {
+            "intent_detected": 1,
+            "reasoning_message_content": 1,
+            "planning_started": 1,
+            "card_delta": 1,
+            "done": 1
+          },
+          "final_event": "done",
+          "completed": true
+        },
+        "session_summary": {
+          "session_id": "eval-mock-agent-marketting-planning-d1642b58"
+        },
+        "fallback": {
+          "used": false,
+          "allowed": false,
+          "reason": ""
+        }
+      }
+    ]
+  },
+  "actual": {
+    "turns": [
+      {
+        "code": 0,
+        "end_flag": 1,
+        "event_summary": {
+          "business_completed": true,
+          "canonical_names": [
+            "intent_detected",
+            "reasoning_message_content",
+            "planning_started",
+            "card_delta",
+            "done"
+          ],
+          "completed": true,
+          "counts": {
+            "card_delta": 1,
+            "done": 1,
+            "intent_detected": 1,
+            "planning_started": 1,
+            "reasoning_message_content": 1
+          },
+          "final_event": "done",
+          "names": [
+            "intent_detected",
+            "reasoning_message_content",
+            "planning_started",
+            "card_delta",
+            "done"
+          ],
+          "protocol_completed": true,
+          "raw_counts": {
+            "card_end": 1,
+            "card_message_content": 1,
+            "card_start": 1,
+            "reasoning_end": 1,
+            "reasoning_message_content": 1,
+            "reasoning_start": 1
+          },
+          "raw_final_event": "card_end",
+          "raw_names": [
+            "reasoning_start",
+            "reasoning_message_content",
+            "reasoning_end",
+            "card_start",
+            "card_message_content",
+            "card_end"
+          ]
+        },
+        "fallback": {
+          "allowed": false,
+          "reason": "",
+          "used": false
+        },
+        "input_turn": {
+          "content": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？",
+          "role": "user"
+        },
+        "intent": "4001",
+        "intent_name": "其他意图",
+        "msg": "success",
+        "robot_text": "卡片生成完成",
+        "session_summary": {
+          "evidence_declared": false,
+          "evidence_status": "missing",
+          "session_id": "eval-mock-agent-marketting-planning-d1642b58"
+        },
+        "stage": "non_agent",
+        "turn_index": 0
+      }
+    ]
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "expected": "营销规划意图对应的意图码（如 1001）",
+      "actual": "未提供（仅提供了 4001）”",
+      "evidence_ref": "",
+      "raw": {
+        "field": "intent",
+        "expected": "营销规划意图对应的意图码（如 1001）",
+        "actual": "未提供（仅提供了 4001）”"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "expected": "intent",
+      "actual": "non_agent",
+      "evidence_ref": "",
+      "raw": {
+        "field": "stage",
+        "expected": "intent",
+        "actual": "non_agent"
+      },
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "expected": "营销规划意图",
+      "actual": "其他意图",
+      "evidence_ref": "",
+      "raw": {
+        "field": "intent_name",
+        "expected": "营销规划意图",
+        "actual": "其他意图"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "expected": "intent",
+      "actual": "non_agent",
+      "evidence_ref": "",
+      "raw": {
+        "field": "stage",
+        "expected": "intent",
+        "actual": "non_agent"
+      },
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    "extracted_output 中 turn[0].stage 为“non_agent”",
+    "extracted_output 中 turn[0].intent_name 为“其他意图”",
+    "execution_trace 中 intent_recognition.evidence.actual_stage 为“non_agent”，expected_stage 为“intent”"
+  ],
+  "reasoning_summary": "用户输入明确表达了通过增加理财师或优化产品方案弥补 NBEV 目标的规划诉求，属于典型的营销规划场景。但系统将其误判为“其他意图”，进入了 non_agent 阶段，这与参考契约要求的 intent 阶段背道而驰。因此，核心业务期望（正确识别并路由至规划意图）完全未实现，整体判定为 not_fulfilled。",
+  "summary": {
+    "reason": "not_fulfilled · blocking=[(none)] · 用户输入明确表达了通过增加理财师或优化产品方案弥补 NBEV 目标的规划诉求，属于典型的营销规划场景。但系统将其误判为“其他意图”，进入了 non_agent 阶段，这与参考契约要求的 intent 阶段背道而驰。因此，核心业务期望（正确识别并路由至规划意图）完全未实现，整体判定为 not_fulfilled。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "用户意图被正确识别为营销规划相关意图",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户输入明确表达了通过增加理财师或优化产品方案弥补 NBEV 目标的规划诉求，属于典型的营销规划场景。但系统将其误判为“其他意图”，进入了 non_agent 阶段，这与参考契约要求的 intent 阶段背道而驰。因此，核心业务期望（正确识别并路由至规划意图）完全未实现，整体判定为 not_fulfilled。"
+      },
+      {
+        "expectation_id": "系统阶段输出符合 expected_stage 要求",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户输入明确表达了通过增加理财师或优化产品方案弥补 NBEV 目标的规划诉求，属于典型的营销规划场景。但系统将其误判为“其他意图”，进入了 non_agent 阶段，这与参考契约要求的 intent 阶段背道而驰。因此，核心业务期望（正确识别并路由至规划意图）完全未实现，整体判定为 not_fulfilled。"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 2,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

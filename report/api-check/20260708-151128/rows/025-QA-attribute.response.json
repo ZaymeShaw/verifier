@@ -1,0 +1,35 @@
+{
+  "trace_id": "QA:mock-agent-QA-87e78ff7:1783494888049",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "涵盖轻症责任重要细则（分组限制、对重疾保额的影响等）",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": ""
+    }
+  ],
+  "suspected_locations": [
+    "LLM 生成阶段 (agent response generation)"
+  ],
+  "root_cause_hypothesis": "生成模型可能由于训练知识局限或 prompt 中缺乏对轻症责任全面性的要求，导致回答仅聚焦于用户直接询问的次数与金额，而忽略了分组限制、对重疾保额影响、确诊标准等重要的附加细则。此外，系统设计上可能未对“完整性”进行专门优化，使得回答倾向于简洁而非全面。",
+  "evidence": [
+    {
+      "type": "output comparison",
+      "description": "实际输出提到轻症可以多次赔付，每次赔付20%-30%，可能有次数上限和间隔期，建议查阅合同。但缺失分组限制、对重疾保额的影响等参考回答中涵盖的细节。"
+    },
+    {
+      "type": "missing gaps",
+      "description": "judge 识别出未说明轻症分组限制、未说明对重疾保额的影响、未说明确诊标准、未提及累计赔付上限。"
+    }
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "causal_category": "",
+    "attribution_count": 1,
+    "probe_count": 0,
+    "summary_text": "生成模型可能由于训练知识局限或 prompt 中缺乏对轻症责任全面性的要求，导致回答仅聚焦于用户直接询问的次数与金额，而忽略了分组限制、对重疾保额影响、确诊标准等重要的附加细则。此外，系统设计上可能未对“完整性”进行专门优化，使得回答倾向于简洁而非全面。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

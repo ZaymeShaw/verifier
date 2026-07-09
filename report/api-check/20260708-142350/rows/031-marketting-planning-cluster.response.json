@@ -1,0 +1,58 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::意图识别模块在分类用户请求时，未能将包含“NBEV目标”、“增加理财师”、“优化产品方案”等核心业务术语的规划请求映射到正确的营销规划意图代码（如 4002），::not_fulfilled",
+      "mechanism": "意图识别模块在分类用户请求时，未能将包含“NBEV目标”、“增加理财师”、“优化产品方案”等核心业务术语的规划请求映射到正确的营销规划意图代码（如 4002），::not_fulfilled",
+      "causal_category": "",
+      "fulfillment_statuses": [
+        "not_fulfilled"
+      ],
+      "expectation_ids": [
+        "意图识别准确性",
+        "阶段路由正确性",
+        "用户关键业务维度保留",
+        "SSE事件内容匹配",
+        "mp_contract:expected_stage"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "representative_traces": [
+        "marketting-planning:mock-agent-marketting-planning-d1642b58:1783491832664"
+      ],
+      "common_root_cause": "意图识别模块在分类用户请求时，未能将包含“NBEV目标”、“增加理财师”、“优化产品方案”等核心业务术语的规划请求映射到正确的营销规划意图代码（如 4002），而是错误地归类为“其他意图”（4001），触发了 non_agent 阶段，导致流程提前终止，所有下游期望（阶段路由、业务维度提取、有效SSE内容）均无法满足。可能的原因包括意图分类提示词缺乏该场景的覆盖、训练数据不足或意图映射配置缺失。",
+      "shared_failure_pattern": "意图识别模块在分类用户请求时，未能将包含“NBEV目标”、“增加理财师”、“优化产品方案”等核心业务术语的规划请求映射到正确的营销规划意图代码（如 4002），而是错误地归类为“其他意图”（4001），触发了 non_agent 阶段，导致流程提前终止，所有下游期望（阶段路由、业务维度提取、有效SSE内容）均无法满足。可能的原因包括意图分类提示词缺乏该场景的覆盖、训练数据不足或意图映射配置缺失。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-d1642b58",
+          "root_cause": "意图识别模块在分类用户请求时，未能将包含“NBEV目标”、“增加理财师”、“优化产品方案”等核心业务术语的规划请求映射到正确的营销规划意图代码（如 4002），而是错误地归类为“其他意图”（4001），触发了 non_agent 阶段，导致流程提前终止，所有下游期望（阶段路由、业务维度提取、有效SSE内容）均无法满足。可能的原因包括意图分类提示词缺乏该场景的覆盖、训练数据不足或意图映射配置缺失。",
+          "evidence": [
+            "输出意图代码为 4001（其他意图），预期为营销规划相关代码",
+            "运行阶段为 non_agent，预期为 intent 或 clarification",
+            "session_summary 中 required_fields 为空，未能提取任何业务参数",
+            "robot_text 为“卡片生成完成”，无实际规划内容",
+            "card_summary 为空，没有任何可执行卡片生成",
+            "judge 评估所有业务期望均为 not_fulfilled，整体判定为不满足"
+          ]
+        }
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "next_actions": [
+        "输出意图代码为 4001（其他意图），预期为营销规划相关代码",
+        "运行阶段为 non_agent，预期为 intent 或 clarification",
+        "session_summary 中 required_fields 为空，未能提取任何业务参数",
+        "robot_text 为“卡片生成完成”，无实际规划内容",
+        "card_summary 为空，没有任何可执行卡片生成"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模块在分类用户请求时，未能将包含“NBEV目标”、“增加理财师”、“优化产品方案”等核心业务术语的规划请求映射到正确的营销规划意图代码（如 4002），而是错误地归类为“其他意图”（4001），触发了 non_agent 阶段，导致流程提前终止，所有下游期望（阶段路由、业务维度提取、有效SSE内容）均无法满足。可能的原因包括意图分类提示词缺乏该场景的覆盖、训练数据不足或意图映射配置缺失。",
+  "impact": "",
+  "priority": "normal"
+}

@@ -28,7 +28,8 @@ def test_existing_projects_load_with_common_compatibility():
         assert spec.adapter == "adapter.py"
         assert isinstance(spec.common, dict)
         assert isinstance(spec.extra, dict)
-        assert isinstance(spec.documents, dict)
+        assert isinstance(spec.endpoint_discovery, dict)
+        assert isinstance(spec.attribute_draft, dict)
         assert (Path(spec.root) / "adapter.py").exists()
 
         common_api = spec.common.get("api") or {}

@@ -1,0 +1,240 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783493358119",
+  "project_id": "marketting-planning-intent",
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签应为 customer_portrait",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "应提取目标实体 target_value 为重疾险",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "置信度应达到 0.95",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "不应落入回退意图 other",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "意图应可分发到 customer_portrait 流程",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签应为 customer_portrait",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "应提取目标实体 target_value 为重疾险",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "置信度应达到 0.95",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "不应落入回退意图 other",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "意图应可分发到 customer_portrait 流程",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "not_fulfilled",
+      "downstream_impact": "当前单轮意图识别未满足 reference contract：query=帮我看看上季度买了重疾险的客户都是啥样的？，expected_intent=customer_portrait，actual_intent=other，confidence=0.5，min_confidence=None，失败项=['intent']，整体判定为 incorrect。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "blocking_expectations": [
+      "intent_contract"
+    ]
+  },
+  "expected": {
+    "intent": "customer_portrait",
+    "confidence": 0.95,
+    "target_value": "重疾险",
+    "subIntent": "其他意图"
+  },
+  "actual": {
+    "confidence": 0.5,
+    "intent": "other",
+    "subIntent": "其他意图"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "intent",
+        "expected_value": "customer_portrait",
+        "actual_value": "other"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "target_value",
+        "expected_value": "重疾险"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "confidence 阈值满足",
+        "expected_value": "≥0.95",
+        "actual_value": 0.5
+      },
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "intent",
+        "expected_value": "customer_portrait",
+        "actual_value": "other"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "subIntent",
+        "expected_value": "不为“其他意图”",
+        "actual_value": "其他意图"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "wrong",
+      "error_type": "wrong",
+      "evidence_ref": "",
+      "raw": {
+        "requirement": "intent",
+        "expected_fragment": "customer_portrait",
+        "actual_fragment": "other",
+        "status": "wrong",
+        "evidence": [
+          "normalized intent differs from reference intent"
+        ]
+      },
+      "incomplete": false
+    }
+  ],
+  "extra": [
+    {
+      "kind": "extra",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "subIntent",
+        "value": "其他意图",
+        "note": "该字段在预期中无对应，且内容与回退相关，属于识别错误后的附加信息"
+      },
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "source": "run_trace.extracted_output",
+      "intent": "other",
+      "confidence": 0.5,
+      "subIntent": "其他意图"
+    },
+    {
+      "source": "run_trace.execution_trace.stage.adapter_extraction",
+      "evidence": "confidence=0.5, intent=other, subIntent=其他意图"
+    }
+  ],
+  "reasoning_summary": "当前单轮意图识别未满足 reference contract：query=帮我看看上季度买了重疾险的客户都是啥样的？，expected_intent=customer_portrait，actual_intent=other，confidence=0.5，min_confidence=None，失败项=['intent']，整体判定为 incorrect。",
+  "summary": {
+    "reason": "not_fulfilled · blocking=[(none)] · 用户查询“帮我看看上季度买了重疾险的客户都是啥样的？”明确意图为分析客户画像，系统应识别为 customer_portrait 并提取“重疾险”。实际 API 返回 intent=other, confidence=0.5, target_value=null，未命中预期意图，置信度远低于参考值 0.95，关键实体缺失，且错误回退至“其他意图”，无法满足任何业务期望，整体意图识别失败。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "不应落入回退意图 other",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询“帮我看看上季度买了重疾险的客户都是啥样的？”明确意图为分析客户画像，系统应识别为 customer_portrait 并提取“重疾险”。实际 API 返回 intent=other, confidence=0.5, target_value=null，未命中预期意图，置信度远低于参考值 0.95，关键实体缺失，且错误回退至“其他意图”，无法满足任何业务期望，整体意图识别失败。"
+      },
+      {
+        "expectation_id": "应提取目标实体 target_value 为重疾险",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询“帮我看看上季度买了重疾险的客户都是啥样的？”明确意图为分析客户画像，系统应识别为 customer_portrait 并提取“重疾险”。实际 API 返回 intent=other, confidence=0.5, target_value=null，未命中预期意图，置信度远低于参考值 0.95，关键实体缺失，且错误回退至“其他意图”，无法满足任何业务期望，整体意图识别失败。"
+      },
+      {
+        "expectation_id": "意图应可分发到 customer_portrait 流程",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询“帮我看看上季度买了重疾险的客户都是啥样的？”明确意图为分析客户画像，系统应识别为 customer_portrait 并提取“重疾险”。实际 API 返回 intent=other, confidence=0.5, target_value=null，未命中预期意图，置信度远低于参考值 0.95，关键实体缺失，且错误回退至“其他意图”，无法满足任何业务期望，整体意图识别失败。"
+      },
+      {
+        "expectation_id": "意图标签应为 customer_portrait",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询“帮我看看上季度买了重疾险的客户都是啥样的？”明确意图为分析客户画像，系统应识别为 customer_portrait 并提取“重疾险”。实际 API 返回 intent=other, confidence=0.5, target_value=null，未命中预期意图，置信度远低于参考值 0.95，关键实体缺失，且错误回退至“其他意图”，无法满足任何业务期望，整体意图识别失败。"
+      },
+      {
+        "expectation_id": "置信度应达到 0.95",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询“帮我看看上季度买了重疾险的客户都是啥样的？”明确意图为分析客户画像，系统应识别为 customer_portrait 并提取“重疾险”。实际 API 返回 intent=other, confidence=0.5, target_value=null，未命中预期意图，置信度远低于参考值 0.95，关键实体缺失，且错误回退至“其他意图”，无法满足任何业务期望，整体意图识别失败。"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

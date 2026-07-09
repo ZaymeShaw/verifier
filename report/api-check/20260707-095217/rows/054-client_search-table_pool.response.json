@@ -1,0 +1,84 @@
+{
+  "project_id": "client_search",
+  "rows": [
+    {
+      "id": "mock-agent-client_search-cdd7df11",
+      "input": "session_001",
+      "scenario": "",
+      "output_summary": "{\"code\": 0, \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"MATCH\", \"value\": \"疾病保险\"}], \"confidence\": 0.8, \"cost_times\": 1477.0, \"end_flag\": 1, \"intent_summ…",
+      "reference_summary": "{\"code\": 0, \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": \"疾病保险\"}], \"end_flag\": 1, \"msg\": \"操作成功\", \"query\": \"帮我看看公司里所有买了重疾险的客户都有谁\", \"q…",
+      "status": "fulfilled",
+      "execution_mode": "",
+      "output_source": "live_service",
+      "verdict": "correct",
+      "fulfillment_status": "fulfilled",
+      "judge_summary": {
+        "status": "fulfilled",
+        "fulfillment_status": "fulfilled",
+        "verdict": "correct",
+        "reason": "fulfilled · 0 blocking expectations all met · 用户查询「帮我看看公司里所有买了重疾险的客户都有谁」的核心意图是筛选持有疾病保险的客户。actual output正确地将口语「重疾险」映射为标准枚举值「疾病保险」，使用了正确的pCategorys字段承载险种大类查询。操作符虽用MATCH而非capability_manifest中的CONTAINS，但根据项目边界协议，MATCH与CONTAINS在项目中经后处理等价，不应视为错误。条件数量为1，query_logic为AND，未引入用户未表达的额外筛选维度。rewritten_query正确反映了口语到标准枚举的转换。所有业务期望均满足，输出在parser条件语义层面完全正确。",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 3,
+        "blocking_count": 0
+      },
+      "attribution_summary": {
+        "attribution_count": 3,
+        "causal_category": "no_issue",
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 1,
+        "summary_text": "业务预期已达成"
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 3,
+        "protocol_gap_count": 0,
+        "consistency_gap_count": 0,
+        "recommended_fix_count": 1,
+        "issues": [
+          "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+          "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+          "generic core contains project-specific marker matched_level: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+        ]
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "quality_flags": [
+        "match_contains_equivalence_accepted",
+        "application_boundary_parser_only"
+      ],
+      "check_passed": false,
+      "issue_count": 3,
+      "fallback_count": 0,
+      "causal_category": "no_issue",
+      "divergence_stage": "fulfillment_assessment",
+      "root_cause_summary": "业务预期已达成",
+      "created_at": "2026-07-07T01:52:19.343002+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "500ffe36-bbfa-47ff-9497-6828f672d19b"
+    }
+  ],
+  "total": 1,
+  "summary": {
+    "fulfilled_count": 1,
+    "not_fulfilled_count": 0,
+    "pending_count": 0,
+    "correct_count": 1,
+    "incorrect_count": 0,
+    "uncertain_count": 0,
+    "human_review_count": 0,
+    "check_failed_count": 1,
+    "issue_count": 3,
+    "fallback_count": 0,
+    "rows_with_fallback_count": 0,
+    "by_scenario": {
+      "未分类": 1
+    }
+  }
+}

@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from impl.core.adapter import ProjectAdapter
-from impl.core.schema import AttributeResult, ExecutionTraceEvent, JudgeResult, LiveExecutionResult, LiveRequest, MultiTurnCase, SingleTurnCase
+from impl.core.schema import AttributeResult, JudgeResult, LiveExecutionResult, LiveRequest, MultiTurnCase, SingleTurnCase
+from impl.core.summary import summary_from_attribution
 
 
 class Adapter(ProjectAdapter):
@@ -38,53 +39,6 @@ class Adapter(ProjectAdapter):
             execution_mode="live_service",
             session_id=str(input_data.get("session_id") or case.metadata.get("session_id") or ""),
         )
-
-    def call_or_prepare(self, request: LiveRequest) -> LiveExecutionResult:
-        raw_response = request.normalized_request.get("output") or {"actual_answer": ""}
-        if isinstance(raw_response, dict):
-            raw_response = {**raw_response, "_normalized_request": request.normalized_request}
-        extracted_output = self.extract_output(raw_response)
-        return LiveExecutionResult(
-            project_id=request.project_id,
-            case_id=request.case_id,
-            session_id=request.session_id,
-            raw_input=request.raw_input,
-            normalized_request=request.normalized_request,
-            raw_response=raw_response,
-            extracted_output=extracted_output,
-            output_source=request.execution_mode,
-            execution_trace=self.build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output),
-            project_fields=self.project_fields(raw_response, extracted_output),
-        )
-
-    def extract_output(self, raw_response: Any) -> Dict[str, Any]:
-        if isinstance(raw_response, dict):
-            return {"actual_answer": str(raw_response.get("actual_answer") or raw_response.get("answer") or raw_response.get("text") or "")}
-        return {"actual_answer": str(raw_response or "")}
-
-    def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any]) -> Dict[str, Any]:
-        # 优先从 raw_response._normalized_request 取（旧 call_or_prepare 注入路径），
-        # 否则回退到 build_request 快照（provided 统一路径，raw_response 不再注入）。
-        request = raw_response.get("_normalized_request") if isinstance(raw_response, dict) else None
-        if not isinstance(request, dict):
-            request = getattr(self, "_last_normalized_request", None) or {}
-        if not isinstance(request, dict):
-            return {}
-        return {
-            "scenario": request.get("scenario") or "",
-            "data_quality_flags": list(request.get("data_quality_flags") or []),
-            "contexts": list((request.get("input") or {}).get("contexts") or []),
-            "reference": dict(request.get("reference") or {}),
-            "metadata": dict(request.get("metadata") or {}),
-            "estimated_quality_only": request.get("scenario") == "qa_weak_quality",
-        }
-
-    def build_execution_trace(self, input_data: Dict[str, Any], request: Dict[str, Any], raw_response: Any, extracted_output: Dict[str, Any]) -> list[ExecutionTraceEvent]:
-        return [
-            ExecutionTraceEvent(stage="qa.sample.normalize", status="ok" if request.get("scenario") != "invalid_sample" else "suspicious", evidence={"scenario": request.get("scenario"), "flags": request.get("data_quality_flags")}),
-            ExecutionTraceEvent(stage="qa.output.read", status="ok" if extracted_output.get("actual_answer") else "suspicious", evidence="evaluated output read from uploaded sample"),
-            ExecutionTraceEvent(stage="adapter.extract_output", status="ok", evidence={"actual_answer_present": bool(extracted_output.get("actual_answer"))}),
-        ]
 
     def to_run_trace(self, result: LiveExecutionResult):
         return super().to_run_trace(result)
@@ -178,36 +132,32 @@ class Adapter(ProjectAdapter):
         }
 
     def _default_business_expectation(self, trace, judge_result):
-        expectation = super()._default_business_expectation(trace, judge_result)
-        expectation.update({
+        expectation = {
             "expectation_id": "QA:answer_quality",
             "downstream_consumer": "QA user",
-            "required_capabilities": expectation.get("required_capabilities") or ["answer_relevance", "groundedness", "reference_alignment"],
-            "boundary": judge_result.boundary_decision or judge_result.evaluation_boundary or self.build_judge_context(trace).get("application_boundary") or expectation.get("boundary") or {},
+            "required_capabilities": ["answer_relevance", "groundedness", "reference_alignment"],
+            "boundary": self.build_judge_context(trace).get("application_boundary") or {},
+        }
+        question = str(((trace.normalized_request or {}).get("input") or {}).get("question") or "")
+        expectation.update({
+            "user_intent": question,
+            "expected_outcome": "actual answer should satisfy answer relevance, groundedness, and reference alignment for the current QA sample",
+            "acceptance_criteria": list(judge_result.missing or judge_result.wrong or []),
         })
-        if not judge_result.intent_model:
-            question = judge_result.reconstructed_intent or str(((trace.normalized_request or {}).get("input") or {}).get("question") or "")
-            expectation.update({
-                "user_intent": question,
-                "expected_outcome": "actual answer should satisfy answer relevance, groundedness, and reference alignment for the current QA sample",
-                "acceptance_criteria": list(judge_result.missing or judge_result.wrong or []),
-            })
         return expectation
 
     def _default_fulfillment_assessment(self, trace, judge_result, expectation):
-        status = self._expectation_status_from_verdict(judge_result)
+        overall = judge_result.overall_fulfillment or {}
+        status = overall.get("status") or "not_evaluable"
         reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else judge_result.expected or {}
         actual = judge_result.actual or trace.extracted_output or {}
         return {
             "expectation_id": expectation.get("expectation_id"),
             "status": status,
-            "score": judge_result.score,
             "expected_evidence": list(judge_result.missing or []) or [reference],
             "actual_evidence": list(judge_result.wrong or []) or [actual],
-            "boundary_decision": judge_result.boundary_decision or judge_result.evaluation_boundary or self.build_judge_context(trace).get("application_boundary") or {},
             "downstream_impact": "QA answer is acceptable for the current user" if status == "fulfilled" else (judge_result.reasoning_summary or "QA user cannot rely on the answer quality for this sample"),
             "blocking": status in {"not_fulfilled", "not_evaluable"},
-            "confidence": judge_result.confidence,
             "evidence_refs": list(getattr(trace, "evidence_refs", []) or []),
         }
 
@@ -224,9 +174,11 @@ class Adapter(ProjectAdapter):
             exact = self._gold_answer_exact_probe(trace, judge_result)
             if exact:
                 return exact
-        if scenario == "qa_weak_quality" and judge_result.verdict in {"correct", "incorrect"}:
+        overall = judge_result.overall_fulfillment or {}
+        status = overall.get("status")
+        if scenario == "qa_weak_quality" and status in {"fulfilled", "not_fulfilled"}:
             return self._weak_quality_probe(trace, judge_result)
-        if judge_result.verdict == "uncertain" and "llm_call_failed" not in (judge_result.quality_flags or []):
+        if status == "not_evaluable":
             metadata = dict((trace.normalized_request or {}).get("metadata") or {})
             expected_quality = metadata.get("expected_quality") or "uncertain"
             if expected_quality in ("correct", "incorrect"):
@@ -239,22 +191,11 @@ class Adapter(ProjectAdapter):
                 )
                 if fallback:
                     return fallback
-        if judge_result.verdict in ("correct", "incorrect", "uncertain") and "llm_call_failed" not in (judge_result.quality_flags or []):
+        if status in {"fulfilled", "not_fulfilled", "not_evaluable"}:
             return self._enrich_semantic_judge(trace, judge_result, scenario)
         fallback = self._fallback_judge(trace, judge_result)
         if not fallback:
             return self._scrub_placeholder_ids(judge_result)
-        if fallback.judge_method in ("qa_sample_expected_quality", "qa_gold_answer_exact_match", "qa_weak_quality_probe"):
-            flags = list(fallback.quality_flags or [])
-            if "llm_call_failed" in (judge_result.quality_flags or []) and "llm_call_failed" not in flags:
-                flags.insert(0, "llm_call_failed")
-            fallback.quality_flags = flags
-        else:
-            flags = ["qa_local_evidence_probe", "semantic_judge_unavailable"]
-            if "llm_call_failed" in (judge_result.quality_flags or []):
-                flags.insert(0, "llm_call_failed")
-            fallback.quality_flags = flags
-        fallback.raw_model_output = judge_result.raw_model_output
         return self._scrub_placeholder_ids(fallback)
 
     def _scrub_placeholder_ids(self, judge_result):
@@ -263,22 +204,13 @@ class Adapter(ProjectAdapter):
             (r"\bE\d+\b", "编码失败项"),
             (r"\bexp[-_]?\d+\b", "编码失败项"),
         ]
-        text_fields = ["reasoning_summary", "verdict_derivation_why_verdict", "blocking_gaps", "why_verdict", "reasoning"]
+        text_fields = ["reasoning_summary", "blocking_gaps", "why_verdict", "reasoning"]
         for field in text_fields:
             val = getattr(judge_result, field, None)
             if val and isinstance(val, str):
                 for pat, replacement in placeholder_patterns:
                     val = re.sub(pat, replacement, val)
                 setattr(judge_result, field, val)
-        vd = getattr(judge_result, "verdict_derivation", None)
-        if isinstance(vd, dict):
-            for key in ("why_verdict", "reasoning", "blocking_gaps"):
-                if key in vd and isinstance(vd[key], str):
-                    for pat, replacement in placeholder_patterns:
-                        vd[key] = re.sub(pat, replacement, vd[key])
-            for key in ("why_verdict", "reasoning", "assessment_summary"):
-                if key in vd and isinstance(vd[key], list):
-                    vd[key] = [re.sub(pat, replacement, str(item)) for item in vd[key] for pat, replacement in placeholder_patterns]
         for ca_list_attr in ("fulfillment_assessments",):
             ca_list = getattr(judge_result, ca_list_attr, []) or []
             for ca in ca_list:
@@ -297,10 +229,9 @@ class Adapter(ProjectAdapter):
         request = trace.normalized_request or {}
         reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}
         actual = trace.extracted_output or judge_result.actual or {}
-        question = str((request.get("input") or {}).get("question") or judge_result.reconstructed_intent or "")
+        question = str((request.get("input") or {}).get("question") or "")
         judge_result.expected = judge_result.expected or reference
         judge_result.actual = actual
-        judge_result.reconstructed_intent = judge_result.reconstructed_intent or question
         evidence = list(judge_result.evidence or [])
         case_evidence = [
             f"scenario={scenario or 'unknown'}",
@@ -312,38 +243,20 @@ class Adapter(ProjectAdapter):
             if item not in evidence:
                 evidence.append(item)
         judge_result.evidence = evidence
-        taxonomy = list(self.spec.frontend_extensions.get("error_taxonomy") or [])
-        error_type = self._qa_taxonomy_error_type(judge_result, reference, actual, taxonomy)
-        if error_type:
-            judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), "taxonomy_error_types": [error_type]}
-        dimensions = list(self.spec.frontend_extensions.get("score_dimensions") or [])
-        if dimensions:
-            judge_result.verdict_derivation = {
-                **(judge_result.verdict_derivation or {}),
-                "score_dimensions": [{"dimension": dimension, "score": judge_result.score, "evidence": evidence, "status": "judged" if judge_result.verdict in {"correct", "incorrect"} else "needs_review"} for dimension in dimensions],
-            }
         if not judge_result.fulfillment_assessments:
+            overall = judge_result.overall_fulfillment or {}
+            status = overall.get("status") or "not_evaluable"
             req_name = f"answer_quality_for_{scenario}" if scenario else "qa_answer_quality"
-            judge_result.fulfillment_assessments = [{"expectation_id": req_name, "status": "not_fulfilled" if judge_result.verdict == "incorrect" else "fulfilled", "expected_evidence": [reference], "actual_evidence": [actual], "boundary_decision": judge_result.boundary_decision or {}, "downstream_impact": judge_result.reasoning_summary or "QA answer quality judged for current sample", "blocking": judge_result.verdict == "incorrect", "confidence": judge_result.confidence, "evidence_refs": []}]
-        judge_result.verdict_derivation = {
-            **(judge_result.verdict_derivation or {}),
-            "primary_boundary": scenario or "qa_semantic_evaluation",
-            "error_type": error_type,
-            "assessment_summary": judge_result.reasoning_summary or (judge_result.verdict_derivation or {}).get("why_verdict", ""),
-        }
-        judge_result.judge_basis = judge_result.judge_basis or "qa_semantic_judge"
-        judge_result.judge_method = judge_result.judge_method or "qa_semantic_judge"
-        judge_result.evaluation_boundary = judge_result.evaluation_boundary or {
-            "primary_boundary_id": scenario or "qa_semantic_evaluation",
-            "primary_boundary_name": "QA semantic evaluation",
-            "verdict_basis": "question + actual answer + current-case reference",
-        }
+            judge_result.fulfillment_assessments = [{"expectation_id": req_name, "status": status, "expected_evidence": [reference], "actual_evidence": [actual], "downstream_impact": judge_result.reasoning_summary or "QA answer quality judged for current sample", "blocking": status == "not_fulfilled", "evidence_refs": []}]
+        judge_result.reasoning_summary = judge_result.reasoning_summary or f"QA answer quality judged for current sample (scenario={scenario or 'unknown'})"
         return self._scrub_placeholder_ids(judge_result)
 
     def _qa_taxonomy_error_type(self, judge_result, reference, actual, taxonomy):
-        if judge_result.verdict == "correct":
+        overall = judge_result.overall_fulfillment or {}
+        status = overall.get("status")
+        if status == "fulfilled":
             return "none" if "none" in taxonomy else ""
-        if judge_result.verdict == "uncertain":
+        if status == "not_evaluable":
             return "needs_human_review" if "needs_human_review" in taxonomy else ""
         wrong_text = " ".join(str(item) for item in (judge_result.wrong or []))
         expected_text = str((reference or {}).get("actual_answer") or judge_result.expected or "")
@@ -353,46 +266,22 @@ class Adapter(ProjectAdapter):
         return "answer_incorrect" if "answer_incorrect" in taxonomy else ""
 
     def normalize_attribute_result(self, trace, judge_result, attribute_result):
-        if judge_result.judge_method == "qa_weak_quality_probe":
-            reason = "qa_weak_quality 没有 reference 或 contexts，当前只能记录质量估计证据，不能做正式失败归因。"
-            return self._blocked_attribute_result(
-                trace, judge_result, attribute_result, reason, "qa_weak_quality_probe",
-                ["reference_or_context", "semantic_judge"],
-                "QA weak-quality 样本不能被当作可判定正确/错误的语义评测样本。"
-            )
-        if judge_result.judge_method == "qa_sample_expected_quality":
-            return self._sample_label_attribute_result(trace, judge_result, attribute_result)
-        if judge_result.judge_method == "qa_local_evidence_probe" or any(
-            flag in (judge_result.quality_flags or []) for flag in ["semantic_judge_unavailable", "llm_call_failed"]
-        ):
-            reason = "QA 本地证据探针只能记录样本和输出是否存在；缺少可用语义 judge 时不能产出正式失败归因。"
+        overall = judge_result.overall_fulfillment or {}
+        status = overall.get("status") or "not_evaluable"
+        # 当 judge 处于 not_evaluable 或缺少语义证据时，记录 insufficient_evidence。
+        if status == "not_evaluable":
+            reason = "QA judge 处于 not_evaluable 状态，缺少可用语义判定，不能产出正式失败归因。"
             return self._blocked_attribute_result(
                 trace, judge_result, attribute_result, reason, "qa_local_evidence_probe",
                 ["semantic_judge"],
                 "QA 正式归因必须建立在可解释的 semantic judge 结果和当前样本证据链上。"
             )
-        if attribute_result.incomplete_reason and attribute_result.analysis_quality.get("passed") is True:
-            quality = dict(attribute_result.analysis_quality or {})
-            missing = list(quality.get("missing") or [])
-            if "incomplete_reason" not in missing:
-                missing.append("incomplete_reason")
-            quality["passed"] = False
-            quality["status"] = "next_verification_step"
-            quality["missing"] = missing
-            attribute_result.analysis_quality = quality
-        if attribute_result.analysis_quality.get("passed") is True and attribute_result.suspected_locations and not attribute_result.probe_results and not attribute_result.evidence_coverage.get("code_or_config"):
-            reason = "疑似位置缺少代码/配置或本地验证证据，不能作为正式归因。"
-            return self._blocked_attribute_result(
-                trace, judge_result, attribute_result, reason, "qa_unverified_suspected_location",
-                ["code_or_config", "local_verification"],
-                "QA 归因不能只凭疑似位置通过质量门，必须有当前 case 的代码/配置或本地验证证据。"
-            )
+        if status == "fulfilled":
+            return self._patch_chinese_text_fields(attribute_result)
         return self._patch_chinese_text_fields(attribute_result)
 
     def _patch_chinese_text_fields(self, attribute_result):
         """Translate common English fragments to Chinese in attribute output text fields for QA not_fulfilled cases."""
-        if (attribute_result.analysis_quality or {}).get("passed") is not False:
-            return attribute_result
         en_to_zh = {
             "unsupported root-cause evidence": "根因证据不充分",
             "current case evidence does not support suspected locations or patch direction": "当前 case 证据不足以支撑疑似位置或补丁方向",
@@ -405,155 +294,83 @@ class Adapter(ProjectAdapter):
             "model_capability_gap": "模型能力缺陷",
             "boundary_limitation": "边界限制",
         }
-        text_fields = ["incomplete_reason", "root_cause_hypothesis", "causal_category"]
-        for field in text_fields:
-            val = getattr(attribute_result, field, None)
-            if val and isinstance(val, str):
-                for en, zh in en_to_zh.items():
-                    val = val.replace(en, zh)
-                setattr(attribute_result, field, val)
+        val = attribute_result.root_cause_hypothesis
+        if val and isinstance(val, str):
+            for en, zh in en_to_zh.items():
+                val = val.replace(en, zh)
+            attribute_result.root_cause_hypothesis = val
         for ea in (attribute_result.expectation_attributions or []):
             if not isinstance(ea, dict):
                 continue
-            for field in ("incomplete_reason", "root_cause_hypothesis"):
+            for field in ("root_cause_hypothesis",):
                 val = ea.get(field)
                 if val and isinstance(val, str):
                     for en, zh in en_to_zh.items():
                         val = val.replace(en, zh)
                     ea[field] = val
-        for cn in (attribute_result.chain_nodes or []):
-            if not isinstance(cn, dict):
-                continue
-            val = cn.get("reason")
-            if val and isinstance(val, str):
-                for en, zh in en_to_zh.items():
-                    val = val.replace(en, zh)
-                cn["reason"] = val
-        for probe in (attribute_result.probe_results or []):
-            if not isinstance(probe, dict):
-                continue
-            val = probe.get("status") or probe.get("result")
-            if val and isinstance(val, str):
-                for en, zh in en_to_zh.items():
-                    val = val.replace(en, zh)
-                probe["status"] = val
         return attribute_result
 
     def _sample_label_attribute_result(self, trace, judge_result, attribute_result):
-        status = (judge_result.overall_fulfillment or {}).get("status") or ("fulfilled" if judge_result.verdict == "correct" else "not_fulfilled")
-        causal_category = "no_issue" if status == "fulfilled" else "sample_labeled_quality_gap"
+        status = (judge_result.overall_fulfillment or {}).get("status") or "not_fulfilled"
         evidence = list(judge_result.evidence or [judge_result.reasoning_summary])
         expectation_id = "QA:answer_quality"
-        if status == "fulfilled":
-            verification_steps = ["核对当前 QA mock 样本的 metadata.expected_quality、reference 和 output.actual_answer。", "确认样本不属于 qa_weak_quality 且没有 data_quality_flags。"]
-            patch_direction = ["无需修复业务链路；保留样本标注作为语义 judge 不可用时的 deterministic mock 判定依据。"]
-        else:
-            verification_steps = ["核对当前 QA mock 样本的 expected_quality 与 expected_error_type。", "检查 output.actual_answer 与 reference/contexts 不满足的证据是否对应样本标注。"]
-            patch_direction = ["按样本标注的 QA 质量缺口修复被测回答或上游生成逻辑。"]
-        return AttributeResult(
+        result = AttributeResult(
             trace_id=trace.trace_id,
             project_id=trace.project_id,
             case_id=str(trace.input.get("case_id") or trace.input.get("id") or ""),
             expectation_attributions=[{
                 "expectation_id": expectation_id,
                 "fulfillment_status": status,
-                "causal_category": causal_category,
-                "earliest_divergence": {"node": "qa_sample_expected_quality", "evidence": evidence, "confidence": "high"},
-                "causal_chain": [{"name": "qa_sample_expected_quality", "status": "succeeded", "evidence": evidence}],
                 "suspected_locations": [],
-                "improvement_direction": patch_direction if status != "fulfilled" else [],
-                "source_evidence": evidence,
-                "probe_evidence": evidence,
-                "incomplete_reason": "",
+                "root_cause_hypothesis": "业务预期已达成，当前归因结论为 no_issue。" if status == "fulfilled" else "QA seeded mock 标注表明当前回答未满足样本质量预期。",
+                "evidence": evidence,
             }],
-            causal_category=causal_category,
-            probe_results=[{"probe": "qa_sample_expected_quality", "status": "passed", "evidence": evidence}],
-            analysis_method="qa_sample_expected_quality_attribution",
-            chain_nodes=[{"name": "qa_sample_expected_quality", "status": "succeeded", "evidence": evidence, "reason": judge_result.reasoning_summary}],
-            earliest_divergence={"node": "qa_sample_expected_quality", "evidence": evidence, "confidence": "high"},
-            evidence_coverage={
-                "query": bool((trace.normalized_request.get("input") or {}).get("question")),
-                "actual": bool((trace.extracted_output or {}).get("actual_answer")),
-                "expected": bool(judge_result.expected),
-                "execution_trace": bool(trace.execution_trace),
-                "project_docs": True,
-                "code_or_config": True,
-                "unsupported_claims": [],
-            },
-            analysis_quality={"passed": True, "missing": [], "standard": "QA seeded mock attribution follows sample expected_quality when semantic judge is unavailable."},
-            incomplete_reason="",
             suspected_locations=[],
+            evidence=evidence,
+            evidence_strength="strong",
             root_cause_hypothesis="业务预期已达成，当前归因结论为 no_issue。" if status == "fulfilled" else "QA seeded mock 标注表明当前回答未满足样本质量预期。",
-            verification_steps=verification_steps,
-            patch_direction=patch_direction,
-            needs_human_review=False,
-            scenario=str(trace.scenario or (trace.normalized_request or {}).get("scenario") or ""),
-            quality_flags=list(judge_result.quality_flags or []),
         )
+        result.summary = summary_from_attribution({
+            "expectation_attributions": result.expectation_attributions,
+            "root_cause_hypothesis": result.root_cause_hypothesis,
+            "evidence_strength": result.evidence_strength,
+        })
+        return result
 
     def _blocked_attribute_result(self, trace, judge_result, attribute_result, reason, method, missing, standard):
-        scenario = str(trace.scenario or (trace.normalized_request or {}).get("scenario") or "")
         evidence = list(judge_result.evidence or [judge_result.reasoning_summary or reason])
-        return AttributeResult(
+        result = AttributeResult(
             trace_id=trace.trace_id,
             project_id=trace.project_id,
             case_id=str(trace.input.get("case_id") or ""),
-            causal_category="insufficient_evidence",
-            analysis_method=method,
-            chain_nodes=[{"name": method, "status": "not_verified", "evidence": evidence, "reason": reason}],
-            probe_results=[],
-            earliest_divergence={"node": method, "evidence": evidence, "confidence": "unknown"},
-            evidence_coverage={
-                "query": bool((trace.normalized_request.get("input") or {}).get("question")),
-                "actual": bool((trace.extracted_output or {}).get("actual_answer")),
-                "expected": bool(judge_result.expected),
-                "execution_trace": bool(trace.execution_trace),
-                "project_docs": True,
-                "code_or_config": False,
-                "unsupported_claims": [],
-            },
-            analysis_quality={"passed": False, "missing": list(missing), "standard": standard},
-            incomplete_reason=reason,
             suspected_locations=[],
+            evidence=evidence,
+            evidence_strength="none",
             root_cause_hypothesis="当前证据不足以定位 QA 业务根因，需要语义 judge 或人工复核补足证据。",
-            verification_steps=["确认 semantic judge 可用后重新运行 QA judge 和 attribute。", "检查样本是否提供 output.actual_answer 以及 reference.actual_answer 或 input.contexts。"],
-            patch_direction=["补齐样本协议或恢复语义 judge；不要基于本地探针结果直接修改业务代码。"],
-            needs_human_review=True,
-            scenario=scenario,
-            quality_flags=list(judge_result.quality_flags or []),
-            raw_model_output=attribute_result.raw_model_output,
         )
+        result.summary = summary_from_attribution({
+            "expectation_attributions": result.expectation_attributions,
+            "root_cause_hypothesis": result.root_cause_hypothesis,
+            "evidence_strength": result.evidence_strength,
+        })
+        return result
 
     def _weak_quality_probe(self, trace, judge_result):
         actual = trace.extracted_output or {}
         request = trace.normalized_request or {}
-        data_quality_flags = list(request.get("data_quality_flags") or [])
-        if "estimated_quality_only" not in data_quality_flags:
-            data_quality_flags.append("estimated_quality_only")
         reason = "qa_weak_quality 没有 reference 或 contexts，只能作为质量估计样本，不能产出正式语义正确/错误判定。"
-        flags = list(judge_result.quality_flags or [])
-        for flag in ["estimated_quality_only", "qa_weak_quality_not_semantic_judge"]:
-            if flag not in flags:
-                flags.append(flag)
-        judge_result.confidence = min(float(judge_result.confidence or 0.2), 0.4)
-        judge_result.judge_basis = "qa_weak_quality_probe"
-        judge_result.judge_method = "qa_weak_quality_probe"
         judge_result.actual = actual
         judge_result.expected = judge_result.expected or self._generate_reference(request, str(actual.get("actual_answer") or ""), [], "qa_weak_quality")
         judge_result.fulfillment_assessments = list(judge_result.fulfillment_assessments or []) + [{
             "expectation_id": "QA:weak_quality_probe",
             "status": "not_evaluable",
             "blocking": False,
-            "evidence": [f"data_quality_flags={data_quality_flags}"],
+            "evidence": [reason],
             "downstream_impact": reason,
         }]
-        judge_result.boundary_decision = {"within_evaluable_scope": False, "reasoning": reason}
-        judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), "blocking_gaps": [reason], "why_verdict": reason, "primary_boundary": "qa_weak_quality"}
         judge_result.missing = []
         judge_result.wrong = []
         judge_result.extra = []
-        judge_result.needs_human_review = True
-        judge_result.quality_flags = flags
         judge_result.reasoning_summary = reason
         return judge_result
 
@@ -574,41 +391,15 @@ class Adapter(ProjectAdapter):
         judge_result.fulfillment_assessments = list(judge_result.fulfillment_assessments or []) + [
             {"expectation_id": "QA:gold_answer_exact_match", "status": "fulfilled",
              "expected_evidence": [reference], "actual_evidence": [actual],
-             "boundary_decision": {"within_evaluable_scope": True, "reasoning": "actual_answer 与 reference.actual_answer 完全一致"},
-             "downstream_impact": "用户获得了完整准确的答案", "blocking": False, "confidence": 1.0},
+             "downstream_impact": "用户获得了完整准确的答案", "blocking": False, "evidence_refs": []},
         ]
         judge_result.expected = reference
         judge_result.actual = actual
-        judge_result.reconstructed_intent = str((request.get("input") or {}).get("question") or judge_result.reconstructed_intent or "")
-        judge_result.judge_basis = "qa_gold_answer_exact_match"
-        judge_result.judge_method = "qa_gold_answer_exact_match"
-        judge_result.semantic_equivalence_checks = [{"method": "exact_string_match", "status": "matched", "evidence": evidence}]
-        judge_result.reference_generation_basis = {"source": "case_reference", "alignment_to_live_schema": "QA compares output.actual_answer against reference.actual_answer.", "evidence": evidence}
-        judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}),
-            "assessment_summary": "actual_answer exactly matches reference answer",
-            "blocking_gaps": [], "why_verdict": "actual_answer 与 reference.actual_answer 完全一致，当前 QA 样本业务预期已达成。",
-            "overridden_by": "qa_gold_answer_exact_probe", "original_verdict": judge_result.verdict,
-            "original_judge_method": judge_result.judge_method, "original_quality_flags": list(judge_result.quality_flags or [])}
-        judge_result.boundary_decision = {"within_evaluable_scope": True, "reasoning": "qa_gold_answer exact-match sample has deterministic reference evidence"}
-        judge_result.evaluation_boundary = {
-            "primary_boundary_id": "qa_gold_answer", "primary_boundary_name": "QA reference answer exact match",
-            "judge_question": "actual_answer 是否与 reference.actual_answer 一致",
-            "verdict_basis": "current sample output.actual_answer + reference.actual_answer",
-            "boundary_sources": "impl/data/QA/mock_cases.json",
-            "conflict_policy": "exact match is sufficient for seeded qa_gold_answer samples",
-        }
         judge_result.missing = []
         judge_result.wrong = []
         judge_result.extra = []
         judge_result.evidence = evidence
         judge_result.reasoning_summary = "actual_answer 与 reference.actual_answer 完全一致，当前 QA 样本业务预期已达成。"
-        judge_result.needs_human_review = False
-        judge_result.scenario = "qa_gold_answer"
-        judge_result.quality_flags = list(judge_result.quality_flags or []) + ["qa_gold_answer_exact_match", "overridden_by_gold_answer_probe"]
-        judge_result.overrides = list(judge_result.overrides or []) + [
-            {"field": "fulfillment_assessments", "original_value": "LLM original", "overridden_value": "gold_answer_exact_match injected",
-             "reason": "qa_gold_answer_exact_probe: actual_answer exactly matches reference answer", "source": "qa_gold_answer_exact_probe"},
-        ]
         return judge_result
 
     def _fallback_judge(self, trace, judge_result):
@@ -621,82 +412,39 @@ class Adapter(ProjectAdapter):
         scenario = str(trace.scenario or request.get("scenario") or "")
         if scenario not in {"qa_gold_answer", "qa_context_faithfulness", "qa_weak_quality", "invalid_sample"}:
             return None
-        data_quality_flags = list(request.get("data_quality_flags") or [])
         expected_reference = reference or self._expected_reference_from_judge(judge_result.expected) or self._generate_reference(request, actual_text, contexts, scenario)
         metadata = dict(request.get("metadata") or {})
-        labeled = self._fallback_judge_from_sample_label(trace, judge_result, expected_reference, actual, scenario, metadata, data_quality_flags)
+        labeled = self._fallback_judge_from_sample_label(trace, judge_result, expected_reference, actual, scenario, metadata, [])
         if labeled:
             return labeled
-        reference_source = "case_reference" if reference else "judge_generated"
-        evidence = [
-            f"scenario={scenario or 'unknown'}",
-            f"actual_answer_present={bool(actual_text)}",
-            f"reference_answer_present={bool(golden_text)}",
-            f"contexts_present={bool(contexts)}",
-            f"data_quality_flags={data_quality_flags}",
-        ]
-        blocking_gaps = ["LLM semantic judge unavailable; local QA probe cannot determine answer correctness."]
-        if data_quality_flags:
-            blocking_gaps.extend(data_quality_flags)
         reason = "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。"
         judge_result.fulfillment_assessments = list(judge_result.fulfillment_assessments or []) + [{
             "expectation_id": "QA:local_evidence_probe",
             "status": "not_evaluable",
             "expected_evidence": [expected_reference],
             "actual_evidence": [actual],
-            "boundary_decision": {"within_evaluable_scope": scenario != "invalid_sample", "reasoning": reason},
             "downstream_impact": reason,
             "blocking": False,
         }]
         judge_result.expected = expected_reference
         judge_result.actual = actual
-        judge_result.reconstructed_intent = str((request.get("input") or {}).get("question") or "")
-        judge_result.judge_basis = "qa_local_evidence_probe"
-        judge_result.judge_method = "qa_local_evidence_probe"
-        judge_result.semantic_equivalence_checks = []
-        judge_result.reference_generation_basis = {
-            "source": reference_source,
-            "alignment_to_live_schema": "QA keeps semantic fields: output.actual_answer is evaluated output and reference.actual_answer is the reference answer.",
-            "evidence": evidence,
-        }
-        judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}),
-            "assessment_summary": reason, "blocking_gaps": blocking_gaps, "why_verdict": reason,
-            "overridden_by": "qa_fallback_judge", "original_verdict": judge_result.verdict, "original_judge_method": judge_result.judge_method}
-        judge_result.boundary_decision = {"within_evaluable_scope": scenario != "invalid_sample", "reasoning": reason}
-        judge_result.evaluation_boundary = {
-            "primary_boundary_id": scenario or "qa_fallback", "primary_boundary_name": "QA semantic evaluation",
-            "judge_question": "当前 QA 输出是否满足样本参考或场景要求",
-            "verdict_basis": "semantic judge unavailable; local probe is not a correctness judge",
-            "boundary_sources": "impl/projects/QA/evaluation.md",
-            "conflict_policy": "do not infer correct/incorrect from text overlap or answer length",
-        }
-        judge_result.missing = blocking_gaps if data_quality_flags else []
+        judge_result.missing = []
         judge_result.wrong = []
         judge_result.extra = []
-        judge_result.evidence = evidence
-        judge_result.reasoning_summary = reason
-        judge_result.needs_human_review = True
-        judge_result.scenario = scenario
-        judge_result.quality_flags = list(judge_result.quality_flags or []) + ["qa_local_evidence_probe", "semantic_judge_unavailable", "overridden_by_fallback_judge"]
-        judge_result.overrides = list(judge_result.overrides or []) + [
-            {"field": "fulfillment_assessments", "original_value": "LLM original", "overridden_value": "local_evidence_probe injected",
-             "reason": "qa_fallback_judge: semantic judge unavailable", "source": "qa_fallback_judge"},
+        judge_result.evidence = [
+            f"scenario={scenario or 'unknown'}",
+            f"actual_answer_present={bool(actual_text)}",
+            f"reference_answer_present={bool(golden_text)}",
+            f"contexts_present={bool(contexts)}",
         ]
+        judge_result.reasoning_summary = reason
         return judge_result
 
     def _fallback_judge_from_sample_label_forced(self, trace, judge_result, expected_reference, actual, scenario, metadata, expected_quality):
         """Rescue an LLM 'uncertain' verdict using the seeded sample expected_quality label."""
-        data_quality_flags = list((trace.normalized_request or {}).get("data_quality_flags") or [])
-        result = self._fallback_judge_from_sample_label(
-            trace, judge_result, expected_reference, actual, scenario, metadata, data_quality_flags
+        return self._fallback_judge_from_sample_label(
+            trace, judge_result, expected_reference, actual, scenario, metadata, []
         )
-        if result is None:
-            return None
-        derivation = dict(result.verdict_derivation or {})
-        derivation["overridden_by"] = "qa_sample_expected_quality_forced"
-        derivation["why_verdict"] = "LLM judge 返回 uncertain，seeded mock 样本 expected_quality 提供确定性判定。"
-        result.verdict_derivation = derivation
-        return result
 
     def _fallback_judge_from_sample_label(self, trace, judge_result, expected_reference, actual, scenario, metadata, data_quality_flags):
         expected_quality = str(metadata.get("expected_quality") or trace.input.get("expected_quality") or "")
@@ -713,49 +461,19 @@ class Adapter(ProjectAdapter):
             f"expected_error_type={error_type or 'none'}",
             "sample_label_source=metadata.expected_quality",
         ]
-        blocking_gaps = [] if is_correct else [error_type or "qa_answer_quality_gap"]
         judge_result.fulfillment_assessments = list(judge_result.fulfillment_assessments or []) + [{
             "expectation_id": "QA:sample_expected_quality", "status": status,
             "expected_evidence": [expected_reference], "actual_evidence": [actual],
-            "boundary_decision": {"within_evaluable_scope": True, "reasoning": "sample label provides deterministic QA mock expectation"},
             "downstream_impact": "QA answer is acceptable for the current user" if is_correct else "QA user cannot rely on the answer quality for this sample",
-            "blocking": not is_correct, "confidence": 0.9,
+            "blocking": not is_correct, "evidence_refs": [],
         }]
         judge_result.expected = expected_reference
         judge_result.actual = actual
-        judge_result.reconstructed_intent = str(((trace.normalized_request or {}).get("input") or {}).get("question") or "")
-        judge_result.judge_basis = "qa_sample_expected_quality"
-        judge_result.judge_method = "qa_sample_expected_quality"
-        judge_result.reference_generation_basis = {
-            "source": "case_reference_and_sample_label",
-            "alignment_to_live_schema": "QA sample label is used only for seeded mock cases with expected_quality metadata.",
-            "evidence": evidence,
-        }
-        judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}),
-            "assessment_summary": "sample expected_quality label determines seeded mock verdict when LLM judge is unavailable",
-            "blocking_gaps": blocking_gaps, "why_verdict": "QA seeded mock sample carries expected_quality metadata.",
-            "overridden_by": "qa_sample_expected_quality", "original_verdict": judge_result.verdict,
-            "original_judge_method": judge_result.judge_method}
-        judge_result.boundary_decision = {"within_evaluable_scope": True, "reasoning": "seeded QA mock has deterministic expected_quality metadata"}
-        judge_result.evaluation_boundary = {
-            "primary_boundary_id": scenario or "qa_answer_quality", "primary_boundary_name": "QA seeded mock expected quality",
-            "judge_question": "当前 QA mock 输出是否符合样本 expected_quality",
-            "verdict_basis": "metadata.expected_quality for seeded mock data",
-            "boundary_sources": "impl/data/QA/mock_cases.json",
-            "conflict_policy": "only use deterministic sample labels for seeded mock cases; weak-quality remains review-only",
-        }
         judge_result.missing = []
         judge_result.wrong = [] if is_correct else [{"requirement": "QA:answer_quality", "error_type": error_type or "answer_incorrect"}]
         judge_result.extra = []
         judge_result.evidence = evidence
         judge_result.reasoning_summary = "QA seeded mock sample expected_quality label used because semantic LLM judge was unavailable."
-        judge_result.needs_human_review = False
-        judge_result.scenario = scenario
-        judge_result.quality_flags = list(judge_result.quality_flags or []) + ["qa_sample_expected_quality", "overridden_by_sample_label"]
-        judge_result.overrides = list(judge_result.overrides or []) + [
-            {"field": "fulfillment_assessments", "original_value": "LLM original", "overridden_value": "sample_expected_quality injected",
-             "reason": "qa_sample_expected_quality: seeded mock sample label", "source": "qa_sample_expected_quality"},
-        ]
         return judge_result
 
     def _expected_reference_from_judge(self, expected):
@@ -827,23 +545,16 @@ class Adapter(ProjectAdapter):
             else:
                 data = dict(data or {})
         input_part = dict(data.get("input") or {}) if isinstance(data.get("input"), dict) else {}
-        output_part = dict(data.get("output") or {}) if isinstance(data.get("output"), dict) else {}
-        reference_part = dict(data.get("reference") or {}) if isinstance(data.get("reference"), dict) else {}
-        metadata = dict(data.get("metadata") or {}) if isinstance(data.get("metadata"), dict) else {}
-        question = data.get("question") or input_part.get("question") or input_part.get("query") or input_part.get("user_input") or ""
-        # 兼容 mock_agent 产出的嵌套 input 结构：input.input.query / input.input.system_answer
-        nested_input = input_part.get("input") if isinstance(input_part.get("input"), dict) else {}
-        if not question:
-            question = nested_input.get("question") or nested_input.get("query") or nested_input.get("user_input") or ""
-        contexts = data.get("contexts") if "contexts" in data else (input_part.get("contexts") or input_part.get("context") or nested_input.get("contexts") or nested_input.get("context") or [])
-        actual_answer = data.get("actual_answer") or data.get("answer") or output_part.get("actual_answer") or output_part.get("answer") or input_part.get("actual_answer") or input_part.get("answer") or nested_input.get("actual_answer") or nested_input.get("answer") or nested_input.get("system_answer") or nested_input.get("candidate_answer") or ""
-        # reference 答案统一归一化到 actual_answer（对齐 EXTRACT_OUTPUT_SHAPE）。
-        # golden_answer / gold_answer / answer 作为输入别名保留，便于兼容上传数据。
-        reference_answer = reference_part.get("actual_answer") or reference_part.get("golden_answer") or reference_part.get("gold_answer") or reference_part.get("answer") or input_part.get("golden_answer") or input_part.get("gold_answer") or nested_input.get("golden_answer") or nested_input.get("gold_answer") or data.get("golden_answer") or data.get("gold_answer") or ""
-        # 结构化参考（如 {年龄/健康状况/推荐险种: ...}）没有文本键时，
-        # 把整个 reference 序列化为文本，避免 qa_gold_answer 场景误判 missing_reference_answer。
-        if not reference_answer and reference_part:
-            reference_answer = json.dumps(reference_part, ensure_ascii=False)
+        output_source = data.get("output") if isinstance(data.get("output"), dict) else input_part.get("output")
+        reference_source = data.get("reference") if isinstance(data.get("reference"), dict) else input_part.get("reference")
+        metadata_source = data.get("metadata") if isinstance(data.get("metadata"), dict) else input_part.get("metadata")
+        output_part = dict(output_source or {}) if isinstance(output_source, dict) else {}
+        reference_part = dict(reference_source or {}) if isinstance(reference_source, dict) else {}
+        metadata = dict(metadata_source or {}) if isinstance(metadata_source, dict) else {}
+        question = data.get("question") or input_part.get("question") or ""
+        contexts = data.get("contexts") if "contexts" in data else (input_part.get("contexts") or [])
+        actual_answer = output_part.get("actual_answer") or ""
+        reference_answer = reference_part.get("actual_answer") or ""
         for key in self.metadata_fields:
             if key in data and key not in metadata:
                 metadata[key] = data[key]

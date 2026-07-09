@@ -7,7 +7,7 @@ from .batch import BatchRunResult
 from .check import CheckReport
 from .cluster import ClusterSummary
 from .config import LayerConfig, SchemaLayerConfig
-from .attribute import AttributeLLMOutput, AttributeResult, ChainNode, ExpectationAttribution
+from .attribute import AttributeLLMOutput, AttributeResult, ExpectationAttribution
 from .fallback import FallbackDecision
 from .evidence import EvidenceRef, ExecutionTraceEvent, ProbeResult
 from .frontend import FrontendViewModel
@@ -16,7 +16,7 @@ from .live import LiveExecutionResult, LiveMultiTurnResult, LiveMultiTurnState, 
 from .mock import MockBuildResult, MockBuildSpec, MockDataset, MockSpec, MultiTurnCase, MultiTurnInteraction, MultiTurnPolicy, MultiTurnTurnExpectation, SingleTurnCase
 from .project import ProjectAnalysis, ProjectSpec
 from .registry import SCHEMA_LAYERS
-from .accessors import attribute_causal_category, attribute_chain_evidence, attribute_failure_stage, attribute_probe_evidence, judge_expected_actual_gaps, judge_primary_signal, trace_application_boundary, trace_conversation_transcript, trace_execution_trace, trace_extracted_output, trace_input, trace_normalized_request, trace_output_source, trace_project_fields, trace_raw_response, trace_stop_reason
+from .accessors import judge_expected_actual_gaps, judge_primary_signal, trace_application_boundary, trace_conversation_transcript, trace_execution_trace, trace_extracted_output, trace_input, trace_normalized_request, trace_output_source, trace_project_fields, trace_raw_response, trace_stop_reason
 from .api import API_ENDPOINT_SCHEMAS, ApiEnvelope, CasePoolSaveResponse, CasePoolsResponse, MockBuildResponse, MockCasesResponse, MockDatasetsResponse, RunChainResponse
 from .occam import SCHEMA_FIELD_ROLES, field_role, to_public_dict
 from .table import CasePoolTable, ConversationTurn, TraceTableRow
@@ -25,7 +25,7 @@ from .normalize import CALL_STATUSES, CHAIN_STATUSES, EVENT_STATUSES, FALLBACK_S
 from .utils import _first_list_key, _first_list_value, _non_empty_reference
 
 __all__ = [
-    "AttributeLLMOutput", "AttributeResult", "BatchRunResult", "BusinessExpectation", "CALL_STATUSES", "CasePoolSaveResponse", "CasePoolTable", "CasePoolsResponse", "CHAIN_STATUSES", "ChainNode",
+    "AttributeLLMOutput", "AttributeResult", "BatchRunResult", "BusinessExpectation", "CALL_STATUSES", "CasePoolSaveResponse", "CasePoolTable", "CasePoolsResponse", "CHAIN_STATUSES",
     "CheckReport", "ClusterSummary", "ConversationTurn", "EVENT_STATUSES", "EvidenceRef", "ExecutionTraceEvent",
     "ExpectationAttribution", "FALLBACK_STATUSES", "FULFILLMENT_STATUSES", "FallbackDecision", "FrontendViewModel",
     "FulfillmentAssessment", "GapItem", "GateDecision", "INTERACTION_MODES", "JudgeLLMOutput", "JudgeReferenceOutput", "JudgeResult", "LayerConfig",
@@ -49,6 +49,5 @@ __all__ = [
     "normalize_trace_table_row", "normalize_trace_table_rows", "now_iso", "field_role", "to_dict", "to_public_dict",
     "trace_application_boundary", "trace_conversation_transcript", "trace_execution_trace", "trace_extracted_output",
     "trace_input", "trace_normalized_request", "trace_output_source", "trace_project_fields", "trace_raw_response", "trace_stop_reason",
-    "attribute_causal_category", "attribute_chain_evidence", "attribute_failure_stage", "attribute_probe_evidence",
     "judge_expected_actual_gaps", "judge_primary_signal",
 ]

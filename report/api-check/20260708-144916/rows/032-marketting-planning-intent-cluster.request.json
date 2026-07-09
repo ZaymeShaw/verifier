@@ -1,0 +1,95 @@
+{
+  "project": "marketting-planning-intent",
+  "attributes": [
+    {
+      "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783493358119",
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+      "expectation_attributions": [
+        {
+          "expectation_id": "意图标签识别为customer_portrait",
+          "fulfillment_status": "not_fulfilled",
+          "root_cause_hypothesis": ""
+        },
+        {
+          "expectation_id": "提取目标产品实体为重疾险",
+          "fulfillment_status": "not_fulfilled",
+          "root_cause_hypothesis": ""
+        },
+        {
+          "expectation_id": "置信度达到合理阈值",
+          "fulfillment_status": "not_fulfilled",
+          "root_cause_hypothesis": ""
+        },
+        {
+          "expectation_id": "intent_contract",
+          "fulfillment_status": "not_fulfilled",
+          "root_cause_hypothesis": ""
+        }
+      ],
+      "suspected_locations": [
+        {
+          "location": "intent_contract_gate",
+          "evidence": [
+            [
+              {
+                "kind": "missing",
+                "error_type": "",
+                "evidence_ref": "",
+                "raw": {
+                  "item": "意图标签 customer_portrait",
+                  "detail": "实际输出中未出现预期的意图标签"
+                },
+                "incomplete": false
+              },
+              {
+                "kind": "missing",
+                "error_type": "",
+                "evidence_ref": "",
+                "raw": {
+                  "item": "目标实体 target_value“重疾险”",
+                  "detail": "实际输出 target_value 为 null，缺失该实体"
+                },
+                "incomplete": false
+              }
+            ]
+          ]
+        }
+      ],
+      "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': 'customer_portrait', 'confidence': 0.95, 'target_value': '重疾险', 'path_types': None, 'subIntent': '其他意图'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "evidence": [
+        [
+          {
+            "kind": "missing",
+            "error_type": "",
+            "evidence_ref": "",
+            "raw": {
+              "item": "意图标签 customer_portrait",
+              "detail": "实际输出中未出现预期的意图标签"
+            },
+            "incomplete": false
+          },
+          {
+            "kind": "missing",
+            "error_type": "",
+            "evidence_ref": "",
+            "raw": {
+              "item": "目标实体 target_value“重疾险”",
+              "detail": "实际输出 target_value 为 null，缺失该实体"
+            },
+            "incomplete": false
+          }
+        ]
+      ],
+      "evidence_strength": "medium",
+      "summary": {
+        "causal_category": "",
+        "attribution_count": 4,
+        "probe_count": 0,
+        "summary_text": "意图识别链路的根因可分为两层：(1) 提示词设计缺陷：intent_prompt.py中的提示词未能有效引导LLM将涉及历史购买重疾险客户分析的查询归类为customer_portrait，导致模型返回通用'其他意图'且置信度低；(2) 映射层防御不足：intent.py的INTENT_MAPPING未覆盖LLM可能输出的中文意图标签（如'客户画像'），导致上游even正确识别也可能被fallback为other。两者叠加导致最终输出与reference contract严重偏离。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      }
+    }
+  ]
+}

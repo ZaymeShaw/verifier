@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any, Dict, Iterable, List, Optional
 
-from .attribute import AttributeResult, ChainNode, ExpectationAttribution
+from .attribute import AttributeResult, ExpectationAttribution
 from .check import CheckReport
 from .cluster import ClusterSummary
 from .fallback import FallbackDecision
@@ -71,6 +71,7 @@ def _normalize_event_status(value: Any) -> str:
 
 
 def _normalize_chain_status(value: Any) -> str:
+    """向前兼容：ChainNode 已删除，保留函数仅为兼容 normalize_chain_node 调用方。"""
     return _one_of(value, CHAIN_STATUSES, "not_verified", {"succeeded": "verified", "ok": "verified", "error": "failed"})
 
 
@@ -212,7 +213,6 @@ def normalize_trace_table_row(value: Any) -> Optional[TraceTableRow]:
         status=_normalize_trace_status(data.get("status")),
         execution_mode=str(data.get("execution_mode") or ""),
         output_source=str(data.get("output_source") or ""),
-        verdict=_normalize_verdict(data.get("verdict")),
         score=data.get("score"),
         fulfillment_status=_normalize_fulfillment_status(data.get("fulfillment_status")),
         judge_summary=data.get("judge_summary") if isinstance(data.get("judge_summary"), dict) else {},
@@ -224,7 +224,6 @@ def normalize_trace_table_row(value: Any) -> Optional[TraceTableRow]:
         check_passed=data.get("check_passed"),
         issue_count=int(data.get("issue_count") or 0),
         fallback_count=int(data.get("fallback_count") or 0),
-        causal_category=str(data.get("causal_category") or ""),
         divergence_stage=str(data.get("divergence_stage") or ""),
         root_cause_summary=str(data.get("root_cause_summary") or ""),
         created_at=str(data.get("created_at") or ""),
@@ -391,7 +390,6 @@ def normalize_fulfillment_assessment(value: Any) -> Optional[FulfillmentAssessme
         score=data.get("score"),
         expected_evidence=_as_list(data.get("expected_evidence")),
         actual_evidence=_as_list(data.get("actual_evidence")),
-        boundary_decision=data.get("boundary_decision") if isinstance(data.get("boundary_decision"), dict) else {},
         downstream_impact=str(data.get("downstream_impact") or ""),
         blocking=bool(data.get("blocking")),
         confidence=data.get("confidence"),
@@ -420,27 +418,15 @@ def normalize_expectation_attribution(value: Any) -> Optional[ExpectationAttribu
     return ExpectationAttribution(
         expectation_id=str(data.get("expectation_id") or data.get("id") or ""),
         fulfillment_status=_normalize_fulfillment_status(data.get("fulfillment_status") or data.get("status")),
-        causal_category=str(data.get("causal_category") or "insufficient_evidence"),
-        earliest_divergence=data.get("earliest_divergence") if isinstance(data.get("earliest_divergence"), dict) else {},
-        causal_chain=_as_list(data.get("causal_chain")),
         suspected_locations=_as_list(data.get("suspected_locations")),
-        improvement_direction=_as_list(data.get("improvement_direction")),
-        source_evidence=_as_list(data.get("source_evidence")),
-        probe_evidence=_as_list(data.get("probe_evidence")),
-        incomplete_reason=str(data.get("incomplete_reason") or ""),
+        root_cause_hypothesis=str(data.get("root_cause_hypothesis") or ""),
+        evidence=_as_list(data.get("evidence")),
     )
 
 
-def normalize_chain_node(value: Any) -> Optional[ChainNode]:
-    if value is None:
-        return None
-    if isinstance(value, ChainNode):
-        value.status = _normalize_chain_status(value.status)
-        return value
-    data = _as_dict(value)
-    if not data:
-        return None
-    return ChainNode(name=str(data.get("name") or data.get("node") or ""), status=_normalize_chain_status(data.get("status")), evidence=_as_list(data.get("evidence")), reason=str(data.get("reason") or ""))
+def normalize_chain_node(value: Any) -> Any:
+    """向前兼容：ChainNode 已从通用 schema 删除，始终返回空字典。"""
+    return {} if isinstance(value, dict) else value
 
 
 def normalize_live_request(value: Any) -> Optional[LiveRequest]:
@@ -638,9 +624,13 @@ def normalize_judge_result(value: Any) -> Optional[JudgeResult]:
     if not data:
         return None
     data = dict(data)
-    for legacy_key in ("primary_assessment", "condition_assessments", "intent_decomposition", "contrast_assessments", "score_details"):
+    for legacy_key in ("primary_assessment", "condition_assessments", "intent_decomposition", "contrast_assessments", "score_details",
+                       "verdict", "score", "confidence", "probability", "intent_model", "consumer_contract",
+                       "reconstructed_intent", "judge_basis", "judge_method", "semantic_equivalence_checks",
+                       "reference_generation_basis", "verdict_derivation", "boundary_decision", "evaluation_boundary",
+                       "needs_human_review", "quality_flags", "scenario", "raw_model_output", "llm_output",
+                       "overrides", "gate_decisions", "transition_decisions", "fallbacks"):
         data.pop(legacy_key, None)
-    data["verdict"] = _normalize_verdict(data.get("verdict"))
     overall = data.get("overall_fulfillment")
     if isinstance(overall, dict) and "status" in overall:
         overall = dict(overall)
@@ -651,7 +641,6 @@ def normalize_judge_result(value: Any) -> Optional[JudgeResult]:
     data["wrong"] = [normalize_gap_item(item, "wrong") for item in _as_list(data.get("wrong"))]
     data["missing"] = [normalize_gap_item(item, "missing") for item in _as_list(data.get("missing"))]
     data["extra"] = [normalize_gap_item(item, "extra") for item in _as_list(data.get("extra"))]
-    data["fallbacks"] = normalize_fallback_decisions(data.get("fallbacks"))
     if not data.get("summary"):
         data["summary"] = _as_dict(data.get("summary"))
     return JudgeResult(**data)
@@ -662,18 +651,18 @@ def normalize_attribute_result(value: Any) -> Optional[AttributeResult]:
         return None
     if isinstance(value, AttributeResult):
         value.expectation_attributions = [item for item in (normalize_expectation_attribution(item) for item in _as_list(value.expectation_attributions)) if item is not None]
-        value.chain_nodes = [item for item in (normalize_chain_node(item) for item in _as_list(value.chain_nodes)) if item is not None]
-        value.probe_results = normalize_probe_results(value.probe_results)
-        value.fallbacks = normalize_fallback_decisions(value.fallbacks)
         return value
     data = _as_dict(value)
     if not data:
         return None
     data = dict(data)
+    for legacy_key in ("causal_category", "chain_nodes", "earliest_divergence", "evidence_coverage",
+                       "analysis_quality", "incomplete_reason", "verification_steps", "patch_direction",
+                       "needs_human_review", "scenario", "quality_flags", "raw_model_output", "llm_output",
+                       "tool_call_log", "analysis_method", "probe_results", "gate_decisions",
+                       "transition_decisions", "fallbacks"):
+        data.pop(legacy_key, None)
     data["expectation_attributions"] = [item for item in (normalize_expectation_attribution(item) for item in _as_list(data.get("expectation_attributions"))) if item is not None]
-    data["chain_nodes"] = [item for item in (normalize_chain_node(item) for item in _as_list(data.get("chain_nodes"))) if item is not None]
-    data["probe_results"] = normalize_probe_results(data.get("probe_results"))
-    data["fallbacks"] = normalize_fallback_decisions(data.get("fallbacks"))
     if not data.get("summary"):
         data["summary"] = _as_dict(data.get("summary"))
     return AttributeResult(**data)

@@ -1,0 +1,41 @@
+{
+  "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783491832688",
+  "project_id": "client_search",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "口语重疾险识别为险种大类pCategorys字段",
+      "fulfillment_status": "not_evaluable",
+      "root_cause_hypothesis": ""
+    },
+    {
+      "expectation_id": "重疾险映射为标准枚举值疾病保险",
+      "fulfillment_status": "not_evaluable",
+      "root_cause_hypothesis": ""
+    }
+  ],
+  "root_cause_hypothesis": "法官 LLM 在生成结构化业务期望评估结果时，输出在未完成状态下被截断，返回的 JSON 字符串不完整，导致 JSON 解析器抛出“Expecting ',' delimiter”错误。截断原因可能为 token 上限、生成中途连接断开或内部异常，使得整个评估流程中断，所有 business_expectations 均未能完成评估，最终整体 fulfillment 判定为 not_evaluable。",
+  "evidence": [
+    {
+      "type": "judge_raw_output_preview",
+      "content": "原始输出预览：{\"business_expectations\":[{\"expectation_id\":\"口语重疾险识别为险种大类pCategorys字段\",\"description\":\"用户说“买了重疾险”，核心意图是通过险种大类筛选客户；系统应使用 pCategorys 字段承载该筛选条件。\",\"acceptance_criteria\":\"actual output 的 conditions 中包含 field=pCategorys 的条件。\"},{\"expectation_id\":\"重疾险映射为标准枚举值疾病保险\",\"description\":\"口语“重疾险”应按 value_mappings 映射到"
+    },
+    {
+      "type": "parsing_error",
+      "content": "Expecting ',' delimiter at line 1 column 91 (char 90); whole response 解析失败，bare JSON from first bracket 同样失败"
+    },
+    {
+      "type": "judge_final_status",
+      "content": "overall_fulfillment.status = not_evaluable，evidence 中包含 llm_output_validation_failed"
+    }
+  ],
+  "evidence_strength": "strong",
+  "summary": {
+    "causal_category": "",
+    "attribution_count": 2,
+    "probe_count": 0,
+    "summary_text": "法官 LLM 在生成结构化业务期望评估结果时，输出在未完成状态下被截断，返回的 JSON 字符串不完整，导致 JSON 解析器抛出“Expecting ',' delimiter”错误。截断原因可能为 token 上限、生成中途连接断开或内部异常，使得整个评估流程中断，所有 business_expectations 均未能完成评估，最终整体 fulfillment 判定为 not_evaluable。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

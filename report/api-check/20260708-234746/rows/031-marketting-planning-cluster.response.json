@@ -1,0 +1,54 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::intent_recognition阶段的意图分类模型/提示词未能将用户关于“增加理财师/优化产品方案弥补NBEV目标”的请求识别为营销规划意图（应映射至400::not_fulfilled",
+      "mechanism": "intent_recognition阶段的意图分类模型/提示词未能将用户关于“增加理财师/优化产品方案弥补NBEV目标”的请求识别为营销规划意图（应映射至400::not_fulfilled",
+      "fulfillment_statuses": [
+        "not_fulfilled"
+      ],
+      "expectation_ids": [
+        "正确识别用户营销规划意图",
+        "输出阶段为intent而非non_agent",
+        "mp_contract:expected_stage"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "representative_traces": [
+        "marketting-planning:mock-agent-marketting-planning-d1642b58:1783525667572"
+      ],
+      "common_root_cause": "intent_recognition阶段的意图分类模型/提示词未能将用户关于“增加理财师/优化产品方案弥补NBEV目标”的请求识别为营销规划意图（应映射至4002或其他规划意图），错误地分类为“其他意图”（4001），导致stage输出为non_agent，违背了reference contract，并使后续规划功能完全跳过，是本次失败的根本原因。",
+      "shared_failure_pattern": "intent_recognition阶段的意图分类模型/提示词未能将用户关于“增加理财师/优化产品方案弥补NBEV目标”的请求识别为营销规划意图（应映射至4002或其他规划意图），错误地分类为“其他意图”（4001），导致stage输出为non_agent，违背了reference contract，并使后续规划功能完全跳过，是本次失败的根本原因。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-d1642b58",
+          "root_cause": "intent_recognition阶段的意图分类模型/提示词未能将用户关于“增加理财师/优化产品方案弥补NBEV目标”的请求识别为营销规划意图（应映射至4002或其他规划意图），错误地分类为“其他意图”（4001），导致stage输出为non_agent，违背了reference contract，并使后续规划功能完全跳过，是本次失败的根本原因。",
+          "evidence": [
+            "execution_stage_probe.intent_recognition: actual_stage=\"non_agent\", expected_stage=\"intent\"",
+            "planning_output_probe: expected_stage=\"intent\", actual_stage=null, stage_match=false, evidence_gap=[\"actual_stage\"]",
+            "judge_result: 意图识别期望not_fulfilled, intent_name=\"其他意图\", intent_code=\"4001\"",
+            "extracted_output.turns[0]: intent=\"4001\", intent_name=\"其他意图\", stage=\"non_agent\"",
+            "planning_function stage: card_count=0 因为前置意图识别错误导致跳过"
+          ]
+        }
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "next_actions": [
+        "execution_stage_probe.intent_recognition: actual_stage=\"non_agent\", expected_stage=\"intent\"",
+        "planning_output_probe: expected_stage=\"intent\", actual_stage=null, stage_match=false, evidence_gap=[\"actual_stage\"]",
+        "judge_result: 意图识别期望not_fulfilled, intent_name=\"其他意图\", intent_code=\"4001\"",
+        "extracted_output.turns[0]: intent=\"4001\", intent_name=\"其他意图\", stage=\"non_agent\"",
+        "planning_function stage: card_count=0 因为前置意图识别错误导致跳过"
+      ]
+    }
+  ],
+  "common_root_cause": "intent_recognition阶段的意图分类模型/提示词未能将用户关于“增加理财师/优化产品方案弥补NBEV目标”的请求识别为营销规划意图（应映射至4002或其他规划意图），错误地分类为“其他意图”（4001），导致stage输出为non_agent，违背了reference contract，并使后续规划功能完全跳过，是本次失败的根本原因。",
+  "impact": "",
+  "priority": "normal"
+}

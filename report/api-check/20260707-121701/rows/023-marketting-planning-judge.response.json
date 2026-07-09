@@ -1,0 +1,303 @@
+{
+  "trace_id": "1748fa3a-5877-4f9e-93a1-565a8cc331c3",
+  "project_id": "marketting-planning",
+  "verdict": "uncertain",
+  "business_expectations": [
+    {
+      "expectation_id": "业务指标NBEV识别",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "时间范围今年提取",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "分解维度提取",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "缺失目标值处理",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "意图分类正确路由",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "规划可操作性前置",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "SSE事件流正常结束",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "业务指标NBEV识别",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "时间范围今年提取",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "分解维度提取",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "缺失目标值处理",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "意图分类正确路由",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "规划可操作性前置",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "SSE事件流正常结束",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "summary": "系统未能将用户查询识别为营销规划意图，既未提取业务指标与维度，也未引导补充缺失的目标值，直接以“其他意图”结束，核心业务期望全部未达成。",
+    "assessment_count": 7
+  },
+  "expected": {
+    "turns": [
+      {
+        "turn_index": 0,
+        "input_turn": {
+          "content": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？",
+          "role": "user"
+        },
+        "msg": "success",
+        "code": 0,
+        "end_flag": 0,
+        "robot_text": "请提供您今年的NBEV具体目标值，以便我为您分析如何通过理财师或产品方案弥补缺口。",
+        "extra_output_params": {
+          "card_result": {
+            "answer": "请提供您今年的NBEV具体目标值...",
+            "event": "ask_question",
+            "intent": "营销规划",
+            "intent_name": "营销规划",
+            "slots": {
+              "business_metric": "NBEV",
+              "time_range": "今年",
+              "decomposition_dimensions": [
+                "增加理财师",
+                "优化产品方案"
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "reasoning_summary": "用户查询明确表达了通过增加理财师或优化产品方案弥补今年NBEV目标缺口的意图，但系统将其归为“其他意图”并立即结束对话。实际输出中既未提取NBEV指标、时间范围、分解维度等关键信息，也未因目标值缺失而发起澄清，导致所有blocking业务期望均未满足。仅SSE事件流的技术性结束满足了非阻塞期望，因此整体判定为未满足用户意图。",
+  "judge_basis": "基于实际输出的意图识别结果、事件序列与空白的卡片答案，结合用户查询的业务语义。",
+  "judge_method": "将业务期望逐一与实际输出对比，判定每个原子期望的满足状态，再汇总为整体结论。",
+  "verdict_derivation": {
+    "method": "聚合所有blocking期望后取最差状态；若存在任一blocking期望未满足，则整体未满足。"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "NBEV目标值询问",
+        "detail": "系统未生成任何请求目标值的澄清问题"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "业务指标槽位",
+        "detail": "输出中未提取NBEV指标"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "时间范围",
+        "detail": "输出中未提取“今年”"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "分解维度",
+        "detail": "输出中未提取“增加理财师”和“优化产品方案”"
+      },
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "意图分类",
+        "detail": "被错误识别为“其他意图”（4001）"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "item": "对话结束方式",
+        "detail": "未进行任何澄清或规划，直接以card_end结束"
+      },
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    "用户查询明确表达了通过增加理财师或优化产品方案弥补今年NBEV目标缺口的意图，但系统将其归为“其他意图”并立即结束对话。实际输出中既未提取NBEV指标、时间范围、分解维度等关键信息，也未因目标值缺失而发起澄清，导致所有blocking业务期望均未满足。仅SSE事件流的技术性结束满足了非阻塞期望，因此整体判定为未满足用户意图。"
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "reason": "失败由系统内部意图识别错误导致，不涉及不可控的外部依赖。"
+  },
+  "evaluation_boundary": {
+    "allow_fallback": false,
+    "dependency_status": "available",
+    "judge_scope": "system_responsibility_with_declared_external_boundary"
+  },
+  "consumer_contract": {
+    "description": "对于营销规划类请求，系统应识别业务指标、时间范围、分解维度，若关键数值缺失则应主动询问用户，确保意图可被后续规划阶段消费。"
+  },
+  "intent_model": {
+    "intent_label": "营销规划/目标补缺",
+    "slots": {
+      "business_metric": "NBEV",
+      "time_range": "今年",
+      "decomposition_dimensions": [
+        "增加理财师",
+        "优化产品方案"
+      ]
+    }
+  },
+  "reconstructed_intent": "用户希望系统帮助分析如何弥补今年NBEV目标缺口，具体通过增加理财师或优化产品方案实现，但未提供目标数值。",
+  "reference_generation_basis": {
+    "reference_provided": false,
+    "generation_method": "依据critical_intent_dimensions和intent_recognition场景推导预期行为。"
+  },
+  "scenario": "intent_recognition",
+  "needs_human_review": true,
+  "quality_flags": [
+    "意图识别错误",
+    "缺失关键槽位",
+    "未进行必要澄清",
+    "invalid_actual_shape"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[(none)] · 用户查询明确表达了通过增加理财师或优化产品方案弥补今年NBEV目标缺口的意图，但系统将其归为“其他意图”并立即结束对话。实际输出中既未提取NBEV指标、时间范围、分解维度等关键信息，也未因目标值缺失而发起澄清，导致所有blocking业务期望均未满足。仅SSE事件流的技术性结束满足了非阻塞期望，因此整体判定为未满足用户意图。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "业务指标NBEV识别",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户查询明确表达了通过增加理财师或优化产品方案弥补今年NBEV目标缺口的意图，但系统将其归为“其他意图”并立即结束对话。实际输出中既未提取NBEV指标、时间范围、分解维度等关键信息，也未因目标值缺失而发起澄清，导致所有blocking业务期望均未满足。仅SSE事件流的技术性结束满足了非阻塞期望，因此整体判定为未满足用户意图。"
+      },
+      {
+        "expectation_id": "分解维度提取",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户查询明确表达了通过增加理财师或优化产品方案弥补今年NBEV目标缺口的意图，但系统将其归为“其他意图”并立即结束对话。实际输出中既未提取NBEV指标、时间范围、分解维度等关键信息，也未因目标值缺失而发起澄清，导致所有blocking业务期望均未满足。仅SSE事件流的技术性结束满足了非阻塞期望，因此整体判定为未满足用户意图。"
+      },
+      {
+        "expectation_id": "意图分类正确路由",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户查询明确表达了通过增加理财师或优化产品方案弥补今年NBEV目标缺口的意图，但系统将其归为“其他意图”并立即结束对话。实际输出中既未提取NBEV指标、时间范围、分解维度等关键信息，也未因目标值缺失而发起澄清，导致所有blocking业务期望均未满足。仅SSE事件流的技术性结束满足了非阻塞期望，因此整体判定为未满足用户意图。"
+      },
+      {
+        "expectation_id": "时间范围今年提取",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户查询明确表达了通过增加理财师或优化产品方案弥补今年NBEV目标缺口的意图，但系统将其归为“其他意图”并立即结束对话。实际输出中既未提取NBEV指标、时间范围、分解维度等关键信息，也未因目标值缺失而发起澄清，导致所有blocking业务期望均未满足。仅SSE事件流的技术性结束满足了非阻塞期望，因此整体判定为未满足用户意图。"
+      },
+      {
+        "expectation_id": "缺失目标值处理",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户查询明确表达了通过增加理财师或优化产品方案弥补今年NBEV目标缺口的意图，但系统将其归为“其他意图”并立即结束对话。实际输出中既未提取NBEV指标、时间范围、分解维度等关键信息，也未因目标值缺失而发起澄清，导致所有blocking业务期望均未满足。仅SSE事件流的技术性结束满足了非阻塞期望，因此整体判定为未满足用户意图。"
+      },
+      {
+        "expectation_id": "规划可操作性前置",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "用户查询明确表达了通过增加理财师或优化产品方案弥补今年NBEV目标缺口的意图，但系统将其归为“其他意图”并立即结束对话。实际输出中既未提取NBEV指标、时间范围、分解维度等关键信息，也未因目标值缺失而发起澄清，导致所有blocking业务期望均未满足。仅SSE事件流的技术性结束满足了非阻塞期望，因此整体判定为未满足用户意图。"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 7,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

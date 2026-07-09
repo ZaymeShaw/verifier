@@ -52,7 +52,7 @@ Tool outputs must be evidence-first:
 
 ## Retrieval tool budgets
 
-Retrieval tools that return file or document content (e.g. `search_source_file`, `search_field_definition`) must enforce two caps:
+Retrieval tools that return file or document content (e.g. `source_read_functions`, `field_search_definition`) must enforce two caps:
 
 - **Per-call cap**: a single result is bounded by a documented byte cap (current default `MAX_SOURCE_FILE_BYTES = 64000` in `impl/tools/source_retrieval.py`). Content over the cap must be truncated, not paginated.
 - **Per-case aggregate cap**: cumulative bytes returned to one agent run are bounded (current default `DEFAULT_AGGREGATE_BYTE_BUDGET = 192_000`). Once exhausted, the tool must return a structured `budget_exhausted` marker so the agent can stop calling and finalise with `incomplete_reason` instead of retrying.

@@ -1,22 +1,23 @@
 """
-通用 Tool 协议：源码文件检索（辅助 tool，已降级）。
+通用 Tool 协议：源码函数/符号检索。
 
-⚠️ 降级说明（spec/tool2.md）：
-此 tool 是"信息搬运"而非"可执行验证"，不作为归因主力。归因主力是各项目 adapter
-在 get_verifiable_tools() 里提供的可执行验证 tool（execute_fn 真能跑、能产出 actual）。
-本 tool 仅作为兜底辅助，供 judge/attr 在没有项目级源码验证 tool 时按需读取源码文件。
+本模块提供 SourceFileProvider 协议 + 默认项目级 provider，并输出统一的 VerifiableTool：
+- source_list_symbols：列出 Python 文件中的函数/方法清单
+- source_read_functions：按 qualified_name 读取函数片段，或读取非 Python 文档/配置文本
 
-与 field_retrieval.py 平行。提供 SourceFileProvider 协议 + 默认项目级 provider，
-供 attribute agent 按需读取项目 source_* 文档、原业务系统源码（application.external_repo /
-endpoint_discovery.source_roots / 绝对路径 source_* 文档），避免在 user prompt 中全量加载。
+整文件读取仅作为非 Python 文件或函数片段不足时的兜底，避免在 user prompt 中全量加载源码。
 """
 from __future__ import annotations
 
+import ast
 import os
 from pathlib import Path
 from typing import Protocol, Optional, Dict, List, Any
 
+from impl.tools.protocol import ToolResult, VerifiableTool
+
 MAX_SOURCE_FILE_BYTES = 64000
+MAX_SOURCE_FUNCTION_BYTES = 24_000
 SOURCE_READABLE_SUFFIXES = {".py", ".yaml", ".yml", ".md", ".json", ".txt", ".cfg", ".toml", ".prompt"}
 DEFAULT_AGGREGATE_BYTE_BUDGET = 192_000
 # 原业务系统 repo walk 上限：避免大仓 catalog 失控
@@ -87,6 +88,31 @@ class SourceFileProvider(Protocol):
 
         Returns:
             文件内容字符串；key 不存在则返回 None。
+        """
+        ...
+
+    def read_functions(self, file_key: str, function_names: List[str]) -> Optional[str]:
+        """
+        按需读取指定 Python 文件中的若干函数/方法源码片段。
+
+        Args:
+            file_key: list_files() 返回的 key
+            function_names: 需要读取的函数名，支持 Class.method 或 method/function
+
+        Returns:
+            匹配函数源码片段；key 不存在则返回 None。
+        """
+        ...
+
+    def list_symbols(self, file_key: str) -> Optional[List[Dict[str, Any]]]:
+        """
+        列出指定 Python 文件中的函数/方法符号摘要。
+
+        Args:
+            file_key: list_files() 返回的 key
+
+        Returns:
+            符号摘要列表；key 不存在则返回 None。
         """
         ...
 
@@ -261,69 +287,236 @@ class ProjectSourceFileProvider:
         if file_key in self._content_cache:
             return self._content_cache[file_key]
 
-        if self._bytes_returned >= self.aggregate_byte_budget:
-            return (f"[budget_exhausted: aggregate byte budget {self.aggregate_byte_budget:,} "
-                    f"reached across {len(self._content_cache)} file(s). Stop calling this tool "
-                    f"and rely on already-read files; if attribution is still incomplete, "
-                    f"finalise with incomplete_reason.]")
+        budget_error = self._reserve_budget(0)
+        if budget_error:
+            return budget_error
 
-        catalog = self.list_files()
-        entry = next((e for e in catalog if e["key"] == file_key), None)
+        entry = self._catalog_entry(file_key)
         if entry is None:
             return None
 
         try:
             content = Path(entry["path"]).read_text(encoding="utf-8", errors="ignore")
-            remaining = self.aggregate_byte_budget - self._bytes_returned
-            truncated = content[:min(MAX_SOURCE_FILE_BYTES, remaining)]
-            self._bytes_returned += len(truncated)
-            self._content_cache[file_key] = truncated
-            return truncated
+            return self._cache_content(file_key, content, MAX_SOURCE_FILE_BYTES)
         except Exception:
             return None
 
+    def read_functions(self, file_key: str, function_names: List[str]) -> Optional[str]:
+        entry = self._catalog_entry(file_key)
+        if entry is None:
+            return None
 
-def create_source_file_search_tool(provider: SourceFileProvider):
-    """
-    协议通用：创建源码文件检索 tool。
+        path = Path(entry["path"])
+        if path.suffix != ".py":
+            return f"[function_extract_unsupported: '{file_key}' is not a Python source file; use full_file=true only if necessary.]"
 
-    Args:
-        provider: 源码文件提供者
-
-    Returns:
-        search_source_file 函数（用于 Agno Agent tools）
-    """
-
-    def search_source_file(file_key: str) -> str:
-        """
-        Retrieve a specific source file's content from the project.
-
-        Use this when you need to inspect actual source code, configs, or
-        prompts during attribution. The user prompt contains a
-        `source_file_catalog` listing all available files and their keys.
-
-        Args:
-            file_key: The file key from source_file_catalog (e.g.,
-                      "project_doc:source_enhanced_rules", "config:source_field_definitions",
-                      "project_adapter:adapter.py")
-
-        Returns:
-            File content (capped at 64k chars), or "File not found" if key invalid.
-        """
         try:
-            content = provider.read_file(file_key)
-            if content is None:
-                return f"File '{file_key}' not found in catalog"
-            return content
+            content = path.read_text(encoding="utf-8", errors="ignore")
+            snippets = extract_python_functions(content, function_names)
         except Exception as e:
-            return f"Error retrieving file '{file_key}': {str(e)}"
+            return f"[function_extract_error: {str(e)}]"
 
-    search_source_file.__name__ = "search_source_file"
-    search_source_file.__doc__ = (
-        "Retrieve a specific source file's content from the project source catalog. "
-        "Use this when you need to inspect source code, configs, or prompts during "
-        "attribution. The user prompt contains a source_file_catalog listing all "
-        "available files and their keys."
-    )
+        if not snippets:
+            requested = ", ".join(function_names)
+            return f"[functions_not_found: {requested}]"
 
-    return search_source_file
+        cache_key = f"{file_key}::functions::{','.join(function_names)}"
+        return self._cache_content(cache_key, "\n\n".join(snippets), MAX_SOURCE_FUNCTION_BYTES)
+
+    def list_symbols(self, file_key: str) -> Optional[List[Dict[str, Any]]]:
+        entry = self._catalog_entry(file_key)
+        if entry is None:
+            return None
+
+        path = Path(entry["path"])
+        if path.suffix != ".py":
+            return []
+
+        try:
+            content = path.read_text(encoding="utf-8", errors="ignore")
+            return extract_python_symbols(content)
+        except Exception:
+            return []
+
+    def _catalog_entry(self, file_key: str) -> Optional[Dict[str, Any]]:
+        catalog = self.list_files()
+        return next((e for e in catalog if e["key"] == file_key), None)
+
+    def _reserve_budget(self, requested_bytes: int) -> Optional[str]:
+        if self._bytes_returned + requested_bytes <= self.aggregate_byte_budget:
+            return None
+        return (f"[budget_exhausted: aggregate byte budget {self.aggregate_byte_budget:,} "
+                f"reached across {len(self._content_cache)} file(s). Stop calling this tool "
+                f"and rely on already-read files; if attribution is still incomplete, "
+                f"finalise with incomplete_reason.]")
+
+    def _cache_content(self, cache_key: str, content: str, byte_limit: int) -> str:
+        remaining = self.aggregate_byte_budget - self._bytes_returned
+        truncated = content[:min(byte_limit, remaining)]
+        budget_error = self._reserve_budget(len(truncated))
+        if budget_error:
+            return budget_error
+        self._bytes_returned += len(truncated)
+        self._content_cache[cache_key] = truncated
+        return truncated
+
+
+def extract_python_functions(content: str, function_names: List[str]) -> List[str]:
+    requested = {name.strip() for name in function_names if name and name.strip()}
+    if not requested:
+        return []
+
+    lines = content.splitlines()
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return []
+
+    snippets: List[str] = []
+    parents = _python_parent_map(tree)
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        qualified_name = _qualified_function_name(node, parents)
+        if node.name not in requested and qualified_name not in requested:
+            continue
+        end_lineno = getattr(node, "end_lineno", node.lineno)
+        header = f"# {qualified_name} (lines {node.lineno}-{end_lineno})"
+        snippet = "\n".join(lines[node.lineno - 1:end_lineno])
+        snippets.append(f"{header}\n{snippet}")
+    return snippets
+
+
+def extract_python_symbols(content: str) -> List[Dict[str, Any]]:
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return []
+
+    parents = _python_parent_map(tree)
+    symbols: List[Dict[str, Any]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        doc = ast.get_docstring(node) or ""
+        end_lineno = getattr(node, "end_lineno", node.lineno)
+        symbols.append({
+            "name": node.name,
+            "qualified_name": _qualified_function_name(node, parents),
+            "kind": "async_function" if isinstance(node, ast.AsyncFunctionDef) else "function",
+            "line": node.lineno,
+            "end_line": end_lineno,
+            "args": [arg.arg for arg in node.args.args],
+            "doc": doc.splitlines()[0][:200] if doc else "",
+        })
+    return sorted(symbols, key=lambda item: item["line"])
+
+
+def _python_parent_map(tree: ast.AST) -> Dict[ast.AST, ast.AST]:
+    parents: Dict[ast.AST, ast.AST] = {}
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            parents[child] = node
+    return parents
+
+
+def _qualified_function_name(target: ast.AST, parents: Dict[ast.AST, ast.AST]) -> str:
+    class_names = []
+    node = parents.get(target)
+    while node is not None:
+        if isinstance(node, ast.ClassDef):
+            class_names.append(node.name)
+        node = parents.get(node)
+    if isinstance(target, (ast.FunctionDef, ast.AsyncFunctionDef)) and class_names:
+        return f"{'.'.join(reversed(class_names))}.{target.name}"
+    return getattr(target, "name", "")
+
+
+def create_source_retrieval_tools(provider: SourceFileProvider) -> List[VerifiableTool]:
+    def list_source_symbols(**kwargs: Any) -> ToolResult:
+        file_key = str(kwargs.get("file_key") or "")
+        symbols = provider.list_symbols(file_key)
+        if symbols is None:
+            return ToolResult(
+                tool_id="source.list_symbols",
+                tool_type="source_retrieval",
+                status="failed",
+                error=f"file not found in catalog: {file_key}",
+            )
+        return ToolResult(
+            tool_id="source.list_symbols",
+            tool_type="source_retrieval",
+            status="succeeded" if symbols else "inconclusive",
+            actual={"file_key": file_key, "symbols": symbols},
+            evidence=f"listed {len(symbols)} Python function symbols from {file_key}",
+        )
+
+    def read_source_functions(**kwargs: Any) -> ToolResult:
+        file_key = str(kwargs.get("file_key") or "")
+        function_names = kwargs.get("function_names") or []
+        full_file = bool(kwargs.get("full_file") or False)
+        if function_names:
+            content = provider.read_functions(file_key, [str(name) for name in function_names])
+        elif full_file:
+            content = provider.read_file(file_key)
+        else:
+            return ToolResult(
+                tool_id="source.read_functions",
+                tool_type="source_retrieval",
+                status="inconclusive",
+                error="function_names is required unless full_file=true",
+                evidence="function_names is empty and full_file is false; no source text was retrieved",
+            )
+        if content is None:
+            return ToolResult(
+                tool_id="source.read_functions",
+                tool_type="source_retrieval",
+                status="failed",
+                error=f"file not found in catalog: {file_key}",
+            )
+        status = "inconclusive" if content.startswith("[") else "succeeded"
+        return ToolResult(
+            tool_id="source.read_functions",
+            tool_type="source_retrieval",
+            status=status,
+            actual={"file_key": file_key, "content": content},
+            evidence=f"retrieved source snippets from {file_key}",
+        )
+
+    list_source_symbols.__name__ = "source_list_symbols"
+    read_source_functions.__name__ = "source_read_functions"
+    return [
+        VerifiableTool(
+            tool_id="source.list_symbols",
+            description="列出指定 Python 源文件中的函数/方法符号摘要。输入 source_file_catalog 中的 file_key，输出 name、qualified_name、kind、line/end_line、args 和 doc 摘要；该工具只提供源码结构索引，不验证运行时行为、业务配置或根因结论。",
+            applicable_scenario="attr",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "file_key": {"type": "string", "description": "必填。source_file_catalog 中的文件 key，必须原样使用 catalog 提供的 key，不要传文件路径；catalog 条目的来源和描述决定该文件能提供哪类证据。"},
+                },
+                "required": ["file_key"],
+            },
+            execute_fn=list_source_symbols,
+        ),
+        VerifiableTool(
+            tool_id="source.read_functions",
+            description="读取指定源码文件的函数/方法片段，或在文件类型不支持函数抽取时读取整文件内容。输入 source_file_catalog 的 file_key、可选 function_names 或 full_file，输出源码/文档文本片段；该工具提供实现机制证据，不执行系统、不验证当前行为，也不替代 API、字段能力或规则类工具的证据。",
+            applicable_scenario="attr",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "file_key": {"type": "string", "description": "必填。source_file_catalog 中的文件 key，必须原样使用 catalog 提供的 key，不要传文件路径；catalog 条目的来源和描述决定该文件能提供哪类证据。"},
+                    "function_names": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "要读取的函数/方法名列表，支持普通函数名或 qualified_name（如 ClassName.method_name）；名称必须来自已有符号信息、文件内容线索或当前任务证据，不要凭空猜测。",
+                    },
+                    "full_file": {"type": "boolean", "description": "是否读取整文件内容。默认 false；用于非 Python 文档/配置，或 function_names 无法表达所需文本片段时。整文件输出可能较大，只能提供文本证据。"},
+                },
+                "required": ["file_key"],
+            },
+            execute_fn=read_source_functions,
+        ),
+    ]
+

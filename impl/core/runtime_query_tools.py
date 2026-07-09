@@ -105,7 +105,7 @@ def _root_cause_from_system_check(system_check: dict) -> Optional[dict]:
     direct = system_check.get("root_cause")
     if isinstance(direct, dict):
         return {
-            "category": direct.get("category") or system_check.get("causal_category") or "implementation_bug",
+            "category": direct.get("category") or system_check.get("root_cause_category") or "implementation_bug",
             "summary": direct.get("summary") or direct.get("reason") or direct.get("root_cause") or str(direct),
             "evidence": _evidence_list(direct.get("evidence") or system_check.get("evidence")),
             "confidence": direct.get("confidence") or system_check.get("confidence") or "high",
@@ -113,7 +113,7 @@ def _root_cause_from_system_check(system_check: dict) -> Optional[dict]:
         }
     if isinstance(direct, str) and direct.strip():
         return {
-            "category": system_check.get("causal_category") or "implementation_bug",
+            "category": system_check.get("root_cause_category") or "implementation_bug",
             "summary": direct,
             "evidence": _evidence_list(system_check.get("evidence")),
             "confidence": system_check.get("confidence") or "high",
@@ -132,7 +132,7 @@ def _root_cause_from_system_check(system_check: dict) -> Optional[dict]:
         evidence = _evidence_list(system_check.get("evidence"))
         summary = system_check.get("summary") or system_check.get("reason") or "; ".join(str(x) for x in evidence) or "runtime check failed"
         return {
-            "category": system_check.get("causal_category") or "implementation_bug",
+            "category": system_check.get("root_cause_category") or "implementation_bug",
             "summary": str(summary),
             "evidence": evidence,
             "confidence": system_check.get("confidence") or "high",
@@ -181,7 +181,7 @@ def analyze_divergence(
     system_check = _normalize_runtime_checks(runtime_checks)
 
     root_cause = _root_cause_from_system_check(system_check) or _infer_generic_root_cause(gaps, runtime_values, first_failed)
-    causal_category = (root_cause or {}).get("category") or "unknown"
+    root_cause_category = (root_cause or {}).get("category") or "unknown"
     root_cause_hypothesis = (root_cause or {}).get("summary") or ""
     fix_suggestion = (root_cause or {}).get("fix_suggestion") or ""
 
@@ -195,10 +195,9 @@ def analyze_divergence(
         "gaps": gaps,
         "system_check": system_check,
         "root_cause": root_cause,
-        "causal_category": causal_category,
         "root_cause_hypothesis": root_cause_hypothesis,
         "fix_suggestion": fix_suggestion,
-        "root_cause_category": causal_category,
+        "root_cause_category": root_cause_category,
         "root_cause_reasoning": root_cause_hypothesis,
         "analysis_method": "trace_runtime_analysis_with_project_checks" if system_check else "trace_runtime_analysis",
         "evidence_source": "execution_trace + adapter_runtime_checks" if system_check else "execution_trace runtime data",

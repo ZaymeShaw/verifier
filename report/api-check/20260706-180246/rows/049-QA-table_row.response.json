@@ -1,0 +1,76 @@
+{
+  "id": "mock-agent-QA-87e78ff7",
+  "input": "qa_gold_answer",
+  "scenario": "qa_gold_answer",
+  "output_summary": "{\"actual_answer\": \"轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。\"}",
+  "reference_summary": "{\"actual_answer\": \"通常情况下，您购买的重疾险合同中关于轻症责任的赔付规则如下：\\n1. 轻症可以多次赔付，具体次数以合同约定为准（常见为3-5次）。每次确诊的轻症需满足合同定义的疾病标准，且两次轻症确诊之间通常有间隔期（如90天或180天）。\\n2. 每次轻症赔付的金额一般为基本保额的一定比例，常…",
+  "status": "not_fulfilled",
+  "execution_mode": "",
+  "output_source": "provided_output",
+  "verdict": "incorrect",
+  "fulfillment_status": "fulfilled",
+  "judge_summary": {
+    "status": "not_fulfilled",
+    "fulfillment_status": "fulfilled",
+    "verdict": "incorrect",
+    "reason": "[self_check_failed] uncertain · judge self-check failed; specific inconsistencies: [{\"kind\": \"overall_status_mismatch\", \"where\": \"overall_fulfillment.status\", \"value\": \"fulfilled\", \"derived\": \"not_fulfilled\"}]",
+    "reason_source": "degradation_marker",
+    "reason_stage": "judge",
+    "is_formal_attribution": false,
+    "assessment_count": 6,
+    "blocking_count": 0,
+    "primary_failure_dimensions": [
+      {
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "judge self-check failed; specific inconsistencies: [{\"kind\": \"overall_status_mismatch\", \"where\": \"overall_fulfillment.status\", \"value\": \"fulfilled\", \"derived\": \"not_fulfilled\"}]",
+        "expectation_id": "其他轻症赔付重要注意事项",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      }
+    ]
+  },
+  "attribution_summary": {
+    "attribution_count": 1,
+    "causal_category": "answer_incomplete",
+    "is_complete": true,
+    "is_formal_attribution": true,
+    "probe_count": 3,
+    "summary_text": "mock_agent_llm 在生成回答时采用了简洁风格，优先满足用户直接询问的'轻症能否多次赔付'和'每次赔付金额比例'两个核心问题。对于 gold reference 中属于'其他轻症赔付重要注意事项'范畴的辅助信息（间隔期具体时长如90天或180天、轻症分组限制规则、赔付后合同继续有效、累计赔付上限、重疾保额影响），LLM 未做展开说明。所有管线节点（normalize、read、extract_output、schema validation）均成功执行，adapter.py 的 extract_output 方法仅做透传无截断，排除系统管线异常。根因属于生成模型的简洁偏好导致的 answer_incomplete，而非系统缺陷或管线故障。"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 1,
+    "protocol_gap_count": 0,
+    "consistency_gap_count": 1,
+    "recommended_fix_count": 1,
+    "issues": [
+      "AttributeResult passed quality gate while claiming fields not present in current trace/judge evidence: LLM, adapter.py, config, generation, gold, high"
+    ]
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": true,
+  "quality_flags": [
+    "核心信息完整",
+    "风险提示充分",
+    "延伸细节省略但非误导",
+    "self_check_failed",
+    "核心信息完整",
+    "延伸细节省略但非误导",
+    "管线无异常",
+    "根因定位于LLM生成简洁偏好"
+  ],
+  "check_passed": false,
+  "issue_count": 2,
+  "fallback_count": 0,
+  "causal_category": "answer_incomplete",
+  "divergence_stage": "内容生成阶段",
+  "root_cause_summary": "mock_agent_llm 在生成回答时采用了简洁风格，优先满足用户直接询问的'轻症能否多次赔付'和'每次赔付金额比例'两个核心问题。对于 gold reference 中属于'其他轻症赔付重要注意事项'范畴的辅助信息（间隔期具体时长如90天或180天、轻症分组限制规则、赔付后合同继续有效、累计赔付上限、重疾保额影响），LLM 未做展开说明。所有管线节点（normalize、read、extract_output、schema validation）均成功执行，adapter.py 的 extract_output 方法仅做透传无截断，排除系统管线异常。根因属于生成模型的简洁偏好导致的 answer_incomplete，而非系统缺陷或管线故障。",
+  "created_at": "2026-07-06T10:12:47.214141+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "d094d70f-939f-49cf-86ff-69d76e5bea0e"
+}

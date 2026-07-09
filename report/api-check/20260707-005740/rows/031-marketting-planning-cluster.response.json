@@ -1,0 +1,60 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "expectation::needs_human_review::not_evaluable",
+      "mechanism": "insufficient_evidence_or_human_review",
+      "causal_category": "needs_human_review",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图识别为营销规划",
+        "业务指标NBEV提取",
+        "时间范围识别",
+        "分解维度识别",
+        "阶段路由进入规划",
+        "输出可执行规划卡片",
+        "SSE事件内容充实"
+      ],
+      "needs_human_review": true,
+      "canonical_attribution": false,
+      "count": 1,
+      "representative_cases": [
+        "f3dc2a68-687c-428a-915a-713391364c2e"
+      ],
+      "representative_traces": [
+        "f3dc2a68-687c-428a-915a-713391364c2e"
+      ],
+      "common_root_cause": "意图识别模块（intent_recognition）使用的 LLM prompt 模板对“如何通过增加理财师或优化产品方案来补足 NBEV 目标”这类复合营销规划 query 缺乏覆盖：prompt 中可能未包含 NBEV/理财师/产品方案组合场景的 few-shot 示例，导致 LLM 分类器将其归入兜底意图 4001（“其他意图”）。该误判引发全链路连锁失效——path_dispatch 路由至 non_agent 阶段、planning_function 未执行规划、card_list 为空、SSE 事件流无实质业务内容。request_normalization 阶段 turn_count=0 的可疑状态可能进一步加剧了上下文缺失（但需源码确认）。",
+      "shared_failure_pattern": "意图识别模块（intent_recognition）使用的 LLM prompt 模板对“如何通过增加理财师或优化产品方案来补足 NBEV 目标”这类复合营销规划 query 缺乏覆盖：prompt 中可能未包含 NBEV/理财师/产品方案组合场景的 few-shot 示例，导致 LLM 分类器将其归入兜底意图 4001（“其他意图”）。该误判引发全链路连锁失效——path_dispatch 路由至 non_agent 阶段、planning_function 未执行规划、card_list 为空、SSE 事件流无实质业务内容。request_normalization 阶段 turn_count=0 的可疑状态可能进一步加剧了上下文缺失（但需源码确认）。",
+      "representative_diffs": [
+        {
+          "case_id": "f3dc2a68-687c-428a-915a-713391364c2e",
+          "node": "intent_recognition",
+          "expected": "intent 应为营销规划类（如 NBEV 规划 / 团队目标达成规划），stage 应进入 planning",
+          "actual": "intent=4001（其他意图），stage=non_agent"
+        }
+      ],
+      "minimal_fix_direction": [
+        "在 intent_prompt.py 中补充 2-3 条营销规划类 few-shot 示例，覆盖“NBEV 目标 + 增加理财师”“NBEV 缺口 + 优化产品方案”“团队 NBEV 达成 + 分解维度”等组合场景",
+        "在 intent.py schema 中确认是否存在 营销规划 专用意图码；若“其他意图”4001 命中率过高，考虑收紧其定义边界或增加前置关键词匹配规则",
+        "在 intent_recognition.py 中增加安全网：当 LLM 输出为 4001 但用户 query 包含“NBEV”“理财师”“产品方案”“目标”等业务关键词时，触发二次判定（如用更宽松的 prompt 重试或直接路由至 planning 尝试解析）",
+        "排查 request_normalization 中 turn_count=0 的原因并修复，确保用户 query 完整传递至意图识别步骤"
+      ],
+      "verification_cases": [
+        "f3dc2a68-687c-428a-915a-713391364c2e"
+      ],
+      "next_actions": [
+        "读取 app/workflow/prompts/intent_prompt.py，检查 SYSTEM_PROMPT 和 few-shot 示例中是否包含 NBEV/目标达成/理财师增员类样本",
+        "读取 app/schemas/intent.py，确认意图枚举是否包含 营销规划/目标达成 专用意图码；若存在，排查为何未被命中",
+        "读取 app/workflow/steps/intent_recognition.py，检查 LLM 调用是否设置 temperature=0 及是否有置信度阈值或兜底二次判定逻辑",
+        "用同一 query 重跑 intent_recognition 步骤，捕获 LLM 原始输出（含 logprobs 或置信度），确认模型是否确实倾向 4001",
+        "检查 request_normalization 中 turn_count=0 的原因：是否与 eval mock session 初始化方式有关"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模块（intent_recognition）使用的 LLM prompt 模板对“如何通过增加理财师或优化产品方案来补足 NBEV 目标”这类复合营销规划 query 缺乏覆盖：prompt 中可能未包含 NBEV/理财师/产品方案组合场景的 few-shot 示例，导致 LLM 分类器将其归入兜底意图 4001（“其他意图”）。该误判引发全链路连锁失效——path_dispatch 路由至 non_agent 阶段、planning_function 未执行规划、card_list 为空、SSE 事件流无实质业务内容。request_normalization 阶段 turn_count=0 的可疑状态可能进一步加剧了上下文缺失（但需源码确认）。",
+  "impact": "",
+  "priority": "high"
+}

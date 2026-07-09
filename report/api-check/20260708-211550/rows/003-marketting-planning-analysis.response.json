@@ -1,0 +1,110 @@
+{
+  "project_id": "marketting-planning",
+  "api": {
+    "base_url": "http://127.0.0.1:9006",
+    "endpoint": "/api/v1/marketing-planning/stream",
+    "method": "POST",
+    "timeout": "120"
+  },
+  "application": {
+    "mode": "existing_service_optional",
+    "primary_path": "/api/v1/marketing-planning/stream",
+    "external_repo": "/Users/xiaozijian/WorkSpace/package/marketing-planning",
+    "modify_external_repo": false
+  },
+  "capabilities": [
+    "live_run",
+    "judge",
+    "attribute",
+    "cluster",
+    "check",
+    "scenario",
+    "multi_turn",
+    "sse_summary"
+  ],
+  "documents": {
+    "application": "application.md",
+    "mock": "mock.md",
+    "evaluation": "evaluation.md",
+    "judge_boundary": "judge_boundary.md",
+    "attribution": "attribution.md",
+    "checklist": "checklist.md",
+    "implementation_standard": "implementation_standard.md",
+    "source_demand": "../../../projects/marketting-planning/marketplan-demand.md",
+    "source_risks": "issue/20260611-marketplan-integration-risks.md"
+  },
+  "mock_guidance": "# marketting-planning mock\n\nmock agent 不只生成固定单轮查询，还要围绕单一 `user_intent` 构建输入、turns、expected stage、path types 和 reference contract。\n\nv1 mock cases 覆盖：\n\n- intent recognition：识别营销规划意图。\n- clarification：缺字段时应澄清而不是生成规划卡片。\n- multi-turn field accumulation：多轮补齐字段后进入规划。\n- execution planning：按 path_types 生成规划卡片。\n- fallback/data unavailable：外部数据不可用时的允许或禁止 fallback。\n- non-agent intent：非本 agent 意图应拒绝或转出。\n- streaming protocol：SSE event 顺序和 completion 状态可被摘要验证。\n- interactive intent：通过通用 `interaction.mode = interactive_intent` envelope 声明一个原始用户意图，由 adapter 根据每轮 compact feedback 生成下一轮用户输入。\n\ninteractive case contract：\n\n- `interaction.mode` 是 core 唯一识别的交互模式字段；`turn_expectations`、`stop_when` 和业务事实由 adapter 解释。\n- `user_intent` 保存 goal、target value、path type intent 等模拟用户事实，不能只把路径选择写进 reference。\n- `mock_agent.driver = adapter` 表示下一轮输入由项目 adapter 基于当前 case 事实和前序 turn feedback 生成。\n- 结果保持一个 source case id 对应一个 batch run，并只暴露 `conversation_summary` 与 compact `turn_traces`。\n\n所有 batch mock case 默认隔离 session id，避免状态污染。\n",
+  "evaluation_guidance": "# marketting-planning evaluation\n\n## 评估对象\n\n评估当前营销规划 agent 在系统责任边界内是否完成用户意图。reference 不是唯一标准答案文本，而是与 output summary 对齐的条件契约。\n\n## 输出摘要形状\n\n`extracted_output` 应保持轻量：\n\n```json\n{\n  \"stage\": \"intent|clarification|planning|non_agent|fallback|unknown\",\n  \"event_summary\": {\"names\": [], \"counts\": {}, \"final_event\": \"\", \"completed\": false},\n  \"card_summary\": [{\"path_type\": \"\", \"card_code\": \"\", \"card_name\": \"\", \"fallback\": false}],\n  \"session_summary\": {\"session_id\": \"\", \"required_fields\": [], \"accumulated_fields\": {}, \"missing_fields\": []},\n  \"fallback\": {\"used\": false, \"allowed\": false, \"reason\": \"\"},\n  \"errors\": []\n}\n```\n\n## 参考契约\n\nreference 可包含：\n\n- `expected_stage`\n- `required_events`\n- `required_path_types`\n- `forbidden_path_types`\n- `required_cards`\n- `forbidden_cards`\n- `allow_fallback`\n- `session_requirements`\n- `semantic_requirements`\n\n输入无 reference 时，judge 可以生成同形状参考契约；前端必须标记为 judge-generated。\n",
+  "attribution_guidance": "# marketting-planning attribution\n\n归因必须从当前 case 的 `execution_trace`、`extracted_output`、`LiveExecutionResult.application_boundary`、reference contract 和业务文档出发，不能复用历史 case 字段或硬编码个别 query。\n\n## 阶段顺序\n\n1. request_normalization\n2. intent_recognition\n3. field_clarification\n4. session_merge\n5. path_dispatch\n6. planning_function\n7. result_assembly\n8. sse_generation\n9. adapter_extraction\n\nattribute agent 应定位最早可观察的 fulfillment gap 或 root-cause evidence。如果 `overall_fulfillment.status` 是 `fulfilled`，则不做失败归因。如果 evidence 不足或 judge 不可用，则将 `evidence_strength` 设为 `none` 或 `weak`，并在 `root_cause_hypothesis` 说明缺失证据，而不是伪造根因。\n",
+  "analysis_handoff": {
+    "api_document": {
+      "base_url": "http://127.0.0.1:9006",
+      "endpoint": "/api/v1/marketing-planning/stream",
+      "method": "POST",
+      "timeout": "120"
+    },
+    "api_call_chain": "source_demand, application.md, and adapter.py",
+    "mock_strategy": "mock.md",
+    "frontend_architecture": {
+      "live": "render stage, event summary, cards, fallback, Judge, Attribute, and project extension panels",
+      "summary": "show scenario-aware compact case-pool rows with Output and Reference aligned by stage/card/event semantics"
+    },
+    "judge_standard": "judge_boundary.md",
+    "attribution_trace_plan": "attribution.md",
+    "key_pipeline_links": [
+      "request_normalization",
+      "intent_recognition",
+      "field_clarification",
+      "session_merge",
+      "path_dispatch",
+      "planning_function",
+      "result_assembly",
+      "sse_generation",
+      "adapter_extraction"
+    ]
+  },
+  "frontend_build_handoff": {
+    "analysis_output": "ProjectAnalysis.frontend_build_handoff",
+    "frontend_architecture": {
+      "live": "render stage, event summary, cards, fallback, Judge, Attribute, and project extension panels",
+      "summary": "show scenario-aware compact case-pool rows with Output and Reference aligned by stage/card/event semantics"
+    },
+    "project_frontend_standards": {
+      "frontend_view": {
+        "live": "render stage, event summary, cards, fallback, Judge, Attribute, and project extension panels",
+        "summary": "show scenario-aware compact case-pool rows with Output and Reference aligned by stage/card/event semantics"
+      },
+      "batch_persistence": {
+        "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+        "transient_results": "do not persist full SSE raw stream, trace, judge, attribute, or frontend_view as durable case-pool source data"
+      }
+    },
+    "display_contract": {
+      "output_source": "trace.extracted_output",
+      "reference_source": "input.reference or judge.expected",
+      "formatting": [
+        "json formatting",
+        "truncation",
+        "output/reference alignment"
+      ]
+    }
+  },
+  "judge_handoff": {
+    "judge_standard": "judge_boundary.md",
+    "evaluation_guidance": true
+  },
+  "attribute_handoff": {
+    "attribution_trace_plan": "attribution.md",
+    "key_pipeline_links": [
+      "request_normalization",
+      "intent_recognition",
+      "field_clarification",
+      "session_merge",
+      "path_dispatch",
+      "planning_function",
+      "result_assembly",
+      "sse_generation",
+      "adapter_extraction"
+    ]
+  }
+}

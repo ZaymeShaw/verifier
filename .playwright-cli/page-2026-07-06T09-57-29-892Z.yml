@@ -1,0 +1,59 @@
+- generic [ref=f4e1]:
+  - banner [ref=f4e2]:
+    - heading "Live 请求" [level=1] [ref=f4e3]
+    - paragraph [ref=f4e4]: 单次请求链路：业务服务 → Judge → Attribute。Cluster 聚合在归因总结页处理。
+  - main [ref=f4e5]:
+    - generic [ref=f4e6]:
+      - generic [ref=f4e7]: Project
+      - combobox [ref=f4e8]:
+        - option "QA"
+        - option "client_search"
+        - option "marketting-planning" [selected]
+        - option "marketting-planning-intent"
+      - generic [ref=f4e9]: Input JSON
+      - textbox [ref=f4e10]: "{ \"query\": \"规划NBEV增长路径\", \"user_text\": \"规划NBEV增长路径\" }"
+      - generic [ref=f4e11]: Expected Intent（可选，传给 judge agent）
+      - textbox "可留空；填写后用于 judge 当前 RunTrace。" [ref=f4e12]
+      - generic [ref=f4e13]:
+        - button "请求业务服务" [active] [ref=f4e14] [cursor=pointer]
+        - button "请求 Judge" [ref=f4e15] [cursor=pointer]
+        - button "请求 Attribute" [ref=f4e16] [cursor=pointer]
+        - button "统一全链路" [ref=f4e17] [cursor=pointer]
+      - generic [ref=f4e18]: 按顺序执行单步按钮会复用当前页面保存的 lastTrace / lastJudge。
+      - generic [ref=f4e19]: 业务请求完成，可继续请求 Judge。
+    - generic [ref=f4e20]:
+      - generic [ref=f4e21]:
+        - generic [ref=f4e22]:
+          - generic [ref=f4e23]: 业务请求
+          - generic [ref=f4e24]: 未运行
+        - generic [ref=f4e25]:
+          - generic [ref=f4e26]: Judge
+          - generic [ref=f4e27]: 未运行
+        - generic [ref=f4e28]:
+          - generic [ref=f4e29]: Attribute
+          - generic [ref=f4e30]: 未运行
+      - group [ref=f4e31]:
+        - generic "业务请求结果 未运行 收起" [ref=f4e54] [cursor=pointer]:
+          - heading "业务请求结果" [level=2] [ref=f4e33]
+          - generic [ref=f4e34]: 未运行
+          - text: 收起
+        - generic [ref=f4e35]:
+          - generic [ref=f4e36]:
+            - generic [ref=f4e48]: Trace ID：5c6e16ad-d744-497d-84a6-77f95cc9e710
+            - generic [ref=f4e49]: 状态：ok
+            - group [ref=f4e50]:
+              - generic "状态机执行（6项）" [ref=f4e51] [cursor=pointer]
+            - generic [ref=f4e52]: Output / 被评估输出：有未领取的生存金为是的客户
+            - generic [ref=f4e53]: "结构化输出：{ \"query\": \"有生存金未领取的客户\", \"query_logic\": \"AND\", \"conditions\": [ { \"field\": \"polNoInfo.payamountdue\", \"operator\": \"MATCH\", \"value\": \"是\" } ] }"
+          - generic [ref=f4e37]: Raw JSON
+          - generic [ref=f4e38]: "{}"
+      - group [ref=f4e39]:
+        - generic "Judge 评估 未运行 展开" [ref=f4e40] [cursor=pointer]:
+          - heading "Judge 评估" [level=2] [ref=f4e41]
+          - generic [ref=f4e42]: 未运行
+          - text: 展开
+      - group [ref=f4e43]:
+        - generic "Attribute 归因 未运行 展开" [ref=f4e44] [cursor=pointer]:
+          - heading "Attribute 归因" [level=2] [ref=f4e45]
+          - generic [ref=f4e46]: 未运行
+          - text: 展开

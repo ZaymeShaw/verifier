@@ -1,7 +1,4 @@
-# marketting-planning-intent 项目 live schema — dataclass 形状定义（spec/struct_output.md）
-#
-# 来源：impl/projects/marketting-planning-intent/live_schema.py
-# 真实 API: POST http://127.0.0.1:9006/api/v1/marketing-planning/intent-recognition (non-SSE)
+# marketting-planning-intent 项目 dataclass schema（显式结构唯一来源）
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -20,13 +17,46 @@ class MPIIntentCaseInput:
 
 
 @dataclass
-class MPIIntentRequest:
-    """真实 API 请求形状（adapter._live_request_body 产出）。"""
+class MPIIntentNormalizedRequest:
+    """verifier live 协议 normalized_request 形状。"""
+    case_id: str
+    session_id: str
+    query: str
+    scenario: str
+    reference: Dict[str, Any]
+    metadata: Dict[str, Any]
+    expected_intent: Optional[str] = None
+
+
+@dataclass
+class MPIIntentApiRequest:
+    """真实 API 请求 body。"""
     session_id: str
     trace_id: str
     org_id: str = "eval-org"
     user_text: str = ""
     extra_input_params: Dict[str, Any] = field(default_factory=dict)
+
+
+# 兼容旧名称：真实 API body，不作为 live normalized_request schema 使用。
+MPIIntentRequest = MPIIntentApiRequest
+
+
+@dataclass
+class MPIIntentRawCardResult:
+    event: str = ""
+    sse_id: str = ""
+    think: Optional[str] = None
+    answer: Optional[str] = None
+    card_list: List[Any] = field(default_factory=list)
+    extensions: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class MPIIntentRawResponse:
+    code: int
+    msg: str
+    data: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

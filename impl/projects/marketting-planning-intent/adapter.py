@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 import importlib.util
-import json
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from impl.core.adapter import ProjectAdapter
-from impl.core.schema import ExecutionTraceEvent, LiveExecutionResult, LiveRequest, MultiTurnCase, RunTrace, SingleTurnCase, TraceExecutionContext
+from impl.core.schema import LiveExecutionResult, LiveRequest, MultiTurnCase, RunTrace, SingleTurnCase, TraceExecutionContext
 
 
 # Stage→ext_repo path-prefix map. Narrows the source-file catalog by current
@@ -39,19 +36,18 @@ ATTRIBUTE_CATALOG_FILE_CAP = 8
 class Adapter(ProjectAdapter):
     def build_request(self, case: SingleTurnCase | MultiTurnCase) -> LiveRequest:
         input_data = dict(case.input or {})
-        nested = input_data.get("input") if isinstance(input_data.get("input"), dict) else {}
-        query = input_data.get("query") or input_data.get("user_text") or input_data.get("user_query") or nested.get("query") or nested.get("user_text") or ""
-        reference = input_data.get("reference") or nested.get("reference") or {}
-        expected_intent = input_data.get("expected_intent") or nested.get("expected_intent") or (reference.get("intent") if isinstance(reference, dict) else None)
-        session_id = str(input_data.get("session_id") or nested.get("session_id") or f"eval-{case.id or input_data.get('case_id') or input_data.get('id') or int(time.time() * 1000)}")
+        query = input_data.get("query") or ""
+        reference = input_data.get("reference") or {}
+        expected_intent = input_data.get("expected_intent") or (reference.get("intent") if isinstance(reference, dict) else None)
+        session_id = str(input_data.get("session_id") or f"eval-{case.id or input_data.get('case_id') or input_data.get('id') or int(time.time() * 1000)}")
         normalized_request = {
             "case_id": str(case.id or input_data.get("case_id") or input_data.get("id") or f"intent-case-{int(time.time() * 1000)}"),
             "session_id": session_id,
             "query": str(query),
-            "scenario": str(input_data.get("scenario") or nested.get("scenario") or "intent_recognition"),
+            "scenario": str(input_data.get("scenario") or "intent_recognition"),
             "expected_intent": expected_intent,
             "reference": reference if isinstance(reference, dict) else {"intent": reference},
-            "metadata": dict(input_data.get("metadata") or nested.get("metadata") or {}),
+            "metadata": dict(input_data.get("metadata") or {}),
         }
         return LiveRequest(
             project_id=self.spec.project_id,
@@ -63,136 +59,6 @@ class Adapter(ProjectAdapter):
             execution_mode="live_service",
             session_id=session_id,
         )
-
-    def call_or_prepare(self, request: LiveRequest) -> LiveExecutionResult:
-        start = time.time()
-        try:
-            body = json.dumps(self._live_request_body(request), ensure_ascii=False).encode("utf-8")
-            url = str(self.spec.api.get("base_url") or "").rstrip("/") + "/" + str(self.spec.api.get("endpoint") or "").lstrip("/")
-            api_request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method=str(self.spec.api.get("method") or "POST").upper())
-            with urllib.request.urlopen(api_request, timeout=float(self.spec.api.get("timeout") or 60)) as response:
-                raw_response = {"raw": response.read().decode("utf-8"), "request": request.normalized_request}
-            call_status = "succeeded"
-            call_error = None
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            raw_response = None
-            call_status = "failed"
-            call_error = f"marketing-planning intent service unavailable: {exc}"
-        extracted_output = self.extract_output(raw_response) if call_status == "succeeded" else {}
-        application_boundary = {"scope": "single_turn_intent_recognition", "excludes": ["multi_turn_planning", "sse_card_generation"]}
-        return LiveExecutionResult(
-            project_id=request.project_id,
-            case_id=request.case_id,
-            session_id=request.session_id,
-            raw_input=request.raw_input,
-            normalized_request=request.normalized_request,
-            call_status=call_status,
-            raw_response=raw_response,
-            call_error=call_error,
-            runtime_ms=int((time.time() - start) * 1000),
-            extracted_output=extracted_output,
-            output_source=request.execution_mode,
-            execution_trace=self.build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output),
-            project_fields=self.project_fields(raw_response, extracted_output),
-            application_boundary=application_boundary,
-        )
-
-    def _live_request_body(self, request: LiveRequest | Dict[str, Any]) -> Dict[str, Any]:
-        payload = request.normalized_request if isinstance(request, LiveRequest) else request
-        query = str(payload.get("query") or "")
-        session_id = str(payload.get("session_id") or f"eval-{payload.get('case_id') or int(time.time() * 1000)}")
-        return {
-            "session_id": session_id,
-            "trace_id": str(payload.get("case_id") or session_id),
-            "org_id": str((payload.get("metadata") or {}).get("org_id") or "eval-org"),
-            "user_text": query,
-            "extra_input_params": {
-                "agent_args": {"conversation_id": session_id, "message": {"content": query, "content_type": "text"}},
-                "args": {"extensions": {}, "contexts": []},
-            },
-        }
-
-    def provided_output_raw(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Any:
-        input_data = dict(case.input or {})
-        for key in ("raw_response", "response", "output"):
-            if key in input_data:
-                return {"raw": input_data[key], "request": request.normalized_request}
-        return {"raw": {}, "request": request.normalized_request}
-
-    def extract_output(self, raw_response: Any) -> Dict[str, Any]:
-        data = raw_response.get("raw") if isinstance(raw_response, dict) and "raw" in raw_response else raw_response
-        parsed = self._parse_payload(data)
-        nlu_info = self._first_value(parsed, ["nlu_info"])
-        if not isinstance(nlu_info, dict):
-            nlu_info = {}
-        raw_intent = self._first_value(parsed, ["intent", "intent_type", "intent_label", "label", "type"])
-        intent = nlu_info.get("intent") or raw_intent
-        confidence = nlu_info.get("confidence") if "confidence" in nlu_info else self._first_value(parsed, ["confidence", "score", "probability"])
-        # target_value / path_types 来自原项目 IntentResult（app/schemas/intent.py），
-        # 嵌在 nlu_info 里；live_schema.EXTRACT_OUTPUT_SHAPE 已声明这两个字段。
-        target_value = nlu_info.get("target_value") if isinstance(nlu_info, dict) else None
-        path_types = nlu_info.get("path_types") if isinstance(nlu_info, dict) else None
-        slots = self._first_value(parsed, ["slots", "slot", "slot_values"]) or {}
-        if nlu_info:
-            slots = {key: value for key, value in nlu_info.items() if key not in {"intent", "confidence", "subIntent", "target_value", "path_types"} and value is not None}
-        entities = self._first_value(parsed, ["entities", "entity", "extracted_entities"]) or []
-        ambiguous = bool(self._first_value(parsed, ["ambiguous", "is_ambiguous"]))
-        fallback = bool(self._first_value(parsed, ["fallback", "is_fallback"])) or str(intent or "").lower() in {"unknown", "fallback"}
-        errors = self._first_value(parsed, ["error", "errors", "message"])
-        if errors and not isinstance(errors, list):
-            errors = [errors]
-        return {
-            "intent": intent or "unknown",
-            "confidence": float(confidence) if isinstance(confidence, (int, float)) else 0.0,
-            "target_value": target_value,
-            "path_types": path_types if isinstance(path_types, list) else None,
-            "subIntent": nlu_info.get("subIntent") if isinstance(nlu_info, dict) else None,
-        }
-
-    def _intent_evidence(self, raw_response: Any, extracted_output: Dict[str, Any]) -> Dict[str, Any]:
-        data = raw_response.get("raw") if isinstance(raw_response, dict) and "raw" in raw_response else raw_response
-        parsed = self._parse_payload(data)
-        nlu_info = self._first_value(parsed, ["nlu_info"])
-        if not isinstance(nlu_info, dict):
-            nlu_info = {}
-        slots = {key: value for key, value in nlu_info.items() if key not in {"intent", "confidence", "subIntent", "target_value", "path_types"} and value is not None} if nlu_info else (self._first_value(parsed, ["slots", "slot", "slot_values"]) or {})
-        entities = self._first_value(parsed, ["entities", "entity", "extracted_entities"]) or []
-        ambiguous = bool(self._first_value(parsed, ["ambiguous", "is_ambiguous"]))
-        fallback = bool(self._first_value(parsed, ["fallback", "is_fallback"])) or str(extracted_output.get("intent") or "").lower() in {"unknown", "fallback"}
-        errors = self._first_value(parsed, ["error", "errors", "message"])
-        if errors and not isinstance(errors, list):
-            errors = [errors]
-        return {
-            "raw_intent": self._first_value(parsed, ["intent", "intent_type", "intent_label", "label", "type"]),
-            "slots": slots if isinstance(slots, dict) else {},
-            "entities": entities if isinstance(entities, list) else [entities],
-            "ambiguous": ambiguous,
-            "fallback": fallback,
-            "errors": errors or [],
-        }
-
-    def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any]) -> Dict[str, Any]:
-        request = raw_response.get("request") if isinstance(raw_response, dict) else {}
-        return {
-            "scenario": request.get("scenario") or "intent_recognition",
-            "case_id": request.get("case_id") or "",
-            "session_id": request.get("session_id") or "",
-            "reference": request.get("reference") or {},
-            "expected_intent": request.get("expected_intent"),
-            "intent_evidence": self._intent_evidence(raw_response, extracted_output),
-            "application_boundary": {"scope": "single_turn_intent_recognition", "excludes": ["multi_turn_planning", "sse_card_generation"]},
-        }
-
-    def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any]) -> Dict[str, Any]:
-        return {"scope": "single_turn_intent_recognition", "excludes": ["multi_turn_planning", "sse_card_generation"]}
-
-    def build_execution_trace(self, input_data: Dict[str, Any], request: Dict[str, Any], raw_response: Any, extracted_output: Dict[str, Any]) -> list[ExecutionTraceEvent]:
-        return [
-            ExecutionTraceEvent(stage="request_normalization", status="ok" if request.get("query") else "suspicious", evidence={"query": request.get("query")}),
-            ExecutionTraceEvent(stage="intent_api_call", status="ok", evidence={"endpoint": self.spec.api.get("endpoint")}),
-            ExecutionTraceEvent(stage="adapter_extraction", status="ok" if extracted_output.get("intent") else "failed", evidence=extracted_output),
-            ExecutionTraceEvent(stage="label_mapping", status="ok" if extracted_output.get("intent") != "unknown" else "suspicious", evidence={"intent": extracted_output.get("intent")}),
-        ]
 
     def _application_boundary_from_trace(self, trace: RunTrace) -> dict[str, Any]:
         live_result = getattr(trace, "live_result", None)
@@ -450,15 +316,9 @@ class Adapter(ProjectAdapter):
                 "evidence": evidence_str,
                 "downstream_impact": self._intent_contract_reasoning_summary(trace, reference, output, missing, wrong, "incorrect"),
             })
-            if "intent_contract_gate_failed" not in judge_result.quality_flags:
-                judge_result.quality_flags.append("intent_contract_gate_failed")
             judge_result.overall_fulfillment = {"status": "not_fulfilled", "blocking_expectations": ["intent_contract"]}
-            judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), "contract_gate": "failed"}
             judge_result.reasoning_summary = self._intent_contract_reasoning_summary(trace, reference, output, missing, wrong, "incorrect")
-            self.register_judge_override(judge_result, "fulfillment_assessments", [], ["intent_contract: not_fulfilled"], "contract_gate_failed", "normalize_judge_result")
             return judge_result
-        if "intent_contract_gate_passed" not in judge_result.quality_flags:
-            judge_result.quality_flags.append("intent_contract_gate_passed")
         judge_result.fulfillment_assessments.append({
             "expectation_id": "intent_contract",
             "status": "fulfilled",
@@ -466,10 +326,8 @@ class Adapter(ProjectAdapter):
             "evidence": f"intent={actual_intent}; confidence={confidence}; min_confidence={min_confidence}",
             "downstream_impact": self._intent_contract_reasoning_summary(trace, reference, output, [], [], "correct"),
         })
-        judge_result.verdict_derivation = {**(judge_result.verdict_derivation or {}), "contract_gate": "passed"}
         judge_result.reasoning_summary = judge_result.reasoning_summary or self._intent_contract_reasoning_summary(trace, reference, output, [], [], "correct")
         judge_result.overall_fulfillment = judge_result.overall_fulfillment or {"status": "fulfilled", "blocking_expectations": []}
-        judge_result.quality_flags = [flag for flag in judge_result.quality_flags if flag != "llm_call_failed"]
         return judge_result
 
     def _intent_contract_reasoning_summary(self, trace, reference, output, missing, wrong, verdict: str) -> str:
@@ -496,88 +354,55 @@ class Adapter(ProjectAdapter):
         }
 
     def _default_business_expectation(self, trace, judge_result):
-        expectation = super()._default_business_expectation(trace, judge_result)
+        expectation = {
+            "expectation_id": "marketting-planning-intent:intent_contract",
+            "downstream_consumer": "marketing intent router",
+            "required_capabilities": ["intent_label", "slot_extraction", "confidence_threshold", "fallback_control"],
+            "boundary": self.build_judge_context(trace).get("application_boundary") or {},
+        }
         expectation.update(
             {
-                "expectation_id": "marketting-planning-intent:intent_contract",
-                "downstream_consumer": "marketing intent router",
-                "required_capabilities": expectation.get("required_capabilities") or ["intent_label", "slot_extraction", "confidence_threshold", "fallback_control"],
-                "boundary": judge_result.boundary_decision or self.build_judge_context(trace).get("application_boundary") or expectation.get("boundary") or {},
+                "user_intent": str((trace.normalized_request or {}).get("query") or trace.input or ""),
+                "expected_outcome": "single-turn intent recognition should return the expected label, required slots/entities, acceptable confidence, and permitted fallback behavior",
+                "acceptance_criteria": list(judge_result.missing or judge_result.wrong or []),
             }
         )
-        if not judge_result.intent_model:
-            expectation.update(
-                {
-                    "user_intent": str((trace.normalized_request or {}).get("query") or trace.input or ""),
-                    "expected_outcome": "single-turn intent recognition should return the expected label, required slots/entities, acceptable confidence, and permitted fallback behavior",
-                    "acceptance_criteria": list(judge_result.missing or judge_result.wrong or []),
-                }
-            )
         return expectation
 
     def _default_fulfillment_assessment(self, trace, judge_result, expectation):
-        status = self._expectation_status_from_verdict(judge_result)
+        overall = judge_result.overall_fulfillment or {}
+        status = overall.get("status") or "not_evaluable"
         return {
             "expectation_id": expectation.get("expectation_id"),
             "status": status,
-            "score": judge_result.score,
             "expected_evidence": list(judge_result.missing or []) or [judge_result.expected or trace.reference_contract or {}],
             "actual_evidence": list(judge_result.wrong or []) or [judge_result.actual or trace.extracted_output],
-            "boundary_decision": judge_result.boundary_decision or self.build_judge_context(trace).get("application_boundary") or {},
             "downstream_impact": "intent router can safely dispatch to the next planning step" if status == "fulfilled" else (judge_result.reasoning_summary or "intent router cannot safely dispatch this query to the expected planning path"),
             "blocking": status in {"not_fulfilled", "not_evaluable"},
-            "confidence": judge_result.confidence,
             "evidence_refs": list(getattr(trace, "evidence_refs", []) or []),
         }
 
     def normalize_attribute_result(self, trace, judge_result, attribute_result):
-        if judge_result.verdict == "correct":
+        overall = judge_result.overall_fulfillment or {}
+        if overall.get("status") == "fulfilled":
             if not attribute_result.expectation_attributions:
                 expectation_id = "marketting-planning-intent:intent_contract"
                 if judge_result.business_expectations:
                     first = judge_result.business_expectations[0]
                     expectation_id = first.get("expectation_id", expectation_id) if isinstance(first, dict) else getattr(first, "expectation_id", expectation_id)
                 evidence = list(judge_result.evidence or ["intent contract fulfilled"])
-                attribute_result.expectation_attributions = [{"expectation_id": expectation_id, "fulfillment_status": "fulfilled", "causal_category": "no_issue", "earliest_divergence": {"node": "intent_contract_gate", "evidence": evidence, "confidence": "high"}, "causal_chain": [{"name": "intent_contract_gate", "status": "succeeded", "evidence": evidence}], "suspected_locations": [], "improvement_direction": [], "source_evidence": [], "probe_evidence": evidence, "incomplete_reason": ""}]
-            attribute_result.causal_category = "no_issue"
-            attribute_result.probe_results = attribute_result.probe_results or [{"probe": "intent_contract_gate", "status": "passed", "evidence": list(judge_result.evidence or ["intent contract fulfilled"])}]
-            evidence = list(judge_result.evidence or ["intent contract fulfilled"])
-            attribute_result.analysis_method = "fulfilled_expectation_attribution"
-            attribute_result.chain_nodes = [{"name": "intent_contract_gate", "status": "succeeded", "evidence": evidence, "reason": "intent contract fulfilled"}]
-            attribute_result.earliest_divergence = attribute_result.earliest_divergence or {"node": "intent_contract_gate", "evidence": evidence, "confidence": "high"}
-            attribute_result.evidence_coverage = {"query": bool(trace.input), "actual": bool(trace.extracted_output), "expected": bool(judge_result.expected), "execution_trace": bool(trace.execution_trace), "unsupported_claims": []}
-            attribute_result.analysis_quality = {"passed": True, "status": "fulfilled_expectation", "missing": []}
+                attribute_result.expectation_attributions = [{"expectation_id": expectation_id, "fulfillment_status": "fulfilled", "suspected_locations": [], "root_cause_hypothesis": "当前 intent-recognition 输出满足业务预期，归因结论为 no_issue。", "evidence": evidence}]
+            attribute_result.suspected_locations = []
             attribute_result.root_cause_hypothesis = "当前 intent-recognition 输出满足业务预期，归因结论为 no_issue。"
-            attribute_result.verification_steps = []
-            attribute_result.patch_direction = []
             return attribute_result
         first_failed = next((node for node in trace.execution_trace or [] if isinstance(node, dict) and node.get("status") in {"failed", "suspicious"}), {})
         expected = judge_result.expected or trace.reference_contract or {}
         actual = judge_result.actual or trace.extracted_output or {}
         stage = first_failed.get("stage") or "intent_contract_gate"
-        existing_incomplete = str(attribute_result.incomplete_reason or "")
-        missing_quality = list((attribute_result.analysis_quality or {}).get("missing") or []) if isinstance(attribute_result.analysis_quality, dict) else []
-        quality_passed = not existing_incomplete
-        quality_missing = missing_quality if existing_incomplete else []
-        if existing_incomplete and "intent_recognition_internal_evidence" not in quality_missing:
-            quality_missing.append("intent_recognition_internal_evidence")
-        attribute_result.causal_category = "implementation_bug"
-        attribute_result.analysis_method = "current_case_intent_contract_trace"
-        node_evidence = [
-            {"query": trace.input.get("query") or trace.input.get("user_text")},
-            {"expected": expected},
-            {"actual": actual},
-            {"missing": judge_result.missing, "wrong": judge_result.wrong},
-        ]
-        attribute_result.chain_nodes = list(trace.execution_trace or [])
-        attribute_result.chain_nodes.append({"name": stage, "status": "failed", "evidence": node_evidence, "reason": "intent contract mismatch"})
-        attribute_result.earliest_divergence = {"node": stage, "expected": expected, "actual": actual, "evidence": [first_failed.get("evidence") or judge_result.missing or judge_result.wrong], "confidence": "medium"}
-        attribute_result.evidence_coverage = {"query": bool(trace.input), "actual": bool(actual), "expected": bool(expected), "execution_trace": bool(trace.execution_trace), "unsupported_claims": []}
-        attribute_result.analysis_quality = {"passed": quality_passed, "status": "supported_root_cause" if quality_passed else "next_verification_step", "missing": quality_missing}
-        attribute_result.incomplete_reason = existing_incomplete
+        attribute_result.suspected_locations = [{"location": stage, "evidence": [first_failed.get("evidence") or judge_result.missing or judge_result.wrong]}]
+        attribute_result.evidence = [first_failed.get("evidence") or judge_result.missing or judge_result.wrong]
+        attribute_result.evidence_strength = "medium"
         attribute_result.root_cause_hypothesis = f"当前 case 期望 intent/slots 为 {expected}，实际 normalized intent evidence 为 {actual}，最早差异位于 {stage}。"
-        attribute_result.verification_steps = ["复查当前 query、reference 与 normalized intent evidence 是否一致。"]
-        attribute_result.patch_direction = ["优先修正 intent-recognition 请求构造、响应解析或 label/slot 映射源头，不只改展示结果。"]
         return attribute_result
 
     def get_runtime_checks(self, runtime_values: Dict[str, Any], context: TraceExecutionContext | None = None) -> Dict[str, Any]:
@@ -610,7 +435,7 @@ class Adapter(ProjectAdapter):
         fix_suggestion = ""
         if status == "failed":
             root_cause = {
-                "category": "implementation_bug",
+                "category": "label_mapping",
                 "summary": f"运行时 raw_intent={raw_intent} 经项目映射得到 {actual_mapping}，但当前 reference contract 期望 {expected_intent}。",
                 "evidence": evidence,
                 "confidence": "high",
@@ -652,23 +477,3 @@ class Adapter(ProjectAdapter):
     # build_mock_cases / build_mock_datasets 已移除：
     # pipeline.mock_cases / mock_datasets 全线走 mock_agent（LLM 生成），不再读 seed JSON。
     # 详见 impl/core/mock_agent.py 与 impl/core/pipeline.py。
-
-    def _parse_payload(self, value: Any) -> Any:
-        if isinstance(value, str):
-            try:
-                return json.loads(value)
-            except json.JSONDecodeError:
-                return {"raw_text": value}
-        return value
-
-    def _first_value(self, value: Any, keys: list[str]) -> Any:
-        if isinstance(value, dict):
-            for key in keys:
-                if key in value:
-                    return value[key]
-            for nested_key in ("data", "result", "output", "extra_output_params", "card_result", "extensions"):
-                nested = value.get(nested_key)
-                found = self._first_value(nested, keys)
-                if found is not None:
-                    return found
-        return None

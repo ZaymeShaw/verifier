@@ -4,70 +4,52 @@ from dataclasses import fields, is_dataclass
 from typing import Any
 
 # Occam-role annotations for schema fields.
-#
-# These roles document which fields are canonical fact sources and which fields
-# are derived, legacy-compatible, view-only, or debug/evidence payloads. API
-# serialization uses the public profiles below so raw/debug/legacy fields do not
-# silently become part of the stable public contract.
+# Updated for spec/info-volume.md slimmed schemas.
 
 SCHEMA_FIELD_ROLES = {
     "RunTrace": {
         "canonical": [
-            "trace_id",
-            "project_id",
-            "case_id",
-            "live_result",
-            "status",
-            "error",
-            "state_history",
-            "gate_decisions",
-            "transition_decisions",
-            "evidence_refs",
-            "fallbacks",
-            "scenario",
-            "interaction_mode",
-            "session_id",
-            "created_at",
+            "trace_id", "project_id", "case_id", "live_result", "status", "error",
+            "state_history", "gate_decisions", "transition_decisions", "evidence_refs",
+            "fallbacks", "scenario", "interaction_mode", "session_id", "created_at",
         ],
         "derived_alias": [
-            "input",
-            "normalized_request",
-            "raw_response",
-            "extracted_output",
-            "execution_mode",
-            "output_source",
-            "application_boundary",
-            "project_fields",
-            "execution_trace",
-            "runtime_logs",
-            "stop_reason",
-            "conversation_transcript",
+            "input", "normalized_request", "raw_response", "extracted_output",
+            "execution_mode", "output_source", "application_boundary", "project_fields",
+            "execution_trace", "runtime_logs", "stop_reason", "conversation_transcript",
             "conversation_summary",
         ],
         "legacy_alias": ["multi_turn_input"],
     },
     "MultiTurnTraceSummary": {
-        "legacy_alias": ["trace_id", "project_id", "session_id", "input", "turn_traces", "conversation_transcript", "stop_reason", "final_output"],
+        "legacy_alias": ["trace_id", "project_id", "session_id", "input", "turn_traces",
+                        "conversation_transcript", "stop_reason", "final_output"],
     },
     "JudgeResult": {
         "canonical": ["trace_id", "project_id", "business_expectations", "fulfillment_assessments", "overall_fulfillment"],
         "snapshot": ["expected", "actual"],
-        "derived_alias": ["verdict", "score", "confidence", "probability", "reasoning_summary", "judge_basis", "judge_method", "verdict_derivation"],
+        "explanation": ["missing", "wrong", "extra", "evidence", "reasoning_summary"],
         "summary": ["summary"],
-        "explanation": ["missing", "wrong", "extra", "evidence", "boundary_decision", "evaluation_boundary", "consumer_contract", "intent_model", "reconstructed_intent", "semantic_equivalence_checks", "reference_generation_basis", "overrides"],
-        "legacy_alias": ["scenario"],
-        "debug_evidence": ["quality_flags", "gate_decisions", "transition_decisions", "raw_model_output", "fallbacks", "needs_human_review"],
     },
     "AttributeResult": {
-        "canonical": ["trace_id", "project_id", "case_id", "expectation_attributions", "causal_category", "earliest_divergence", "chain_nodes", "probe_results", "evidence_coverage", "tool_call_log"],
-        "summary": ["root_cause_hypothesis", "verification_steps", "patch_direction", "needs_human_review", "scenario", "summary"],
-        "debug_evidence": ["analysis_method", "analysis_quality", "incomplete_reason", "suspected_locations", "quality_flags", "gate_decisions", "transition_decisions", "raw_model_output", "fallbacks"],
+        "canonical": ["trace_id", "project_id", "case_id", "expectation_attributions",
+                      "suspected_locations", "root_cause_hypothesis", "evidence", "evidence_strength"],
+        "summary": ["summary"],
     },
     "FrontendViewModel": {
-        "view_only": ["project_info", "run_trace_summary", "raw_sections", "reference_panel", "judge_panel", "attribute_panel", "fulfillment_panel", "expectation_attribution_panel", "cluster_panel", "check_panel", "table_row", "project_extensions", "tool_call_log"],
+        "view_only": ["project_info", "run_trace_summary", "raw_sections", "reference_panel",
+                      "judge_panel", "attribute_panel", "fulfillment_panel",
+                      "expectation_attribution_panel", "cluster_panel", "check_panel",
+                      "table_row", "project_extensions", "tool_call_log"],
     },
     "TraceTableRow": {
-        "view_only": ["id", "input", "scenario", "output_summary", "reference_summary", "status", "execution_mode", "output_source", "verdict", "score", "fulfillment_status", "judge_summary", "attribution_summary", "check_summary", "fallback_summary", "needs_human_review", "quality_flags", "check_passed", "issue_count", "fallback_count", "causal_category", "divergence_stage", "root_cause_summary", "created_at", "stop_reason", "interaction_mode", "conversation_summary", "conversation_detail", "trace_id"],
+        "view_only": ["id", "input", "scenario", "output_summary", "reference_summary", "status",
+                      "execution_mode", "output_source", "score", "fulfillment_status",
+                      "judge_summary", "attribution_summary", "check_summary", "fallback_summary",
+                      "needs_human_review", "quality_flags", "check_passed", "issue_count",
+                      "fallback_count", "divergence_stage", "root_cause_summary",
+                      "created_at", "stop_reason", "interaction_mode", "conversation_summary",
+                      "conversation_detail", "trace_id"],
     },
     "CasePoolTable": {
         "view_only": ["project_id", "rows", "total", "summary"],
@@ -88,35 +70,33 @@ PUBLIC_SCHEMA_FIELDS = {
     for schema_name, roles in SCHEMA_FIELD_ROLES.items()
 }
 PUBLIC_SCHEMA_FIELDS.update({
+    "RunTrace": [
+        "trace_id", "project_id", "case_id", "input", "normalized_request", "raw_response",
+        "extracted_output", "live_result", "execution_mode", "output_source", "scenario",
+        "reference_contract", "application_boundary", "evidence_refs", "execution_trace",
+        "status", "error", "fallbacks", "interaction_mode", "session_id", "created_at",
+    ],
     "LiveExecutionResult": [
-        "project_id",
-        "case_id",
-        "session_id",
-        "raw_input",
-        "normalized_request",
-        "call_status",
-        "call_error",
-        "runtime_ms",
-        "extracted_output",
-        "output_source",
-        "evidence_refs",
-        "application_boundary",
-        "interaction_mode",
-        "multi_turn_state",
+        "project_id", "case_id", "session_id", "raw_input", "normalized_request",
+        "call_status", "raw_response", "call_error", "runtime_ms", "extracted_output",
+        "output_source", "execution_trace", "evidence_refs", "application_boundary",
+        "interaction_mode", "multi_turn_state",
     ],
     "LiveMultiTurnState": ["session_id", "turn_index", "turns", "stop_reason", "final_output"],
     "LiveMultiTurnResult": ["state", "trace"],
     "TraceStateRecord": ["state", "attempt", "status", "reason", "started_at", "ended_at", "metadata"],
     "GateDecision": ["gate_id", "gate_type", "passed", "recoverable", "recommended_transition", "reason"],
     "TransitionDecision": ["from_state", "to_state", "condition", "reason", "retry_count", "stop_reason"],
-    "EvidenceRef": ["id", "source", "path", "summary", "value"],
-    "ExecutionTraceEvent": ["event_id", "event_type", "status", "summary", "timestamp", "metadata"],
+    "EvidenceRef": ["ref_id", "source", "kind", "stage", "summary", "location", "payload", "metadata"],
+    "ExecutionTraceEvent": ["stage", "status", "evidence", "timestamp", "inputs", "outputs", "error", "metadata"],
     "FallbackDecision": ["stage", "reason", "selected_strategy", "status"],
-    "BusinessExpectation": ["expectation_id", "downstream_consumer", "user_intent", "expected_outcome", "required_capabilities", "acceptance_criteria", "boundary", "priority", "evidence_refs"],
-    "FulfillmentAssessment": ["expectation_id", "status", "score", "expected_evidence", "actual_evidence", "boundary_decision", "downstream_impact", "blocking", "confidence", "evidence_refs"],
+    "BusinessExpectation": ["expectation_id", "downstream_consumer", "user_intent", "expected_outcome",
+                            "required_capabilities", "acceptance_criteria", "boundary", "priority", "evidence_refs"],
+    "FulfillmentAssessment": ["expectation_id", "status", "score", "expected_evidence", "actual_evidence",
+                              "downstream_impact", "blocking", "confidence", "evidence_refs"],
     "GapItem": ["kind", "error_type", "expected", "actual", "evidence_ref", "raw", "incomplete"],
-    "ExpectationAttribution": ["expectation_id", "status", "causal_category", "evidence", "reason"],
-    "ChainNode": ["node_id", "stage", "status", "summary", "evidence"],
+    "ExpectationAttribution": ["expectation_id", "fulfillment_status", "suspected_locations",
+                               "root_cause_hypothesis", "evidence"],
     "ProbeResult": ["probe_id", "status", "summary", "evidence"],
     "ClusterSummary": None,
     "CheckReport": None,
@@ -130,48 +110,22 @@ PUBLIC_SCHEMA_FIELDS.update({
     "SingleTurnCase": None,
     "MultiTurnCase": None,
     "MockDataset": None,
-    # JudgeResult 的 verdict/score/confidence/probability 是代码单点推导的核心结论字段
-    # （从 fulfillment_assessments 派生），必须出现在 public 输出中，否则下游/前端无法
-    # 获取量化评分。reasoning_summary/verdict_derivation 是判断依据文本，也是 public 必需。
     "JudgeResult": [
         "trace_id", "project_id",
-        "verdict", "score", "confidence", "probability",
         "business_expectations", "fulfillment_assessments", "overall_fulfillment",
-        "expected", "actual",
-        "reasoning_summary", "judge_basis", "judge_method", "verdict_derivation",
-        "missing", "wrong", "extra", "evidence",
-        "boundary_decision", "evaluation_boundary",
-        "consumer_contract", "intent_model", "reconstructed_intent",
-        "semantic_equivalence_checks", "reference_generation_basis",
-        "scenario", "needs_human_review", "quality_flags",
+        "expected", "actual", "missing", "wrong", "extra", "evidence", "reasoning_summary",
         "summary",
     ],
-    # AttributeResult 的 root_cause_hypothesis/verification_steps/patch_direction 是归因结论
-    # 的核心字段，incomplete_reason/suspected_locations/analysis_method 是归因质量字段，
-    # 都必须在 public 输出中，否则前端/下游看不到归因结论和质量标记。
     "AttributeResult": [
         "trace_id", "project_id", "case_id",
-        "expectation_attributions", "causal_category", "earliest_divergence",
-        "chain_nodes", "probe_results", "evidence_coverage",
-        "root_cause_hypothesis", "verification_steps", "patch_direction",
-        "needs_human_review", "scenario", "summary",
-        "analysis_method", "analysis_quality", "incomplete_reason",
-        "suspected_locations", "quality_flags", "tool_call_log",
+        "expectation_attributions", "suspected_locations", "root_cause_hypothesis",
+        "evidence", "evidence_strength", "summary",
     ],
 })
 PUBLIC_DROP_KEYS = {
-    "raw_model_output",
-    "raw_response",
-    "raw_sections",
-    "raw_sse",
-    "raw_cards",
-    "raw_text",
-    "downstream_payload",
-    "project_fields",
-    "runtime_logs",
-    "conversation_transcript",
-    "multi_turn_input",
-    "schema_protocol_extensions",
+    "raw_model_output", "raw_sections", "raw_sse", "raw_cards", "raw_text",
+    "downstream_payload", "project_fields", "runtime_logs", "conversation_transcript",
+    "multi_turn_input", "schema_protocol_extensions",
 }
 
 

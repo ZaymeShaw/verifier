@@ -8,7 +8,7 @@ from pathlib import Path
 # Add impl to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from impl.core.project_loader import load_project
+from impl.core.project_loader import load_adapter, load_project
 from impl.tools.source_retrieval import ProjectSourceFileProvider
 
 # Load MPI project
@@ -18,8 +18,7 @@ print(f"External repo: {spec.application.get('external_repo')}")
 print()
 
 # Simulate build_attribute_context
-from impl.projects.marketting_planning_intent.adapter import Adapter
-adapter = Adapter(spec)
+adapter = load_adapter(spec)
 
 # Mock trace with intent_api_call failure
 class MockTrace:
@@ -29,6 +28,7 @@ class MockTrace:
         {'stage': 'label_mapping', 'status': 'failed', 'evidence': 'intent=other'}
     ]
     project_fields = {'reference': {'intent': 'nbev_planning'}}
+    reference_contract = {}
 
 trace = MockTrace()
 

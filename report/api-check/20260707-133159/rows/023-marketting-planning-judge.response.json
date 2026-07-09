@@ -1,0 +1,354 @@
+{
+  "trace_id": "1516720c-63c1-4e26-8113-e75962ac6536",
+  "project_id": "marketting-planning",
+  "verdict": "incorrect",
+  "business_expectations": [
+    {
+      "expectation_id": "正确识别营销规划意图",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "提取业务指标NBEV",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "识别时间范围与目标缺口",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "识别分解维度",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "阶段路由进入规划流程",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "生成可操作规划卡片",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "SSE流完整结束",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "SSE事件体现规划阶段",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "正确识别营销规划意图",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "提取业务指标NBEV",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "识别时间范围与目标缺口",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "识别分解维度",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "阶段路由进入规划流程",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "生成可操作规划卡片",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "SSE流完整结束",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "SSE事件体现规划阶段",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "blocking_gaps": [
+      "系统将营销规划意图误识别为“其他意图”，导致规划流程未启动。",
+      "未提取 NBEV、时间范围、缺口数值及分解维度等关键规划要素。",
+      "未生成任何规划卡片，用户完全无法获得填补 NBEV 缺口的方案。"
+    ],
+    "reasoning_summary": "用户明确表达了填补今年 NBEV 目标缺口的营销规划需求，并指定了增加理财师或优化产品方案两个方向。但系统将输入归类为“其他意图”（4001），整个交互停留在 non_agent 阶段，未执行澄清或规划，未输出任何与 NBEV 相关的信息或可操作卡片。除了 SSE 流自身完整结束这一非核心期望，其余所有核心期望均未满足，用户意图完全未达成。",
+    "assessment_count": 8
+  },
+  "expected": {
+    "turns": [
+      {
+        "turn_index": 0,
+        "code": 0,
+        "msg": "success",
+        "robot_text": "我理解您希望填补今年的 NBEV 目标缺口，并且考虑通过增加理财师或优化产品方案来实现。为了帮您制定规划，请告诉我：1. 今年的 NBEV 目标值是多少？2. 目前已完成多少，缺口具体是多少？3. 您是否可以先侧重一个维度（理财师数量或产品方案）？",
+        "extra_output_params": {
+          "intent": "营销规划",
+          "intent_name": "营销规划",
+          "card_result": {
+            "event": "clarification",
+            "sse_id": "expected-mock-id:clarification",
+            "think": "",
+            "answer": "",
+            "extensions": {
+              "trace_id": "trace_12345",
+              "session_id": "eval-mock-xxx"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "actual": {
+    "turns": [
+      {
+        "code": 0,
+        "end_flag": 1,
+        "extra_output_params": {
+          "card_result": {
+            "answer": "",
+            "event": "card_end",
+            "extensions": {
+              "session_id": "eval-mock-agent-marketting-planning-d1642b58",
+              "trace_id": "mock-agent-marketting-planning-d1642b58"
+            },
+            "sse_id": "mock-agent-marketting-planning-d1642b58:card_end",
+            "think": ""
+          },
+          "intent": "4001",
+          "intent_name": "其他意图"
+        },
+        "input_turn": {
+          "content": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？",
+          "role": "user"
+        },
+        "msg": "success",
+        "robot_text": "卡片生成完成",
+        "turn_index": 0
+      }
+    ]
+  },
+  "reasoning_summary": "系统将用户明确的营销规划诉求误判为“其他意图”，因而完全没有进入规划流程，未提取 NBEV、时间范围、缺口和分解维度，未生成任何卡片，仅流式传输完整但缺少规划标志事件。所有核心业务期望均落空，用户无法获得任何进展，因此整体判定为未满足。",
+  "judge_basis": "基于 run_trace 中 agent 输出的实际阶段、意图识别结果（intent=4001）、卡片内容（空）以及 SSE 事件序列，对照用户输入和 critical_intent_dimensions 逐项评估。",
+  "judge_method": "critical_intent_dimensions 原子分解期望匹配法",
+  "verdict_derivation": {
+    "method": "blocking_gaps 聚合导致整体 not_fulfilled",
+    "detail": "6 项核心期望未满足，仅 1 项非核心期望满足，合并判定为未达成用户意图。"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "field": "intent",
+        "description": "正确的营销规划意图",
+        "evidence": "实际 intent 为 4001 (其他意图)"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "missing",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "field": "NBEV识别",
+        "description": "未提取业务指标 NBEV",
+        "evidence": "全程无 NBEV 提及"
+      },
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "field": "intent",
+        "description": "错误地输出为“其他意图”",
+        "evidence": "intent=4001, intent_name=其他意图"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "evidence_ref": "",
+      "raw": {
+        "field": "stage",
+        "description": "实际阶段为 non_agent，而非 expected 的 intent/clarification",
+        "evidence": "execution_trace 记录 actual_stage=non_agent"
+      },
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "source": "extracted_output.turns[0].extra_output_params.intent",
+      "value": "4001"
+    },
+    {
+      "source": "extracted_output.turns[0].extra_output_params.card_result.card_list"
+    },
+    {
+      "source": "execution_trace[intent_recognition].evidence.actual_stage",
+      "value": "non_agent"
+    }
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "evaluable_errors": [
+      "意图识别错误",
+      "阶段路由错误",
+      "卡片未生成"
+    ]
+  },
+  "evaluation_boundary": {
+    "allow_fallback": false,
+    "dependency_status": "available",
+    "fallback_used": false
+  },
+  "consumer_contract": {
+    "expected_stage": "intent",
+    "scenario": "intent_recognition"
+  },
+  "intent_model": {
+    "primary_intent": "marketing_planning",
+    "sub_components": [
+      {
+        "business_metric": "NBEV",
+        "time_range": "今年",
+        "decomposition_dimensions": [
+          "增加理财师",
+          "优化产品方案"
+        ],
+        "goal_gap": "未明确，需澄清"
+      }
+    ]
+  },
+  "reconstructed_intent": "用户希望得到营销规划建议，以填补今年 NBEV 目标缺口，具体通过增加理财师或优化产品方案两个方向来实现。",
+  "reference_generation_basis": {
+    "source": "用户 query + expected_stage + 营销规划最佳实践",
+    "method": "模拟系统应输出的意图识别与澄清回复"
+  },
+  "scenario": "intent_recognition",
+  "needs_human_review": true,
+  "quality_flags": [
+    "intent_misclassification",
+    "no_cards_generated",
+    "stage_routing_failure",
+    "missing_planning_essentials"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[(none)] · 系统将用户明确的营销规划诉求误判为“其他意图”，因而完全没有进入规划流程，未提取 NBEV、时间范围、缺口和分解维度，未生成任何卡片，仅流式传输完整但缺少规划标志事件。所有核心业务期望均落空，用户无法获得任何进展，因此整体判定为未满足。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "SSE事件体现规划阶段",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "系统将用户明确的营销规划诉求误判为“其他意图”，因而完全没有进入规划流程，未提取 NBEV、时间范围、缺口和分解维度，未生成任何卡片，仅流式传输完整但缺少规划标志事件。所有核心业务期望均落空，用户无法获得任何进展，因此整体判定为未满足。"
+      },
+      {
+        "expectation_id": "提取业务指标NBEV",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "系统将用户明确的营销规划诉求误判为“其他意图”，因而完全没有进入规划流程，未提取 NBEV、时间范围、缺口和分解维度，未生成任何卡片，仅流式传输完整但缺少规划标志事件。所有核心业务期望均落空，用户无法获得任何进展，因此整体判定为未满足。"
+      },
+      {
+        "expectation_id": "正确识别营销规划意图",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "系统将用户明确的营销规划诉求误判为“其他意图”，因而完全没有进入规划流程，未提取 NBEV、时间范围、缺口和分解维度，未生成任何卡片，仅流式传输完整但缺少规划标志事件。所有核心业务期望均落空，用户无法获得任何进展，因此整体判定为未满足。"
+      },
+      {
+        "expectation_id": "生成可操作规划卡片",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "系统将用户明确的营销规划诉求误判为“其他意图”，因而完全没有进入规划流程，未提取 NBEV、时间范围、缺口和分解维度，未生成任何卡片，仅流式传输完整但缺少规划标志事件。所有核心业务期望均落空，用户无法获得任何进展，因此整体判定为未满足。"
+      },
+      {
+        "expectation_id": "识别分解维度",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "系统将用户明确的营销规划诉求误判为“其他意图”，因而完全没有进入规划流程，未提取 NBEV、时间范围、缺口和分解维度，未生成任何卡片，仅流式传输完整但缺少规划标志事件。所有核心业务期望均落空，用户无法获得任何进展，因此整体判定为未满足。"
+      },
+      {
+        "expectation_id": "识别时间范围与目标缺口",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "系统将用户明确的营销规划诉求误判为“其他意图”，因而完全没有进入规划流程，未提取 NBEV、时间范围、缺口和分解维度，未生成任何卡片，仅流式传输完整但缺少规划标志事件。所有核心业务期望均落空，用户无法获得任何进展，因此整体判定为未满足。"
+      },
+      {
+        "expectation_id": "阶段路由进入规划流程",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "系统将用户明确的营销规划诉求误判为“其他意图”，因而完全没有进入规划流程，未提取 NBEV、时间范围、缺口和分解维度，未生成任何卡片，仅流式传输完整但缺少规划标志事件。所有核心业务期望均落空，用户无法获得任何进展，因此整体判定为未满足。"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 8,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

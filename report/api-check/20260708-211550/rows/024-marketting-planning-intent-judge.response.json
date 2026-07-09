@@ -1,0 +1,208 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783516553883",
+  "project_id": "marketting-planning-intent",
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签为客户画像",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "目标产品槽位提取",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "置信度达到基线",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "避免误回退到其他意图",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "派发边界覆盖客户画像查询",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签为客户画像",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "目标产品槽位提取",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "置信度达到基线",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "避免误回退到其他意图",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "派发边界覆盖客户画像查询",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "not_fulfilled",
+      "downstream_impact": "当前单轮意图识别未满足 reference contract：query=帮我看看上季度买了重疾险的客户都是啥样的？，expected_intent=customer_portrait，actual_intent=other，confidence=0.5，min_confidence=None，失败项=['intent']，整体判定为 incorrect。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "blocking_expectations": [
+      "intent_contract"
+    ]
+  },
+  "expected": {
+    "intent": "customer_portrait",
+    "confidence": 0.95,
+    "target_value": "重疾险",
+    "subIntent": "其他意图"
+  },
+  "actual": {
+    "confidence": 0.5,
+    "intent": "other",
+    "subIntent": "其他意图"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "expected": "重疾险",
+      "evidence_ref": "",
+      "raw": {
+        "field": "target_value",
+        "expected": "重疾险"
+      },
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "expected": "customer_portrait",
+      "actual": "other",
+      "evidence_ref": "",
+      "raw": {
+        "field": "intent",
+        "expected": "customer_portrait",
+        "actual": "other"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "expected": ">=0.95",
+      "actual": 0.5,
+      "evidence_ref": "",
+      "raw": {
+        "field": "confidence",
+        "expected": ">=0.95",
+        "actual": 0.5
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "wrong",
+      "error_type": "wrong",
+      "evidence_ref": "",
+      "raw": {
+        "requirement": "intent",
+        "expected_fragment": "customer_portrait",
+        "actual_fragment": "other",
+        "status": "wrong",
+        "evidence": [
+          "normalized intent differs from reference intent"
+        ]
+      },
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "source": "run_trace.extracted_output",
+      "content": {
+        "intent": "other",
+        "subIntent": "其他意图",
+        "confidence": 0.5
+      }
+    }
+  ],
+  "reasoning_summary": "当前单轮意图识别未满足 reference contract：query=帮我看看上季度买了重疾险的客户都是啥样的？，expected_intent=customer_portrait，actual_intent=other，confidence=0.5，min_confidence=None，失败项=['intent']，整体判定为 incorrect。",
+  "summary": {
+    "reason": "not_fulfilled · blocking=[(none)] · 用户查询“帮我看看上季度买了重疾险的客户都是啥样的？”明显期望进行客户画像分析，并指定了产品“重疾险”，但系统将其识别为“other”意图，置信度仅 0.5，未提取产品槽位，完全偏离业务预期。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "意图标签为客户画像",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询“帮我看看上季度买了重疾险的客户都是啥样的？”明显期望进行客户画像分析，并指定了产品“重疾险”，但系统将其识别为“other”意图，置信度仅 0.5，未提取产品槽位，完全偏离业务预期。"
+      },
+      {
+        "expectation_id": "派发边界覆盖客户画像查询",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询“帮我看看上季度买了重疾险的客户都是啥样的？”明显期望进行客户画像分析，并指定了产品“重疾险”，但系统将其识别为“other”意图，置信度仅 0.5，未提取产品槽位，完全偏离业务预期。"
+      },
+      {
+        "expectation_id": "目标产品槽位提取",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询“帮我看看上季度买了重疾险的客户都是啥样的？”明显期望进行客户画像分析，并指定了产品“重疾险”，但系统将其识别为“other”意图，置信度仅 0.5，未提取产品槽位，完全偏离业务预期。"
+      },
+      {
+        "expectation_id": "置信度达到基线",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询“帮我看看上季度买了重疾险的客户都是啥样的？”明显期望进行客户画像分析，并指定了产品“重疾险”，但系统将其识别为“other”意图，置信度仅 0.5，未提取产品槽位，完全偏离业务预期。"
+      },
+      {
+        "expectation_id": "避免误回退到其他意图",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询“帮我看看上季度买了重疾险的客户都是啥样的？”明显期望进行客户画像分析，并指定了产品“重疾险”，但系统将其识别为“other”意图，置信度仅 0.5，未提取产品槽位，完全偏离业务预期。"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "trace_id": "5e90b78d-23f0-437d-855f-5b6bf7472b41",
+  "project_id": "client_search",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "client_search:search_condition_contract",
+      "causal_category": "no_issue"
+    }
+  ],
+  "causal_category": "no_issue",
+  "earliest_divergence": {
+    "node": "fulfillment_assessment",
+    "evidence": [
+      "[judge] LLM 输出不是合法 JSON，无法进入结构化校验。解析错误：whole response: Expecting ',' delimiter at line 5 column 30 (char 118); bare JSON from first bracket: Expecting ',' delimiter at line 5 column 30 (char 118)\n原始输出预览：{\n  \"business_expectations\": [\n    {\n      \"expectation_id\": \"口语重疾险识别为险种大类字段pCategorys\",\n      \"description\": \"用户查询中的\"重疾险\"应被识别为险种大类字段pCategorys，而非产品名称字段（planAbbrNames/abbrname）或健康险标志字段（isBuyHealth）\",\n      \"blocking_level\": \"blocking\",\n      \"acceptance_criteria\": \"actual output的conditions数组中存在fi"
+    ],
+    "confidence": "high"
+  },
+  "chain_nodes": [
+    {
+      "status": "verified",
+      "evidence": [
+        "[judge] LLM 输出不是合法 JSON，无法进入结构化校验。解析错误：whole response: Expecting ',' delimiter at line 5 column 30 (char 118); bare JSON from first bracket: Expecting ',' delimiter at line 5 column 30 (char 118)\n原始输出预览：{\n  \"business_expectations\": [\n    {\n      \"expectation_id\": \"口语重疾险识别为险种大类字段pCategorys\",\n      \"description\": \"用户查询中的\"重疾险\"应被识别为险种大类字段pCategorys，而非产品名称字段（planAbbrNames/abbrname）或健康险标志字段（isBuyHealth）\",\n      \"blocking_level\": \"blocking\",\n      \"acceptance_criteria\": \"actual output的conditions数组中存在fi"
+      ]
+    }
+  ],
+  "probe_results": [
+    {
+      "probe_id": "fulfillment_assessment",
+      "status": "not_verified",
+      "evidence": [
+        "[judge] LLM 输出不是合法 JSON，无法进入结构化校验。解析错误：whole response: Expecting ',' delimiter at line 5 column 30 (char 118); bare JSON from first bracket: Expecting ',' delimiter at line 5 column 30 (char 118)\n原始输出预览：{\n  \"business_expectations\": [\n    {\n      \"expectation_id\": \"口语重疾险识别为险种大类字段pCategorys\",\n      \"description\": \"用户查询中的\"重疾险\"应被识别为险种大类字段pCategorys，而非产品名称字段（planAbbrNames/abbrname）或健康险标志字段（isBuyHealth）\",\n      \"blocking_level\": \"blocking\",\n      \"acceptance_criteria\": \"actual output的conditions数组中存在fi"
+      ]
+    }
+  ],
+  "evidence_coverage": {
+    "judge_evidence": true,
+    "execution_trace": false
+  },
+  "root_cause_hypothesis": "业务预期已达成，当前归因为 no_issue，不进入失败根因链路。",
+  "verification_steps": [
+    "复核 judge.fulfillment_assessments 均为 fulfilled，确认当前输出满足业务预期。"
+  ],
+  "patch_direction": [
+    "无需修改业务实现；若后续出现 not_evaluable 或 not_fulfilled evidence，再按对应 expectation 重新归因。"
+  ],
+  "needs_human_review": false,
+  "scenario": "",
+  "summary": {
+    "causal_category": "no_issue",
+    "attribution_count": 1,
+    "probe_count": 1,
+    "summary_text": "业务预期已达成",
+    "is_complete": true,
+    "is_formal_attribution": true
+  },
+  "analysis_method": "fulfilled_expectation_attribution",
+  "analysis_quality": {
+    "passed": true
+  },
+  "incomplete_reason": ""
+}

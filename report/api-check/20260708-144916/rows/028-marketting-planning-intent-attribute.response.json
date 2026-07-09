@@ -1,0 +1,108 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783493358119",
+  "project_id": "marketting-planning-intent",
+  "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图标签识别为customer_portrait",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": "",
+      "evidence": [
+        "adapter_extraction 输出 intent='other', confidence=0.5",
+        "label_mapping 输出 intent='other'",
+        "runtime_checks 显示 raw_intent=None, actual_mapping=other"
+      ]
+    },
+    {
+      "expectation_id": "提取目标产品实体为重疾险",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": "",
+      "evidence": [
+        "adapter_extraction 输出中未提供 target_value 字段",
+        "judge missing 项指出实际输出 target_value 为 null"
+      ]
+    },
+    {
+      "expectation_id": "置信度达到合理阈值",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": "",
+      "evidence": [
+        "adapter_extraction 输出 confidence=0.5",
+        "judge wrong 项指出置信度期望≥0.8，实际 0.5"
+      ]
+    },
+    {
+      "expectation_id": "intent_contract",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": "",
+      "evidence": [
+        "reference contract: expected_intent=customer_portrait",
+        "actual output: intent='other', confidence=0.5",
+        "judge overall_fulfillment: blocking_expectations=['intent_contract']"
+      ]
+    }
+  ],
+  "suspected_locations": [
+    {
+      "location": "intent_contract_gate",
+      "evidence": [
+        [
+          {
+            "kind": "missing",
+            "error_type": "",
+            "evidence_ref": "",
+            "raw": {
+              "detail": "实际输出中未出现预期的意图标签",
+              "item": "意图标签 customer_portrait"
+            },
+            "incomplete": false
+          },
+          {
+            "kind": "missing",
+            "error_type": "",
+            "evidence_ref": "",
+            "raw": {
+              "detail": "实际输出 target_value 为 null，缺失该实体",
+              "item": "目标实体 target_value“重疾险”"
+            },
+            "incomplete": false
+          }
+        ]
+      ]
+    }
+  ],
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'confidence': 0.95, 'intent': 'customer_portrait', 'subIntent': '其他意图', 'target_value': '重疾险'}，实际 normalized intent evidence 为 {'confidence': 0.5, 'intent': 'other', 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+  "evidence": [
+    [
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": {
+          "detail": "实际输出中未出现预期的意图标签",
+          "item": "意图标签 customer_portrait"
+        },
+        "incomplete": false
+      },
+      {
+        "kind": "missing",
+        "error_type": "",
+        "evidence_ref": "",
+        "raw": {
+          "detail": "实际输出 target_value 为 null，缺失该实体",
+          "item": "目标实体 target_value“重疾险”"
+        },
+        "incomplete": false
+      }
+    ]
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "causal_category": "",
+    "attribution_count": 4,
+    "probe_count": 0,
+    "summary_text": "本次意图识别失败（未识别为 customer_portrait，置信度仅 0.5）很可能是由意图识别 prompt（intent_prompt.py）的设计不足和/或模型对特定业务查询的泛化能力有限导致的。查询“帮我看看上季度买了重疾险的客户都是啥样的？”属于客户画像分析类问题，但 prompt 可能未覆盖此类示例，使得模型返回了兜底意图“other”。此外，标签映射（intent.py:INTENT_MAPPING）在 raw_intent 为 None 或未知时默认映射为“other”，进一步放大了问题。实体提取未触发是意图错误的连锁反应。建议优化 prompt 增加客户画像的 few-shot 示例，并考虑在映射时引入更积极的模糊匹配。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

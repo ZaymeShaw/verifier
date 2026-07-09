@@ -1,0 +1,98 @@
+{
+  "id": "mock-agent-marketting-planning-intent-9e16256b",
+  "input": "default_org",
+  "scenario": "intent_recognition",
+  "output_summary": "{\"confidence\": 0.5, \"intent\": \"other\", \"subIntent\": \"其他意图\"}",
+  "reference_summary": "{\"confidence\": 0.8, \"intent\": \"customer_insight\", \"path_types\": [\"客户画像\", \"上季度\"], \"subIntent\": \"客户画像分析\", \"target_value\": \"重疾险\"}",
+  "status": "not_fulfilled",
+  "execution_mode": "",
+  "output_source": "live_service",
+  "verdict": "incorrect",
+  "score": 0.0,
+  "fulfillment_status": "not_fulfilled",
+  "judge_summary": {
+    "status": "not_fulfilled",
+    "fulfillment_status": "not_fulfilled",
+    "verdict": "incorrect",
+    "score": 0.0,
+    "reason": "not_fulfilled · blocking=[(none)] · 用户查询明确要求分析上季度购买重疾险的客户特征，属于客户洞察/分析意图。但意图识别返回了兜底意图 'other'，置信度仅 0.5，且未提取任何关键实体（产品、时间）。这不符合业务预期，导致下游无法正常调度营销流程，关键业务期望均未满足。",
+    "reason_source": "aggregated_fulfillment",
+    "reason_stage": "judge",
+    "is_formal_attribution": true,
+    "assessment_count": 3,
+    "blocking_count": 0,
+    "primary_failure_dimensions": [
+      {
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询明确要求分析上季度购买重疾险的客户特征，属于客户洞察/分析意图。但意图识别返回了兜底意图 'other'，置信度仅 0.5，且未提取任何关键实体（产品、时间）。这不符合业务预期，导致下游无法正常调度营销流程，关键业务期望均未满足。",
+        "expectation_id": "关键实体提取",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询明确要求分析上季度购买重疾险的客户特征，属于客户洞察/分析意图。但意图识别返回了兜底意图 'other'，置信度仅 0.5，且未提取任何关键实体（产品、时间）。这不符合业务预期，导致下游无法正常调度营销流程，关键业务期望均未满足。",
+        "expectation_id": "意图标签准确性",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      },
+      {
+        "blocking": false,
+        "downstream_impact": "",
+        "evidence": "用户查询明确要求分析上季度购买重疾险的客户特征，属于客户洞察/分析意图。但意图识别返回了兜底意图 'other'，置信度仅 0.5，且未提取任何关键实体（产品、时间）。这不符合业务预期，导致下游无法正常调度营销流程，关键业务期望均未满足。",
+        "expectation_id": "置信度达标",
+        "status": "not_fulfilled",
+        "within_evaluable_scope": true
+      }
+    ]
+  },
+  "attribution_summary": {
+    "attribution_count": 4,
+    "causal_category": "needs_human_review",
+    "is_complete": true,
+    "is_formal_attribution": true,
+    "probe_count": 5,
+    "summary_text": "意图识别模块存在双层缺陷：（1）规则层：_HOMEPAGE_RULES 中 customer_portrait 的正则关键词（画像/分布/结构/分层）偏正式，无法覆盖口语化表达“都是啥样的”，导致规则路径全部漏过；（2）LLM 层：INTENT_RECOGNITION_PROMPT 中 customer_portrait 仅被定义为“customer distribution”，语义覆盖过窄且缺少口语化 few-shot，导致 LLM 无法将“客户都是啥样的”映射到 customer_portrait。两条路径均失效后，系统触发硬编码兜底 IntentType.other（confidence=0.5），造成意图标签错误、置信度不达标、实体缺失三项契约失败。"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 4,
+    "protocol_gap_count": 1,
+    "consistency_gap_count": 0,
+    "recommended_fix_count": 2,
+    "issues": [
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/trace_analysis.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/pipeline.py",
+      "generic core contains project-specific marker marketting-planning-intent: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/mock_agent.py",
+      "marketting-planning-intent attribution causal_category outside taxonomy: implementation_bug"
+    ]
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": false,
+  "quality_flags": [
+    "intent_misclassification",
+    "low_confidence",
+    "missing_entities",
+    "intent_contract_gate_failed",
+    "intent_misclassification_due_to_regex_gap",
+    "intent_misclassification_due_to_prompt_narrow_definition",
+    "llm_fallback_default_confidence_too_low",
+    "entity_schema_only_covers_nbev_domain",
+    "ungrounded_root_cause"
+  ],
+  "check_passed": false,
+  "issue_count": 5,
+  "fallback_count": 0,
+  "causal_category": "needs_human_review",
+  "divergence_stage": "intent_contract_gate",
+  "root_cause_summary": "意图识别模块存在双层缺陷：（1）规则层：_HOMEPAGE_RULES 中 customer_portrait 的正则关键词（画像/分布/结构/分层）偏正式，无法覆盖口语化表达“都是啥样的”，导致规则路径全部漏过；（2）LLM 层：INTENT_RECOGNITION_PROMPT 中 customer_portrait 仅被定义为“customer distribution”，语义覆盖过窄且缺少口语化 few-shot，导致 LLM 无法将“客户都是啥样的”映射到 customer_portrait。两条路径均失效后，系统触发硬编码兜底 IntentType.other（confidence=0.5），造成意图标签错误、置信度不达标、实体缺失三项契约失败。",
+  "created_at": "2026-07-07T01:52:19.981749+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "dccca497-d9f6-430c-a9b5-47e8a11d94a4"
+}

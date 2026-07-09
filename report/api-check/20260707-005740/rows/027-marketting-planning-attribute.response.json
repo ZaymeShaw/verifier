@@ -1,0 +1,195 @@
+{
+  "trace_id": "f3dc2a68-687c-428a-915a-713391364c2e",
+  "project_id": "marketting-planning",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图识别为营销规划",
+      "causal_category": "implementation_bug"
+    },
+    {
+      "expectation_id": "业务指标NBEV提取",
+      "causal_category": "downstream_cascade"
+    },
+    {
+      "expectation_id": "时间范围识别",
+      "causal_category": "downstream_cascade"
+    },
+    {
+      "expectation_id": "分解维度识别",
+      "causal_category": "downstream_cascade"
+    },
+    {
+      "expectation_id": "阶段路由进入规划",
+      "causal_category": "downstream_cascade"
+    },
+    {
+      "expectation_id": "输出可执行规划卡片",
+      "causal_category": "downstream_cascade"
+    },
+    {
+      "expectation_id": "SSE事件内容充实",
+      "causal_category": "downstream_cascade"
+    }
+  ],
+  "causal_category": "needs_human_review",
+  "earliest_divergence": {
+    "stage": "intent_recognition",
+    "description": "意图识别输出intent=4001（其他意图），而非营销规划意图。这是整个请求处理链中第一个可观察的与业务预期的偏离，所有后续偏离均由此衍生。",
+    "evidence_source": "extracted_output.turns[0].extra_output_params.card_result.intent",
+    "actual_value": "4001",
+    "expected_value": "非4001的营销规划意图ID"
+  },
+  "chain_nodes": [
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    },
+    {
+      "status": "not_verified"
+    }
+  ],
+  "evidence_coverage": {
+    "source_files_read": 0,
+    "source_files_attempted": [
+      "ext_repo:app/workflow/steps:intent_recognition.py",
+      "ext_repo:app/workflow/prompts:intent_prompt.py",
+      "ext_repo:app/schemas:intent.py",
+      "config:ext_repo:app/workflow/steps:intent_recognition.py",
+      "config:ext_repo:app/workflow/prompts:intent_prompt.py",
+      "config:ext_repo:app/schemas:intent.py"
+    ],
+    "all_failed": true,
+    "execution_trace_available": false,
+    "judge_result_available": true
+  },
+  "root_cause_hypothesis": "意图识别模块（intent_recognition.py + intent_prompt.py）未能将营销规划类用户query正确分类。最可能的原因是：1）intent_prompt.py的prompt模板中缺少营销规划场景的few-shot示例或类别描述，导致LLM无法将“如何通过增加理财师或优化产品方案补足NBEV缺口”映射到任何已知业务意图；2）intent.py中未定义营销规划对应的意图ID（非4001），使得即使LLM输出相关语义标签，也无法匹配到有效意图，最终回退到兜底意图4001（其他意图）。两者叠加导致意图识别系统性失败，所有下游阶段（字段澄清、路径分发、规划执行、卡片生成）均被阻断。",
+  "verification_steps": [
+    "1. 读取 ext_repo:app/workflow/prompts/intent_prompt.py，检查SYSTEM_PROMPT和few-shot示例是否包含营销规划场景（如NBEV缺口补足、增加理财师、优化产品方案等query）",
+    "2. 读取 ext_repo:app/schemas/intent.py，确认IntentType枚举是否包含营销规划意图ID（非4001）",
+    "3. 读取 ext_repo:app/workflow/steps/intent_recognition.py，审查意图分类函数在LLM返回无法匹配时回退到4001的逻辑",
+    "4. 使用相同query调用意图识别接口，观察LLM原始输出和最终intent ID，确认是prompt层面还是解析层面问题",
+    "5. 若为prompt缺失，在intent_prompt.py中增加1-2条营销规划few-shot示例后回归测试"
+  ],
+  "patch_direction": [
+    "在 intent_prompt.py 的 prompt 模板中增加营销规划场景的 few-shot 示例，示例query应包含“如何通过增加理财师或优化产品方案来补足今年NBEV目标缺口”这类表述，并映射到正确的营销规划意图ID",
+    "检查 intent.py 中是否定义了营销规划意图（如 INTENT_MARKETING_PLANNING），若缺失则新增，并在 intent_recognition.py 中注册该意图的路由映射",
+    "在 intent_recognition.py 的回退逻辑中增加日志，记录触发回退的原始LLM输出，便于后续诊断误分类case",
+    "考虑增加基于关键词的规则兜底：当query包含“NBEV”“理财师”“产品方案”“补足”等营销规划强特征词时，直接提升营销规划意图的优先级"
+  ],
+  "needs_human_review": true,
+  "scenario": "intent_recognition",
+  "summary": {
+    "causal_category": "needs_human_review",
+    "attribution_count": 7,
+    "probe_count": 0,
+    "summary_text": "tool_call_budget_exhausted: search_source_file共调用6次，全部返回not found，未能读取任何源码文件。归因完全基于judge_result与extracted_output的间接推断，未通过源码交叉验证。如需确认根因，需人工检查 intent_recognition.py、intent_prompt.py、intent.py 的实际内容。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  },
+  "analysis_method": "基于judge_result的fulfillment_assessments、extracted_output中的intent字段、以及attribution_spec定义阶段顺序进行静态因果链分析。因search_source_file全部调用返回not found且tool_call_budget_exhausted，无法读取源码验证prompt和意图定义细节，归因依赖可观察输出反推。",
+  "analysis_quality": {
+    "confidence": "medium",
+    "confidence_rationale": "归因基于extracted_output和judge_result的反推，未通过源码验证。intent=4001明确指向意图识别失败，但无法确认根因是prompt缺失、意图枚举缺失还是LLM调用本身的随机错误。",
+    "blocked_probes": [
+      "无法读取intent_recognition.py确认意图分类逻辑",
+      "无法读取intent_prompt.py确认prompt是否包含营销规划示例",
+      "无法读取intent.py确认意图枚举定义"
+    ],
+    "passed": false,
+    "status": "insufficient_evidence",
+    "missing": [
+      "supported root-cause evidence"
+    ]
+  },
+  "incomplete_reason": "tool_call_budget_exhausted: search_source_file共调用6次，全部返回not found，未能读取任何源码文件。归因完全基于judge_result与extracted_output的间接推断，未通过源码交叉验证。如需确认根因，需人工检查 intent_recognition.py、intent_prompt.py、intent.py 的实际内容。",
+  "quality_flags": [
+    "intent_misrouting",
+    "missing_plan_cards",
+    "empty_response",
+    "insufficient_source_evidence",
+    "ungrounded_root_cause"
+  ],
+  "tool_call_log": [
+    {
+      "tool_name": "search_source_file",
+      "tool_call_id": "call_00_UrSrEVhJKISwOs6wfERU2994",
+      "arguments": {
+        "file_key": "ext_repo:app/workflow/steps:intent_recognition.py"
+      },
+      "result": "File 'ext_repo:app/workflow/steps:intent_recognition.py' not found in catalog"
+    },
+    {
+      "tool_name": "search_source_file",
+      "tool_call_id": "call_01_ewxGpJybuDRpu9qmuh6B6427",
+      "arguments": {
+        "file_key": "ext_repo:app/workflow/prompts:intent_prompt.py"
+      },
+      "result": "File 'ext_repo:app/workflow/prompts:intent_prompt.py' not found in catalog"
+    },
+    {
+      "tool_name": "search_source_file",
+      "tool_call_id": "call_02_OhvManyeIt4tx0hITEIp1671",
+      "arguments": {
+        "file_key": "ext_repo:app/schemas:intent.py"
+      },
+      "result": "File 'ext_repo:app/schemas:intent.py' not found in catalog"
+    },
+    {
+      "tool_name": "search_source_file",
+      "tool_call_id": "call_00_doEBLIAZfb7Qjef6apVX3946",
+      "arguments": {
+        "file_key": "config:ext_repo:app/workflow/steps:intent_recognition.py"
+      },
+      "result": "File 'config:ext_repo:app/workflow/steps:intent_recognition.py' not found in catalog"
+    },
+    {
+      "tool_name": "search_source_file",
+      "tool_call_id": "call_01_YOYpFCnNgnH7yicbdDRP2414",
+      "arguments": {
+        "file_key": "config:ext_repo:app/workflow/prompts:intent_prompt.py"
+      },
+      "result": "File 'config:ext_repo:app/workflow/prompts:intent_prompt.py' not found in catalog"
+    },
+    {
+      "tool_name": "search_source_file",
+      "tool_call_id": "call_02_e60iLwBOrbkik1PsVeiE7851",
+      "arguments": {
+        "file_key": "config:ext_repo:app/schemas:intent.py"
+      },
+      "result": "File 'config:ext_repo:app/schemas:intent.py' not found in catalog"
+    },
+    {
+      "tool_name": "search_source_file",
+      "tool_call_id": "call_00_FFjh4IkqbHEiyF6AjbdV5570",
+      "arguments": {
+        "file_key": "project_adapter:adapter.py"
+      },
+      "result": "Tool call limit reached. Tool call search_source_file not executed. Don't try to execute it again."
+    },
+    {
+      "tool_name": "search_source_file",
+      "tool_call_id": "call_01_dZJFNciR4BhFB5HuOvGC0068",
+      "arguments": {
+        "file_key": "ext_repo:README.md"
+      },
+      "result": "Tool call limit reached. Tool call search_source_file not executed. Don't try to execute it again."
+    },
+    {
+      "tool_name": "search_source_file",
+      "tool_call_id": "call_00_KNYA6dCx91GMIvY8mvm03518",
+      "arguments": {
+        "file_key": "ext_repo:app/workflow/steps:intent_recognition.py"
+      },
+      "result": "Tool call limit reached. Tool call search_source_file not executed. Don't try to execute it again."
+    }
+  ]
+}

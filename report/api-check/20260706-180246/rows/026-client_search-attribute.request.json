@@ -1,0 +1,621 @@
+{
+  "project": "client_search",
+  "trace": {
+    "trace_id": "5e90b78d-23f0-437d-855f-5b6bf7472b41",
+    "project_id": "client_search",
+    "case_id": "mock-agent-client_search-cdd7df11",
+    "live_result": {
+      "project_id": "client_search",
+      "case_id": "mock-agent-client_search-cdd7df11",
+      "session_id": "session_001",
+      "raw_input": {
+        "extra_input_params": {
+          "pCategorys": "重疾险"
+        },
+        "session_id": "session_001",
+        "source": "insurance_search",
+        "trace_id": "trace_001",
+        "user_id": "default_user",
+        "user_text": "帮我看看公司里所有买了重疾险的客户都有谁"
+      },
+      "normalized_request": {
+        "user_text": "帮我看看公司里所有买了重疾险的客户都有谁",
+        "user_id": "default_user",
+        "trace_id": "trace_001",
+        "session_id": "session_001",
+        "source": "insurance_search",
+        "extra_input_params": {
+          "pCategorys": "重疾险"
+        }
+      },
+      "call_status": "succeeded",
+      "runtime_ms": 1276,
+      "extracted_output": {
+        "code": 0,
+        "msg": "操作成功",
+        "robot_text": "产品类别为疾病保险的客户",
+        "end_flag": 1,
+        "trace_id": "trace_001",
+        "query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+        "query_logic": "AND",
+        "conditions": [
+          {
+            "field": "pCategorys",
+            "operator": "MATCH",
+            "value": "疾病保险"
+          }
+        ],
+        "matched_level": 4,
+        "matched_patterns": "### 当前时间\n2026-07-06 18:02:47 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁",
+        "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+        "intent_summary": "产品类别为疾病保险的客户",
+        "confidence": 0.8,
+        "cost_times": 1101.0
+      },
+      "output_source": "live_service",
+      "application_boundary": {
+        "downstream_result_set_available": false,
+        "downstream_status": "unavailable",
+        "judge_scope": "parser_condition_semantics_only",
+        "result_set_verified": false,
+        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+      },
+      "interaction_mode": "single_turn"
+    },
+    "status": "ok",
+    "state_history": [
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-06T10:02:47.497913+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-06T10:02:47.497929+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-06T10:02:48.776592+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-06T10:02:48.776611+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-06T10:06:41.429249+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-06T10:06:41.429281+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-06T10:06:41.429294+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-06T10:06:41.431797+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-06T10:06:41.432291+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "skipped",
+        "started_at": "2026-07-06T10:06:41.432302+00:00"
+      },
+      {
+        "attempt": 1,
+        "status": "succeeded",
+        "started_at": "2026-07-06T10:06:41.456421+00:00"
+      }
+    ],
+    "gate_decisions": [
+      {
+        "gate_id": "trace_available",
+        "gate_type": "required_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "trace exists"
+      },
+      {
+        "gate_id": "consumer_contract_present",
+        "gate_type": "consumer_contract_present",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "consumer contract available"
+      },
+      {
+        "gate_id": "business_expectation_coverage",
+        "gate_type": "business_expectation_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "build_business_expectations",
+        "reason": "business expectations available"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "boundary_decision_present",
+        "gate_type": "boundary_decision_present",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "fulfillment boundary available"
+      },
+      {
+        "gate_id": "derived_verdict_consistency",
+        "gate_type": "derived_verdict_consistency",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "derived verdict matches fulfillment state"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      },
+      {
+        "gate_id": "fulfillment_assessment_coverage",
+        "gate_type": "fulfillment_assessment_coverage",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "evaluate_fulfillment",
+        "reason": "fulfillment assessments cover expectations"
+      },
+      {
+        "gate_id": "attribute_targets_expectation_gap",
+        "gate_type": "attribute_targets_expectation_gap",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "finalize",
+        "reason": "attribute targets fulfillment gaps"
+      },
+      {
+        "gate_id": "probe_evidence_or_blocked_reason",
+        "gate_type": "probe_evidence_or_blocked_reason",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "probe evidence or blocked reason available"
+      },
+      {
+        "gate_id": "expectation_attribution_evidence",
+        "gate_type": "expectation_attribution_evidence",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "expectation attribution evidence available"
+      },
+      {
+        "gate_id": "causal_category_support",
+        "gate_type": "causal_category_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "causal category supported"
+      },
+      {
+        "gate_id": "improvement_direction_support",
+        "gate_type": "improvement_direction_support",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "run_attribution_probes",
+        "reason": "improvement direction available"
+      },
+      {
+        "gate_id": "finalization_ready",
+        "gate_type": "finalization_ready",
+        "passed": true,
+        "recoverable": false,
+        "recommended_transition": "",
+        "reason": "finalization ready"
+      },
+      {
+        "gate_id": "contradiction_free",
+        "gate_type": "contradiction_free",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no contradictions"
+      },
+      {
+        "gate_id": "unsupported_claims_absent",
+        "gate_type": "unsupported_claims_absent",
+        "passed": true,
+        "recoverable": true,
+        "recommended_transition": "collect_evidence",
+        "reason": "no unsupported claims"
+      }
+    ],
+    "transition_decisions": [
+      {
+        "from_state": "prepare_trace",
+        "to_state": "mock_or_input",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "mock_or_input",
+        "to_state": "execute_or_capture",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "execute_or_capture",
+        "to_state": "collect_evidence",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "collect_evidence",
+        "to_state": "build_business_expectations",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "build_business_expectations",
+        "to_state": "evaluate_fulfillment",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "evaluate_fulfillment",
+        "to_state": "fulfillment_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "fulfillment_critic",
+        "to_state": "attribute_expectations",
+        "condition": "fulfillment_requires_attribute",
+        "reason": "fulfillment_requires_attribute",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribute_expectations",
+        "to_state": "run_attribution_probes",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "run_attribution_probes",
+        "to_state": "attribution_critic",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "attribution_critic",
+        "to_state": "finalize",
+        "condition": "always",
+        "reason": "always",
+        "retry_count": 0,
+        "stop_reason": ""
+      },
+      {
+        "from_state": "finalize",
+        "to_state": "completed",
+        "condition": "stop",
+        "reason": "stop",
+        "retry_count": 0,
+        "stop_reason": "completed"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "source": "",
+        "summary": ""
+      }
+    ],
+    "scenario": "",
+    "interaction_mode": "single_turn",
+    "session_id": "session_001",
+    "created_at": "2026-07-06T10:02:48.776555+00:00"
+  },
+  "judge": {
+    "trace_id": "5e90b78d-23f0-437d-855f-5b6bf7472b41",
+    "project_id": "client_search",
+    "verdict": "correct",
+    "score": 1.0,
+    "business_expectations": [
+      {
+        "expectation_id": "client_search:search_condition_contract",
+        "downstream_consumer": "downstream client search",
+        "user_intent": "帮我看看公司里所有买了重疾险的客户都有谁",
+        "expected_outcome": "actual search conditions should cover the target customer population without wrong, missing, or extra conditions",
+        "required_capabilities": [
+          "field_operator_value_logic",
+          "semantic_equivalence",
+          "downstream_search_executability"
+        ],
+        "boundary": {
+          "result_set_verified": false,
+          "application_boundary": {
+            "downstream_result_set_available": false,
+            "downstream_status": "unavailable",
+            "judge_scope": "parser_condition_semantics_only",
+            "result_set_verified": false,
+            "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+          }
+        },
+        "priority": "normal",
+        "evidence_refs": [
+          {
+            "type": "client_search_state_boundary",
+            "state_id": "collect_evidence",
+            "application_boundary": {
+              "downstream_result_set_available": false,
+              "downstream_status": "unavailable",
+              "judge_scope": "parser_condition_semantics_only",
+              "result_set_verified": false,
+              "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+            },
+            "external_boundary_sources": {
+              "config_paths": {
+                "source_field_definitions": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml",
+                "source_field_enums": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml",
+                "source_value_mappings": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml",
+                "source_enhanced_rules": "/Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "client_search:search_condition_contract",
+        "status": "fulfilled",
+        "expected_evidence": [
+          {
+            "query_logic": "AND",
+            "expected_source": "not_available",
+            "reference_is_oracle": false
+          }
+        ],
+        "actual_evidence": [
+          {
+            "query_logic": "AND"
+          }
+        ],
+        "downstream_impact": "search conditions cover the target customer population",
+        "blocking": true
+      },
+      {
+        "expectation_id": "semantic_equivalence_reconciled",
+        "status": "fulfilled",
+        "downstream_impact": "expected/actual 在等价规则下一致",
+        "blocking": false
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "fulfilled",
+      "assessment_count": 2
+    },
+    "expected": {
+      "code": 0,
+      "msg": "操作成功",
+      "robot_text": "产品类别为疾病保险的客户",
+      "end_flag": 1,
+      "trace_id": "trace_001",
+      "query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+      "query_logic": "AND",
+      "conditions": [
+        {
+          "field": "pCategorys",
+          "operator": "MATCH",
+          "value": "疾病保险"
+        }
+      ],
+      "matched_level": 4,
+      "matched_patterns": "### 当前时间\n2026-07-06 18:02:47 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁",
+      "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+      "intent_summary": "产品类别为疾病保险的客户",
+      "confidence": 0.8,
+      "cost_times": 1101.0
+    },
+    "actual": {
+      "code": 0,
+      "msg": "操作成功",
+      "robot_text": "产品类别为疾病保险的客户",
+      "end_flag": 1,
+      "trace_id": "trace_001",
+      "query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+      "query_logic": "AND",
+      "conditions": [
+        {
+          "field": "pCategorys",
+          "operator": "MATCH",
+          "value": "疾病保险"
+        }
+      ],
+      "matched_level": 4,
+      "matched_patterns": "### 当前时间\n2026-07-06 18:02:47 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁",
+      "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+      "intent_summary": "产品类别为疾病保险的客户",
+      "confidence": 0.8,
+      "cost_times": 1101.0
+    },
+    "reasoning_summary": "[judge] LLM 输出不是合法 JSON，无法进入结构化校验。解析错误：whole response: Expecting ',' delimiter at line 5 column 30 (char 118); bare JSON from first bracket: Expecting ',' delimiter at line 5 column 30 (char 118)\n原始输出预览：{\n  \"business_expectations\": [\n    {\n      \"expectation_id\": \"口语重疾险识别为险种大类字段pCategorys\",\n      \"description\": \"用户查询中的\"重疾险\"应被识别为险种大类字段pCategorys，而非产品名称字段（planAbbrNames/abbrname）或健康险标志字段（isBuyHealth）\",\n      \"blocking_level\": \"blocking\",\n      \"acceptance_criteria\": \"actual output的conditions数组中存在fi",
+    "judge_basis": "semantic_equivalence_reconciliation",
+    "judge_method": "current_case_llm_judge",
+    "verdict_derivation": {
+      "condition_comparison_expected": {
+        "query_logic": "AND",
+        "expected_source": "not_available",
+        "reference_is_oracle": false
+      },
+      "condition_comparison_actual": {
+        "query_logic": "AND"
+      },
+      "why_verdict": "client_search condition comparison has no current intent/config expected conditions; reference conditions are evidence only",
+      "missing_evidence": [
+        "current intent/config expected conditions"
+      ],
+      "semantic_equivalence_expected": {
+        "query_logic": "AND",
+        "conditions": [
+          {
+            "field": "pCategorys",
+            "operator": "CONTAINS",
+            "value": [
+              "疾病保险"
+            ]
+          }
+        ]
+      },
+      "semantic_equivalence_actual": {
+        "query_logic": "AND",
+        "conditions": [
+          {
+            "field": "pCategorys",
+            "operator": "CONTAINS",
+            "value": [
+              "疾病保险"
+            ]
+          }
+        ]
+      }
+    },
+    "boundary_decision": {
+      "result_set_verified": false,
+      "application_boundary": {
+        "downstream_result_set_available": false,
+        "downstream_status": "unavailable",
+        "judge_scope": "parser_condition_semantics_only",
+        "result_set_verified": false,
+        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+      }
+    },
+    "consumer_contract": {
+      "consumer": "downstream client search",
+      "contract": "parsed field/operator/value conditions and query logic must be executable for downstream client search within the active application boundary",
+      "reference_contract": {
+        "clientAge": {
+          "field": "clientAge",
+          "operator": "RANGE/GTE/LTE/MATCH",
+          "value_type": "number",
+          "definition": "客户年龄字段，用于年龄精确值或边界条件筛选。",
+          "examples": [
+            "45岁女性保费10万以上",
+            "大于50岁的客户"
+          ]
+        },
+        "clientSex": {
+          "field": "clientSex",
+          "operator": "MATCH",
+          "value_type": "enum",
+          "enums": [
+            "男",
+            "女"
+          ],
+          "definition": "客户性别字段。",
+          "examples": [
+            "45岁女性保费10万以上"
+          ]
+        },
+        "annPremSegNum": {
+          "field": "annPremSegNum",
+          "operator": "GTE/LTE/RANGE/MATCH",
+          "value_type": "number",
+          "definition": "年缴保费金额字段，中文金额单位需要换算成数值。",
+          "examples": [
+            "45岁女性保费10万以上",
+            "年缴保费一万以上的客户"
+          ]
+        },
+        "polNoInfo.payamountdue": {
+          "field": "polNoInfo.payamountdue",
+          "operator": "MATCH",
+          "value_type": "enum",
+          "enums": [
+            "是",
+            "否"
+          ],
+          "definition": "生存金未领取金额是否大于0；是表示存在未领取生存金。",
+          "examples": [
+            "有未领生存金的",
+            "有生存金未领取的客户"
+          ]
+        },
+        "pCategorys": {
+          "field": "pCategorys",
+          "operator": "CONTAINS/NOT_CONTAINS",
+          "value_type": "list",
+          "definition": "险种大类字段，用于年金险、两全险、重疾险等保险类别筛选。",
+          "examples": [
+            "买了年金险或两全险的客户",
+            "只有重疾险的客户"
+          ]
+        }
+      },
+      "application_boundary": {
+        "downstream_result_set_available": false,
+        "downstream_status": "unavailable",
+        "judge_scope": "parser_condition_semantics_only",
+        "result_set_verified": false,
+        "reason": "application adapter probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+      }
+    },
+    "reconstructed_intent": "",
+    "reference_generation_basis": {
+      "source": "not_available",
+      "comparison_basis": "client_search wrong/missing/extra customer-search coverage",
+      "expected_source": "not_available"
+    },
+    "scenario": "",
+    "needs_human_review": true,
+    "quality_flags": [
+      "llm_output_validation_failed",
+      "application_boundary_parser_only",
+      "semantic_equivalence_reconciled"
+    ]
+  }
+}

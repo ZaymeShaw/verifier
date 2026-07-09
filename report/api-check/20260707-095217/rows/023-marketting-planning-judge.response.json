@@ -1,0 +1,177 @@
+{
+  "trace_id": "8cfb93ed-6eff-4e9f-94a7-9556bf864f55",
+  "project_id": "marketting-planning",
+  "verdict": "uncertain",
+  "business_expectations": [
+    {
+      "expectation_id": "意图识别归类准确",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    },
+    {
+      "expectation_id": "SSE事件流正常完成",
+      "downstream_consumer": "",
+      "user_intent": "",
+      "expected_outcome": "",
+      "priority": "normal"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图识别归类准确",
+      "status": "not_fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    },
+    {
+      "expectation_id": "SSE事件流正常完成",
+      "status": "fulfilled",
+      "downstream_impact": "",
+      "blocking": false
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "summary": "意图识别错误导致核心业务期望未满足，虽然SSE流完整，但整体失败。",
+    "blocking_gaps": [
+      "意图识别归类错误，将NBEV目标弥补请求识别为“其他意图”，未进入营销规划流程"
+    ],
+    "assessment_count": 2
+  },
+  "expected": {
+    "turns": [
+      {
+        "turn_index": 0,
+        "code": 0,
+        "end_flag": 1,
+        "msg": "success",
+        "input_turn": {
+          "content": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？",
+          "role": "user"
+        },
+        "extra_output_params": {
+          "intent": "planning_intent",
+          "intent_name": "营销规划",
+          "card_result": {
+            "event": "card_end",
+            "answer": "",
+            "think": "",
+            "sse_id": "mock-agent-marketting-planning-d1642b58:card_end",
+            "extensions": {
+              "session_id": "eval-mock-agent-marketting-planning-d1642b58",
+              "trace_id": "mock-agent-marketting-planning-d1642b58"
+            }
+          }
+        },
+        "robot_text": "规划方案生成中..."
+      }
+    ]
+  },
+  "reasoning_summary": "在意图识别阶段，系统将用户明确的NBEV目标弥补规划请求错误地归类为“其他意图（4001）”，导致核心业务期望未能满足。尽管SSE事件流正常结束，但意图识别失败属于阻塞性缺陷，因此整体评估为未满足。其他后续维度因流程未推进而无法评估。",
+  "judge_basis": "基于用户query的业务语义、意图识别输出及application_boundary判断。",
+  "judge_method": "将实际输出与期望的意图分类和SSE完整性进行直接对比，结合业务上下文评估。",
+  "verdict_derivation": {
+    "core_evaluations": [
+      "意图识别失败 -> not_fulfilled",
+      "SSE完成 -> fulfilled"
+    ],
+    "overall_status": "not_fulfilled",
+    "reason": "存在阻塞性gaps（意图错误）"
+  },
+  "missing": [
+    {
+      "kind": "missing",
+      "error_type": "",
+      "expected": "系统应输出澄清问题或规划卡片",
+      "evidence_ref": "",
+      "raw": {
+        "item": "营销规划澄清或规划引导",
+        "expected": "系统应输出澄清问题或规划卡片",
+        "impact": "用户获得无效响应"
+      },
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "wrong",
+      "error_type": "",
+      "expected": "规划相关意图",
+      "actual": "4001 - 其他意图",
+      "evidence_ref": "",
+      "raw": {
+        "item": "意图分类",
+        "expected": "规划相关意图",
+        "actual": "4001 - 其他意图",
+        "impact": "导致流程无法进入营销规划，用户需求未响应"
+      },
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "type": "output",
+      "source": "extracted_output.turns[0]",
+      "content": "intent=4001, intent_name=其他意图"
+    }
+  ],
+  "boundary_decision": {
+    "within_evaluable_scope": true,
+    "evaluable_errors": [
+      "意图识别结果错误，归类为其他意图"
+    ]
+  },
+  "evaluation_boundary": {
+    "allow_fallback": false,
+    "dependency_status": "available",
+    "judge_scope": "系统内部意图识别责任范围，不涉及外部依赖"
+  },
+  "consumer_contract": {
+    "expected_response": "系统应识别为规划意图并进入澄清或规划阶段",
+    "fallback_policy": "不允许默认回退至其他意图",
+    "session_requirements": "可能需澄清缺失字段"
+  },
+  "intent_model": {
+    "primary_intent": "营销规划",
+    "business_metric": "NBEV",
+    "target_gap": "不少（具体数值需澄清）",
+    "time_range": "今年",
+    "decomposition_dimensions": [
+      "增加理财师（人员维度）",
+      "优化产品方案（产品维度）"
+    ],
+    "action_required": "规划弥补缺口方案"
+  },
+  "reconstructed_intent": "用户希望针对团队今年的NBEV目标缺口，通过调整理财师配置和优化产品方案等方式，制定弥补缺口的营销规划。",
+  "reference_generation_basis": {
+    "basis": "基于用户输入的业务意图和critical_intent_dimensions推导出期望的意图识别结果。",
+    "reference_contract": "intent_recognition阶段的预期：意图应正确分类，SSE正常结束。"
+  },
+  "scenario": "intent_recognition",
+  "needs_human_review": true,
+  "quality_flags": [
+    "意图识别错误",
+    "未能进入业务规划流程",
+    "invalid_actual_shape"
+  ],
+  "summary": {
+    "reason": "not_fulfilled · blocking=[(none)] · 在意图识别阶段，系统将用户明确的NBEV目标弥补规划请求错误地归类为“其他意图（4001）”，导致核心业务期望未能满足。尽管SSE事件流正常结束，但意图识别失败属于阻塞性缺陷，因此整体评估为未满足。其他后续维度因流程未推进而无法评估。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "意图识别归类准确",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "",
+        "within_evaluable_scope": true,
+        "evidence": "在意图识别阶段，系统将用户明确的NBEV目标弥补规划请求错误地归类为“其他意图（4001）”，导致核心业务期望未能满足。尽管SSE事件流正常结束，但意图识别失败属于阻塞性缺陷，因此整体评估为未满足。其他后续维度因流程未推进而无法评估。"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 2,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

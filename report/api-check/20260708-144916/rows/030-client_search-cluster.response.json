@@ -1,0 +1,51 @@
+{
+  "project_id": "client_search",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::judge agent 在生成评估结果时输出了格式错误的 JSON，解析器无法提取 business_expectations 列表，导致整体评估标记为 not::not_evaluable",
+      "mechanism": "judge agent 在生成评估结果时输出了格式错误的 JSON，解析器无法提取 business_expectations 列表，导致整体评估标记为 not::not_evaluable",
+      "causal_category": "",
+      "fulfillment_statuses": [
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "client_search:judge_output_parsing_error"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "client_search:mock-agent-client_search-cdd7df11:1783493358232"
+      ],
+      "representative_traces": [
+        "client_search:mock-agent-client_search-cdd7df11:1783493358232"
+      ],
+      "common_root_cause": "judge agent 在生成评估结果时输出了格式错误的 JSON，解析器无法提取 business_expectations 列表，导致整体评估标记为 not_evaluable。此外，下游客户搜索服务连接失败限制了 judge 的可验证范围，但核心故障点在于 LLM 输出的 JSON 格式错误。",
+      "shared_failure_pattern": "judge agent 在生成评估结果时输出了格式错误的 JSON，解析器无法提取 business_expectations 列表，导致整体评估标记为 not_evaluable。此外，下游客户搜索服务连接失败限制了 judge 的可验证范围，但核心故障点在于 LLM 输出的 JSON 格式错误。",
+      "representative_diffs": [
+        {
+          "case_id": "client_search:mock-agent-client_search-cdd7df11:1783493358232",
+          "root_cause": "judge agent 在生成评估结果时输出了格式错误的 JSON，解析器无法提取 business_expectations 列表，导致整体评估标记为 not_evaluable。此外，下游客户搜索服务连接失败限制了 judge 的可验证范围，但核心故障点在于 LLM 输出的 JSON 格式错误。",
+          "evidence": [
+            "judge_result.llm_output_validation_failed 明确指出 LLM 输出不是合法 JSON",
+            "judge_result.reasoning_summary 提供了原始输出预览及解析错误位置（第5行第31列）",
+            "judge_result.overall_fulfillment.status 为 not_evaluable",
+            "run_trace.downstream_search 状态为 not_verified，错误为 Remote end closed connection，可能影响 judge 数据可用性"
+          ]
+        }
+      ],
+      "verification_cases": [
+        "client_search:mock-agent-client_search-cdd7df11:1783493358232"
+      ],
+      "next_actions": [
+        "judge_result.llm_output_validation_failed 明确指出 LLM 输出不是合法 JSON",
+        "judge_result.reasoning_summary 提供了原始输出预览及解析错误位置（第5行第31列）",
+        "judge_result.overall_fulfillment.status 为 not_evaluable",
+        "run_trace.downstream_search 状态为 not_verified，错误为 Remote end closed connection，可能影响 judge 数据可用性"
+      ]
+    }
+  ],
+  "common_root_cause": "judge agent 在生成评估结果时输出了格式错误的 JSON，解析器无法提取 business_expectations 列表，导致整体评估标记为 not_evaluable。此外，下游客户搜索服务连接失败限制了 judge 的可验证范围，但核心故障点在于 LLM 输出的 JSON 格式错误。",
+  "impact": "",
+  "priority": "normal"
+}
