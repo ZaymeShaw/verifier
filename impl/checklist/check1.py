@@ -40,8 +40,8 @@ from impl.core.config import get_uat_base_url
 
 # Minimal test: QA + marketplan-intent only (2 cases each) for fix validation
 CONFIG = {
-    "projects": ["marketting-planning-intent", "QA","client_search","marketting-planning"],
-    "case_counts": {"marketting-planning-intent": 4, "QA": 4,"client_search":10},
+    "projects": ["marketting-planning-intent", "QA","client_search","marketting-planning","deerflow"],
+    "case_counts": {"marketting-planning-intent": 4, "QA": 4,"client_search":10,"deerflow":4},
     "required_cases": {
         # mock_agent 产出的 case ID 是动态的，不再用旧 seed ID。
         # required_cases 留空，全部走 balanced 选取逻辑。

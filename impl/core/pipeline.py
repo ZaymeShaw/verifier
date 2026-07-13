@@ -649,7 +649,11 @@ def _attach_case_table_rows(project_id: str, cases: list[Dict[str, Any]]) -> lis
     return cases
 
 
-def mock_cases(project_id: str, count: int = 3) -> list[Dict[str, Any]]:
+def mock_cases(project_id: str, count: int = 3, cases_per_scenario: int = 0) -> list[Dict[str, Any]]:
+    """生成 mock cases。优先用固化的 fixture；否则用 mock_agent LLM 动态生成。
+
+    cases_per_scenario > 0 时按场景遍历生成（每场景 N 条），覆盖 count。
+    """
     fixtures = _fixture_mock_cases(project_id)
     if fixtures:
         return _attach_case_table_rows(project_id, fixtures[:count])
@@ -657,15 +661,27 @@ def mock_cases(project_id: str, count: int = 3) -> list[Dict[str, Any]]:
     live_schema = load_live_schema(project_id)
     scenarios = list(getattr(live_schema, "SCENARIO_ENUM", []) or []) or [""]
     cases: list[Dict[str, Any]] = []
-    for scenario in scenarios[:count]:
-        built = mock_build_intent(project_id, scenario=scenario)
-        if built and isinstance(built.get("input"), dict):
-            cases.append(built)
+    if cases_per_scenario and cases_per_scenario > 0:
+        for scenario in scenarios:
+            for _ in range(cases_per_scenario):
+                built = mock_build_intent(project_id, scenario=scenario)
+                if built and isinstance(built.get("input"), dict):
+                    cases.append(built)
+    else:
+        for scenario in scenarios[:count]:
+            built = mock_build_intent(project_id, scenario=scenario)
+            if built and isinstance(built.get("input"), dict):
+                cases.append(built)
+    _ = spec  # 保留 spec 引用以备扩展
     return _attach_case_table_rows(project_id, cases)
 
 
-def mock_datasets(project_id: str) -> list[Dict[str, Any]]:
-    cases = mock_cases(project_id)
+def mock_datasets(
+    project_id: str,
+    count: int = 3,
+    cases_per_scenario: int = 0,
+) -> list[Dict[str, Any]]:
+    cases = mock_cases(project_id, count=count, cases_per_scenario=cases_per_scenario)
     if not cases:
         return []
     by_scenario: dict[str, list[Dict[str, Any]]] = {}
@@ -683,6 +699,26 @@ def mock_datasets(project_id: str) -> list[Dict[str, Any]]:
         }
         for scenario, scenario_cases in by_scenario.items()
     ]
+
+
+def save_mock_cases(
+    project_id: str,
+    cases: list[Dict[str, Any]],
+    output_path: Optional[str] = None,
+) -> Dict[str, Any]:
+    """把 cases 写入 JSON 文件。格式与 _fixture_mock_cases 读取的格式一致。
+
+    output_path:
+        None 或 "default" → impl/data/<project>/mock_cases.json
+        其他路径 → 按指定路径写
+    返回 {"path": ..., "case_count": ...}。
+    """
+    target = IMPL_ROOT / "data" / project_id / "mock_cases.json"
+    if output_path and output_path != "default":
+        target = Path(output_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(cases, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"saved": True, "save_path": str(target), "save_count": len(cases)}
 
 
 def check_mock_data(project_id: str, data_path: Optional[str] = None, cases: Optional[list[Dict[str, Any]]] = None) -> Dict[str, Any]:

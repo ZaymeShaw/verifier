@@ -49,6 +49,7 @@ verifier 分三层（见 `spec/adapter.md`），接入时**只补项目扩展层
 - **操作**：理解业务场景、API 配置、`common.ready` 声明
 - **验收**：能正确读取 project.yaml 关键字段
 - **边界**：project.yaml 是唯一事实源，skill 不自动生成
+- **其他**：live没有启动时请根据yaml指引启动live背后的业务系统
 
 ### Step 1: 跑 scaffold 生成骨架
 - **命令**：`bash run.sh python scripts/scaffold_project.py --project <id>`

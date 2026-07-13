@@ -51,9 +51,15 @@ def main(argv=None):
 
     p = sub.add_parser("mock-cases")
     p.add_argument("--project", required=True)
+    p.add_argument("--count", type=int, default=3, help="生成多少条 case（按场景轮转取前 N 条）")
+    p.add_argument("--save", default="", help="写入文件路径；默认不写盘。设为 'default' 用项目默认位置 impl/data/<project>/mock_cases.json，也可指定其他绝对/相对路径")
+    p.add_argument("--cases-per-scenario", type=int, default=0, help="每个场景生成多少条 case；>0 时覆盖 --count，按场景遍历生成")
 
     p = sub.add_parser("mock-datasets")
     p.add_argument("--project", required=True)
+    p.add_argument("--count", type=int, default=3, help="生成多少条 case（按场景轮转取前 N 条）")
+    p.add_argument("--save", default="", help="写入文件路径；默认不写盘。设为 'default' 用项目默认位置 impl/data/<project>/mock_cases.json，也可指定其他绝对/相对路径")
+    p.add_argument("--cases-per-scenario", type=int, default=0, help="每个场景生成多少条 case；>0 时覆盖 --count，按场景遍历生成")
 
     p = sub.add_parser("mock-check")
     p.add_argument("--project", default="")
@@ -101,9 +107,14 @@ def main(argv=None):
         _cli_check_request(args.project, load_json_arg(args.input))
         emit(pipeline.live_run(args.project, load_json_arg(args.input)))
     elif args.cmd == "mock-cases":
-        emit({"project_id": args.project, "cases": pipeline.mock_cases(args.project)})
+        cases = pipeline.mock_cases(args.project, count=args.count)
+        save_result = _maybe_save_mock_cases(args, cases)
+        emit({"project_id": args.project, "cases": cases, **save_result})
     elif args.cmd == "mock-datasets":
-        emit({"project_id": args.project, "datasets": pipeline.mock_datasets(args.project)})
+        datasets = pipeline.mock_datasets(args.project, count=args.count, cases_per_scenario=args.cases_per_scenario)
+        cases_flat = [c for d in datasets for c in (d.get("cases") or [])]
+        save_result = _maybe_save_mock_cases(args, cases_flat)
+        emit({"project_id": args.project, "datasets": datasets, **save_result})
     elif args.cmd == "mock-check":
         cases = load_json_arg(args.cases) if args.cases else None
         if args.project:
@@ -168,6 +179,17 @@ def _cli_check_request(project_id: str, input_data: Any) -> None:
             print(f"[live_schema] WARNING: CLI input does not match REQUEST_SCHEMA for {project_id}", file=sys.stderr)
     except Exception as e:
         print(f"[live_schema] WARNING: request check raised for {project_id}: {e}", file=sys.stderr)
+
+
+def _maybe_save_mock_cases(args, cases: list) -> dict:
+    """如果 args.save 非空，把 cases 写盘。返回附加到 emit 的字段。"""
+    if not getattr(args, "save", ""):
+        return {}
+    return pipeline.save_mock_cases(
+        project_id=args.project,
+        cases=cases,
+        output_path=args.save,
+    )
 
 
 if __name__ == "__main__":

@@ -8,12 +8,19 @@ project_id: "<project>"
 # 灰度加载使用 project.yaml 的 <role>_draft 配置。
 role: "attribute"
 
-# 本轮真正要改善什么。探索、修改和最终结论都围绕它进行。
+# 本轮真正要改善什么。整轮稳定，不随 prompt 漂移。
+# 反复要求改 objective，说明这里没写对，应更新 config 而不是在 prompt 临时承载。
 objective: |
   Describe the behavior that should improve and the constraints that matter.
 
 # 项目已有固定 mock 数据集。整个 loop 直接加载并使用同一份数据，不在迭代中修改。
-mock_source: "<existing project mock dataset>"
+# 分两层：
+# - iteration_cases：参与 loop 的 case，探索/固化/对比都基于它。
+# - unseen_cases：未见对照 case，只在 promotion 前跑，检测泛化退化。
+# 不指定 unseen_cases 时，promotion 不成立（缺泛化验证）。
+mock_source:
+  iteration_cases: "<existing project mock dataset path>"
+  unseen_cases: "<existing project unseen mock dataset path>"
 mock_frozen: true
 
 # 理解项目和寻找优化路径时应阅读的源码、配置、文档、trace 或已有工具。
@@ -25,7 +32,8 @@ material:
   - path: "impl/projects/<project>/adapter.py"
     note: "角色、工具和已有检查能力的入口。"
 
-# 用户如何判断 objective 是否真正改善。结论必须结合真实实验逐条回答。
+# 用户如何判断 objective 是否真正改善。默认应包含泛化能力。
+# 结论必须结合真实实验逐条回答，不能用字段丰富度冒充效果。
 review: |
   泛化能力：未见 case 上也能保持目标行为。
   准确性：对目标行为的判断或归因正确。
