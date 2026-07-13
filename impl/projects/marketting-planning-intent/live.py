@@ -4,7 +4,7 @@ import json
 import time
 import urllib.error
 import urllib.request
-from typing import Any
+from typing import Any, Dict
 
 from impl.core.schema import ExecutionTraceEvent, LiveExecutionResult, LiveRequest, MultiTurnCase, ProjectSpec, SingleTurnCase
 
@@ -139,16 +139,28 @@ def build_execution_trace(input_data: dict[str, Any], request: dict[str, Any], r
     ]
 
 
-class LiveDelivery:
-    """marketting-planning-intent 项目的 live 投递层。"""
+from impl.core.live_protocol import RealServiceLive
 
-    def deliver_real(self, spec: ProjectSpec, adapter: Any, request: LiveRequest) -> LiveExecutionResult:
-        start = time.time()
+
+class MarketingIntentLive(RealServiceLive):
+    """marketting-planning-intent 项目 Live 实现（新协议）。"""
+
+    def __init__(self, spec: ProjectSpec, adapter):
+        super().__init__(spec)
+        self._adapter = adapter
+
+    def build_request(self, case: SingleTurnCase | MultiTurnCase) -> Dict[str, Any]:
+        live_request = self._adapter.build_request(case)
+        return live_request.normalized_request
+
+    def deliver_real(self, request: LiveRequest) -> Any:
+        import time as _time
+        start = _time.time()
         try:
             body = json.dumps(_live_request_body(request), ensure_ascii=False).encode("utf-8")
-            url = str(spec.api.get("base_url") or "").rstrip("/") + "/" + str(spec.api.get("endpoint") or "").lstrip("/")
-            api_request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method=str(spec.api.get("method") or "POST").upper())
-            with urllib.request.urlopen(api_request, timeout=float(spec.api.get("timeout") or 60)) as response:
+            url = str(self.spec.api.get("base_url") or "").rstrip("/") + "/" + str(self.spec.api.get("endpoint") or "").lstrip("/")
+            api_request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method=str(self.spec.api.get("method") or "POST").upper())
+            with urllib.request.urlopen(api_request, timeout=float(self.spec.api.get("timeout") or 60)) as response:
                 raw_response = {"raw": response.read().decode("utf-8"), "request": request.normalized_request}
             call_status = "succeeded"
             call_error = None
@@ -166,13 +178,22 @@ class LiveDelivery:
             call_status=call_status,
             raw_response=raw_response,
             call_error=call_error,
-            runtime_ms=int((time.time() - start) * 1000),
+            runtime_ms=int((_time.time() - start) * 1000),
             extracted_output=extracted_output,
             output_source=request.execution_mode,
-            execution_trace=build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output, spec),
+            execution_trace=build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output, self.spec),
             project_fields=project_fields(raw_response, extracted_output),
             application_boundary=application_boundary(raw_response, extracted_output),
         )
 
-    def deliver_provided(self, spec: ProjectSpec, adapter: Any, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Any:
-        return provided_output_raw(case, request)
+    def extract_output(self, raw_response: Any, request: LiveRequest) -> Dict[str, Any]:
+        return extract_output(raw_response)
+
+    def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest, application_boundary: Dict[str, Any]) -> Dict[str, Any]:
+        return project_fields(raw_response, extracted_output)
+
+    def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> Dict[str, Any]:
+        return application_boundary(raw_response, extracted_output)
+
+    def build_execution_trace(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> list:
+        return build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output, self.spec)

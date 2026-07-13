@@ -1,0 +1,77 @@
+# Draft loop 初始化配置模板。
+# config 不落盘到项目 draft 目录——在对话里给 skill（贴 yaml 内容或指向临时位置），
+# skill 运行时读，不写进项目 draft 目录。
+# 字段对齐 SKILL.md 步骤 2 和 spec/draft/draft.md 阶段 0。
+
+# 目标项目 id；用于定位 impl/projects/<project>/ 下的 adapter、draft 和项目配置。
+# 必填，不填跑不起来。
+project_id: "<project>"
+
+# 当前 draft 角色；attribute / judge / 后续可扩展。
+# 必填，决定跑哪个协议、哪个角色层对比脚本。
+role: "attribute"
+
+# 本轮 draft 的初始优化需求；多行 prompt 写清目标、约束、用户偏好。
+# 后续用户可用 prompt 调整需求，但 mock 数据只能在配置或用户明确要求时变。
+# 必填。示例：
+#   objective: |
+#     当前 attribute 归因停在模块名（如 intent_recognition），要下沉到可修改点
+#     （具体 tool / 具体代码路径 / 具体配置项）。引入项目特有 probe 复用 adapter
+#     comparison，不另造 comparator。约束：证据不足标 weak/none，不伪造 strong。
+objective: |
+  Describe what the <role> draft should improve.
+  Include constraints, preferred evidence sources, and known risks.
+
+# 固定评测数据来源；指向**项目已有的** trace/fixtures/run_chain 输出，不另生成冻结副本。
+# 冻结的是"loop 中不改这份源数据"，不是"再生成一份"。
+# 形态可以是：
+#   ① trace 文件目录：如 "tmp/<run_chain 输出>/"，按文件名解析成 RunTrace 列表
+#      （attribute 角色需配对同 trace_id 的 JudgeResult）
+#   ② fixtures 脚本：如 "impl/projects/<project>/fixtures/cases.py"，import 调用其返回 case 列表的函数
+#   ③ 显式 case 文件：如 ".json" 或 ".py"，按 case_key/trace/judge_result 等字段解析
+# 必填。case 字段不预定义，由当前 ProjectXxx 模板方法签名 + 扩展点签名派生
+# （见对应角色 ROLE.md "case 字段" 章节）。
+# 如果 mock_source 指向的数据没有 expected_check 字段，skill 在加载时提示用户补——
+# case 必须带期望，否则对比无判定依据。
+mock_source: "tmp/<run_chain 输出>/"
+
+# 资料来源清单；用于建立项目理解（不是 case 数据）。
+# 支持多个项目目录、文档、配置、trace 或工具说明，并用 note 说明为什么重要。
+# 必填。draft 实现者按这份清单读项目源码/配置/文档/现有 adapter/tool/schema，
+# 建立项目理解，只读不改。
+material:
+  - path: "impl/projects/<project>/project.yaml"
+    note: "项目配置、文档、语义规则、可用 runtime hooks。"
+  - path: "impl/projects/<project>/<role>.py"
+    note: "当前正式版 <role> 实现，要改的就是它。"
+  - path: "impl/projects/<project>/live_schema"
+    note: "项目 live_schema，REQUEST_SCHEMA / EXTRACT_OUTPUT_SCHEMA / scenario enum。"
+  # 按需添加：
+  # - path: "impl/projects/<project>/adapter.py"
+  #   note: "项目 adapter，看现有 comparison/runtime check 能否复用。"
+  # - path: "tmp/<最新 run_chain 输出>"
+  #   note: "最近一次失败的归因/判定 trace，定位 current 实际表现。"
+
+# mock 数据是否冻结；必须为 true。
+# loop 中不得修改 case 数据，除非用户明确更新本配置或明确要求改。
+# skill 对参与评测的源文件及序列化 case 内容建立 SHA-256 基线，每轮运行前后重算；
+# 摘要变化立即终止 loop，用户明确更新 config 后才重建基线。
+# 改成 false 违反 spec/draft/draft.md 阶段 2 case 契约 3，无法防伪造。
+mock_frozen: true
+
+# review prompt；多行填写，每行一个评审原则或描述。
+# 具体比较逻辑由 skill 门禁和当前 evidence 决定，不在 config 里重建 comparator。
+# 必填。decision_rule 用这些原则判定 draft 是否更优。
+# 建议三类原则：泛化能力 / 准确性 / 可用性。
+review: |
+  泛化能力：扩展到没见过的 case 上依然有较强的判定/归因能力。
+  准确性：判定/归因的准确度。
+  可用性：开发可以直接采纳建议改进。
+
+# loop 最多迭代次数；每轮只允许优化 draft/tool/report，不允许自动改 mock 数据。
+# 建议 3-5。达上限仍未更优 → 记录 blocker，不 promotion。
+max_iterations: 5
+
+# 对比报告输出位置；具体报告落在项目 draft 目录，不进入 production。
+# 不填默认 impl/projects/<project>/draft/<role>_comparison_report.md
+report_path: "impl/projects/<project>/draft/<role>_comparison_report.md"

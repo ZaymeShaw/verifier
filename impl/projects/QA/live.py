@@ -26,17 +26,17 @@ def extract_output(raw_response: Any) -> Dict[str, Any]:
 
 
 def project_fields(raw_response: Any, extracted_output: Dict[str, Any], request: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    # normalized_request 现在是 QAInput 形状（flat），contexts 在顶层
     normalized_request = request if isinstance(request, dict) else None
     if normalized_request is None and isinstance(raw_response, dict):
         embedded = raw_response.get("_normalized_request")
         normalized_request = embedded if isinstance(embedded, dict) else None
     if not isinstance(normalized_request, dict):
         return {}
-    sample_input = normalized_request.get("input") if isinstance(normalized_request.get("input"), dict) else {}
     return {
         "scenario": normalized_request.get("scenario") or "",
         "data_quality_flags": list(normalized_request.get("data_quality_flags") or []),
-        "contexts": list(sample_input.get("contexts") or []),
+        "contexts": list(normalized_request.get("contexts") or []),
         "reference": dict(normalized_request.get("reference") or {}),
         "metadata": dict(normalized_request.get("metadata") or {}),
         "estimated_quality_only": normalized_request.get("scenario") == "qa_weak_quality",
@@ -55,30 +55,42 @@ def build_execution_trace(input_data: Dict[str, Any], request: Dict[str, Any], r
     ]
 
 
-class LiveDelivery:
-    """QA 项目的 live 投递层：只读取 case 中的预制输出，不调用外部服务。"""
+from impl.core.live_protocol import ProvidedOutputLive
 
-    def deliver_provided(self, spec: ProjectSpec, adapter: Any, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Any:
+
+class QALive(ProvidedOutputLive):
+    """QA 项目 Live 实现（新协议）：只读取 case 中的预制输出，不调用外部服务。
+
+    复用模块级函数，扩展点签名统一使用 LiveRequest。
+    """
+
+    def build_request(self, case: SingleTurnCase | MultiTurnCase) -> Dict[str, Any]:
+        # 方案 A：mock 直接对接 live_schema，build_request 不做形状翻译。
+        # case.input 已是 QAInput 形状（= REQUEST_SCHEMA），直接透传作为 normalized_request。
+        input_data = dict(case.input or {}) if hasattr(case, "input") else {}
+        # 补默认值，保持 QAInput 形状完整，不改形状
+        normalized = {
+            "question": str(input_data.get("question") or ""),
+            "contexts": list(input_data.get("contexts") or []),
+            "reference": dict(input_data.get("reference") or {}),
+            "metadata": dict(input_data.get("metadata") or {}),
+            "scenario": str(input_data.get("scenario") or "qa_default"),
+            "data_quality_flags": list(input_data.get("data_quality_flags") or []),
+            "output": dict(input_data.get("output") or getattr(case, "output", {}) or {}),
+        }
+        return normalized
+
+    def deliver_provided(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Any:
         return provided_output_raw(case, request)
 
-    def deliver_real(self, spec: ProjectSpec, adapter: Any, request: LiveRequest) -> LiveExecutionResult:
-        call_error = "QA project is provided-output only; no real live service is configured."
-        boundary = {**application_boundary(), "live_service_available": False, "sample_replay_only": True}
-        trace = [
-            ExecutionTraceEvent(stage="qa.live_service", status="failed", evidence={"reason": call_error}),
-        ]
-        return LiveExecutionResult(
-            project_id=request.project_id,
-            case_id=request.case_id,
-            session_id=request.session_id,
-            raw_input=request.raw_input,
-            normalized_request=request.normalized_request,
-            call_status="failed",
-            raw_response=None,
-            call_error=call_error,
-            extracted_output={},
-            output_source="live_service_unavailable",
-            execution_trace=trace,
-            project_fields=project_fields(None, {}, request.normalized_request),
-            application_boundary=boundary,
-        )
+    def extract_output(self, raw_response: Any, request: LiveRequest) -> Dict[str, Any]:
+        return extract_output(raw_response)
+
+    def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> Dict[str, Any]:
+        return application_boundary(raw_response, extracted_output)
+
+    def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest, application_boundary: Dict[str, Any]) -> Dict[str, Any]:
+        return project_fields(raw_response, extracted_output, request.normalized_request)
+
+    def build_execution_trace(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> list[ExecutionTraceEvent]:
+        return build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output)

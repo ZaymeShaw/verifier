@@ -6,6 +6,7 @@ import time
 from typing import Any, Dict
 
 from impl.core.adapter import ProjectAdapter
+from impl.core.adapter_v2 import LegacyProjectAdapter
 from impl.core.interaction_protocol import ready_from_spec
 from impl.core.schema import AttributeResult, JudgeResult, LiveRequest, MockDataset, MultiTurnCase, RunTrace, SingleTurnCase, TraceExecutionContext
 from impl.projects.client_search.tools import ClientSearchConditionCompareTool, build_field_capability_tool, build_rule_verify_tool, build_search_api_tool
@@ -16,7 +17,22 @@ import yaml as _yaml
 from impl.projects.client_search.capability_manifest import build_capability_manifest
 
 
-class Adapter(ProjectAdapter):
+class Adapter(LegacyProjectAdapter):
+
+    def _load_live(self):
+        """加载 ProjectLive 实例（新协议）"""
+        from impl.projects.client_search.live import ClientSearchLive
+        return ClientSearchLive(self.spec, self)
+
+    def _load_judge(self):
+        """加载 ProjectJudge 实例（新协议）"""
+        from impl.projects.client_search.judge import ClientSearchJudge
+        return ClientSearchJudge(self.spec, self)
+
+    def _load_attribute(self):
+        """加载 ProjectAttribute 实例（新协议）"""
+        from impl.projects.client_search.attribute import ClientSearchAttribute
+        return ClientSearchAttribute(self.spec, self)
     field_patterns = {
         "clientAge": {
             "field": "clientAge",

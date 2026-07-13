@@ -93,8 +93,16 @@ def live_run(project_id: str, case: SingleTurnCase | Dict[str, Any]) -> RunTrace
     adapter = load_adapter(spec)
     normalized_case = _case_from_input(project_id, normalize_mock_case(input_data) or SingleTurnCase(id="", input=dict(input_data or {})))
     contract = interaction_contract(normalized_case)
-    live_request = build_live_request(adapter, normalized_case, project_id)
-    result = run_live(spec, adapter, normalized_case, live_request, contract)
+    # 走协议层入口：adapter.live().deliver()（新协议主流程）
+    # 兼容旧路径：adapter 未迁移时（无 live() 或 live() 返回非 ProjectLive），走 run_live
+    from impl.core.live_protocol import ProjectLive
+    live = adapter.live() if hasattr(adapter, "live") else None
+    if isinstance(live, ProjectLive):
+        result = live.deliver(normalized_case, contract)
+    else:
+        # 兼容旧路径（adapter 未迁移时）
+        live_request = build_live_request(adapter, normalized_case, project_id)
+        result = run_live(spec, adapter, normalized_case, live_request, contract)
     trace = trace_from_live_result(adapter, result)
     trace.execution_mode = "provided" if result.output_source == "provided_output" else "live"
     trace.ready = ready_from_spec(spec)
@@ -177,6 +185,13 @@ def judge(project_id: str, trace: RunTrace, expected_intent: Optional[str] = Non
     adapter = load_adapter(spec)
     if not getattr(trace, "ready", None):
         trace.ready = ready_from_spec(spec)
+    # 走协议层入口：adapter.judge().judge_trace()（新协议主流程）
+    from impl.core.judge_protocol import ProjectJudge
+    judge_inst = adapter.judge() if hasattr(adapter, "judge") else None
+    if isinstance(judge_inst, ProjectJudge):
+        result = judge_inst.judge_trace(trace, expected_intent=expected_intent)
+        return _enforce_judge_live_schema(project_id, trace, normalize_judge_result(result) or result)
+    # 兼容旧路径：项目 judge.py 模块的函数式 judge_trace
     project_judge = load_project_judge(spec)
     if project_judge is not None and hasattr(project_judge, "judge_trace"):
         result = project_judge.judge_trace(spec, adapter, trace, expected_intent=expected_intent)
@@ -187,6 +202,13 @@ def judge(project_id: str, trace: RunTrace, expected_intent: Optional[str] = Non
 def attribute(project_id: str, trace: RunTrace, judge_result: JudgeResult) -> AttributeResult:
     spec = load_project(project_id)
     adapter = load_adapter(spec)
+    # 走协议层入口：adapter.attribute().attribute_failure()（新协议主流程）
+    from impl.core.attribute_protocol import ProjectAttribute
+    attr_inst = adapter.attribute() if hasattr(adapter, "attribute") else None
+    if isinstance(attr_inst, ProjectAttribute):
+        result = attr_inst.attribute_failure(trace, judge_result)
+        return _normalize_attribute_schema_payload(result)
+    # 兼容旧路径：项目 attribute.py 模块的函数式 attribute_failure
     project_attribute = load_project_attribute(spec)
     if project_attribute is not None and hasattr(project_attribute, "attribute_failure"):
         result = project_attribute.attribute_failure(spec, adapter, trace, judge_result)

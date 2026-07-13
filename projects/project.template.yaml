@@ -1,0 +1,55 @@
+# ============================================================================
+# user-side project.yaml 模板
+# 位置：verifier/projects/<project_id>/project.yaml
+# 作用：业务资料索引，供 evals skill 接入时 AI 分析用
+# 注意：本文件不被 verifier 运行时代码硬依赖，纯 AI 资料索引
+#       真正的运行时配置在 impl/projects/<id>/project.yaml
+# ============================================================================
+
+# === 必填：项目标识 ===
+project_id: my_project                    # 项目 ID（决定目录名 impl/projects/<id>）
+name: 我的项目                              # 显示名
+description: 简短说明这个项目测什么          # AI 分析的依据
+
+# === 1. live 系统部署 / API 调用 / 环境信息 ===
+# 通过文档承载（不在 yaml 里硬填结构化字段，避免和 impl 侧重复）
+# 三个字段名固定，AI 按字段名去对应文档读
+live:
+  startup_doc: start.md          # 部署/启动文档（怎么跑业务系统、依赖什么、端口等）
+  api_doc: api.md                # API 调用文档（端点、请求参数、响应形状）
+  env_doc: env.md                # 环境变量文档（依赖配置、密钥、外部服务等）
+
+# === 2. live 系统的文档信息（list 形式，灵活扩展）===
+# 每项 {path, description}，AI 按 description 判断是否需要读
+# 字段不固定，项目按实际情况增减
+docs:
+  - path: demand.md
+    description: 业务需求总览，评估目标和场景分类
+  - path: scenarios.md
+    description: 评估场景枚举和各场景的判定标准
+  - path: judge_boundary.md
+    description: judge 边界协议，哪些算系统能力边界、哪些算可评价问题
+  # 按需增减，例如：
+  # - path: attribution.md
+  #   description: 归因方案和证据来源
+  # - path: checklist.md
+  #   description: 项目特有检查项
+
+# === 3. 项目源代码位置 ===
+# 业务系统源码绝对路径，供 AI 分析代码逻辑（attribute 归因时有用）
+# 留空也可以，但 AI 分析能力会下降
+source:
+  repo: /path/to/business/repo
+
+# === 4. 基础的 ready 信息 ===
+# 数据流模式（接入关键决策，决定 live 如何获取 output/reference）
+# 三种模式：
+#   ready: []                        → 有真实服务，output 由 live 调用产生，reference 由 judge 生成
+#   ready: [output, reference]       → 评估已产出数据，case 自带 output 和 reference（如上传数据集）
+#   ready: [reference]               → output 走真实调用，但 reference 由你提供
+ready: []
+
+# === 5. 是否多轮/单轮 ===
+# single_turn：单轮交互（一问一答）
+# multi_turn：多轮交互（需在 live_schema 里定义 turns 字段，见 spec/live.md 多轮方案章节）
+interaction: single_turn

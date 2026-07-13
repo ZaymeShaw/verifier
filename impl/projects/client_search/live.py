@@ -170,14 +170,30 @@ def build_execution_trace(input_data: Dict[str, Any], request: Dict[str, Any], r
     ]
 
 
-class LiveDelivery:
-    """client_search 项目的 live 投递层。"""
+from impl.core.live_protocol import RealServiceLive
 
-    def deliver_real(self, spec: ProjectSpec, adapter: Any, request: LiveRequest) -> LiveExecutionResult:
+
+class ClientSearchLive(RealServiceLive):
+    """client_search 项目 Live 实现（新协议）。
+
+    迁移过渡期：扩展点委托模块级函数和 adapter 现有方法。
+    """
+
+    def __init__(self, spec: ProjectSpec, adapter):
+        super().__init__(spec)
+        self._adapter = adapter
+
+    def build_request(self, case: SingleTurnCase | MultiTurnCase) -> Dict[str, Any]:
+        # adapter.build_request 返回 LiveRequest，取其 normalized_request
+        live_request = self._adapter.build_request(case)
+        return live_request.normalized_request
+
+    def deliver_real(self, request: LiveRequest) -> Any:
+        # 调用 call_project_api + 构建完整 LiveExecutionResult
         with _SERVICE_LOCK:
-            raw_response = call_project_api(spec, request.normalized_request)
+            raw_response = call_project_api(self.spec, request.normalized_request)
         if isinstance(raw_response, dict):
-            raw_response = {**raw_response, "_downstream_search": _probe_downstream_search(spec, raw_response)}
+            raw_response = {**raw_response, "_downstream_search": _probe_downstream_search(self.spec, raw_response)}
         extracted_output = extract_output(raw_response)
         return LiveExecutionResult(
             project_id=request.project_id,
@@ -189,9 +205,18 @@ class LiveDelivery:
             extracted_output=extracted_output,
             output_source=request.execution_mode,
             execution_trace=build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output),
-            project_fields=project_fields(raw_response, extracted_output, spec),
+            project_fields=project_fields(raw_response, extracted_output, self.spec),
             application_boundary=application_boundary(raw_response, extracted_output),
         )
 
-    def deliver_provided(self, spec: ProjectSpec, adapter: Any, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Any:
-        return provided_output_raw(case, request)
+    def extract_output(self, raw_response: Any, request: LiveRequest) -> Dict[str, Any]:
+        return extract_output(raw_response)
+
+    def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest, application_boundary: Dict[str, Any]) -> Dict[str, Any]:
+        return project_fields(raw_response, extracted_output, self.spec)
+
+    def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> Dict[str, Any]:
+        return application_boundary(raw_response, extracted_output)
+
+    def build_execution_trace(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> list:
+        return build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output)

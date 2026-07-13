@@ -150,3 +150,33 @@ def judge_trace(spec: ProjectSpec, adapter, trace: RunTrace, expected_intent: Op
         expected_intent=expected_intent,
         project_judge_context=_build_core_context(adapter, trace),
     )
+
+
+from impl.core.judge_protocol import ProjectJudge
+
+
+class ClientSearchJudge(ProjectJudge):
+    """client_search 项目 Judge 实现（新协议）。
+
+    迁移过渡期：扩展点委托 adapter 现有方法，保持功能不变。
+    """
+
+    def __init__(self, spec: ProjectSpec, adapter):
+        super().__init__(spec)
+        self._adapter = adapter
+
+    def build_context(self, trace: RunTrace) -> dict:
+        return _build_core_context(self._adapter, trace)
+
+    def build_intent_frame(self, trace: RunTrace, context: Optional[dict] = None) -> dict:
+        return self._adapter.build_intent_frame(trace)
+
+    def pre_judge(self, trace: RunTrace, expected_intent: Optional[str] = None) -> Optional[JudgeResult]:
+        return self._adapter.pre_judge_result(trace, expected_intent=expected_intent)
+
+    def normalize_result(self, trace: RunTrace, result: JudgeResult) -> JudgeResult:
+        from impl.core.schema import normalize_judge_result
+        return normalize_judge_result(self._adapter.normalize_judge_result(trace, result)) or result
+
+    def reconcile_result(self, trace: RunTrace, result: JudgeResult) -> JudgeResult:
+        return self._adapter.reconcile_judge_result(trace, result)

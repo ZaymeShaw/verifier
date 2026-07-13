@@ -13,7 +13,7 @@
 
 2. **adapter.build_request 必须符合 live_schema**：adapter 的职责是把 case.input 翻译成 live_schema 要求的形状。如果 adapter 翻译出来的东西不符合 live_schema，adapter 就是错的，需要修正。
 
-3. **mock_agent 产出必须符合 live_schema**：mock_agent 生成的 case.input，经过 adapter 翻译后，必须符合 live_schema 的 `normalized_request` 形状。
+3. **mock_agent 产出必须符合 live_schema**：mock_agent 生成的 case.input，必须符合 live_schema 的 形状。
 
 4. **live 直接输入也必须符合 live_schema**：前端文本框、CLI --input、导入池等手动输入，经过 adapter 翻译后同样要符合 live_schema。
 
@@ -65,7 +65,7 @@
 
 **校验机制相应升级：**
 - live_schema 从原项目源码的 schema 模型自动提取（或人工对照源码确认）
-- adapter.build_request 产出的 normalized_request 与 live_schema 校验，不符则改 adapter
+- mock、fixture等 产出结果应与 live_schema 直接对齐并校验，未对齐时需向用户确认
 - 真实 API 响应与 live_schema 的 EXTRACT_OUTPUT_SHAPE 校验，发现未声明字段则补 schema
 - 这样 live_schema 真正成为连接"业务服务真实形状"和"verifier 实现"的权威桥梁
 

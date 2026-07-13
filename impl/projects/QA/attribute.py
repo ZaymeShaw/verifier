@@ -96,3 +96,49 @@ def attribute_failure(spec: ProjectSpec, adapter, trace: RunTrace, judge_result:
         judge_result,
         project_attribute_context=_build_project_attribute_context(spec, adapter, trace, judge_result),
     )
+
+
+from impl.core.attribute_protocol import ProjectAttribute
+from impl.core.runtime_query_tools import extract_runtime_values
+from impl.core.schema import normalize_attribute_result, trace_execution_trace, trace_extracted_output
+
+
+class QAAttribute(ProjectAttribute):
+    """QA 项目 Attribute 实现（新协议）。
+
+    迁移过渡期：扩展点委托 adapter 现有方法，保持功能不变。
+    旧版 apply_attribution_probes 在 LLM 后应用（修改 result），新版模板方法在 LLM 前运行 probes（放入 context）。
+    为保持功能不变，QAAttribute 在 normalize_result 阶段调用 adapter.apply_attribution_probes（模拟旧版 LLM 后应用）。
+    """
+
+    def __init__(self, spec: ProjectSpec, adapter):
+        super().__init__(spec)
+        self._adapter = adapter
+
+    def build_context(self, trace: RunTrace, judge_result: JudgeResult) -> dict:
+        # 产出含 runtime_checks 的完整 context（与旧版 run_project_attribute_protocol 一致）
+        base_context = self._adapter.build_attribute_context(trace, judge_result)
+        extra_context = _build_project_attribute_context(self.spec, self._adapter, trace, judge_result)
+        context = dict(base_context or {})
+        context.update(extra_context)
+        actual = judge_result.actual or trace_extracted_output(trace) or {}
+        expected = judge_result.expected or trace.reference_contract or {}
+        runtime_context = {
+            "expected": expected,
+            "actual": actual,
+            "reference": trace.reference_contract or {},
+            "trace_id": trace.trace_id,
+            "project_id": trace.project_id,
+        }
+        runtime_values = extract_runtime_values(trace_execution_trace(trace), actual)
+        context["runtime_checks"] = self._adapter.get_runtime_checks(runtime_values, runtime_context)
+        return context
+
+    def probes(self):
+        # 旧版 probes 在 LLM 后应用（normalize_result 阶段），这里返回 None 避免重复
+        return None
+
+    def normalize_result(self, trace: RunTrace, judge_result: JudgeResult, result: AttributeResult) -> AttributeResult:
+        # 模拟旧版：先 apply_attribution_probes（LLM 后应用），再 normalize_attribute_result
+        result = self._adapter.apply_attribution_probes(trace, judge_result, result)
+        return normalize_attribute_result(self._adapter.normalize_attribute_result(trace, judge_result, result)) or result

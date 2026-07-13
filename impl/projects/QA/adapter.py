@@ -6,28 +6,57 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from impl.core.adapter import ProjectAdapter
+from impl.core.adapter_v2 import LegacyProjectAdapter
 from impl.core.schema import AttributeResult, JudgeResult, LiveExecutionResult, LiveRequest, MultiTurnCase, SingleTurnCase
 from impl.core.summary import summary_from_attribution
 
 
-class Adapter(ProjectAdapter):
+class Adapter(LegacyProjectAdapter):
     metadata_fields = {"category", "model_name", "latency_ms", "token_usage", "cost", "row_index", "source_dataset", "expected_quality", "expected_error_type", "quality_dimension"}
 
+    @staticmethod
+    def _input_payload(request: Dict[str, Any] | None) -> Dict[str, Any]:
+        """从 normalized_request 取核心输入 payload。
+
+        兼容两种形状：
+        - flat（QAInput）：question/contexts 在顶层 → 直接返回 request
+        - wrapper（旧 QARequest）：question/contexts 嵌套在 input 字段 → 返回 input
+        """
+        if not isinstance(request, dict):
+            return {}
+        nested = request.get("input")
+        return nested if isinstance(nested, dict) else request
+
+
+    def _load_live(self):
+        """加载 ProjectLive 实例（新协议）"""
+        from impl.projects.QA.live import QALive
+        return QALive(self.spec)
+
+    def _load_judge(self):
+        """加载 ProjectJudge 实例（新协议）"""
+        from impl.projects.QA.judge import QAJudge
+        return QAJudge(self.spec, self)
+
+    def _load_attribute(self):
+        """加载 ProjectAttribute 实例（新协议）"""
+        from impl.projects.QA.attribute import QAAttribute
+        return QAAttribute(self.spec, self)
+
     def build_request(self, case: SingleTurnCase | MultiTurnCase) -> LiveRequest:
-        # case 可能是 SingleTurnCase（有顶层 output/reference）或裸 dict（前端旧输入）。
-        # _normalize_sample 用 getattr 兼容 dataclass，能从 case.output/case.reference 取值。
+        # 方案 A：mock 直接对接 live_schema，build_request 不做形状翻译。
+        # case.input 已是 QAInput 形状（= REQUEST_SCHEMA），直接透传作为 normalized_request。
         sample = self._normalize_sample(case)
         input_data = dict(case.input or {}) if hasattr(case, "input") else (dict(case.get("input") or {}) if isinstance(case, dict) else {})
         normalized_request = {
-            "input": sample["input"],
-            "reference": sample["reference"],
-            "metadata": sample["metadata"],
-            "scenario": sample["scenario"],
-            "data_quality_flags": sample["data_quality_flags"],
-            "output": sample["output"],
+            "question": str(sample.get("input", {}).get("question") or input_data.get("question") or ""),
+            "contexts": list(sample.get("input", {}).get("contexts") or input_data.get("contexts") or []),
+            "reference": dict(sample.get("reference") or {}),
+            "metadata": dict(sample.get("metadata") or {}),
+            "scenario": str(sample.get("scenario") or "qa_default"),
+            "data_quality_flags": list(sample.get("data_quality_flags") or []),
+            "output": dict(sample.get("output") or {}),
         }
-        # 协议层 ready gate 接管 provided 判定后，build_request 不再硬编码 execution_mode；
-        # pipeline live_run 在 provided 分支统一覆盖为 "provided_output"。
         # 存一份快照，project_fields 在 provided 路径下无 _normalized_request 注入时可回退读取。
         self._last_normalized_request = normalized_request
         return LiveRequest(
@@ -62,7 +91,7 @@ class Adapter(ProjectAdapter):
         if not trace:
             return {"status": "failed", "missing_evidence": ["trace"]}
         request = trace.normalized_request or {}
-        sample_input = request.get("input") or {}
+        sample_input = self._input_payload(request)
         reference = request.get("reference") or {}
         actual_answer = (trace.extracted_output or {}).get("actual_answer")
         evidence = {
@@ -107,9 +136,9 @@ class Adapter(ProjectAdapter):
 
     def build_intent_frame(self, trace):
         request = trace.normalized_request or {}
-        sample_input = request.get("input") if isinstance(request.get("input"), dict) else {}
+        sample_input = self._input_payload(request)
         reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}
-        contexts = sample_input.get("contexts") or request.get("contexts") or []
+        contexts = sample_input.get("contexts") or []
         return {
             **super().build_intent_frame(trace),
             "business_task_type": "qa_answer_evaluation",
@@ -138,7 +167,7 @@ class Adapter(ProjectAdapter):
             "required_capabilities": ["answer_relevance", "groundedness", "reference_alignment"],
             "boundary": self.build_judge_context(trace).get("application_boundary") or {},
         }
-        question = str(((trace.normalized_request or {}).get("input") or {}).get("question") or "")
+        question = str(self._input_payload(trace.normalized_request).get("question") or "")
         expectation.update({
             "user_intent": question,
             "expected_outcome": "actual answer should satisfy answer relevance, groundedness, and reference alignment for the current QA sample",
@@ -229,7 +258,7 @@ class Adapter(ProjectAdapter):
         request = trace.normalized_request or {}
         reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}
         actual = trace.extracted_output or judge_result.actual or {}
-        question = str((request.get("input") or {}).get("question") or "")
+        question = str(self._input_payload(request).get("question") or "")
         judge_result.expected = judge_result.expected or reference
         judge_result.actual = actual
         evidence = list(judge_result.evidence or [])
@@ -408,7 +437,7 @@ class Adapter(ProjectAdapter):
         request = trace.normalized_request or {}
         reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}
         golden_text = str(reference.get("actual_answer") or "").strip()
-        contexts = list((request.get("input") or {}).get("contexts") or [])
+        contexts = list(self._input_payload(request).get("contexts") or [])
         scenario = str(trace.scenario or request.get("scenario") or "")
         if scenario not in {"qa_gold_answer", "qa_context_faithfulness", "qa_weak_quality", "invalid_sample"}:
             return None
@@ -486,7 +515,7 @@ class Adapter(ProjectAdapter):
         return {}
 
     def _generate_reference(self, request, actual_text, contexts, scenario):
-        question = str((request.get("input") or {}).get("question") or "").strip()
+        question = str(self._input_payload(request).get("question") or "").strip()
         if scenario == "qa_context_faithfulness" and contexts:
             context_text = " ".join(str(ctx).strip() for ctx in contexts if str(ctx).strip())
             if context_text:

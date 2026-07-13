@@ -132,3 +132,41 @@ def attribute_failure(spec: ProjectSpec, adapter, trace: RunTrace, judge_result:
         judge_result,
         project_attribute_context=_build_project_attribute_context(spec, adapter, trace, judge_result),
     )
+
+
+from impl.core.attribute_protocol import ProjectAttribute
+from impl.core.runtime_query_tools import extract_runtime_values
+from impl.core.schema import normalize_attribute_result, trace_execution_trace, trace_extracted_output
+
+
+class MarketingPlanningAttribute(ProjectAttribute):
+    """marketting-planning 项目 Attribute 实现（新协议）。"""
+
+    def __init__(self, spec: ProjectSpec, adapter):
+        super().__init__(spec)
+        self._adapter = adapter
+
+    def build_context(self, trace: RunTrace, judge_result: JudgeResult) -> dict:
+        base_context = self._adapter.build_attribute_context(trace, judge_result)
+        extra_context = _build_project_attribute_context(self.spec, self._adapter, trace, judge_result)
+        context = dict(base_context or {})
+        context.update(extra_context)
+        actual = judge_result.actual or trace_extracted_output(trace) or {}
+        expected = judge_result.expected or trace.reference_contract or {}
+        runtime_context = {
+            "expected": expected,
+            "actual": actual,
+            "reference": trace.reference_contract or {},
+            "trace_id": trace.trace_id,
+            "project_id": trace.project_id,
+        }
+        runtime_values = extract_runtime_values(trace_execution_trace(trace), actual)
+        context["runtime_checks"] = self._adapter.get_runtime_checks(runtime_values, runtime_context)
+        return context
+
+    def probes(self):
+        return None
+
+    def normalize_result(self, trace: RunTrace, judge_result: JudgeResult, result: AttributeResult) -> AttributeResult:
+        result = self._adapter.apply_attribution_probes(trace, judge_result, result)
+        return normalize_attribute_result(self._adapter.normalize_attribute_result(trace, judge_result, result)) or result

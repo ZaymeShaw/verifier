@@ -66,3 +66,16 @@ formal: impl/projects/client_search/attribute.py
 draft:  impl/projects/client_search/draft/attribute.py
 
 进入 pipeline 之后，调用方式完全一致。
+
+
+
+
+
+---------------
+
+我需要judge也有judge机制，你看看是要在搞一个skill，还是混合到当前的skiil里面 你先想想，别动手
+我希望draft这种东西，还是能复用一下，但是我也觉得judge 和attr做两套skill好像好一点，怎么能做好呢
+
+ 或者这样。skill改名字为draft，然后SKILL.md写draft的机制，然后内置构建attribute和judge两个子目录，公共的部分就在公共的目录里面写，attr/judge特异的
+  部分就在对应的地方写，然后把那些相关的reference啥的也都搬进去，公共层写一个模版套架的references，然后attr和judge相应的reference从公共层的reference保持结构
+  上一致，有一些扩展性的东西，并且把attr/judge的定位需求啥的也写在attr/judge的子目录里面。你先构思一下

@@ -487,22 +487,37 @@ def provided_output_raw(case: SingleTurnCase | MultiTurnCase, request: LiveReque
     return _attach_request({}, request.normalized_request)
 
 
-class LiveDelivery:
-    """marketting-planning 项目的 live 投递层。"""
+from impl.core.live_protocol import RealServiceLive
 
-    def deliver_real(self, spec: ProjectSpec, adapter: Any, request: LiveRequest) -> LiveExecutionResult:
-        start = time.time()
+
+class MarketingPlanningLive(RealServiceLive):
+    """marketting-planning 项目 Live 实现（新协议）。
+
+    迁移过渡期：扩展点委托模块级函数和 adapter 现有方法。
+    """
+
+    def __init__(self, spec: ProjectSpec, adapter):
+        super().__init__(spec)
+        self._adapter = adapter
+
+    def build_request(self, case: SingleTurnCase | MultiTurnCase) -> Dict[str, Any]:
+        live_request = self._adapter.build_request(case)
+        return live_request.normalized_request
+
+    def deliver_real(self, request: LiveRequest) -> Any:
+        import time as _time
+        start = _time.time()
         try:
-            raw_response = deliver_raw_response(spec, request)
+            raw_response = deliver_raw_response(self.spec, request)
             call_status = "succeeded"
             call_error = None
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             raw_response = None
             call_status = "failed"
             call_error = f"marketing-planning service unavailable: {exc}"
-        extracted_output = {"turns": [extract_output(raw_response, request, spec, max(len(request.turns or []) - 1, 0))]} if call_status == "succeeded" else {}
+        extracted_output = {"turns": [extract_output(raw_response, request, self.spec, max(len(request.turns or []) - 1, 0))]} if call_status == "succeeded" else {}
         latest_output = extracted_output["turns"][-1] if extracted_output.get("turns") else {}
-        application_boundary = _application_boundary(request.normalized_request, latest_output)
+        app_boundary = _application_boundary(request.normalized_request, latest_output)
         return LiveExecutionResult(
             project_id=request.project_id,
             case_id=request.case_id,
@@ -512,14 +527,23 @@ class LiveDelivery:
             call_status=call_status,
             raw_response=raw_response,
             call_error=call_error,
-            runtime_ms=int((time.time() - start) * 1000),
+            runtime_ms=int((_time.time() - start) * 1000),
             extracted_output=extracted_output,
             output_source=request.execution_mode,
-            execution_trace=build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output, spec) if call_status == "succeeded" else [],
-            project_fields=project_fields(raw_response, extracted_output, request, spec, application_boundary) if call_status == "succeeded" else {},
-            application_boundary=application_boundary,
+            execution_trace=build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output, self.spec) if call_status == "succeeded" else [],
+            project_fields=project_fields(raw_response, extracted_output, request, self.spec, app_boundary) if call_status == "succeeded" else {},
+            application_boundary=app_boundary,
             interaction_mode="interactive_intent" if request.turns else "single_turn",
         )
 
-    def deliver_provided(self, spec: ProjectSpec, adapter: Any, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Any:
-        return provided_output_raw(case, request)
+    def extract_output(self, raw_response: Any, request: LiveRequest) -> Dict[str, Any]:
+        return extract_output(raw_response, request, self.spec, max(len(request.turns or []) - 1, 0))
+
+    def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest, application_boundary: Dict[str, Any]) -> Dict[str, Any]:
+        return project_fields(raw_response, extracted_output, request, self.spec, application_boundary)
+
+    def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> Dict[str, Any]:
+        return _application_boundary(request.normalized_request, extracted_output.get("turns", [-1])[-1] if extracted_output.get("turns") else {})
+
+    def build_execution_trace(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> list:
+        return build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output, self.spec)

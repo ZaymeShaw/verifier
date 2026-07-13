@@ -18,17 +18,6 @@ class QAInput:
 
 
 @dataclass
-class QARequest:
-    """normalized_request 形状（provided-output 模式）。"""
-    input: Dict[str, Any] = field(default_factory=dict)
-    reference: Optional[Dict[str, Any]] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    scenario: str = ""
-    data_quality_flags: Optional[List[str]] = None
-    output: Optional[Dict[str, Any]] = None
-
-
-@dataclass
 class QAExtractOutput:
     """extract_output 形状。"""
     actual_answer: str
