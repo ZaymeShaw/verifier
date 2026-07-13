@@ -1,0 +1,56 @@
+{
+  "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783729332157",
+  "project_id": "marketting-planning",
+  "case_id": "mock-agent-marketting-planning-d1642b58",
+  "expectation_attributions": [
+    {
+      "expectation_id": "系统服务可用且无连接错误",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": "营销规划服务进程未启动或未在预期端口监听，导致客户端发起HTTP请求时TCP连接被拒绝（Connection refused），服务不可用。",
+      "evidence": [
+        {
+          "source": "run_trace.error",
+          "content": "marketing-planning service unavailable: <urlopen error [Errno 61] Connection refused>"
+        },
+        {
+          "source": "run_trace.status",
+          "content": "status为error"
+        }
+      ]
+    },
+    {
+      "expectation_id": "正确识别意图并进入intent阶段",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": "由于营销规划服务连接失败，请求无法被处理，意图识别阶段未能执行，因此extracted_output为空，未生成任何stage信息。",
+      "evidence": [
+        {
+          "source": "run_trace.extracted_output",
+          "content": "{}"
+        },
+        {
+          "source": "judge_result.missing",
+          "content": "缺失stage字段，实际为null"
+        }
+      ]
+    }
+  ],
+  "root_cause_hypothesis": "营销规划服务启动失败或未运行，导致客户端无法建立连接（Connection refused），进而阻塞了意图识别等所有下游流程，所有业务期望均无法达成。",
+  "evidence": [
+    {
+      "source": "run_trace.error",
+      "content": "marketing-planning service unavailable: <urlopen error [Errno 61] Connection refused>"
+    },
+    {
+      "source": "run_trace.extracted_output",
+      "content": "{}"
+    }
+  ],
+  "evidence_strength": "strong",
+  "summary": {
+    "attribution_count": 2,
+    "probe_count": 0,
+    "summary_text": "营销规划服务启动失败或未运行，导致客户端无法建立连接（Connection refused），进而阻塞了意图识别等所有下游流程，所有业务期望均无法达成。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

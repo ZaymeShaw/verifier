@@ -1,0 +1,56 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::最早根因阶段为 intent_recognition：意图识别模块将明确的营销规划查询误分类为“其他意图”，导致下游所有阶段（路径调度、规划函数、结果组装、SS::not_fulfilled",
+      "mechanism": "最早根因阶段为 intent_recognition：意图识别模块将明确的营销规划查询误分类为“其他意图”，导致下游所有阶段（路径调度、规划函数、结果组装、SS::not_fulfilled",
+      "fulfillment_statuses": [
+        "not_fulfilled"
+      ],
+      "expectation_ids": [
+        "意图识别为营销规划场景",
+        "阶段路由进入意图阶段",
+        "SSE事件序列可解释且面向规划",
+        "会话不在不完整状态下终止",
+        "mp_contract:expected_stage"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "representative_traces": [
+        "marketting-planning:mock-agent-marketting-planning-d1642b58:1783828276479"
+      ],
+      "common_root_cause": "最早根因阶段为 intent_recognition：意图识别模块将明确的营销规划查询误分类为“其他意图”，导致下游所有阶段（路径调度、规划函数、结果组装、SSE生成）均未能按营销规划流程执行，所有业务期望均未满足。证据强度为 strong，因为 execution_stage_probe 和 planning_output_probe 均确认 intent_recognition 阶段输出的 stage 与合约不符。",
+      "shared_failure_pattern": "最早根因阶段为 intent_recognition：意图识别模块将明确的营销规划查询误分类为“其他意图”，导致下游所有阶段（路径调度、规划函数、结果组装、SSE生成）均未能按营销规划流程执行，所有业务期望均未满足。证据强度为 strong，因为 execution_stage_probe 和 planning_output_probe 均确认 intent_recognition 阶段输出的 stage 与合约不符。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-d1642b58",
+          "root_cause": "最早根因阶段为 intent_recognition：意图识别模块将明确的营销规划查询误分类为“其他意图”，导致下游所有阶段（路径调度、规划函数、结果组装、SSE生成）均未能按营销规划流程执行，所有业务期望均未满足。证据强度为 strong，因为 execution_stage_probe 和 planning_output_probe 均确认 intent_recognition 阶段输出的 stage 与合约不符。",
+          "evidence": [
+            "execution_stage_probe.intent_recognition.evidence.actual_stage = 'non_agent', expected_stage = 'intent'",
+            "planning_output_probe.stage_match = false, evidence_gap包含actual_stage",
+            "output.turn.intent = '4001', intent_name = '其他意图'",
+            "output.turn.stage = 'non_agent'",
+            "output.turn.end_flag = 1，robot_text='卡片生成完成'，card_summary=[]"
+          ]
+        }
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "next_actions": [
+        "execution_stage_probe.intent_recognition.evidence.actual_stage = 'non_agent', expected_stage = 'intent'",
+        "planning_output_probe.stage_match = false, evidence_gap包含actual_stage",
+        "output.turn.intent = '4001', intent_name = '其他意图'",
+        "output.turn.stage = 'non_agent'",
+        "output.turn.end_flag = 1，robot_text='卡片生成完成'，card_summary=[]"
+      ]
+    }
+  ],
+  "common_root_cause": "最早根因阶段为 intent_recognition：意图识别模块将明确的营销规划查询误分类为“其他意图”，导致下游所有阶段（路径调度、规划函数、结果组装、SSE生成）均未能按营销规划流程执行，所有业务期望均未满足。证据强度为 strong，因为 execution_stage_probe 和 planning_output_probe 均确认 intent_recognition 阶段输出的 stage 与合约不符。",
+  "impact": "",
+  "priority": "normal"
+}

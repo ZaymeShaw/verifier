@@ -1,0 +1,52 @@
+{
+  "project_id": "client_search",
+  "rows": [
+    {
+      "id": "mock-agent-client_search-cdd7df11",
+      "input": "帮我看看公司里所有买了重疾险的客户都有谁",
+      "scenario": "",
+      "output_summary": "{\"code\": 0, \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"MATCH\", \"value\": \"疾病保险\"}], \"confidence\": 0.8, \"cost_times\": 596.0, \"end_flag\": 1, \"intent_summa…",
+      "reference_summary": "{\"code\": 0, \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\"]}], \"end_flag\": 1, \"intent_summary\": \"产品类别为疾病保险的客户\", \"msg\": \"操作成功\",…",
+      "status": "fulfilled",
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "fulfillment_status": "fulfilled",
+      "judge_summary": {
+        "status": "fulfilled",
+        "fulfillment_status": "fulfilled",
+        "reason": "fulfilled · 0 blocking expectations all met · 用户查询'买了重疾险的客户'，核心意图是按险种大类筛选持有疾病保险的客户。系统将口语'重疾险'正确映射为 pCategorys 字段的标准枚举值'疾病保险'，映射关系符合 value_mappings 定义（重疾险→疾病保险）。操作符使用 MATCH 而非 prompt 示例中的 CONTAINS，但根据评估规范 MATCH 与 CONTAINS 在语义上等价，不影响搜索正确性。rewritten_query 将'重疾险'归一化为'疾病保险'，符合业务预期。输出仅包含一个筛选条件，无遗漏也无多余。下游 ES 搜索不可用（result_set_verified=false），但在 parser 条件语义层面，该条件能够正确表达用户意图，判定为 fulfilled。",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 3,
+        "blocking_count": 0
+      },
+      "attribution_summary": {
+        "attribution_count": 3,
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 0,
+        "summary_text": "业务预期已达成，无根因。"
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 3
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": false,
+      "issue_count": 3,
+      "fallback_count": 0,
+      "divergence_stage": "",
+      "root_cause_summary": "业务预期已达成，无根因。",
+      "created_at": "2026-07-13T05:12:00.597217+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783919520597"
+    }
+  ],
+  "total": 1
+}

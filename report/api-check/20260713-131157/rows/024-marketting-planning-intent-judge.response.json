@@ -1,0 +1,286 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783919519540",
+  "project_id": "marketting-planning-intent",
+  "business_expectations": [
+    {
+      "expectation_id": "意图标签为客户画像",
+      "downstream_consumer": "营销规划下游模块",
+      "user_intent": "查询上季度购买重疾险的客户群体画像",
+      "expected_outcome": "intent字段为'customer_portrait'",
+      "required_capabilities": [
+        "意图分类"
+      ],
+      "acceptance_criteria": [
+        {
+          "field": "extracted_output.intent",
+          "operator": "equals",
+          "value": "customer_portrait"
+        }
+      ],
+      "boundary": {
+        "scope": "单轮意图识别"
+      },
+      "priority": "高"
+    },
+    {
+      "expectation_id": "关键实体提取重疾险",
+      "downstream_consumer": "营销规划下游模块",
+      "user_intent": "查询上季度购买重疾险的客户群体画像",
+      "expected_outcome": "提取产品实体'重疾险'作为target_value",
+      "required_capabilities": [
+        "实体抽取"
+      ],
+      "acceptance_criteria": [
+        {
+          "field": "extracted_output.target_value",
+          "operator": "equals",
+          "value": "重疾险"
+        }
+      ],
+      "boundary": {
+        "scope": "单轮意图识别"
+      },
+      "priority": "中"
+    },
+    {
+      "expectation_id": "置信度达标",
+      "downstream_consumer": "营销规划下游模块",
+      "user_intent": "查询上季度购买重疾险的客户群体画像",
+      "expected_outcome": "置信度达到0.95（参考预期）或至少≥0.9",
+      "required_capabilities": [
+        "置信度评估"
+      ],
+      "acceptance_criteria": [
+        {
+          "field": "extracted_output.confidence",
+          "operator": "gte",
+          "value": 0.9
+        }
+      ],
+      "boundary": {
+        "scope": "单轮意图识别"
+      },
+      "priority": "中"
+    },
+    {
+      "expectation_id": "调度边界不应误判为其他意图",
+      "downstream_consumer": "营销规划调度模块",
+      "user_intent": "查询上季度购买重疾险的客户群体画像",
+      "expected_outcome": "该查询不应被分派到'other'意图，而应进入客户画像处理流程",
+      "required_capabilities": [
+        "意图调度"
+      ],
+      "acceptance_criteria": [
+        {
+          "field": "extracted_output.intent",
+          "operator": "not_equals",
+          "value": "other"
+        }
+      ],
+      "boundary": {
+        "scope": "意图调度边界"
+      },
+      "priority": "高"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图标签为客户画像",
+      "status": "not_fulfilled",
+      "score": 0,
+      "expected_evidence": [
+        {
+          "reference_intent": "customer_portrait",
+          "reference_confidence": 0.95,
+          "reference_target": "重疾险"
+        }
+      ],
+      "actual_evidence": [
+        {
+          "extracted_intent": "other",
+          "extracted_confidence": 0.5,
+          "subIntent": "其他意图"
+        }
+      ],
+      "downstream_impact": "下游模块无法执行客户画像分析，传入错误意图将导致营销计划偏离目标",
+      "blocking": true
+    },
+    {
+      "expectation_id": "关键实体提取重疾险",
+      "status": "not_fulfilled",
+      "score": 0,
+      "expected_evidence": [
+        {
+          "reference_target_value": "重疾险"
+        }
+      ],
+      "actual_evidence": [
+        {}
+      ],
+      "downstream_impact": "后续画像查询缺少关键过滤条件，无法准确筛选目标客户群",
+      "blocking": true
+    },
+    {
+      "expectation_id": "置信度达标",
+      "status": "not_fulfilled",
+      "score": 0,
+      "expected_evidence": [
+        {
+          "reference_confidence": 0.95
+        }
+      ],
+      "actual_evidence": [
+        {
+          "extracted_confidence": 0.5
+        }
+      ],
+      "downstream_impact": "低置信度无法保证意图可靠性，可能需人工复核或导致错误触发",
+      "blocking": false
+    },
+    {
+      "expectation_id": "调度边界不应误判为其他意图",
+      "status": "not_fulfilled",
+      "score": 0,
+      "expected_evidence": [
+        {
+          "expected_dispatch": "customer_portrait"
+        }
+      ],
+      "actual_evidence": [
+        {
+          "actual_dispatch": "other"
+        }
+      ],
+      "downstream_impact": "调度错误使整个流程进入无关分支，完全丧失业务价值",
+      "blocking": true
+    },
+    {
+      "expectation_id": "intent_contract",
+      "status": "not_fulfilled",
+      "downstream_impact": "当前单轮意图识别未满足 reference contract：query=帮我看看上季度买了重疾险的客户都是啥样的？，expected_intent=customer_portrait，actual_intent=other，confidence=0.5，min_confidence=None，失败项=['intent']，整体判定为 incorrect。",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "blocking_expectations": [
+      "intent_contract"
+    ]
+  },
+  "expected": {
+    "intent": "customer_portrait",
+    "confidence": 0.95,
+    "target_value": "重疾险",
+    "subIntent": "其他意图"
+  },
+  "actual": {
+    "confidence": 0.5,
+    "intent": "other",
+    "subIntent": "其他意图"
+  },
+  "missing": [
+    {
+      "kind": "intent_label",
+      "error_type": "wrong_label",
+      "expected": "customer_portrait",
+      "actual": "other",
+      "evidence_ref": "extracted_output",
+      "raw": {
+        "intent": "customer_portrait",
+        "confidence": 0.95
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "entity",
+      "error_type": "missing_entity",
+      "expected": "重疾险",
+      "evidence_ref": "extracted_output.target_value",
+      "raw": {
+        "target_value": "重疾险"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "confidence",
+      "error_type": "low_confidence",
+      "expected": 0.95,
+      "actual": 0.5,
+      "evidence_ref": "extracted_output.confidence",
+      "raw": {
+        "confidence": 0.95
+      },
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "intent_label",
+      "error_type": "wrong_label",
+      "expected": "customer_portrait",
+      "actual": "other",
+      "evidence_ref": "extracted_output.intent",
+      "raw": {
+        "intent": "other"
+      },
+      "incomplete": false
+    },
+    {
+      "kind": "wrong",
+      "error_type": "wrong",
+      "evidence_ref": "",
+      "raw": {
+        "requirement": "intent",
+        "expected_fragment": "customer_portrait",
+        "actual_fragment": "other",
+        "status": "wrong",
+        "evidence": [
+          "normalized intent differs from reference intent"
+        ]
+      },
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    "用户查询明确指向客户画像分析（上季度重疾险购买客户），预期意图为customer_portrait且应提取实体重疾险。实际返回意图为other，置信度仅0.5，目标实体为空，表明系统未能正确识别意图和实体，分类与调度均失败，整体未满足业务期望。"
+  ],
+  "reasoning_summary": "当前单轮意图识别未满足 reference contract：query=帮我看看上季度买了重疾险的客户都是啥样的？，expected_intent=customer_portrait，actual_intent=other，confidence=0.5，min_confidence=None，失败项=['intent']，整体判定为 incorrect。",
+  "summary": {
+    "reason": "not_fulfilled · blocking=[关键实体提取重疾险,意图标签为客户画像,调度边界不应误判为其他意图] · 用户查询明确指向客户画像分析（上季度重疾险购买客户），预期意图为customer_portrait且应提取实体重疾险。实际返回意图为other，置信度仅0.5，目标实体为空，表明系统未能正确识别意图和实体，分类与调度均失败，整体未满足业务期望。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "关键实体提取重疾险",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "后续画像查询缺少关键过滤条件，无法准确筛选目标客户群",
+        "evidence": "后续画像查询缺少关键过滤条件，无法准确筛选目标客户群"
+      },
+      {
+        "expectation_id": "意图标签为客户画像",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "下游模块无法执行客户画像分析，传入错误意图将导致营销计划偏离目标",
+        "evidence": "下游模块无法执行客户画像分析，传入错误意图将导致营销计划偏离目标"
+      },
+      {
+        "expectation_id": "调度边界不应误判为其他意图",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "调度错误使整个流程进入无关分支，完全丧失业务价值",
+        "evidence": "调度错误使整个流程进入无关分支，完全丧失业务价值"
+      },
+      {
+        "expectation_id": "置信度达标",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "低置信度无法保证意图可靠性，可能需人工复核或导致错误触发",
+        "evidence": "低置信度无法保证意图可靠性，可能需人工复核或导致错误触发"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 4,
+    "blocking_count": 3,
+    "is_formal_attribution": true
+  }
+}

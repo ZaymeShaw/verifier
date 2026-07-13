@@ -1,0 +1,32 @@
+# 目标项目；用于定位 impl/projects/<project>/ 下的 adapter、draft 和项目配置。
+project_id: "<project>"
+
+# 本轮 draft 的初始优化需求；用多行 prompt 写清目标、约束、用户偏好。后续用户可用 prompt 调整。
+objective: |
+  Describe what the attribution draft should improve.
+  Include constraints, preferred evidence sources, and known risks.
+
+# 固定评测数据来源；可以是已有 trace/mock case/api 输出或项目 draft 中的数据文件。
+mock_source: "<path-or-identifier>"
+
+# 归因资料来源；支持多个项目目录、文档、配置、trace 或工具说明，并用 note 说明为什么重要。
+material:
+  - path: "impl/projects/<project>/project.yaml"
+    note: "Project config, documents, semantic rules, and available runtime hooks."
+  - path: "impl/projects/<project>/attribution.md"
+    note: "Project attribution expectations and known evidence boundaries."
+
+# mock 数据是否冻结；默认必须为 true，loop 中不得修改，除非用户明确要求更新本配置。
+mock_frozen: true
+
+# review prompt；多行填写，每行一个评审原则或描述。具体比较逻辑由 skill 门禁和当前 evidence 决定，不在 config 里重建 comparator。
+review: |
+  泛化能力：扩展到没见过的case上依然有较强的模型能力
+  准确性：归因的准确度
+  可用性：开发可以直接采纳建议改进
+
+# loop 最多迭代次数；每轮只允许优化 draft/tool/report，不允许自动改 mock 数据。
+max_iterations: 5
+
+# 对比报告输出位置；具体报告落在项目 draft 目录，不进入 production。
+report_path: "impl/projects/<project>/draft/attribute_comparison_report.md"

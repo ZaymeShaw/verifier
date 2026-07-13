@@ -1,0 +1,61 @@
+{
+  "project_id": "marketting-planning-intent",
+  "rows": [
+    {
+      "id": "mock-agent-marketting-planning-intent-9e16256b",
+      "input": "帮我看看上季度买了重疾险的客户都是啥样的？",
+      "scenario": "intent_recognition",
+      "output_summary": "{\"confidence\": 0.5, \"intent\": \"other\", \"subIntent\": \"其他意图\"}",
+      "reference_summary": "{\"confidence\": 0.95, \"intent\": \"customer_portrait\", \"target_value\": \"重疾险\"}",
+      "status": "not_fulfilled",
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "fulfillment_status": "not_fulfilled",
+      "judge_summary": {
+        "status": "not_fulfilled",
+        "fulfillment_status": "not_fulfilled",
+        "reason": "not_fulfilled · blocking=[intent_contract] · 当前单轮意图识别未满足 reference contract：query=帮我看看上季度买了重疾险的客户都是啥样的？，expected_intent=customer_portrait，actual_intent=other，confidence=0.5，min_confidence=None，失败项=['intent']，整体判定为 incorrect。",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 1,
+        "blocking_count": 1,
+        "primary_failure_dimensions": [
+          {
+            "expectation_id": "intent_contract",
+            "status": "not_fulfilled",
+            "blocking": true,
+            "downstream_impact": "当前单轮意图识别未满足 reference contract：query=帮我看看上季度买了重疾险的客户都是啥样的？，expected_intent=customer_portrait，actual_intent=other，confidence=0.5，min_confidence=None，失败项=['intent']，整体判定为 incorrect。",
+            "evidence": "当前单轮意图识别未满足 reference contract：query=帮我看看上季度买了重疾险的客户都是啥样的？，expected_intent=customer_portrait，actual_intent=other，confidence=0.5，min_confidence=None，失败项=['intent']，整体判定为 incorrect。"
+          }
+        ]
+      },
+      "attribution_summary": {
+        "attribution_count": 1,
+        "is_complete": false,
+        "is_formal_attribution": false,
+        "probe_count": 0,
+        "summary_text": "attribute agent LLM 调用失败，无法完成正式归因: [attribute] LLM 产出不符合结构化输出约束，已阻断（不放行假货）：\n  - 产出不是 JSON 对象，而是 str：\n产出预览：\"\""
+      },
+      "check_summary": {
+        "passed": true,
+        "issue_count": 0
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": true,
+      "issue_count": 0,
+      "fallback_count": 0,
+      "divergence_stage": "",
+      "root_cause_summary": "当前 case 期望 intent/slots 为 {'intent': 'customer_portrait', 'confidence': 0.95, 'target_value': '重疾险', 'path_types': None, 'subIntent': '其他意图'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "created_at": "2026-07-12T10:14:15.767789+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783851255767"
+    }
+  ],
+  "total": 1
+}

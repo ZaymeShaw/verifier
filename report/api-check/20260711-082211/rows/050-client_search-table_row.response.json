@@ -1,0 +1,53 @@
+{
+  "id": "mock-agent-client_search-cdd7df11",
+  "input": "帮我看看公司里所有买了重疾险的客户都有谁",
+  "scenario": "",
+  "output_summary": "",
+  "reference_summary": "{\"code\": 0, \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"=\", \"value\": \"重疾险\"}], \"confidence\": 0.95, \"end_flag\": 1, \"matched_level\": 1, \"msg\": \"success\", …",
+  "status": "<urlopen error [Errno 61] Connection refused>",
+  "execution_mode": "live",
+  "output_source": "live_service_unavailable",
+  "fulfillment_status": "not_evaluable",
+  "judge_summary": {
+    "status": "<urlopen error [Errno 61] Connection refused>",
+    "fulfillment_status": "",
+    "reason": "<urlopen error [Errno 61] Connection refused>",
+    "reason_source": "execution_error",
+    "reason_stage": "execution",
+    "is_formal_attribution": false,
+    "assessment_count": 0,
+    "blocking_count": 0
+  },
+  "attribution_summary": {
+    "attribution_count": 2,
+    "is_complete": true,
+    "is_formal_attribution": true,
+    "probe_count": 0,
+    "summary_text": "本次请求在 project.call 阶段尝试连接下游客户搜索服务时遭遇 Connection refused 错误，导致整个调用链失败。请求标准化阶段虽已正确识别“重疾险”产品类别，但 project.call 的异常处理未将中间解析结果（如 conditions）进行降级输出，使得最终响应完全为空，两个核心业务期望均未达成。修复重点：确认下游搜索服务正常运行且连接配置正确；同时增强 project.call 的异常处理，确保在外部服务不可用时仍能返回已解析的搜索条件，提供部分可用反馈。"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 5
+  },
+  "fallback_summary": {
+    "count": 2,
+    "needs_human_review": false,
+    "by_stage": {
+      "unknown": 2
+    },
+    "reasons": [
+      "<urlopen error [Errno 61] Connection refused>",
+      "<urlopen error [Errno 61] Connection refused>"
+    ]
+  },
+  "needs_human_review": false,
+  "check_passed": false,
+  "issue_count": 5,
+  "fallback_count": 2,
+  "divergence_stage": "",
+  "root_cause_summary": "本次请求在 project.call 阶段尝试连接下游客户搜索服务时遭遇 Connection refused 错误，导致整个调用链失败。请求标准化阶段虽已正确识别“重疾险”产品类别，但 project.call 的异常处理未将中间解析结果（如 conditions）进行降级输出，使得最终响应完全为空，两个核心业务期望均未达成。修复重点：确认下游搜索服务正常运行且连接配置正确；同时增强 project.call 的异常处理，确保在外部服务不可用时仍能返回已解析的搜索条件，提供部分可用反馈。",
+  "created_at": "2026-07-11T00:22:12.158879+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783729332158"
+}

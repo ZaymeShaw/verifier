@@ -1,0 +1,39 @@
+{
+  "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783729332158",
+  "project_id": "client_search",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "产品类别识别为重疾险",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": "由于下游搜索服务不可达（Connection refused），整个处理流程中断，未能执行到解析生成条件的阶段，因此无法产出包含pCategorys的重疾险搜索条件。",
+      "evidence": [
+        "run_trace显示project.call阶段返回'<urlopen error [Errno 61] Connection refused>'",
+        "extracted_output为空，无任何conditions"
+      ]
+    },
+    {
+      "expectation_id": "搜索请求成功执行并返回结果",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": "后端搜索服务连接被拒绝，API调用未成功，未能返回任何状态码或数据。",
+      "evidence": [
+        "run_trace显示project.call阶段连接错误",
+        "错误信息：<urlopen error [Errno 61] Connection refused>"
+      ]
+    }
+  ],
+  "root_cause_hypothesis": "系统在调用后端客户搜索API时发生连接拒绝（Connection refused），原因是目标服务未启动、网络不可达或端口配置错误，导致整个请求链路中断，解析模块未能输出任何条件，搜索请求也无法完成。",
+  "evidence": [
+    "run_trace中的错误记录：project.call阶段返回<urlopen error [Errno 61] Connection refused>",
+    "live_schema.validate_request阶段成功，说明前置验证通过，但后续调用失败",
+    "extracted_output为空，无任何结构化输出"
+  ],
+  "evidence_strength": "strong",
+  "summary": {
+    "attribution_count": 2,
+    "probe_count": 0,
+    "summary_text": "系统在调用后端客户搜索API时发生连接拒绝（Connection refused），原因是目标服务未启动、网络不可达或端口配置错误，导致整个请求链路中断，解析模块未能输出任何条件，搜索请求也无法完成。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

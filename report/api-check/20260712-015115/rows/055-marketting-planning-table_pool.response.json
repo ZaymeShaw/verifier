@@ -1,0 +1,75 @@
+{
+  "project_id": "marketting-planning",
+  "rows": [
+    {
+      "id": "mock-agent-marketting-planning-d1642b58",
+      "input": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？",
+      "scenario": "intent_recognition",
+      "output_summary": "{\"turns\": [{\"code\": 0, \"end_flag\": 1, \"event_summary\": {\"business_completed\": true, \"canonical_names\": [\"intent_detected\", \"reasoning_message_content\", \"planni…",
+      "reference_summary": "{\"expected_stage\": \"intent\", \"scenario\": \"intent_recognition\"}",
+      "status": "not_fulfilled",
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "fulfillment_status": "not_fulfilled",
+      "judge_summary": {
+        "status": "not_fulfilled",
+        "fulfillment_status": "not_fulfilled",
+        "reason": "not_fulfilled · blocking=[关键业务要素保留,意图阶段正确路由,营销规划意图识别准确性] · 用户明确表达通过调整理财师和产品方案来弥补团队今年NBEV缺口，属于典型营销规划需求。系统本应识别为营销意图并进入intent或后续澄清阶段，却错误识别为“其他意图(4001)”，随即以non_agent阶段直接结束，未提取任何业务要素，导致用户需求完全未响应。虽然SSE协议事件流完整且未输出无关卡片，但关键意图处理失败使整体输出对下游不可用，因此整体评估为not_fulfilled。",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 5,
+        "blocking_count": 3,
+        "primary_failure_dimensions": [
+          {
+            "blocking": true,
+            "downstream_impact": "下游无法利用核心指标和时间维度进行澄清或计算。",
+            "evidence": "robot_text为“卡片生成完成”等通用提示，无业务要素 | session_summary.accumulated_fields为空，无字段提取 | robot_text或think或session_summary中包含NBEV、今年、理财师、产品方案 | 卡片生成完成",
+            "expectation_id": "关键业务要素保留",
+            "status": "not_fulfilled"
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "会话在无实质性进展下终止，用户需求完全未满足。",
+            "evidence": "stage=non_agent | end_flag=1直接结束 | stage为intent或clarification | end_flag=0以便继续交互 | non_agent | 1",
+            "expectation_id": "意图阶段正确路由",
+            "status": "not_fulfilled"
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "规划引擎无法获取正确意图，后续澄清、字段提取、卡片生成全部阻塞。",
+            "evidence": "intent=4001（其他意图） | intent_name=其他意图 | stage=non_agent | intent字段为营销规划相关代码（如4002） | intent_name包含NBEV或规划语义 | stage为intent或clarification | 4001 | 其他意图 | non_agent",
+            "expectation_id": "营销规划意图识别准确性",
+            "status": "not_fulfilled"
+          }
+        ]
+      },
+      "attribution_summary": {
+        "attribution_count": 4,
+        "is_complete": false,
+        "is_formal_attribution": false,
+        "probe_count": 0,
+        "summary_text": "The intent recognition stage misclassified the user query as '其他意图' (4001) instead of a marketing planning intent. This incorrect classification led to stage routing to non_agent with immediate termination, skipping field clarification and planning, causing all blocked expectations."
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 2
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": false,
+      "issue_count": 2,
+      "fallback_count": 0,
+      "divergence_stage": "",
+      "root_cause_summary": "The intent recognition stage misclassified the user query as '其他意图' (4001) instead of a marketing planning intent. This incorrect classification led to stage routing to non_agent with immediate termination, skipping field clarification and planning, causing all blocked expectations.",
+      "created_at": "2026-07-11T17:51:16.773002+00:00",
+      "stop_reason": "",
+      "interaction_mode": "interactive_intent",
+      "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783792276772"
+    }
+  ],
+  "total": 1
+}

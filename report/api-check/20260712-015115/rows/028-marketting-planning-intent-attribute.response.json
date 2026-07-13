@@ -1,0 +1,161 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783792277427",
+  "project_id": "marketting-planning-intent",
+  "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图标签为customer_portrait",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_api_call",
+        "adapter_extraction",
+        "label_mapping"
+      ],
+      "root_cause_hypothesis": "意图识别模型将查询误判为“其他意图”（intent: 'other'，原始编码 4001），同时适配器未提取原始 intent 编码导致 label_mapping 收到 raw_intent=None，映射规则默认返回 'other'，最终输出非预期意图 customer_portrait。",
+      "evidence": [
+        {
+          "source": "extracted_output",
+          "intent": "other",
+          "subIntent": "其他意图"
+        },
+        {
+          "source": "raw_response_snippet",
+          "intent": "4001",
+          "intent_name": "其他意图",
+          "nlu_info.intent": "other"
+        },
+        {
+          "source": "runtime_checks",
+          "actual_mapping": "other",
+          "is_expected_mapping": false,
+          "summary": "映射未找到有效 raw_intent，回退至 other"
+        },
+        {
+          "source": "intent_contract_probe",
+          "intent_match": false,
+          "evidence_gap": [
+            "intent_evidence"
+          ]
+        }
+      ]
+    },
+    {
+      "expectation_id": "提取目标产品实体重疾险",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_api_call"
+      ],
+      "root_cause_hypothesis": "意图识别模型未提取产品实体，原始响应中 target_value 为 null，导致下游缺少关键分析维度。",
+      "evidence": [
+        {
+          "source": "raw_response_snippet"
+        },
+        {
+          "source": "extracted_output",
+          "missing_target_value": true
+        },
+        {
+          "source": "judge_result.missing",
+          "kind": "entity",
+          "error_type": "missing_entity",
+          "expected": "重疾险"
+        }
+      ]
+    },
+    {
+      "expectation_id": "置信度满足阈值要求",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_api_call"
+      ],
+      "root_cause_hypothesis": "意图识别模型输出的置信度仅 0.5，远低于合同要求的 0.95，表明分类结果不可靠，无法被信任。",
+      "evidence": [
+        {
+          "source": "extracted_output",
+          "confidence": 0.5
+        },
+        {
+          "source": "reference_contract",
+          "confidence": 0.95
+        },
+        {
+          "source": "intent_contract_probe",
+          "actual_confidence": 0.5,
+          "note": "expected_min_confidence 未显式配置，但合同要求 ≥0.95"
+        }
+      ]
+    }
+  ],
+  "suspected_locations": [
+    {
+      "location": "intent_contract_gate",
+      "evidence": [
+        [
+          {
+            "kind": "intent",
+            "error_type": "wrong_label",
+            "expected": {
+              "intent": "customer_portrait"
+            },
+            "actual": {
+              "intent": "other"
+            },
+            "evidence_ref": "extracted_output.intent",
+            "raw": {
+              "intent": "other",
+              "subIntent": "其他意图"
+            },
+            "incomplete": false
+          },
+          {
+            "kind": "entity",
+            "error_type": "missing_entity",
+            "expected": {
+              "target_value": "重疾险"
+            },
+            "evidence_ref": "extracted_output.target_value",
+            "incomplete": true
+          }
+        ]
+      ]
+    }
+  ],
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'confidence': 0.95, 'intent': 'customer_portrait', 'subIntent': '其他意图', 'target_value': '重疾险'}，实际 normalized intent evidence 为 {'confidence': 0.5, 'intent': 'other', 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+  "evidence": [
+    [
+      {
+        "kind": "intent",
+        "error_type": "wrong_label",
+        "expected": {
+          "intent": "customer_portrait"
+        },
+        "actual": {
+          "intent": "other"
+        },
+        "evidence_ref": "extracted_output.intent",
+        "raw": {
+          "intent": "other",
+          "subIntent": "其他意图"
+        },
+        "incomplete": false
+      },
+      {
+        "kind": "entity",
+        "error_type": "missing_entity",
+        "expected": {
+          "target_value": "重疾险"
+        },
+        "evidence_ref": "extracted_output.target_value",
+        "incomplete": true
+      }
+    ]
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "attribution_count": 3,
+    "probe_count": 0,
+    "summary_text": "意图识别模型未能正确理解用户查询，将其分类为“其他意图”且未提取产品实体，置信度过低；同时适配器未传递原始意图编码，映射模块在 raw_intent=None 时兜底返回 'other'，未触发 customer_portrait 映射，最终导致全链路失败。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

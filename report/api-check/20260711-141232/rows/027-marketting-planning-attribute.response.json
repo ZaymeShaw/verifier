@@ -1,0 +1,115 @@
+{
+  "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783750354204",
+  "project_id": "marketting-planning",
+  "case_id": "mock-agent-marketting-planning-d1642b58",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图识别阶段正确",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "type": "processing_stage",
+          "stage": "intent_recognition",
+          "likely_files": [
+            "app/main.py",
+            "intent classification module"
+          ],
+          "rationale": "意图识别阶段负责决定 stage 和 intent_name，输出 non_agent 和“其他意图”表明该阶段的分类/路由逻辑产生了错误决策。"
+        }
+      ],
+      "root_cause_hypothesis": "意图分类器（可能是基于规则或机器学习模型）未能将“NBEV目标、增加理财师、优化产品方案”识别为营销规划意图，将其错误分类为“其他意图”，随后阶段路由依据错误分类结果将请求派发至 non_agent 分支，导致整个营销规划流程未能启动。",
+      "evidence": [
+        {
+          "source": "execution_trace.intent_recognition.evidence",
+          "detail": "actual_stage 为 non_agent，与 expected_stage intent 不符，确认阶段识别失败。"
+        },
+        {
+          "source": "extracted_output.turns[0].stage",
+          "detail": "实际输出 stage 为 non_agent。"
+        }
+      ]
+    },
+    {
+      "expectation_id": "意图分类为营销规划相关",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "type": "processing_stage",
+          "stage": "intent_recognition",
+          "likely_files": [
+            "app/main.py",
+            "intent classification model/config"
+          ],
+          "rationale": "意图名称被设为“其他意图”，说明分类器未匹配到任何营销规划相关意图类别，可能因为类别定义缺失或分类阈值不当。"
+        }
+      ],
+      "root_cause_hypothesis": "意图分类体系中缺少覆盖“NBEV目标补缺”这类经营分析/规划场景的意图标签，或者训练数据中未包含类似表述，导致分类器将该查询归入兜底的“其他意图”类别。",
+      "evidence": [
+        {
+          "source": "extracted_output.turns[0].intent_name",
+          "detail": "实际 intent_name 为“其他意图”，无法映射到营销规划相关意图。"
+        },
+        {
+          "source": "extracted_output.turns[0].intent",
+          "detail": "意图代码为 4001，通常表示未分类或兜底类别。"
+        }
+      ]
+    }
+  ],
+  "suspected_locations": [
+    {
+      "type": "processing_stage",
+      "stage": "intent_recognition",
+      "description": "意图识别与阶段路由逻辑执行点",
+      "evidence_refs": [
+        "execution_trace.intent_recognition",
+        "extracted_output.turns[0].stage",
+        "extracted_output.turns[0].intent_name"
+      ],
+      "likely_source_files": [
+        "app/main.py",
+        "app/config.py",
+        "意图分类模型配置文件"
+      ]
+    }
+  ],
+  "root_cause_hypothesis": "系统在意图识别阶段未能正确解析用户关于 NBEV 目标补缺的营销规划请求。根本原因可能是：1）意图分类器（规则或模型）缺乏与“NBEV”“理财师”“优化产品方案”等术语关联的营销规划意图类别；2）分类结果“其他意图”（4001）触发了 non_agent 路由规则，导致整个流程被阻断。两个未满足的期望共享同一根因：意图分类错误 → 阶段路由错误 → 下游流程完全未执行。",
+  "evidence": [
+    {
+      "source": "input.query",
+      "value": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？",
+      "interpretation": "明显属于营销规划/经营分析类型的业务查询。"
+    },
+    {
+      "source": "extracted_output.turns[0].stage",
+      "value": "non_agent",
+      "interpretation": "阶段未按预期进入 intent，表明意图识别阶段做出了错误的路由决策。"
+    },
+    {
+      "source": "extracted_output.turns[0].intent_name",
+      "value": "其他意图",
+      "interpretation": "意图被归入兜底类别，未匹配到任何具体业务意图。"
+    },
+    {
+      "source": "execution_trace.intent_recognition.evidence",
+      "value": {
+        "actual_stage": "non_agent",
+        "expected_stage": "intent"
+      },
+      "interpretation": "意图识别节点内部记录确认了阶段不符预期。"
+    },
+    {
+      "source": "judge_result.fulfillment_assessments",
+      "value": "两个期望均 not_fulfilled, blocking=true",
+      "interpretation": "下游营销规划流程因意图分类错误被完全阻断。"
+    }
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "attribution_count": 2,
+    "probe_count": 0,
+    "summary_text": "系统在意图识别阶段未能正确解析用户关于 NBEV 目标补缺的营销规划请求。根本原因可能是：1）意图分类器（规则或模型）缺乏与“NBEV”“理财师”“优化产品方案”等术语关联的营销规划意图类别；2）分类结果“其他意图”（4001）触发了 non_agent 路由规则，导致整个流程被阻断。两个未满足的期望共享同一根因：意图分类错误 → 阶段路由错误 → 下游流程完全未执行。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

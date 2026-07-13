@@ -1,0 +1,89 @@
+{
+  "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783835508646",
+  "project_id": "marketting-planning",
+  "case_id": "mock-agent-marketting-planning-d1642b58",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图识别为营销规划意图而非其他意图",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_recognition"
+      ],
+      "root_cause_hypothesis": "意图识别模块将用户的NBEV目标规划请求误判为“其他意图”（intent_name: 其他意图，intent: 4001），未正确归类为营销规划意图，导致下游流程全部错位。",
+      "evidence": [
+        "extracted_output.turns[0].intent_name: 其他意图",
+        "extracted_output.turns[0].intent: 4001",
+        "execution_stage_probe.intent_recognition.actual_stage: non_agent (expected: intent)"
+      ]
+    },
+    {
+      "expectation_id": "阶段路由为意图或规划阶段",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "path_dispatch",
+        "intent_recognition"
+      ],
+      "root_cause_hypothesis": "受意图误判影响，path_dispatch将阶段路由为non_agent，而非预期的intent或planning，阻断了后续营销规划流程。",
+      "evidence": [
+        "extracted_output.turns[0].stage: non_agent",
+        "execution_stage_probe: intent_recognition输出stage non_agent",
+        "planning_output_probe.stage_match: false"
+      ]
+    },
+    {
+      "expectation_id": "识别缺失业务字段并触发澄清",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "field_clarification"
+      ],
+      "root_cause_hypothesis": "由于流程进入non_agent阶段，field_clarification未被触发，系统未声明NBEV目标值等关键业务字段，也未通过对话询问。",
+      "evidence": [
+        "session_summary: required_fields/missing_fields为空",
+        "robot_text: “卡片生成完成”（无询问内容）",
+        "execution_stage_probe.field_clarification.evidence_status: missing"
+      ]
+    },
+    {
+      "expectation_id": "规划卡片在非澄清场景下产出非空",
+      "fulfillment_status": "not_evaluable",
+      "root_cause_hypothesis": "因阶段路由错误，planning_function未执行营销规划，卡片产出为0（card_count: 0），无法评估其业务质量。",
+      "evidence": [
+        "card_count: 0",
+        "card_summary: []",
+        "planning_output_probe.actual_cards_count: 0"
+      ]
+    },
+    {
+      "expectation_id": "mp_contract:expected_stage",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_recognition"
+      ],
+      "root_cause_hypothesis": "参考合同要求expected_stage为intent，但实际链路产出的stage为non_agent，根因是意图识别阶段输出错误意图类别。",
+      "evidence": [
+        "reference_contract.expected_stage: intent",
+        "actual stage: non_agent",
+        "execution_stage_probe.intent_recognition: actual_stage=non_agent vs expected_stage=intent"
+      ]
+    }
+  ],
+  "suspected_locations": [
+    "intent_recognition"
+  ],
+  "root_cause_hypothesis": "在intent_recognition阶段，意图分类模型/逻辑错误地将用户“NBEV目标缺口弥补”的请求归类为“其他意图”（intent=4001），导致path_dispatch将阶段路由为non_agent，并跳过planning_function等所有营销规划流程，最终整体业务期望未达成。SSE协议虽然完整，但业务层面完全失败。",
+  "evidence": [
+    "intent_name: 其他意图 (intent: 4001)",
+    "stage: non_agent",
+    "execution_stage_probe.intent_recognition: actual_stage=non_agent vs expected_stage=intent",
+    "planning_output_probe.stage_match: false, actual_cards_count: 0",
+    "judge_result: 意图识别和阶段路由均未满足，blocking=true"
+  ],
+  "evidence_strength": "high",
+  "summary": {
+    "attribution_count": 5,
+    "probe_count": 0,
+    "summary_text": "在intent_recognition阶段，意图分类模型/逻辑错误地将用户“NBEV目标缺口弥补”的请求归类为“其他意图”（intent=4001），导致path_dispatch将阶段路由为non_agent，并跳过planning_function等所有营销规划流程，最终整体业务期望未达成。SSE协议虽然完整，但业务层面完全失败。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  }
+}

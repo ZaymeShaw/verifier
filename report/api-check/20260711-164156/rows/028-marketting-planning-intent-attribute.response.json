@@ -1,0 +1,51 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783759318204",
+  "project_id": "marketting-planning-intent",
+  "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图标签为客户画像",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "app/workflow/steps/intent_recognition.py: 意图识别API响应解析与适配器提取逻辑",
+        "projects/marketting-planning-intent/intent.py: INTENT_MAPPING 字典"
+      ],
+      "root_cause_hypothesis": "意图识别API返回的原始意图为None或无法识别，适配器提取阶段将其设为'other'，且项目意图映射表将未知意图映射为'other'，未根据业务需求映射为'customer_portrait'。",
+      "evidence": [
+        "run_trace: adapter_extraction 输出 intent='other', confidence=0.5",
+        "runtime_checks: raw_intent=None, actual_mapping='other'",
+        "judge: expected intent='customer_portrait', actual='other'"
+      ]
+    },
+    {
+      "expectation_id": "目标值提取为重疾险",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "app/workflow/steps/intent_recognition.py: 槽位提取逻辑"
+      ],
+      "root_cause_hypothesis": "由于整体意图未被识别为customer_portrait，槽位提取逻辑可能未执行或未能从用户查询中提取出'重疾险'，导致target_value缺失。",
+      "evidence": [
+        "run_trace: extracted_output 中无 target_value 字段",
+        "judge: expected target_value='重疾险', actual missing"
+      ]
+    }
+  ],
+  "suspected_locations": [
+    "app/workflow/steps/intent_recognition.py: 意图识别适配器解析与槽位提取",
+    "projects/marketting-planning-intent/intent.py: INTENT_MAPPING 映射配置"
+  ],
+  "root_cause_hypothesis": "意图识别模型/API未能正确识别用户意图为customer_portrait，返回空或低置信度结果，导致适配器提取为'other'；同时项目配置的意图映射表将空/未知意图映射为'other'，未进行兜底修正。目标值提取受整体意图识别错误影响，未能输出'重疾险'。",
+  "evidence": [
+    "run_trace: adapter_extraction 输出 intent='other', confidence=0.5",
+    "runtime_checks: raw_intent=None, actual_mapping='other', confidence='high'",
+    "judge: 两个业务期望均未满足，实际 intent='other', target_value 缺失"
+  ],
+  "evidence_strength": "strong",
+  "summary": {
+    "attribution_count": 2,
+    "probe_count": 0,
+    "summary_text": "意图识别模型/API未能正确识别用户意图为customer_portrait，返回空或低置信度结果，导致适配器提取为'other'；同时项目配置的意图映射表将空/未知意图映射为'other'，未进行兜底修正。目标值提取受整体意图识别错误影响，未能输出'重疾险'。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "trace_id": "QA:mock-agent-QA-87e78ff7:1783857890883",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "告知轻症分组限制和合同继续有效等关键规则",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "answer_generation_or_provided_output"
+      ],
+      "root_cause_hypothesis": "实际回答聚焦于用户直接询问的“多次赔付”和“每次赔付金额”，并补充了次数上限、间隔期等常识性内容，但完全遗漏了参考回答中包含的轻症分组限制（同组只赔一次）、赔付后合同继续有效及累计赔付上限等影响用户全面理解轻症责任的重要规则。该缺失可能是由于答案生成时采用了简短回复策略，未纳入完整的轻症责任约束信息。",
+      "evidence": [
+        {
+          "ref": "missing_detail_from_judge",
+          "description": "评判发现答案缺失了“轻症责任可能设有分组限制，同一组别的轻症只能赔付一次；以及赔付后合同继续有效，累计赔付上限可能有限制”等关键信息。"
+        },
+        {
+          "ref": "reference_contract",
+          "text": "“需要注意，轻症责任可能设有分组限制，即同一组别的轻症只能赔付一次；另外，轻症赔付后合同继续有效，但累计赔付上限可能有限制。”"
+        },
+        {
+          "ref": "actual_answer",
+          "text": "“轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。” - 未提及以上规则"
+        }
+      ]
+    }
+  ],
+  "suspected_locations": [
+    "answer_generation_or_provided_output"
+  ],
+  "root_cause_hypothesis": "实际回答未完全覆盖参考回答中的轻症责任关键规则，尤其是分组限制、合同持续有效及累计赔付上限等细节，导致答案完整性不达标。根本原因在于答案生成过程未将轻症责任的附加约束条件纳入优先输出，而仅侧重于用户直接提问的赔付次数与金额。",
+  "evidence": [
+    {
+      "source": "judge_result.missing",
+      "missing": "说明轻症责任可能存在分组限制，同一组别的轻症只能赔付一次；以及赔付后合同继续有效，累计赔付上限可能有限制"
+    },
+    {
+      "source": "reference_contract",
+      "excerpt": "需要注意，轻症责任可能设有分组限制，即同一组别的轻症只能赔付一次；另外，轻症赔付后合同继续有效，但累计赔付上限可能有限制"
+    },
+    {
+      "source": "actual_answer",
+      "note": "未包含上述规则，仅覆盖赔付次数、比例、次数上限、间隔期及查阅合同提示，字符覆盖率约44.7%"
+    }
+  ],
+  "evidence_strength": "strong",
+  "summary": {
+    "attribution_count": 1,
+    "probe_count": 0,
+    "summary_text": "实际回答未完全覆盖参考回答中的轻症责任关键规则，尤其是分组限制、合同持续有效及累计赔付上限等细节，导致答案完整性不达标。根本原因在于答案生成过程未将轻症责任的附加约束条件纳入优先输出，而仅侧重于用户直接提问的赔付次数与金额。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

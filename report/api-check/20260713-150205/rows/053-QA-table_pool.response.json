@@ -1,0 +1,75 @@
+{
+  "project_id": "QA",
+  "rows": [
+    {
+      "id": "mock-agent-QA-87e78ff7",
+      "input": "我买的那个重疾险，如果得了合同里写的轻症，是不是能赔多次？每次赔多少？",
+      "scenario": "qa_gold_answer",
+      "output_summary": "{\"actual_answer\": \"轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。\"}",
+      "reference_summary": "{\"actual_answer\": \"通常情况下，您购买的重疾险合同中关于轻症责任的赔付规则如下：\\n1. 轻症可以多次赔付，具体次数以合同约定为准（常见为3-5次）。每次确诊的轻症需满足合同定义的疾病标准，且两次轻症确诊之间通常有间隔期（如90天或180天）。\\n2. 每次轻症赔付的金额一般为基本保额的一定比例，常…",
+      "status": "not_fulfilled",
+      "execution_mode": "provided",
+      "output_source": "provided_output",
+      "fulfillment_status": "not_fulfilled",
+      "judge_summary": {
+        "status": "not_fulfilled",
+        "fulfillment_status": "not_fulfilled",
+        "reason": "not_fulfilled · blocking=[(none)] · 实际回答准确回应了用户关于轻症多次赔付和赔付比例的两个核心问题，并给出了次数上限和间隔期存在的提示，同时包含了必要的风险提示。但与参考回答相比，遗漏了三项重要信息：1）轻症确诊需满足合同定义的疾病标准；2）轻症责任可能设有分组限制；3）轻症赔付后对重疾保额的可能影响。这些信息对于用户全面理解轻症责任具有实用价值。因此，整体回答在关键准确性上满足要求，但在完整性上存在明显不足。",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 10,
+        "blocking_count": 0,
+        "primary_failure_dimensions": [
+          {
+            "blocking": false,
+            "downstream_impact": "用户可能不了解多次赔付存在组别限制",
+            "evidence": "实际回答未提及分组限制 | 参考回答说明'轻症责任可能设有分组限制，同一组别的轻症只能赔付一次'",
+            "expectation_id": "说明轻症可能存在的分组限制",
+            "status": "not_fulfilled"
+          },
+          {
+            "blocking": false,
+            "downstream_impact": "用户可能忽略确诊需达到合同定义这一关键条件",
+            "evidence": "实际回答未提及疾病标准 | 参考回答明确指出'每次确诊的轻症需满足合同定义的疾病标准'",
+            "expectation_id": "说明轻症确诊需满足合同疾病标准",
+            "status": "not_fulfilled"
+          },
+          {
+            "blocking": false,
+            "downstream_impact": "用户可能未意识到轻症赔付会影响重疾保额",
+            "evidence": "实际回答未提保额变化 | 参考回答说明'部分产品轻症赔付后重疾保额不变，部分产品会相应减少'",
+            "expectation_id": "说明轻症赔付后重疾保额可能变化",
+            "status": "not_fulfilled"
+          }
+        ]
+      },
+      "attribution_summary": {
+        "attribution_count": 3,
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 0,
+        "summary_text": "实际回答虽然在核心点（多次赔付、比例、次数上限、间隔期）上满足了用户的核心意图，但由于回答生成阶段对参考合同细节的覆盖不够全面，遗漏了疾病标准、分组限制和保额变化等关键信息，导致总体完整性不足。在无提供上下文（contexts_count=0）的情况下，模型可能基于一般保险知识生成了简化版本的答案，未充分反映参考合同中的全部细节。"
+      },
+      "check_summary": {
+        "passed": true,
+        "issue_count": 0
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": true,
+      "issue_count": 0,
+      "fallback_count": 0,
+      "divergence_stage": "",
+      "root_cause_summary": "实际回答虽然在核心点（多次赔付、比例、次数上限、间隔期）上满足了用户的核心意图，但由于回答生成阶段对参考合同细节的覆盖不够全面，遗漏了疾病标准、分组限制和保额变化等关键信息，导致总体完整性不足。在无提供上下文（contexts_count=0）的情况下，模型可能基于一般保险知识生成了简化版本的答案，未充分反映参考合同中的全部细节。",
+      "created_at": "2026-07-13T07:02:05.600226+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "QA:mock-agent-QA-87e78ff7:1783926125600"
+    }
+  ],
+  "total": 1
+}

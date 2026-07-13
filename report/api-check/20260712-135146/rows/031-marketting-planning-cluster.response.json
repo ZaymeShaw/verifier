@@ -1,0 +1,57 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::在营销规划链路的 intent_recognition 阶段，系统未能正确识别用户的NBEV规划意图，将其归类为“其他意图”，导致后续 stage 路由错误至 ::not_fulfilled",
+      "mechanism": "在营销规划链路的 intent_recognition 阶段，系统未能正确识别用户的NBEV规划意图，将其归类为“其他意图”，导致后续 stage 路由错误至 ::not_fulfilled",
+      "fulfillment_statuses": [
+        "not_fulfilled",
+        "fulfilled",
+        "not_evaluable"
+      ],
+      "expectation_ids": [
+        "意图识别为营销规划意图而非其他意图",
+        "阶段路由为意图或规划阶段",
+        "识别缺失业务字段并触发澄清",
+        "SSE事件流协议完整",
+        "规划卡片在非澄清场景下产出非空",
+        "mp_contract:expected_stage"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "representative_traces": [
+        "marketting-planning:mock-agent-marketting-planning-d1642b58:1783835508646"
+      ],
+      "common_root_cause": "在营销规划链路的 intent_recognition 阶段，系统未能正确识别用户的NBEV规划意图，将其归类为“其他意图”，导致后续 stage 路由错误至 non_agent，所有规划、字段澄清及卡片产出均未执行，是本次 trace 不满足 reference contract 的根本原因。",
+      "shared_failure_pattern": "在营销规划链路的 intent_recognition 阶段，系统未能正确识别用户的NBEV规划意图，将其归类为“其他意图”，导致后续 stage 路由错误至 non_agent，所有规划、字段澄清及卡片产出均未执行，是本次 trace 不满足 reference contract 的根本原因。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-d1642b58",
+          "root_cause": "在营销规划链路的 intent_recognition 阶段，系统未能正确识别用户的NBEV规划意图，将其归类为“其他意图”，导致后续 stage 路由错误至 non_agent，所有规划、字段澄清及卡片产出均未执行，是本次 trace 不满足 reference contract 的根本原因。",
+          "evidence": [
+            "execution_stage_probe: intent_recognition 阶段 actual_stage=non_agent, expected_stage=intent",
+            "planning_output_probe: stage_match=false, actual_stage=null",
+            "extracted_output.turns[0].intent_name: 其他意图, stage: non_agent",
+            "session_summary.required_fields: [], card_summary: []"
+          ]
+        }
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "next_actions": [
+        "execution_stage_probe: intent_recognition 阶段 actual_stage=non_agent, expected_stage=intent",
+        "planning_output_probe: stage_match=false, actual_stage=null",
+        "extracted_output.turns[0].intent_name: 其他意图, stage: non_agent",
+        "session_summary.required_fields: [], card_summary: []"
+      ]
+    }
+  ],
+  "common_root_cause": "在营销规划链路的 intent_recognition 阶段，系统未能正确识别用户的NBEV规划意图，将其归类为“其他意图”，导致后续 stage 路由错误至 non_agent，所有规划、字段澄清及卡片产出均未执行，是本次 trace 不满足 reference contract 的根本原因。",
+  "impact": "",
+  "priority": "normal"
+}

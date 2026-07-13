@@ -1,0 +1,75 @@
+{
+  "trace_id": "QA:mock-agent-QA-87e78ff7:1783828275772",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "说明轻症分组限制",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "answer_generation_or_provided_output"
+      ],
+      "root_cause_hypothesis": "实际回答未提及轻症分组限制，可能是因为生成答案时模型未检索或未能覆盖该保险条款细节，导致信息不完整。",
+      "evidence": [
+        {
+          "type": "judge_assessment",
+          "content": "期望 '说明轻症分组限制' 的状态为 not_fulfilled，实际回答中未包含分组限制相关内容，而参考回答明确说明 '轻症责任可能设有分组限制，即同一组别的轻症只能赔付一次'。"
+        }
+      ]
+    },
+    {
+      "expectation_id": "说明轻症赔付对重疾保额的影响",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "answer_generation_or_provided_output"
+      ],
+      "root_cause_hypothesis": "实际回答遗漏了轻症赔付可能影响重疾保额这一重要限制条件，可能是模型生成时未能将轻症赔付与重疾保额联动考虑，或知识库中该关联未被激活。",
+      "evidence": [
+        {
+          "type": "judge_assessment",
+          "content": "期望 '说明轻症赔付对重疾保额的影响' 的状态为 not_fulfilled，实际回答未提及重疾保额变化，而参考回答指出 '部分产品轻症赔付后重疾保额不变，部分产品会相应减少'。"
+        }
+      ]
+    },
+    {
+      "expectation_id": "说明累计赔付上限",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "answer_generation_or_provided_output"
+      ],
+      "root_cause_hypothesis": "实际回答未包含累计赔付上限的信息，可能因为模型优先回答了核心问题，忽略了次优先级但仍有用的限制说明，或生成长度控制导致截断。",
+      "evidence": [
+        {
+          "type": "judge_assessment",
+          "content": "期望 '说明累计赔付上限' 的状态为 not_fulfilled，实际回答未提及累计赔付上限，而参考回答明确说明 '累计赔付上限可能有限制'。"
+        }
+      ]
+    }
+  ],
+  "suspected_locations": [
+    "answer_generation_or_provided_output"
+  ],
+  "root_cause_hypothesis": "实际回答虽满足了用户的核心疑问（是否多次赔付、每次赔多少），但缺失了分组限制、重疾保额影响、累计赔付上限等关键限制条件，根因在于答案生成环节未充分覆盖参考回答中的全部重要信息点，可能是由于模型知识检索不全面或输出生成时未包含所有细节，导致答案不完整。",
+  "evidence": [
+    {
+      "source": "qa_local_evidence_probe",
+      "content": "reference_answer_present: true, actual_answer_present: true, judge_status: not_fulfilled，reference_actual_char_coverage 仅 0.447，表明实际回答覆盖度较低。"
+    },
+    {
+      "source": "judge_result.fulfillment_assessments",
+      "content": "三个期望（分组限制、重疾保额影响、累计赔付上限）均被评估为 not_fulfilled，对应的 actual_evidence 均为 '未提及' 相关内容。"
+    },
+    {
+      "source": "judge_result.overall_fulfillment",
+      "content": "整体评估为 not_fulfilled，原因说明 '遗漏了分组限制、重疾保额影响、累计赔付上限等关键限制条件'。"
+    }
+  ],
+  "evidence_strength": "strong",
+  "summary": {
+    "attribution_count": 3,
+    "probe_count": 0,
+    "summary_text": "实际回答虽满足了用户的核心疑问（是否多次赔付、每次赔多少），但缺失了分组限制、重疾保额影响、累计赔付上限等关键限制条件，根因在于答案生成环节未充分覆盖参考回答中的全部重要信息点，可能是由于模型知识检索不全面或输出生成时未包含所有细节，导致答案不完整。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

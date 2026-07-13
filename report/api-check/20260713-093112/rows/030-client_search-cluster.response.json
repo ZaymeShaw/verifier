@@ -1,0 +1,94 @@
+{
+  "project_id": "client_search",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::业务预期已达成，无根因。::fulfilled",
+      "mechanism": "业务预期已达成，无根因。::fulfilled",
+      "fulfillment_statuses": [
+        "fulfilled"
+      ],
+      "expectation_ids": [
+        "重疾险口语映射为疾病保险枚举值",
+        "使用正确的字段pCategorys进行险种筛选",
+        "操作符语义上实现持有该险种的筛选"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "client_search:mock-agent-client_search-cdd7df11:1783906274907"
+      ],
+      "representative_traces": [
+        "client_search:mock-agent-client_search-cdd7df11:1783906274907"
+      ],
+      "common_root_cause": "业务预期已达成，无根因。",
+      "shared_failure_pattern": "业务预期已达成，无根因。",
+      "representative_diffs": [
+        {
+          "case_id": "client_search:mock-agent-client_search-cdd7df11:1783906274907",
+          "root_cause": "业务预期已达成，无根因。",
+          "evidence": [
+            {
+              "detail": "value_mappings中「重疾险」→「疾病保险」",
+              "source": "value_mappings",
+              "type": "field_mapping"
+            },
+            {
+              "detail": "actual输出条件为 pCategorys MATCH 疾病保险",
+              "source": "actual_output",
+              "type": "actual_condition"
+            },
+            {
+              "detail": "prompt示例「买了重疾险和医疗险的客户」→ pCategorys CONTAINS [疾病保险, 医疗保险]",
+              "source": "prompt.md",
+              "type": "prompt_example"
+            },
+            {
+              "detail": "MATCH与CONTAINS在本项目中等价，后处理会统一转换",
+              "source": "judge_boundary",
+              "type": "operator_equivalence"
+            },
+            {
+              "detail": "下游搜索不可用，无法验证结果集",
+              "source": "application_boundary",
+              "type": "downstream_unavailable"
+            }
+          ]
+        }
+      ],
+      "verification_cases": [
+        "client_search:mock-agent-client_search-cdd7df11:1783906274907"
+      ],
+      "next_actions": [
+        {
+          "detail": "value_mappings中「重疾险」→「疾病保险」",
+          "source": "value_mappings",
+          "type": "field_mapping"
+        },
+        {
+          "detail": "actual输出条件为 pCategorys MATCH 疾病保险",
+          "source": "actual_output",
+          "type": "actual_condition"
+        },
+        {
+          "detail": "prompt示例「买了重疾险和医疗险的客户」→ pCategorys CONTAINS [疾病保险, 医疗保险]",
+          "source": "prompt.md",
+          "type": "prompt_example"
+        },
+        {
+          "detail": "MATCH与CONTAINS在本项目中等价，后处理会统一转换",
+          "source": "judge_boundary",
+          "type": "operator_equivalence"
+        },
+        {
+          "detail": "下游搜索不可用，无法验证结果集",
+          "source": "application_boundary",
+          "type": "downstream_unavailable"
+        }
+      ]
+    }
+  ],
+  "common_root_cause": "业务预期已达成，无根因。",
+  "impact": "",
+  "priority": "normal"
+}

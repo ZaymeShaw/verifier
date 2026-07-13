@@ -1,0 +1,57 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::意图识别模块（intent_recognition）未能正确理解用户关于通过增加理财师或优化产品来弥补NBEV差距的营销规划意图，将其错误归类为“其他意图”（i::not_fulfilled",
+      "mechanism": "意图识别模块（intent_recognition）未能正确理解用户关于通过增加理财师或优化产品来弥补NBEV差距的营销规划意图，将其错误归类为“其他意图”（i::not_fulfilled",
+      "fulfillment_statuses": [
+        "not_fulfilled"
+      ],
+      "expectation_ids": [
+        "意图识别为营销规划",
+        "阶段流转进入意图或澄清",
+        "会话连续性保持",
+        "SSE事件语义正确",
+        "mp_contract:expected_stage"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "representative_traces": [
+        "marketting-planning:mock-agent-marketting-planning-d1642b58:1783906273825"
+      ],
+      "common_root_cause": "意图识别模块（intent_recognition）未能正确理解用户关于通过增加理财师或优化产品来弥补NBEV差距的营销规划意图，将其错误归类为“其他意图”（intent=4001），导致系统路由至non_agent阶段并过早结束会话，后续的规划、卡片生成等阶段均未执行，从而所有业务期望均未满足。",
+      "shared_failure_pattern": "意图识别模块（intent_recognition）未能正确理解用户关于通过增加理财师或优化产品来弥补NBEV差距的营销规划意图，将其错误归类为“其他意图”（intent=4001），导致系统路由至non_agent阶段并过早结束会话，后续的规划、卡片生成等阶段均未执行，从而所有业务期望均未满足。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-d1642b58",
+          "root_cause": "意图识别模块（intent_recognition）未能正确理解用户关于通过增加理财师或优化产品来弥补NBEV差距的营销规划意图，将其错误归类为“其他意图”（intent=4001），导致系统路由至non_agent阶段并过早结束会话，后续的规划、卡片生成等阶段均未执行，从而所有业务期望均未满足。",
+          "evidence": [
+            "extracted_output.turns[0].intent=4001, intent_name=其他意图",
+            "extracted_output.turns[0].stage=non_agent, end_flag=1",
+            "execution_trace.intent_recognition.evidence.actual_stage=non_agent, expected_stage=intent",
+            "execution_stage_probe: 无failed_stages，但intent_recognition已经产出错误stage",
+            "planning_output_probe: stage_match=false, evidence_gap=[actual_stage]",
+            "judge_result.fulfillment_assessments: 意图识别为营销规划 status=not_fulfilled, blocking=true"
+          ]
+        }
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "next_actions": [
+        "extracted_output.turns[0].intent=4001, intent_name=其他意图",
+        "extracted_output.turns[0].stage=non_agent, end_flag=1",
+        "execution_trace.intent_recognition.evidence.actual_stage=non_agent, expected_stage=intent",
+        "execution_stage_probe: 无failed_stages，但intent_recognition已经产出错误stage",
+        "planning_output_probe: stage_match=false, evidence_gap=[actual_stage]"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模块（intent_recognition）未能正确理解用户关于通过增加理财师或优化产品来弥补NBEV差距的营销规划意图，将其错误归类为“其他意图”（intent=4001），导致系统路由至non_agent阶段并过早结束会话，后续的规划、卡片生成等阶段均未执行，从而所有业务期望均未满足。",
+  "impact": "",
+  "priority": "normal"
+}

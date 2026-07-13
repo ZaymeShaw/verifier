@@ -1,0 +1,1801 @@
+{
+  "project": "client_search",
+  "trace": {
+    "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783919520597",
+    "project_id": "client_search",
+    "case_id": "mock-agent-client_search-cdd7df11",
+    "input": {
+      "extra_input_params": {
+        "pCategorys": "重疾险"
+      },
+      "session_id": "session_001",
+      "source": "insurance_search",
+      "trace_id": "trace_001",
+      "user_id": "default_user",
+      "user_text": "帮我看看公司里所有买了重疾险的客户都有谁"
+    },
+    "normalized_request": {
+      "user_text": "帮我看看公司里所有买了重疾险的客户都有谁",
+      "user_id": "default_user",
+      "trace_id": "trace_001",
+      "session_id": "session_001",
+      "source": "insurance_search",
+      "extra_input_params": {
+        "pCategorys": "重疾险"
+      }
+    },
+    "raw_response": {
+      "code": 0,
+      "msg": "操作成功",
+      "data": {
+        "robot_text": "产品类别为疾病保险的客户",
+        "end_flag": 1,
+        "extra_output_params": {
+          "query": "帮我看看公司里所有买了重疾险的客户都有谁",
+          "query_logic": "AND",
+          "conditions": [
+            {
+              "field": "pCategorys",
+              "operator": "MATCH",
+              "value": "疾病保险"
+            }
+          ],
+          "matched_level": 4,
+          "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+          "matched_patterns": "### 当前时间\n2026-07-13 13:11:59 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁",
+          "cost_times": 596.0,
+          "confidence": 0.8,
+          "intent_summary": "产品类别为疾病保险的客户"
+        },
+        "trace_id": "trace_001"
+      },
+      "_downstream_search": {
+        "status": "unavailable",
+        "url": "http://localhost:8081/api/v1/search/customer",
+        "payload": {
+          "header": {
+            "agent_id": "eval-user",
+            "page": 1,
+            "size": 20
+          },
+          "query_logic": "AND",
+          "conditions": [
+            {
+              "field": "pCategorys",
+              "operator": "MATCH",
+              "value": "疾病保险"
+            }
+          ]
+        },
+        "error": "[Errno 54] Connection reset by peer"
+      }
+    },
+    "extracted_output": {
+      "code": 0,
+      "msg": "操作成功",
+      "robot_text": "产品类别为疾病保险的客户",
+      "end_flag": 1,
+      "trace_id": "trace_001",
+      "query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+      "query_logic": "AND",
+      "conditions": [
+        {
+          "field": "pCategorys",
+          "operator": "MATCH",
+          "value": "疾病保险"
+        }
+      ],
+      "matched_level": 4,
+      "matched_patterns": "### 当前时间\n2026-07-13 13:11:59 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁",
+      "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+      "intent_summary": "产品类别为疾病保险的客户",
+      "confidence": 0.8,
+      "cost_times": 596.0
+    },
+    "live_result": {
+      "project_id": "client_search",
+      "case_id": "mock-agent-client_search-cdd7df11",
+      "session_id": "",
+      "raw_input": {
+        "extra_input_params": {
+          "pCategorys": "重疾险"
+        },
+        "session_id": "session_001",
+        "source": "insurance_search",
+        "trace_id": "trace_001",
+        "user_id": "default_user",
+        "user_text": "帮我看看公司里所有买了重疾险的客户都有谁"
+      },
+      "normalized_request": {
+        "user_text": "帮我看看公司里所有买了重疾险的客户都有谁",
+        "user_id": "default_user",
+        "trace_id": "trace_001",
+        "session_id": "session_001",
+        "source": "insurance_search",
+        "extra_input_params": {
+          "pCategorys": "重疾险"
+        }
+      },
+      "call_status": "succeeded",
+      "raw_response": {
+        "code": 0,
+        "msg": "操作成功",
+        "data": {
+          "robot_text": "产品类别为疾病保险的客户",
+          "end_flag": 1,
+          "extra_output_params": {
+            "query": "帮我看看公司里所有买了重疾险的客户都有谁",
+            "query_logic": "AND",
+            "conditions": [
+              {
+                "field": "pCategorys",
+                "operator": "MATCH",
+                "value": "疾病保险"
+              }
+            ],
+            "matched_level": 4,
+            "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+            "matched_patterns": "### 当前时间\n2026-07-13 13:11:59 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁",
+            "cost_times": 596.0,
+            "confidence": 0.8,
+            "intent_summary": "产品类别为疾病保险的客户"
+          },
+          "trace_id": "trace_001"
+        },
+        "_downstream_search": {
+          "status": "unavailable",
+          "url": "http://localhost:8081/api/v1/search/customer",
+          "payload": {
+            "header": {
+              "agent_id": "eval-user",
+              "page": 1,
+              "size": 20
+            },
+            "query_logic": "AND",
+            "conditions": [
+              {
+                "field": "pCategorys",
+                "operator": "MATCH",
+                "value": "疾病保险"
+              }
+            ]
+          },
+          "error": "[Errno 54] Connection reset by peer"
+        }
+      },
+      "runtime_ms": 2369,
+      "extracted_output": {
+        "code": 0,
+        "msg": "操作成功",
+        "robot_text": "产品类别为疾病保险的客户",
+        "end_flag": 1,
+        "trace_id": "trace_001",
+        "query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+        "query_logic": "AND",
+        "conditions": [
+          {
+            "field": "pCategorys",
+            "operator": "MATCH",
+            "value": "疾病保险"
+          }
+        ],
+        "matched_level": 4,
+        "matched_patterns": "### 当前时间\n2026-07-13 13:11:59 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁",
+        "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+        "intent_summary": "产品类别为疾病保险的客户",
+        "confidence": 0.8,
+        "cost_times": 596.0
+      },
+      "output_source": "live_service",
+      "execution_trace": [
+        {
+          "stage": "client_search.request_normalization",
+          "status": "succeeded",
+          "evidence": {
+            "user_text": "帮我看看公司里所有买了重疾险的客户都有谁",
+            "source": "insurance_search"
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "client_search.api",
+          "status": "succeeded",
+          "evidence": {
+            "code": 0
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "client_search.routing",
+          "status": "succeeded",
+          "evidence": {
+            "matched_level": 4,
+            "matched_patterns": "### 当前时间\n2026-07-13 13:11:59 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁"
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "client_search.downstream_search",
+          "status": "not_verified",
+          "evidence": {
+            "status": "unavailable",
+            "url": "http://localhost:8081/api/v1/search/customer",
+            "payload": {
+              "header": {
+                "agent_id": "eval-user",
+                "page": 1,
+                "size": 20
+              },
+              "query_logic": "AND",
+              "conditions": [
+                {
+                  "field": "pCategorys",
+                  "operator": "MATCH",
+                  "value": "疾病保险"
+                }
+              ]
+            },
+            "error": "[Errno 54] Connection reset by peer"
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "client_search.output_extract",
+          "status": "succeeded",
+          "evidence": {
+            "logic": "AND",
+            "condition_count": 1
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "live_schema.validate_request",
+          "status": "succeeded",
+          "evidence": {
+            "project_id": "client_search"
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "live_schema.validate_output",
+          "status": "succeeded",
+          "evidence": {
+            "project_id": "client_search"
+          },
+          "timestamp": "",
+          "error": ""
+        }
+      ],
+      "application_boundary": {
+        "downstream_result_set_available": false,
+        "downstream_status": "unavailable",
+        "judge_scope": "parser_condition_semantics_only",
+        "result_set_verified": false,
+        "reason": "application live layer probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+      },
+      "interaction_mode": "single_turn"
+    },
+    "execution_mode": "live",
+    "output_source": "live_service",
+    "scenario": "",
+    "application_boundary": {
+      "downstream_result_set_available": false,
+      "downstream_status": "unavailable",
+      "judge_scope": "parser_condition_semantics_only",
+      "result_set_verified": false,
+      "reason": "application live layer probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+    },
+    "execution_trace": [
+      {
+        "stage": "client_search.request_normalization",
+        "status": "succeeded",
+        "evidence": {
+          "user_text": "帮我看看公司里所有买了重疾险的客户都有谁",
+          "source": "insurance_search"
+        },
+        "timestamp": "",
+        "error": ""
+      },
+      {
+        "stage": "client_search.api",
+        "status": "succeeded",
+        "evidence": {
+          "code": 0
+        },
+        "timestamp": "",
+        "error": ""
+      },
+      {
+        "stage": "client_search.routing",
+        "status": "succeeded",
+        "evidence": {
+          "matched_level": 4,
+          "matched_patterns": "### 当前时间\n2026-07-13 13:11:59 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁"
+        },
+        "timestamp": "",
+        "error": ""
+      },
+      {
+        "stage": "client_search.downstream_search",
+        "status": "not_verified",
+        "evidence": {
+          "status": "unavailable",
+          "url": "http://localhost:8081/api/v1/search/customer",
+          "payload": {
+            "header": {
+              "agent_id": "eval-user",
+              "page": 1,
+              "size": 20
+            },
+            "query_logic": "AND",
+            "conditions": [
+              {
+                "field": "pCategorys",
+                "operator": "MATCH",
+                "value": "疾病保险"
+              }
+            ]
+          },
+          "error": "[Errno 54] Connection reset by peer"
+        },
+        "timestamp": "",
+        "error": ""
+      },
+      {
+        "stage": "client_search.output_extract",
+        "status": "succeeded",
+        "evidence": {
+          "logic": "AND",
+          "condition_count": 1
+        },
+        "timestamp": "",
+        "error": ""
+      },
+      {
+        "stage": "live_schema.validate_request",
+        "status": "succeeded",
+        "evidence": {
+          "project_id": "client_search"
+        },
+        "timestamp": "",
+        "error": ""
+      },
+      {
+        "stage": "live_schema.validate_output",
+        "status": "succeeded",
+        "evidence": {
+          "project_id": "client_search"
+        },
+        "timestamp": "",
+        "error": ""
+      }
+    ],
+    "status": "ok",
+    "error": "",
+    "interaction_mode": "single_turn",
+    "session_id": "",
+    "created_at": "2026-07-13T05:12:00.597217+00:00"
+  },
+  "judge": {
+    "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783919520597",
+    "project_id": "client_search",
+    "business_expectations": [
+      {
+        "expectation_id": "重疾险口语映射为疾病保险标准枚举值",
+        "downstream_consumer": "下游 ES 客户搜索",
+        "user_intent": "用户查询'买了重疾险的客户'，口语'重疾险'应映射为 pCategorys 字段的标准枚举值'疾病保险'",
+        "expected_outcome": "conditions 中包含 field=pCategorys，value=疾病保险",
+        "required_capabilities": [
+          "pCategorys 字段的 CONTAINS 操作符",
+          "重疾险→疾病保险 的值映射"
+        ],
+        "acceptance_criteria": [
+          "conditions 数组包含 field=pCategorys 的条件",
+          "该条件的 value 为'疾病保险'（直接或数组形式）"
+        ],
+        "priority": "critical"
+      },
+      {
+        "expectation_id": "条件操作符能正确筛选目标客户",
+        "downstream_consumer": "下游 ES 客户搜索",
+        "user_intent": "筛选持有重疾险（疾病保险）的客户",
+        "expected_outcome": "操作符能够执行筛选语义，MATCH 在此上下文中与 CONTAINS 等价",
+        "required_capabilities": [
+          "pCategorys 字段支持的操作符"
+        ],
+        "acceptance_criteria": [
+          "操作符不是无效或无法执行筛选的类型",
+          "MATCH 操作符对单个枚举值的筛选效果等价于 CONTAINS"
+        ],
+        "priority": "critical"
+      },
+      {
+        "expectation_id": "输出不包含用户未表达的额外条件",
+        "downstream_consumer": "下游 ES 客户搜索",
+        "user_intent": "用户只表达了按险种筛选的意图，未表达其他限制",
+        "expected_outcome": "conditions 仅包含一个条件，无额外限制",
+        "acceptance_criteria": [
+          "conditions 数组长度为 1",
+          "没有用户未表达的字段条件出现"
+        ],
+        "priority": "important"
+      }
+    ],
+    "fulfillment_assessments": [
+      {
+        "expectation_id": "重疾险口语映射为疾病保险标准枚举值",
+        "status": "fulfilled",
+        "score": 1.0,
+        "expected_evidence": [
+          {
+            "field": "pCategorys",
+            "value": "疾病保险"
+          }
+        ],
+        "actual_evidence": [
+          {
+            "field": "pCategorys",
+            "operator": "MATCH",
+            "value": "疾病保险"
+          }
+        ],
+        "downstream_impact": "能够正确筛选持有疾病保险的客户",
+        "blocking": false,
+        "confidence": 0.95
+      },
+      {
+        "expectation_id": "条件操作符能正确筛选目标客户",
+        "status": "fulfilled",
+        "score": 1.0,
+        "expected_evidence": [
+          {
+            "operator": "CONTAINS 或 MATCH，语义等价"
+          }
+        ],
+        "actual_evidence": [
+          {
+            "operator": "MATCH"
+          }
+        ],
+        "downstream_impact": "MATCH 操作符在 ES 中对 keyword 字段可正常执行筛选，语义等价于 CONTAINS",
+        "blocking": false,
+        "confidence": 0.9
+      },
+      {
+        "expectation_id": "输出不包含用户未表达的额外条件",
+        "status": "fulfilled",
+        "score": 1.0,
+        "expected_evidence": [
+          {
+            "condition_count": 1
+          }
+        ],
+        "actual_evidence": [
+          {
+            "condition_count": 1,
+            "conditions": [
+              {
+                "field": "pCategorys",
+                "operator": "MATCH",
+                "value": "疾病保险"
+              }
+            ]
+          }
+        ],
+        "downstream_impact": "无额外限制，搜索结果覆盖所有持有疾病保险的客户",
+        "blocking": false,
+        "confidence": 1.0
+      }
+    ],
+    "overall_fulfillment": {
+      "status": "fulfilled"
+    },
+    "expected": {
+      "code": 0,
+      "msg": "操作成功",
+      "query": "帮我看看公司里所有买了重疾险的客户都有谁",
+      "conditions": [
+        {
+          "field": "pCategorys",
+          "operator": "CONTAINS",
+          "value": [
+            "疾病保险"
+          ]
+        }
+      ],
+      "robot_text": "产品类别为疾病保险的客户",
+      "query_logic": "AND",
+      "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+      "end_flag": 1,
+      "intent_summary": "产品类别为疾病保险的客户"
+    },
+    "actual": {
+      "code": 0,
+      "msg": "操作成功",
+      "robot_text": "产品类别为疾病保险的客户",
+      "end_flag": 1,
+      "trace_id": "trace_001",
+      "query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+      "query_logic": "AND",
+      "conditions": [
+        {
+          "field": "pCategorys",
+          "operator": "MATCH",
+          "value": "疾病保险"
+        }
+      ],
+      "matched_level": 4,
+      "matched_patterns": "### 当前时间\n2026-07-13 13:11:59 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁",
+      "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+      "intent_summary": "产品类别为疾病保险的客户",
+      "confidence": 0.8,
+      "cost_times": 596.0
+    },
+    "evidence": [
+      {
+        "type": "value_mapping",
+        "mapping": "重疾险 → 疾病保险",
+        "source": "value_mappings.pCategorys"
+      },
+      {
+        "type": "capability_manifest",
+        "field": "pCategorys",
+        "supported_operators": [
+          "CONTAINS",
+          "NOT_CONTAINS"
+        ],
+        "note": "MATCH 操作符在语义上等价，根据评估规范不纠结 CONTAINS/MATCH 差异"
+      },
+      {
+        "type": "downstream_status",
+        "status": "unavailable",
+        "result_set_verified": false
+      },
+      {
+        "type": "judge_scope",
+        "scope": "parser_condition_semantics_only"
+      }
+    ],
+    "reasoning_summary": "用户查询'买了重疾险的客户'，核心意图是按险种大类筛选持有疾病保险的客户。系统将口语'重疾险'正确映射为 pCategorys 字段的标准枚举值'疾病保险'，映射关系符合 value_mappings 定义（重疾险→疾病保险）。操作符使用 MATCH 而非 prompt 示例中的 CONTAINS，但根据评估规范 MATCH 与 CONTAINS 在语义上等价，不影响搜索正确性。rewritten_query 将'重疾险'归一化为'疾病保险'，符合业务预期。输出仅包含一个筛选条件，无遗漏也无多余。下游 ES 搜索不可用（result_set_verified=false），但在 parser 条件语义层面，该条件能够正确表达用户意图，判定为 fulfilled。",
+    "summary": {
+      "reason": "fulfilled · 0 blocking expectations all met · 用户查询'买了重疾险的客户'，核心意图是按险种大类筛选持有疾病保险的客户。系统将口语'重疾险'正确映射为 pCategorys 字段的标准枚举值'疾病保险'，映射关系符合 value_mappings 定义（重疾险→疾病保险）。操作符使用 MATCH 而非 prompt 示例中的 CONTAINS，但根据评估规范 MATCH 与 CONTAINS 在语义上等价，不影响搜索正确性。rewritten_query 将'重疾险'归一化为'疾病保险'，符合业务预期。输出仅包含一个筛选条件，无遗漏也无多余。下游 ES 搜索不可用（result_set_verified=false），但在 parser 条件语义层面，该条件能够正确表达用户意图，判定为 fulfilled。",
+      "reason_source": "aggregated_fulfillment",
+      "fulfillment_status": "fulfilled",
+      "assessment_count": 3,
+      "blocking_count": 0,
+      "is_formal_attribution": true
+    }
+  },
+  "attribute": {
+    "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783919520597",
+    "project_id": "client_search",
+    "case_id": "",
+    "expectation_attributions": [
+      {
+        "expectation_id": "重疾险口语映射为疾病保险标准枚举值",
+        "fulfillment_status": "fulfilled",
+        "root_cause_hypothesis": "业务预期已达成，无根因。",
+        "evidence": [
+          {
+            "type": "value_mapping",
+            "mapping": "重疾险 → 疾病保险",
+            "source": "value_mappings.pCategorys"
+          },
+          {
+            "type": "capability_manifest",
+            "field": "pCategorys",
+            "supported_operators": [
+              "CONTAINS",
+              "NOT_CONTAINS"
+            ],
+            "note": "MATCH 操作符在语义上等价，根据评估规范不纠结 CONTAINS/MATCH 差异"
+          },
+          {
+            "type": "downstream_status",
+            "status": "unavailable",
+            "result_set_verified": false
+          },
+          {
+            "type": "judge_scope",
+            "scope": "parser_condition_semantics_only"
+          }
+        ]
+      },
+      {
+        "expectation_id": "条件操作符能正确筛选目标客户",
+        "fulfillment_status": "fulfilled",
+        "root_cause_hypothesis": "业务预期已达成，无根因。",
+        "evidence": [
+          {
+            "type": "value_mapping",
+            "mapping": "重疾险 → 疾病保险",
+            "source": "value_mappings.pCategorys"
+          },
+          {
+            "type": "capability_manifest",
+            "field": "pCategorys",
+            "supported_operators": [
+              "CONTAINS",
+              "NOT_CONTAINS"
+            ],
+            "note": "MATCH 操作符在语义上等价，根据评估规范不纠结 CONTAINS/MATCH 差异"
+          },
+          {
+            "type": "downstream_status",
+            "status": "unavailable",
+            "result_set_verified": false
+          },
+          {
+            "type": "judge_scope",
+            "scope": "parser_condition_semantics_only"
+          }
+        ]
+      },
+      {
+        "expectation_id": "输出不包含用户未表达的额外条件",
+        "fulfillment_status": "fulfilled",
+        "root_cause_hypothesis": "业务预期已达成，无根因。",
+        "evidence": [
+          {
+            "type": "value_mapping",
+            "mapping": "重疾险 → 疾病保险",
+            "source": "value_mappings.pCategorys"
+          },
+          {
+            "type": "capability_manifest",
+            "field": "pCategorys",
+            "supported_operators": [
+              "CONTAINS",
+              "NOT_CONTAINS"
+            ],
+            "note": "MATCH 操作符在语义上等价，根据评估规范不纠结 CONTAINS/MATCH 差异"
+          },
+          {
+            "type": "downstream_status",
+            "status": "unavailable",
+            "result_set_verified": false
+          },
+          {
+            "type": "judge_scope",
+            "scope": "parser_condition_semantics_only"
+          }
+        ]
+      }
+    ],
+    "root_cause_hypothesis": "业务预期已达成，无根因。",
+    "evidence": [
+      {
+        "type": "value_mapping",
+        "mapping": "重疾险 → 疾病保险",
+        "source": "value_mappings.pCategorys"
+      },
+      {
+        "type": "capability_manifest",
+        "field": "pCategorys",
+        "supported_operators": [
+          "CONTAINS",
+          "NOT_CONTAINS"
+        ],
+        "note": "MATCH 操作符在语义上等价，根据评估规范不纠结 CONTAINS/MATCH 差异"
+      },
+      {
+        "type": "downstream_status",
+        "status": "unavailable",
+        "result_set_verified": false
+      },
+      {
+        "type": "judge_scope",
+        "scope": "parser_condition_semantics_only"
+      }
+    ],
+    "evidence_strength": "strong",
+    "summary": {
+      "attribution_count": 3,
+      "probe_count": 0,
+      "summary_text": "业务预期已达成，无根因。",
+      "is_complete": true,
+      "is_formal_attribution": true
+    }
+  },
+  "check": {
+    "passed": false,
+    "issues": [
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+      "generic core contains project-specific marker query_logic: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+    ],
+    "boundary_violations": [
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+      "generic core contains project-specific marker query_logic: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+    ],
+    "verification_results": [
+      "Check categories passed current audit."
+    ],
+    "recommended_fixes": [
+      "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions."
+    ]
+  },
+  "frontend_view": {
+    "project_info": {
+      "project_id": "client_search",
+      "name": "客户搜索评估示例",
+      "description": "将客户搜索项目作为通用评估系统的第一个项目适配实现。"
+    },
+    "run_trace_summary": {
+      "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783919520597",
+      "project_id": "client_search",
+      "case_id": "mock-agent-client_search-cdd7df11",
+      "input": {
+        "extra_input_params": {
+          "pCategorys": "重疾险"
+        },
+        "session_id": "session_001",
+        "source": "insurance_search",
+        "trace_id": "trace_001",
+        "user_id": "default_user",
+        "user_text": "帮我看看公司里所有买了重疾险的客户都有谁"
+      },
+      "normalized_request": {
+        "user_text": "帮我看看公司里所有买了重疾险的客户都有谁",
+        "user_id": "default_user",
+        "trace_id": "trace_001",
+        "session_id": "session_001",
+        "source": "insurance_search",
+        "extra_input_params": {
+          "pCategorys": "重疾险"
+        }
+      },
+      "raw_response": {
+        "code": 0,
+        "msg": "操作成功",
+        "data": {
+          "robot_text": "产品类别为疾病保险的客户",
+          "end_flag": 1,
+          "extra_output_params": {
+            "query": "帮我看看公司里所有买了重疾险的客户都有谁",
+            "query_logic": "AND",
+            "conditions": [
+              {
+                "field": "pCategorys",
+                "operator": "MATCH",
+                "value": "疾病保险"
+              }
+            ],
+            "matched_level": 4,
+            "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+            "matched_patterns": "### 当前时间\n2026-07-13 13:11:59 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁",
+            "cost_times": 596.0,
+            "confidence": 0.8,
+            "intent_summary": "产品类别为疾病保险的客户"
+          },
+          "trace_id": "trace_001"
+        },
+        "_downstream_search": {
+          "status": "unavailable",
+          "url": "http://localhost:8081/api/v1/search/customer",
+          "payload": {
+            "header": {
+              "agent_id": "eval-user",
+              "page": 1,
+              "size": 20
+            },
+            "query_logic": "AND",
+            "conditions": [
+              {
+                "field": "pCategorys",
+                "operator": "MATCH",
+                "value": "疾病保险"
+              }
+            ]
+          },
+          "error": "[Errno 54] Connection reset by peer"
+        }
+      },
+      "extracted_output": {
+        "code": 0,
+        "msg": "操作成功",
+        "robot_text": "产品类别为疾病保险的客户",
+        "end_flag": 1,
+        "trace_id": "trace_001",
+        "query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+        "query_logic": "AND",
+        "conditions": [
+          {
+            "field": "pCategorys",
+            "operator": "MATCH",
+            "value": "疾病保险"
+          }
+        ],
+        "matched_level": 4,
+        "matched_patterns": "### 当前时间\n2026-07-13 13:11:59 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁",
+        "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+        "intent_summary": "产品类别为疾病保险的客户",
+        "confidence": 0.8,
+        "cost_times": 596.0
+      },
+      "live_result": {
+        "project_id": "client_search",
+        "case_id": "mock-agent-client_search-cdd7df11",
+        "session_id": "",
+        "raw_input": {
+          "extra_input_params": {
+            "pCategorys": "重疾险"
+          },
+          "session_id": "session_001",
+          "source": "insurance_search",
+          "trace_id": "trace_001",
+          "user_id": "default_user",
+          "user_text": "帮我看看公司里所有买了重疾险的客户都有谁"
+        },
+        "normalized_request": {
+          "user_text": "帮我看看公司里所有买了重疾险的客户都有谁",
+          "user_id": "default_user",
+          "trace_id": "trace_001",
+          "session_id": "session_001",
+          "source": "insurance_search",
+          "extra_input_params": {
+            "pCategorys": "重疾险"
+          }
+        },
+        "call_status": "succeeded",
+        "raw_response": {
+          "code": 0,
+          "msg": "操作成功",
+          "data": {
+            "robot_text": "产品类别为疾病保险的客户",
+            "end_flag": 1,
+            "extra_output_params": {
+              "query": "帮我看看公司里所有买了重疾险的客户都有谁",
+              "query_logic": "AND",
+              "conditions": [
+                {
+                  "field": "pCategorys",
+                  "operator": "MATCH",
+                  "value": "疾病保险"
+                }
+              ],
+              "matched_level": 4,
+              "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+              "matched_patterns": "### 当前时间\n2026-07-13 13:11:59 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁",
+              "cost_times": 596.0,
+              "confidence": 0.8,
+              "intent_summary": "产品类别为疾病保险的客户"
+            },
+            "trace_id": "trace_001"
+          },
+          "_downstream_search": {
+            "status": "unavailable",
+            "url": "http://localhost:8081/api/v1/search/customer",
+            "payload": {
+              "header": {
+                "agent_id": "eval-user",
+                "page": 1,
+                "size": 20
+              },
+              "query_logic": "AND",
+              "conditions": [
+                {
+                  "field": "pCategorys",
+                  "operator": "MATCH",
+                  "value": "疾病保险"
+                }
+              ]
+            },
+            "error": "[Errno 54] Connection reset by peer"
+          }
+        },
+        "runtime_ms": 2369,
+        "extracted_output": {
+          "code": 0,
+          "msg": "操作成功",
+          "robot_text": "产品类别为疾病保险的客户",
+          "end_flag": 1,
+          "trace_id": "trace_001",
+          "query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+          "query_logic": "AND",
+          "conditions": [
+            {
+              "field": "pCategorys",
+              "operator": "MATCH",
+              "value": "疾病保险"
+            }
+          ],
+          "matched_level": 4,
+          "matched_patterns": "### 当前时间\n2026-07-13 13:11:59 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁",
+          "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+          "intent_summary": "产品类别为疾病保险的客户",
+          "confidence": 0.8,
+          "cost_times": 596.0
+        },
+        "output_source": "live_service",
+        "execution_trace": [
+          {
+            "stage": "client_search.request_normalization",
+            "status": "succeeded",
+            "evidence": {
+              "user_text": "帮我看看公司里所有买了重疾险的客户都有谁",
+              "source": "insurance_search"
+            },
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "client_search.api",
+            "status": "succeeded",
+            "evidence": {
+              "code": 0
+            },
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "client_search.routing",
+            "status": "succeeded",
+            "evidence": {
+              "matched_level": 4,
+              "matched_patterns": "### 当前时间\n2026-07-13 13:11:59 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁"
+            },
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "client_search.downstream_search",
+            "status": "not_verified",
+            "evidence": {
+              "status": "unavailable",
+              "url": "http://localhost:8081/api/v1/search/customer",
+              "payload": {
+                "header": {
+                  "agent_id": "eval-user",
+                  "page": 1,
+                  "size": 20
+                },
+                "query_logic": "AND",
+                "conditions": [
+                  {
+                    "field": "pCategorys",
+                    "operator": "MATCH",
+                    "value": "疾病保险"
+                  }
+                ]
+              },
+              "error": "[Errno 54] Connection reset by peer"
+            },
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "client_search.output_extract",
+            "status": "succeeded",
+            "evidence": {
+              "logic": "AND",
+              "condition_count": 1
+            },
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "live_schema.validate_request",
+            "status": "succeeded",
+            "evidence": {
+              "project_id": "client_search"
+            },
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "live_schema.validate_output",
+            "status": "succeeded",
+            "evidence": {
+              "project_id": "client_search"
+            },
+            "timestamp": "",
+            "error": ""
+          }
+        ],
+        "application_boundary": {
+          "downstream_result_set_available": false,
+          "downstream_status": "unavailable",
+          "judge_scope": "parser_condition_semantics_only",
+          "result_set_verified": false,
+          "reason": "application live layer probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+        },
+        "interaction_mode": "single_turn"
+      },
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "scenario": "",
+      "application_boundary": {
+        "downstream_result_set_available": false,
+        "downstream_status": "unavailable",
+        "judge_scope": "parser_condition_semantics_only",
+        "result_set_verified": false,
+        "reason": "application live layer probed downstream customer search before judge/attribute and constrained evaluation scope to parser output semantics."
+      },
+      "execution_trace": [
+        {
+          "stage": "client_search.request_normalization",
+          "status": "succeeded",
+          "evidence": {
+            "user_text": "帮我看看公司里所有买了重疾险的客户都有谁",
+            "source": "insurance_search"
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "client_search.api",
+          "status": "succeeded",
+          "evidence": {
+            "code": 0
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "client_search.routing",
+          "status": "succeeded",
+          "evidence": {
+            "matched_level": 4,
+            "matched_patterns": "### 当前时间\n2026-07-13 13:11:59 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁"
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "client_search.downstream_search",
+          "status": "not_verified",
+          "evidence": {
+            "status": "unavailable",
+            "url": "http://localhost:8081/api/v1/search/customer",
+            "payload": {
+              "header": {
+                "agent_id": "eval-user",
+                "page": 1,
+                "size": 20
+              },
+              "query_logic": "AND",
+              "conditions": [
+                {
+                  "field": "pCategorys",
+                  "operator": "MATCH",
+                  "value": "疾病保险"
+                }
+              ]
+            },
+            "error": "[Errno 54] Connection reset by peer"
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "client_search.output_extract",
+          "status": "succeeded",
+          "evidence": {
+            "logic": "AND",
+            "condition_count": 1
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "live_schema.validate_request",
+          "status": "succeeded",
+          "evidence": {
+            "project_id": "client_search"
+          },
+          "timestamp": "",
+          "error": ""
+        },
+        {
+          "stage": "live_schema.validate_output",
+          "status": "succeeded",
+          "evidence": {
+            "project_id": "client_search"
+          },
+          "timestamp": "",
+          "error": ""
+        }
+      ],
+      "status": "ok",
+      "error": "",
+      "created_at": "2026-07-13T05:12:00.597217+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "session_id": "",
+      "turn_index": 0
+    },
+    "reference_panel": {
+      "reference": {
+        "code": 0,
+        "msg": "操作成功",
+        "query": "帮我看看公司里所有买了重疾险的客户都有谁",
+        "conditions": [
+          {
+            "field": "pCategorys",
+            "operator": "CONTAINS",
+            "value": [
+              "疾病保险"
+            ]
+          }
+        ],
+        "robot_text": "产品类别为疾病保险的客户",
+        "query_logic": "AND",
+        "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+        "end_flag": 1,
+        "intent_summary": "产品类别为疾病保险的客户"
+      },
+      "source": "judge_generated",
+      "actual": {
+        "code": 0,
+        "msg": "操作成功",
+        "robot_text": "产品类别为疾病保险的客户",
+        "end_flag": 1,
+        "trace_id": "trace_001",
+        "query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+        "query_logic": "AND",
+        "conditions": [
+          {
+            "field": "pCategorys",
+            "operator": "MATCH",
+            "value": "疾病保险"
+          }
+        ],
+        "matched_level": 4,
+        "matched_patterns": "### 当前时间\n2026-07-13 13:11:59 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁",
+        "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+        "intent_summary": "产品类别为疾病保险的客户",
+        "confidence": 0.8,
+        "cost_times": 596.0
+      }
+    },
+    "judge_panel": {
+      "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783919520597",
+      "project_id": "client_search",
+      "business_expectations": [
+        {
+          "expectation_id": "重疾险口语映射为疾病保险标准枚举值",
+          "downstream_consumer": "下游 ES 客户搜索",
+          "user_intent": "用户查询'买了重疾险的客户'，口语'重疾险'应映射为 pCategorys 字段的标准枚举值'疾病保险'",
+          "expected_outcome": "conditions 中包含 field=pCategorys，value=疾病保险",
+          "required_capabilities": [
+            "pCategorys 字段的 CONTAINS 操作符",
+            "重疾险→疾病保险 的值映射"
+          ],
+          "acceptance_criteria": [
+            "conditions 数组包含 field=pCategorys 的条件",
+            "该条件的 value 为'疾病保险'（直接或数组形式）"
+          ],
+          "priority": "critical"
+        },
+        {
+          "expectation_id": "条件操作符能正确筛选目标客户",
+          "downstream_consumer": "下游 ES 客户搜索",
+          "user_intent": "筛选持有重疾险（疾病保险）的客户",
+          "expected_outcome": "操作符能够执行筛选语义，MATCH 在此上下文中与 CONTAINS 等价",
+          "required_capabilities": [
+            "pCategorys 字段支持的操作符"
+          ],
+          "acceptance_criteria": [
+            "操作符不是无效或无法执行筛选的类型",
+            "MATCH 操作符对单个枚举值的筛选效果等价于 CONTAINS"
+          ],
+          "priority": "critical"
+        },
+        {
+          "expectation_id": "输出不包含用户未表达的额外条件",
+          "downstream_consumer": "下游 ES 客户搜索",
+          "user_intent": "用户只表达了按险种筛选的意图，未表达其他限制",
+          "expected_outcome": "conditions 仅包含一个条件，无额外限制",
+          "acceptance_criteria": [
+            "conditions 数组长度为 1",
+            "没有用户未表达的字段条件出现"
+          ],
+          "priority": "important"
+        }
+      ],
+      "fulfillment_assessments": [
+        {
+          "expectation_id": "重疾险口语映射为疾病保险标准枚举值",
+          "status": "fulfilled",
+          "score": 1.0,
+          "expected_evidence": [
+            {
+              "field": "pCategorys",
+              "value": "疾病保险"
+            }
+          ],
+          "actual_evidence": [
+            {
+              "field": "pCategorys",
+              "operator": "MATCH",
+              "value": "疾病保险"
+            }
+          ],
+          "downstream_impact": "能够正确筛选持有疾病保险的客户",
+          "blocking": false,
+          "confidence": 0.95
+        },
+        {
+          "expectation_id": "条件操作符能正确筛选目标客户",
+          "status": "fulfilled",
+          "score": 1.0,
+          "expected_evidence": [
+            {
+              "operator": "CONTAINS 或 MATCH，语义等价"
+            }
+          ],
+          "actual_evidence": [
+            {
+              "operator": "MATCH"
+            }
+          ],
+          "downstream_impact": "MATCH 操作符在 ES 中对 keyword 字段可正常执行筛选，语义等价于 CONTAINS",
+          "blocking": false,
+          "confidence": 0.9
+        },
+        {
+          "expectation_id": "输出不包含用户未表达的额外条件",
+          "status": "fulfilled",
+          "score": 1.0,
+          "expected_evidence": [
+            {
+              "condition_count": 1
+            }
+          ],
+          "actual_evidence": [
+            {
+              "condition_count": 1,
+              "conditions": [
+                {
+                  "field": "pCategorys",
+                  "operator": "MATCH",
+                  "value": "疾病保险"
+                }
+              ]
+            }
+          ],
+          "downstream_impact": "无额外限制，搜索结果覆盖所有持有疾病保险的客户",
+          "blocking": false,
+          "confidence": 1.0
+        }
+      ],
+      "overall_fulfillment": {
+        "status": "fulfilled"
+      },
+      "expected": {
+        "code": 0,
+        "msg": "操作成功",
+        "query": "帮我看看公司里所有买了重疾险的客户都有谁",
+        "conditions": [
+          {
+            "field": "pCategorys",
+            "operator": "CONTAINS",
+            "value": [
+              "疾病保险"
+            ]
+          }
+        ],
+        "robot_text": "产品类别为疾病保险的客户",
+        "query_logic": "AND",
+        "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+        "end_flag": 1,
+        "intent_summary": "产品类别为疾病保险的客户"
+      },
+      "actual": {
+        "code": 0,
+        "msg": "操作成功",
+        "robot_text": "产品类别为疾病保险的客户",
+        "end_flag": 1,
+        "trace_id": "trace_001",
+        "query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+        "query_logic": "AND",
+        "conditions": [
+          {
+            "field": "pCategorys",
+            "operator": "MATCH",
+            "value": "疾病保险"
+          }
+        ],
+        "matched_level": 4,
+        "matched_patterns": "### 当前时间\n2026-07-13 13:11:59 (Asia/Shanghai)\n### 今天星期\n周一\n\n### 相关字段参考（根据查询内容动态召回）\n\n\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户\n\n  示例: \"有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"客户\", \"准客\"]}\n\n  示例: \"没有保险的客户\" → {\"field\": \"isBuyInsurance\", \"operator\": \"CONTAINS\", \"value\": [\"用户\"]}\n\n- **searchClientName** | 操作符: MATCH | 值类型: extract | 定义: 表示客户本人完整姓名，不表示家庭成员、被保人、投保人姓名 | 说明: 当查询直接出现完整中文姓名时，必须保留全名原样输出；如\"陈成\"\"李保\"\"张无\"\"金美\"应输出完整姓名，不能截断为\"陈\"\"李\"\"张\"\"金\"，也不能因为名字较少见而省略、跳过或判定为无效。只有明确出现\"姓张\"\"姓李\"这类姓氏表达时，才可只取姓。\n\n  示例: \"叫张三的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n  示例: \"名字是李四的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"李四\"}\n\n  示例: \"陈成\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"陈成\"}\n\n  示例: \"姓张的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张\"}\n\n  示例: \"名字带伟的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"伟\"}\n\n  示例: \"姓zhang的客户\" → {\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"zhang\"}\n\n  反例: \"子女叫张三的客户\" → 不输出该字段；原因: 这是家庭成员姓名，应映射到 familyInfo.familyclientname 并组合 familyInfo.familyrelation\n\n- **pCategorys** | 操作符: CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户持有的寿险险种大类，如年金保险、医疗保险、疾病保险、意外伤害保险等，不表示具体产品名称。 | 说明: 医疗险/重疾险/年金险等口语应归到险种大类；具体产品简称或产品全称应映射到 polNoInfo.plancodeinfo.abbrname 或 polNoInfo.plancodeinfo.planfullname。\n\n  示例: \"持有年金保险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"年金保险\"]}\n\n  示例: \"买过终身寿险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"终身寿险\"]}\n\n  示例: \"购买了医疗产品的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"医疗保险\"]}\n\n  示例: \"购买了定寿的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"定期寿险\"]}\n\n  示例: \"买了重疾险和医疗险的客户\" → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}\n\n- **planAbbrNames** | 操作符: EXISTS | 值类型: exists | 定义: 表示客户持有任意寿险产品，不要求具体寿险产品名，仅表示寿险保单存在，不能表示持有某一款寿险产品\n\n  示例: \"寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  示例: \"买过寿险的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"EXISTS\", \"value\": \"\"}\n\n  反例: \"买了保险的客户\" → 不输出该字段\n\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\n\n  示例: \"有养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买养老险的客户\" → {\"field\": \"isBuyPension\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\n\n  示例: \"有健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"有购买\"}\n\n  示例: \"没有买健康险的客户\" → {\"field\": \"isBuyHealth\", \"operator\": \"MATCH\", \"value\": \"没有购买\"}\n\n- **planAbbrNames** | 操作符: NOT_EXISTS | 值类型: exists | 定义: 表示客户未持有任何寿险产品，不表示车险/非车险，不表示寿险保单到期时间为空，仅表示寿险保单不存在，不能表示没有买某一款寿险产品\n\n  示例: \"不是寿险客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  示例: \"没有寿险保单的客户\" → {\"field\": \"planAbbrNames\", \"operator\": \"NOT_EXISTS\", \"value\": \"\"}\n\n  反例: \"没买保险的客户\" → 不输出该字段\n\n- **polNoInfo.plancodeinfo.abbrname** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['百万任我行', '百万任我行17', '百万任我行18', '百万任我行22', '百万任我行23', '百万任我行25', '倍享百万', '百万随行'] | 定义: 表示百万医疗业务词对应的一组固定产品简称；输出值应限制在 millionMedicalProducts 枚举配置内。\n\n  示例: \"未配置百万医疗的客户\" → {\"field\": \"polNoInfo.plancodeinfo.abbrname\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"百万任我行\", \"百万任我行17\", \"百万任我行18\", \"百万任我行22\", \"百万任我行23\", \"百万任我行25\", \"倍享百万\", \"百万随行\"]}\n\n  反例: \"医疗险的客户\" → 不输出该字段；原因: 这是险种大类语义，应优先映射到 pCategorys=医疗保险，不是百万医疗产品集合\n\n- **validSinsPol** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['综拓', 'O2O', '意健险'] | 说明: 该字段仅表示是否有效短险保单，不表示准客来源，若需要查询准客来源，应映射到pcustSourcType\n\n  示例: \"没有综拓短险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"综拓\"]}\n\n  示例: \"未购买了意健险的客户\" → {\"field\": \"validSinsPol\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"意健险\"]}\n\n- **polNoInfo.applicantname** | 操作符: MATCH | 值类型: extract | 定义: 保单投保人姓名，嵌套字段\n\n  示例: \"投保人叫张三的客户\" → {\"field\": \"polNoInfo.applicantname\", \"operator\": \"MATCH\", \"value\": \"张三\"}\n\n### 用户查询\n帮我看看公司里所有买了疾病保险的客户都有谁",
+        "rewritten_query": "帮我看看公司里所有买了疾病保险的客户都有谁",
+        "intent_summary": "产品类别为疾病保险的客户",
+        "confidence": 0.8,
+        "cost_times": 596.0
+      },
+      "evidence": [
+        {
+          "type": "value_mapping",
+          "mapping": "重疾险 → 疾病保险",
+          "source": "value_mappings.pCategorys"
+        },
+        {
+          "type": "capability_manifest",
+          "field": "pCategorys",
+          "supported_operators": [
+            "CONTAINS",
+            "NOT_CONTAINS"
+          ],
+          "note": "MATCH 操作符在语义上等价，根据评估规范不纠结 CONTAINS/MATCH 差异"
+        },
+        {
+          "type": "downstream_status",
+          "status": "unavailable",
+          "result_set_verified": false
+        },
+        {
+          "type": "judge_scope",
+          "scope": "parser_condition_semantics_only"
+        }
+      ],
+      "reasoning_summary": "用户查询'买了重疾险的客户'，核心意图是按险种大类筛选持有疾病保险的客户。系统将口语'重疾险'正确映射为 pCategorys 字段的标准枚举值'疾病保险'，映射关系符合 value_mappings 定义（重疾险→疾病保险）。操作符使用 MATCH 而非 prompt 示例中的 CONTAINS，但根据评估规范 MATCH 与 CONTAINS 在语义上等价，不影响搜索正确性。rewritten_query 将'重疾险'归一化为'疾病保险'，符合业务预期。输出仅包含一个筛选条件，无遗漏也无多余。下游 ES 搜索不可用（result_set_verified=false），但在 parser 条件语义层面，该条件能够正确表达用户意图，判定为 fulfilled。",
+      "summary": {
+        "reason": "fulfilled · 0 blocking expectations all met · 用户查询'买了重疾险的客户'，核心意图是按险种大类筛选持有疾病保险的客户。系统将口语'重疾险'正确映射为 pCategorys 字段的标准枚举值'疾病保险'，映射关系符合 value_mappings 定义（重疾险→疾病保险）。操作符使用 MATCH 而非 prompt 示例中的 CONTAINS，但根据评估规范 MATCH 与 CONTAINS 在语义上等价，不影响搜索正确性。rewritten_query 将'重疾险'归一化为'疾病保险'，符合业务预期。输出仅包含一个筛选条件，无遗漏也无多余。下游 ES 搜索不可用（result_set_verified=false），但在 parser 条件语义层面，该条件能够正确表达用户意图，判定为 fulfilled。",
+        "reason_source": "aggregated_fulfillment",
+        "fulfillment_status": "fulfilled",
+        "assessment_count": 3,
+        "blocking_count": 0,
+        "is_formal_attribution": true
+      },
+      "display_status": "fulfilled",
+      "display_reason": "fulfilled · 0 blocking expectations all met · 用户查询'买了重疾险的客户'，核心意图是按险种大类筛选持有疾病保险的客户。系统将口语'重疾险'正确映射为 pCategorys 字段的标准枚举值'疾病保险'，映射关系符合 value_mappings 定义（重疾险→疾病保险）。操作符使用 MATCH 而非 prompt 示例中的 CONTAINS，但根据评估规范 MATCH 与 CONTAINS 在语义上等价，不影响搜索正确性。rewritten_query 将'重疾险'归一化为'疾病保险'，符合业务预期。输出仅包含一个筛选条件，无遗漏也无多余。下游 ES 搜索不可用（result_set_verified=false），但在 parser 条件语义层面，该条件能够正确表达用户意图，判定为 fulfilled。",
+      "wrong_missing_extra": {}
+    },
+    "attribute_panel": {
+      "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783919520597",
+      "project_id": "client_search",
+      "case_id": "",
+      "expectation_attributions": [
+        {
+          "expectation_id": "重疾险口语映射为疾病保险标准枚举值",
+          "fulfillment_status": "fulfilled",
+          "root_cause_hypothesis": "业务预期已达成，无根因。",
+          "evidence": [
+            {
+              "type": "value_mapping",
+              "mapping": "重疾险 → 疾病保险",
+              "source": "value_mappings.pCategorys"
+            },
+            {
+              "type": "capability_manifest",
+              "field": "pCategorys",
+              "supported_operators": [
+                "CONTAINS",
+                "NOT_CONTAINS"
+              ],
+              "note": "MATCH 操作符在语义上等价，根据评估规范不纠结 CONTAINS/MATCH 差异"
+            },
+            {
+              "type": "downstream_status",
+              "status": "unavailable",
+              "result_set_verified": false
+            },
+            {
+              "type": "judge_scope",
+              "scope": "parser_condition_semantics_only"
+            }
+          ]
+        },
+        {
+          "expectation_id": "条件操作符能正确筛选目标客户",
+          "fulfillment_status": "fulfilled",
+          "root_cause_hypothesis": "业务预期已达成，无根因。",
+          "evidence": [
+            {
+              "type": "value_mapping",
+              "mapping": "重疾险 → 疾病保险",
+              "source": "value_mappings.pCategorys"
+            },
+            {
+              "type": "capability_manifest",
+              "field": "pCategorys",
+              "supported_operators": [
+                "CONTAINS",
+                "NOT_CONTAINS"
+              ],
+              "note": "MATCH 操作符在语义上等价，根据评估规范不纠结 CONTAINS/MATCH 差异"
+            },
+            {
+              "type": "downstream_status",
+              "status": "unavailable",
+              "result_set_verified": false
+            },
+            {
+              "type": "judge_scope",
+              "scope": "parser_condition_semantics_only"
+            }
+          ]
+        },
+        {
+          "expectation_id": "输出不包含用户未表达的额外条件",
+          "fulfillment_status": "fulfilled",
+          "root_cause_hypothesis": "业务预期已达成，无根因。",
+          "evidence": [
+            {
+              "type": "value_mapping",
+              "mapping": "重疾险 → 疾病保险",
+              "source": "value_mappings.pCategorys"
+            },
+            {
+              "type": "capability_manifest",
+              "field": "pCategorys",
+              "supported_operators": [
+                "CONTAINS",
+                "NOT_CONTAINS"
+              ],
+              "note": "MATCH 操作符在语义上等价，根据评估规范不纠结 CONTAINS/MATCH 差异"
+            },
+            {
+              "type": "downstream_status",
+              "status": "unavailable",
+              "result_set_verified": false
+            },
+            {
+              "type": "judge_scope",
+              "scope": "parser_condition_semantics_only"
+            }
+          ]
+        }
+      ],
+      "root_cause_hypothesis": "业务预期已达成，无根因。",
+      "evidence": [
+        {
+          "type": "value_mapping",
+          "mapping": "重疾险 → 疾病保险",
+          "source": "value_mappings.pCategorys"
+        },
+        {
+          "type": "capability_manifest",
+          "field": "pCategorys",
+          "supported_operators": [
+            "CONTAINS",
+            "NOT_CONTAINS"
+          ],
+          "note": "MATCH 操作符在语义上等价，根据评估规范不纠结 CONTAINS/MATCH 差异"
+        },
+        {
+          "type": "downstream_status",
+          "status": "unavailable",
+          "result_set_verified": false
+        },
+        {
+          "type": "judge_scope",
+          "scope": "parser_condition_semantics_only"
+        }
+      ],
+      "evidence_strength": "strong",
+      "summary": {
+        "attribution_count": 3,
+        "probe_count": 0,
+        "summary_text": "业务预期已达成，无根因。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      },
+      "display_root_cause": "业务预期已达成，无根因。",
+      "attribution_count": 3
+    },
+    "fulfillment_panel": {
+      "overall_fulfillment": {
+        "status": "fulfilled"
+      },
+      "matrix": [
+        {
+          "expectation_id": "重疾险口语映射为疾病保险标准枚举值",
+          "downstream_consumer": "下游 ES 客户搜索",
+          "expected_outcome": "conditions 中包含 field=pCategorys，value=疾病保险",
+          "required_capabilities": [
+            "pCategorys 字段的 CONTAINS 操作符",
+            "重疾险→疾病保险 的值映射"
+          ],
+          "status": "fulfilled",
+          "score": 1.0,
+          "blocking": false,
+          "downstream_impact": "能够正确筛选持有疾病保险的客户"
+        },
+        {
+          "expectation_id": "条件操作符能正确筛选目标客户",
+          "downstream_consumer": "下游 ES 客户搜索",
+          "expected_outcome": "操作符能够执行筛选语义，MATCH 在此上下文中与 CONTAINS 等价",
+          "required_capabilities": [
+            "pCategorys 字段支持的操作符"
+          ],
+          "status": "fulfilled",
+          "score": 1.0,
+          "blocking": false,
+          "downstream_impact": "MATCH 操作符在 ES 中对 keyword 字段可正常执行筛选，语义等价于 CONTAINS"
+        },
+        {
+          "expectation_id": "输出不包含用户未表达的额外条件",
+          "downstream_consumer": "下游 ES 客户搜索",
+          "expected_outcome": "conditions 仅包含一个条件，无额外限制",
+          "status": "fulfilled",
+          "score": 1.0,
+          "blocking": false,
+          "downstream_impact": "无额外限制，搜索结果覆盖所有持有疾病保险的客户"
+        }
+      ]
+    },
+    "expectation_attribution_panel": {
+      "attributions": [
+        {
+          "expectation_id": "重疾险口语映射为疾病保险标准枚举值",
+          "fulfillment_status": "fulfilled",
+          "root_cause_hypothesis": "业务预期已达成，无根因。",
+          "evidence": [
+            {
+              "type": "value_mapping",
+              "mapping": "重疾险 → 疾病保险",
+              "source": "value_mappings.pCategorys"
+            },
+            {
+              "type": "capability_manifest",
+              "field": "pCategorys",
+              "supported_operators": [
+                "CONTAINS",
+                "NOT_CONTAINS"
+              ],
+              "note": "MATCH 操作符在语义上等价，根据评估规范不纠结 CONTAINS/MATCH 差异"
+            },
+            {
+              "type": "downstream_status",
+              "status": "unavailable",
+              "result_set_verified": false
+            },
+            {
+              "type": "judge_scope",
+              "scope": "parser_condition_semantics_only"
+            }
+          ]
+        },
+        {
+          "expectation_id": "条件操作符能正确筛选目标客户",
+          "fulfillment_status": "fulfilled",
+          "root_cause_hypothesis": "业务预期已达成，无根因。",
+          "evidence": [
+            {
+              "type": "value_mapping",
+              "mapping": "重疾险 → 疾病保险",
+              "source": "value_mappings.pCategorys"
+            },
+            {
+              "type": "capability_manifest",
+              "field": "pCategorys",
+              "supported_operators": [
+                "CONTAINS",
+                "NOT_CONTAINS"
+              ],
+              "note": "MATCH 操作符在语义上等价，根据评估规范不纠结 CONTAINS/MATCH 差异"
+            },
+            {
+              "type": "downstream_status",
+              "status": "unavailable",
+              "result_set_verified": false
+            },
+            {
+              "type": "judge_scope",
+              "scope": "parser_condition_semantics_only"
+            }
+          ]
+        },
+        {
+          "expectation_id": "输出不包含用户未表达的额外条件",
+          "fulfillment_status": "fulfilled",
+          "root_cause_hypothesis": "业务预期已达成，无根因。",
+          "evidence": [
+            {
+              "type": "value_mapping",
+              "mapping": "重疾险 → 疾病保险",
+              "source": "value_mappings.pCategorys"
+            },
+            {
+              "type": "capability_manifest",
+              "field": "pCategorys",
+              "supported_operators": [
+                "CONTAINS",
+                "NOT_CONTAINS"
+              ],
+              "note": "MATCH 操作符在语义上等价，根据评估规范不纠结 CONTAINS/MATCH 差异"
+            },
+            {
+              "type": "downstream_status",
+              "status": "unavailable",
+              "result_set_verified": false
+            },
+            {
+              "type": "judge_scope",
+              "scope": "parser_condition_semantics_only"
+            }
+          ]
+        }
+      ]
+    },
+    "cluster_panel": {
+      "project_id": "client_search",
+      "clusters": [
+        {
+          "cluster_id": "root_cause::业务预期已达成，无根因。::fulfilled",
+          "mechanism": "业务预期已达成，无根因。::fulfilled",
+          "fulfillment_statuses": [
+            "fulfilled"
+          ],
+          "expectation_ids": [
+            "重疾险口语映射为疾病保险标准枚举值",
+            "条件操作符能正确筛选目标客户",
+            "输出不包含用户未表达的额外条件"
+          ],
+          "needs_human_review": false,
+          "canonical_attribution": true,
+          "count": 1,
+          "representative_cases": [
+            "client_search:mock-agent-client_search-cdd7df11:1783919520597"
+          ],
+          "representative_traces": [
+            "client_search:mock-agent-client_search-cdd7df11:1783919520597"
+          ],
+          "common_root_cause": "业务预期已达成，无根因。",
+          "shared_failure_pattern": "业务预期已达成，无根因。",
+          "representative_diffs": [
+            {
+              "case_id": "client_search:mock-agent-client_search-cdd7df11:1783919520597",
+              "root_cause": "业务预期已达成，无根因。",
+              "evidence": [
+                {
+                  "type": "value_mapping",
+                  "mapping": "重疾险 → 疾病保险",
+                  "source": "value_mappings.pCategorys"
+                },
+                {
+                  "type": "capability_manifest",
+                  "field": "pCategorys",
+                  "supported_operators": [
+                    "CONTAINS",
+                    "NOT_CONTAINS"
+                  ],
+                  "note": "MATCH 操作符在语义上等价，根据评估规范不纠结 CONTAINS/MATCH 差异"
+                },
+                {
+                  "type": "downstream_status",
+                  "status": "unavailable",
+                  "result_set_verified": false
+                },
+                {
+                  "type": "judge_scope",
+                  "scope": "parser_condition_semantics_only"
+                }
+              ]
+            }
+          ],
+          "verification_cases": [
+            "client_search:mock-agent-client_search-cdd7df11:1783919520597"
+          ],
+          "next_actions": [
+            {
+              "type": "value_mapping",
+              "mapping": "重疾险 → 疾病保险",
+              "source": "value_mappings.pCategorys"
+            },
+            {
+              "type": "capability_manifest",
+              "field": "pCategorys",
+              "supported_operators": [
+                "CONTAINS",
+                "NOT_CONTAINS"
+              ],
+              "note": "MATCH 操作符在语义上等价，根据评估规范不纠结 CONTAINS/MATCH 差异"
+            },
+            {
+              "type": "downstream_status",
+              "status": "unavailable",
+              "result_set_verified": false
+            },
+            {
+              "type": "judge_scope",
+              "scope": "parser_condition_semantics_only"
+            }
+          ]
+        }
+      ],
+      "common_root_cause": "业务预期已达成，无根因。",
+      "impact": "",
+      "priority": "normal"
+    },
+    "check_panel": {
+      "passed": false,
+      "issues": [
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+        "generic core contains project-specific marker query_logic: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+      ],
+      "boundary_violations": [
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+        "generic core contains project-specific marker query_logic: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+        "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+      ],
+      "verification_results": [
+        "Check categories passed current audit."
+      ],
+      "recommended_fixes": [
+        "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions."
+      ]
+    },
+    "table_row": {
+      "id": "mock-agent-client_search-cdd7df11",
+      "input": "帮我看看公司里所有买了重疾险的客户都有谁",
+      "scenario": "",
+      "output_summary": "{\"code\": 0, \"msg\": \"操作成功\", \"robot_text\": \"产品类别为疾病保险的客户\", \"end_flag\": 1, \"trace_id\": \"trace_001\", \"query\": \"帮我看看公司里所有买了疾病保险的客户都有谁\", \"query_logic\": \"AND\", \"condi…",
+      "reference_summary": "{\"code\": 0, \"msg\": \"操作成功\", \"query\": \"帮我看看公司里所有买了重疾险的客户都有谁\", \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\"]}], \"robot_text\": \"…",
+      "status": "fulfilled",
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "fulfillment_status": "fulfilled",
+      "judge_summary": {
+        "status": "fulfilled",
+        "fulfillment_status": "fulfilled",
+        "reason": "fulfilled · 0 blocking expectations all met · 用户查询'买了重疾险的客户'，核心意图是按险种大类筛选持有疾病保险的客户。系统将口语'重疾险'正确映射为 pCategorys 字段的标准枚举值'疾病保险'，映射关系符合 value_mappings 定义（重疾险→疾病保险）。操作符使用 MATCH 而非 prompt 示例中的 CONTAINS，但根据评估规范 MATCH 与 CONTAINS 在语义上等价，不影响搜索正确性。rewritten_query 将'重疾险'归一化为'疾病保险'，符合业务预期。输出仅包含一个筛选条件，无遗漏也无多余。下游 ES 搜索不可用（result_set_verified=false），但在 parser 条件语义层面，该条件能够正确表达用户意图，判定为 fulfilled。",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 3,
+        "blocking_count": 0
+      },
+      "attribution_summary": {
+        "attribution_count": 3,
+        "probe_count": 0,
+        "summary_text": "业务预期已达成，无根因。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 3
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": false,
+      "issue_count": 3,
+      "fallback_count": 0,
+      "divergence_stage": "",
+      "root_cause_summary": "业务预期已达成，无根因。",
+      "created_at": "2026-07-13T05:12:00.597217+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783919520597"
+    },
+    "project_extensions": {
+      "frontend_standard": {
+        "frontend_view": {
+          "live": "render normalized parser output and raw project fields under protocol extension panels",
+          "summary": "align Output and Reference as formatted JSON with equal-size table cells and compact drill-downs"
+        },
+        "batch_persistence": {
+          "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+          "transient_results": "do not persist full trace, judge, attribute, downstream payload, or frontend_view as durable case-pool source data"
+        }
+      },
+      "display_contract": {
+        "output_source": "trace.live_result.extracted_output",
+        "reference_source": "judge_generated",
+        "formatting": [
+          "json formatting",
+          "truncation",
+          "output/reference alignment"
+        ]
+      },
+      "verifiable_tools": {
+        "available": false,
+        "reason": "adapter has no get_verifiable_tools"
+      }
+    }
+  }
+}

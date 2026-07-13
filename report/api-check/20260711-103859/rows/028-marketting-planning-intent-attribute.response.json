@@ -1,0 +1,57 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783737543903",
+  "project_id": "marketting-planning-intent",
+  "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图识别为customer_portrait",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "/app/workflow/prompts/intent_prompt.py",
+        "/app/workflow/steps/intent_recognition.py",
+        "/projects/marketting-planning-intent/intent.py:INTENT_MAPPING"
+      ],
+      "root_cause_hypothesis": "意图识别API在处理用户查询时未能正确识别“customer_portrait”意图，可能因提示词中缺乏该意图的描述或示例，导致模型返回空/错误意图；适配器解析后raw_intent=None，经INTENT_MAPPING映射为“other”，最终输出错误意图。",
+      "evidence": [
+        "用户查询“帮我看看上季度买了重疾险的客户都是啥样的？”期望意图为customer_portrait",
+        "实际输出intent为other，confidence仅为0.5",
+        "runtime_checks显示raw_intent=None，映射后为other",
+        "reference_contract期望confidence>=0.95，但实际仅0.5"
+      ]
+    },
+    {
+      "expectation_id": "提取产品实体为重疾险",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "/app/workflow/steps/intent_recognition.py",
+        "/app/workflow/prompts/intent_prompt.py"
+      ],
+      "root_cause_hypothesis": "由于意图识别为other，实体抽取逻辑可能未触发；或者API未设计返回产品实体；适配器在提取实体时未从查询中正确抽取“重疾险”，导致target_value缺失。",
+      "evidence": [
+        "最终输出无target_value字段",
+        "用户查询明确提及“重疾险”，但未出现在响应中",
+        "意图识别错误可能导致下游实体抽取被跳过"
+      ]
+    }
+  ],
+  "suspected_locations": [
+    "/app/workflow/prompts/intent_prompt.py",
+    "/app/workflow/steps/intent_recognition.py",
+    "/projects/marketting-planning-intent/intent.py:INTENT_MAPPING"
+  ],
+  "root_cause_hypothesis": "意图识别API未能正确识别“customer_portrait”意图，最可能根源在于提示词设计未覆盖该意图或模型训练不足，导致适配器回退为“other”；同时产品实体提取失败是意图错误导致的连锁反应。",
+  "evidence": [
+    "runtime_checks显示raw_intent=None，映射后为other",
+    "用户查询期望customer_portrait，实际输出other，confidence 0.5",
+    "reference_contract要求confidence>=0.95且intent=customer_portrait，均不满足",
+    "产品实体target_value缺失，尽管查询中明显提及“重疾险”"
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "attribution_count": 2,
+    "probe_count": 0,
+    "summary_text": "意图识别API未能正确识别“customer_portrait”意图，最可能根源在于提示词设计未覆盖该意图或模型训练不足，导致适配器回退为“other”；同时产品实体提取失败是意图错误导致的连锁反应。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

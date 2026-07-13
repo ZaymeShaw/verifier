@@ -1,0 +1,52 @@
+{
+  "project_id": "client_search",
+  "rows": [
+    {
+      "id": "mock-agent-client_search-cdd7df11",
+      "input": "帮我看看公司里所有买了重疾险的客户都有谁",
+      "scenario": "",
+      "output_summary": "{\"code\": 0, \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"MATCH\", \"value\": \"疾病保险\"}], \"confidence\": 0.8, \"cost_times\": 836.0, \"end_flag\": 1, \"intent_summa…",
+      "reference_summary": "{\"code\": 0, \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\"]}], \"msg\": \"操作成功\", \"query\": \"帮我看看公司里所有买了重疾险的客户都有谁\", \"query_logic\": …",
+      "status": "fulfilled",
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "fulfillment_status": "fulfilled",
+      "judge_summary": {
+        "status": "fulfilled",
+        "fulfillment_status": "fulfilled",
+        "reason": "fulfilled · 0 blocking expectations all met · 用户查询「买了重疾险的客户」，核心意图是按险种大类筛选持有疾病保险的客户。actual output 使用 pCategorys 字段、值为「疾病保险」，完全符合 value_mappings 中「重疾险→疾病保险」的映射规则。操作符为 MATCH，虽与 prompt 示例中的 CONTAINS 不完全一致，但根据项目 judge 边界规范，MATCH 与 CONTAINS 在本项目中等价且后处理会统一转换，不应视为错误。条件能够正确筛选出持有疾病保险的客户，满足用户搜索意图。下游搜索不可用，但基于 ES 查询语义和字段能力判断，该条件在语义上等价于正确查询。",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 3,
+        "blocking_count": 0
+      },
+      "attribution_summary": {
+        "attribution_count": 3,
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 0,
+        "summary_text": "业务预期已达成，无根因。"
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 3
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": false,
+      "issue_count": 3,
+      "fallback_count": 0,
+      "divergence_stage": "",
+      "root_cause_summary": "业务预期已达成，无根因。",
+      "created_at": "2026-07-13T01:31:14.907094+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783906274907"
+    }
+  ],
+  "total": 1
+}

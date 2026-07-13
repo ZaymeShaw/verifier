@@ -1,0 +1,67 @@
+{
+  "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783759317728",
+  "project_id": "marketting-planning",
+  "case_id": "mock-agent-marketting-planning-d1642b58",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图识别阶段应为intent",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": "意图识别模块的分类逻辑或规则未覆盖用户输入中的 NBEV、理财师、产品方案等营销规划关键词，导致系统将请求错误归类为“其他意图”，从而跳过 intent 阶段并进入 non_agent 阶段，无法执行后续营销规划流程。",
+      "evidence": [
+        {
+          "field": "actual_stage",
+          "value": "non_agent",
+          "source": "extracted_output"
+        },
+        {
+          "field": "actual_intent_name",
+          "value": "其他意图",
+          "source": "extracted_output"
+        },
+        {
+          "field": "expected_stage",
+          "value": "intent",
+          "source": "reference_contract"
+        },
+        {
+          "field": "user_query",
+          "value": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？"
+        }
+      ]
+    }
+  ],
+  "suspected_locations": [
+    "app/main.py"
+  ],
+  "root_cause_hypothesis": "意图识别模块未能正确理解用户的营销规划意图，根本原因可能是其分类器规则或模型训练数据中未包含类似 NBEV 目标调整、理财师资源优化等领域的表达，导致用户输入被归入“其他意图”兜底类别。该错误在 intent_recognition 阶段发生，表现为 stage 被错误设置为 non_agent，最终使系统无法进入正常的字段澄清、路径分派和规划生成流程，完全阻断了业务价值交付。",
+  "evidence": [
+    {
+      "key": "stage_actual",
+      "value": "non_agent"
+    },
+    {
+      "key": "stage_expected",
+      "value": "intent"
+    },
+    {
+      "key": "intent_name_actual",
+      "value": "其他意图"
+    },
+    {
+      "key": "intent_code",
+      "value": "4001"
+    },
+    {
+      "key": "user_query",
+      "value": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？"
+    }
+  ],
+  "evidence_strength": "weak",
+  "summary": {
+    "attribution_count": 1,
+    "probe_count": 0,
+    "summary_text": "意图识别模块未能正确理解用户的营销规划意图，根本原因可能是其分类器规则或模型训练数据中未包含类似 NBEV 目标调整、理财师资源优化等领域的表达，导致用户输入被归入“其他意图”兜底类别。该错误在 intent_recognition 阶段发生，表现为 stage 被错误设置为 non_agent，最终使系统无法进入正常的字段澄清、路径分派和规划生成流程，完全阻断了业务价值交付。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  }
+}

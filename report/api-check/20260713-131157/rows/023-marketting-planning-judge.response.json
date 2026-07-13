@@ -1,0 +1,400 @@
+{
+  "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783919518617",
+  "project_id": "marketting-planning",
+  "business_expectations": [
+    {
+      "expectation_id": "正确识别营销规划意图",
+      "downstream_consumer": "下游规划引擎与澄清模块",
+      "user_intent": "用户希望系统帮助分析如何补足NBEV缺口，隐含营销规划需求",
+      "expected_outcome": "意图识别结果为营销规划类，而非“其他意图”",
+      "required_capabilities": [
+        "意图识别",
+        "NBEV语义理解"
+      ],
+      "acceptance_criteria": [
+        "输出的 intent_name 应包含“规划”或“营销”",
+        "stage 应为“intent”或“planning”，并非“non_agent”"
+      ],
+      "boundary": {
+        "allow_fallback": false,
+        "dependency_status": "available"
+      },
+      "priority": "critical"
+    },
+    {
+      "expectation_id": "阶段路由进入意图识别或规划",
+      "downstream_consumer": "下游规划与卡片生成模块",
+      "user_intent": "用户需要系统理解其营销规划请求",
+      "expected_outcome": "系统将当前对话阶段标记为 intent 或 planning，而非 non_agent",
+      "required_capabilities": [
+        "阶段路由"
+      ],
+      "acceptance_criteria": [
+        "输出的 stage 字段值必须为 intent 或 planning"
+      ],
+      "boundary": {
+        "allow_fallback": false,
+        "dependency_status": "available"
+      },
+      "priority": "high"
+    },
+    {
+      "expectation_id": "SSE事件序列符合意图识别场景",
+      "downstream_consumer": "前端交互与状态展示",
+      "user_intent": "用户期望系统进行业务规划，而非输出无关卡片",
+      "expected_outcome": "事件序列包含意图识别完成事件，无无关卡片生成事件；最终结束状态与意图识别阶段一致",
+      "required_capabilities": [
+        "SSE事件编排"
+      ],
+      "acceptance_criteria": [
+        "事件列表中不应包含 card_start / card_message_content / card_end 等卡片生成事件",
+        "最终事件应为 done 或 reasoning_end 等表征意图识别完成的事件",
+        "protocol_completed 为 true"
+      ],
+      "boundary": {
+        "allow_fallback": false,
+        "dependency_status": "available"
+      },
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "未意外触发fallback",
+      "downstream_consumer": "整体系统稳定性",
+      "user_intent": "用户期望系统能够正常处理请求",
+      "expected_outcome": "在当前边界允许且依赖可用的条件下，不触发任何 fallback",
+      "required_capabilities": [
+        "fallback 控制"
+      ],
+      "acceptance_criteria": [
+        "fallback.used 必须为 false"
+      ],
+      "boundary": {
+        "allow_fallback": false,
+        "dependency_status": "available"
+      },
+      "priority": "high"
+    },
+    {
+      "expectation_id": "会话状态可追溯",
+      "downstream_consumer": "会话管理模块",
+      "user_intent": "用户期望系统在多轮对话中保持上下文",
+      "expected_outcome": "输出包含有效的 session_id 以及合理的 required_fields（即使为空）",
+      "required_capabilities": [
+        "会话管理"
+      ],
+      "acceptance_criteria": [
+        "session_summary.session_id 非空",
+        "session_summary 包含 required_fields、accumulated_fields、missing_fields 等基本结构"
+      ],
+      "boundary": {
+        "allow_fallback": false,
+        "dependency_status": "available"
+      },
+      "priority": "low"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "正确识别营销规划意图",
+      "status": "not_fulfilled",
+      "score": 0.0,
+      "expected_evidence": [
+        {
+          "field": "intent_name",
+          "condition": "contains '规划' or '营销'"
+        },
+        {
+          "field": "stage",
+          "expected_value": "intent"
+        }
+      ],
+      "actual_evidence": [
+        {
+          "field": "intent_name",
+          "actual_value": "其他意图"
+        },
+        {
+          "field": "stage",
+          "actual_value": "non_agent"
+        },
+        {
+          "field": "intent",
+          "actual_value": "4001"
+        }
+      ],
+      "downstream_impact": "下游规划引擎无法获得正确意图，导致无法生成任何规划卡片，用户需求落空",
+      "blocking": true,
+      "confidence": 0.98
+    },
+    {
+      "expectation_id": "阶段路由进入意图识别或规划",
+      "status": "not_fulfilled",
+      "score": 0.0,
+      "expected_evidence": [
+        {
+          "field": "stage",
+          "expected_values": [
+            "intent",
+            "planning"
+          ]
+        }
+      ],
+      "actual_evidence": [
+        {
+          "field": "stage",
+          "actual_value": "non_agent"
+        }
+      ],
+      "downstream_impact": "系统停留在 non_agent 阶段，无法触发澄清或规划流程，会话中断",
+      "blocking": true,
+      "confidence": 0.97
+    },
+    {
+      "expectation_id": "SSE事件序列符合意图识别场景",
+      "status": "not_fulfilled",
+      "score": 0.1,
+      "expected_evidence": [
+        {
+          "event_sequence": "应包含 intent_detected / reasoning_end 等事理事件，且无 card 相关事件"
+        }
+      ],
+      "actual_evidence": [
+        {
+          "raw_names": [
+            "reasoning_start",
+            "reasoning_message_content",
+            "reasoning_end",
+            "card_start",
+            "card_message_content",
+            "card_end"
+          ],
+          "contains_unexpected_cards": true
+        }
+      ],
+      "downstream_impact": "前端可能渲染空白卡片或误导用户，体验受损",
+      "blocking": false,
+      "confidence": 0.85
+    },
+    {
+      "expectation_id": "未意外触发fallback",
+      "status": "fulfilled",
+      "score": 1.0,
+      "expected_evidence": [
+        {
+          "fallback.used": false
+        }
+      ],
+      "actual_evidence": [
+        {
+          "fallback.used": false
+        }
+      ],
+      "downstream_impact": "无负面影响",
+      "blocking": false,
+      "confidence": 0.95
+    },
+    {
+      "expectation_id": "会话状态可追溯",
+      "status": "fulfilled",
+      "score": 1.0,
+      "expected_evidence": [
+        {
+          "session_id": "non-empty"
+        },
+        {
+          "required_fields_structure": "exists"
+        }
+      ],
+      "actual_evidence": [
+        {
+          "session_id": "eval-mock-agent-marketting-planning-d1642b58"
+        },
+        {}
+      ],
+      "downstream_impact": "会话可被后续追踪，无功能影响",
+      "blocking": false,
+      "confidence": 0.95
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "score": 0.25,
+    "summary": "核心意图识别失败，系统将营销规划请求误判为“其他意图”，导致阶段路由错误、规划完全缺失，用户诉求无法实现。尽管 fallback 未触发且会话信息完整，但关键维度未满足。"
+  },
+  "expected": {
+    "turns": [
+      {
+        "code": 0,
+        "msg": "success",
+        "robot_text": "已收到您关于团队NBEV目标补足的请求，正在分析规划路径…",
+        "end_flag": 0,
+        "intent": "4002",
+        "intent_name": "营销规划",
+        "stage": "intent",
+        "event_summary": {
+          "names": [
+            "intent_detected",
+            "done"
+          ],
+          "raw_names": [
+            "reasoning_start",
+            "intent_detected",
+            "reasoning_end",
+            "done"
+          ],
+          "canonical_names": [
+            "intent_detected",
+            "done"
+          ],
+          "counts": {
+            "intent_detected": 1,
+            "done": 1
+          },
+          "raw_counts": {
+            "reasoning_start": 1,
+            "intent_detected": 1,
+            "reasoning_end": 1,
+            "done": 1
+          },
+          "final_event": "done",
+          "raw_final_event": "done",
+          "protocol_completed": true,
+          "business_completed": false,
+          "completed": true
+        },
+        "session_summary": {
+          "session_id": "eval-mock-agent-marketting-planning-d1642b58",
+          "required_fields": [
+            "target_metric",
+            "current_gap",
+            "team_info"
+          ],
+          "missing_fields": [
+            "target_metric",
+            "current_gap",
+            "team_info"
+          ],
+          "evidence_declared": false,
+          "evidence_status": "missing"
+        },
+        "fallback": {
+          "used": false,
+          "allowed": false,
+          "reason": ""
+        },
+        "turn_index": 0,
+        "input_turn": {
+          "content": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？",
+          "role": "user"
+        }
+      }
+    ]
+  },
+  "actual": {
+    "turns": [
+      {
+        "code": 0,
+        "end_flag": 1,
+        "event_summary": {
+          "business_completed": true,
+          "canonical_names": [
+            "intent_detected",
+            "reasoning_message_content",
+            "planning_started",
+            "card_delta",
+            "done"
+          ],
+          "completed": true,
+          "counts": {
+            "card_delta": 1,
+            "done": 1,
+            "intent_detected": 1,
+            "planning_started": 1,
+            "reasoning_message_content": 1
+          },
+          "final_event": "done",
+          "names": [
+            "intent_detected",
+            "reasoning_message_content",
+            "planning_started",
+            "card_delta",
+            "done"
+          ],
+          "protocol_completed": true,
+          "raw_counts": {
+            "card_end": 1,
+            "card_message_content": 1,
+            "card_start": 1,
+            "reasoning_end": 1,
+            "reasoning_message_content": 1,
+            "reasoning_start": 1
+          },
+          "raw_final_event": "card_end",
+          "raw_names": [
+            "reasoning_start",
+            "reasoning_message_content",
+            "reasoning_end",
+            "card_start",
+            "card_message_content",
+            "card_end"
+          ]
+        },
+        "fallback": {
+          "allowed": false,
+          "reason": "",
+          "used": false
+        },
+        "input_turn": {
+          "content": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？",
+          "role": "user"
+        },
+        "intent": "4001",
+        "intent_name": "其他意图",
+        "msg": "success",
+        "robot_text": "卡片生成完成",
+        "session_summary": {
+          "evidence_declared": false,
+          "evidence_status": "missing",
+          "session_id": "eval-mock-agent-marketting-planning-d1642b58"
+        },
+        "stage": "non_agent",
+        "turn_index": 0
+      }
+    ]
+  },
+  "evidence": [
+    "系统实际输出将用户的营销规划请求识别为“其他意图”，阶段停留在 non_agent，导致规划卡片缺失，完全偏离了用户意图。关键评估维度均未满足，整体业务目标未达成。"
+  ],
+  "reasoning_summary": "系统实际输出将用户的营销规划请求识别为“其他意图”，阶段停留在 non_agent，导致规划卡片缺失，完全偏离了用户意图。关键评估维度均未满足，整体业务目标未达成。",
+  "summary": {
+    "reason": "not_fulfilled · blocking=[正确识别营销规划意图,阶段路由进入意图识别或规划] · 系统实际输出将用户的营销规划请求识别为“其他意图”，阶段停留在 non_agent，导致规划卡片缺失，完全偏离了用户意图。关键评估维度均未满足，整体业务目标未达成。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "正确识别营销规划意图",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "下游规划引擎无法获得正确意图，导致无法生成任何规划卡片，用户需求落空",
+        "evidence": "下游规划引擎无法获得正确意图，导致无法生成任何规划卡片，用户需求落空"
+      },
+      {
+        "expectation_id": "阶段路由进入意图识别或规划",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "系统停留在 non_agent 阶段，无法触发澄清或规划流程，会话中断",
+        "evidence": "系统停留在 non_agent 阶段，无法触发澄清或规划流程，会话中断"
+      },
+      {
+        "expectation_id": "SSE事件序列符合意图识别场景",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "前端可能渲染空白卡片或误导用户，体验受损",
+        "evidence": "前端可能渲染空白卡片或误导用户，体验受损"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 5,
+    "blocking_count": 2,
+    "is_formal_attribution": true
+  }
+}

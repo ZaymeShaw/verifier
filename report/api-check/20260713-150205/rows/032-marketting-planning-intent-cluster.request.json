@@ -1,0 +1,188 @@
+{
+  "project": "marketting-planning-intent",
+  "attributes": [
+    {
+      "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783926127869",
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+      "expectation_attributions": [
+        {
+          "expectation_id": "意图标签为customer_portrait",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            {
+              "stage": "label_mapping",
+              "reason": "INTENT_MAPPING 未将 raw_intent 4001 映射到 customer_portrait，而是映射为 other。"
+            },
+            {
+              "stage": "adapter_extraction",
+              "reason": "adapter_extraction 可能未能正确传递 raw_intent 或提前回退为 other。"
+            }
+          ],
+          "root_cause_hypothesis": "raw_intent 4001 未被项目映射表识别，导致最终意图为 other，未能满足 customer_portrait 的期望。",
+          "evidence": [
+            {
+              "source": "extracted_output",
+              "intent": "other"
+            },
+            {
+              "source": "intent_evidence",
+              "raw_intent": "4001"
+            },
+            {
+              "source": "runtime_checks",
+              "actual_mapping": "other",
+              "is_in_mapping": false,
+              "expected_intent": "customer_portrait"
+            }
+          ]
+        },
+        {
+          "expectation_id": "置信度达到业务可用阈值",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            {
+              "stage": "adapter_extraction",
+              "reason": "提取的置信度仅为 0.5，远低于期望的 0.8。"
+            },
+            {
+              "stage": "intent_api_call",
+              "reason": "API 返回的原始置信度可能较低或未被提取。"
+            }
+          ],
+          "root_cause_hypothesis": "由于意图被错误映射为 other，伴随的置信度默认为低值 0.5，或者 API 本身对 4001 的置信度不足，导致未达到业务可用阈值。",
+          "evidence": [
+            {
+              "source": "extracted_output",
+              "confidence": 0.5
+            },
+            {
+              "source": "reference_contract",
+              "expected_confidence": 0.95
+            },
+            {
+              "source": "intent_contract_probe",
+              "actual_confidence": 0.5
+            }
+          ]
+        },
+        {
+          "expectation_id": "目标产品实体提取完整",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            {
+              "stage": "adapter_extraction",
+              "reason": "未从 API 响应中提取 target_value 槽位。"
+            },
+            {
+              "stage": "intent_api_call",
+              "reason": "API 可能未返回产品实体或返回格式不符合 adapter 预期。"
+            }
+          ],
+          "root_cause_hypothesis": "adapter_extraction 未能解析 API 返回的实体信息，导致 target_value 为空；可能是 API 未返回实体或 adapter 的实体提取逻辑缺失对产品名称的处理。",
+          "evidence": [
+            {
+              "source": "extracted_output"
+            },
+            {
+              "source": "reference_contract",
+              "target_value": "重疾险"
+            },
+            {
+              "source": "intent_evidence"
+            }
+          ]
+        },
+        {
+          "expectation_id": "意图识别未错误回退",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            {
+              "stage": "label_mapping",
+              "reason": "映射表中缺乏 4001 的有效映射，触发 fallback 为 other。"
+            }
+          ],
+          "root_cause_hypothesis": "由于映射规则未覆盖 raw_intent 4001，label_mapping 阶段将其回退为 other，违反了不回退的期望。",
+          "evidence": [
+            {
+              "source": "extracted_output",
+              "intent": "other"
+            },
+            {
+              "source": "intent_contract_probe",
+              "intent_match": false
+            },
+            {
+              "source": "runtime_checks",
+              "actual_mapping": "other"
+            }
+          ]
+        },
+        {
+          "expectation_id": "intent_contract",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            {
+              "stage": "label_mapping",
+              "reason": "整体 contract 的主要断裂点：映射错误导致意图不符。"
+            },
+            {
+              "stage": "adapter_extraction",
+              "reason": "槽位提取缺失加剧 contract 不满足。"
+            }
+          ],
+          "root_cause_hypothesis": "单轮意图识别链路未满足 reference contract：因 raw_intent 4001 映射到 other，且缺失 target_value，导致 intent 和置信度均偏离预期。",
+          "evidence": [
+            {
+              "source": "judge_result.fulfillment_assessments",
+              "status": "not_fulfilled",
+              "downstream_impact": "当前单轮意图识别未满足 reference contract"
+            }
+          ]
+        }
+      ],
+      "suspected_locations": [
+        {
+          "location": "intent_contract_gate",
+          "evidence": [
+            [
+              {
+                "kind": "entity",
+                "error_type": "missing_required_slot",
+                "expected": {
+                  "target_value": "重疾险"
+                },
+                "actual": {},
+                "evidence_ref": "extracted_output.target_value",
+                "incomplete": false
+              }
+            ]
+          ]
+        }
+      ],
+      "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': 'customer_portrait', 'confidence': 0.95, 'target_value': '重疾险', 'path_types': None, 'subIntent': '其他意图'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "evidence": [
+        [
+          {
+            "kind": "entity",
+            "error_type": "missing_required_slot",
+            "expected": {
+              "target_value": "重疾险"
+            },
+            "actual": {},
+            "evidence_ref": "extracted_output.target_value",
+            "incomplete": false
+          }
+        ]
+      ],
+      "evidence_strength": "medium",
+      "summary": {
+        "attribution_count": 5,
+        "probe_count": 0,
+        "summary_text": "在意图识别链路中，intent_api_call 返回了 raw_intent 4001，但 adapter_extraction 未能提取有效的意图标签和产品实体，label_mapping 阶段亦未将 4001 映射到 customer_portrait，最终导致意图回退为 other、置信度降至 0.5 且目标产品实体缺失，未满足 reference contract。",
+        "is_complete": false,
+        "is_formal_attribution": false
+      }
+    }
+  ]
+}

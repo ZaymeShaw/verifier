@@ -1,0 +1,193 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783857892867",
+  "project_id": "marketting-planning-intent",
+  "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图标签为 customer_portrait",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "stage: intent_api_call (可能返回了原始意图 other 或 None)",
+        "stage: adapter_extraction (解析意图逻辑可能错误)",
+        "stage: label_mapping (映射表 INTENT_MAPPING 将 raw_intent=None 映射为 other)"
+      ],
+      "root_cause_hypothesis": "API 调用未能正确识别用户意图为 customer_portrait，可能原始返回为 None 或其他低置信度标签，经由 adapter_extraction 与 label_mapping 逐步传递，最终输出 other。",
+      "evidence": [
+        {
+          "runtime_checks": {
+            "actual_mapping": "other",
+            "actual_intent": "other"
+          }
+        },
+        {
+          "actual_intent_output": {
+            "intent": "other"
+          }
+        },
+        {
+          "reference_contract": {
+            "intent": "customer_portrait"
+          }
+        }
+      ]
+    },
+    {
+      "expectation_id": "置信度达到预期阈值",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "stage: intent_api_call (模型预测置信度低)",
+        "stage: adapter_extraction (可能未正确传递原始置信度)"
+      ],
+      "root_cause_hypothesis": "由于意图被识别为 other，模型整体置信度低（0.5），反映出模型对该输入的不确定性，也可能是 adapter_extraction 忽略了原始的高置信度标签。",
+      "evidence": [
+        {
+          "actual_intent_output": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "runtime_checks": {
+            "actual_confidence": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "expectation_id": "关键实体 target_value 提取正确",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "stage: intent_api_call (API 响应中可能未包含 target_value 字段)",
+        "stage: adapter_extraction (未实现 target_value 的抽取逻辑)"
+      ],
+      "root_cause_hypothesis": "意图识别链路未配置实体抽取，或因意图被归类为 other 时跳过实体抽取，导致缺失 target_value。",
+      "evidence": [
+        {
+          "actual_intent_output": {
+            "subIntent": "其他意图",
+            "intent": "other"
+          }
+        },
+        {
+          "reference_contract": {
+            "target_value": "重疾险"
+          }
+        },
+        {
+          "runtime_checks": {}
+        }
+      ]
+    },
+    {
+      "expectation_id": "意图不属于回退类别 other",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "stage: intent_api_call",
+        "stage: adapter_extraction",
+        "stage: label_mapping"
+      ],
+      "root_cause_hypothesis": "因意图被识别为 other，违背了此期望。",
+      "evidence": [
+        {
+          "actual_intent_output": {
+            "intent": "other"
+          }
+        }
+      ]
+    },
+    {
+      "expectation_id": "intent_contract",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "整体意图识别链路"
+      ],
+      "root_cause_hypothesis": "由于意图输出与 reference 不符，且缺失实体与低置信度，导致 contract 判定失败。",
+      "evidence": [
+        {
+          "judge_result": {
+            "overall_fulfillment": {
+              "status": "not_fulfilled"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "suspected_locations": [
+    {
+      "location": "intent_contract_gate",
+      "evidence": [
+        [
+          {
+            "kind": "intent_label",
+            "error_type": "missing",
+            "expected": "customer_portrait",
+            "evidence_ref": "adapter_extraction",
+            "raw": {
+              "error_type": "missing",
+              "evidence_ref": "adapter_extraction",
+              "expected": "customer_portrait",
+              "incomplete": false,
+              "kind": "intent_label"
+            },
+            "incomplete": false
+          },
+          {
+            "kind": "entity",
+            "error_type": "missing",
+            "expected": "重疾险",
+            "evidence_ref": "adapter_extraction",
+            "raw": {
+              "error_type": "missing",
+              "evidence_ref": "adapter_extraction",
+              "expected": "重疾险",
+              "incomplete": false,
+              "kind": "entity"
+            },
+            "incomplete": false
+          }
+        ]
+      ]
+    }
+  ],
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'confidence': 0.95, 'intent': 'customer_portrait', 'subIntent': '其他意图', 'target_value': '重疾险'}，实际 normalized intent evidence 为 {'confidence': 0.5, 'intent': 'other', 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+  "evidence": [
+    [
+      {
+        "kind": "intent_label",
+        "error_type": "missing",
+        "expected": "customer_portrait",
+        "evidence_ref": "adapter_extraction",
+        "raw": {
+          "error_type": "missing",
+          "evidence_ref": "adapter_extraction",
+          "expected": "customer_portrait",
+          "incomplete": false,
+          "kind": "intent_label"
+        },
+        "incomplete": false
+      },
+      {
+        "kind": "entity",
+        "error_type": "missing",
+        "expected": "重疾险",
+        "evidence_ref": "adapter_extraction",
+        "raw": {
+          "error_type": "missing",
+          "evidence_ref": "adapter_extraction",
+          "expected": "重疾险",
+          "incomplete": false,
+          "kind": "entity"
+        },
+        "incomplete": false
+      }
+    ]
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "attribution_count": 5,
+    "probe_count": 0,
+    "summary_text": "意图识别 API 在输入“帮我看看上季度买了重疾险的客户都是啥样的？”时未能给出 customer_portrait 的明确结果，很可能返回了原始意图为 None 或低置信度的 other，导致下游解析器提取出 other，并经由标签映射维持 other，且缺失 target_value 实体。置信度 0.5 远低于参考要求 0.9。根本原因可能在于 API 的 prompt 设计不足以处理该类客户画像查询，或训练数据/模型对 customer_portrait 意图覆盖不足。同时 adapter 与映射逻辑未能兜底，直接透传了低质量结果。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  }
+}

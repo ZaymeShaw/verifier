@@ -1,0 +1,225 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783835508938",
+  "project_id": "marketting-planning-intent",
+  "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图标签应为customer_portrait",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "stage": "intent_api_call",
+          "reason": "意图识别API未能将查询识别为customer_portrait，返回了other或低置信度意图。"
+        },
+        {
+          "stage": "adapter_extraction",
+          "reason": "适配器提取未纠正错误意图，直接传递了other。"
+        },
+        {
+          "stage": "label_mapping",
+          "reason": "标签映射将无有效意图的输入映射为other，未保持正确标签。"
+        }
+      ],
+      "root_cause_hypothesis": "意图识别API未正确解析查询中的“客户画像”需求，导致输出other意图；适配器提取和标签映射均未修复此错误，最终意图标签与期望不符。",
+      "evidence": [
+        {
+          "source": "extracted_output",
+          "value": {
+            "intent": "other"
+          }
+        },
+        {
+          "source": "intent_contract_probe",
+          "value": {
+            "intent_match": false,
+            "evidence_gap": [
+              "intent_evidence"
+            ]
+          }
+        },
+        {
+          "source": "runtime_checks",
+          "value": {
+            "actual_intent": "other",
+            "expected_intent": "customer_portrait"
+          }
+        }
+      ]
+    },
+    {
+      "expectation_id": "目标实体应为重疾险",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "stage": "intent_api_call",
+          "reason": "意图识别API响应中未包含target_value字段，实体抽取缺失。"
+        },
+        {
+          "stage": "adapter_extraction",
+          "reason": "适配器提取未生成或补全target_value实体。"
+        }
+      ],
+      "root_cause_hypothesis": "意图识别API未能从查询中抽取“重疾险”实体，适配器提取也未输出该槽位，导致下游缺少关键筛选条件。",
+      "evidence": [
+        {
+          "source": "extracted_output",
+          "value": "缺少target_value字段"
+        },
+        {
+          "source": "judge_result",
+          "value": {
+            "missing": [
+              {
+                "kind": "target_value",
+                "expected": "重疾险"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "expectation_id": "置信度至少为0.9",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "stage": "intent_api_call",
+          "reason": "API返回的置信度仅0.5，远低于要求的0.9。"
+        },
+        {
+          "stage": "adapter_extraction",
+          "reason": "适配器提取未提升或补救置信度。"
+        }
+      ],
+      "root_cause_hypothesis": "意图识别模型对查询分类不确定，给出的置信度0.5，可能因为训练数据不足或查询表述模糊，未达到业务高置信度要求。",
+      "evidence": [
+        {
+          "source": "extracted_output",
+          "value": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "source": "intent_contract_probe",
+          "value": {
+            "actual_confidence": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "expectation_id": "不应错误触发fallback意图",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "stage": "adapter_extraction",
+          "reason": "提取出的意图为other，即触发了fallback。"
+        },
+        {
+          "stage": "label_mapping",
+          "reason": "映射逻辑将无效意图归类为other，导致fallback。"
+        }
+      ],
+      "root_cause_hypothesis": "由于上游意图识别错误，导致最终意图落入other类别，错误触发了fallback机制，将明确的业务查询误判为非业务意图。",
+      "evidence": [
+        {
+          "source": "extracted_output",
+          "value": {
+            "intent": "other"
+          }
+        },
+        {
+          "source": "judge_result",
+          "value": {
+            "wrong": [
+              {
+                "kind": "intent_label",
+                "actual": "other",
+                "expected": "customer_portrait"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "expectation_id": "intent_contract",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "stage": "intent_api_call",
+          "reason": "API未满足reference contract的意图和置信度要求。"
+        },
+        {
+          "stage": "adapter_extraction",
+          "reason": "提取结果与contract严重偏离。"
+        },
+        {
+          "stage": "label_mapping",
+          "reason": "映射进一步固化了错误结果。"
+        }
+      ],
+      "root_cause_hypothesis": "整个单轮意图识别链路未能满足reference contract：意图识别为other而非customer_portrait，置信度0.5远低于0.95，关键实体缺失，整体判定为incorrect。根源在于API识别能力不足和映射容错性差。",
+      "evidence": [
+        {
+          "source": "reference_contract",
+          "value": {
+            "intent": "customer_portrait",
+            "confidence": 0.95,
+            "target_value": "重疾险"
+          }
+        },
+        {
+          "source": "actual_output",
+          "value": {
+            "intent": "other",
+            "confidence": 0.5
+          }
+        },
+        {
+          "source": "runtime_checks",
+          "value": {
+            "actual_mapping": "other",
+            "root_cause": "label_mapping"
+          }
+        }
+      ]
+    }
+  ],
+  "suspected_locations": [
+    {
+      "location": "intent_contract_gate",
+      "evidence": [
+        [
+          {
+            "kind": "target_value",
+            "error_type": "missing",
+            "expected": "重疾险",
+            "evidence_ref": "extracted_output",
+            "incomplete": false
+          }
+        ]
+      ]
+    }
+  ],
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'confidence': 0.95, 'intent': 'customer_portrait', 'subIntent': '其他意图', 'target_value': '重疾险'}，实际 normalized intent evidence 为 {'confidence': 0.5, 'intent': 'other', 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+  "evidence": [
+    [
+      {
+        "kind": "target_value",
+        "error_type": "missing",
+        "expected": "重疾险",
+        "evidence_ref": "extracted_output",
+        "incomplete": false
+      }
+    ]
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "attribution_count": 5,
+    "probe_count": 0,
+    "summary_text": "根本原因在于意图识别API对中文保险领域查询“帮我看看上季度买了重疾险的客户都是啥样的？”识别失败，输出other意图且置信度仅0.5，未抽取关键实体；下游适配器提取和标签映射均无纠错机制，导致最终结果与期望严重偏离。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "trace_id": "QA:mock-agent-QA-87e78ff7:1783835507318",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "说明分组限制",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "answer_generation_or_provided_output"
+      ],
+      "root_cause_hypothesis": "实际回答中完全没有提及轻症分组限制，而参考合同明确描述了该规则，说明答案生成阶段遗漏了此关键信息。",
+      "evidence": [
+        {
+          "source": "actual_answer",
+          "content": "未提及分组限制或同组轻症只赔一次"
+        },
+        {
+          "source": "reference_answer",
+          "content": "明确写明：轻症责任可能设有分组限制，即同一组别的轻症只能赔付一次"
+        },
+        {
+          "source": "judge_result",
+          "assessment": "not_fulfilled，missing information"
+        }
+      ]
+    },
+    {
+      "expectation_id": "说明轻症赔付对重疾保额的影响",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "answer_generation_or_provided_output"
+      ],
+      "root_cause_hypothesis": "实际回答未涉及轻症赔付后重疾保额可能不变或减少的情况，而参考合同给出了详细说明，表明答案输出时未覆盖这一维度。",
+      "evidence": [
+        {
+          "source": "actual_answer",
+          "content": "回答中未提及轻症赔付对重疾保额的影响"
+        },
+        {
+          "source": "reference_answer",
+          "content": "部分产品轻症赔付后重疾保额不变，部分产品会相应减少"
+        },
+        {
+          "source": "judge_result",
+          "assessment": "not_fulfilled，blocking"
+        }
+      ]
+    },
+    {
+      "expectation_id": "说明合同继续有效及累计上限",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "answer_generation_or_provided_output"
+      ],
+      "root_cause_hypothesis": "实际回答没有说明合同继续有效以及累计赔付上限，参考合同中存在这一条款，显示答案生成阶段信息覆盖不全。",
+      "evidence": [
+        {
+          "source": "actual_answer",
+          "content": "未提及合同继续有效及累计上限"
+        },
+        {
+          "source": "reference_answer",
+          "content": "轻症赔付后合同继续有效，但累计赔付上限可能有限制"
+        },
+        {
+          "source": "judge_result",
+          "assessment": "not_fulfilled"
+        }
+      ]
+    }
+  ],
+  "suspected_locations": [
+    "answer_generation_or_provided_output"
+  ],
+  "root_cause_hypothesis": "提供的实际回答（actual_answer）只覆盖了核心赔付次数、比例、上限和间隔期，但遗漏了参考合同中明确要求的三个重要细节：分组限制、轻症对重疾保额的影响、合同继续有效及累计上限。由于项目未执行外部QA服务和上下文检索（contexts_count=0），实际回答完全由提供的输出决定，因此缺失信息应归因于答案生成阶段（answer_generation_or_provided_output）未能生成全面回复，导致用户可能对保障范围和限制产生误解。",
+  "evidence": [
+    {
+      "type": "qa_local_evidence_probe",
+      "question_present": true,
+      "contexts_count": 0,
+      "reference_answer_present": true,
+      "actual_answer_present": true,
+      "reference_actual_char_coverage": 0.447,
+      "judge_status": "not_fulfilled"
+    },
+    {
+      "type": "judge_missing_items",
+      "items": [
+        "轻症责任可能设有分组限制，同一组别的轻症只能赔付一次",
+        "部分产品轻症赔付后重疾保额不变，部分产品会相应减少",
+        "轻症赔付后合同继续有效，但累计赔付上限可能有限制"
+      ]
+    },
+    {
+      "type": "actual_answer_full",
+      "text": "轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。"
+    },
+    {
+      "type": "reference_answer_full",
+      "text": "通常情况下，您购买的重疾险合同中关于轻症责任的赔付规则如下：\n1. 轻症可以多次赔付...\n2. 每次轻症赔付的金额一般为基本保额的一定比例...\n3. 需要注意，轻症责任可能设有分组限制...轻症赔付后合同继续有效，但累计赔付上限可能有限制...建议查阅合同..."
+    }
+  ],
+  "evidence_strength": "strong",
+  "summary": {
+    "attribution_count": 3,
+    "probe_count": 0,
+    "summary_text": "提供的实际回答（actual_answer）只覆盖了核心赔付次数、比例、上限和间隔期，但遗漏了参考合同中明确要求的三个重要细节：分组限制、轻症对重疾保额的影响、合同继续有效及累计上限。由于项目未执行外部QA服务和上下文检索（contexts_count=0），实际回答完全由提供的输出决定，因此缺失信息应归因于答案生成阶段（answer_generation_or_provided_output）未能生成全面回复，导致用户可能对保障范围和限制产生误解。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

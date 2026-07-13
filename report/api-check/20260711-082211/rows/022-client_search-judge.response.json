@@ -1,0 +1,210 @@
+{
+  "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783729332158",
+  "project_id": "client_search",
+  "business_expectations": [
+    {
+      "expectation_id": "系统正常响应并返回成功状态",
+      "downstream_consumer": "下游客户搜索服务",
+      "user_intent": "用户期望通过系统查询购买重疾险的客户列表",
+      "expected_outcome": "API调用成功，返回包含筛选条件的结构化响应",
+      "required_capabilities": [
+        "稳定调用parser API"
+      ],
+      "acceptance_criteria": [
+        "HTTP状态码200或业务code为0",
+        "响应体包含conditions等必要字段"
+      ],
+      "boundary": {
+        "result_set_verified": false,
+        "judge_scope": "parser_condition_semantics_only"
+      },
+      "priority": "must-have"
+    },
+    {
+      "expectation_id": "生成产品类别为重疾险的筛选条件",
+      "downstream_consumer": "下游客户搜索服务",
+      "user_intent": "用户明确要求查找“买了重疾险”的客户，需要按产品类别过滤",
+      "expected_outcome": "conditions数组中至少包含一个字段为pCategorys、值为“重疾险”的等值条件",
+      "required_capabilities": [
+        "正确解析自然语言中的产品类别意图",
+        "字段映射到pCategorys"
+      ],
+      "acceptance_criteria": [
+        "conditions中有一个field为pCategorys且value包含重疾险"
+      ],
+      "boundary": {
+        "result_set_verified": false,
+        "judge_scope": "parser_condition_semantics_only"
+      },
+      "priority": "must-have"
+    },
+    {
+      "expectation_id": "查询逻辑合理且无多余条件",
+      "downstream_consumer": "下游客户搜索服务",
+      "user_intent": "用户没有提出其他限制，期望仅用产品类别过滤，条件间应为AND关系",
+      "expected_outcome": "query_logic为and，conditions数量为1",
+      "required_capabilities": [
+        "正确推断查询逻辑",
+        "避免引入未提及的过滤字段"
+      ],
+      "acceptance_criteria": [
+        "query_logic为'and'",
+        "conditions数量为1"
+      ],
+      "boundary": {
+        "result_set_verified": false,
+        "judge_scope": "parser_condition_semantics_only"
+      },
+      "priority": "should-have"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "系统正常响应并返回成功状态",
+      "status": "not_fulfilled",
+      "score": 0,
+      "expected_evidence": [
+        "HTTP 200或业务code 0"
+      ],
+      "actual_evidence": [
+        "连接拒绝错误，raw_response为null"
+      ],
+      "downstream_impact": "下游无法获取任何条件，搜索完全失败",
+      "blocking": true,
+      "confidence": 1.0,
+      "evidence_refs": [
+        {
+          "trace_error": "<urlopen error [Errno 61] Connection refused>"
+        }
+      ]
+    },
+    {
+      "expectation_id": "生成产品类别为重疾险的筛选条件",
+      "status": "not_fulfilled",
+      "score": 0,
+      "expected_evidence": [
+        "conditions中包含{'field':'pCategorys','op':'=','value':'重疾险'}"
+      ],
+      "actual_evidence": [
+        "extracted_output为空，无任何条件生成"
+      ],
+      "downstream_impact": "缺少核心筛选条件，无法过滤重疾险客户",
+      "blocking": true,
+      "confidence": 1.0,
+      "evidence_refs": [
+        {
+          "actual_response": "null"
+        }
+      ]
+    },
+    {
+      "expectation_id": "查询逻辑合理且无多余条件",
+      "status": "not_fulfilled",
+      "score": 0,
+      "expected_evidence": [
+        "query_logic为'and'，conditions长度为1"
+      ],
+      "actual_evidence": [
+        "无法评估，无输出"
+      ],
+      "downstream_impact": "无影响（连条件都没有）",
+      "blocking": false,
+      "confidence": 1.0
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_evaluable",
+    "score": 0
+  },
+  "expected": {
+    "code": 0,
+    "msg": "success",
+    "query": "帮我看看公司里所有买了重疾险的客户都有谁",
+    "conditions": [
+      {
+        "field": "pCategorys",
+        "op": "=",
+        "value": "重疾险"
+      }
+    ],
+    "query_logic": "and",
+    "trace_id": "trace_001",
+    "confidence": 1.0
+  },
+  "missing": [
+    {
+      "kind": "condition",
+      "error_type": "missing_required_field",
+      "expected": {
+        "field": "pCategorys",
+        "op": "=",
+        "value": "重疾险"
+      },
+      "evidence_ref": "extracted_output_empty",
+      "incomplete": false
+    },
+    {
+      "kind": "status_code",
+      "error_type": "missing_success_code",
+      "expected": 0,
+      "evidence_ref": "raw_response_null",
+      "incomplete": false
+    },
+    {
+      "kind": "query_logic",
+      "error_type": "missing_required_field",
+      "expected": "and",
+      "evidence_ref": "extracted_output_empty",
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "type": "execution_trace",
+      "stage": "project.call",
+      "status": "failed",
+      "error": "<urlopen error [Errno 61] Connection refused>"
+    },
+    {
+      "type": "api_response",
+      "note": "没有收到任何有效输出"
+    },
+    {
+      "type": "boundary",
+      "result_set_verified": false,
+      "reason": "由于API调用失败，无法验证下游搜索是否能够返回预期客户"
+    }
+  ],
+  "reasoning_summary": "用户输入为“帮我看看公司里所有买了重疾险的客户都有谁”，业务意图是获取购买了重疾险的客户列表。核心筛选条件应为产品类别（pCategorys）等于“重疾险”。然而，当前run trace显示parser API调用遭到连接拒绝（Connection refused），导致raw_response和extracted_output均为空，系统完全未生成任何搜索条件。依据评价范围，API调用失败属于当前系统可优化部分（如服务可用性、网络配置），因此视为系统未满足用户需求。所有期望的筛选条件、成功状态、查询逻辑均未实现，整体判定为not_fulfilled。由于下游不可用，无法进行实际搜索验证，标记result_set_verified=false。",
+  "summary": {
+    "reason": "not_fulfilled · blocking=[生成产品类别为重疾险的筛选条件,系统正常响应并返回成功状态] · 用户输入为“帮我看看公司里所有买了重疾险的客户都有谁”，业务意图是获取购买了重疾险的客户列表。核心筛选条件应为产品类别（pCategorys）等于“重疾险”。然而，当前run trace显示parser API调用遭到连接拒绝（Connection refused），导致raw_response和extracted_output均为空，系统完全未生成任何搜索条件。依据评价范围，API调用失败属于当前系统可优化部分（如服务可用性、网络配置），因此视为系统未满足用户需求。所有期望的筛选条件、成功状态、查询逻辑均未实现，整体判定为not_fulfilled。由于下游不可用，无法进行实际搜索验证，标记result_set_verified=false。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "生成产品类别为重疾险的筛选条件",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "缺少核心筛选条件，无法过滤重疾险客户",
+        "evidence": "extracted_output为空，无任何条件生成 | conditions中包含{'field':'pCategorys','op':'=','value':'重疾险'}"
+      },
+      {
+        "expectation_id": "系统正常响应并返回成功状态",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "下游无法获取任何条件，搜索完全失败",
+        "evidence": "连接拒绝错误，raw_response为null | HTTP 200或业务code 0"
+      },
+      {
+        "expectation_id": "查询逻辑合理且无多余条件",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "无影响（连条件都没有）",
+        "evidence": "无法评估，无输出 | query_logic为'and'，conditions长度为1"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 3,
+    "blocking_count": 2,
+    "is_formal_attribution": true
+  }
+}

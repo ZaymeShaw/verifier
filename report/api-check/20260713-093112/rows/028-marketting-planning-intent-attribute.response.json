@@ -1,0 +1,214 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783906274463",
+  "project_id": "marketting-planning-intent",
+  "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图标签为customer_portrait",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "stage": "intent_api_call",
+          "file": "app/workflow/prompts/intent_prompt.py",
+          "element": "intent classification prompt",
+          "reason": "模型未输出 customer_portrait 意图，可能提示词缺少该类意图的定义或样本"
+        },
+        {
+          "stage": "adapter_extraction",
+          "file": "app/workflow/steps/intent_recognition.py",
+          "element": "intent extraction logic",
+          "reason": "从原始响应中提取意图标签时未能解析为 customer_portrait，可能默认回退为 other"
+        },
+        {
+          "stage": "label_mapping",
+          "file": "app/schemas/intent.py",
+          "element": "INTENT_MAPPING",
+          "reason": "raw_intent=None 或未知标签被映射为 other，未将对应模式纠正为 customer_portrait"
+        }
+      ],
+      "root_cause_hypothesis": "上游识别与提取环节未能产出 customer_portrait 标签，而 label_mapping 保持 other，导致最终意图错误",
+      "evidence": [
+        {
+          "source": "extracted_output",
+          "detail": "intent: 'other', confidence: 0.5"
+        },
+        {
+          "source": "runtime_checks",
+          "detail": "raw_intent=None 经映射变为 other，期望 customer_portrait"
+        },
+        {
+          "source": "intent_contract_probe",
+          "detail": "intent_match=false"
+        }
+      ]
+    },
+    {
+      "expectation_id": "槽位target_value提取为重疾险",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "stage": "adapter_extraction",
+          "file": "app/workflow/steps/intent_recognition.py",
+          "element": "slot extraction logic",
+          "reason": "未从用户查询或模型响应中提取 target_value 字段，缺少实体识别步骤"
+        }
+      ],
+      "root_cause_hypothesis": "提取逻辑未实现或未执行槽位提取，或因意图错误导致跳过 target_value 提取",
+      "evidence": [
+        {
+          "source": "extracted_output",
+          "detail": "缺失 target_value 字段"
+        },
+        {
+          "source": "reference_contract",
+          "detail": "期望 target_value='重疾险'"
+        }
+      ]
+    },
+    {
+      "expectation_id": "置信度不低于0.95",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "stage": "intent_api_call",
+          "file": "app/workflow/prompts/intent_prompt.py",
+          "element": "confidence scoring",
+          "reason": "模型返回置信度仅 0.5，说明分类结果高度不确定"
+        }
+      ],
+      "root_cause_hypothesis": "模型对查询的分类置信度过低，无法满足 0.95 阈值，根源与意图错误分类一致",
+      "evidence": [
+        {
+          "source": "extracted_output",
+          "detail": "confidence: 0.5"
+        },
+        {
+          "source": "reference_contract",
+          "detail": "期望 confidence ≥ 0.95"
+        }
+      ]
+    },
+    {
+      "expectation_id": "不触发fallback兜底意图",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "stage": "label_mapping",
+          "file": "app/schemas/intent.py",
+          "element": "INTENT_MAPPING",
+          "reason": "最终 intent 为 other，即兜底意图，未能避免 fallback"
+        }
+      ],
+      "root_cause_hypothesis": "整个意图识别流程未正确匹配，导致标签映射落入兜底分支 other",
+      "evidence": [
+        {
+          "source": "extracted_output",
+          "detail": "intent: 'other'"
+        },
+        {
+          "source": "intent_contract_probe",
+          "detail": "fallback_observed=false 但实际进入 other 即为兜底"
+        }
+      ]
+    },
+    {
+      "expectation_id": "客户画像分析调度边界正确",
+      "fulfillment_status": "not_fulfilled",
+      "root_cause_hypothesis": "因意图标签错误为 other，导致调度无法指向客户画像分析模块，属于意图识别失败的间接结果",
+      "evidence": [
+        {
+          "source": "extracted_output",
+          "detail": "intent: 'other'，导致 dispatch_target='fallback'"
+        }
+      ]
+    },
+    {
+      "expectation_id": "intent_contract",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "stage": "all",
+          "file": "intent_recognition chain",
+          "reason": "整体未满足 reference contract"
+        }
+      ],
+      "root_cause_hypothesis": "单轮意图识别整体失败，未输出 contract 指定的 intent 与槽位，属于前述根本原因的汇总",
+      "evidence": [
+        {
+          "source": "judge_result",
+          "detail": "incorrect，失败项=['intent']"
+        }
+      ]
+    }
+  ],
+  "suspected_locations": [
+    {
+      "location": "intent_contract_gate",
+      "evidence": [
+        [
+          {
+            "kind": "intent_label",
+            "error_type": "misclassification",
+            "expected": {
+              "intent": "customer_portrait"
+            },
+            "actual": {
+              "intent": "other"
+            },
+            "evidence_ref": "extracted_output",
+            "raw": {
+              "extracted_intent": "other"
+            },
+            "incomplete": false
+          },
+          {
+            "kind": "slot",
+            "error_type": "missing_value",
+            "expected": {
+              "target_value": "重疾险"
+            },
+            "evidence_ref": "extracted_output",
+            "incomplete": true
+          }
+        ]
+      ]
+    }
+  ],
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'confidence': 0.95, 'intent': 'customer_portrait', 'subIntent': '其他意图', 'target_value': '重疾险'}，实际 normalized intent evidence 为 {'confidence': 0.5, 'intent': 'other', 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+  "evidence": [
+    [
+      {
+        "kind": "intent_label",
+        "error_type": "misclassification",
+        "expected": {
+          "intent": "customer_portrait"
+        },
+        "actual": {
+          "intent": "other"
+        },
+        "evidence_ref": "extracted_output",
+        "raw": {
+          "extracted_intent": "other"
+        },
+        "incomplete": false
+      },
+      {
+        "kind": "slot",
+        "error_type": "missing_value",
+        "expected": {
+          "target_value": "重疾险"
+        },
+        "evidence_ref": "extracted_output",
+        "incomplete": true
+      }
+    ]
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "attribution_count": 6,
+    "probe_count": 0,
+    "summary_text": "意图识别模型未能将用户查询'帮我看看上季度买了重疾险的客户都是啥样的？'分类为 customer_portrait，adapter_extraction 输出低置信度 other 且未提取 target_value 槽位；label_mapping 将空或未知标签映射为 other，未启用任何纠正机制，导致最终意图与所有期望不符。根本原因在于模型提示词/分类能力不足或 adapter 解析逻辑缺陷，以及映射表缺乏兜底规则来覆盖此类明显属于客户画像的查询。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  }
+}

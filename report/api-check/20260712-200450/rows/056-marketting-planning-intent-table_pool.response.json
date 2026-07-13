@@ -1,0 +1,82 @@
+{
+  "project_id": "marketting-planning-intent",
+  "rows": [
+    {
+      "id": "mock-agent-marketting-planning-intent-9e16256b",
+      "input": "帮我看看上季度买了重疾险的客户都是啥样的？",
+      "scenario": "intent_recognition",
+      "output_summary": "{\"confidence\": 0.5, \"intent\": \"other\", \"subIntent\": \"其他意图\"}",
+      "reference_summary": "{\"confidence\": 0.95, \"intent\": \"customer_portrait\", \"target_value\": \"重疾险\"}",
+      "status": "not_fulfilled",
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "fulfillment_status": "not_fulfilled",
+      "judge_summary": {
+        "status": "not_fulfilled",
+        "fulfillment_status": "not_fulfilled",
+        "reason": "not_fulfilled · blocking=[关键实体 target_value 提取正确,意图不属于回退类别 other,意图标签为 customer_portrait,置信度达到预期阈值] · 用户查询“帮我看看上季度买了重疾险的客户都是啥样的？”明确表达了进行客户画像分析的意图，预期 intent 应为 customer_portrait，置信度不低于 0.9，并提取实体“重疾险”。但实际系统输出 intent 为 other，置信度仅 0.5，target_value 为 null。这表明意图识别组件错误地将查询归类为“其他意图”，未能满足所有核心预期，整个意图识别环节失败。",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 4,
+        "blocking_count": 4,
+        "primary_failure_dimensions": [
+          {
+            "blocking": true,
+            "downstream_impact": "缺少产品实体导致无法构建精准的客户画像查询条件",
+            "evidence": "重疾险",
+            "expectation_id": "关键实体 target_value 提取正确",
+            "status": "not_fulfilled"
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "回退意图导致整个营销规划流程无法正确触发",
+            "evidence": "other | other",
+            "expectation_id": "意图不属于回退类别 other",
+            "status": "not_fulfilled"
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "无法触发客户画像分析流程，用户查询将被错误处理或忽略",
+            "evidence": "other | customer_portrait | other",
+            "expectation_id": "意图标签为 customer_portrait",
+            "status": "not_fulfilled"
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "低置信度导致下游可能忽略或进行不必要的兜底处理",
+            "evidence": "0.5 | 0.5",
+            "expectation_id": "置信度达到预期阈值",
+            "status": "not_fulfilled"
+          }
+        ]
+      },
+      "attribution_summary": {
+        "attribution_count": 5,
+        "is_complete": false,
+        "is_formal_attribution": false,
+        "probe_count": 0,
+        "summary_text": "在intent_recognition链路的adapter_extraction阶段，未能正确解析上游API返回的意图证据（raw_intent=4001）和实体“重疾险”，且错误地输出低置信度和other意图；label_mapping在缺少raw_intent的情况下回退到other，导致最终意图识别结果与期望不符。"
+      },
+      "check_summary": {
+        "passed": true,
+        "issue_count": 0
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": true,
+      "issue_count": 0,
+      "fallback_count": 0,
+      "divergence_stage": "",
+      "root_cause_summary": "当前 case 期望 intent/slots 为 {'intent': 'customer_portrait', 'confidence': 0.95, 'target_value': '重疾险', 'path_types': None, 'subIntent': '其他意图'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "created_at": "2026-07-12T12:04:52.867964+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783857892867"
+    }
+  ],
+  "total": 1
+}

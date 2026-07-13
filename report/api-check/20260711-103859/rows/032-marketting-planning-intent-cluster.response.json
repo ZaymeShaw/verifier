@@ -1,0 +1,85 @@
+{
+  "project_id": "marketting-planning-intent",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::意图识别服务未能正确分类，根本原因在于上游分类器（可能是LLM）未将查询映射到customer_portrait类别。提示词可能未包含“客户画像”相关问法的示例::not_fulfilled",
+      "mechanism": "意图识别服务未能正确分类，根本原因在于上游分类器（可能是LLM）未将查询映射到customer_portrait类别。提示词可能未包含“客户画像”相关问法的示例::not_fulfilled",
+      "fulfillment_statuses": [
+        "not_fulfilled"
+      ],
+      "expectation_ids": [
+        "意图识别为customer_portrait",
+        "提取产品实体为重疾险"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-intent-9e16256b"
+      ],
+      "representative_traces": [
+        "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783737543903"
+      ],
+      "common_root_cause": "意图识别服务未能正确分类，根本原因在于上游分类器（可能是LLM）未将查询映射到customer_portrait类别。提示词可能未包含“客户画像”相关问法的示例，或者模型对口语化表达（“看看...都是啥样的”）理解不足。随后映射逻辑（INTENT_MAPPING）将unknown或空值映射为other，且实体抽取依赖于正确意图，导致target_value丢失。结合置信度仅0.5，表明分类器处于不确定状态，未触发重试或澄清，直接输出other。",
+      "shared_failure_pattern": "意图识别服务未能正确分类，根本原因在于上游分类器（可能是LLM）未将查询映射到customer_portrait类别。提示词可能未包含“客户画像”相关问法的示例，或者模型对口语化表达（“看看...都是啥样的”）理解不足。随后映射逻辑（INTENT_MAPPING）将unknown或空值映射为other，且实体抽取依赖于正确意图，导致target_value丢失。结合置信度仅0.5，表明分类器处于不确定状态，未触发重试或澄清，直接输出other。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+          "root_cause": "意图识别服务未能正确分类，根本原因在于上游分类器（可能是LLM）未将查询映射到customer_portrait类别。提示词可能未包含“客户画像”相关问法的示例，或者模型对口语化表达（“看看...都是啥样的”）理解不足。随后映射逻辑（INTENT_MAPPING）将unknown或空值映射为other，且实体抽取依赖于正确意图，导致target_value丢失。结合置信度仅0.5，表明分类器处于不确定状态，未触发重试或澄清，直接输出other。",
+          "evidence": [
+            {
+              "data": {
+                "intent_name": "其他意图",
+                "nlu_info": {
+                  "confidence": 0.5,
+                  "intent": "other"
+                }
+              },
+              "source": "raw_response"
+            },
+            {
+              "data": {
+                "confidence": 0.5,
+                "intent": "other"
+              },
+              "source": "extracted_output"
+            },
+            {
+              "source": "runtime_checks",
+              "summary": "raw_intent=None经映射得other，枚举值包含customer_portrait但未命中"
+            }
+          ]
+        }
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-intent-9e16256b"
+      ],
+      "next_actions": [
+        {
+          "data": {
+            "intent_name": "其他意图",
+            "nlu_info": {
+              "confidence": 0.5,
+              "intent": "other"
+            }
+          },
+          "source": "raw_response"
+        },
+        {
+          "data": {
+            "confidence": 0.5,
+            "intent": "other"
+          },
+          "source": "extracted_output"
+        },
+        {
+          "source": "runtime_checks",
+          "summary": "raw_intent=None经映射得other，枚举值包含customer_portrait但未命中"
+        }
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别服务未能正确分类，根本原因在于上游分类器（可能是LLM）未将查询映射到customer_portrait类别。提示词可能未包含“客户画像”相关问法的示例，或者模型对口语化表达（“看看...都是啥样的”）理解不足。随后映射逻辑（INTENT_MAPPING）将unknown或空值映射为other，且实体抽取依赖于正确意图，导致target_value丢失。结合置信度仅0.5，表明分类器处于不确定状态，未触发重试或澄清，直接输出other。",
+  "impact": "",
+  "priority": "normal"
+}

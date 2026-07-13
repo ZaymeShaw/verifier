@@ -1,0 +1,115 @@
+{
+  "project": "marketting-planning",
+  "attributes": [
+    {
+      "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783926126459",
+      "project_id": "marketting-planning",
+      "case_id": "mock-agent-marketting-planning-d1642b58",
+      "expectation_attributions": [
+        {
+          "expectation_id": "意图识别准确分类用户需求为营销规划相关意图",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_recognition"
+          ],
+          "root_cause_hypothesis": "意图识别分类器/模型未能正确理解用户输入中关于补全NBEV目标、增加理财师、优化产品方案等营销规划意图，将输入错误归为意图4001（其他意图），导致后续规划链路中断。可能的原因：训练数据中缺乏此类复合意图表达、分类边界定义不清晰或意图识别提示设计未能有效触发规划类意图。",
+          "evidence": [
+            {
+              "source": "extracted_output.turns[0].intent",
+              "value": "4001"
+            },
+            {
+              "source": "extracted_output.turns[0].intent_name",
+              "value": "其他意图"
+            },
+            {
+              "source": "user_query",
+              "value": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？"
+            }
+          ]
+        },
+        {
+          "expectation_id": "系统路由至正确阶段避免过早结束",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_recognition"
+          ],
+          "root_cause_hypothesis": "由于意图识别错误导致实际阶段设为non_agent，系统未进入预期intent阶段，跳过后续澄清与规划步骤，使得系统过早结束。根因位于意图识别模块输出的阶段错误。",
+          "evidence": [
+            {
+              "source": "extracted_output.turns[0].stage",
+              "value": "non_agent"
+            },
+            {
+              "source": "reference_contract.expected_stage",
+              "value": "intent"
+            }
+          ]
+        },
+        {
+          "expectation_id": "SSE事件流完整且无错误",
+          "fulfillment_status": "fulfilled",
+          "root_cause_hypothesis": ""
+        },
+        {
+          "expectation_id": "mp_contract:expected_stage",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_recognition"
+          ],
+          "root_cause_hypothesis": "与系统路由期望一致，实际stage未达到合同规定的expected_stage(intent)。",
+          "evidence": [
+            {
+              "source": "reference_contract.expected_stage",
+              "value": "intent"
+            },
+            {
+              "source": "extracted_output.turns[0].stage",
+              "value": "non_agent"
+            }
+          ]
+        }
+      ],
+      "suspected_locations": [
+        "intent_recognition"
+      ],
+      "root_cause_hypothesis": "意图识别模块(intent_recognition)错误地将用户明确的营销规划请求分类为“其他意图”(intent=4001)并输出non_agent阶段，导致整个规划链路中断。该错误是后续所有阶段（field_clarification、path_dispatch、planning_function、result_assembly）无有效输出的根本原因。尽管SSE事件流形式上完成，但业务内容为空。未发现其他阶段引入独立错误。",
+      "evidence": [
+        {
+          "type": "intent_output",
+          "source": "extracted_output.turns[0]",
+          "value": {
+            "intent": "4001",
+            "intent_name": "其他意图"
+          }
+        },
+        {
+          "type": "stage_output",
+          "source": "extracted_output.turns[0].stage",
+          "value": "non_agent"
+        },
+        {
+          "type": "expected_contract",
+          "source": "reference_contract",
+          "value": {
+            "expected_stage": "intent",
+            "scenario": "intent_recognition"
+          }
+        },
+        {
+          "type": "user_input",
+          "source": "user_query",
+          "value": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？"
+        }
+      ],
+      "evidence_strength": "strong",
+      "summary": {
+        "attribution_count": 4,
+        "probe_count": 0,
+        "summary_text": "意图识别模块(intent_recognition)错误地将用户明确的营销规划请求分类为“其他意图”(intent=4001)并输出non_agent阶段，导致整个规划链路中断。该错误是后续所有阶段（field_clarification、path_dispatch、planning_function、result_assembly）无有效输出的根本原因。尽管SSE事件流形式上完成，但业务内容为空。未发现其他阶段引入独立错误。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      }
+    }
+  ]
+}

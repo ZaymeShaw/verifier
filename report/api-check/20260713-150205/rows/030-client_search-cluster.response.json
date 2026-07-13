@@ -1,0 +1,106 @@
+{
+  "project_id": "client_search",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::业务预期已达成，无根因。::fulfilled",
+      "mechanism": "业务预期已达成，无根因。::fulfilled",
+      "fulfillment_statuses": [
+        "fulfilled"
+      ],
+      "expectation_ids": [
+        "重疾险意图识别为险种大类筛选",
+        "重疾险口语映射为疾病保险枚举值",
+        "输出条件语义等价且可执行"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "client_search:mock-agent-client_search-cdd7df11:1783926128336"
+      ],
+      "representative_traces": [
+        "client_search:mock-agent-client_search-cdd7df11:1783926128336"
+      ],
+      "common_root_cause": "业务预期已达成，无根因。",
+      "shared_failure_pattern": "业务预期已达成，无根因。",
+      "representative_diffs": [
+        {
+          "case_id": "client_search:mock-agent-client_search-cdd7df11:1783926128336",
+          "root_cause": "业务预期已达成，无根因。",
+          "evidence": [
+            {
+              "mapping": "重疾险 → 疾病保险",
+              "source": "value_mappings.pCategorys",
+              "type": "value_mapping",
+              "verified": true
+            },
+            {
+              "enum_list": [
+                "意外伤害保险",
+                "医疗保险",
+                "护理保险",
+                "疾病保险",
+                "定期寿险",
+                "终身寿险"
+              ],
+              "field": "pCategorys",
+              "in_enum": true,
+              "type": "enum_check",
+              "value": "疾病保险"
+            },
+            {
+              "actual": "MATCH",
+              "expected_by_prompt": "CONTAINS",
+              "note": "MATCH与CONTAINS在ES查询语义上等价，后处理可处置，按judge边界规范不纠结此差异",
+              "type": "operator_equivalence"
+            },
+            {
+              "result_set_verified": false,
+              "status": "unavailable",
+              "type": "downstream_status"
+            }
+          ]
+        }
+      ],
+      "verification_cases": [
+        "client_search:mock-agent-client_search-cdd7df11:1783926128336"
+      ],
+      "next_actions": [
+        {
+          "mapping": "重疾险 → 疾病保险",
+          "source": "value_mappings.pCategorys",
+          "type": "value_mapping",
+          "verified": true
+        },
+        {
+          "enum_list": [
+            "意外伤害保险",
+            "医疗保险",
+            "护理保险",
+            "疾病保险",
+            "定期寿险",
+            "终身寿险"
+          ],
+          "field": "pCategorys",
+          "in_enum": true,
+          "type": "enum_check",
+          "value": "疾病保险"
+        },
+        {
+          "actual": "MATCH",
+          "expected_by_prompt": "CONTAINS",
+          "note": "MATCH与CONTAINS在ES查询语义上等价，后处理可处置，按judge边界规范不纠结此差异",
+          "type": "operator_equivalence"
+        },
+        {
+          "result_set_verified": false,
+          "status": "unavailable",
+          "type": "downstream_status"
+        }
+      ]
+    }
+  ],
+  "common_root_cause": "业务预期已达成，无根因。",
+  "impact": "",
+  "priority": "normal"
+}

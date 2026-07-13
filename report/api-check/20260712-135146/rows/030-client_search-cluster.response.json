@@ -1,0 +1,86 @@
+{
+  "project_id": "client_search",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::业务预期已达成，无根因。::fulfilled",
+      "mechanism": "业务预期已达成，无根因。::fulfilled",
+      "fulfillment_statuses": [
+        "fulfilled"
+      ],
+      "expectation_ids": [
+        "重疾险口语映射到疾病保险枚举值",
+        "使用pCategorys字段表达险种大类筛选",
+        "查询条件无多余限制覆盖所有目标客户"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "client_search:mock-agent-client_search-cdd7df11:1783835509080"
+      ],
+      "representative_traces": [
+        "client_search:mock-agent-client_search-cdd7df11:1783835509080"
+      ],
+      "common_root_cause": "业务预期已达成，无根因。",
+      "shared_failure_pattern": "业务预期已达成，无根因。",
+      "representative_diffs": [
+        {
+          "case_id": "client_search:mock-agent-client_search-cdd7df11:1783835509080",
+          "root_cause": "业务预期已达成，无根因。",
+          "evidence": [
+            {
+              "mapping": "重疾险 → 疾病保险",
+              "source": "value_mappings.pCategorys",
+              "type": "value_mapping",
+              "verified": true
+            },
+            {
+              "note": "actual output 使用 MATCH，项目后处理中与 CONTAINS 等价，不视为错误",
+              "operators": [
+                "CONTAINS",
+                "NOT_CONTAINS"
+              ],
+              "source": "capability_manifest.pCategorys",
+              "type": "field_capability"
+            },
+            {
+              "note": "下游 ES 搜索不可用，但 parser 条件语义经字段/枚举/映射三重校验，确认等价于正确查询",
+              "result_set_verified": false,
+              "status": "unavailable",
+              "type": "downstream_search"
+            }
+          ]
+        }
+      ],
+      "verification_cases": [
+        "client_search:mock-agent-client_search-cdd7df11:1783835509080"
+      ],
+      "next_actions": [
+        {
+          "mapping": "重疾险 → 疾病保险",
+          "source": "value_mappings.pCategorys",
+          "type": "value_mapping",
+          "verified": true
+        },
+        {
+          "note": "actual output 使用 MATCH，项目后处理中与 CONTAINS 等价，不视为错误",
+          "operators": [
+            "CONTAINS",
+            "NOT_CONTAINS"
+          ],
+          "source": "capability_manifest.pCategorys",
+          "type": "field_capability"
+        },
+        {
+          "note": "下游 ES 搜索不可用，但 parser 条件语义经字段/枚举/映射三重校验，确认等价于正确查询",
+          "result_set_verified": false,
+          "status": "unavailable",
+          "type": "downstream_search"
+        }
+      ]
+    }
+  ],
+  "common_root_cause": "业务预期已达成，无根因。",
+  "impact": "",
+  "priority": "normal"
+}

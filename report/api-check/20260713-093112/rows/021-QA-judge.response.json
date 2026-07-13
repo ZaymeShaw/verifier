@@ -1,0 +1,220 @@
+{
+  "trace_id": "QA:mock-agent-QA-87e78ff7:1783906273018",
+  "project_id": "QA",
+  "business_expectations": [
+    {
+      "expectation_id": "明确回答轻症可以多次赔付",
+      "downstream_consumer": "重疾险投保人",
+      "user_intent": "确认轻症能否多次赔付",
+      "expected_outcome": "答案明确表示轻症可以多次赔付",
+      "required_capabilities": [
+        "意图理解",
+        "保险知识"
+      ],
+      "acceptance_criteria": [
+        "actual_answer 中包含“可以赔付多次”或类似肯定表述"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "提供轻症赔付次数常见范围",
+      "downstream_consumer": "重疾险投保人",
+      "user_intent": "了解轻症具体能赔几次",
+      "expected_outcome": "答案给出具体次数范围，如3-5次",
+      "required_capabilities": [
+        "保险知识"
+      ],
+      "acceptance_criteria": [
+        "actual_answer 中提及次数上限，并给出具体数字示例（如3次或5次）"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "说明每次轻症赔付金额的比例",
+      "downstream_consumer": "重疾险投保人",
+      "user_intent": "了解每次赔付金额的计算比例",
+      "expected_outcome": "答案说明每次赔付金额为基本保额的特定比例范围",
+      "required_capabilities": [
+        "保险知识"
+      ],
+      "acceptance_criteria": [
+        "actual_answer 中包含比例范围“20%至30%”或类似"
+      ],
+      "priority": "high"
+    },
+    {
+      "expectation_id": "提及轻症赔付存在间隔期要求",
+      "downstream_consumer": "重疾险投保人",
+      "user_intent": "了解赔付是否有时间限制",
+      "expected_outcome": "答案提醒两次轻症赔付之间需要满足间隔期",
+      "required_capabilities": [
+        "保险知识"
+      ],
+      "acceptance_criteria": [
+        "actual_answer 中包含“间隔期”或类似表述"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "告知轻症责任可能涉及分组限制和累计赔付上限",
+      "downstream_consumer": "重疾险投保人",
+      "user_intent": "避免误以为所有轻症都可无限次赔付",
+      "expected_outcome": "答案说明轻症可能分组赔付，同一组别只赔一次，并有累计赔付上限",
+      "required_capabilities": [
+        "保险知识"
+      ],
+      "acceptance_criteria": [
+        "actual_answer 中包含关于分组限制或累计赔付上限的说明"
+      ],
+      "priority": "medium"
+    },
+    {
+      "expectation_id": "提醒用户以实际合同条款为准",
+      "downstream_consumer": "重疾险投保人",
+      "user_intent": "确保用户理解答案仅为一般规则",
+      "expected_outcome": "答案包含建议查阅保险合同或咨询保险公司的免责提示",
+      "required_capabilities": [
+        "风险控制"
+      ],
+      "acceptance_criteria": [
+        "actual_answer 中包含“建议查阅您的保险合同条款”或类似表述"
+      ],
+      "priority": "high"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "明确回答轻症可以多次赔付",
+      "status": "fulfilled",
+      "score": 1.0,
+      "expected_evidence": [
+        "轻症可以多次赔付的明确陈述"
+      ],
+      "actual_evidence": [
+        "轻症可以赔付多次"
+      ],
+      "downstream_impact": "用户清楚了解可以多次赔付",
+      "blocking": false,
+      "confidence": 1.0
+    },
+    {
+      "expectation_id": "提供轻症赔付次数常见范围",
+      "status": "fulfilled",
+      "score": 1.0,
+      "expected_evidence": [
+        "提及次数上限具体范围"
+      ],
+      "actual_evidence": [
+        "可能有次数上限（如3次或5次）"
+      ],
+      "downstream_impact": "用户获得具体次数预期",
+      "blocking": false,
+      "confidence": 1.0
+    },
+    {
+      "expectation_id": "说明每次轻症赔付金额的比例",
+      "status": "fulfilled",
+      "score": 1.0,
+      "expected_evidence": [
+        "每次赔付金额比例范围"
+      ],
+      "actual_evidence": [
+        "通常为基本保险金额的20%至30%"
+      ],
+      "downstream_impact": "用户了解赔付金额计算方式",
+      "blocking": false,
+      "confidence": 1.0
+    },
+    {
+      "expectation_id": "提及轻症赔付存在间隔期要求",
+      "status": "fulfilled",
+      "score": 1.0,
+      "expected_evidence": [
+        "包含间隔期表述"
+      ],
+      "actual_evidence": [
+        "和间隔期要求"
+      ],
+      "downstream_impact": "用户注意时间限制",
+      "blocking": false,
+      "confidence": 1.0
+    },
+    {
+      "expectation_id": "告知轻症责任可能涉及分组限制和累计赔付上限",
+      "status": "not_fulfilled",
+      "score": 0.0,
+      "expected_evidence": [
+        "提及分组赔付或累计上限"
+      ],
+      "downstream_impact": "用户可能误以为所有轻症都能单独赔付，忽略分组和上限约束",
+      "blocking": false,
+      "confidence": 1.0
+    },
+    {
+      "expectation_id": "提醒用户以实际合同条款为准",
+      "status": "fulfilled",
+      "score": 1.0,
+      "expected_evidence": [
+        "建议查阅合同或咨询客服"
+      ],
+      "actual_evidence": [
+        "建议查阅您的保险合同条款获取准确信息"
+      ],
+      "downstream_impact": "用户理解实际以合同为准",
+      "blocking": false,
+      "confidence": 1.0
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "score": 0.67
+  },
+  "expected": {
+    "actual_answer": "通常情况下，您购买的重疾险合同中关于轻症责任的赔付规则如下：\n1. 轻症可以多次赔付，具体次数以合同约定为准（常见为3-5次）。每次确诊的轻症需满足合同定义的疾病标准，且两次轻症确诊之间通常有间隔期（如90天或180天）。\n2. 每次轻症赔付的金额一般为基本保额的一定比例，常见比例为20%-30%。例如保额50万，每次轻症可赔付10万-15万。部分产品轻症赔付后重疾保额不变，部分产品会相应减少。\n3. 需要注意，轻症责任可能设有分组限制，即同一组别的轻症只能赔付一次；另外，轻症赔付后合同继续有效，但累计赔付上限可能有限制。\n以上为一般规则，具体赔付条件、次数、金额比例请以您持有的保险合同条款为准。建议您查阅合同中的“保险责任”及“轻症疾病保险金”章节，或直接咨询保险公司客服获取准确信息。"
+  },
+  "actual": {
+    "actual_answer": "轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。"
+  },
+  "missing": [
+    {
+      "kind": "fact",
+      "error_type": "answer_incomplete",
+      "expected": "轻症可能存在分组限制，同一组别的轻症只能赔付一次，以及累计赔付上限可能有限制",
+      "actual": "未提及",
+      "evidence_ref": "actual_answer",
+      "incomplete": true
+    }
+  ],
+  "evidence": [
+    {
+      "source": "actual_answer",
+      "content": "轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。"
+    },
+    {
+      "source": "reference_answer",
+      "content": "通常情况下，您购买的重疾险合同中关于轻症责任的赔付规则如下：\n1. 轻症可以多次赔付，具体次数以合同约定为准（常见为3-5次）。每次确诊的轻症需满足合同定义的疾病标准，且两次轻症确诊之间通常有间隔期（如90天或180天）。\n2. 每次轻症赔付的金额一般为基本保额的一定比例，常见比例为20%-30%。例如保额50万，每次轻症可赔付10万-15万。部分产品轻症赔付后重疾保额不变，部分产品会相应减少。\n3. 需要注意，轻症责任可能设有分组限制，即同一组别的轻症只能赔付一次；另外，轻症赔付后合同继续有效，但累计赔付上限可能有限制。\n以上为一般规则，具体赔付条件、次数、金额比例请以您持有的保险合同条款为准。建议您查阅合同中的“保险责任”及“轻症疾病保险金”章节，或直接咨询保险公司客服获取准确信息。"
+    },
+    "scenario=qa_gold_answer",
+    "question_present=True",
+    "actual_answer_present=True",
+    "reference_answer_present=True"
+  ],
+  "reasoning_summary": "actual_answer 正确回答了轻症可以多次赔付、赔付比例、次数范围和间隔期，并提供了合宜的免责声明。但遗漏了 golden answer 中提及的分组限制和累计赔付上限，导致回答的完整性不足。因此整体评估为未完全满足。",
+  "summary": {
+    "reason": "not_fulfilled · blocking=[(none)] · actual_answer 正确回答了轻症可以多次赔付、赔付比例、次数范围和间隔期，并提供了合宜的免责声明。但遗漏了 golden answer 中提及的分组限制和累计赔付上限，导致回答的完整性不足。因此整体评估为未完全满足。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "告知轻症责任可能涉及分组限制和累计赔付上限",
+        "status": "not_fulfilled",
+        "blocking": false,
+        "downstream_impact": "用户可能误以为所有轻症都能单独赔付，忽略分组和上限约束",
+        "evidence": "提及分组赔付或累计上限"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 6,
+    "blocking_count": 0,
+    "is_formal_attribution": true
+  }
+}

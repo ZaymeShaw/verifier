@@ -1,0 +1,49 @@
+{
+  "project_id": "marketting-planning-intent",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::核心根因在于意图识别上游 API 未能输出正确的意图标签（raw_intent=None），导致适配器提取后映射为 other，同时槽位提取（target_va::not_fulfilled",
+      "mechanism": "核心根因在于意图识别上游 API 未能输出正确的意图标签（raw_intent=None），导致适配器提取后映射为 other，同时槽位提取（target_va::not_fulfilled",
+      "fulfillment_statuses": [
+        "not_fulfilled"
+      ],
+      "expectation_ids": [
+        "意图标签为客户画像",
+        "目标值提取为重疾险"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-intent-9e16256b"
+      ],
+      "representative_traces": [
+        "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783759318204"
+      ],
+      "common_root_cause": "核心根因在于意图识别上游 API 未能输出正确的意图标签（raw_intent=None），导致适配器提取后映射为 other，同时槽位提取（target_value）也因意图识别错误而未能执行。可能的原因包括：LLM 提示词不充分、模型训练数据未覆盖此类查询表述，或意图映射配置未包含模糊匹配兜底策略。建议优化 intent_prompt 增加多样化示例，并调整 intent_recognition 的错误处理逻辑，在低置信度时结合关键词（如“客户画像”、“客户都是啥样”）进行修正。",
+      "shared_failure_pattern": "核心根因在于意图识别上游 API 未能输出正确的意图标签（raw_intent=None），导致适配器提取后映射为 other，同时槽位提取（target_value）也因意图识别错误而未能执行。可能的原因包括：LLM 提示词不充分、模型训练数据未覆盖此类查询表述，或意图映射配置未包含模糊匹配兜底策略。建议优化 intent_prompt 增加多样化示例，并调整 intent_recognition 的错误处理逻辑，在低置信度时结合关键词（如“客户画像”、“客户都是啥样”）进行修正。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+          "root_cause": "核心根因在于意图识别上游 API 未能输出正确的意图标签（raw_intent=None），导致适配器提取后映射为 other，同时槽位提取（target_value）也因意图识别错误而未能执行。可能的原因包括：LLM 提示词不充分、模型训练数据未覆盖此类查询表述，或意图映射配置未包含模糊匹配兜底策略。建议优化 intent_prompt 增加多样化示例，并调整 intent_recognition 的错误处理逻辑，在低置信度时结合关键词（如“客户画像”、“客户都是啥样”）进行修正。",
+          "evidence": [
+            "execution_trace 中 intent_api_call 阶段返回 raw_response，但 adapter_extraction 得到 intent='other', confidence=0.5",
+            "runtime_checks 确认 raw_intent=None，经由 INTENT_MAPPING 转为 other，且 customer_portrait 存在于枚举中但未被选中",
+            "reference contract 指定 intent=customer_portrait, target_value='重疾险'，与实际输出严重不符"
+          ]
+        }
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-intent-9e16256b"
+      ],
+      "next_actions": [
+        "execution_trace 中 intent_api_call 阶段返回 raw_response，但 adapter_extraction 得到 intent='other', confidence=0.5",
+        "runtime_checks 确认 raw_intent=None，经由 INTENT_MAPPING 转为 other，且 customer_portrait 存在于枚举中但未被选中",
+        "reference contract 指定 intent=customer_portrait, target_value='重疾险'，与实际输出严重不符"
+      ]
+    }
+  ],
+  "common_root_cause": "核心根因在于意图识别上游 API 未能输出正确的意图标签（raw_intent=None），导致适配器提取后映射为 other，同时槽位提取（target_value）也因意图识别错误而未能执行。可能的原因包括：LLM 提示词不充分、模型训练数据未覆盖此类查询表述，或意图映射配置未包含模糊匹配兜底策略。建议优化 intent_prompt 增加多样化示例，并调整 intent_recognition 的错误处理逻辑，在低置信度时结合关键词（如“客户画像”、“客户都是啥样”）进行修正。",
+  "impact": "",
+  "priority": "normal"
+}

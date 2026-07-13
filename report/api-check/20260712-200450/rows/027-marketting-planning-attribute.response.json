@@ -1,0 +1,69 @@
+{
+  "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783857892431",
+  "project_id": "marketting-planning",
+  "case_id": "mock-agent-marketting-planning-d1642b58",
+  "expectation_attributions": [
+    {
+      "expectation_id": "用户规划意图被正确识别并进入intent阶段",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_recognition"
+      ],
+      "root_cause_hypothesis": "意图识别阶段错误地将营销规划请求分类为“其他意图”，导致 stage 变为 non_agent，未能进入 intent 阶段",
+      "evidence": [
+        {
+          "source": "execution_stage_probe",
+          "detail": "intent_recognition stage evidence shows actual_stage=non_agent, expected_stage=intent"
+        },
+        {
+          "source": "extracted_output",
+          "detail": "intent=4001, intent_name=其他意图, stage=non_agent"
+        }
+      ]
+    },
+    {
+      "expectation_id": "mp_contract:expected_stage",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_recognition"
+      ],
+      "root_cause_hypothesis": "输出 stage 为 non_agent，与 contract 期望的 intent 不符，根因为意图识别误分类",
+      "evidence": [
+        {
+          "source": "reference_contract",
+          "detail": "expected_stage=intent, scenario=intent_recognition"
+        },
+        {
+          "source": "extracted_output",
+          "detail": "stage=non_agent"
+        }
+      ]
+    }
+  ],
+  "suspected_locations": [
+    "intent_recognition"
+  ],
+  "root_cause_hypothesis": "意图识别模块或其配置/prompt 错误地将明确的营销规划意图分类为“其他意图”，导致阶段路由为 non_agent，从而阻塞了后续规划流程",
+  "evidence": [
+    {
+      "source": "execution_stage_probe",
+      "detail": "intent_recognition stage evidence shows actual_stage=non_agent, expected_stage=intent; planning_output_probe reports stage_match=false, evidence_gap=['actual_stage']"
+    },
+    {
+      "source": "extracted_output",
+      "detail": "intent=4001, intent_name=其他意图, stage=non_agent; 用户输入明确包含‘NBEV目标’‘增加理财师’‘优化产品方案’等规划关键词"
+    },
+    {
+      "source": "judge_result",
+      "detail": "fulfillment_assessments 中第一个期望为 not_fulfilled，置信度 0.95，阻塞下游规划"
+    }
+  ],
+  "evidence_strength": "weak",
+  "summary": {
+    "attribution_count": 2,
+    "probe_count": 0,
+    "summary_text": "意图识别模块或其配置/prompt 错误地将明确的营销规划意图分类为“其他意图”，导致阶段路由为 non_agent，从而阻塞了后续规划流程",
+    "is_complete": false,
+    "is_formal_attribution": false
+  }
+}

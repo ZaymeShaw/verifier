@@ -1,0 +1,75 @@
+{
+  "project_id": "marketting-planning-intent",
+  "rows": [
+    {
+      "id": "mock-agent-marketting-planning-intent-9e16256b",
+      "input": "帮我看看上季度买了重疾险的客户都是啥样的？",
+      "scenario": "intent_recognition",
+      "output_summary": "{\"confidence\": 0.5, \"intent\": \"other\", \"subIntent\": \"其他意图\"}",
+      "reference_summary": "{\"confidence\": 0.95, \"intent\": \"customer_portrait\", \"target_value\": \"重疾险\"}",
+      "status": "not_fulfilled",
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "fulfillment_status": "not_fulfilled",
+      "judge_summary": {
+        "status": "not_fulfilled",
+        "fulfillment_status": "not_fulfilled",
+        "reason": "not_fulfilled · blocking=[意图标签为customer_portrait,提取目标产品实体重疾险,置信度满足阈值要求] · 用户明确询问“上季度买了重疾险的客户画像”，属于 customer_portrait 意图，且应提取产品“重疾险”。但实际输出为 other 意图、target_value 为空、置信度仅 0.5，与参考契约严重不符，所有关键期望均未满足，整体意图识别失败。",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 3,
+        "blocking_count": 3,
+        "primary_failure_dimensions": [
+          {
+            "blocking": true,
+            "downstream_impact": "意图错误将直接阻断客户画像分析流程的启动，导致用户需求无法满足",
+            "evidence": "other",
+            "expectation_id": "意图标签为customer_portrait",
+            "status": "not_fulfilled"
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "缺少产品实体将导致后续分析无法聚焦到具体险种，客户画像失去业务意义",
+            "evidence": "缺少产品实体将导致后续分析无法聚焦到具体险种，客户画像失去业务意义",
+            "expectation_id": "提取目标产品实体重疾险",
+            "status": "not_fulfilled"
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "低置信度无法保证意图可靠性，会触发不必要的降级或人工兜底",
+            "evidence": "0.5",
+            "expectation_id": "置信度满足阈值要求",
+            "status": "not_fulfilled"
+          }
+        ]
+      },
+      "attribution_summary": {
+        "attribution_count": 4,
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 0,
+        "summary_text": "单轮意图识别失败的根本原因在于NLU模型将查询“帮我看看上季度买了重疾险的客户都是啥样的？”分类为other而非customer_portrait，伴随低置信度0.5。原始API返回的意图编码4001及空实体表明模型完全未识别客户画像意图及其关键实体。后续适配器与映射层均按当前逻辑正确执行，但无法弥补上游分类错误。最可能的根本原因是意图识别模型的提示词或训练数据未有效覆盖customer_portrait的典型问法，导致该意图与兜底other之间的决策边界模糊。"
+      },
+      "check_summary": {
+        "passed": true,
+        "issue_count": 0
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": true,
+      "issue_count": 0,
+      "fallback_count": 0,
+      "divergence_stage": "",
+      "root_cause_summary": "当前 case 期望 intent/slots 为 {'intent': 'customer_portrait', 'confidence': 0.95, 'target_value': '重疾险', 'path_types': None, 'subIntent': '其他意图'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "created_at": "2026-07-11T17:51:17.427369+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783792277427"
+    }
+  ],
+  "total": 1
+}

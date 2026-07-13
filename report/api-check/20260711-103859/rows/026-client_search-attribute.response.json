@@ -1,0 +1,98 @@
+{
+  "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783737543645",
+  "project_id": "client_search",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "正确识别重疾险对应的险种大类",
+      "fulfillment_status": "fulfilled",
+      "root_cause_hypothesis": "业务预期已达成，无根因。",
+      "evidence": [
+        {
+          "data": [
+            {
+              "field": "pCategorys",
+              "operator": "MATCH",
+              "value": "疾病保险"
+            }
+          ],
+          "type": "live_response_conditions"
+        },
+        {
+          "description": "prompt中示例：买了重疾险和医疗险的客户 → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}",
+          "type": "prompt_example"
+        },
+        {
+          "description": "下游搜索payload使用MATCH操作符，但因连接拒绝未执行成功",
+          "type": "downstream_payload"
+        },
+        {
+          "description": "根据judge边界，MATCH/CONTAINS操作符差异由项目后处理处置，不构成实质错误",
+          "type": "judge_boundary"
+        }
+      ]
+    },
+    {
+      "expectation_id": "查询条件不引入无关字段",
+      "fulfillment_status": "fulfilled",
+      "root_cause_hypothesis": "业务预期已达成，无根因。",
+      "evidence": [
+        {
+          "data": [
+            {
+              "field": "pCategorys",
+              "operator": "MATCH",
+              "value": "疾病保险"
+            }
+          ],
+          "type": "live_response_conditions"
+        },
+        {
+          "description": "prompt中示例：买了重疾险和医疗险的客户 → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}",
+          "type": "prompt_example"
+        },
+        {
+          "description": "下游搜索payload使用MATCH操作符，但因连接拒绝未执行成功",
+          "type": "downstream_payload"
+        },
+        {
+          "description": "根据judge边界，MATCH/CONTAINS操作符差异由项目后处理处置，不构成实质错误",
+          "type": "judge_boundary"
+        }
+      ]
+    }
+  ],
+  "root_cause_hypothesis": "业务预期已达成，无根因。",
+  "evidence": [
+    {
+      "data": [
+        {
+          "field": "pCategorys",
+          "operator": "MATCH",
+          "value": "疾病保险"
+        }
+      ],
+      "type": "live_response_conditions"
+    },
+    {
+      "description": "prompt中示例：买了重疾险和医疗险的客户 → {\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\", \"医疗保险\"]}",
+      "type": "prompt_example"
+    },
+    {
+      "description": "下游搜索payload使用MATCH操作符，但因连接拒绝未执行成功",
+      "type": "downstream_payload"
+    },
+    {
+      "description": "根据judge边界，MATCH/CONTAINS操作符差异由项目后处理处置，不构成实质错误",
+      "type": "judge_boundary"
+    }
+  ],
+  "evidence_strength": "strong",
+  "summary": {
+    "attribution_count": 2,
+    "probe_count": 0,
+    "summary_text": "业务预期已达成，无根因。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

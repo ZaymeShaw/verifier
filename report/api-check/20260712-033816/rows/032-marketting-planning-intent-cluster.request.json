@@ -1,0 +1,152 @@
+{
+  "project": "marketting-planning-intent",
+  "attributes": [
+    {
+      "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783798698198",
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+      "expectation_attributions": [
+        {
+          "expectation_id": "意图标签应为客户画像",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "adapter_extraction",
+            "label_mapping",
+            "intent_api_call"
+          ],
+          "root_cause_hypothesis": "label_mapping 阶段未能将 raw_intent “4001”正确映射到 customer_portrait，或 adapter_extraction 错误地将模型返回的原始意图转化为 other，最终导致 extracted_output.intent 为 other，不符合 customer_portrait 的预期。",
+          "evidence": [
+            "extracted_output.intent=other",
+            "intent_contract_probe.actual_intent=other",
+            "intent_contract_probe.evidence_intent=4001",
+            "runtime_checks.actual_intent=other",
+            "runtime_checks.expected_intent=customer_portrait"
+          ]
+        },
+        {
+          "expectation_id": "应提取目标险种实体",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call",
+            "adapter_extraction"
+          ],
+          "root_cause_hypothesis": "由于意图被错误分类为 other，导致下游实体提取逻辑主动放弃或无法触发 target_value 的抽取，使其保持 null；即便在 customer_portrait 意图下，实体抽取也可能存在缺陷，但主因仍是意图分类错误。",
+          "evidence": [
+            "extracted_output.target_value=null",
+            "expected_target_value=重疾险",
+            "intent_contract_probe.intent_match=false"
+          ]
+        },
+        {
+          "expectation_id": "置信度应高于阈值",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "adapter_extraction",
+            "intent_api_call"
+          ],
+          "root_cause_hypothesis": "意图分类错误直接拉低了置信度（0.5），与参考置信度 0.95 差距显著；可能是模型本身对 customer_portrait 的置信度较高，但适配层在回退或误映射时返回了固定低置信度，或模型在 other 意图下的原始置信度即为 0.5。",
+          "evidence": [
+            "extracted_output.confidence=0.5",
+            "reference_contract.confidence=0.95",
+            "intent_contract_probe.actual_confidence=0.5"
+          ]
+        },
+        {
+          "expectation_id": "意图识别不应回退到其他意图",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "adapter_extraction",
+            "label_mapping"
+          ],
+          "root_cause_hypothesis": "raw_intent “4001”未能被映射到有效的业务意图，导致 label_mapping 或 adapter_extraction 将其归类为 other/其他意图，未能避免回退。",
+          "evidence": [
+            "extracted_output.intent=other",
+            "extracted_output.subIntent=其他意图",
+            "intent_contract_probe.intent_match=false",
+            "runtime_checks.root_cause.category=label_mapping"
+          ]
+        },
+        {
+          "expectation_id": "意图分发边界正确",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "label_mapping"
+          ],
+          "root_cause_hypothesis": "label_mapping 阶段将实际意图 other 视为有效分发目标，导致调度到兜底逻辑而非 customer_portrait 路径；根本原因仍为映射表缺失或适配层未产生正确的 intent 值。",
+          "evidence": [
+            "runtime_checks.actual_mapping=other",
+            "runtime_checks.expected_intent=customer_portrait",
+            "runtime_checks.enum_values 包含 customer_portrait",
+            "runtime_checks.is_expected_mapping=false"
+          ]
+        },
+        {
+          "expectation_id": "intent_contract",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "label_mapping",
+            "adapter_extraction"
+          ],
+          "root_cause_hypothesis": "综合失败原因：raw_intent “4001”未能转换为 customer_portrait，置信度低于参考，实体未提取；核心环节在 adapter_extraction 或 label_mapping 中缺失关键映射或误处理，导致整个意图合约破裂。",
+          "evidence": [
+            "judge_result.overall_fulfillment.blocking_expectations=['intent_contract']",
+            "runtime_checks.root_cause.confidence=high",
+            "intent_contract_probe.intent_match=false"
+          ]
+        }
+      ],
+      "suspected_locations": [
+        {
+          "location": "intent_contract_gate",
+          "evidence": [
+            [
+              {
+                "kind": "wrong",
+                "error_type": "wrong",
+                "evidence_ref": "",
+                "raw": {
+                  "requirement": "intent",
+                  "expected_fragment": "customer_portrait",
+                  "actual_fragment": "other",
+                  "status": "wrong",
+                  "evidence": [
+                    "normalized intent differs from reference intent"
+                  ]
+                },
+                "incomplete": false
+              }
+            ]
+          ]
+        }
+      ],
+      "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': 'customer_portrait', 'confidence': 0.95, 'target_value': '重疾险', 'path_types': None, 'subIntent': '其他意图'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "evidence": [
+        [
+          {
+            "kind": "wrong",
+            "error_type": "wrong",
+            "evidence_ref": "",
+            "raw": {
+              "requirement": "intent",
+              "expected_fragment": "customer_portrait",
+              "actual_fragment": "other",
+              "status": "wrong",
+              "evidence": [
+                "normalized intent differs from reference intent"
+              ]
+            },
+            "incomplete": false
+          }
+        ]
+      ],
+      "evidence_strength": "medium",
+      "summary": {
+        "attribution_count": 6,
+        "probe_count": 0,
+        "summary_text": "在 adapter_extraction 或 label_mapping 阶段，所依赖的原始意图编码“4001”未能正确转换为 customer_portrait，从而回退为 other；该映射缺失或适配解析错误是导致所有下游期望（意图标签、实体提取、置信度、回退策略、分发边界）均未满足的根本原因。",
+        "is_complete": false,
+        "is_formal_attribution": false
+      }
+    }
+  ]
+}

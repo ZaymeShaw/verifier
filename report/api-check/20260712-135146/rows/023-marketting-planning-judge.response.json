@@ -1,0 +1,407 @@
+{
+  "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783835508646",
+  "project_id": "marketting-planning",
+  "business_expectations": [
+    {
+      "expectation_id": "意图识别准确反映营销规划意图",
+      "downstream_consumer": "营销规划引擎",
+      "user_intent": "用户希望基于NBEV目标缺口进行规划，增加理财师或优化产品方案",
+      "expected_outcome": "系统识别为营销规划意图，并转入后续可执行阶段",
+      "required_capabilities": [
+        "语义理解",
+        "意图分类"
+      ],
+      "acceptance_criteria": [
+        "intent_name 不是“其他意图”",
+        "intent 字段对应营销规划类意图编码"
+      ],
+      "boundary": {
+        "allow_fallback": false,
+        "scope": "意图识别阶段"
+      },
+      "priority": "高",
+      "evidence_refs": [
+        {
+          "ref": "extracted_output.turns[0].intent_name"
+        },
+        {
+          "ref": "extracted_output.turns[0].intent"
+        }
+      ]
+    },
+    {
+      "expectation_id": "阶段路由为意图识别而非非代理阶段",
+      "downstream_consumer": "营销规划流程",
+      "user_intent": "同上",
+      "expected_outcome": "输出 stage 应为“intent”或后续规划阶段，而非“non_agent”",
+      "required_capabilities": [
+        "阶段路由"
+      ],
+      "acceptance_criteria": [
+        "stage 字段不是“non_agent”"
+      ],
+      "boundary": {
+        "allow_fallback": false,
+        "scope": "意图识别阶段"
+      },
+      "priority": "高",
+      "evidence_refs": [
+        {
+          "ref": "extracted_output.turns[0].stage"
+        }
+      ]
+    },
+    {
+      "expectation_id": "SSE事件序列完整并正确结束",
+      "downstream_consumer": "前端展示",
+      "user_intent": "用户期望获得流畅的交互体验",
+      "expected_outcome": "SSE 事件包含意图识别、推理、卡片生成等阶段，且协议结束标志为 true",
+      "required_capabilities": [
+        "SSE协议实现",
+        "事件编排"
+      ],
+      "acceptance_criteria": [
+        "event_summary.completed 为 true",
+        "event_summary.final_event 为“done”",
+        "event_summary.names 包含典型事件（intent_detected、reasoning_message_content、planning_started、card_delta、done）"
+      ],
+      "boundary": {
+        "allow_fallback": false,
+        "scope": "事件流输出"
+      },
+      "priority": "中",
+      "evidence_refs": [
+        {
+          "ref": "extracted_output.turns[0].event_summary"
+        }
+      ]
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图识别准确反映营销规划意图",
+      "status": "not_fulfilled",
+      "score": 0,
+      "expected_evidence": [
+        {
+          "field": "intent_name",
+          "condition": "not_equal_to '其他意图'"
+        },
+        {
+          "field": "intent",
+          "condition": "corresponding_to_planning_intent"
+        }
+      ],
+      "actual_evidence": [
+        {
+          "field": "intent_name",
+          "value": "其他意图"
+        },
+        {
+          "field": "intent",
+          "value": "4001"
+        }
+      ],
+      "downstream_impact": "后续规划流程无法启动，用户意图被丢弃，导致整体任务失败",
+      "blocking": true,
+      "confidence": 1.0,
+      "evidence_refs": [
+        {
+          "ref": "extracted_output.turns[0].intent_name",
+          "value": "其他意图"
+        },
+        {
+          "ref": "extracted_output.turns[0].intent",
+          "value": "4001"
+        }
+      ]
+    },
+    {
+      "expectation_id": "阶段路由为意图识别而非非代理阶段",
+      "status": "not_fulfilled",
+      "score": 0,
+      "expected_evidence": [
+        {
+          "field": "stage",
+          "condition": "not_equal_to 'non_agent'"
+        }
+      ],
+      "actual_evidence": [
+        {
+          "field": "stage",
+          "value": "non_agent"
+        }
+      ],
+      "downstream_impact": "系统退出了正常对话流程，无法进行后续澄清或规划",
+      "blocking": true,
+      "confidence": 1.0,
+      "evidence_refs": [
+        {
+          "ref": "extracted_output.turns[0].stage",
+          "value": "non_agent"
+        }
+      ]
+    },
+    {
+      "expectation_id": "SSE事件序列完整并正确结束",
+      "status": "fulfilled",
+      "score": 1.0,
+      "expected_evidence": [
+        {
+          "field": "event_summary.completed",
+          "condition": "true"
+        },
+        {
+          "field": "event_summary.final_event",
+          "condition": "done"
+        }
+      ],
+      "actual_evidence": [
+        {
+          "field": "event_summary.completed",
+          "value": true
+        },
+        {
+          "field": "event_summary.final_event",
+          "value": "done"
+        },
+        {
+          "field": "event_summary.names",
+          "value": [
+            "intent_detected",
+            "reasoning_message_content",
+            "planning_started",
+            "card_delta",
+            "done"
+          ]
+        }
+      ],
+      "downstream_impact": "前端可以正常接收事件流并渲染，不影响交互体验",
+      "blocking": false,
+      "confidence": 1.0,
+      "evidence_refs": [
+        {
+          "ref": "extracted_output.turns[0].event_summary"
+        }
+      ]
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "score": 0.0,
+    "reason": "核心意图识别错误，将营销规划需求归类为“其他意图”，导致阶段退化为 non_agent，直接阻断后续规划流程。"
+  },
+  "expected": {
+    "turns": [
+      {
+        "code": 0,
+        "msg": "success",
+        "robot_text": "已识别到您的NBEV规划需求，正在为您准备方案……",
+        "end_flag": 1,
+        "intent": "营销规划意图",
+        "intent_name": "营销规划意图",
+        "stage": "intent",
+        "event_summary": {
+          "names": [
+            "intent_detected",
+            "reasoning_message_content",
+            "planning_started",
+            "card_delta",
+            "done"
+          ],
+          "raw_names": [
+            "reasoning_start",
+            "reasoning_message_content",
+            "reasoning_end",
+            "card_start",
+            "card_message_content",
+            "card_end"
+          ],
+          "canonical_names": [
+            "intent_detected",
+            "reasoning_message_content",
+            "planning_started",
+            "card_delta",
+            "done"
+          ],
+          "counts": {
+            "intent_detected": 1,
+            "reasoning_message_content": 1,
+            "planning_started": 1,
+            "card_delta": 1,
+            "done": 1
+          },
+          "raw_counts": {
+            "reasoning_start": 1,
+            "reasoning_message_content": 1,
+            "reasoning_end": 1,
+            "card_start": 1,
+            "card_message_content": 1,
+            "card_end": 1
+          },
+          "final_event": "done",
+          "raw_final_event": "card_end",
+          "protocol_completed": true,
+          "business_completed": true,
+          "completed": true
+        },
+        "session_summary": {
+          "session_id": "eval-mock-agent-marketting-planning-d1642b58",
+          "evidence_declared": false,
+          "evidence_status": "missing"
+        },
+        "fallback": {
+          "used": false,
+          "allowed": false,
+          "reason": ""
+        },
+        "turn_index": 0,
+        "input_turn": {
+          "content": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？",
+          "role": "user"
+        }
+      }
+    ]
+  },
+  "actual": {
+    "turns": [
+      {
+        "code": 0,
+        "end_flag": 1,
+        "event_summary": {
+          "business_completed": true,
+          "canonical_names": [
+            "intent_detected",
+            "reasoning_message_content",
+            "planning_started",
+            "card_delta",
+            "done"
+          ],
+          "completed": true,
+          "counts": {
+            "card_delta": 1,
+            "done": 1,
+            "intent_detected": 1,
+            "planning_started": 1,
+            "reasoning_message_content": 1
+          },
+          "final_event": "done",
+          "names": [
+            "intent_detected",
+            "reasoning_message_content",
+            "planning_started",
+            "card_delta",
+            "done"
+          ],
+          "protocol_completed": true,
+          "raw_counts": {
+            "card_end": 1,
+            "card_message_content": 1,
+            "card_start": 1,
+            "reasoning_end": 1,
+            "reasoning_message_content": 1,
+            "reasoning_start": 1
+          },
+          "raw_final_event": "card_end",
+          "raw_names": [
+            "reasoning_start",
+            "reasoning_message_content",
+            "reasoning_end",
+            "card_start",
+            "card_message_content",
+            "card_end"
+          ]
+        },
+        "fallback": {
+          "allowed": false,
+          "reason": "",
+          "used": false
+        },
+        "input_turn": {
+          "content": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？",
+          "role": "user"
+        },
+        "intent": "4001",
+        "intent_name": "其他意图",
+        "msg": "success",
+        "robot_text": "卡片生成完成",
+        "session_summary": {
+          "evidence_declared": false,
+          "evidence_status": "missing",
+          "session_id": "eval-mock-agent-marketting-planning-d1642b58"
+        },
+        "stage": "non_agent",
+        "turn_index": 0
+      }
+    ]
+  },
+  "wrong": [
+    {
+      "kind": "intent_name",
+      "error_type": "incorrect_value",
+      "expected": "营销规划意图",
+      "actual": "其他意图",
+      "evidence_ref": "extracted_output.turns[0].intent_name",
+      "raw": "其他意图",
+      "incomplete": false
+    },
+    {
+      "kind": "stage",
+      "error_type": "incorrect_value",
+      "expected": "intent",
+      "actual": "non_agent",
+      "evidence_ref": "extracted_output.turns[0].stage",
+      "raw": "non_agent",
+      "incomplete": false
+    },
+    {
+      "kind": "intent",
+      "error_type": "incorrect_code",
+      "expected": "规划类意图码",
+      "actual": "4001",
+      "evidence_ref": "extracted_output.turns[0].intent",
+      "raw": "4001",
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "source": "extracted_output.turns[0]",
+      "fields": {
+        "intent": "4001",
+        "intent_name": "其他意图",
+        "stage": "non_agent",
+        "event_summary.completed": true
+      }
+    },
+    {
+      "source": "raw_response",
+      "note": "SSE events show full protocol, but intent was misclassified"
+    }
+  ],
+  "reasoning_summary": "用户输入明确表达NBEV缺口及弥补措施，属于典型的营销规划意图。但系统将其识别为“其他意图(4001)”，导致dialog stage退化为non_agent，未能进入可执行的规划路径。虽然SSE事件序列完成且未触发fallback，但核心意图识别错误直接造成业务失败，因此整体不满足要求。",
+  "summary": {
+    "reason": "not_fulfilled · blocking=[意图识别准确反映营销规划意图,阶段路由为意图识别而非非代理阶段] · 用户输入明确表达NBEV缺口及弥补措施，属于典型的营销规划意图。但系统将其识别为“其他意图(4001)”，导致dialog stage退化为non_agent，未能进入可执行的规划路径。虽然SSE事件序列完成且未触发fallback，但核心意图识别错误直接造成业务失败，因此整体不满足要求。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "意图识别准确反映营销规划意图",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "后续规划流程无法启动，用户意图被丢弃，导致整体任务失败",
+        "evidence": "其他意图 | 4001 | 其他意图 | 4001"
+      },
+      {
+        "expectation_id": "阶段路由为意图识别而非非代理阶段",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "系统退出了正常对话流程，无法进行后续澄清或规划",
+        "evidence": "non_agent | non_agent"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 3,
+    "blocking_count": 2,
+    "is_formal_attribution": true
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::意图识别阶段（intent_recognition）未能将用户关于 NBEV 缺口、增加理财师、优化产品方案的查询归类为营销规划意图，而是错误地标记为“其他意图::not_fulfilled",
+      "mechanism": "意图识别阶段（intent_recognition）未能将用户关于 NBEV 缺口、增加理财师、优化产品方案的查询归类为营销规划意图，而是错误地标记为“其他意图::not_fulfilled",
+      "fulfillment_statuses": [
+        "not_fulfilled",
+        "fulfilled"
+      ],
+      "expectation_ids": [
+        "意图识别为营销规划相关意图",
+        "stage路由正确进入intent或澄清阶段",
+        "业务指标NBEV被捕获至会话或澄清字段",
+        "分解维度理财师和产品方案被提及或询问",
+        "SSE事件流完整且符合协议",
+        "未使用fallback",
+        "mp_contract:expected_stage"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "representative_traces": [
+        "marketting-planning:mock-agent-marketting-planning-d1642b58:1783798697362"
+      ],
+      "common_root_cause": "意图识别阶段（intent_recognition）未能将用户关于 NBEV 缺口、增加理财师、优化产品方案的查询归类为营销规划意图，而是错误地标记为“其他意图”（intent=4001），导致 stage 变为 non_agent。此错误使得系统跳过整个营销规划流程（intent/clarification → planning），未捕获业务指标和规划维度，实质上是本链路最早的根因。",
+      "shared_failure_pattern": "意图识别阶段（intent_recognition）未能将用户关于 NBEV 缺口、增加理财师、优化产品方案的查询归类为营销规划意图，而是错误地标记为“其他意图”（intent=4001），导致 stage 变为 non_agent。此错误使得系统跳过整个营销规划流程（intent/clarification → planning），未捕获业务指标和规划维度，实质上是本链路最早的根因。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-d1642b58",
+          "root_cause": "意图识别阶段（intent_recognition）未能将用户关于 NBEV 缺口、增加理财师、优化产品方案的查询归类为营销规划意图，而是错误地标记为“其他意图”（intent=4001），导致 stage 变为 non_agent。此错误使得系统跳过整个营销规划流程（intent/clarification → planning），未捕获业务指标和规划维度，实质上是本链路最早的根因。",
+          "evidence": [
+            "execution_stage_probe: intent_recognition 阶段 evidence 中 actual_stage='non_agent'，与 reference_contract 的 expected_stage='intent' 冲突；",
+            "planning_output_probe: expected_stage='intent'，但 actual_stage 为空（实际输出为 non_agent），stage_match=false；",
+            "extracted_output: intent='4001', intent_name='其他意图', stage='non_agent'；",
+            "后续 field_clarification、session_merge、path_dispatch、planning_function 等阶段均因上游错误而无法执行预期业务逻辑（card_count=0，无路径、无澄清）。"
+          ]
+        }
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "next_actions": [
+        "execution_stage_probe: intent_recognition 阶段 evidence 中 actual_stage='non_agent'，与 reference_contract 的 expected_stage='intent' 冲突；",
+        "planning_output_probe: expected_stage='intent'，但 actual_stage 为空（实际输出为 non_agent），stage_match=false；",
+        "extracted_output: intent='4001', intent_name='其他意图', stage='non_agent'；",
+        "后续 field_clarification、session_merge、path_dispatch、planning_function 等阶段均因上游错误而无法执行预期业务逻辑（card_count=0，无路径、无澄清）。"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别阶段（intent_recognition）未能将用户关于 NBEV 缺口、增加理财师、优化产品方案的查询归类为营销规划意图，而是错误地标记为“其他意图”（intent=4001），导致 stage 变为 non_agent。此错误使得系统跳过整个营销规划流程（intent/clarification → planning），未捕获业务指标和规划维度，实质上是本链路最早的根因。",
+  "impact": "",
+  "priority": "normal"
+}

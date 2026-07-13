@@ -1,0 +1,64 @@
+{
+  "trace_id": "QA:mock-agent-QA-87e78ff7:1783798696588",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "确认轻症可以多次赔付",
+      "fulfillment_status": "fulfilled",
+      "root_cause_hypothesis": ""
+    },
+    {
+      "expectation_id": "说明每次轻症赔付金额的比例范围",
+      "fulfillment_status": "fulfilled",
+      "root_cause_hypothesis": ""
+    },
+    {
+      "expectation_id": "提及存在赔付次数上限",
+      "fulfillment_status": "fulfilled",
+      "root_cause_hypothesis": ""
+    },
+    {
+      "expectation_id": "提及两次轻症赔付之间有间隔期要求",
+      "fulfillment_status": "fulfilled",
+      "root_cause_hypothesis": ""
+    },
+    {
+      "expectation_id": "提示具体赔付规则以保险合同为准",
+      "fulfillment_status": "fulfilled",
+      "root_cause_hypothesis": ""
+    },
+    {
+      "expectation_id": "阐述轻症责任的其他重要限制（如分组限制、对重疾保额的影响、累计赔付上限等）",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "answer_generation_or_provided_output"
+      ],
+      "root_cause_hypothesis": "实际答案生成时未能覆盖轻症责任的其他重要限制（分组限制、轻症赔付对重疾保额的影响、累计赔付上限），原因很可能在于答案生成阶段缺乏具体产品的合同条款作为上下文（provided contexts 为空），仅基于通用保险知识作答；此外输入问题文本为空（question_present=false）可能也导致模型未能准确捕捉用户对细节的全面需求，但核心问题是生成内容的完整性不足。",
+      "evidence": [
+        "实际答案仅提及赔付次数、20%-30% 比例、次数上限和间隔期，完全未涉及分组限制、保额变化和累计上限",
+        "参考合同第3点明确列出这些限制",
+        "judge_result 中对该期望给出 not_fulfilled 判定，缺失关键规则",
+        "qa_local_evidence_probe 显示 contexts_count=0，question_present=false，生成时缺乏额外信息支撑"
+      ]
+    }
+  ],
+  "suspected_locations": [
+    "answer_generation_or_provided_output"
+  ],
+  "root_cause_hypothesis": "实际答案未满足“阐述轻症责任的其他重要限制”期望，因为答案生成阶段（provided output）未包含参考合同中关于分组限制、重疾保额变化和累计赔付上限等约束；根本原因是生成时可用上下文为空（contexts_count=0），且模型自身知识未能补全这些具体合同细节，导致答案完整性不足。",
+  "evidence": [
+    "judge_result.fulfillment_assessments 中 expectation_id=‘阐述轻症责任的其他重要限制（如分组限制、对重疾保额的影响、累计赔付上限等）’ 状态为 not_fulfilled，score=0",
+    "actual_answer 缺失分组限制、保额变化、累计上限等关键内容，仅覆盖核心赔付规则",
+    "reference_contract 包含完整限制说明（第3点）",
+    "qa_local_evidence_probe：contexts_count=0，question_present=false，reference_answer_present=true，actual_answer_present=true"
+  ],
+  "evidence_strength": "strong",
+  "summary": {
+    "attribution_count": 6,
+    "probe_count": 0,
+    "summary_text": "实际答案未满足“阐述轻症责任的其他重要限制”期望，因为答案生成阶段（provided output）未包含参考合同中关于分组限制、重疾保额变化和累计赔付上限等约束；根本原因是生成时可用上下文为空（contexts_count=0），且模型自身知识未能补全这些具体合同细节，导致答案完整性不足。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

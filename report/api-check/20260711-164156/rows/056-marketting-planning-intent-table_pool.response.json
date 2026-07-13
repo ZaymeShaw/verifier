@@ -1,0 +1,68 @@
+{
+  "project_id": "marketting-planning-intent",
+  "rows": [
+    {
+      "id": "mock-agent-marketting-planning-intent-9e16256b",
+      "input": "帮我看看上季度买了重疾险的客户都是啥样的？",
+      "scenario": "intent_recognition",
+      "output_summary": "{\"confidence\": 0.5, \"intent\": \"other\", \"subIntent\": \"其他意图\"}",
+      "reference_summary": "{\"confidence\": 0.95, \"intent\": \"customer_portrait\", \"target_value\": \"重疾险\"}",
+      "status": "not_fulfilled",
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "fulfillment_status": "not_fulfilled",
+      "judge_summary": {
+        "status": "not_fulfilled",
+        "fulfillment_status": "not_fulfilled",
+        "reason": "not_fulfilled · blocking=[意图标签为客户画像,目标值提取为重疾险] · 用户查询“帮我看看上季度买了重疾险的客户都是啥样的？”期望意图为 customer_portrait，但实际识别结果为 other，且 target_value 为空，完全未满足业务预期。",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 2,
+        "blocking_count": 2,
+        "primary_failure_dimensions": [
+          {
+            "blocking": true,
+            "downstream_impact": "下游无法获取正确的画像意图，可能触发其他流程或失败",
+            "evidence": "下游无法获取正确的画像意图，可能触发其他流程或失败",
+            "expectation_id": "意图标签为客户画像",
+            "status": "not_fulfilled"
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "无法获取目标险种信息，无法针对重疾险客户生成画像",
+            "evidence": "无法获取目标险种信息，无法针对重疾险客户生成画像",
+            "expectation_id": "目标值提取为重疾险",
+            "status": "not_fulfilled"
+          }
+        ]
+      },
+      "attribution_summary": {
+        "attribution_count": 2,
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 0,
+        "summary_text": "核心根因在于意图识别上游 API 未能输出正确的意图标签（raw_intent=None），导致适配器提取后映射为 other，同时槽位提取（target_value）也因意图识别错误而未能执行。可能的原因包括：LLM 提示词不充分、模型训练数据未覆盖此类查询表述，或意图映射配置未包含模糊匹配兜底策略。建议优化 intent_prompt 增加多样化示例，并调整 intent_recognition 的错误处理逻辑，在低置信度时结合关键词（如“客户画像”、“客户都是啥样”）进行修正。"
+      },
+      "check_summary": {
+        "passed": true,
+        "issue_count": 0
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": true,
+      "issue_count": 0,
+      "fallback_count": 0,
+      "divergence_stage": "",
+      "root_cause_summary": "核心根因在于意图识别上游 API 未能输出正确的意图标签（raw_intent=None），导致适配器提取后映射为 other，同时槽位提取（target_value）也因意图识别错误而未能执行。可能的原因包括：LLM 提示词不充分、模型训练数据未覆盖此类查询表述，或意图映射配置未包含模糊匹配兜底策略。建议优化 intent_prompt 增加多样化示例，并调整 intent_recognition 的错误处理逻辑，在低置信度时结合关键词（如“客户画像”、“客户都是啥样”）进行修正。",
+      "created_at": "2026-07-11T08:41:58.204774+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783759318204"
+    }
+  ],
+  "total": 1
+}

@@ -1,0 +1,57 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::营销规划链路最早且最关键的失败点在intent_recognition阶段：意图分类器未能正确将用户关于NBEV目标缺口弥补、增加理财师/优化产品的请求识别为营::not_fulfilled",
+      "mechanism": "营销规划链路最早且最关键的失败点在intent_recognition阶段：意图分类器未能正确将用户关于NBEV目标缺口弥补、增加理财师/优化产品的请求识别为营::not_fulfilled",
+      "fulfillment_statuses": [
+        "not_fulfilled"
+      ],
+      "expectation_ids": [
+        "意图正确识别为营销规划类",
+        "阶段路由至intent或clarification且避免non_agent",
+        "识别缺失字段并主动澄清",
+        "SSE协议完成且业务有效",
+        "mp_contract:expected_stage"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "representative_traces": [
+        "marketting-planning:mock-agent-marketting-planning-d1642b58:1783919518617"
+      ],
+      "common_root_cause": "营销规划链路最早且最关键的失败点在intent_recognition阶段：意图分类器未能正确将用户关于NBEV目标缺口弥补、增加理财师/优化产品的请求识别为营销规划意图，而是误判为“其他意图”（intent:4001），输出stage=non_agent。该错误导致下游field_clarification、path_dispatch、planning_function等模块均未按营销规划合同执行，所有业务期望均未达成。",
+      "shared_failure_pattern": "营销规划链路最早且最关键的失败点在intent_recognition阶段：意图分类器未能正确将用户关于NBEV目标缺口弥补、增加理财师/优化产品的请求识别为营销规划意图，而是误判为“其他意图”（intent:4001），输出stage=non_agent。该错误导致下游field_clarification、path_dispatch、planning_function等模块均未按营销规划合同执行，所有业务期望均未达成。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-d1642b58",
+          "root_cause": "营销规划链路最早且最关键的失败点在intent_recognition阶段：意图分类器未能正确将用户关于NBEV目标缺口弥补、增加理财师/优化产品的请求识别为营销规划意图，而是误判为“其他意图”（intent:4001），输出stage=non_agent。该错误导致下游field_clarification、path_dispatch、planning_function等模块均未按营销规划合同执行，所有业务期望均未达成。",
+          "evidence": [
+            "intent_recognition输出：intent=\"4001\"，intent_name=\"其他意图\"，stage=\"non_agent\"",
+            "execution_stage_probe显示intent_recognition阶段evidence中actual_stage=non_agent与expected_stage=intent存在差异",
+            "planning_output_probe显示stage_match=false，actual_stage为null，确认参考合同预期未满足",
+            "field_clarification输出missing_fields=[]、required_fields=[]，澄清功能未触发",
+            "planning_function输出card_count=0，无规划内容生成",
+            "最终robot_text仅包含“卡片生成完成”，无业务价值"
+          ]
+        }
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "next_actions": [
+        "intent_recognition输出：intent=\"4001\"，intent_name=\"其他意图\"，stage=\"non_agent\"",
+        "execution_stage_probe显示intent_recognition阶段evidence中actual_stage=non_agent与expected_stage=intent存在差异",
+        "planning_output_probe显示stage_match=false，actual_stage为null，确认参考合同预期未满足",
+        "field_clarification输出missing_fields=[]、required_fields=[]，澄清功能未触发",
+        "planning_function输出card_count=0，无规划内容生成"
+      ]
+    }
+  ],
+  "common_root_cause": "营销规划链路最早且最关键的失败点在intent_recognition阶段：意图分类器未能正确将用户关于NBEV目标缺口弥补、增加理财师/优化产品的请求识别为营销规划意图，而是误判为“其他意图”（intent:4001），输出stage=non_agent。该错误导致下游field_clarification、path_dispatch、planning_function等模块均未按营销规划合同执行，所有业务期望均未达成。",
+  "impact": "",
+  "priority": "normal"
+}

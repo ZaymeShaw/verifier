@@ -1,0 +1,122 @@
+{
+  "project": "marketting-planning-intent",
+  "attributes": [
+    {
+      "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783853426693",
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+      "expectation_attributions": [
+        {
+          "expectation_id": "意图标签应为customer_portrait",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call"
+          ],
+          "root_cause_hypothesis": "API returned raw_intent '4001' (other) instead of the expected intent code for 'customer_portrait'.",
+          "evidence": [
+            "raw_response shows intent_name:其他意图",
+            "extracted_output.intent=other"
+          ]
+        },
+        {
+          "expectation_id": "实体抽取target_value包含重疾险",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call"
+          ],
+          "root_cause_hypothesis": "Model did not extract entity '重疾险' as target_value; returned empty slots.",
+          "evidence": [
+            "intent_evidence.slots={}",
+            "extracted_output.target_value=null"
+          ]
+        },
+        {
+          "expectation_id": "置信度不低于业务阈值",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call"
+          ],
+          "root_cause_hypothesis": "Model confidence is 0.5, below the required 0.8, indicating high uncertainty in classification.",
+          "evidence": [
+            "actual_intent_output.confidence=0.5",
+            "extracted_output.confidence=0.5"
+          ]
+        },
+        {
+          "expectation_id": "不应将明确意图降级为other",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call"
+          ],
+          "root_cause_hypothesis": "The model misclassified the obvious customer portrait query as fallback 'other'.",
+          "evidence": [
+            "query explicitly asks about customer characteristics of insured group",
+            "actual intent is other"
+          ]
+        },
+        {
+          "expectation_id": "intent_contract",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call"
+          ],
+          "root_cause_hypothesis": "Overall intent contract not met due to model's failure to output the correct intent and slot.",
+          "evidence": [
+            "intent_contract_probe shows mismatch",
+            "judge_result overall_fulfillment not_fulfilled"
+          ]
+        }
+      ],
+      "suspected_locations": [
+        {
+          "location": "intent_contract_gate",
+          "evidence": [
+            [
+              {
+                "kind": "target_value",
+                "error_type": "missing_slot",
+                "expected": "重疾险",
+                "evidence_ref": "extracted_output",
+                "raw": {
+                  "kind": "target_value",
+                  "error_type": "missing_slot",
+                  "expected": "重疾险",
+                  "evidence_ref": "extracted_output",
+                  "incomplete": false
+                },
+                "incomplete": false
+              }
+            ]
+          ]
+        }
+      ],
+      "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': 'customer_portrait', 'confidence': 0.95, 'target_value': '重疾险', 'path_types': None, 'subIntent': '其他意图'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "evidence": [
+        [
+          {
+            "kind": "target_value",
+            "error_type": "missing_slot",
+            "expected": "重疾险",
+            "evidence_ref": "extracted_output",
+            "raw": {
+              "kind": "target_value",
+              "error_type": "missing_slot",
+              "expected": "重疾险",
+              "evidence_ref": "extracted_output",
+              "incomplete": false
+            },
+            "incomplete": false
+          }
+        ]
+      ],
+      "evidence_strength": "medium",
+      "summary": {
+        "attribution_count": 5,
+        "probe_count": 0,
+        "summary_text": "The intent recognition API at stage 'intent_api_call' responded with fallback intent code 4001 (mapped to 'other') and confidence 0.5, failing to identify the query as 'customer_portrait' and missing the entity '重疾险'. This indicates an issue with the underlying model, prompt or classification threshold, rather than with downstream mapping or extraction.",
+        "is_complete": false,
+        "is_formal_attribution": false
+      }
+    }
+  ]
+}

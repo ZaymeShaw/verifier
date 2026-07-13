@@ -1,0 +1,136 @@
+{
+  "project": "marketting-planning",
+  "attributes": [
+    {
+      "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783792276772",
+      "project_id": "marketting-planning",
+      "case_id": "mock-agent-marketting-planning-d1642b58",
+      "expectation_attributions": [
+        {
+          "expectation_id": "营销规划意图识别准确性",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            {
+              "stage": "intent_recognition",
+              "reason": "Intent classification returned 4001 (其他意图) instead of marketing planning intent"
+            }
+          ],
+          "root_cause_hypothesis": "Intent recognition misclassified the user query, preventing downstream marketing planning stages.",
+          "evidence": [
+            {
+              "source": "extracted_output.turns[0].intent",
+              "value": "4001"
+            },
+            {
+              "source": "extracted_output.turns[0].intent_name",
+              "value": "其他意图"
+            }
+          ]
+        },
+        {
+          "expectation_id": "关键业务要素保留",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            {
+              "stage": "intent_recognition",
+              "reason": "No business elements extracted because wrong intent led to field clarification being skipped"
+            }
+          ],
+          "root_cause_hypothesis": "Business elements were not extracted due to misrouting after intent misclassification.",
+          "evidence": [
+            {
+              "source": "extracted_output.turns[0].session_summary.accumulated_fields"
+            }
+          ]
+        },
+        {
+          "expectation_id": "意图阶段正确路由",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            {
+              "stage": "intent_recognition",
+              "reason": "Stage set to non_agent and end_flag=1, premature termination"
+            }
+          ],
+          "root_cause_hypothesis": "Incorrect intent caused the router to set stage=non_agent and end_flag=1, terminating the session.",
+          "evidence": [
+            {
+              "source": "extracted_output.turns[0].stage",
+              "value": "non_agent"
+            },
+            {
+              "source": "extracted_output.turns[0].end_flag",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "expectation_id": "mp_contract:expected_stage",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            {
+              "stage": "intent_recognition",
+              "reason": "Expected stage=intent but actual is non_agent"
+            }
+          ],
+          "root_cause_hypothesis": "Contract stage not met because intent misclassification diverted the flow.",
+          "evidence": [
+            {
+              "source": "reference_contract.expected_stage",
+              "value": "intent"
+            },
+            {
+              "source": "actual_stage",
+              "value": "non_agent"
+            }
+          ]
+        }
+      ],
+      "suspected_locations": [
+        {
+          "stage": "intent_recognition",
+          "file": "app/workflow/steps/intent_recognition.py",
+          "reason": "Intent classification model/prompt returned 4001 (其他意图) instead of marketing planning intent, causing downstream errors."
+        }
+      ],
+      "root_cause_hypothesis": "The intent recognition stage misclassified the user query as '其他意图' (4001) instead of a marketing planning intent. This incorrect classification led to stage routing to non_agent with immediate termination, skipping field clarification and planning, causing all blocked expectations.",
+      "evidence": [
+        {
+          "source": "extracted_output.turns[0].intent",
+          "value": "4001"
+        },
+        {
+          "source": "extracted_output.turns[0].intent_name",
+          "value": "其他意图"
+        },
+        {
+          "source": "extracted_output.turns[0].stage",
+          "value": "non_agent"
+        },
+        {
+          "source": "extracted_output.turns[0].end_flag",
+          "value": 1
+        },
+        {
+          "source": "judge_result.missing[0]",
+          "value": "intent incorrect"
+        },
+        {
+          "source": "execution_stage_probe.intent_recognition.evidence",
+          "value": {
+            "actual_stage": "non_agent",
+            "expected_stage": "intent"
+          }
+        }
+      ],
+      "evidence_strength": "high",
+      "summary": {
+        "attribution_count": 4,
+        "probe_count": 0,
+        "summary_text": "The intent recognition stage misclassified the user query as '其他意图' (4001) instead of a marketing planning intent. This incorrect classification led to stage routing to non_agent with immediate termination, skipping field clarification and planning, causing all blocked expectations.",
+        "is_complete": false,
+        "is_formal_attribution": false
+      }
+    }
+  ]
+}

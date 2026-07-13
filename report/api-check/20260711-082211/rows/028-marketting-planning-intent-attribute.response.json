@@ -1,0 +1,119 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783729332313",
+  "project_id": "marketting-planning-intent",
+  "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图识别服务正常响应",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "type": "service",
+          "identifier": "/api/v1/marketing-planning/intent-recognition"
+        },
+        {
+          "type": "code",
+          "file": "app/workflow/steps/intent_recognition.py"
+        }
+      ],
+      "root_cause_hypothesis": "意图识别服务未正常启动或网络连接异常，导致连接被拒绝，API 调用失败。",
+      "evidence": [
+        {
+          "source": "trace stage intent_api_call",
+          "error": "Connection refused",
+          "endpoint": "/api/v1/marketing-planning/intent-recognition",
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "expectation_id": "意图标签为customer_portrait",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "type": "service",
+          "identifier": "/api/v1/marketing-planning/intent-recognition"
+        },
+        {
+          "type": "code",
+          "file": "app/schemas/intent.py",
+          "description": "INTENT_MAPPING 映射逻辑，raw_intent=None 映射为 other"
+        }
+      ],
+      "root_cause_hypothesis": "由于上游意图识别服务不可用，raw_intent 为空，导致 label_mapping 将其映射为 null 而非期望的 customer_portrait，本质是上游故障的传导。",
+      "evidence": [
+        {
+          "source": "runtime_checks.intent_mapping",
+          "actual_mapping": "other"
+        },
+        {
+          "source": "trace stage label_mapping",
+          "detail": "produced intent: null"
+        }
+      ]
+    },
+    {
+      "expectation_id": "置信度达到高可信水平",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "type": "service",
+          "identifier": "/api/v1/marketing-planning/intent-recognition"
+        }
+      ],
+      "root_cause_hypothesis": "置信度字段因意图 API 无响应而缺失，无法满足阈值要求。根因同服务不可用。",
+      "evidence": [
+        {
+          "source": "trace",
+          "detail": "no confidence value available"
+        }
+      ]
+    }
+  ],
+  "suspected_locations": [
+    {
+      "type": "service",
+      "identifier": "/api/v1/marketing-planning/intent-recognition",
+      "description": "意图识别服务端点，返回 Connection refused，疑似未启动或网络不通"
+    },
+    {
+      "type": "code",
+      "file": "app/workflow/steps/intent_recognition.py",
+      "description": "负责发起意图识别 API 请求的模块，可能缺少对服务不可用的降级处理"
+    },
+    {
+      "type": "code",
+      "file": "app/schemas/intent.py",
+      "description": "意图标签映射逻辑，在 raw_intent 为空时给出 other，可能导致期望意图丢失"
+    }
+  ],
+  "root_cause_hypothesis": "营销计划意图识别服务（/api/v1/marketing-planning/intent-recognition）不可用，造成请求连接被拒绝，无法返回包含 intent 和 confidence 的响应。此故障直接导致意图标签和置信度缺失，进而使所有核心业务期望未满足。可能根因：服务进程未启动、目标端口未开放、服务地址配置错误或网络策略阻断。",
+  "evidence": [
+    {
+      "stage": "intent_api_call",
+      "status": "failed",
+      "error": "Connection refused",
+      "endpoint": "/api/v1/marketing-planning/intent-recognition"
+    },
+    {
+      "stage": "adapter_extraction",
+      "status": "failed"
+    },
+    {
+      "stage": "label_mapping",
+      "status": "succeeded"
+    },
+    {
+      "source": "runtime_checks.intent_mapping",
+      "actual_mapping": "other"
+    }
+  ],
+  "evidence_strength": "strong",
+  "summary": {
+    "attribution_count": 3,
+    "probe_count": 0,
+    "summary_text": "营销计划意图识别服务（/api/v1/marketing-planning/intent-recognition）不可用，造成请求连接被拒绝，无法返回包含 intent 和 confidence 的响应。此故障直接导致意图标签和置信度缺失，进而使所有核心业务期望未满足。可能根因：服务进程未启动、目标端口未开放、服务地址配置错误或网络策略阻断。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

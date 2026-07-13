@@ -1,0 +1,85 @@
+{
+  "project": "marketting-planning-intent",
+  "attributes": [
+    {
+      "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783759318204",
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+      "expectation_attributions": [
+        {
+          "expectation_id": "意图标签为客户画像",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            {
+              "file": "ext_repo:app/workflow/steps/intent_recognition.py",
+              "reason": "负责构造意图识别请求并处理上游 API 响应，可能未正确调用或解析导致 raw_intent=None"
+            },
+            {
+              "file": "ext_repo:app/workflow/prompts/intent_prompt.py",
+              "reason": "LLM 提示词可能未能覆盖“查询买了重疾险的客户画像”这类表述的意图映射"
+            },
+            {
+              "file": "projects/marketting-planning-intent/intent.py",
+              "symbol": "INTENT_MAPPING",
+              "reason": "当 raw_intent=None 时，映射逻辑将其归为 other，未能回退到更合理的默认意图"
+            }
+          ],
+          "root_cause_hypothesis": "上游意图识别 API 未能将用户查询（“帮我看看上季度买了重疾险的客户都是啥样的？”）识别为 customer_portrait，可能是由于 LLM 模型能力不足或提示词未包含足够的示例，导致 raw_intent 返回 None，经由 INTENT_MAPPING 映射为 other，最终下游未收到正确意图标签。",
+          "evidence": [
+            "extracted_output.intent 实际值为 'other'，期望值为 'customer_portrait'",
+            "runtime_checks 显示 raw_intent=None，映射后得到 other",
+            "reference contract 表明正确意图应为 customer_portrait，置信度 0.95"
+          ]
+        },
+        {
+          "expectation_id": "目标值提取为重疾险",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            {
+              "file": "ext_repo:app/workflow/steps/intent_recognition.py",
+              "reason": "意图识别失败影响后续槽位提取，未能从查询中抽取“重疾险”作为 target_value"
+            },
+            {
+              "file": "ext_repo:app/workflow/prompts/intent_prompt.py",
+              "reason": "提示词设计可能未明确指示模型在识别 customer_portrait 意图时同时提取产品名称作为 target_value"
+            }
+          ],
+          "root_cause_hypothesis": "由于意图识别本身错误（intent 为 other），模型未能进入 customer_portrait 分支进行槽位提取，导致 target_value 未被正确设置为“重疾险”；根源与意图标签错误相同。",
+          "evidence": [
+            "extracted_output.target_value 实际为 null，期望为 '重疾险'",
+            "extracted_output.intent 为 other，且 subIntent 为 '其他意图'，表明模型未识别出画像意图"
+          ]
+        }
+      ],
+      "suspected_locations": [
+        {
+          "file": "ext_repo:app/workflow/steps/intent_recognition.py",
+          "reason": "意图识别请求构造与响应解析逻辑，可能是产生 raw_intent=None 的源头"
+        },
+        {
+          "file": "ext_repo:app/workflow/prompts/intent_prompt.py",
+          "reason": "提示词设计可能不足以让模型准确理解“帮我看看上季度买了重疾险的客户都是啥样的？”应映射为 customer_portrait"
+        },
+        {
+          "file": "projects/marketting-planning-intent/intent.py",
+          "symbol": "INTENT_MAPPING",
+          "reason": "当 raw_intent 缺失时，映射逻辑未提供回退策略，直接输出 other"
+        }
+      ],
+      "root_cause_hypothesis": "核心根因在于意图识别上游 API 未能输出正确的意图标签（raw_intent=None），导致适配器提取后映射为 other，同时槽位提取（target_value）也因意图识别错误而未能执行。可能的原因包括：LLM 提示词不充分、模型训练数据未覆盖此类查询表述，或意图映射配置未包含模糊匹配兜底策略。建议优化 intent_prompt 增加多样化示例，并调整 intent_recognition 的错误处理逻辑，在低置信度时结合关键词（如“客户画像”、“客户都是啥样”）进行修正。",
+      "evidence": [
+        "execution_trace 中 intent_api_call 阶段返回 raw_response，但 adapter_extraction 得到 intent='other', confidence=0.5",
+        "runtime_checks 确认 raw_intent=None，经由 INTENT_MAPPING 转为 other，且 customer_portrait 存在于枚举中但未被选中",
+        "reference contract 指定 intent=customer_portrait, target_value='重疾险'，与实际输出严重不符"
+      ],
+      "evidence_strength": "strong",
+      "summary": {
+        "attribution_count": 2,
+        "probe_count": 0,
+        "summary_text": "核心根因在于意图识别上游 API 未能输出正确的意图标签（raw_intent=None），导致适配器提取后映射为 other，同时槽位提取（target_value）也因意图识别错误而未能执行。可能的原因包括：LLM 提示词不充分、模型训练数据未覆盖此类查询表述，或意图映射配置未包含模糊匹配兜底策略。建议优化 intent_prompt 增加多样化示例，并调整 intent_recognition 的错误处理逻辑，在低置信度时结合关键词（如“客户画像”、“客户都是啥样”）进行修正。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      }
+    }
+  ]
+}

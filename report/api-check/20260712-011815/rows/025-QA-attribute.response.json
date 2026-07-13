@@ -1,0 +1,38 @@
+{
+  "trace_id": "QA:mock-agent-QA-87e78ff7:1783790295994",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "回答完整性覆盖关键保险责任细节",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "answer_generation"
+      ],
+      "root_cause_hypothesis": "实际回答仅回应了核心问题（多次赔付和比例范围），但遗漏了间隔期具体天数、分组限制、保额影响等参考标准中明确列出的重要细节。最可能的原因是生成阶段的知识检索或利用不足，无法提供完整的条款细则；也可能受到长度限制或保守策略影响，导致输出过于简略。",
+      "evidence": [
+        "实际回答中仅提及‘间隔期要求’，未给出具体天数（参考标准明确为90天或180天）。",
+        "实际回答未提及轻症分组限制或同一组别轻症只能赔付一次的规则，而参考标准第3点有此说明。",
+        "实际回答未说明轻症赔付后对重疾保额的可能影响，参考标准第2点明确提到了保额不变或减少。",
+        "语义裁判判定该期望未满足（score 0.4），missing列表明确列出了上述三项缺失信息。"
+      ]
+    }
+  ],
+  "suspected_locations": [
+    "answer_generation"
+  ],
+  "root_cause_hypothesis": "总体而言，实际回答未能满足完整性期望，根源在于生成回答时未能充分提取和覆盖参考标准中关于轻症赔付的辅助细节（如具体间隔期、分组限制、保额影响）。项目没有外部QA服务调用，失败纯粹由输出内容本身的不完整造成。",
+  "evidence": [
+    "qa_local_evidence_probe显示question、reference、actual均存在，证据充分；judge评估指出三个关键信息点缺失。",
+    "actual_answer仅131字符，reference_answer约300字符，内容覆盖度低（reference_actual_char_coverage=0.447）。",
+    "missing列表包含间隔期具体天数、分组限制、保额影响三大项，均为用户获得全面理解所需。"
+  ],
+  "evidence_strength": "strong",
+  "summary": {
+    "attribution_count": 1,
+    "probe_count": 0,
+    "summary_text": "总体而言，实际回答未能满足完整性期望，根源在于生成回答时未能充分提取和覆盖参考标准中关于轻症赔付的辅助细节（如具体间隔期、分组限制、保额影响）。项目没有外部QA服务调用，失败纯粹由输出内容本身的不完整造成。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

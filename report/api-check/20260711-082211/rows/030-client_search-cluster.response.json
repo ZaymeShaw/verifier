@@ -1,0 +1,51 @@
+{
+  "project_id": "client_search",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::本次请求在 project.call 阶段尝试连接下游客户搜索服务时遭遇 Connection refused 错误，导致整个调用链失败。请求标准化阶段虽已正确::not_fulfilled",
+      "mechanism": "本次请求在 project.call 阶段尝试连接下游客户搜索服务时遭遇 Connection refused 错误，导致整个调用链失败。请求标准化阶段虽已正确::not_fulfilled",
+      "fulfillment_statuses": [
+        "not_fulfilled"
+      ],
+      "expectation_ids": [
+        "产品类别识别为重疾险",
+        "搜索请求成功执行并返回结果"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "client_search:mock-agent-client_search-cdd7df11:1783729332158"
+      ],
+      "representative_traces": [
+        "client_search:mock-agent-client_search-cdd7df11:1783729332158"
+      ],
+      "common_root_cause": "本次请求在 project.call 阶段尝试连接下游客户搜索服务时遭遇 Connection refused 错误，导致整个调用链失败。请求标准化阶段虽已正确识别“重疾险”产品类别，但 project.call 的异常处理未将中间解析结果（如 conditions）进行降级输出，使得最终响应完全为空，两个核心业务期望均未达成。修复重点：确认下游搜索服务正常运行且连接配置正确；同时增强 project.call 的异常处理，确保在外部服务不可用时仍能返回已解析的搜索条件，提供部分可用反馈。",
+      "shared_failure_pattern": "本次请求在 project.call 阶段尝试连接下游客户搜索服务时遭遇 Connection refused 错误，导致整个调用链失败。请求标准化阶段虽已正确识别“重疾险”产品类别，但 project.call 的异常处理未将中间解析结果（如 conditions）进行降级输出，使得最终响应完全为空，两个核心业务期望均未达成。修复重点：确认下游搜索服务正常运行且连接配置正确；同时增强 project.call 的异常处理，确保在外部服务不可用时仍能返回已解析的搜索条件，提供部分可用反馈。",
+      "representative_diffs": [
+        {
+          "case_id": "client_search:mock-agent-client_search-cdd7df11:1783729332158",
+          "root_cause": "本次请求在 project.call 阶段尝试连接下游客户搜索服务时遭遇 Connection refused 错误，导致整个调用链失败。请求标准化阶段虽已正确识别“重疾险”产品类别，但 project.call 的异常处理未将中间解析结果（如 conditions）进行降级输出，使得最终响应完全为空，两个核心业务期望均未达成。修复重点：确认下游搜索服务正常运行且连接配置正确；同时增强 project.call 的异常处理，确保在外部服务不可用时仍能返回已解析的搜索条件，提供部分可用反馈。",
+          "evidence": [
+            "normalized_request 中 extra_input_params.pCategorys = '重疾险'（产品类别识别成功）。",
+            "run_trace.execution_trace 显示 project.call 阶段返回 Connection refused 错误。",
+            "extracted_output 为空，缺少条件解析结果与搜索响应。",
+            "judge_result 中所有期望状态均为 not_fulfilled，且缺失条件与搜索结果。"
+          ]
+        }
+      ],
+      "verification_cases": [
+        "client_search:mock-agent-client_search-cdd7df11:1783729332158"
+      ],
+      "next_actions": [
+        "normalized_request 中 extra_input_params.pCategorys = '重疾险'（产品类别识别成功）。",
+        "run_trace.execution_trace 显示 project.call 阶段返回 Connection refused 错误。",
+        "extracted_output 为空，缺少条件解析结果与搜索响应。",
+        "judge_result 中所有期望状态均为 not_fulfilled，且缺失条件与搜索结果。"
+      ]
+    }
+  ],
+  "common_root_cause": "本次请求在 project.call 阶段尝试连接下游客户搜索服务时遭遇 Connection refused 错误，导致整个调用链失败。请求标准化阶段虽已正确识别“重疾险”产品类别，但 project.call 的异常处理未将中间解析结果（如 conditions）进行降级输出，使得最终响应完全为空，两个核心业务期望均未达成。修复重点：确认下游搜索服务正常运行且连接配置正确；同时增强 project.call 的异常处理，确保在外部服务不可用时仍能返回已解析的搜索条件，提供部分可用反馈。",
+  "impact": "",
+  "priority": "normal"
+}

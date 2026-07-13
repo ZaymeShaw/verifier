@@ -1,0 +1,51 @@
+{
+  "project_id": "marketting-planning-intent",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::意图识别模块在提示词设计和适配器解析两方面均存在缺陷：提示词未能有效引导模型识别“客户画像”类查询及产品实体，导致API返回空意图或无产品信息；适配器在提取阶段::not_fulfilled",
+      "mechanism": "意图识别模块在提示词设计和适配器解析两方面均存在缺陷：提示词未能有效引导模型识别“客户画像”类查询及产品实体，导致API返回空意图或无产品信息；适配器在提取阶段::not_fulfilled",
+      "fulfillment_statuses": [
+        "not_fulfilled"
+      ],
+      "expectation_ids": [
+        "意图识别为customer_portrait",
+        "提取产品参数为重疾险"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-intent-9e16256b"
+      ],
+      "representative_traces": [
+        "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783750354676"
+      ],
+      "common_root_cause": "意图识别模块在提示词设计和适配器解析两方面均存在缺陷：提示词未能有效引导模型识别“客户画像”类查询及产品实体，导致API返回空意图或无产品信息；适配器在提取阶段缺乏健壮的fallback或校正机制，直接返回other和null。映射表虽包含目标标签，但在raw_intent为空时错误映射为other，造成下游完全无法执行客户画像分析。",
+      "shared_failure_pattern": "意图识别模块在提示词设计和适配器解析两方面均存在缺陷：提示词未能有效引导模型识别“客户画像”类查询及产品实体，导致API返回空意图或无产品信息；适配器在提取阶段缺乏健壮的fallback或校正机制，直接返回other和null。映射表虽包含目标标签，但在raw_intent为空时错误映射为other，造成下游完全无法执行客户画像分析。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+          "root_cause": "意图识别模块在提示词设计和适配器解析两方面均存在缺陷：提示词未能有效引导模型识别“客户画像”类查询及产品实体，导致API返回空意图或无产品信息；适配器在提取阶段缺乏健壮的fallback或校正机制，直接返回other和null。映射表虽包含目标标签，但在raw_intent为空时错误映射为other，造成下游完全无法执行客户画像分析。",
+          "evidence": [
+            "执行trace显示adapter_extraction输出intent: other, confidence: 0.5, target_value: null",
+            "runtime_checks确认raw_intent=None，actual_mapping=other，与期望customer_portrait矛盾",
+            "INTENT_MAPPING位于projects/marketting-planning-intent/intent.py，枚举包含customer_portrait但未被使用",
+            "reference contract期望intent=customer_portrait, target_value=重疾险，置信度0.95，但系统完全偏离"
+          ]
+        }
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-intent-9e16256b"
+      ],
+      "next_actions": [
+        "执行trace显示adapter_extraction输出intent: other, confidence: 0.5, target_value: null",
+        "runtime_checks确认raw_intent=None，actual_mapping=other，与期望customer_portrait矛盾",
+        "INTENT_MAPPING位于projects/marketting-planning-intent/intent.py，枚举包含customer_portrait但未被使用",
+        "reference contract期望intent=customer_portrait, target_value=重疾险，置信度0.95，但系统完全偏离"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模块在提示词设计和适配器解析两方面均存在缺陷：提示词未能有效引导模型识别“客户画像”类查询及产品实体，导致API返回空意图或无产品信息；适配器在提取阶段缺乏健壮的fallback或校正机制，直接返回other和null。映射表虽包含目标标签，但在raw_intent为空时错误映射为other，造成下游完全无法执行客户画像分析。",
+  "impact": "",
+  "priority": "normal"
+}

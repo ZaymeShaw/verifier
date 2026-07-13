@@ -1,0 +1,52 @@
+{
+  "project_id": "client_search",
+  "rows": [
+    {
+      "id": "mock-agent-client_search-cdd7df11",
+      "input": "帮我看看公司里所有买了重疾险的客户都有谁",
+      "scenario": "",
+      "output_summary": "{\"code\": 0, \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"MATCH\", \"value\": \"疾病保险\"}], \"confidence\": 0.8, \"cost_times\": 1238.0, \"end_flag\": 1, \"intent_summ…",
+      "reference_summary": "{\"code\": 0, \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\"]}], \"end_flag\": 1, \"intent_summary\": \"产品类别为疾病保险的客户\", \"matched_level…",
+      "status": "fulfilled",
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "fulfillment_status": "fulfilled",
+      "judge_summary": {
+        "status": "fulfilled",
+        "fulfillment_status": "fulfilled",
+        "reason": "fulfilled · 0 blocking expectations all met · 用户查询\"帮我看看公司里所有买了重疾险的客户都有谁\"，核心意图是筛选持有重疾险的客户。根据值映射表，\"重疾险\"应映射为标准枚举\"疾病保险\"，使用pCategorys字段承载筛选。实际输出conditions为[{\"field\":\"pCategorys\",\"operator\":\"MATCH\",\"value\":\"疾病保险\"}]，query_logic为AND。虽然capability_manifest中pCategorys的操作符为CONTAINS/NOT_CONTAINS而非MATCH，但根据项目judge规范，MATCH与CONTAINS的差异由后处理统一处置，不应纠结；在语义层面两者等价，均可正确定位持有疾病保险的客户。rewritten_query正确将\"重疾险\"改写为\"疾病保险\"，intent_summary准确概括为\"产品类别为疾病保险的客户\"。综上，三个业务期望——口语映射、字段选择、查询逻辑——均完全满足，整体判定为fulfilled。",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 3,
+        "blocking_count": 0
+      },
+      "attribution_summary": {
+        "attribution_count": 3,
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 0,
+        "summary_text": "业务预期已达成，无根因。"
+      },
+      "check_summary": {
+        "passed": false,
+        "issue_count": 3
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": false,
+      "issue_count": 3,
+      "fallback_count": 0,
+      "divergence_stage": "",
+      "root_cause_summary": "业务预期已达成，无根因。",
+      "created_at": "2026-07-12T03:51:17.477498+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783828277477"
+    }
+  ],
+  "total": 1
+}

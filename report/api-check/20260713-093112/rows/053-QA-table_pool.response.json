@@ -1,0 +1,75 @@
+{
+  "project_id": "QA",
+  "rows": [
+    {
+      "id": "mock-agent-QA-87e78ff7",
+      "input": "我买的那个重疾险，如果得了合同里写的轻症，是不是能赔多次？每次赔多少？",
+      "scenario": "qa_gold_answer",
+      "output_summary": "{\"actual_answer\": \"轻症赔付次数和金额取决于具体保险合同。一般情况下，轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。\"}",
+      "reference_summary": "{\"actual_answer\": \"通常情况下，您购买的重疾险合同中关于轻症责任的赔付规则如下：\\n1. 轻症可以多次赔付，具体次数以合同约定为准（常见为3-5次）。每次确诊的轻症需满足合同定义的疾病标准，且两次轻症确诊之间通常有间隔期（如90天或180天）。\\n2. 每次轻症赔付的金额一般为基本保额的一定比例，常…",
+      "status": "not_fulfilled",
+      "execution_mode": "provided",
+      "output_source": "provided_output",
+      "fulfillment_status": "not_fulfilled",
+      "judge_summary": {
+        "status": "not_fulfilled",
+        "fulfillment_status": "not_fulfilled",
+        "reason": "not_fulfilled · blocking=[提示合同继续有效及累计赔付上限,提示轻症分组限制,说明轻症赔付需满足疾病定义标准] · 被评估答案正确回答了用户关于轻症能否多次赔付以及赔付金额比例的核心问题，并提示了间隔期要求和查阅合同的建议。但与gold answer对比，遗漏了“需满足合同定义疾病标准”、“轻症分组限制”、“合同继续有效及累计赔付上限”等重要细节，这些缺失可能导致用户对理赔条件产生误解。因此，整体fulfillment判定为not_fulfilled。",
+        "reason_source": "aggregated_fulfillment",
+        "reason_stage": "judge",
+        "is_formal_attribution": true,
+        "assessment_count": 7,
+        "blocking_count": 3,
+        "primary_failure_dimensions": [
+          {
+            "blocking": true,
+            "downstream_impact": "用户可能不了解合同持续有效及总赔付上限，影响保障预期",
+            "evidence": "未提及 | 轻症赔付后合同继续有效 | 累计赔付上限可能有限制",
+            "expectation_id": "提示合同继续有效及累计赔付上限",
+            "status": "not_fulfilled"
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "用户可能误解所有轻症均可多次赔付，忽视分组限制",
+            "evidence": "未提及 | 同一组别的轻症只能赔付一次",
+            "expectation_id": "提示轻症分组限制",
+            "status": "not_fulfilled"
+          },
+          {
+            "blocking": true,
+            "downstream_impact": "用户可能忽略理赔需符合疾病定义这一重要条件",
+            "evidence": "未提及 | 每次确诊的轻症需满足合同定义的疾病标准",
+            "expectation_id": "说明轻症赔付需满足疾病定义标准",
+            "status": "not_fulfilled"
+          }
+        ]
+      },
+      "attribution_summary": {
+        "attribution_count": 3,
+        "is_complete": true,
+        "is_formal_attribution": true,
+        "probe_count": 0,
+        "summary_text": "qa_gold_answer场景下，actual answer提供了核心的赔付次数和比例信息，但相较于reference answer，遗漏了轻症理赔的疾病定义标准、分组限制、合同继续有效及累计赔付上限等重要细节。根因在于actual answer的生成可能缺乏对用户意图的全方位覆盖，仅聚焦于金额和次数，而忽略了条款中的约束条件；也可能由于缺少上下文检索，答案完全依赖模型固有知识，未能与reference对齐。"
+      },
+      "check_summary": {
+        "passed": true,
+        "issue_count": 0
+      },
+      "fallback_summary": {
+        "count": 0,
+        "needs_human_review": false
+      },
+      "needs_human_review": false,
+      "check_passed": true,
+      "issue_count": 0,
+      "fallback_count": 0,
+      "divergence_stage": "",
+      "root_cause_summary": "qa_gold_answer场景下，actual answer提供了核心的赔付次数和比例信息，但相较于reference answer，遗漏了轻症理赔的疾病定义标准、分组限制、合同继续有效及累计赔付上限等重要细节。根因在于actual answer的生成可能缺乏对用户意图的全方位覆盖，仅聚焦于金额和次数，而忽略了条款中的约束条件；也可能由于缺少上下文检索，答案完全依赖模型固有知识，未能与reference对齐。",
+      "created_at": "2026-07-13T01:31:13.018471+00:00",
+      "stop_reason": "",
+      "interaction_mode": "single_turn",
+      "trace_id": "QA:mock-agent-QA-87e78ff7:1783906273018"
+    }
+  ],
+  "total": 1
+}

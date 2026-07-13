@@ -1,0 +1,184 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783729332313",
+  "project_id": "marketting-planning-intent",
+  "business_expectations": [
+    {
+      "expectation_id": "意图识别API成功调用",
+      "downstream_consumer": "营销规划系统下游模块",
+      "user_intent": "分析上季度购买重疾险的客户画像",
+      "expected_outcome": "系统能够向intent-recognition端点发送请求并收到HTTP 200响应",
+      "required_capabilities": [
+        "服务可达",
+        "端点正常"
+      ],
+      "acceptance_criteria": [
+        "HTTP状态码为200",
+        "响应体不为空"
+      ],
+      "boundary": {
+        "scope": "intent_recognition"
+      },
+      "priority": "必需"
+    },
+    {
+      "expectation_id": "意图标签正确识别为顾客画像",
+      "downstream_consumer": "营销规划系统下游模块",
+      "user_intent": "分析上季度购买重疾险的客户画像",
+      "expected_outcome": "适配器从API响应中提取的intent字段值为customer_portrait",
+      "required_capabilities": [
+        "适配器解析",
+        "label_mapping"
+      ],
+      "acceptance_criteria": [
+        "最终intent标签等于customer_portrait"
+      ],
+      "boundary": {
+        "scope": "adapter_extraction"
+      },
+      "priority": "高"
+    },
+    {
+      "expectation_id": "目标险种实体正确提取",
+      "downstream_consumer": "营销规划系统下游模块",
+      "user_intent": "分析上季度购买重疾险的客户画像",
+      "expected_outcome": "适配器提取的target_value字段值为重疾险",
+      "required_capabilities": [
+        "NER/实体提取"
+      ],
+      "acceptance_criteria": [
+        "target_value为‘重疾险’"
+      ],
+      "boundary": {
+        "scope": "adapter_extraction"
+      },
+      "priority": "中"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图识别API成功调用",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        {
+          "key": "reference_contract",
+          "value": "预期API可达并返回响应"
+        }
+      ],
+      "actual_evidence": [
+        {
+          "key": "execution_trace",
+          "stage": "intent_api_call",
+          "status": "failed",
+          "error": "Connection refused"
+        }
+      ],
+      "downstream_impact": "下游无法获得任何意图信息，整个营销规划流程中断",
+      "blocking": true
+    },
+    {
+      "expectation_id": "意图标签正确识别为顾客画像",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        {
+          "key": "reference_contract",
+          "intent": "customer_portrait"
+        }
+      ],
+      "actual_evidence": [
+        {
+          "key": "extracted_output"
+        }
+      ],
+      "downstream_impact": "下游无法确定用户需要进行客户画像分析，无法触发相应规划流程",
+      "blocking": true
+    },
+    {
+      "expectation_id": "目标险种实体正确提取",
+      "status": "not_fulfilled",
+      "expected_evidence": [
+        {
+          "key": "reference_contract",
+          "target_value": "重疾险"
+        }
+      ],
+      "actual_evidence": [
+        {
+          "key": "extracted_output"
+        }
+      ],
+      "downstream_impact": "缺少险种实体将导致画像分析无法精确筛选目标客户群",
+      "blocking": true
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_evaluable",
+    "summary": "意图识别服务因连接拒绝而完全失败，所有关键预期均未满足"
+  },
+  "expected": {
+    "confidence": 0.95,
+    "intent": "customer_portrait",
+    "target_value": "重疾险"
+  },
+  "missing": [
+    {
+      "kind": "缺失字段",
+      "error_type": "missing",
+      "expected": "customer_portrait",
+      "evidence_ref": "execution_trace.intent_api_call.failed",
+      "incomplete": false
+    },
+    {
+      "kind": "缺失字段",
+      "error_type": "missing",
+      "expected": "重疾险",
+      "evidence_ref": "execution_trace.intent_api_call.failed",
+      "incomplete": false
+    },
+    {
+      "kind": "缺失字段",
+      "error_type": "missing",
+      "expected": 0.95,
+      "evidence_ref": "execution_trace.intent_api_call.failed",
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "stage": "intent_api_call",
+      "status": "failed",
+      "error": "marketing-planning intent service unavailable: <urlopen error [Errno 61] Connection refused>"
+    }
+  ],
+  "reasoning_summary": "当前运行记录显示意图识别API调用环节失败，错误原因为连接拒绝（Connection refused）。因此整个意图识别流程中断，未能提取任何意图标签、目标实体或置信度。业务期望中所有关键输出（API调用成功、意图标签customer_portrait、目标险种‘重疾险’）均未达成，整体交付状态判定为not_fulfilled。",
+  "summary": {
+    "reason": "not_fulfilled · blocking=[意图标签正确识别为顾客画像,意图识别API成功调用,目标险种实体正确提取] · 当前运行记录显示意图识别API调用环节失败，错误原因为连接拒绝（Connection refused）。因此整个意图识别流程中断，未能提取任何意图标签、目标实体或置信度。业务期望中所有关键输出（API调用成功、意图标签customer_portrait、目标险种‘重疾险’）均未达成，整体交付状态判定为not_fulfilled。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "意图标签正确识别为顾客画像",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "下游无法确定用户需要进行客户画像分析，无法触发相应规划流程",
+        "evidence": "下游无法确定用户需要进行客户画像分析，无法触发相应规划流程"
+      },
+      {
+        "expectation_id": "意图识别API成功调用",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "下游无法获得任何意图信息，整个营销规划流程中断",
+        "evidence": "预期API可达并返回响应"
+      },
+      {
+        "expectation_id": "目标险种实体正确提取",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "缺少险种实体将导致画像分析无法精确筛选目标客户群",
+        "evidence": "缺少险种实体将导致画像分析无法精确筛选目标客户群"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 3,
+    "blocking_count": 3,
+    "is_formal_attribution": true
+  }
+}

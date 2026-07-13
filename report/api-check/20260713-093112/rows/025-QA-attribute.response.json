@@ -1,0 +1,64 @@
+{
+  "trace_id": "QA:mock-agent-QA-87e78ff7:1783906273018",
+  "project_id": "QA",
+  "case_id": "",
+  "expectation_attributions": [
+    {
+      "expectation_id": "说明轻症赔付需满足疾病定义标准",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "actual_answer"
+      ],
+      "root_cause_hypothesis": "Actual answer 未提及每次确诊的轻症需满足合同定义的疾病标准，可能由于答案生成时简化了赔付条件，忽略了这一理赔前置要求。",
+      "evidence": [
+        "Expected evidence: 每次确诊的轻症需满足合同定义的疾病标准",
+        "Actual evidence: 未提及",
+        "Judge assessment: score 0.0, blocking=true, confidence=1.0"
+      ]
+    },
+    {
+      "expectation_id": "提示轻症分组限制",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "actual_answer"
+      ],
+      "root_cause_hypothesis": "Actual answer 未说明轻症责任可能存在分组限制，同一组别的轻症只能赔付一次。答案生成时可能只提供了普遍性信息，未覆盖此细节。",
+      "evidence": [
+        "Expected evidence: 同一组别的轻症只能赔付一次",
+        "Actual evidence: 未提及",
+        "Judge assessment: score 0.0, blocking=true, confidence=1.0"
+      ]
+    },
+    {
+      "expectation_id": "提示合同继续有效及累计赔付上限",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "actual_answer"
+      ],
+      "root_cause_hypothesis": "Actual answer 未说明轻症赔付后合同继续有效以及累计赔付上限可能有限制。答案生成时可能侧重于赔付次数和金额，忽略了合同持续状态和总上限。",
+      "evidence": [
+        "Expected evidence: 轻症赔付后合同继续有效，累计赔付上限可能有限制",
+        "Actual evidence: 未提及",
+        "Judge assessment: score 0.0, blocking=true, confidence=1.0"
+      ]
+    }
+  ],
+  "suspected_locations": [
+    "actual_answer"
+  ],
+  "root_cause_hypothesis": "生成的实际答案覆盖了用户核心问题（能否多次赔、每次赔多少），但遗漏了reference answer中三项重要细节：疾病定义标准、分组限制、合同继续有效及累计赔付上限。根因可能是答案生成环节仅基于常规保险知识简要作答，未充分参考reference中的完整条款，导致输出不完整。",
+  "evidence": [
+    "qa_local_evidence_probe: question_present=true, reference_answer_present=true, actual_answer_present=true, judge_status=not_fulfilled",
+    "judge missing details: 1) 未提及轻症需满足合同定义的疾病标准 2) 未提及分组限制 3) 未提及合同继续有效及累计赔付上限",
+    "actual_answer内容：轻症可以赔付多次，每次赔付金额通常为基本保险金额的20%至30%，且可能有次数上限（如3次或5次）和间隔期要求。建议查阅您的保险合同条款获取准确信息。",
+    "reference_answer包含以上缺失的细节，字符覆盖率仅0.447，说明答案覆盖度不足。"
+  ],
+  "evidence_strength": "strong",
+  "summary": {
+    "attribution_count": 3,
+    "probe_count": 0,
+    "summary_text": "生成的实际答案覆盖了用户核心问题（能否多次赔、每次赔多少），但遗漏了reference answer中三项重要细节：疾病定义标准、分组限制、合同继续有效及累计赔付上限。根因可能是答案生成环节仅基于常规保险知识简要作答，未充分参考reference中的完整条款，导致输出不完整。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

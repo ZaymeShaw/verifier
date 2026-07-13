@@ -1,0 +1,55 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::意图识别模块（intent_recognition）未能正确识别用户关于NBEV目标补足的营销规划意图，错误分类为“其他意图”（intent=4001），并输出::not_fulfilled",
+      "mechanism": "意图识别模块（intent_recognition）未能正确识别用户关于NBEV目标补足的营销规划意图，错误分类为“其他意图”（intent=4001），并输出::not_fulfilled",
+      "fulfillment_statuses": [
+        "not_fulfilled"
+      ],
+      "expectation_ids": [
+        "意图识别正确分类为营销规划意图",
+        "阶段路由正确导向代理流程",
+        "mp_contract:expected_stage"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "representative_traces": [
+        "marketting-planning:mock-agent-marketting-planning-d1642b58:1783924995234"
+      ],
+      "common_root_cause": "意图识别模块（intent_recognition）未能正确识别用户关于NBEV目标补足的营销规划意图，错误分类为“其他意图”（intent=4001），并输出stage=non_agent，导致整个规划链路从最早阶段就偏离contract，后续所有阶段均基于错误路由，无法生成规划结果。",
+      "shared_failure_pattern": "意图识别模块（intent_recognition）未能正确识别用户关于NBEV目标补足的营销规划意图，错误分类为“其他意图”（intent=4001），并输出stage=non_agent，导致整个规划链路从最早阶段就偏离contract，后续所有阶段均基于错误路由，无法生成规划结果。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-d1642b58",
+          "root_cause": "意图识别模块（intent_recognition）未能正确识别用户关于NBEV目标补足的营销规划意图，错误分类为“其他意图”（intent=4001），并输出stage=non_agent，导致整个规划链路从最早阶段就偏离contract，后续所有阶段均基于错误路由，无法生成规划结果。",
+          "evidence": [
+            "用户输入明确要求“增加理财师或者优化产品方案来补上NBEV目标”，属于营销规划场景",
+            "意图识别输出intent=4001，intent_name=其他意图，stage=non_agent",
+            "execution_stage_probe：intent_recognition阶段actual_stage=non_agent，与expected_stage=intent不符",
+            "planning_output_probe：stage_match=false，expected_stage=intent",
+            "judge_result：意图识别期望未满足，步骤路由期望未满足",
+            "field_clarification、path_dispatch、planning_function等阶段虽然标记succeeded，但都是在non_agent路径下运行，无实际规划产出"
+          ]
+        }
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "next_actions": [
+        "用户输入明确要求“增加理财师或者优化产品方案来补上NBEV目标”，属于营销规划场景",
+        "意图识别输出intent=4001，intent_name=其他意图，stage=non_agent",
+        "execution_stage_probe：intent_recognition阶段actual_stage=non_agent，与expected_stage=intent不符",
+        "planning_output_probe：stage_match=false，expected_stage=intent",
+        "judge_result：意图识别期望未满足，步骤路由期望未满足"
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模块（intent_recognition）未能正确识别用户关于NBEV目标补足的营销规划意图，错误分类为“其他意图”（intent=4001），并输出stage=non_agent，导致整个规划链路从最早阶段就偏离contract，后续所有阶段均基于错误路由，无法生成规划结果。",
+  "impact": "",
+  "priority": "normal"
+}

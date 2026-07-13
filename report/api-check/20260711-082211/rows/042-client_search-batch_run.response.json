@@ -1,0 +1,1266 @@
+{
+  "project_id": "client_search",
+  "total": 1,
+  "runs": [
+    {
+      "trace": {
+        "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783729528153",
+        "project_id": "client_search",
+        "case_id": "mock-agent-client_search-cdd7df11",
+        "input": {
+          "extra_input_params": {
+            "pCategorys": "重疾险"
+          },
+          "session_id": "session_001",
+          "source": "insurance_search",
+          "trace_id": "trace_001",
+          "user_id": "default_user",
+          "user_text": "帮我看看公司里所有买了重疾险的客户都有谁"
+        },
+        "normalized_request": {
+          "user_text": "帮我看看公司里所有买了重疾险的客户都有谁",
+          "user_id": "default_user",
+          "trace_id": "trace_001",
+          "session_id": "session_001",
+          "source": "insurance_search",
+          "extra_input_params": {
+            "pCategorys": "重疾险"
+          }
+        },
+        "live_result": {
+          "project_id": "client_search",
+          "case_id": "mock-agent-client_search-cdd7df11",
+          "session_id": "session_001",
+          "raw_input": {
+            "extra_input_params": {
+              "pCategorys": "重疾险"
+            },
+            "session_id": "session_001",
+            "source": "insurance_search",
+            "trace_id": "trace_001",
+            "user_id": "default_user",
+            "user_text": "帮我看看公司里所有买了重疾险的客户都有谁"
+          },
+          "normalized_request": {
+            "user_text": "帮我看看公司里所有买了重疾险的客户都有谁",
+            "user_id": "default_user",
+            "trace_id": "trace_001",
+            "session_id": "session_001",
+            "source": "insurance_search",
+            "extra_input_params": {
+              "pCategorys": "重疾险"
+            }
+          },
+          "call_status": "failed",
+          "call_error": "<urlopen error [Errno 61] Connection refused>",
+          "output_source": "live_service_unavailable",
+          "execution_trace": [
+            {
+              "stage": "project.call",
+              "status": "failed",
+              "evidence": "<urlopen error [Errno 61] Connection refused>",
+              "timestamp": "",
+              "error": ""
+            },
+            {
+              "stage": "live_schema.validate_request",
+              "status": "succeeded",
+              "evidence": {
+                "project_id": "client_search"
+              },
+              "timestamp": "",
+              "error": ""
+            }
+          ],
+          "interaction_mode": "single_turn"
+        },
+        "execution_mode": "live",
+        "output_source": "live_service_unavailable",
+        "scenario": "",
+        "execution_trace": [
+          {
+            "stage": "project.call",
+            "status": "failed",
+            "evidence": "<urlopen error [Errno 61] Connection refused>",
+            "timestamp": "",
+            "error": ""
+          },
+          {
+            "stage": "live_schema.validate_request",
+            "status": "succeeded",
+            "evidence": {
+              "project_id": "client_search"
+            },
+            "timestamp": "",
+            "error": ""
+          }
+        ],
+        "status": "error",
+        "error": "<urlopen error [Errno 61] Connection refused>",
+        "fallbacks": [
+          {
+            "reason": "<urlopen error [Errno 61] Connection refused>",
+            "status": "error"
+          }
+        ],
+        "interaction_mode": "single_turn",
+        "session_id": "",
+        "created_at": "2026-07-11T00:25:28.153674+00:00"
+      },
+      "judge": {
+        "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783729528153",
+        "project_id": "client_search",
+        "business_expectations": [
+          {
+            "expectation_id": "用户意图解析正确",
+            "downstream_consumer": "client_search 下游搜索模块",
+            "user_intent": "查找公司内所有购买了重疾险的客户",
+            "expected_outcome": "系统正确识别出产品类别为“重疾险”，并映射到正确的数据库字段（如 pCategorys）",
+            "required_capabilities": [
+              "自然语言理解",
+              "实体提取（产品类别）",
+              "字段映射（产品类别 → pCategorys）"
+            ],
+            "acceptance_criteria": [
+              "rewritten_query 或 conditions 中体现产品类别为“重疾险”",
+              "条件字段名符合项目枚举（如 pCategorys 或等价字段）"
+            ],
+            "boundary": {
+              "scope": "parser_condition_semantics_only",
+              "description": "由于上游 ES 连接失败，本评估仅基于 parser 应有语义判断，无法验证真实搜索返回"
+            },
+            "priority": "critical"
+          },
+          {
+            "expectation_id": "输出条件可执行",
+            "downstream_consumer": "client_search 下游搜索模块",
+            "user_intent": "生成的条件能够在下游搜索中检索到目标客户",
+            "expected_outcome": "conditions 数组包含一个字段名为 pCategorys，操作符为 MATCH（或等价），值为“重疾险”的条件，且 query_logic 合理",
+            "required_capabilities": [
+              "结构化条件生成",
+              "操作符选用（MATCH/CONTAINS）",
+              "逻辑关系（AND/OR）"
+            ],
+            "acceptance_criteria": [
+              "conditions 非空",
+              "存在条件：field=pCategorys, op=MATCH 或 CONTAINS, value=“重疾险”",
+              "query_logic 为 AND 或 null",
+              "条件组合无错误"
+            ],
+            "boundary": {
+              "scope": "parser_condition_semantics_only",
+              "description": "由于上游 ES 连接失败，无法验证真实搜索返回"
+            },
+            "priority": "critical"
+          }
+        ],
+        "fulfillment_assessments": [
+          {
+            "expectation_id": "用户意图解析正确",
+            "status": "not_evaluable",
+            "expected_evidence": [
+              "用户 query 明确提及“重疾险”且 extra_input_params 中包含 pCategorys: 重疾险"
+            ],
+            "actual_evidence": [
+              "API 调用失败，extracted_output 为空，无实际 conditions 输出"
+            ],
+            "downstream_impact": "由于无法获取 parser 输出，下游搜索未执行，无法验证是否满足意图",
+            "blocking": true
+          },
+          {
+            "expectation_id": "输出条件可执行",
+            "status": "not_evaluable",
+            "expected_evidence": [
+              "期望输出包含正确的 pCategorys 条件"
+            ],
+            "actual_evidence": [
+              "API 调用失败，extracted_output 为空，无实际 conditions 输出"
+            ],
+            "downstream_impact": "无法生成搜索请求，无法检索客户",
+            "blocking": true
+          }
+        ],
+        "overall_fulfillment": {
+          "status": "not_evaluable",
+          "reason": "项目调用阶段发生连接错误，未产生任何 API 实际输出，故无法评估任何业务期望是否被满足"
+        },
+        "expected": {
+          "code": 200,
+          "msg": "success",
+          "query": "帮我看看公司里所有买了重疾险的客户都有谁",
+          "conditions": [
+            {
+              "field": "pCategorys",
+              "op": "MATCH",
+              "value": "重疾险"
+            }
+          ],
+          "robot_text": "我找到了以下购买了重疾险的客户：",
+          "query_logic": "AND",
+          "rewritten_query": "购买了重疾险的客户",
+          "end_flag": 0,
+          "intent_summary": "搜索购买重疾险的客户"
+        },
+        "evidence": [
+          "RunTrace.execution_trace 显示 project.call 失败，错误信息为 Connection refused",
+          "RunTrace.status 为 error，raw_response 为 null，extracted_output 为空对象"
+        ],
+        "reasoning_summary": "本次评估中，用户意图是查找购买了重疾险的客户，期望 parser 输出相应的结构化条件。然而，系统运行时在 project.call 阶段遭遇连接错误，未能返回任何实际输出。按照评估边界，当实际输出不可获取时，无法验证输出是否满足业务期望，因此所有期望均判定为 not_evaluable。理想情况下，应输出包含字段 pCategorys、操作符 MATCH、值“重疾险”的条件，但当前无法判定 parser 是否做到了这一点。",
+        "summary": {
+          "reason": "not_evaluable · 本次评估中，用户意图是查找购买了重疾险的客户，期望 parser 输出相应的结构化条件。然而，系统运行时在 project.call 阶段遭遇连接错误，未能返回任何实际输出。按照评估边界，当实际输出不可获取时，无法验证输出是否满足业务期望，因此所有期望均判定为 not_evaluable。理想情况下，应输出包含字段 pCategorys、操作符 MATCH、值“重疾险”的条件，但当前无法判定 parser 是否做到了这一点。",
+          "reason_source": "reasoning_summary",
+          "fulfillment_status": "not_evaluable",
+          "assessment_count": 2,
+          "blocking_count": 2,
+          "is_formal_attribution": false
+        }
+      },
+      "attribute": {
+        "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783729528153",
+        "project_id": "client_search",
+        "case_id": "",
+        "expectation_attributions": [
+          {
+            "expectation_id": "用户意图解析正确",
+            "fulfillment_status": "not_evaluable",
+            "root_cause_hypothesis": "由于客户端在调用 client_search 项目 API 时遇到连接拒绝错误（Errno 61），导致无法获取任何 parser 输出，因此无法评估该期望。根本原因可能是目标服务未启动或网络配置错误。",
+            "evidence": [
+              "RunTrace.execution_trace 中 project.call 阶段失败，错误信息为 '<urlopen error [Errno 61] Connection refused>'",
+              "RunTrace.extracted_output 为空"
+            ]
+          },
+          {
+            "expectation_id": "输出条件可执行",
+            "fulfillment_status": "not_evaluable",
+            "root_cause_hypothesis": "由于客户端在调用 client_search 项目 API 时遇到连接拒绝错误，导致无法获取任何条件输出，因此无法评估该期望。根本原因可能是目标服务未启动或网络配置错误。",
+            "evidence": [
+              "RunTrace.execution_trace 中 project.call 阶段失败，错误信息为 '<urlopen error [Errno 61] Connection refused>'",
+              "RunTrace.extracted_output 为空"
+            ]
+          }
+        ],
+        "root_cause_hypothesis": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+        "evidence": [
+          "RunTrace.execution_trace 包含 project.call 失败记录，status=failed，error='<urlopen error [Errno 61] Connection refused>'",
+          "RunTrace.status 为 error，extracted_output 为空",
+          "RunTrace.input 中包含 extra_input_params.pCategorys='重疾险'，但未产生实际输出"
+        ],
+        "evidence_strength": "strong",
+        "summary": {
+          "attribution_count": 2,
+          "probe_count": 0,
+          "summary_text": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+          "is_complete": true,
+          "is_formal_attribution": true
+        }
+      },
+      "case_id": "mock-agent-client_search-cdd7df11",
+      "execution_mode": "live",
+      "output_source": "live_service_unavailable",
+      "cluster": {
+        "project_id": "client_search",
+        "clusters": [
+          {
+            "cluster_id": "root_cause::项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：::not_evaluable",
+            "mechanism": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：::not_evaluable",
+            "fulfillment_statuses": [
+              "not_evaluable"
+            ],
+            "expectation_ids": [
+              "用户意图解析正确",
+              "输出条件可执行"
+            ],
+            "needs_human_review": false,
+            "canonical_attribution": true,
+            "count": 1,
+            "representative_cases": [
+              "client_search:mock-agent-client_search-cdd7df11:1783729528153"
+            ],
+            "representative_traces": [
+              "client_search:mock-agent-client_search-cdd7df11:1783729528153"
+            ],
+            "common_root_cause": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+            "shared_failure_pattern": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+            "representative_diffs": [
+              {
+                "case_id": "client_search:mock-agent-client_search-cdd7df11:1783729528153",
+                "root_cause": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+                "evidence": [
+                  "RunTrace.execution_trace 包含 project.call 失败记录，status=failed，error='<urlopen error [Errno 61] Connection refused>'",
+                  "RunTrace.status 为 error，extracted_output 为空",
+                  "RunTrace.input 中包含 extra_input_params.pCategorys='重疾险'，但未产生实际输出"
+                ]
+              }
+            ],
+            "verification_cases": [
+              "client_search:mock-agent-client_search-cdd7df11:1783729528153"
+            ],
+            "next_actions": [
+              "RunTrace.execution_trace 包含 project.call 失败记录，status=failed，error='<urlopen error [Errno 61] Connection refused>'",
+              "RunTrace.status 为 error，extracted_output 为空",
+              "RunTrace.input 中包含 extra_input_params.pCategorys='重疾险'，但未产生实际输出"
+            ]
+          }
+        ],
+        "common_root_cause": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+        "impact": "",
+        "priority": "normal"
+      },
+      "check": {
+        "passed": false,
+        "issues": [
+          "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+          "generic core contains project-specific marker query_logic: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+          "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+          "Fallback decisions require human review before treating the chain as fully verified."
+        ],
+        "boundary_violations": [
+          "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+          "generic core contains project-specific marker query_logic: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+          "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+        ],
+        "consistency_gaps": [
+          "Fallback decisions require human review before treating the chain as fully verified."
+        ],
+        "verification_results": [
+          "Structured fallback decisions recorded: 1.",
+          "Check categories passed current audit."
+        ],
+        "recommended_fixes": [
+          "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions.",
+          "Ensure all steps use the same trace_id and latest run output."
+        ],
+        "fallbacks": [
+          {
+            "reason": "<urlopen error [Errno 61] Connection refused>",
+            "status": "error"
+          }
+        ]
+      },
+      "frontend_view": {
+        "project_info": {
+          "project_id": "client_search",
+          "name": "客户搜索评估示例",
+          "description": "将客户搜索项目作为通用评估系统的第一个项目适配实现。"
+        },
+        "run_trace_summary": {
+          "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783729528153",
+          "project_id": "client_search",
+          "case_id": "mock-agent-client_search-cdd7df11",
+          "input": {
+            "extra_input_params": {
+              "pCategorys": "重疾险"
+            },
+            "session_id": "session_001",
+            "source": "insurance_search",
+            "trace_id": "trace_001",
+            "user_id": "default_user",
+            "user_text": "帮我看看公司里所有买了重疾险的客户都有谁"
+          },
+          "normalized_request": {
+            "user_text": "帮我看看公司里所有买了重疾险的客户都有谁",
+            "user_id": "default_user",
+            "trace_id": "trace_001",
+            "session_id": "session_001",
+            "source": "insurance_search",
+            "extra_input_params": {
+              "pCategorys": "重疾险"
+            }
+          },
+          "live_result": {
+            "project_id": "client_search",
+            "case_id": "mock-agent-client_search-cdd7df11",
+            "session_id": "session_001",
+            "raw_input": {
+              "extra_input_params": {
+                "pCategorys": "重疾险"
+              },
+              "session_id": "session_001",
+              "source": "insurance_search",
+              "trace_id": "trace_001",
+              "user_id": "default_user",
+              "user_text": "帮我看看公司里所有买了重疾险的客户都有谁"
+            },
+            "normalized_request": {
+              "user_text": "帮我看看公司里所有买了重疾险的客户都有谁",
+              "user_id": "default_user",
+              "trace_id": "trace_001",
+              "session_id": "session_001",
+              "source": "insurance_search",
+              "extra_input_params": {
+                "pCategorys": "重疾险"
+              }
+            },
+            "call_status": "failed",
+            "call_error": "<urlopen error [Errno 61] Connection refused>",
+            "output_source": "live_service_unavailable",
+            "execution_trace": [
+              {
+                "stage": "project.call",
+                "status": "failed",
+                "evidence": "<urlopen error [Errno 61] Connection refused>",
+                "timestamp": "",
+                "error": ""
+              },
+              {
+                "stage": "live_schema.validate_request",
+                "status": "succeeded",
+                "evidence": {
+                  "project_id": "client_search"
+                },
+                "timestamp": "",
+                "error": ""
+              }
+            ],
+            "interaction_mode": "single_turn",
+            "fallbacks": [
+              {
+                "fallback_id": "live-error-mock-agent-client_search-cdd7df11",
+                "source_stage": "live",
+                "fallback_type": "live_error",
+                "status": "error",
+                "reason": "<urlopen error [Errno 61] Connection refused>",
+                "missing_evidence": [
+                  "live_response"
+                ],
+                "recoverable": true,
+                "needs_human_review": true,
+                "quality_flags": [
+                  "live_service_unavailable"
+                ],
+                "metadata": {
+                  "case_id": "mock-agent-client_search-cdd7df11",
+                  "session_id": "session_001",
+                  "failure_type": "live_service_unavailable"
+                }
+              }
+            ]
+          },
+          "execution_mode": "live",
+          "output_source": "live_service_unavailable",
+          "scenario": "",
+          "execution_trace": [
+            {
+              "stage": "project.call",
+              "status": "failed",
+              "evidence": "<urlopen error [Errno 61] Connection refused>",
+              "timestamp": "",
+              "error": ""
+            },
+            {
+              "stage": "live_schema.validate_request",
+              "status": "succeeded",
+              "evidence": {
+                "project_id": "client_search"
+              },
+              "timestamp": "",
+              "error": ""
+            }
+          ],
+          "status": "error",
+          "error": "<urlopen error [Errno 61] Connection refused>",
+          "created_at": "2026-07-11T00:25:28.153674+00:00",
+          "stop_reason": "",
+          "interaction_mode": "single_turn",
+          "session_id": "",
+          "turn_index": 0,
+          "fallbacks": [
+            {
+              "fallback_id": "live-error-mock-agent-client_search-cdd7df11",
+              "source_stage": "live",
+              "fallback_type": "live_error",
+              "status": "error",
+              "reason": "<urlopen error [Errno 61] Connection refused>",
+              "missing_evidence": [
+                "live_response"
+              ],
+              "recoverable": true,
+              "needs_human_review": true,
+              "quality_flags": [
+                "live_service_unavailable"
+              ],
+              "metadata": {
+                "case_id": "mock-agent-client_search-cdd7df11",
+                "session_id": "session_001",
+                "failure_type": "live_service_unavailable"
+              }
+            }
+          ]
+        },
+        "reference_panel": {
+          "reference": {
+            "code": 200,
+            "msg": "success",
+            "query": "帮我看看公司里所有买了重疾险的客户都有谁",
+            "conditions": [
+              {
+                "field": "pCategorys",
+                "op": "MATCH",
+                "value": "重疾险"
+              }
+            ],
+            "robot_text": "我找到了以下购买了重疾险的客户：",
+            "query_logic": "AND",
+            "rewritten_query": "购买了重疾险的客户",
+            "end_flag": 0,
+            "intent_summary": "搜索购买重疾险的客户"
+          },
+          "source": "judge_generated"
+        },
+        "judge_panel": {
+          "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783729528153",
+          "project_id": "client_search",
+          "business_expectations": [
+            {
+              "expectation_id": "用户意图解析正确",
+              "downstream_consumer": "client_search 下游搜索模块",
+              "user_intent": "查找公司内所有购买了重疾险的客户",
+              "expected_outcome": "系统正确识别出产品类别为“重疾险”，并映射到正确的数据库字段（如 pCategorys）",
+              "required_capabilities": [
+                "自然语言理解",
+                "实体提取（产品类别）",
+                "字段映射（产品类别 → pCategorys）"
+              ],
+              "acceptance_criteria": [
+                "rewritten_query 或 conditions 中体现产品类别为“重疾险”",
+                "条件字段名符合项目枚举（如 pCategorys 或等价字段）"
+              ],
+              "boundary": {
+                "scope": "parser_condition_semantics_only",
+                "description": "由于上游 ES 连接失败，本评估仅基于 parser 应有语义判断，无法验证真实搜索返回"
+              },
+              "priority": "critical"
+            },
+            {
+              "expectation_id": "输出条件可执行",
+              "downstream_consumer": "client_search 下游搜索模块",
+              "user_intent": "生成的条件能够在下游搜索中检索到目标客户",
+              "expected_outcome": "conditions 数组包含一个字段名为 pCategorys，操作符为 MATCH（或等价），值为“重疾险”的条件，且 query_logic 合理",
+              "required_capabilities": [
+                "结构化条件生成",
+                "操作符选用（MATCH/CONTAINS）",
+                "逻辑关系（AND/OR）"
+              ],
+              "acceptance_criteria": [
+                "conditions 非空",
+                "存在条件：field=pCategorys, op=MATCH 或 CONTAINS, value=“重疾险”",
+                "query_logic 为 AND 或 null",
+                "条件组合无错误"
+              ],
+              "boundary": {
+                "scope": "parser_condition_semantics_only",
+                "description": "由于上游 ES 连接失败，无法验证真实搜索返回"
+              },
+              "priority": "critical"
+            }
+          ],
+          "fulfillment_assessments": [
+            {
+              "expectation_id": "用户意图解析正确",
+              "status": "not_evaluable",
+              "expected_evidence": [
+                "用户 query 明确提及“重疾险”且 extra_input_params 中包含 pCategorys: 重疾险"
+              ],
+              "actual_evidence": [
+                "API 调用失败，extracted_output 为空，无实际 conditions 输出"
+              ],
+              "downstream_impact": "由于无法获取 parser 输出，下游搜索未执行，无法验证是否满足意图",
+              "blocking": true
+            },
+            {
+              "expectation_id": "输出条件可执行",
+              "status": "not_evaluable",
+              "expected_evidence": [
+                "期望输出包含正确的 pCategorys 条件"
+              ],
+              "actual_evidence": [
+                "API 调用失败，extracted_output 为空，无实际 conditions 输出"
+              ],
+              "downstream_impact": "无法生成搜索请求，无法检索客户",
+              "blocking": true
+            }
+          ],
+          "overall_fulfillment": {
+            "status": "not_evaluable",
+            "reason": "项目调用阶段发生连接错误，未产生任何 API 实际输出，故无法评估任何业务期望是否被满足"
+          },
+          "expected": {
+            "code": 200,
+            "msg": "success",
+            "query": "帮我看看公司里所有买了重疾险的客户都有谁",
+            "conditions": [
+              {
+                "field": "pCategorys",
+                "op": "MATCH",
+                "value": "重疾险"
+              }
+            ],
+            "robot_text": "我找到了以下购买了重疾险的客户：",
+            "query_logic": "AND",
+            "rewritten_query": "购买了重疾险的客户",
+            "end_flag": 0,
+            "intent_summary": "搜索购买重疾险的客户"
+          },
+          "evidence": [
+            "RunTrace.execution_trace 显示 project.call 失败，错误信息为 Connection refused",
+            "RunTrace.status 为 error，raw_response 为 null，extracted_output 为空对象"
+          ],
+          "reasoning_summary": "本次评估中，用户意图是查找购买了重疾险的客户，期望 parser 输出相应的结构化条件。然而，系统运行时在 project.call 阶段遭遇连接错误，未能返回任何实际输出。按照评估边界，当实际输出不可获取时，无法验证输出是否满足业务期望，因此所有期望均判定为 not_evaluable。理想情况下，应输出包含字段 pCategorys、操作符 MATCH、值“重疾险”的条件，但当前无法判定 parser 是否做到了这一点。",
+          "summary": {
+            "reason": "not_evaluable · 本次评估中，用户意图是查找购买了重疾险的客户，期望 parser 输出相应的结构化条件。然而，系统运行时在 project.call 阶段遭遇连接错误，未能返回任何实际输出。按照评估边界，当实际输出不可获取时，无法验证输出是否满足业务期望，因此所有期望均判定为 not_evaluable。理想情况下，应输出包含字段 pCategorys、操作符 MATCH、值“重疾险”的条件，但当前无法判定 parser 是否做到了这一点。",
+            "reason_source": "reasoning_summary",
+            "fulfillment_status": "not_evaluable",
+            "assessment_count": 2,
+            "blocking_count": 2,
+            "is_formal_attribution": false
+          },
+          "display_status": "not_evaluable",
+          "display_reason": "not_evaluable · 本次评估中，用户意图是查找购买了重疾险的客户，期望 parser 输出相应的结构化条件。然而，系统运行时在 project.call 阶段遭遇连接错误，未能返回任何实际输出。按照评估边界，当实际输出不可获取时，无法验证输出是否满足业务期望，因此所有期望均判定为 not_evaluable。理想情况下，应输出包含字段 pCategorys、操作符 MATCH、值“重疾险”的条件，但当前无法判定 parser 是否做到了这一点。",
+          "wrong_missing_extra": {},
+          "blocked_expectations": [
+            {
+              "expectation_id": "用户意图解析正确",
+              "status": "not_evaluable",
+              "expected_evidence": [
+                "用户 query 明确提及“重疾险”且 extra_input_params 中包含 pCategorys: 重疾险"
+              ],
+              "actual_evidence": [
+                "API 调用失败，extracted_output 为空，无实际 conditions 输出"
+              ],
+              "downstream_impact": "由于无法获取 parser 输出，下游搜索未执行，无法验证是否满足意图",
+              "blocking": true
+            },
+            {
+              "expectation_id": "输出条件可执行",
+              "status": "not_evaluable",
+              "expected_evidence": [
+                "期望输出包含正确的 pCategorys 条件"
+              ],
+              "actual_evidence": [
+                "API 调用失败，extracted_output 为空，无实际 conditions 输出"
+              ],
+              "downstream_impact": "无法生成搜索请求，无法检索客户",
+              "blocking": true
+            }
+          ]
+        },
+        "attribute_panel": {
+          "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783729528153",
+          "project_id": "client_search",
+          "case_id": "",
+          "expectation_attributions": [
+            {
+              "expectation_id": "用户意图解析正确",
+              "fulfillment_status": "not_evaluable",
+              "root_cause_hypothesis": "由于客户端在调用 client_search 项目 API 时遇到连接拒绝错误（Errno 61），导致无法获取任何 parser 输出，因此无法评估该期望。根本原因可能是目标服务未启动或网络配置错误。",
+              "evidence": [
+                "RunTrace.execution_trace 中 project.call 阶段失败，错误信息为 '<urlopen error [Errno 61] Connection refused>'",
+                "RunTrace.extracted_output 为空"
+              ]
+            },
+            {
+              "expectation_id": "输出条件可执行",
+              "fulfillment_status": "not_evaluable",
+              "root_cause_hypothesis": "由于客户端在调用 client_search 项目 API 时遇到连接拒绝错误，导致无法获取任何条件输出，因此无法评估该期望。根本原因可能是目标服务未启动或网络配置错误。",
+              "evidence": [
+                "RunTrace.execution_trace 中 project.call 阶段失败，错误信息为 '<urlopen error [Errno 61] Connection refused>'",
+                "RunTrace.extracted_output 为空"
+              ]
+            }
+          ],
+          "root_cause_hypothesis": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+          "evidence": [
+            "RunTrace.execution_trace 包含 project.call 失败记录，status=failed，error='<urlopen error [Errno 61] Connection refused>'",
+            "RunTrace.status 为 error，extracted_output 为空",
+            "RunTrace.input 中包含 extra_input_params.pCategorys='重疾险'，但未产生实际输出"
+          ],
+          "evidence_strength": "strong",
+          "summary": {
+            "attribution_count": 2,
+            "probe_count": 0,
+            "summary_text": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          },
+          "display_root_cause": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+          "attribution_count": 2
+        },
+        "fulfillment_panel": {
+          "overall_fulfillment": {
+            "status": "not_evaluable",
+            "reason": "项目调用阶段发生连接错误，未产生任何 API 实际输出，故无法评估任何业务期望是否被满足"
+          },
+          "matrix": [
+            {
+              "expectation_id": "用户意图解析正确",
+              "downstream_consumer": "client_search 下游搜索模块",
+              "expected_outcome": "系统正确识别出产品类别为“重疾险”，并映射到正确的数据库字段（如 pCategorys）",
+              "required_capabilities": [
+                "自然语言理解",
+                "实体提取（产品类别）",
+                "字段映射（产品类别 → pCategorys）"
+              ],
+              "status": "not_evaluable",
+              "blocking": true,
+              "downstream_impact": "由于无法获取 parser 输出，下游搜索未执行，无法验证是否满足意图"
+            },
+            {
+              "expectation_id": "输出条件可执行",
+              "downstream_consumer": "client_search 下游搜索模块",
+              "expected_outcome": "conditions 数组包含一个字段名为 pCategorys，操作符为 MATCH（或等价），值为“重疾险”的条件，且 query_logic 合理",
+              "required_capabilities": [
+                "结构化条件生成",
+                "操作符选用（MATCH/CONTAINS）",
+                "逻辑关系（AND/OR）"
+              ],
+              "status": "not_evaluable",
+              "blocking": true,
+              "downstream_impact": "无法生成搜索请求，无法检索客户"
+            }
+          ]
+        },
+        "expectation_attribution_panel": {
+          "attributions": [
+            {
+              "expectation_id": "用户意图解析正确",
+              "fulfillment_status": "not_evaluable",
+              "root_cause_hypothesis": "由于客户端在调用 client_search 项目 API 时遇到连接拒绝错误（Errno 61），导致无法获取任何 parser 输出，因此无法评估该期望。根本原因可能是目标服务未启动或网络配置错误。",
+              "evidence": [
+                "RunTrace.execution_trace 中 project.call 阶段失败，错误信息为 '<urlopen error [Errno 61] Connection refused>'",
+                "RunTrace.extracted_output 为空"
+              ]
+            },
+            {
+              "expectation_id": "输出条件可执行",
+              "fulfillment_status": "not_evaluable",
+              "root_cause_hypothesis": "由于客户端在调用 client_search 项目 API 时遇到连接拒绝错误，导致无法获取任何条件输出，因此无法评估该期望。根本原因可能是目标服务未启动或网络配置错误。",
+              "evidence": [
+                "RunTrace.execution_trace 中 project.call 阶段失败，错误信息为 '<urlopen error [Errno 61] Connection refused>'",
+                "RunTrace.extracted_output 为空"
+              ]
+            }
+          ]
+        },
+        "cluster_panel": {
+          "project_id": "client_search",
+          "clusters": [
+            {
+              "cluster_id": "root_cause::项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：::not_evaluable",
+              "mechanism": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：::not_evaluable",
+              "fulfillment_statuses": [
+                "not_evaluable"
+              ],
+              "expectation_ids": [
+                "用户意图解析正确",
+                "输出条件可执行"
+              ],
+              "needs_human_review": false,
+              "canonical_attribution": true,
+              "count": 1,
+              "representative_cases": [
+                "client_search:mock-agent-client_search-cdd7df11:1783729528153"
+              ],
+              "representative_traces": [
+                "client_search:mock-agent-client_search-cdd7df11:1783729528153"
+              ],
+              "common_root_cause": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+              "shared_failure_pattern": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+              "representative_diffs": [
+                {
+                  "case_id": "client_search:mock-agent-client_search-cdd7df11:1783729528153",
+                  "root_cause": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+                  "evidence": [
+                    "RunTrace.execution_trace 包含 project.call 失败记录，status=failed，error='<urlopen error [Errno 61] Connection refused>'",
+                    "RunTrace.status 为 error，extracted_output 为空",
+                    "RunTrace.input 中包含 extra_input_params.pCategorys='重疾险'，但未产生实际输出"
+                  ]
+                }
+              ],
+              "verification_cases": [
+                "client_search:mock-agent-client_search-cdd7df11:1783729528153"
+              ],
+              "next_actions": [
+                "RunTrace.execution_trace 包含 project.call 失败记录，status=failed，error='<urlopen error [Errno 61] Connection refused>'",
+                "RunTrace.status 为 error，extracted_output 为空",
+                "RunTrace.input 中包含 extra_input_params.pCategorys='重疾险'，但未产生实际输出"
+              ]
+            }
+          ],
+          "common_root_cause": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+          "impact": "",
+          "priority": "normal"
+        },
+        "check_panel": {
+          "passed": false,
+          "issues": [
+            "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+            "generic core contains project-specific marker query_logic: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+            "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+            "Fallback decisions require human review before treating the chain as fully verified."
+          ],
+          "boundary_violations": [
+            "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+            "generic core contains project-specific marker query_logic: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+            "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+          ],
+          "consistency_gaps": [
+            "Fallback decisions require human review before treating the chain as fully verified."
+          ],
+          "verification_results": [
+            "Structured fallback decisions recorded: 1.",
+            "Check categories passed current audit."
+          ],
+          "recommended_fixes": [
+            "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions.",
+            "Ensure all steps use the same trace_id and latest run output."
+          ],
+          "fallbacks": [
+            {
+              "fallback_id": "live-error-mock-agent-client_search-cdd7df11",
+              "source_stage": "live",
+              "fallback_type": "live_error",
+              "status": "error",
+              "reason": "<urlopen error [Errno 61] Connection refused>",
+              "missing_evidence": [
+                "live_response"
+              ],
+              "recoverable": true,
+              "needs_human_review": true,
+              "quality_flags": [
+                "live_service_unavailable"
+              ],
+              "metadata": {
+                "case_id": "mock-agent-client_search-cdd7df11",
+                "session_id": "session_001",
+                "failure_type": "live_service_unavailable"
+              }
+            }
+          ]
+        },
+        "table_row": {
+          "id": "mock-agent-client_search-cdd7df11",
+          "input": "帮我看看公司里所有买了重疾险的客户都有谁",
+          "scenario": "",
+          "output_summary": "{}",
+          "reference_summary": "{\"code\": 200, \"msg\": \"success\", \"query\": \"帮我看看公司里所有买了重疾险的客户都有谁\", \"conditions\": [{\"field\": \"pCategorys\", \"op\": \"MATCH\", \"value\": \"重疾险\"}], \"robot_text\": \"我找到了以下购…",
+          "status": "<urlopen error [Errno 61] Connection refused>",
+          "execution_mode": "live",
+          "output_source": "live_service_unavailable",
+          "fulfillment_status": "not_evaluable",
+          "judge_summary": {
+            "status": "<urlopen error [Errno 61] Connection refused>",
+            "fulfillment_status": "",
+            "reason": "<urlopen error [Errno 61] Connection refused>",
+            "reason_source": "execution_error",
+            "reason_stage": "execution",
+            "is_formal_attribution": false,
+            "assessment_count": 0,
+            "blocking_count": 0
+          },
+          "attribution_summary": {
+            "attribution_count": 2,
+            "probe_count": 0,
+            "summary_text": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+            "is_complete": true,
+            "is_formal_attribution": true
+          },
+          "check_summary": {
+            "passed": false,
+            "issue_count": 5
+          },
+          "fallback_summary": {
+            "count": 3,
+            "needs_human_review": true,
+            "quality_flags": [
+              "live_service_unavailable"
+            ],
+            "by_stage": {
+              "live": 3
+            },
+            "reasons": [
+              "<urlopen error [Errno 61] Connection refused>",
+              "<urlopen error [Errno 61] Connection refused>",
+              "<urlopen error [Errno 61] Connection refused>"
+            ]
+          },
+          "needs_human_review": true,
+          "quality_flags": [
+            "live_service_unavailable"
+          ],
+          "check_passed": false,
+          "issue_count": 5,
+          "fallback_count": 3,
+          "divergence_stage": "",
+          "root_cause_summary": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+          "created_at": "2026-07-11T00:25:28.153674+00:00",
+          "stop_reason": "",
+          "interaction_mode": "single_turn",
+          "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783729528153"
+        },
+        "project_extensions": {
+          "frontend_standard": {
+            "frontend_view": {
+              "live": "render normalized parser output and raw project fields under protocol extension panels",
+              "summary": "align Output and Reference as formatted JSON with equal-size table cells and compact drill-downs"
+            },
+            "batch_persistence": {
+              "case_shape": "id, selected, input, output, reference, metadata, scenario, source, status, error",
+              "transient_results": "do not persist full trace, judge, attribute, downstream payload, or frontend_view as durable case-pool source data"
+            }
+          },
+          "display_contract": {
+            "output_source": "judge.actual",
+            "reference_source": "judge_generated",
+            "formatting": [
+              "json formatting",
+              "truncation",
+              "output/reference alignment"
+            ]
+          },
+          "verifiable_tools": {
+            "available": true,
+            "catalog": [
+              {
+                "tool_id": "client_search.search_api",
+                "description": "向客户搜索解析接口提交自然语言查询并返回接口实际响应摘要。输入 query 和可选 user_id；输出 rewritten query、conditions、query_logic、matched_level、matched_patterns 和 intent_summary。该工具提供远程 API 行为证据，不解释源码、配置规则或根因。",
+                "applicable_scenario": "attr",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "string",
+                      "description": "必填。发送给客户搜索解析接口的自然语言查询文本，按业务接口支持的用户表达原样填写。"
+                    },
+                    "user_id": {
+                      "type": "string",
+                      "description": "可选。请求客户搜索解析接口时携带的用户 ID；缺省值由工具执行函数提供。"
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ]
+                },
+                "has_execute_fn": true
+              },
+              {
+                "tool_id": "client_search.field_capability",
+                "description": "查询客户搜索字段能力定义。输入字段标识 field；输出该字段在 source_field_definitions.yaml 中声明的 operators、value_types、enums、unit 和 description。该工具提供字段契约/配置证据，不执行搜索 API，也不判断根因。",
+                "applicable_scenario": "attr",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "field": {
+                      "type": "string",
+                      "description": "必填。客户搜索字段标识，需与字段定义文件中的 field 值一致，如 clientAge、annPremSegNum、pCategorys。"
+                    }
+                  },
+                  "required": [
+                    "field"
+                  ]
+                },
+                "has_execute_fn": true
+              },
+              {
+                "tool_id": "client_search.rule_verify",
+                "description": "查询客户搜索配置映射和增强规则。输入 keyword 或 field 作为过滤条件；输出 value_mappings 与 enhanced_rules 中匹配的配置片段，未提供过滤条件时返回完整配置。该工具提供静态配置证据，不执行搜索 API，也不判断规则是否已在某次运行中触发。",
+                "applicable_scenario": "attr",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "keyword": {
+                      "type": "string",
+                      "description": "可选。用于过滤 value_mappings 和 enhanced_rules 的业务关键词或字段名，如 年金、premium、clientAge；不传则不按该字段过滤。"
+                    },
+                    "field": {
+                      "type": "string",
+                      "description": "可选。字段名过滤条件，与 keyword 等价；用于按客户搜索字段标识过滤配置片段。"
+                    }
+                  }
+                },
+                "has_execute_fn": true
+              },
+              {
+                "tool_id": "client_search.api.root",
+                "description": "调用已发现的业务 API endpoint。输入该 endpoint 的路径参数和/或 body；输出 GET / (root) 的 HTTP 响应内容。该工具提供远程 API 行为证据，不解释源码、配置规则或根因。接口说明：根路径",
+                "applicable_scenario": "attr",
+                "parameters": {
+                  "type": "object"
+                },
+                "has_execute_fn": true
+              },
+              {
+                "tool_id": "client_search.api.health_check",
+                "description": "调用已发现的业务 API endpoint。输入该 endpoint 的路径参数和/或 body；输出 GET /health (health_check) 的 HTTP 响应内容。该工具提供远程 API 行为证据，不解释源码、配置规则或根因。接口说明：健康检查",
+                "applicable_scenario": "attr",
+                "parameters": {
+                  "type": "object"
+                },
+                "has_execute_fn": true
+              },
+              {
+                "tool_id": "client_search.api.client_search_query_parse",
+                "description": "调用已发现的业务 API endpoint。输入该 endpoint 的路径参数和/或 body；输出 POST /api/v1/client_search_query_parse (client_search_query_parse) 的 HTTP 响应内容。该工具提供远程 API 行为证据，不解释源码、配置规则或根因。接口说明：解析自然语言查询，返回结构化条件和逻辑关系，不执行实际搜索。\n遵循 AskBob 标准 Bot 接入协议，入参和出参均为标准包装格式。",
+                "applicable_scenario": "attr",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "body": {
+                      "type": "object",
+                      "description": "请求体 JSON，对应 POST /api/v1/client_search_query_parse 的 request body；字段和值应按该业务接口原始协议填写。"
+                    }
+                  },
+                  "required": [
+                    "body"
+                  ]
+                },
+                "has_execute_fn": true
+              },
+              {
+                "tool_id": "client_search.api.client_search_query_parse_no_encipher",
+                "description": "调用已发现的业务 API endpoint。输入该 endpoint 的路径参数和/或 body；输出 POST /api/v1/client_search_query_parse_no_encipher (client_search_query_parse_no_encipher) 的 HTTP 响应内容。该工具提供远程 API 行为证据，不解释源码、配置规则或根因。接口说明：解析自然语言查询，返回结构化条件和逻辑关系，不执行实际搜索。\n遵循 AskBob 标准 Bot 接入协议，入参和出参均为标准包装格式。",
+                "applicable_scenario": "attr",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "body": {
+                      "type": "object",
+                      "description": "请求体 JSON，对应 POST /api/v1/client_search_query_parse_no_encipher 的 request body；字段和值应按该业务接口原始协议填写。"
+                    }
+                  },
+                  "required": [
+                    "body"
+                  ]
+                },
+                "has_execute_fn": true
+              },
+              {
+                "tool_id": "client_search.api.retrieve_fields",
+                "description": "调用已发现的业务 API endpoint。输入该 endpoint 的路径参数和/或 body；输出 POST /api/v1/fields/retrieve (retrieve_fields) 的 HTTP 响应内容。该工具提供远程 API 行为证据，不解释源码、配置规则或根因。接口说明：RAG 字段检索接口\n\n根据自然语言查询，从知识库中召回最相关的字段意图，\n返回字段定义及可直接注入 LLM Prompt 的文本段落。\n\nArgs:\n    request: 包含 query（查询文本）和 top_k（返回数量）\n\nReturns:\n    匹配的字段意图列表及格式化的 prompt 片段",
+                "applicable_scenario": "attr",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "body": {
+                      "type": "object",
+                      "description": "请求体 JSON，对应 POST /api/v1/fields/retrieve 的 request body；字段和值应按该业务接口原始协议填写。"
+                    }
+                  },
+                  "required": [
+                    "body"
+                  ]
+                },
+                "has_execute_fn": true
+              }
+            ]
+          }
+        }
+      },
+      "table_row": {
+        "id": "mock-agent-client_search-cdd7df11",
+        "input": "帮我看看公司里所有买了重疾险的客户都有谁",
+        "scenario": "",
+        "output_summary": "{}",
+        "reference_summary": "{\"code\": 200, \"msg\": \"success\", \"query\": \"帮我看看公司里所有买了重疾险的客户都有谁\", \"conditions\": [{\"field\": \"pCategorys\", \"op\": \"MATCH\", \"value\": \"重疾险\"}], \"robot_text\": \"我找到了以下购…",
+        "status": "<urlopen error [Errno 61] Connection refused>",
+        "execution_mode": "live",
+        "output_source": "live_service_unavailable",
+        "fulfillment_status": "not_evaluable",
+        "judge_summary": {
+          "status": "<urlopen error [Errno 61] Connection refused>",
+          "fulfillment_status": "",
+          "reason": "<urlopen error [Errno 61] Connection refused>",
+          "reason_source": "execution_error",
+          "reason_stage": "execution",
+          "is_formal_attribution": false,
+          "assessment_count": 0,
+          "blocking_count": 0
+        },
+        "attribution_summary": {
+          "attribution_count": 2,
+          "probe_count": 0,
+          "summary_text": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+          "is_complete": true,
+          "is_formal_attribution": true
+        },
+        "check_summary": {
+          "passed": false,
+          "issue_count": 5
+        },
+        "fallback_summary": {
+          "count": 3,
+          "needs_human_review": true,
+          "quality_flags": [
+            "live_service_unavailable"
+          ],
+          "by_stage": {
+            "live": 3
+          },
+          "reasons": [
+            "<urlopen error [Errno 61] Connection refused>",
+            "<urlopen error [Errno 61] Connection refused>",
+            "<urlopen error [Errno 61] Connection refused>"
+          ]
+        },
+        "needs_human_review": true,
+        "quality_flags": [
+          "live_service_unavailable"
+        ],
+        "check_passed": false,
+        "issue_count": 5,
+        "fallback_count": 3,
+        "divergence_stage": "",
+        "root_cause_summary": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+        "created_at": "2026-07-11T00:25:28.153674+00:00",
+        "stop_reason": "",
+        "interaction_mode": "single_turn",
+        "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783729528153"
+      }
+    }
+  ],
+  "cluster": {
+    "project_id": "client_search",
+    "clusters": [
+      {
+        "cluster_id": "root_cause::项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：::not_evaluable",
+        "mechanism": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：::not_evaluable",
+        "fulfillment_statuses": [
+          "not_evaluable"
+        ],
+        "expectation_ids": [
+          "用户意图解析正确",
+          "输出条件可执行"
+        ],
+        "needs_human_review": false,
+        "canonical_attribution": true,
+        "count": 1,
+        "representative_cases": [
+          "client_search:mock-agent-client_search-cdd7df11:1783729528153"
+        ],
+        "representative_traces": [
+          "client_search:mock-agent-client_search-cdd7df11:1783729528153"
+        ],
+        "common_root_cause": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+        "shared_failure_pattern": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+        "representative_diffs": [
+          {
+            "case_id": "client_search:mock-agent-client_search-cdd7df11:1783729528153",
+            "root_cause": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+            "evidence": [
+              "RunTrace.execution_trace 包含 project.call 失败记录，status=failed，error='<urlopen error [Errno 61] Connection refused>'",
+              "RunTrace.status 为 error，extracted_output 为空",
+              "RunTrace.input 中包含 extra_input_params.pCategorys='重疾险'，但未产生实际输出"
+            ]
+          }
+        ],
+        "verification_cases": [
+          "client_search:mock-agent-client_search-cdd7df11:1783729528153"
+        ],
+        "next_actions": [
+          "RunTrace.execution_trace 包含 project.call 失败记录，status=failed，error='<urlopen error [Errno 61] Connection refused>'",
+          "RunTrace.status 为 error，extracted_output 为空",
+          "RunTrace.input 中包含 extra_input_params.pCategorys='重疾险'，但未产生实际输出"
+        ]
+      }
+    ],
+    "common_root_cause": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+    "impact": "",
+    "priority": "normal"
+  },
+  "check": {
+    "passed": false,
+    "issues": [
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+      "generic core contains project-specific marker query_logic: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "Fallback decisions require human review before treating the chain as fully verified."
+    ],
+    "boundary_violations": [
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/judge.py",
+      "generic core contains project-specific marker query_logic: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py",
+      "generic core contains project-specific marker conditions: /Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/core/schema/fixture/core_fixtures.py"
+    ],
+    "consistency_gaps": [
+      "Fallback decisions require human review before treating the chain as fully verified."
+    ],
+    "verification_results": [
+      "Structured fallback decisions recorded: 1.",
+      "Check categories passed current audit."
+    ],
+    "recommended_fixes": [
+      "Move project-specific runtime-only facts into impl/projects/<project>/adapter.py or schema_protocol_extensions.",
+      "Ensure all steps use the same trace_id and latest run output."
+    ],
+    "fallbacks": [
+      {
+        "reason": "<urlopen error [Errno 61] Connection refused>",
+        "status": "error"
+      }
+    ]
+  },
+  "table": {
+    "project_id": "client_search",
+    "rows": [
+      {
+        "id": "mock-agent-client_search-cdd7df11",
+        "input": "帮我看看公司里所有买了重疾险的客户都有谁",
+        "scenario": "",
+        "output_summary": "{}",
+        "reference_summary": "{\"code\": 200, \"msg\": \"success\", \"query\": \"帮我看看公司里所有买了重疾险的客户都有谁\", \"conditions\": [{\"field\": \"pCategorys\", \"op\": \"MATCH\", \"value\": \"重疾险\"}], \"robot_text\": \"我找到了以下购…",
+        "status": "<urlopen error [Errno 61] Connection refused>",
+        "execution_mode": "live",
+        "output_source": "live_service_unavailable",
+        "fulfillment_status": "not_evaluable",
+        "judge_summary": {
+          "status": "<urlopen error [Errno 61] Connection refused>",
+          "fulfillment_status": "",
+          "reason": "<urlopen error [Errno 61] Connection refused>",
+          "reason_source": "execution_error",
+          "reason_stage": "execution",
+          "is_formal_attribution": false,
+          "assessment_count": 0,
+          "blocking_count": 0
+        },
+        "attribution_summary": {
+          "attribution_count": 2,
+          "probe_count": 0,
+          "summary_text": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+          "is_complete": true,
+          "is_formal_attribution": true
+        },
+        "check_summary": {
+          "passed": false,
+          "issue_count": 5
+        },
+        "fallback_summary": {
+          "count": 3,
+          "needs_human_review": true,
+          "quality_flags": [
+            "live_service_unavailable"
+          ],
+          "by_stage": {
+            "live": 3
+          },
+          "reasons": [
+            "<urlopen error [Errno 61] Connection refused>",
+            "<urlopen error [Errno 61] Connection refused>",
+            "<urlopen error [Errno 61] Connection refused>"
+          ]
+        },
+        "needs_human_review": true,
+        "quality_flags": [
+          "live_service_unavailable"
+        ],
+        "check_passed": false,
+        "issue_count": 5,
+        "fallback_count": 3,
+        "divergence_stage": "",
+        "root_cause_summary": "项目调用阶段发生连接错误（Errno 61: Connection refused），表明客户端无法连接到 client_search 服务端点。可能原因包括：下游服务进程未运行、服务监听端口不正确、网络防火墙阻断或服务发现配置错误。由于请求在 project.call 阶段即失败，后续解析与搜索均未执行，导致所有业务期望无法评估。",
+        "created_at": "2026-07-11T00:25:28.153674+00:00",
+        "stop_reason": "",
+        "interaction_mode": "single_turn",
+        "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783729528153"
+      }
+    ],
+    "total": 1
+  }
+}

@@ -1,0 +1,215 @@
+{
+  "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783729332157",
+  "project_id": "marketting-planning",
+  "business_expectations": [
+    {
+      "expectation_id": "系统识别用户NBEV规划意图并进入意图阶段",
+      "downstream_consumer": "营销规划引擎",
+      "user_intent": "用户想通过增加理财师或优化产品方案弥补团队NBEV目标缺口",
+      "expected_outcome": "系统输出 stage 为 'intent'，并返回针对意图的澄清或确认文本",
+      "required_capabilities": [
+        "意图识别",
+        "场景路由"
+      ],
+      "acceptance_criteria": [
+        "输出 JSON 中 stage 字段值为 'intent'",
+        "robot_text 包含对 NBEV 目标、理财师或产品方案的澄清性提问"
+      ],
+      "boundary": {
+        "dependency_status": "available",
+        "allow_fallback": false
+      },
+      "priority": "high"
+    },
+    {
+      "expectation_id": "系统服务可用并正常响应而不断开连接",
+      "downstream_consumer": "终端用户与业务方",
+      "user_intent": "用户期待一个即时、正常的 AI 响应",
+      "expected_outcome": "调用成功，无网络/连接错误",
+      "required_capabilities": [
+        "服务高可用",
+        "网络连通性"
+      ],
+      "acceptance_criteria": [
+        "run_status 非 error",
+        "无 'Connection refused' 等网络异常"
+      ],
+      "boundary": {
+        "dependency_status": "available",
+        "allow_fallback": false
+      },
+      "priority": "critical"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "系统识别用户NBEV规划意图并进入意图阶段",
+      "status": "not_fulfilled",
+      "score": 0.0,
+      "expected_evidence": [
+        "stage 字段为 'intent'",
+        "robot_text 包含对 NBEV 目标的进一步询问"
+      ],
+      "actual_evidence": [
+        "extracted_output 为空",
+        "raw_response 为 null",
+        "run_trace 中无任何业务输出，仅有一条 live_schema 校验成功记录"
+      ],
+      "downstream_impact": "用户无法获得任何意图响应，对话流程中断",
+      "blocking": true,
+      "confidence": 1.0
+    },
+    {
+      "expectation_id": "系统服务可用并正常响应而不断开连接",
+      "status": "not_fulfilled",
+      "score": 0.0,
+      "expected_evidence": [
+        "HTTP 连接成功",
+        "无异常抛出"
+      ],
+      "actual_evidence": [
+        "run_trace 显示 'marketing-planning service unavailable: <urlopen error [Errno 61] Connection refused>'",
+        "status 字段为 'error'"
+      ],
+      "downstream_impact": "整个服务中断，所有后续处理无法进行",
+      "blocking": true,
+      "confidence": 1.0
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_evaluable",
+    "score": 0.0,
+    "reason": "由于营销规划服务连接拒绝（Connection refused），系统未产生任何有效输出，用户意图完全未得到满足。"
+  },
+  "expected": {
+    "turns": [
+      {
+        "code": 0,
+        "msg": "success",
+        "robot_text": "好的，您想了解如何通过增加理财师或优化产品方案来弥补团队NBEV缺口，请问团队今年的NBEV目标是多少？目前进度如何？",
+        "end_flag": 0,
+        "intent": "marketing_planning",
+        "intent_name": "NBEV目标缺口分析",
+        "stage": "intent",
+        "event_summary": {
+          "names": [
+            "intent_detected",
+            "clarification"
+          ],
+          "raw_names": [
+            "intent_detected",
+            "clarification"
+          ],
+          "canonical_names": [
+            "intent_detected",
+            "clarification"
+          ],
+          "counts": {
+            "intent_detected": 1,
+            "clarification": 1
+          },
+          "raw_counts": {
+            "intent_detected": 1,
+            "clarification": 1
+          },
+          "final_event": "clarification",
+          "raw_final_event": "clarification",
+          "protocol_completed": false,
+          "business_completed": false,
+          "completed": false
+        },
+        "session_summary": {
+          "session_id": "eval-mock-agent-marketting-planning-d1642b58",
+          "required_fields": [
+            "team",
+            "target_NBEV",
+            "current_achievement",
+            "timeframe"
+          ],
+          "missing_fields": [
+            "target_NBEV",
+            "current_achievement",
+            "timeframe"
+          ],
+          "evidence_declared": false,
+          "evidence_status": "missing_fields"
+        },
+        "fallback": {
+          "used": false,
+          "allowed": false,
+          "reason": ""
+        },
+        "turn_index": 0,
+        "input_turn": {
+          "role": "user",
+          "content": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？"
+        }
+      }
+    ]
+  },
+  "missing": [
+    {
+      "kind": "turn_output",
+      "error_type": "missing_entire_response",
+      "expected": {
+        "code": 0,
+        "stage": "intent",
+        "robot_text": "非空文本"
+      },
+      "evidence_ref": "run_trace.extracted_output_empty",
+      "incomplete": true
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "system_error",
+      "error_type": "service_unavailable",
+      "expected": "正常响应",
+      "actual": "Connection refused",
+      "evidence_ref": "run_trace.status_error",
+      "raw": "marketing-planning service unavailable: <urlopen error [Errno 61] Connection refused>",
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "source": "run_trace",
+      "key": "status",
+      "value": "error"
+    },
+    {
+      "source": "run_trace",
+      "key": "error",
+      "value": "marketing-planning service unavailable: <urlopen error [Errno 61] Connection refused>"
+    },
+    {
+      "source": "run_trace",
+      "key": "extracted_output"
+    }
+  ],
+  "reasoning_summary": "系统在意图识别场景下未能成功调用营销规划服务，由于连接被拒绝（Connection refused），没有产生任何面向用户的输出。尽管应用边界声明依赖可用，但实际发生了网络层错误，导致用户意图完全无法满足。expected 中构造了一个符合场景的理想 response，但实际 trace 中无任何业务卡片、事件或会话信息，因此所有评估项均为 not_fulfilled。",
+  "summary": {
+    "reason": "not_fulfilled · blocking=[系统服务可用并正常响应而不断开连接,系统识别用户NBEV规划意图并进入意图阶段] · 系统在意图识别场景下未能成功调用营销规划服务，由于连接被拒绝（Connection refused），没有产生任何面向用户的输出。尽管应用边界声明依赖可用，但实际发生了网络层错误，导致用户意图完全无法满足。expected 中构造了一个符合场景的理想 response，但实际 trace 中无任何业务卡片、事件或会话信息，因此所有评估项均为 not_fulfilled。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "系统服务可用并正常响应而不断开连接",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "整个服务中断，所有后续处理无法进行",
+        "evidence": "run_trace 显示 'marketing-planning service unavailable: <urlopen error [Errno 61] Connection refused>' | status 字段为 'error' | HTTP 连接成功 | 无异常抛出"
+      },
+      {
+        "expectation_id": "系统识别用户NBEV规划意图并进入意图阶段",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "用户无法获得任何意图响应，对话流程中断",
+        "evidence": "extracted_output 为空 | raw_response 为 null | run_trace 中无任何业务输出，仅有一条 live_schema 校验成功记录 | stage 字段为 'intent' | robot_text 包含对 NBEV 目标的进一步询问"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 2,
+    "blocking_count": 2,
+    "is_formal_attribution": true
+  }
+}

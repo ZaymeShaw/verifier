@@ -1,0 +1,83 @@
+{
+  "id": "mock-agent-marketting-planning-intent-9e16256b",
+  "input": "帮我看看上季度买了重疾险的客户都是啥样的？",
+  "scenario": "intent_recognition",
+  "output_summary": "{\"confidence\": 0.5, \"intent\": \"other\", \"subIntent\": \"其他意图\"}",
+  "reference_summary": "{\"confidence\": 0.95, \"intent\": \"customer_portrait\", \"target_value\": \"重疾险\"}",
+  "status": "not_fulfilled",
+  "execution_mode": "live",
+  "output_source": "live_service",
+  "fulfillment_status": "not_fulfilled",
+  "judge_summary": {
+    "status": "not_fulfilled",
+    "fulfillment_status": "not_fulfilled",
+    "reason": "not_fulfilled · blocking=[不应触发后备意图为其他意图,分发边界正确分配至客户画像处理逻辑,必要的槽位实体提取目标产品,意图标签正确分类为用户画像查询] · 用户提问“帮我看看上季度买了重疾险的客户都是啥样的？”，明确表达客户画像分析意图，预期意图为 customer_portrait 且需提取产品“重疾险”。然而系统返回意图为 other、置信度仅 0.5，未提取任何实体，完全不满足业务要求。所有维度的期望（意图标签、槽位、置信度、后备策略、分发边界）均未达成，判定为 not_fulfilled。",
+    "reason_source": "aggregated_fulfillment",
+    "reason_stage": "judge",
+    "is_formal_attribution": true,
+    "assessment_count": 5,
+    "blocking_count": 4,
+    "primary_failure_dimensions": [
+      {
+        "blocking": true,
+        "downstream_impact": "错误归类到其他意图，丢失业务价值",
+        "evidence": "错误归类到其他意图，丢失业务价值",
+        "expectation_id": "不应触发后备意图为其他意图",
+        "status": "not_fulfilled"
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "分发至 other 处理逻辑，用户请求无法被正确响应",
+        "evidence": "分发至 other 处理逻辑，用户请求无法被正确响应",
+        "expectation_id": "分发边界正确分配至客户画像处理逻辑",
+        "status": "not_fulfilled"
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "缺少目标产品信息，无法进行针对性的客户画像分析",
+        "evidence": "缺少目标产品信息，无法进行针对性的客户画像分析",
+        "expectation_id": "必要的槽位实体提取目标产品",
+        "status": "not_fulfilled"
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "意图无法识别为客户画像，导致下游无法触发客户画像分析流程",
+        "evidence": "意图无法识别为客户画像，导致下游无法触发客户画像分析流程",
+        "expectation_id": "意图标签正确分类为用户画像查询",
+        "status": "not_fulfilled"
+      },
+      {
+        "blocking": false,
+        "downstream_impact": "低置信度且伴随错误意图，导致意图完全不可信",
+        "evidence": "低置信度且伴随错误意图，导致意图完全不可信",
+        "expectation_id": "置信度满足预测可靠性阈值",
+        "status": "not_fulfilled"
+      }
+    ]
+  },
+  "attribution_summary": {
+    "attribution_count": 6,
+    "is_complete": false,
+    "is_formal_attribution": false,
+    "probe_count": 0,
+    "summary_text": "intent_api_call返回了错误的raw_intent'4001'（可能对应‘其他意图’），置信度仅0.5且未提取实体；adapter_extraction将其映射为'other'且未保留原始编码；label_mapping阶段无额外纠正机会。根因在于意图识别模型/提示词未能正确分类该查询，以及adapter映射未正确处理该编码。"
+  },
+  "check_summary": {
+    "passed": true,
+    "issue_count": 0
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": false,
+  "check_passed": true,
+  "issue_count": 0,
+  "fallback_count": 0,
+  "divergence_stage": "",
+  "root_cause_summary": "当前 case 期望 intent/slots 为 {'intent': 'customer_portrait', 'confidence': 0.95, 'target_value': '重疾险', 'path_types': None, 'subIntent': '其他意图'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+  "created_at": "2026-07-11T17:18:17.460414+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783790297460"
+}

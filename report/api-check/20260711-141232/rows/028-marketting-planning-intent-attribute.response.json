@@ -1,0 +1,88 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783750354676",
+  "project_id": "marketting-planning-intent",
+  "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图识别为customer_portrait",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "file": "app/workflow/steps/intent_recognition.py",
+          "function": "adapter_extraction",
+          "reason": "负责从 API 响应中解析意图标签，但未提取出 customer_portrait，导致 raw_intent 为空并最终映射为 other"
+        },
+        {
+          "file": "app/workflow/prompts/intent_prompt.py",
+          "reason": "意图识别提示词可能缺少对 customer_portrait 的明确示例或定义，导致模型无法正确输出该意图"
+        },
+        {
+          "file": "projects/marketting-planning-intent/intent.py",
+          "line": "INTENT_MAPPING",
+          "reason": "映射表将 raw_intent=None 映射为 other，虽然从映射规则上合理，但暴露了上游提取逻辑的缺失"
+        }
+      ],
+      "root_cause_hypothesis": "意图识别 API 原始响应可能包含有效意图，但适配器提取逻辑（intent_recognition.py）未能正确解析意图字段，导致 raw_intent 丢失；或者 API 因提示词（intent_prompt.py）中缺少 customer_portrait 的表示而返回了无法识别的标签，适配器在无匹配时回退为 other。证据：API 返回了非 customer_portrait 的意图（extracted_output.intent=other），且适配器提取的 confidence 仅为 0.5，表明模型不确定。runtime_checks 显示 raw_intent=None，说明在映射前意图已丢失。",
+      "evidence": [
+        "extracted_output.intent 为 other，confidence=0.5",
+        "runtime_checks: raw_intent=None，映射后 actual_intent=other",
+        "intent_api_call stage: raw_response_present=true，说明 API 有响应",
+        "reference_contract 期望 intent=customer_portrait，confidence=0.95"
+      ]
+    },
+    {
+      "expectation_id": "提取产品参数为重疾险",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        {
+          "file": "app/workflow/steps/intent_recognition.py",
+          "function": "adapter_extraction",
+          "reason": "该函数同时负责提取 target_value，但未输出任何产品信息"
+        },
+        {
+          "file": "app/workflow/prompts/intent_prompt.py",
+          "reason": "提示词可能未要求模型返回 target_value 字段，或未包含产品实体提取的指令"
+        }
+      ],
+      "root_cause_hypothesis": "意图识别 API 的提示词设计可能未包含产品实体提取任务，导致模型响应中缺失 target_value；或者适配器在解析时未从响应中读取 target_value 字段（例如字段名不匹配）。trace 显示最终输出中 target_value 为 null，且 runtime_checks 未发现任何实体提取逻辑，说明整个流程缺失槽位填充能力。",
+      "evidence": [
+        "extracted_output: 仅含 intent 和 subIntent，无 target_value 字段",
+        "reference_contract 期望 target_value=重疾险",
+        "judge_result: target_value 为 null，导致下游无法定位产品",
+        "未在 execution_trace 中观察到 target_value 的提取或传递"
+      ]
+    }
+  ],
+  "suspected_locations": [
+    {
+      "file": "app/workflow/steps/intent_recognition.py",
+      "functions": [
+        "adapter_extraction"
+      ],
+      "reason": "核心提取逻辑，负责解析意图和实体"
+    },
+    {
+      "file": "app/workflow/prompts/intent_prompt.py",
+      "reason": "定义模型提示词，可能缺少意图示例和实体提取指令"
+    },
+    {
+      "file": "projects/marketting-planning-intent/intent.py",
+      "reason": "意图映射表，将空意图映射为 other 导致最终错误"
+    }
+  ],
+  "root_cause_hypothesis": "系统在意图识别与槽位填充流水线中存在两个关键缺陷：1) 意图识别阶段未能将用户查询正确分类为 customer_portrait，根因为适配器提取逻辑或提示词不足，导致意图丢失并回退为 other；2) 产品实体提取能力完全缺失，提示词未要求输出 target_value，适配器也未从 API 响应中解析实体信息。综合导致两个业务期望均未满足。",
+  "evidence": [
+    "extracted_output: intent=other, confidence=0.5, target_value=null",
+    "runtime_checks: raw_intent=None, actual_mapping=other, expected_intent=customer_portrait",
+    "execution_trace 所有阶段均成功，但适配器未提取到正确意图和产品参数",
+    "reference_contract 指定正确意图和参数，置信度0.95"
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "attribution_count": 2,
+    "probe_count": 0,
+    "summary_text": "系统在意图识别与槽位填充流水线中存在两个关键缺陷：1) 意图识别阶段未能将用户查询正确分类为 customer_portrait，根因为适配器提取逻辑或提示词不足，导致意图丢失并回退为 other；2) 产品实体提取能力完全缺失，提示词未要求输出 target_value，适配器也未从 API 响应中解析实体信息。综合导致两个业务期望均未满足。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

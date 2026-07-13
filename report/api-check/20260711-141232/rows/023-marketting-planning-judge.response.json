@@ -1,0 +1,272 @@
+{
+  "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783750354204",
+  "project_id": "marketting-planning",
+  "business_expectations": [
+    {
+      "expectation_id": "意图识别为营销规划",
+      "downstream_consumer": "下游营销规划引擎",
+      "user_intent": "用户希望分析如何通过增加理财师或优化产品方案来弥补NBEV缺口",
+      "expected_outcome": "系统识别用户意图为营销规划，并触发相应流程",
+      "required_capabilities": [
+        "intent_recognition"
+      ],
+      "acceptance_criteria": [
+        "intent 字段不等于 '4001'",
+        "intent_name 不应为 '其他意图'",
+        "应体现营销规划语义"
+      ],
+      "boundary": {
+        "allow_fallback": false
+      },
+      "priority": "high"
+    },
+    {
+      "expectation_id": "进入正确的阶段",
+      "downstream_consumer": "流程调度器",
+      "user_intent": "用户提出营销规划问题",
+      "expected_outcome": "系统进入 intent 阶段或后续可处理营销规划的阶段，而不是 non_agent",
+      "required_capabilities": [
+        "stage_management"
+      ],
+      "acceptance_criteria": [
+        "stage 字段不等于 'non_agent'",
+        "stage 应为 'intent' 或 'clarification' 等营销规划相关阶段"
+      ],
+      "boundary": {
+        "allow_fallback": false
+      },
+      "priority": "high"
+    },
+    {
+      "expectation_id": "未使用 fallback 机制",
+      "downstream_consumer": "运行时监控",
+      "user_intent": "系统应在正常流程内处理请求",
+      "expected_outcome": "fallback.used 为 false",
+      "required_capabilities": [
+        "fallback_control"
+      ],
+      "acceptance_criteria": [
+        "fallback.used 等于 false"
+      ],
+      "boundary": {
+        "allow_fallback": false
+      },
+      "priority": "medium"
+    }
+  ],
+  "fulfillment_assessments": [
+    {
+      "expectation_id": "意图识别为营销规划",
+      "status": "not_fulfilled",
+      "score": 0.0,
+      "actual_evidence": [
+        {
+          "intent": "4001",
+          "intent_name": "其他意图"
+        }
+      ],
+      "downstream_impact": "后续营销规划流程无法启动，用户需求得不到满足",
+      "blocking": true,
+      "confidence": 0.95
+    },
+    {
+      "expectation_id": "进入正确的阶段",
+      "status": "not_fulfilled",
+      "score": 0.0,
+      "actual_evidence": [
+        {
+          "stage": "non_agent"
+        }
+      ],
+      "downstream_impact": "系统没有进入可处理用户请求的阶段",
+      "blocking": true,
+      "confidence": 0.95
+    },
+    {
+      "expectation_id": "未使用 fallback 机制",
+      "status": "fulfilled",
+      "score": 1.0,
+      "actual_evidence": [
+        {
+          "fallback.used": false
+        }
+      ],
+      "downstream_impact": "无负面影响",
+      "blocking": false,
+      "confidence": 0.95
+    }
+  ],
+  "overall_fulfillment": {
+    "status": "not_fulfilled",
+    "score": 0.0
+  },
+  "expected": {
+    "turns": [
+      {
+        "code": 0,
+        "msg": "success",
+        "robot_text": "识别到营销规划意图，将进入规划流程",
+        "end_flag": 0,
+        "intent": "<营销规划意图代码>",
+        "intent_name": "营销规划",
+        "stage": "intent",
+        "fallback": {
+          "used": false,
+          "allowed": false,
+          "reason": ""
+        },
+        "turn_index": 0,
+        "input_turn": {
+          "content": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？",
+          "role": "user"
+        }
+      }
+    ]
+  },
+  "actual": {
+    "turns": [
+      {
+        "code": 0,
+        "end_flag": 1,
+        "event_summary": {
+          "business_completed": true,
+          "canonical_names": [
+            "intent_detected",
+            "reasoning_message_content",
+            "planning_started",
+            "card_delta",
+            "done"
+          ],
+          "completed": true,
+          "counts": {
+            "card_delta": 1,
+            "done": 1,
+            "intent_detected": 1,
+            "planning_started": 1,
+            "reasoning_message_content": 1
+          },
+          "final_event": "done",
+          "names": [
+            "intent_detected",
+            "reasoning_message_content",
+            "planning_started",
+            "card_delta",
+            "done"
+          ],
+          "protocol_completed": true,
+          "raw_counts": {
+            "card_end": 1,
+            "card_message_content": 1,
+            "card_start": 1,
+            "reasoning_end": 1,
+            "reasoning_message_content": 1,
+            "reasoning_start": 1
+          },
+          "raw_final_event": "card_end",
+          "raw_names": [
+            "reasoning_start",
+            "reasoning_message_content",
+            "reasoning_end",
+            "card_start",
+            "card_message_content",
+            "card_end"
+          ]
+        },
+        "fallback": {
+          "allowed": false,
+          "reason": "",
+          "used": false
+        },
+        "input_turn": {
+          "content": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？",
+          "role": "user"
+        },
+        "intent": "4001",
+        "intent_name": "其他意图",
+        "msg": "success",
+        "robot_text": "卡片生成完成",
+        "session_summary": {
+          "evidence_declared": false,
+          "evidence_status": "missing",
+          "session_id": "eval-mock-agent-marketting-planning-d1642b58"
+        },
+        "stage": "non_agent",
+        "turn_index": 0
+      }
+    ]
+  },
+  "missing": [
+    {
+      "kind": "intent_output",
+      "error_type": "incorrect_intent",
+      "expected": {
+        "intent": "<营销规划意图代码>",
+        "intent_name": "营销规划",
+        "stage": "intent"
+      },
+      "actual": {
+        "intent": "4001",
+        "intent_name": "其他意图",
+        "stage": "non_agent"
+      },
+      "evidence_ref": "extracted_output.turns[0]",
+      "incomplete": false
+    }
+  ],
+  "wrong": [
+    {
+      "kind": "intent_output",
+      "error_type": "wrong_intent",
+      "expected": {
+        "intent": "<营销规划意图代码>",
+        "intent_name": "营销规划",
+        "stage": "intent"
+      },
+      "actual": {
+        "intent": "4001",
+        "intent_name": "其他意图",
+        "stage": "non_agent"
+      },
+      "evidence_ref": "extracted_output.turns[0]",
+      "incomplete": false
+    }
+  ],
+  "evidence": [
+    {
+      "source": "extracted_output.turns[0]",
+      "intent": "4001",
+      "intent_name": "其他意图",
+      "stage": "non_agent"
+    },
+    {
+      "source": "execution_trace.intent_recognition",
+      "actual_stage": "non_agent",
+      "expected_stage": "intent"
+    }
+  ],
+  "reasoning_summary": "用户输入明确表达了营销规划意图（如何通过增加理财师或优化产品方案弥补NBEV目标），但系统将其识别为“其他意图”（intent: 4001），并进入 non_agent 阶段。这导致核心业务期望未满足，后续流程无法启动，整体判定为 not_fulfilled。fallback 未使用符合边界要求，但不足以弥补意图识别错误。",
+  "summary": {
+    "reason": "not_fulfilled · blocking=[意图识别为营销规划,进入正确的阶段] · 用户输入明确表达了营销规划意图（如何通过增加理财师或优化产品方案弥补NBEV目标），但系统将其识别为“其他意图”（intent: 4001），并进入 non_agent 阶段。这导致核心业务期望未满足，后续流程无法启动，整体判定为 not_fulfilled。fallback 未使用符合边界要求，但不足以弥补意图识别错误。",
+    "primary_failure_dimensions": [
+      {
+        "expectation_id": "意图识别为营销规划",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "后续营销规划流程无法启动，用户需求得不到满足",
+        "evidence": "后续营销规划流程无法启动，用户需求得不到满足"
+      },
+      {
+        "expectation_id": "进入正确的阶段",
+        "status": "not_fulfilled",
+        "blocking": true,
+        "downstream_impact": "系统没有进入可处理用户请求的阶段",
+        "evidence": "系统没有进入可处理用户请求的阶段"
+      }
+    ],
+    "reason_source": "aggregated_fulfillment",
+    "fulfillment_status": "not_fulfilled",
+    "assessment_count": 3,
+    "blocking_count": 2,
+    "is_formal_attribution": true
+  }
+}

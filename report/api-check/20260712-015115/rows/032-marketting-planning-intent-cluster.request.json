@@ -1,0 +1,171 @@
+{
+  "project": "marketting-planning-intent",
+  "attributes": [
+    {
+      "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783792277427",
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+      "expectation_attributions": [
+        {
+          "expectation_id": "意图标签为customer_portrait",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call",
+            "intent_model_prompt"
+          ],
+          "root_cause_hypothesis": "意图识别模型将用户查询错误分类为other，而非customer_portrait。可能原因是提示词中对客户画像类问法的覆盖不足，或模型训练数据中类似表述与other模式混淆，导致模型决策偏向通用兜底。",
+          "evidence": [
+            {
+              "source": "extracted_output",
+              "field": "intent",
+              "value": "other"
+            },
+            {
+              "source": "raw_response_snippet",
+              "value": "\"intent\":\"4001\",\"intent_name\":\"其他意图\""
+            },
+            {
+              "source": "intent_contract_probe",
+              "intent_match": false
+            }
+          ]
+        },
+        {
+          "expectation_id": "提取目标产品实体重疾险",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call",
+            "adapter_extraction"
+          ],
+          "root_cause_hypothesis": "由于意图被错误判定为other，系统不会触发针对customer_portrait的实体提取逻辑；同时上游NLU响应中target_value直接为null，表明即使在原始识别中也没有提取到产品实体。实体缺失直接导致下游客户画像分析无法聚焦到具体险种。",
+          "evidence": [
+            {
+              "source": "extracted_output",
+              "field": "target_value"
+            },
+            {
+              "source": "raw_response_snippet",
+              "relevant": "target_value\":null"
+            }
+          ]
+        },
+        {
+          "expectation_id": "置信度满足阈值要求",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call",
+            "confidence_estimation"
+          ],
+          "root_cause_hypothesis": "模型输出置信度仅0.5，远低于期望的0.95，表明模型对当前查询的意图判断高度不确定，未能可靠区分customer_portrait与other。该低置信度直接导致无法信任识别结果，触发不必要的降级或兜底。",
+          "evidence": [
+            {
+              "source": "extracted_output",
+              "field": "confidence",
+              "value": 0.5
+            },
+            {
+              "source": "intent_contract_probe",
+              "actual_confidence": 0.5
+            }
+          ]
+        },
+        {
+          "expectation_id": "intent_contract",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call",
+            "adapter_extraction",
+            "label_mapping"
+          ],
+          "root_cause_hypothesis": "整体意图合约未满足，根因在于意图分类模型在customer_portrait场景上完全失效：输出错误的other标签、缺失必要实体且置信度过低。后续的适配提取与映射虽按预期执行，但无法纠正上游错误。",
+          "evidence": [
+            {
+              "source": "judge_result",
+              "reasoning": "当前单轮意图识别未满足 reference contract，失败项=['intent']"
+            },
+            {
+              "source": "fulfillment_assessments",
+              "blocking": true
+            }
+          ]
+        }
+      ],
+      "suspected_locations": [
+        {
+          "location": "intent_contract_gate",
+          "evidence": [
+            [
+              {
+                "kind": "intent",
+                "error_type": "wrong_label",
+                "expected": {
+                  "intent": "customer_portrait"
+                },
+                "actual": {
+                  "intent": "other"
+                },
+                "evidence_ref": "extracted_output.intent",
+                "raw": {
+                  "intent": "other",
+                  "subIntent": "其他意图"
+                },
+                "incomplete": false
+              },
+              {
+                "kind": "entity",
+                "error_type": "missing_entity",
+                "expected": {
+                  "target_value": "重疾险"
+                },
+                "actual": {},
+                "evidence_ref": "extracted_output.target_value",
+                "raw": {},
+                "incomplete": true
+              }
+            ]
+          ]
+        }
+      ],
+      "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': 'customer_portrait', 'confidence': 0.95, 'target_value': '重疾险', 'path_types': None, 'subIntent': '其他意图'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "evidence": [
+        [
+          {
+            "kind": "intent",
+            "error_type": "wrong_label",
+            "expected": {
+              "intent": "customer_portrait"
+            },
+            "actual": {
+              "intent": "other"
+            },
+            "evidence_ref": "extracted_output.intent",
+            "raw": {
+              "intent": "other",
+              "subIntent": "其他意图"
+            },
+            "incomplete": false
+          },
+          {
+            "kind": "entity",
+            "error_type": "missing_entity",
+            "expected": {
+              "target_value": "重疾险"
+            },
+            "actual": {},
+            "evidence_ref": "extracted_output.target_value",
+            "raw": {},
+            "incomplete": true
+          }
+        ]
+      ],
+      "evidence_strength": "medium",
+      "summary": {
+        "attribution_count": 4,
+        "probe_count": 0,
+        "summary_text": "单轮意图识别失败的根本原因在于NLU模型将查询“帮我看看上季度买了重疾险的客户都是啥样的？”分类为other而非customer_portrait，伴随低置信度0.5。原始API返回的意图编码4001及空实体表明模型完全未识别客户画像意图及其关键实体。后续适配器与映射层均按当前逻辑正确执行，但无法弥补上游分类错误。最可能的根本原因是意图识别模型的提示词或训练数据未有效覆盖customer_portrait的典型问法，导致该意图与兜底other之间的决策边界模糊。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      }
+    }
+  ]
+}

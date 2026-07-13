@@ -1,0 +1,90 @@
+{
+  "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783906273825",
+  "project_id": "marketting-planning",
+  "case_id": "mock-agent-marketting-planning-d1642b58",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图识别为营销规划",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "ext_repo:app/workflow/steps/intent_recognition.py",
+        "ext_repo:app/workflow/prompts/intent_prompt.py"
+      ],
+      "root_cause_hypothesis": "意图识别模块未将包含NBEV目标差距、增员和产品优化等关键词的查询正确归类为营销规划意图，而是输出intent=4001（其他意图），导致后续所有营销规划流程被跳过。可能原因是意图分类的prompt或模型缺少营销规划类别的示例/规则，或者对NBEV等领域的语义理解不足。",
+      "evidence": [
+        "extracted_output.turns[0].intent=4001, intent_name='其他意图'",
+        "judge_result.missing[0]: kind='intent', expected='营销规划相关意图', actual='其他意图'",
+        "trace中用户查询明确提到“NBEV目标”、“增加理财师”、“优化产品方案”，属于营销规划典型需求"
+      ]
+    },
+    {
+      "expectation_id": "阶段流转进入意图或澄清",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "ext_repo:app/workflow/steps/intent_recognition.py (stage routing logic)"
+      ],
+      "root_cause_hypothesis": "由于意图识别错误，路由逻辑将请求指派到non_agent阶段并设置end_flag=1，提前终止了会话，使得阶段无法流转到intent或clarification。",
+      "evidence": [
+        "extracted_output.turns[0].stage='non_agent', end_flag=1",
+        "execution_stage_probe: intent_recognition.actual_stage='non_agent', expected_stage='intent'",
+        "judge_result.missing[1]: kind='stage', expected='intent/clarification', actual='non_agent'"
+      ]
+    },
+    {
+      "expectation_id": "会话连续性保持",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "ext_repo:app/workflow/steps/intent_recognition.py (end_flag decision)"
+      ],
+      "root_cause_hypothesis": "意图识别模块的输出导致会话立即结束，未能继续提问或进入规划。end_flag=1源于错误的意图分类，系统认为无需进一步交互。",
+      "evidence": [
+        "extracted_output.turns[0].end_flag=1, robot_text='卡片生成完成'",
+        "judge_result.wrong[0]: kind='end_flag', expected=0, actual=1",
+        "没有任何追问信息，直接关闭会话"
+      ]
+    },
+    {
+      "expectation_id": "SSE事件语义正确",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "可能由result_assembly或sse_generation在错误路径下生成不符合语义的事件流"
+      ],
+      "root_cause_hypothesis": "因为系统进入了non_agent终止路径，SSE生成仍然产出了intent_detected和card_delta等事件，但card_summary为空且completed为true，这违背了业务状态。根本原因仍是意图识别错误导致的路径错误。",
+      "evidence": [
+        "extracted_output.event_summary: card_delta=1, done=1, completed=true, 但实际的业务成果为空",
+        "SSE序列包含reasoning_start, card_start等，但最终卡片为空"
+      ]
+    },
+    {
+      "expectation_id": "mp_contract:expected_stage",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_recognition模块的stage赋值逻辑"
+      ],
+      "root_cause_hypothesis": "参考合同要求预期阶段为intent，但实际产生的阶段为non_agent，导致下游planning无法启动，破坏合同约定。根本原因同意图识别的错误分类。",
+      "evidence": [
+        "planning_output_probe: expected_stage='intent', actual_stage=null, stage_match=false",
+        "execution_trace中intent_recognition阶段已将actual_stage设为non_agent"
+      ]
+    }
+  ],
+  "suspected_locations": [
+    "ext_repo:app/workflow/steps/intent_recognition.py (整体意图识别与路由逻辑)",
+    "ext_repo:app/workflow/prompts/intent_prompt.py (意图分类prompt可能缺少营销规划示例)"
+  ],
+  "root_cause_hypothesis": "在意图识别（intent_recognition）阶段，系统未能正确理解用户关于NBEV目标弥补的营销规划请求，将其错误分类为“其他意图”（intent=4001），进而路由到non_agent阶段并立即终止会话（end_flag=1），导致整个规划链路未能启动。这是所有下游期望未满足的根本原因。问题可能出在意图分类的prompt设计、模型训练或规则集未覆盖“营销规划”类别，或者对金融领域术语（如NBEV）缺乏足够的知识。",
+  "evidence": [
+    "execution_trace: intent_recognition阶段实际输出stage='non_agent'而非预期的'intent'，但自身状态被标记为succeeded，表明该步骤内部逻辑认为分类正确，实为逻辑/模型缺陷",
+    "extracted_output: intent=4001, intent_name='其他意图', stage='non_agent', end_flag=1, card_summary为空",
+    "judge_result: 核心意图识别未满足，整体score为0.0",
+    "planning_output_probe: expected_stage='intent', actual_stage=null, stage_match=false, 证实planning卡未生成"
+  ],
+  "evidence_strength": "strong",
+  "summary": {
+    "attribution_count": 5,
+    "probe_count": 0,
+    "summary_text": "在意图识别（intent_recognition）阶段，系统未能正确理解用户关于NBEV目标弥补的营销规划请求，将其错误分类为“其他意图”（intent=4001），进而路由到non_agent阶段并立即终止会话（end_flag=1），导致整个规划链路未能启动。这是所有下游期望未满足的根本原因。问题可能出在意图分类的prompt设计、模型训练或规则集未覆盖“营销规划”类别，或者对金融领域术语（如NBEV）缺乏足够的知识。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "record_id": "ced5d268-eb41-4f35-ac8f-e95050747bd6",
+  "trace_id": "mock-agent-intent-9b200fd3-c189-437b-904d-5a6c9cfc2dae",
+  "project_id": "QA",
+  "caller": "mock_agent",
+  "messages": [
+    {
+      "role": "system",
+      "content": "你扮演真实终端用户，针对给定业务场景，用自然语言表达你想做的事。场景：qa_gold_answer。本项目无意图标签。input 必须包含字段：question。项目说明：评估已产出的问答输入、输出、参考答案或上下文证据，支持样本级 scenario。mock 文档摘录：# QA Mock Notes\n\nQA mock cases 覆盖三个 scenario：\n\n- `qa_gold_answer`: question + actual_answer + reference.actual_answer。\n- `qa_context_faithfulness`: question + actual_answer + contexts。\n- `qa_weak_quality`: question + actual_answer。\n\nMock 数据集保持 JSON case pool 形态，仍通过统一 batch pipeline 执行。application 文档摘录：# QA Application Notes\n\nQA 项目评估已经产出的问答结果，不在第一版中调用外部被测 QA 服务。\n\n## Input semantics\n\n- `input.question`: 用户问题。\n- `input.contexts`: 可选证据上下文，属于输入的一部分。\n- `output.actual_answer`: 待评估回答，可来自上传数据。\n- `reference.actual_answer`: 可选参考答案；与 `output.actual_answer` 同形状，语义上是参考答案，不能与待评估回答混用。上传数据里的 `golden_answer` / `gold_answer` 别名会被归一化到 `reference.actual_answer`。\n- `scenario`: adapter 按字段推断或沿用样本显式值。\n\n## RunTrace semantics\n\n`normalized_request` 保存标准化后的 input/reference/metadata/scenario；`raw_response` 表示待评估输出来源；`extracted_output` 表示标准化后的 actual answer。evaluation 文档摘录：# QA Project Evaluation Scenario Notes\n\n## Project positioning\n\nQA is one evaluation project with optional sample-level scenarios. It should not be split into multiple projects such as `QA_gold`, `QA_rag`, or `QA_weak`.\n\nThe project evaluates already-produced QA outputs. A sample can provide the user input, the evaluated answer, and optional references/context. The system should normalize these fields, build a trace, then judge and attribute independently.\n\n## Canonical sample shape\n\nQA datasets should be normalized into:\n\n```json\n{\n  \"id\": \"qa-sample-id\",\n  \"input\": {\n    \"question\": \"...\",\n    \"contexts\": []\n  },\n  \"output\": {\n    \"actual_answer\": \"...\"\n  },\n  \"reference\": {\n    \"actual_answer\": \"...\"\n  },\n  \"metadata\": {\n    \"category\": \"...\",\n    \"model_name\": \"...\",\n    \"row_index\": 1\n  },\n  \"scenario\": \"qa_gold_answer\"\n}\n```\n\nFor flat uploaded JSON, accept standard field names and normalize them:\n\n- `question` -> `input.question`\n- `contexts` -> `input.contexts`\n- `actual_answer` / `answer` -> `output.actual_answer`\n- `golden_answer` / `gold_answer` -> `reference.actual_answer`（输入别名，归一化到与 output 同形状）\n- `category`, `model_name`, `latency_ms`, `token_usage`, `cost` -> `metadata要求：query 必须是口语化的用户原话，不要出现系统术语或 JSON 字段名；query 必须贴合该系统的真实业务场景，不要涉及系统不支持的业务领域；如果有意图标签，选择一个最贴合的 expected_intent。输出 JSON，字段：{\"query\": str}。\n\n## 输出约束：mock_agent 意图生成\n你的输出必须是合法 JSON，且严格符合以下 JSON Schema：\n```json\n{\n  \"type\": \"object\",\n  \"properties\": {\n    \"query\": {\n      \"type\": \"string\",\n      \"minLength\": 1\n    },\n    \"expected_intent\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"minLength\": 1\n    },\n    \"user_intent\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"minLength\": 1\n    },\n    \"turns\": {\n      \"type\": [\n        \"array\",\n        \"null\"\n      ],\n      \"items\": {\n        \"type\": \"object\"\n      }\n    }\n  },\n  \"additionalProperties\": false,\n  \"required\": [\n    \"query\"\n  ]\n}\n```\n\n### 强约束\n- 最终回答必须只包含一个 JSON object；不要输出 Markdown，不要使用 ```json 代码块，不要在 JSON 外输出解释、前缀或后缀。\n- 最终回答首字符必须是 `{`，末字符必须是 `}`。\n- JSON 字符串内部如需引用用户原词，禁止直接写未转义英文双引号；请使用中文引号“”或转义为 `\\\"`。\n- 必须包含 `required` 列表中的所有字段。\n- 每个字段值必须匹配 schema 中的类型。\n- 以下字段必须非空（空字符串/空数组/空对象/None 均视为不合规，会被阻断）：['query']\n- `additionalProperties: false`：禁止输出 schema 未定义的字段。\n- 禁止把 schema 里的类型描述符（如 \"string\"）原样当作内容填进去——每个字段必须填入真实内容。\n"
+    },
+    {
+      "role": "user",
+      "content": "{\"project_id\": \"QA\", \"scenario\": \"qa_gold_answer\", \"intent_labels\": [], \"required_input_fields\": [\"question\"], \"template\": null}"
+    }
+  ],
+  "response": null,
+  "created_at": "2026-07-12T01:41:23Z",
+  "prompt_size": 3440,
+  "llm_model": "deepseek-v4-pro",
+  "elapsed_ms": 2010,
+  "error": "__init__() got an unexpected keyword argument 'compress_tool_results'"
+}

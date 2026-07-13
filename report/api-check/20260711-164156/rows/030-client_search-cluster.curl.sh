@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+curl -sS -X POST 'http://127.0.0.1:8021/api/cluster' -H 'Content-Type: application/json' --data-raw '{"attributes": [{"case_id": "", "evidence": ["matched_patterns 中包含重疾险映射至疾病保险的规则说明", "downstream_search 不可用，judge_scope 限定为 parser_condition_semantics_only"], "evidence_strength": "strong", "expectation_attributions": [{"evidence": ["matched_patterns 中包含重疾险映射至疾病保险的规则说明", "downstream_search 不可用，judge_scope 限定为 parser_condition_semantics_only"], "expectation_id": "重疾险口语映射为疾病保险枚举值", "fulfillment_status": "fulfilled", "root_cause_hypothesis": "业务预期已达成，无根因。"}], "project_id": "client_search", "root_cause_hypothesis": "业务预期已达成，无根因。", "summary": {"attribution_count": 1, "is_complete": true, "is_formal_attribution": true, "probe_count": 0, "summary_text": "业务预期已达成，无根因。"}, "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783759318246"}], "project": "client_search"}' --write-out '
+__HTTP_STATUS__:%{http_code}'

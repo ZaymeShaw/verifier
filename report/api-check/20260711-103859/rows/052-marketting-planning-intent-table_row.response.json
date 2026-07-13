@@ -1,0 +1,62 @@
+{
+  "id": "mock-agent-marketting-planning-intent-9e16256b",
+  "input": "帮我看看上季度买了重疾险的客户都是啥样的？",
+  "scenario": "intent_recognition",
+  "output_summary": "{\"confidence\": 0.5, \"intent\": \"other\", \"subIntent\": \"其他意图\"}",
+  "reference_summary": "{\"confidence\": 0.95, \"intent\": \"customer_portrait\", \"target_value\": \"重疾险\"}",
+  "status": "not_fulfilled",
+  "execution_mode": "live",
+  "output_source": "live_service",
+  "fulfillment_status": "not_fulfilled",
+  "judge_summary": {
+    "status": "not_fulfilled",
+    "fulfillment_status": "not_fulfilled",
+    "reason": "not_fulfilled · blocking=[意图识别为customer_portrait,提取产品实体为重疾险] · 用户查询明确要求分析上季度购买重疾险的客户画像，属于customer_portrait意图。但系统识别为其他意图，置信度仅0.5，未抽取目标产品实体“重疾险”，无法满足下游客户画像分析的需求，整个识别结果无效。",
+    "reason_source": "aggregated_fulfillment",
+    "reason_stage": "judge",
+    "is_formal_attribution": true,
+    "assessment_count": 2,
+    "blocking_count": 2,
+    "primary_failure_dimensions": [
+      {
+        "blocking": true,
+        "downstream_impact": "下游无法启动客户画像分析流程",
+        "evidence": "intent为other | intent应为customer_portrait",
+        "expectation_id": "意图识别为customer_portrait",
+        "status": "not_fulfilled"
+      },
+      {
+        "blocking": true,
+        "downstream_impact": "无法筛选上季度购买重疾险的客户",
+        "evidence": "target_value为null | target_value应为“重疾险”",
+        "expectation_id": "提取产品实体为重疾险",
+        "status": "not_fulfilled"
+      }
+    ]
+  },
+  "attribution_summary": {
+    "attribution_count": 2,
+    "is_complete": true,
+    "is_formal_attribution": true,
+    "probe_count": 0,
+    "summary_text": "意图识别服务未能正确分类，根本原因在于上游分类器（可能是LLM）未将查询映射到customer_portrait类别。提示词可能未包含“客户画像”相关问法的示例，或者模型对口语化表达（“看看...都是啥样的”）理解不足。随后映射逻辑（INTENT_MAPPING）将unknown或空值映射为other，且实体抽取依赖于正确意图，导致target_value丢失。结合置信度仅0.5，表明分类器处于不确定状态，未触发重试或澄清，直接输出other。"
+  },
+  "check_summary": {
+    "passed": true,
+    "issue_count": 0
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": false,
+  "check_passed": true,
+  "issue_count": 0,
+  "fallback_count": 0,
+  "divergence_stage": "",
+  "root_cause_summary": "意图识别服务未能正确分类，根本原因在于上游分类器（可能是LLM）未将查询映射到customer_portrait类别。提示词可能未包含“客户画像”相关问法的示例，或者模型对口语化表达（“看看...都是啥样的”）理解不足。随后映射逻辑（INTENT_MAPPING）将unknown或空值映射为other，且实体抽取依赖于正确意图，导致target_value丢失。结合置信度仅0.5，表明分类器处于不确定状态，未触发重试或澄清，直接输出other。",
+  "created_at": "2026-07-11T02:39:03.903493+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783737543903"
+}

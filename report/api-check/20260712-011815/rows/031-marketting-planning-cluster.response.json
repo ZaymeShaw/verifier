@@ -1,0 +1,56 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::在链路节点 intent_recognition 中，意图分类器将用户明确的营销规划需求（增加理财师/优化产品方案补 NBEV）错误识别为“其他意图”（inte::not_fulfilled",
+      "mechanism": "在链路节点 intent_recognition 中，意图分类器将用户明确的营销规划需求（增加理财师/优化产品方案补 NBEV）错误识别为“其他意图”（inte::not_fulfilled",
+      "fulfillment_statuses": [
+        "not_fulfilled"
+      ],
+      "expectation_ids": [
+        "意图识别应进入澄清或规划阶段而非 non_agent",
+        "意图分类不应归为'其他意图'",
+        "mp_contract:expected_stage"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "representative_traces": [
+        "marketting-planning:mock-agent-marketting-planning-d1642b58:1783790296743"
+      ],
+      "common_root_cause": "在链路节点 intent_recognition 中，意图分类器将用户明确的营销规划需求（增加理财师/优化产品方案补 NBEV）错误识别为“其他意图”（intent=4001），并输出 stage=non_agent，导致后续澄清、规划等阶段均未触发，业务目标完全未满足。可能原因包括意图类别定义不完整、提示词未覆盖该场景或分类模型泛化不足。",
+      "shared_failure_pattern": "在链路节点 intent_recognition 中，意图分类器将用户明确的营销规划需求（增加理财师/优化产品方案补 NBEV）错误识别为“其他意图”（intent=4001），并输出 stage=non_agent，导致后续澄清、规划等阶段均未触发，业务目标完全未满足。可能原因包括意图类别定义不完整、提示词未覆盖该场景或分类模型泛化不足。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-d1642b58",
+          "root_cause": "在链路节点 intent_recognition 中，意图分类器将用户明确的营销规划需求（增加理财师/优化产品方案补 NBEV）错误识别为“其他意图”（intent=4001），并输出 stage=non_agent，导致后续澄清、规划等阶段均未触发，业务目标完全未满足。可能原因包括意图类别定义不完整、提示词未覆盖该场景或分类模型泛化不足。",
+          "evidence": [
+            "run_trace.extracted_output.turns[0] 中 stage='non_agent', intent='4001', intent_name='其他意图'",
+            "run_trace.intent_recognition.evidence 显示 actual_stage='non_agent', expected_stage='intent'",
+            "execution_stage_probe 观察到 intent_recognition 阶段实际 stage 与预期不符",
+            "planning_output_probe 显示 stage_match=false, actual_stage=null, evidence_gap 包含 actual_stage",
+            "field_clarification 阶段未触发所需字段澄清，因为流程提前终止",
+            "planning_function 阶段生成卡片数为 0，证实规划未被执行",
+            "judge_result 中 business_expectations 全部未满足，blocking 标志为 true"
+          ]
+        }
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "next_actions": [
+        "run_trace.extracted_output.turns[0] 中 stage='non_agent', intent='4001', intent_name='其他意图'",
+        "run_trace.intent_recognition.evidence 显示 actual_stage='non_agent', expected_stage='intent'",
+        "execution_stage_probe 观察到 intent_recognition 阶段实际 stage 与预期不符",
+        "planning_output_probe 显示 stage_match=false, actual_stage=null, evidence_gap 包含 actual_stage",
+        "field_clarification 阶段未触发所需字段澄清，因为流程提前终止"
+      ]
+    }
+  ],
+  "common_root_cause": "在链路节点 intent_recognition 中，意图分类器将用户明确的营销规划需求（增加理财师/优化产品方案补 NBEV）错误识别为“其他意图”（intent=4001），并输出 stage=non_agent，导致后续澄清、规划等阶段均未触发，业务目标完全未满足。可能原因包括意图类别定义不完整、提示词未覆盖该场景或分类模型泛化不足。",
+  "impact": "",
+  "priority": "normal"
+}

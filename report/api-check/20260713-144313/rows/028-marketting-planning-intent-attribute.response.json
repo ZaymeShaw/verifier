@@ -1,0 +1,190 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783924995493",
+  "project_id": "marketting-planning-intent",
+  "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图标签识别为customer_portrait",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_api_call",
+        "adapter_extraction",
+        "label_mapping"
+      ],
+      "root_cause_hypothesis": "The intent classification model or prompt failed to output 'customer_portrait' for the query; instead no valid intent was produced (raw_intent=None), leading the adapter to fall back to 'other'. The label mapping preserved this error.",
+      "evidence": [
+        {
+          "source": "runtime_checks",
+          "detail": "raw_intent=None, actual_mapping=other, actual_intent=other, expected_intent=customer_portrait"
+        },
+        {
+          "source": "extracted_output",
+          "detail": {
+            "intent": "other"
+          }
+        },
+        {
+          "source": "reference_contract",
+          "detail": {
+            "intent": "customer_portrait"
+          }
+        }
+      ]
+    },
+    {
+      "expectation_id": "提取产品实体重疾险作为target_value",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_api_call",
+        "adapter_extraction"
+      ],
+      "root_cause_hypothesis": "The extraction step did not output a 'target_value' field. The upstream intent API response likely did not include the entity, or the adapter failed to extract it, possibly because the overall intent was misclassified.",
+      "evidence": [
+        {
+          "source": "extracted_output",
+          "detail": "target_value missing"
+        },
+        {
+          "source": "judge_result.missing",
+          "detail": "missing_target_value, slot_not_extracted"
+        },
+        {
+          "source": "reference_contract",
+          "detail": {
+            "target_value": "重疾险"
+          }
+        }
+      ]
+    },
+    {
+      "expectation_id": "置信度满足系统阈值",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_api_call",
+        "adapter_extraction"
+      ],
+      "root_cause_hypothesis": "The low confidence (0.5) stems from the model's uncertainty in the incorrect 'other' classification. A well-functioning model should have high confidence for a clear customer portrait query.",
+      "evidence": [
+        {
+          "source": "extracted_output",
+          "detail": {
+            "confidence": 0.5
+          }
+        },
+        {
+          "source": "expectation",
+          "detail": "expected confidence >=0.7"
+        }
+      ]
+    },
+    {
+      "expectation_id": "未错误回退到其他意图",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "label_mapping",
+        "intent_api_call",
+        "adapter_extraction"
+      ],
+      "root_cause_hypothesis": "The system fell back to 'other' because no valid intent was recognized (raw_intent=None mapped to 'other'), indicating the fallback policy was incorrectly triggered for a query that belongs to a known category.",
+      "evidence": [
+        {
+          "source": "runtime_checks",
+          "detail": "raw_intent=None → mapping to 'other'"
+        },
+        {
+          "source": "intent_contract_probe",
+          "detail": "actual_intent='other', which is a fallback label"
+        }
+      ]
+    },
+    {
+      "expectation_id": "意图分发边界指向客户画像",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "label_mapping",
+        "intent_api_call"
+      ],
+      "root_cause_hypothesis": "The final intent 'other' routes to a generic handler instead of the customer portrait module, a direct result of the classification failure.",
+      "evidence": [
+        {
+          "source": "extracted_output",
+          "detail": {
+            "intent": "other"
+          }
+        },
+        {
+          "source": "routing requirement",
+          "detail": "intent must be 'customer_portrait' for portrait module"
+        }
+      ]
+    },
+    {
+      "expectation_id": "intent_contract",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_api_call",
+        "adapter_extraction",
+        "label_mapping"
+      ],
+      "root_cause_hypothesis": "The intent contract failed because the actual intent did not match the expected, and required entity slots were not populated. The pipeline did not satisfy the contract defined by the reference.",
+      "evidence": [
+        {
+          "source": "intent_contract_probe",
+          "detail": "intent_match=false, evidence_gap=['intent_evidence']"
+        },
+        {
+          "source": "judge_result.overall_fulfillment",
+          "detail": "blocking_expectations: ['intent_contract']"
+        }
+      ]
+    }
+  ],
+  "suspected_locations": [
+    {
+      "location": "intent_contract_gate",
+      "evidence": [
+        [
+          {
+            "kind": "missing_target_value",
+            "error_type": "slot_not_extracted",
+            "expected": "重疾险",
+            "evidence_ref": "extracted_output.target_value",
+            "raw": {
+              "error_type": "slot_not_extracted",
+              "evidence_ref": "extracted_output.target_value",
+              "expected": "重疾险",
+              "kind": "missing_target_value"
+            },
+            "incomplete": false
+          }
+        ]
+      ]
+    }
+  ],
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'confidence': 0.95, 'intent': 'customer_portrait', 'subIntent': '其他意图', 'target_value': '重疾险'}，实际 normalized intent evidence 为 {'confidence': 0.5, 'intent': 'other', 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+  "evidence": [
+    [
+      {
+        "kind": "missing_target_value",
+        "error_type": "slot_not_extracted",
+        "expected": "重疾险",
+        "evidence_ref": "extracted_output.target_value",
+        "raw": {
+          "error_type": "slot_not_extracted",
+          "evidence_ref": "extracted_output.target_value",
+          "expected": "重疾险",
+          "kind": "missing_target_value"
+        },
+        "incomplete": false
+      }
+    ]
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "attribution_count": 6,
+    "probe_count": 0,
+    "summary_text": "The intent recognition pipeline failed to classify the user query as 'customer_portrait'. The intent API or adapter extraction returned no valid raw intent (raw_intent=None), which the label mapping then mapped to 'other'. Additionally, the extraction did not populate the required 'target_value' slot. This indicates a failure in the underlying intent classification model/prompt or an extraction issue that omits necessary slots. Consequently, confidence is low and routing fails.",
+    "is_complete": false,
+    "is_formal_attribution": false
+  }
+}

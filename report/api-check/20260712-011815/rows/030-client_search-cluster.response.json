@@ -1,0 +1,92 @@
+{
+  "project_id": "client_search",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::业务预期已达成，无根因。::fulfilled",
+      "mechanism": "业务预期已达成，无根因。::fulfilled",
+      "fulfillment_statuses": [
+        "fulfilled"
+      ],
+      "expectation_ids": [
+        "重疾险口语映射为疾病保险枚举值",
+        "使用pCategorys字段表达险种大类筛选",
+        "操作符语义等价于可匹配持有疾病保险的客户"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "client_search:mock-agent-client_search-cdd7df11:1783790297151"
+      ],
+      "representative_traces": [
+        "client_search:mock-agent-client_search-cdd7df11:1783790297151"
+      ],
+      "common_root_cause": "业务预期已达成，无根因。",
+      "shared_failure_pattern": "业务预期已达成，无根因。",
+      "representative_diffs": [
+        {
+          "case_id": "client_search:mock-agent-client_search-cdd7df11:1783790297151",
+          "root_cause": "业务预期已达成，无根因。",
+          "evidence": [
+            {
+              "key": "pCategorys.重疾险",
+              "mapped_to": "疾病保险",
+              "note": "capability_manifest 中明确定义重疾险→疾病保险",
+              "source": "value_mappings"
+            },
+            {
+              "enum_hint": "疾病保险 在合法枚举范围内",
+              "operators": [
+                "CONTAINS",
+                "NOT_CONTAINS"
+              ],
+              "source": "capability_manifest.pCategorys"
+            },
+            {
+              "rule": "不纠结 CONTAINS 和 MATCH 的问题，原项目会通过后处理处置",
+              "source": "judge_boundary_protocals"
+            },
+            {
+              "note": "下游搜索不可用，但 parser 条件语义可独立判断为正确",
+              "result_set_verified": false,
+              "source": "downstream_search",
+              "status": "unavailable"
+            }
+          ]
+        }
+      ],
+      "verification_cases": [
+        "client_search:mock-agent-client_search-cdd7df11:1783790297151"
+      ],
+      "next_actions": [
+        {
+          "key": "pCategorys.重疾险",
+          "mapped_to": "疾病保险",
+          "note": "capability_manifest 中明确定义重疾险→疾病保险",
+          "source": "value_mappings"
+        },
+        {
+          "enum_hint": "疾病保险 在合法枚举范围内",
+          "operators": [
+            "CONTAINS",
+            "NOT_CONTAINS"
+          ],
+          "source": "capability_manifest.pCategorys"
+        },
+        {
+          "rule": "不纠结 CONTAINS 和 MATCH 的问题，原项目会通过后处理处置",
+          "source": "judge_boundary_protocals"
+        },
+        {
+          "note": "下游搜索不可用，但 parser 条件语义可独立判断为正确",
+          "result_set_verified": false,
+          "source": "downstream_search",
+          "status": "unavailable"
+        }
+      ]
+    }
+  ],
+  "common_root_cause": "业务预期已达成，无根因。",
+  "impact": "",
+  "priority": "normal"
+}

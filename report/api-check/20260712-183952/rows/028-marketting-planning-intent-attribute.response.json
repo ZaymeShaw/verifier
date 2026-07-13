@@ -1,0 +1,109 @@
+{
+  "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783853426693",
+  "project_id": "marketting-planning-intent",
+  "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图标签应为customer_portrait",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_api_call"
+      ],
+      "root_cause_hypothesis": "意图识别API未能将查询分类为customer_portrait，导致提取结果为other，与reference冲突。",
+      "evidence": [
+        "extracted_output: intent=other, confidence=0.5",
+        "reference_contract: intent=customer_portrait",
+        "runtime_checks: raw_intent=None, expected_intent=customer_portrait"
+      ]
+    },
+    {
+      "expectation_id": "实体抽取target_value包含重疾险",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_api_call"
+      ],
+      "root_cause_hypothesis": "意图识别API未输出target_value实体，槽位缺失。",
+      "evidence": [
+        "extracted_output: 无target_value",
+        "reference_contract: target_value=重疾险",
+        "judge_result.missing: kind=target_value"
+      ]
+    },
+    {
+      "expectation_id": "置信度不低于业务阈值",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_api_call"
+      ],
+      "root_cause_hypothesis": "API返回置信度0.5，远低于阈值0.8/0.95，因模型错误分类为other导致低置信。",
+      "evidence": [
+        "extracted_output: confidence=0.5",
+        "reference_contract: confidence=0.95",
+        "acceptance_criteria: gte 0.8"
+      ]
+    },
+    {
+      "expectation_id": "不应将明确意图降级为other",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "intent_api_call"
+      ],
+      "root_cause_hypothesis": "查询明显属于客户画像，但模型错误判断为“其他意图”，触发兜底逻辑。",
+      "evidence": [
+        "extracted_output: intent=other",
+        "raw_response: intent_name=其他意图",
+        "judge_result: blocking=true"
+      ]
+    }
+  ],
+  "suspected_locations": [
+    {
+      "location": "intent_contract_gate",
+      "evidence": [
+        [
+          {
+            "kind": "target_value",
+            "error_type": "missing_slot",
+            "expected": "重疾险",
+            "evidence_ref": "extracted_output",
+            "raw": {
+              "error_type": "missing_slot",
+              "evidence_ref": "extracted_output",
+              "expected": "重疾险",
+              "incomplete": false,
+              "kind": "target_value"
+            },
+            "incomplete": false
+          }
+        ]
+      ]
+    }
+  ],
+  "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'confidence': 0.95, 'intent': 'customer_portrait', 'subIntent': '其他意图', 'target_value': '重疾险'}，实际 normalized intent evidence 为 {'confidence': 0.5, 'intent': 'other', 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+  "evidence": [
+    [
+      {
+        "kind": "target_value",
+        "error_type": "missing_slot",
+        "expected": "重疾险",
+        "evidence_ref": "extracted_output",
+        "raw": {
+          "error_type": "missing_slot",
+          "evidence_ref": "extracted_output",
+          "expected": "重疾险",
+          "incomplete": false,
+          "kind": "target_value"
+        },
+        "incomplete": false
+      }
+    ]
+  ],
+  "evidence_strength": "medium",
+  "summary": {
+    "attribution_count": 4,
+    "probe_count": 0,
+    "summary_text": "核心原因是意图识别模型（/api/v1/marketing-planning/intent-recognition）未能正确分类“帮我看看上季度买了重疾险的客户都是啥样的？”为用户画像意图，输出为“其他意图”（编码4001），并缺失target_value实体。后续adapter和label_mapping忠实传递了错误结果，未进行纠偏。需检查模型prompt、训练数据或示例是否覆盖此类表达。",
+    "is_complete": false,
+    "is_formal_attribution": false
+  }
+}

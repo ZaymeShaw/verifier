@@ -1,0 +1,186 @@
+{
+  "project": "marketting-planning-intent",
+  "attributes": [
+    {
+      "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783918195651",
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+      "expectation_attributions": [
+        {
+          "expectation_id": "意图标签识别为customer_portrait",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call",
+            "adapter_extraction"
+          ],
+          "root_cause_hypothesis": "意图识别模型返回了兜底代码 4001，导致被映射为 other，而不是 customer_portrait。",
+          "evidence": [
+            "expected intent: customer_portrait",
+            "actual intent: other",
+            "raw_intent: 4001",
+            "mapping includes customer_portrait but not used"
+          ]
+        },
+        {
+          "expectation_id": "提取目标险种实体为重疾险",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call",
+            "adapter_extraction"
+          ],
+          "root_cause_hypothesis": "模型未识别出重疾险实体，因为意图错误，也未进行实体提取。",
+          "evidence": [
+            "expected target_value: 重疾险",
+            "actual target_value: null",
+            "intent_evidence.entities: []"
+          ]
+        },
+        {
+          "expectation_id": "置信度达到0.95",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call"
+          ],
+          "root_cause_hypothesis": "模型对错误意图的置信度仅 0.5，远低于要求的 0.95，说明模型对保险场景查询不确定性高。",
+          "evidence": [
+            "expected confidence >= 0.95",
+            "actual confidence: 0.5"
+          ]
+        },
+        {
+          "expectation_id": "避免错误回退到其他意图",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call",
+            "label_mapping"
+          ],
+          "root_cause_hypothesis": "模型输出 4001，经映射成为 other，违背避免回退要求。",
+          "evidence": [
+            "actual intent: other",
+            "subIntent: 其他意图",
+            "mapping: 4001 -> other"
+          ]
+        },
+        {
+          "expectation_id": "调度到客户画像分析流程",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "label_mapping",
+            "intent_api_call"
+          ],
+          "root_cause_hypothesis": "因为意图识别为 other，无法触发 customer_portrait 调度。",
+          "evidence": [
+            "expected scheduling for customer_portrait",
+            "actual scheduling will be based on other"
+          ]
+        }
+      ],
+      "suspected_locations": [
+        {
+          "location": "intent_contract_gate",
+          "evidence": [
+            [
+              {
+                "kind": "intent_label",
+                "error_type": "missing",
+                "expected": "customer_portrait",
+                "evidence_ref": "extracted_output.intent",
+                "raw": {
+                  "kind": "intent_label",
+                  "error_type": "missing",
+                  "expected": "customer_portrait",
+                  "evidence_ref": "extracted_output.intent",
+                  "incomplete": false
+                },
+                "incomplete": false
+              },
+              {
+                "kind": "target_entity",
+                "error_type": "missing",
+                "expected": "重疾险",
+                "evidence_ref": "extracted_output.target_value",
+                "raw": {
+                  "kind": "target_entity",
+                  "error_type": "missing",
+                  "expected": "重疾险",
+                  "evidence_ref": "extracted_output.target_value",
+                  "incomplete": false
+                },
+                "incomplete": false
+              },
+              {
+                "kind": "confidence_for_correct_intent",
+                "error_type": "missing",
+                "expected": ">=0.95",
+                "evidence_ref": "extracted_output.confidence (only 0.5 for other)",
+                "raw": {
+                  "kind": "confidence_for_correct_intent",
+                  "error_type": "missing",
+                  "expected": ">=0.95",
+                  "evidence_ref": "extracted_output.confidence (only 0.5 for other)",
+                  "incomplete": false
+                },
+                "incomplete": false
+              }
+            ]
+          ]
+        }
+      ],
+      "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': 'customer_portrait', 'confidence': 0.95, 'target_value': '重疾险', 'path_types': None, 'subIntent': '其他意图'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "evidence": [
+        [
+          {
+            "kind": "intent_label",
+            "error_type": "missing",
+            "expected": "customer_portrait",
+            "evidence_ref": "extracted_output.intent",
+            "raw": {
+              "kind": "intent_label",
+              "error_type": "missing",
+              "expected": "customer_portrait",
+              "evidence_ref": "extracted_output.intent",
+              "incomplete": false
+            },
+            "incomplete": false
+          },
+          {
+            "kind": "target_entity",
+            "error_type": "missing",
+            "expected": "重疾险",
+            "evidence_ref": "extracted_output.target_value",
+            "raw": {
+              "kind": "target_entity",
+              "error_type": "missing",
+              "expected": "重疾险",
+              "evidence_ref": "extracted_output.target_value",
+              "incomplete": false
+            },
+            "incomplete": false
+          },
+          {
+            "kind": "confidence_for_correct_intent",
+            "error_type": "missing",
+            "expected": ">=0.95",
+            "evidence_ref": "extracted_output.confidence (only 0.5 for other)",
+            "raw": {
+              "kind": "confidence_for_correct_intent",
+              "error_type": "missing",
+              "expected": ">=0.95",
+              "evidence_ref": "extracted_output.confidence (only 0.5 for other)",
+              "incomplete": false
+            },
+            "incomplete": false
+          }
+        ]
+      ],
+      "evidence_strength": "medium",
+      "summary": {
+        "attribution_count": 5,
+        "probe_count": 0,
+        "summary_text": "意图识别模型未能正确分类保险领域的客户画像查询，错误输出兜底意图代码 4001 并附带低置信度 0.5，导致下游适配器将其解析为 other 意图，缺失 target_value 实体，进而所有业务期望未达成。最可能的根因是模型训练数据或 prompt 不足以处理此类保险规划场景的语义，未将类似查询映射到 customer_portrait。",
+        "is_complete": true,
+        "is_formal_attribution": true
+      }
+    }
+  ]
+}

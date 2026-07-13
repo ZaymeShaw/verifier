@@ -1,0 +1,46 @@
+{
+  "id": "mock-agent-client_search-cdd7df11",
+  "input": "帮我看看公司里所有买了重疾险的客户都有谁",
+  "scenario": "",
+  "output_summary": "{\"code\": 0, \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"MATCH\", \"value\": \"疾病保险\"}], \"confidence\": 0.8, \"cost_times\": 818.0, \"end_flag\": 1, \"intent_summa…",
+  "reference_summary": "{\"code\": 0, \"conditions\": [{\"field\": \"pCategorys\", \"operator\": \"CONTAINS\", \"value\": [\"疾病保险\"]}], \"end_flag\": 1, \"msg\": \"操作成功\", \"query\": \"帮我看看公司里所有买了重疾险的客户都有谁\", …",
+  "status": "fulfilled",
+  "execution_mode": "live",
+  "output_source": "live_service",
+  "fulfillment_status": "fulfilled",
+  "judge_summary": {
+    "status": "fulfilled",
+    "fulfillment_status": "fulfilled",
+    "reason": "fulfilled · 0 blocking expectations all met · 用户查询「买了重疾险的客户」，核心意图是按险种大类筛选持有疾病保险的客户。actual output正确使用了pCategorys字段，将口语「重疾险」映射为标准枚举值「疾病保险」，操作符为正向匹配MATCH。虽然prompt示例中pCategorys的标准操作符为CONTAINS且值为数组形式，但judge_boundary明确规定不纠结CONTAINS和MATCH的差异——两者在ES查询语义上等价，后处理也会统一处置。改写后的query正确将「重疾险」替换为「疾病保险」。条件数量为1，无多余条件，query_logic为AND合理。下游搜索不可用，但在parser_condition_semantics_only评估范围内，条件语义完全满足用户意图。三项business_expectations均fulfilled。",
+    "reason_source": "aggregated_fulfillment",
+    "reason_stage": "judge",
+    "is_formal_attribution": true,
+    "assessment_count": 3,
+    "blocking_count": 0
+  },
+  "attribution_summary": {
+    "attribution_count": 3,
+    "is_complete": true,
+    "is_formal_attribution": true,
+    "probe_count": 0,
+    "summary_text": "业务预期已达成，无根因。"
+  },
+  "check_summary": {
+    "passed": false,
+    "issue_count": 3
+  },
+  "fallback_summary": {
+    "count": 0,
+    "needs_human_review": false
+  },
+  "needs_human_review": false,
+  "check_passed": false,
+  "issue_count": 3,
+  "fallback_count": 0,
+  "divergence_stage": "",
+  "root_cause_summary": "业务预期已达成，无根因。",
+  "created_at": "2026-07-13T04:49:57.085825+00:00",
+  "stop_reason": "",
+  "interaction_mode": "single_turn",
+  "trace_id": "client_search:mock-agent-client_search-cdd7df11:1783918197085"
+}

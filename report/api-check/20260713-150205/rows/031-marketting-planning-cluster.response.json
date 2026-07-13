@@ -1,0 +1,98 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::意图识别模块(intent_recognition)错误地将用户明确的营销规划请求分类为“其他意图”(intent=4001)并输出non_agent阶段，导致::not_fulfilled",
+      "mechanism": "意图识别模块(intent_recognition)错误地将用户明确的营销规划请求分类为“其他意图”(intent=4001)并输出non_agent阶段，导致::not_fulfilled",
+      "fulfillment_statuses": [
+        "not_fulfilled",
+        "fulfilled"
+      ],
+      "expectation_ids": [
+        "意图识别准确分类用户需求为营销规划相关意图",
+        "系统路由至正确阶段避免过早结束",
+        "SSE事件流完整且无错误",
+        "mp_contract:expected_stage"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "representative_traces": [
+        "marketting-planning:mock-agent-marketting-planning-d1642b58:1783926126459"
+      ],
+      "common_root_cause": "意图识别模块(intent_recognition)错误地将用户明确的营销规划请求分类为“其他意图”(intent=4001)并输出non_agent阶段，导致整个规划链路中断。该错误是后续所有阶段（field_clarification、path_dispatch、planning_function、result_assembly）无有效输出的根本原因。尽管SSE事件流形式上完成，但业务内容为空。未发现其他阶段引入独立错误。",
+      "shared_failure_pattern": "意图识别模块(intent_recognition)错误地将用户明确的营销规划请求分类为“其他意图”(intent=4001)并输出non_agent阶段，导致整个规划链路中断。该错误是后续所有阶段（field_clarification、path_dispatch、planning_function、result_assembly）无有效输出的根本原因。尽管SSE事件流形式上完成，但业务内容为空。未发现其他阶段引入独立错误。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-d1642b58",
+          "root_cause": "意图识别模块(intent_recognition)错误地将用户明确的营销规划请求分类为“其他意图”(intent=4001)并输出non_agent阶段，导致整个规划链路中断。该错误是后续所有阶段（field_clarification、path_dispatch、planning_function、result_assembly）无有效输出的根本原因。尽管SSE事件流形式上完成，但业务内容为空。未发现其他阶段引入独立错误。",
+          "evidence": [
+            {
+              "source": "extracted_output.turns[0]",
+              "type": "intent_output",
+              "value": {
+                "intent": "4001",
+                "intent_name": "其他意图"
+              }
+            },
+            {
+              "source": "extracted_output.turns[0].stage",
+              "type": "stage_output",
+              "value": "non_agent"
+            },
+            {
+              "source": "reference_contract",
+              "type": "expected_contract",
+              "value": {
+                "expected_stage": "intent",
+                "scenario": "intent_recognition"
+              }
+            },
+            {
+              "source": "user_query",
+              "type": "user_input",
+              "value": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？"
+            }
+          ]
+        }
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "next_actions": [
+        {
+          "source": "extracted_output.turns[0]",
+          "type": "intent_output",
+          "value": {
+            "intent": "4001",
+            "intent_name": "其他意图"
+          }
+        },
+        {
+          "source": "extracted_output.turns[0].stage",
+          "type": "stage_output",
+          "value": "non_agent"
+        },
+        {
+          "source": "reference_contract",
+          "type": "expected_contract",
+          "value": {
+            "expected_stage": "intent",
+            "scenario": "intent_recognition"
+          }
+        },
+        {
+          "source": "user_query",
+          "type": "user_input",
+          "value": "我们团队今年的NBEV目标还差不少，能帮我看看怎么通过增加理财师或者优化产品方案来补上吗？"
+        }
+      ]
+    }
+  ],
+  "common_root_cause": "意图识别模块(intent_recognition)错误地将用户明确的营销规划请求分类为“其他意图”(intent=4001)并输出non_agent阶段，导致整个规划链路中断。该错误是后续所有阶段（field_clarification、path_dispatch、planning_function、result_assembly）无有效输出的根本原因。尽管SSE事件流形式上完成，但业务内容为空。未发现其他阶段引入独立错误。",
+  "impact": "",
+  "priority": "normal"
+}

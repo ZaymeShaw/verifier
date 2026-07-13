@@ -1,0 +1,82 @@
+{
+  "project_id": "marketting-planning",
+  "clusters": [
+    {
+      "cluster_id": "root_cause::在intent_recognition阶段，意图分类模型未能正确识别用户提供的营销规划意图（增加理财师/优化产品方案弥补NBEV缺口），将其归类为“其他意图”并::not_fulfilled",
+      "mechanism": "在intent_recognition阶段，意图分类模型未能正确识别用户提供的营销规划意图（增加理财师/优化产品方案弥补NBEV缺口），将其归类为“其他意图”并::not_fulfilled",
+      "fulfillment_statuses": [
+        "not_fulfilled",
+        "fulfilled"
+      ],
+      "expectation_ids": [
+        "用户规划意图被正确识别并进入intent阶段",
+        "SSE事件序列完整且符合协议",
+        "系统未启用fallback（allow_fallback为false）",
+        "mp_contract:expected_stage"
+      ],
+      "needs_human_review": false,
+      "canonical_attribution": true,
+      "count": 1,
+      "representative_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "representative_traces": [
+        "marketting-planning:mock-agent-marketting-planning-d1642b58:1783857892431"
+      ],
+      "common_root_cause": "在intent_recognition阶段，意图分类模型未能正确识别用户提供的营销规划意图（增加理财师/优化产品方案弥补NBEV缺口），将其归类为“其他意图”并输出non_agent阶段，导致整个规划链路在早期即偏离预期，未能进入intent及后续澄清规划流程。",
+      "shared_failure_pattern": "在intent_recognition阶段，意图分类模型未能正确识别用户提供的营销规划意图（增加理财师/优化产品方案弥补NBEV缺口），将其归类为“其他意图”并输出non_agent阶段，导致整个规划链路在早期即偏离预期，未能进入intent及后续澄清规划流程。",
+      "representative_diffs": [
+        {
+          "case_id": "mock-agent-marketting-planning-d1642b58",
+          "root_cause": "在intent_recognition阶段，意图分类模型未能正确识别用户提供的营销规划意图（增加理财师/优化产品方案弥补NBEV缺口），将其归类为“其他意图”并输出non_agent阶段，导致整个规划链路在早期即偏离预期，未能进入intent及后续澄清规划流程。",
+          "evidence": [
+            {
+              "actual_output": {
+                "intent": "4001",
+                "intent_name": "其他意图",
+                "stage": "non_agent"
+              },
+              "expected": {
+                "intent_name_not": "其他意图",
+                "stage": "intent"
+              },
+              "stage": "intent_recognition",
+              "status": "succeeded"
+            },
+            {
+              "card_count": 0,
+              "reason": "因意图识别为非代理意图，未触发规划卡片生成",
+              "stage": "planning_function"
+            }
+          ]
+        }
+      ],
+      "verification_cases": [
+        "mock-agent-marketting-planning-d1642b58"
+      ],
+      "next_actions": [
+        {
+          "actual_output": {
+            "intent": "4001",
+            "intent_name": "其他意图",
+            "stage": "non_agent"
+          },
+          "expected": {
+            "intent_name_not": "其他意图",
+            "stage": "intent"
+          },
+          "stage": "intent_recognition",
+          "status": "succeeded"
+        },
+        {
+          "card_count": 0,
+          "reason": "因意图识别为非代理意图，未触发规划卡片生成",
+          "stage": "planning_function"
+        }
+      ]
+    }
+  ],
+  "common_root_cause": "在intent_recognition阶段，意图分类模型未能正确识别用户提供的营销规划意图（增加理财师/优化产品方案弥补NBEV缺口），将其归类为“其他意图”并输出non_agent阶段，导致整个规划链路在早期即偏离预期，未能进入intent及后续澄清规划流程。",
+  "impact": "",
+  "priority": "normal"
+}

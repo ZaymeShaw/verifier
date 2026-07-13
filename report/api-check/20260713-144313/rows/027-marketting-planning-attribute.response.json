@@ -1,0 +1,127 @@
+{
+  "trace_id": "marketting-planning:mock-agent-marketting-planning-d1642b58:1783924995234",
+  "project_id": "marketting-planning",
+  "case_id": "mock-agent-marketting-planning-d1642b58",
+  "expectation_attributions": [
+    {
+      "expectation_id": "意图识别正确分类为营销规划意图",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "app/workflow/steps/intent_recognition.py",
+        "app/workflow/prompts/intent_prompt.py",
+        "app/schemas/intent.py"
+      ],
+      "root_cause_hypothesis": "意图识别模块未能正确分类用户的营销规划意图（弥补NBEV目标缺口），错误输出 intent=4001（其他意图）和 stage=non_agent，导致后续规划流程无法触发。",
+      "evidence": [
+        {
+          "type": "actual_intent",
+          "value": "4001",
+          "source": "extracted_output.turns[0].intent"
+        },
+        {
+          "type": "actual_intent_name",
+          "value": "其他意图",
+          "source": "extracted_output.turns[0].intent_name"
+        },
+        {
+          "type": "actual_stage",
+          "value": "non_agent",
+          "source": "extracted_output.turns[0].stage"
+        },
+        {
+          "type": "judge_assessment",
+          "value": "not_fulfilled",
+          "source": "fulfillment_assessments"
+        }
+      ]
+    },
+    {
+      "expectation_id": "阶段路由正确导向代理流程",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "app/workflow/steps/intent_recognition.py",
+        "app/workflow/steps/path_dispatch.py"
+      ],
+      "root_cause_hypothesis": "由于上游 intent_recognition 输出了 stage=non_agent，导致路径调度（path_dispatch）将请求路由到非代理流程，而非预期的 intent/clarification/planning 阶段。",
+      "evidence": [
+        {
+          "type": "actual_stage",
+          "value": "non_agent",
+          "source": "extracted_output.turns[0].stage"
+        },
+        {
+          "type": "expected_stage",
+          "value": "intent",
+          "source": "reference_contract"
+        },
+        {
+          "type": "path_dispatch_status",
+          "value": "succeeded but routed to non_agent",
+          "source": "execution_trace"
+        }
+      ]
+    },
+    {
+      "expectation_id": "mp_contract:expected_stage",
+      "fulfillment_status": "not_fulfilled",
+      "suspected_locations": [
+        "app/workflow/steps/intent_recognition.py"
+      ],
+      "root_cause_hypothesis": "实际 stage 为 non_agent，与合同预期的 intent 阶段不符，根因在于 intent_recognition 阶段未正确设置 stage。",
+      "evidence": [
+        {
+          "type": "contract_expected_stage",
+          "value": "intent",
+          "source": "reference_contract"
+        },
+        {
+          "type": "actual_stage",
+          "value": "non_agent",
+          "source": "extracted_output.turns[0].stage"
+        }
+      ]
+    }
+  ],
+  "suspected_locations": [
+    "app/workflow/steps/intent_recognition.py",
+    "app/workflow/prompts/intent_prompt.py",
+    "app/schemas/intent.py",
+    "app/workflow/steps/path_dispatch.py"
+  ],
+  "root_cause_hypothesis": "意图识别阶段（intent_recognition）的错误分类是本案例的根因：用户明确表达“弥补NBEV目标”的营销规划需求，但系统将其归类为“其他意图”（4001）并将阶段设为 non_agent，导致整个规划链路中断，后续所有阶段基于错误信息运行。",
+  "evidence": [
+    {
+      "probe": "execution_stage_probe",
+      "finding": "intent_recognition evidence shows actual_stage=non_agent vs expected_stage=intent",
+      "source": "execution_stage_probe"
+    },
+    {
+      "probe": "planning_output_probe",
+      "finding": "expected_stage=intent, actual_stage=null (but extracted_output shows non_agent), stage_match false",
+      "source": "planning_output_probe"
+    },
+    {
+      "judge": "missing_correct_intent",
+      "finding": "intent=4001, expected non-4001",
+      "source": "judge_result.missing"
+    },
+    {
+      "judge": "wrong_stage_value",
+      "finding": "stage=non_agent, expected=intent",
+      "source": "judge_result.wrong"
+    },
+    {
+      "runtime": "extracted_output.turns[0]",
+      "finding": "{intent: 4001, intent_name: 其他意图, stage: non_agent}",
+      "source": "runtime_checks"
+    }
+  ],
+  "evidence_strength": "strong",
+  "summary": {
+    "attribution_count": 3,
+    "probe_count": 0,
+    "summary_text": "意图识别阶段（intent_recognition）的错误分类是本案例的根因：用户明确表达“弥补NBEV目标”的营销规划需求，但系统将其归类为“其他意图”（4001）并将阶段设为 non_agent，导致整个规划链路中断，后续所有阶段基于错误信息运行。",
+    "is_complete": true,
+    "is_formal_attribution": true
+  }
+}

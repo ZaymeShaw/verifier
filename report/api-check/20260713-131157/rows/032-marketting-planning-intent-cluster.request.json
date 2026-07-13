@@ -1,0 +1,248 @@
+{
+  "project": "marketting-planning-intent",
+  "attributes": [
+    {
+      "trace_id": "marketting-planning-intent:mock-agent-marketting-planning-intent-9e16256b:1783919519540",
+      "project_id": "marketting-planning-intent",
+      "case_id": "mock-agent-marketting-planning-intent-9e16256b",
+      "expectation_attributions": [
+        {
+          "expectation_id": "意图标签应为customer_portrait",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call",
+            "label_mapping"
+          ],
+          "root_cause_hypothesis": "意图识别服务返回了错误的原始意图编码'4001'，随后label_mapping将其映射为'other'，而非期望的customer_portrait。",
+          "evidence": [
+            {
+              "source": "run_trace.extracted_output",
+              "intent": "other"
+            },
+            {
+              "source": "intent_evidence",
+              "raw_intent": "4001"
+            },
+            {
+              "source": "runtime_checks",
+              "actual_mapping": "other",
+              "mapping_source": "INTENT_MAPPING"
+            }
+          ]
+        },
+        {
+          "expectation_id": "需提取目标实体“重疾险”",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call",
+            "adapter_extraction"
+          ],
+          "root_cause_hypothesis": "意图识别模型未从查询中识别并提取出目标实体'重疾险'，导致adapter_extraction阶段target_value为null。",
+          "evidence": [
+            {
+              "source": "run_trace.extracted_output"
+            },
+            {
+              "source": "intent_evidence"
+            }
+          ]
+        },
+        {
+          "expectation_id": "置信度应达到业务可用的阈值",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call"
+          ],
+          "root_cause_hypothesis": "意图识别模型对分类结果置信度仅为0.5，远低于期望的0.95，表明模型对本次查询的预测确定性不足，可能因训练数据覆盖或模型校准问题导致。",
+          "evidence": [
+            {
+              "source": "run_trace.extracted_output",
+              "confidence": 0.5
+            },
+            {
+              "source": "reference_contract",
+              "expected_confidence": 0.95
+            }
+          ]
+        },
+        {
+          "expectation_id": "意图分发不应误判为其他意图",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call",
+            "label_mapping"
+          ],
+          "root_cause_hypothesis": "由于最终intent为'other'，导致分发到其他兜底分支；根因与意图标签错误相同。",
+          "evidence": [
+            {
+              "source": "run_trace.extracted_output",
+              "intent": "other",
+              "subIntent": "其他意图"
+            },
+            {
+              "source": "runtime_checks",
+              "actual_intent": "other"
+            }
+          ]
+        },
+        {
+          "expectation_id": "intent_contract",
+          "fulfillment_status": "not_fulfilled",
+          "suspected_locations": [
+            "intent_api_call",
+            "adapter_extraction",
+            "label_mapping"
+          ],
+          "root_cause_hypothesis": "当前单轮意图识别整体未满足reference contract，主要失败项为intent、target_value和confidence，原因同前述各期望。",
+          "evidence": [
+            {
+              "source": "judge_result",
+              "overall_fulfillment": "not_fulfilled",
+              "失败项": [
+                "intent"
+              ]
+            }
+          ]
+        }
+      ],
+      "suspected_locations": [
+        {
+          "location": "intent_contract_gate",
+          "evidence": [
+            [
+              {
+                "kind": "intent_label",
+                "error_type": "missing_value",
+                "expected": "customer_portrait",
+                "actual": "other",
+                "evidence_ref": "intent_label",
+                "raw": {
+                  "kind": "intent_label",
+                  "error_type": "missing_value",
+                  "expected": "customer_portrait",
+                  "actual": "other",
+                  "evidence_ref": "intent_label"
+                },
+                "incomplete": false
+              },
+              {
+                "kind": "slot_value",
+                "error_type": "missing_value",
+                "expected": "重疾险",
+                "evidence_ref": "target_value",
+                "raw": {
+                  "kind": "slot_value",
+                  "error_type": "missing_value",
+                  "expected": "重疾险",
+                  "evidence_ref": "target_value"
+                },
+                "incomplete": false
+              },
+              {
+                "kind": "confidence",
+                "error_type": "below_threshold",
+                "expected": "≥0.95",
+                "actual": 0.5,
+                "evidence_ref": "confidence",
+                "raw": {
+                  "kind": "confidence",
+                  "error_type": "below_threshold",
+                  "expected": "≥0.95",
+                  "actual": 0.5,
+                  "evidence_ref": "confidence"
+                },
+                "incomplete": false
+              },
+              {
+                "kind": "dispatch_intent",
+                "error_type": "wrong_intent",
+                "expected": "customer_portrait",
+                "actual": "other",
+                "evidence_ref": "intent",
+                "raw": {
+                  "kind": "dispatch_intent",
+                  "error_type": "wrong_intent",
+                  "expected": "customer_portrait",
+                  "actual": "other",
+                  "evidence_ref": "intent"
+                },
+                "incomplete": false
+              }
+            ]
+          ]
+        }
+      ],
+      "root_cause_hypothesis": "当前 case 期望 intent/slots 为 {'intent': 'customer_portrait', 'confidence': 0.95, 'target_value': '重疾险', 'path_types': None, 'subIntent': '其他意图'}，实际 normalized intent evidence 为 {'intent': 'other', 'confidence': 0.5, 'target_value': None, 'path_types': None, 'subIntent': '其他意图'}，最早差异位于 intent_contract_gate。",
+      "evidence": [
+        [
+          {
+            "kind": "intent_label",
+            "error_type": "missing_value",
+            "expected": "customer_portrait",
+            "actual": "other",
+            "evidence_ref": "intent_label",
+            "raw": {
+              "kind": "intent_label",
+              "error_type": "missing_value",
+              "expected": "customer_portrait",
+              "actual": "other",
+              "evidence_ref": "intent_label"
+            },
+            "incomplete": false
+          },
+          {
+            "kind": "slot_value",
+            "error_type": "missing_value",
+            "expected": "重疾险",
+            "evidence_ref": "target_value",
+            "raw": {
+              "kind": "slot_value",
+              "error_type": "missing_value",
+              "expected": "重疾险",
+              "evidence_ref": "target_value"
+            },
+            "incomplete": false
+          },
+          {
+            "kind": "confidence",
+            "error_type": "below_threshold",
+            "expected": "≥0.95",
+            "actual": 0.5,
+            "evidence_ref": "confidence",
+            "raw": {
+              "kind": "confidence",
+              "error_type": "below_threshold",
+              "expected": "≥0.95",
+              "actual": 0.5,
+              "evidence_ref": "confidence"
+            },
+            "incomplete": false
+          },
+          {
+            "kind": "dispatch_intent",
+            "error_type": "wrong_intent",
+            "expected": "customer_portrait",
+            "actual": "other",
+            "evidence_ref": "intent",
+            "raw": {
+              "kind": "dispatch_intent",
+              "error_type": "wrong_intent",
+              "expected": "customer_portrait",
+              "actual": "other",
+              "evidence_ref": "intent"
+            },
+            "incomplete": false
+          }
+        ]
+      ],
+      "evidence_strength": "medium",
+      "summary": {
+        "attribution_count": 5,
+        "probe_count": 0,
+        "summary_text": "在intent_api_call阶段，后端意图识别服务对用户查询返回了错误的原始意图编码'4001'（可能对应非customer_portrait类别），且未提取到目标实体'重疾险'，置信度仅为0.5；在label_mapping阶段，该编码被映射为'other'，导致最终意图与期望不符。根因可能为意图识别模型的分类能力不足或映射表缺少'4001'到'customer_portrait'的正确映射条目。",
+        "is_complete": false,
+        "is_formal_attribution": false
+      }
+    }
+  ]
+}
