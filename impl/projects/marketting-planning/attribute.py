@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from typing import Any
+import json
+import re
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from impl.core.attribute_protocol import run_project_attribute_protocol
-from impl.core.schema import AttributeResult, ExecutionTraceEvent, JudgeResult, ProjectSpec, RunTrace
-
+from impl.core.attribute_protocol import ProjectAttribute, run_project_attribute_protocol
+from impl.core.runtime_query_tools import extract_runtime_values
+from impl.core.schema import AttributeResult, ExecutionTraceEvent, JudgeResult, ProjectSpec, RunTrace, normalize_attribute_result, to_dict, trace_execution_trace, trace_extracted_output
 
 _STAGE_ORDER = [
     "request_normalization",
@@ -17,6 +20,52 @@ _STAGE_ORDER = [
     "sse_generation",
     "adapter_extraction",
 ]
+
+STAGE_FILE_PREFIXES: Dict[str, tuple] = {
+    "request_normalization": ("app/api/", "app/schemas/request", "app/main.py"),
+    "intent_recognition": (
+        "app/workflow/steps/intent_recognition",
+        "app/workflow/prompts/intent_",
+        "app/schemas/intent",
+        "app/config.py",
+    ),
+    "field_clarification": (
+        "app/workflow/steps/field_clarification",
+        "app/workflow/prompts/clarification",
+        "app/services/session_store",
+        "app/schemas/session",
+    ),
+    "session_merge": (
+        "app/services/session_store",
+        "app/workflow/steps/field_clarification",
+        "app/schemas/session",
+    ),
+    "path_dispatch": (
+        "app/workflow/steps/path_planning",
+        "app/workflow/path_types",
+        "app/workflow/nbev_workflow",
+    ),
+    "planning_function": (
+        "app/services/planning/",
+        "app/analysis_func/",
+        "app/workflow/steps/path_planning",
+    ),
+    "result_assembly": (
+        "app/workflow/steps/result_assembly",
+        "app/services/card_formatter",
+        "app/services/next_step_recommendation",
+        "app/schemas/events",
+    ),
+    "sse_generation": (
+        "app/api/",
+        "app/schemas/events",
+        "app/schemas/response",
+        "app/workflow/nbev_workflow",
+    ),
+    "adapter_extraction": (),
+}
+
+ATTRIBUTE_CATALOG_FILE_CAP = 8
 
 
 def _event_payload(event: Any) -> dict[str, Any]:
@@ -90,15 +139,172 @@ def _planning_output_probe(trace: RunTrace, judge_result: JudgeResult) -> dict[s
     }
 
 
-def _build_project_attribute_context(spec: ProjectSpec, adapter, trace: RunTrace, judge_result: JudgeResult) -> dict[str, Any]:
-    application_boundary = {}
-    boundary = getattr(adapter, "_application_boundary_from_trace", None)
-    if callable(boundary):
-        application_boundary = boundary(trace) or {}
-    target_probe = {}
-    probe = getattr(adapter, "_target_value_unit_probe", None)
-    if callable(probe):
-        target_probe = probe(trace, judge_result) or {}
+def _application_boundary_from_trace(trace: RunTrace) -> dict[str, Any]:
+    live_result = getattr(trace, "live_result", None)
+    if live_result and isinstance(getattr(live_result, "application_boundary", None), dict) and live_result.application_boundary:
+        return live_result.application_boundary
+    empty_boundary: dict[str, Any] = {}
+    return empty_boundary
+
+
+def _reference_contract(trace: RunTrace) -> dict[str, Any]:
+    return trace.reference_contract if isinstance(trace.reference_contract, dict) else {}
+
+
+def build_attribute_context(trace: RunTrace, judge_result: JudgeResult, spec: ProjectSpec) -> dict[str, Any]:
+    source_config_paths = {}
+    ext_repo = spec.application.get("external_repo") if isinstance(spec.application, dict) else None
+    if ext_repo:
+        ext_path = Path(ext_repo)
+        if ext_path.exists():
+            for py_file in select_ext_repo_files_by_stage(ext_path, trace):
+                try:
+                    source_config_paths[f"ext_repo:{py_file.relative_to(ext_path)}"] = str(py_file)
+                except Exception:
+                    pass
+    for doc_key, doc_rel in (spec.documents or {}).items():
+        if doc_key.startswith("source_"):
+            p = Path(spec.root) / str(doc_rel)
+            if p.exists():
+                source_config_paths[f"project_doc:{doc_key}"] = str(p)
+    return {
+        "application_boundary": _application_boundary_from_trace(trace),
+        "chain_nodes_to_check": list(trace.execution_trace or []),
+        "earliest_stage_order": list(_STAGE_ORDER),
+        "reference_contract": _reference_contract(trace),
+        "output_summary": (trace.project_fields or {}).get("planning_summary") if isinstance(trace.project_fields, dict) else trace.extracted_output,
+        "source_config_paths": source_config_paths,
+        "attribute_standard": "Only attribute failures grounded in current RunTrace/JudgeResult/project docs; no historical-case field carryover. Use source_code_evidence to locate exact code/config responsible for the error.",
+    }
+
+
+def get_runtime_checks(runtime_values: Dict[str, Any], context: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    context = context or {}
+    expected = context.get("expected") if isinstance(context.get("expected"), dict) else {}
+    actual = context.get("actual") if isinstance(context.get("actual"), dict) else {}
+    checks: Dict[str, Any] = {}
+    expected_stage = expected.get("expected_stage") or expected.get("stage")
+    actual_stage = actual.get("stage") or actual.get("current_stage")
+    if expected_stage or actual_stage:
+        checks["stage_match"] = {
+            "expected": expected_stage,
+            "actual": actual_stage,
+            "match": bool(expected_stage) and expected_stage == actual_stage,
+        }
+    if runtime_values:
+        checks["runtime_values"] = runtime_values
+    reference = context.get("reference") if isinstance(context.get("reference"), dict) else {}
+    if reference:
+        checks["reference_contract"] = reference
+    return checks
+
+
+def apply_attribution_probes(trace: RunTrace, judge_result: JudgeResult, attribute_result: AttributeResult) -> AttributeResult:
+    target_probe = target_value_unit_probe(trace, judge_result)
+    if not target_probe:
+        return attribute_result
+    attribute_result.suspected_locations = [{
+        "location": "request_normalization",
+        "evidence": list(target_probe.get("evidence") or []),
+        "findings": target_probe,
+    }]
+    attribute_result.evidence = list(target_probe.get("evidence") or [])
+    attribute_result.evidence_strength = "strong"
+    attribute_result.root_cause_hypothesis = f"当前 query 含目标值 {target_probe.get('source_amount')}，按项目内部单位应为 {target_probe.get('expected_target_nbev_wan')} 万，实际链路使用 {target_probe.get('actual_target_nbev_wan')} 万，最早差异位于请求归一化/目标值单位转换。"
+    return attribute_result
+
+
+def normalize_attribute_result_for_project(trace: RunTrace, judge_result: JudgeResult, attribute_result: AttributeResult) -> AttributeResult:
+    overall = judge_result.overall_fulfillment or {}
+    if overall.get("status") == "fulfilled":
+        if not attribute_result.expectation_attributions:
+            expectation_id = "marketting-planning:planning_output_contract"
+            if judge_result.business_expectations:
+                first = judge_result.business_expectations[0]
+                expectation_id = first.get("expectation_id", expectation_id) if isinstance(first, dict) else getattr(first, "expectation_id", expectation_id)
+            evidence = list(judge_result.evidence or ["planning output contract fulfilled"])
+            attribute_result.expectation_attributions = [{"expectation_id": expectation_id, "fulfillment_status": "fulfilled", "suspected_locations": [], "root_cause_hypothesis": "当前 planning 输出满足业务预期，归因结论为 no_issue。", "evidence": evidence}]
+        attribute_result.suspected_locations = []
+        attribute_result.root_cause_hypothesis = "当前 planning 输出满足业务预期，归因结论为 no_issue。"
+        return attribute_result
+    return apply_attribution_probes(trace, judge_result, attribute_result)
+
+
+def attribution_probes(trace: RunTrace, judge_result: JudgeResult):
+    target_probe = target_value_unit_probe(trace, judge_result)
+    return [target_probe] if target_probe else []
+
+
+def target_value_unit_probe(trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:
+    evidence_text = _target_value_error_evidence(judge_result)
+    if not evidence_text:
+        return {}
+    trace_input = trace.input or {}
+    normalized_request = trace.normalized_request or {}
+    turns = normalized_request.get("turns") if isinstance(normalized_request.get("turns"), list) else []
+    query = str(
+        normalized_request.get("query")
+        or (turns[-1].get("content") if turns and isinstance(turns[-1], dict) else "")
+        or normalized_request.get("user_intent")
+        or trace_input.get("query")
+        or ""
+    )
+    amount_match = re.search(r"(\d+(?:\.\d+)?)\s*亿", query)
+    if not amount_match:
+        return {}
+    expected = int(float(amount_match.group(1)) * 10000)
+    actual = _find_target_nbev_wan(judge_result.actual)
+    if actual is None:
+        actual = _find_target_nbev_wan(judge_result.wrong)
+    if actual is None:
+        actual = _find_target_nbev_wan(trace.extracted_output)
+    if actual is None or actual == expected:
+        return {}
+    return {
+        "method": "target_value_unit_probe",
+        "source_amount": amount_match.group(0),
+        "expected_target_nbev_wan": expected,
+        "actual_target_nbev_wan": actual,
+        "result": "mismatch reproduced",
+        "evidence": [f"query contains {amount_match.group(0)}", f"expected {expected} 万", f"actual {actual} 万", evidence_text],
+    }
+
+
+def _target_value_error_evidence(judge_result: JudgeResult) -> str:
+    evidence_text = json.dumps(to_dict([judge_result.expected, judge_result.wrong, judge_result.actual, judge_result.fulfillment_assessments]), ensure_ascii=False)
+    has_target = any(token in evidence_text for token in ("targetNbev", "target_value", "target_value_wan", "目标值", "NBEV"))
+    has_wrong_status = '"status": "wrong"' in evidence_text or "数值错误" in evidence_text or "误差" in evidence_text
+    if has_target and (has_wrong_status or "target_value_wan" in evidence_text):
+        return evidence_text[:500]
+    return ""
+
+
+def _find_target_nbev_wan(value: Any) -> Any:
+    if isinstance(value, dict):
+        if "actual_fragment" in value:
+            found = _find_target_nbev_wan(value.get("actual_fragment"))
+            if found is not None:
+                return found
+        for key in ("target_nbev_wan", "target_value_wan", "targetNbev", "forecast_value"):
+            if key in value and isinstance(value.get(key), (int, float)):
+                return int(value[key])
+        for key, item in value.items():
+            if key == "expected_fragment":
+                continue
+            found = _find_target_nbev_wan(item)
+            if found is not None:
+                return found
+    if isinstance(value, list):
+        for item in value:
+            found = _find_target_nbev_wan(item)
+            if found is not None:
+                return found
+    return None
+
+
+def _build_project_attribute_context(spec: ProjectSpec, trace: RunTrace, judge_result: JudgeResult) -> dict[str, Any]:
+    application_boundary = _application_boundary_from_trace(trace)
+    target_probe = target_value_unit_probe(trace, judge_result) or {}
     execution_probe = _execution_stage_probe(trace)
     planning_probe = _planning_output_probe(trace, judge_result)
     return {
@@ -130,13 +336,8 @@ def attribute_failure(spec: ProjectSpec, adapter, trace: RunTrace, judge_result:
         adapter,
         trace,
         judge_result,
-        project_attribute_context=_build_project_attribute_context(spec, adapter, trace, judge_result),
+        project_attribute_context=_build_project_attribute_context(spec, trace, judge_result),
     )
-
-
-from impl.core.attribute_protocol import ProjectAttribute
-from impl.core.runtime_query_tools import extract_runtime_values
-from impl.core.schema import normalize_attribute_result, trace_execution_trace, trace_extracted_output
 
 
 class MarketingPlanningAttribute(ProjectAttribute):
@@ -147,8 +348,8 @@ class MarketingPlanningAttribute(ProjectAttribute):
         self._adapter = adapter
 
     def build_context(self, trace: RunTrace, judge_result: JudgeResult) -> dict:
-        base_context = self._adapter.build_attribute_context(trace, judge_result)
-        extra_context = _build_project_attribute_context(self.spec, self._adapter, trace, judge_result)
+        base_context = build_attribute_context(trace, judge_result, self.spec)
+        extra_context = _build_project_attribute_context(self.spec, trace, judge_result)
         context = dict(base_context or {})
         context.update(extra_context)
         actual = judge_result.actual or trace_extracted_output(trace) or {}
@@ -161,12 +362,99 @@ class MarketingPlanningAttribute(ProjectAttribute):
             "project_id": trace.project_id,
         }
         runtime_values = extract_runtime_values(trace_execution_trace(trace), actual)
-        context["runtime_checks"] = self._adapter.get_runtime_checks(runtime_values, runtime_context)
+        context["runtime_checks"] = get_runtime_checks(runtime_values, runtime_context)
         return context
 
     def probes(self):
-        return None
+        return attribution_probes
 
     def normalize_result(self, trace: RunTrace, judge_result: JudgeResult, result: AttributeResult) -> AttributeResult:
-        result = self._adapter.apply_attribution_probes(trace, judge_result, result)
-        return normalize_attribute_result(self._adapter.normalize_attribute_result(trace, judge_result, result)) or result
+        result = normalize_attribute_result_for_project(trace, judge_result, result)
+        return normalize_attribute_result(result) or result
+
+
+# Shared helpers kept in this module for project-local attribute flow.
+
+def prioritized_ext_repo_files(ext_path: Path, limit: int = 100) -> List[Path]:
+    priority_prefixes = (
+        "app/workflow/steps/",
+        "app/workflow/prompts/",
+        "app/workflow/",
+        "app/services/",
+        "app/configs/",
+        "app/schemas/",
+        "app/api/",
+        "app/analysis_func/",
+        "app/fallback/",
+        "app/utils/",
+        "app/",
+    )
+
+    def rank(p: Path) -> tuple:
+        rel = str(p.relative_to(ext_path))
+        for i, prefix in enumerate(priority_prefixes):
+            if rel.startswith(prefix):
+                return (i, rel)
+        return (len(priority_prefixes), rel)
+
+    candidates = [
+        p for p in ext_path.rglob("*.py")
+        if p.name != "__init__.py" and "__pycache__" not in p.parts
+    ]
+    return sorted(candidates, key=rank)[:limit]
+
+
+def trace_failure_stages(trace) -> List[str]:
+    exec_trace = getattr(trace, "execution_trace", None) or []
+    stages: List[str] = []
+    for node in exec_trace:
+        if not isinstance(node, dict):
+            continue
+        stage = node.get("stage") or node.get("node") or node.get("name")
+        status = node.get("status")
+        if stage and status in {"failed", "suspicious"} and stage not in stages:
+            stages.append(stage)
+    return stages
+
+
+def select_ext_repo_files_by_stage(ext_path: Path, trace) -> List[Path]:
+    implicated = trace_failure_stages(trace)
+    if not implicated:
+        chain = getattr(trace, "execution_trace", None) or []
+        if chain and isinstance(chain[-1], dict):
+            last_stage = chain[-1].get("stage") or chain[-1].get("node")
+            if last_stage:
+                implicated = [last_stage]
+    if not implicated:
+        implicated = ["intent_recognition"]
+
+    prefix_union: List[str] = []
+    for stage in implicated:
+        for prefix in STAGE_FILE_PREFIXES.get(stage, ()):
+            if prefix not in prefix_union:
+                prefix_union.append(prefix)
+
+    if not prefix_union:
+        return prioritized_ext_repo_files(ext_path, limit=3)
+
+    candidates = [
+        p for p in ext_path.rglob("*.py")
+        if p.name != "__init__.py" and "__pycache__" not in p.parts
+    ]
+
+    def matches_prefix(rel: str) -> Optional[int]:
+        for i, prefix in enumerate(prefix_union):
+            if rel.startswith(prefix):
+                return i
+        return None
+
+    scored: List[tuple] = []
+    for p in candidates:
+        rel = str(p.relative_to(ext_path))
+        idx = matches_prefix(rel)
+        if idx is None:
+            continue
+        scored.append((idx, rel, p))
+
+    scored.sort(key=lambda x: (x[0], x[1]))
+    return [p for _, _, p in scored[:ATTRIBUTE_CATALOG_FILE_CAP]]

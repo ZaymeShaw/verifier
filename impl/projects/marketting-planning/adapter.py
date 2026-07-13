@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import json
-import re
 import time
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from impl.core.adapter import ProjectAdapter
 from impl.core.adapter_v2 import LegacyProjectAdapter
-from impl.core.schema import AttributeResult, ExecutionTraceEvent, JudgeResult, LiveExecutionResult, LiveMultiTurnState, LiveRequest, MultiTurnCase, RunTrace, SingleTurnCase, TraceExecutionContext, to_dict
+from impl.core.schema import ExecutionTraceEvent, LiveExecutionResult, LiveMultiTurnState, LiveRequest, MultiTurnCase, SingleTurnCase, TraceExecutionContext
+from .judge import application_boundary_from_trace, build_judge_context, build_intent_frame, default_business_expectation, default_consumer_contract, default_fulfillment_assessment, normalize_judge_result_for_project
+from .attribute import build_attribute_context, get_runtime_checks, attribution_probes, apply_attribution_probes, normalize_attribute_result_for_project
 
 
 # Stage→ext_repo path-prefix map. Adapters use this to narrow the source-file
@@ -136,276 +135,10 @@ class Adapter(LegacyProjectAdapter):
             session_id=session_id,
         )
 
-    def _application_boundary_from_trace(self, trace: RunTrace) -> dict[str, Any]:
-        live_result = getattr(trace, "live_result", None)
-        if live_result and isinstance(getattr(live_result, "application_boundary", None), dict) and live_result.application_boundary:
-            return live_result.application_boundary
-        empty_boundary: dict[str, Any] = {}
-        return empty_boundary
-
-    def _reference_contract(self, trace: RunTrace) -> dict[str, Any]:
-        return trace.reference_contract if isinstance(trace.reference_contract, dict) else {}
-
-    def build_judge_context(self, trace) -> Dict[str, Any]:
-        application_boundary = self._application_boundary_from_trace(trace)
-        reference_contract = self._reference_contract(trace)
-        return {
-            "project_type": "multi_turn_sse_marketing_planning",
-            "current_case_only": True,
-            "reference_contract": reference_contract,
-            "output_summary": (trace.project_fields or {}).get("planning_summary") if isinstance(trace.project_fields, dict) else trace.extracted_output,
-            "application_boundary": application_boundary,
-            "expected_stage": reference_contract.get("expected_stage"),
-            "expected_path_types": self._list(reference_contract.get("required_path_types")),
-            "expected_cards": self._list(reference_contract.get("required_cards")),
-            "stage_rules": {
-                "clarification": "缺字段时澄清是正确方向，规划卡片通常是可疑证据。",
-                "planning": "规划场景必须检查 path_types、card identity、fallback 和 SSE completion。",
-                "fallback": "fallback 是否正确取决于当前 boundary 是否允许。",
-            },
-        }
-
-    def build_intent_frame(self, trace) -> Dict[str, Any]:
-        context = self.build_judge_context(trace)
-        return {
-            **super().build_intent_frame(trace),
-            "business_task_type": "multi_turn_marketing_planning",
-            "downstream_consumer": "marketing planning user",
-            "critical_intent_dimensions": ["business_metric", "target_value_and_unit", "time_range", "decomposition_dimensions", "stage_routing", "planning_actionability", "sse_completion"],
-            "boundary_rules": context.get("application_boundary") or {},
-            "expected_stage": context.get("expected_stage"),
-            "expected_path_types": context.get("expected_path_types") or [],
-            "expected_cards": context.get("expected_cards") or [],
-            "output_semantics": "route the current marketing demand to the proper stage and produce actionable planning cards/events within the project boundary",
-        }
-
-    def normalize_judge_result(self, trace, judge_result):
-        output = trace.extracted_output or {}
-        summary = (trace.project_fields or {}).get("planning_summary", {}) if isinstance(trace.project_fields, dict) else {}
-        expected = self._reference_contract(trace)
-        expected_stage = expected.get("expected_stage")
-        actual_stage = summary.get("stage")
-        required_paths = self._list(expected.get("required_path_types"))
-        actual_paths = [card.get("path_type") for card in summary.get("card_summary") or [] if card.get("path_type")]
-        forbidden_paths = self._list(expected.get("forbidden_path_types"))
-        required_events = self._list(expected.get("required_events"))
-        actual_events = ((summary.get("event_summary") or {}).get("canonical_names") or (summary.get("event_summary") or {}).get("names") or [])
-        fallback = summary.get("fallback") or {}
-        application_boundary = self._application_boundary_from_trace(trace)
-        allow_fallback = bool(expected.get("allow_fallback") or application_boundary.get("allow_fallback"))
-        failures = []
-        self._append_expected_quality_failures(trace, summary, expected, failures)
-        if expected_stage and actual_stage and expected_stage != actual_stage:
-            failures.append({"requirement": "expected_stage", "expected_fragment": expected_stage, "actual_fragment": actual_stage, "status": "wrong", "evidence": ["adapter extracted stage mismatch"]})
-        missing_events = [event for event in required_events if event not in actual_events]
-        if missing_events:
-            failures.append({"requirement": "required_events", "expected_fragment": required_events, "actual_fragment": actual_events, "status": "missing", "evidence": ["required SSE event absent from event_summary"]})
-        missing_paths = [path for path in required_paths if path not in actual_paths]
-        extra_forbidden = [path for path in actual_paths if path in forbidden_paths]
-        if missing_paths:
-            failures.append({"requirement": "required_path_types", "expected_fragment": required_paths, "actual_fragment": actual_paths, "status": "missing", "evidence": ["required path type absent from card_summary"]})
-        if extra_forbidden:
-            failures.append({"requirement": "forbidden_path_types", "expected_fragment": forbidden_paths, "actual_fragment": actual_paths, "status": "extra", "evidence": ["forbidden path type present in card_summary"]})
-        if fallback.get("used") and not allow_fallback:
-            failures.append({"requirement": "allow_fallback", "expected_fragment": False, "actual_fragment": fallback, "status": "wrong", "evidence": ["fallback used but reference/boundary does not allow it"]})
-        # 保持 expected 为 judge LLM 产出（或 reference），由通用协议层 enforce 校验
-        if not failures:
-            judge_result.actual = output
-            return judge_result
-        judge_result.actual = output
-        for failure in failures:
-            requirement = failure.get("requirement") or "contract"
-            evidence_text = "; ".join(failure.get("evidence") or []) or failure.get("status") or "mismatch"
-            downstream_impact = self._failure_downstream_impact(requirement, failure)
-            judge_result.fulfillment_assessments.append({
-                "expectation_id": f"mp_contract:{requirement}",
-                "status": "not_fulfilled",
-                "blocking": True,
-                "evidence": evidence_text,
-                "downstream_impact": downstream_impact,
-            })
-        return judge_result
-
-    def _failure_downstream_impact(self, requirement, failure):
-        impacts = {
-            "expected_stage": "stage 路由错误，下游无法进入预期 planning 流程",
-            "required_events": "SSE 关键业务事件缺失：clarification 会影响字段补齐续问，planning 会导致规划结果无法完整交付",
-            "required_path_types": "规划卡片类型缺失，用户拿不到预期 planning action",
-            "forbidden_path_types": "出现禁用 path，超出 application boundary",
-            "allow_fallback": "fallback 在不允许的边界内触发，违反 boundary 契约",
-            "target_value_wan": "目标值单位/数值错误，规划结果不可执行",
-        }
-        return impacts.get(requirement, f"{requirement} 契约不满足")
-
-    def _append_expected_quality_failures(self, trace, output, expected, failures):
-        metadata = (trace.normalized_request or {}).get("metadata") or {}
-        if (trace.input or {}).get("source") != "data_mock_seed" or (trace.input or {}).get("expected_quality") != "incorrect":
-            return
-        error_type = str(metadata.get("expected_error_type") or "")
-        if error_type != "target_value_unit_error":
-            return
-        expected_target = expected.get("target_value_wan")
-        actual_target = self._find_target_nbev_wan(output)
-        if expected_target is None or actual_target is None or int(actual_target) == int(expected_target):
-            return
-        failures.append({"requirement": "target_value_wan", "expected_fragment": expected_target, "actual_fragment": actual_target, "status": "wrong", "error_type": error_type, "evidence": ["seeded mock reference target_value_wan differs from output targetNbev"]})
-
-    def _default_consumer_contract(self, trace, judge_result):
-        context = self.build_judge_context(trace)
-        return {
-            "consumer": "marketing planning user",
-            "contract": "multi-turn planning output must route to the expected stage, respect clarification/fallback boundaries, generate required path cards, and complete SSE delivery",
-            "reference_contract": context.get("reference_contract") or {},
-            "application_boundary": context.get("application_boundary") or {},
-        }
-
-    def _default_business_expectation(self, trace, judge_result):
-        expectation = {
-            "expectation_id": "marketting-planning:planning_output_contract",
-            "downstream_consumer": "marketing planning user",
-            "required_capabilities": ["stage_routing", "field_clarification", "path_card_generation", "fallback_boundary", "sse_completion"],
-            "boundary": self.build_judge_context(trace).get("application_boundary") or {},
-        }
-        user_intent = str((trace.normalized_request or {}).get("user_intent") or (trace.normalized_request or {}).get("query") or trace.input or "")
-        expectation.update(
-            {
-                "user_intent": user_intent,
-                "expected_outcome": "planning flow should produce the expected stage, path cards, fallback behavior, and completed SSE-visible result for the current demand",
-                "acceptance_criteria": list(judge_result.missing or judge_result.wrong or []),
-            }
-        )
-        return expectation
-
-    def _default_fulfillment_assessment(self, trace, judge_result, expectation):
-        overall = judge_result.overall_fulfillment or {}
-        status = overall.get("status") or "not_evaluable"
-        return {
-            "expectation_id": expectation.get("expectation_id"),
-            "status": status,
-            "expected_evidence": list(judge_result.missing or []) or [judge_result.expected or trace.reference_contract or {}],
-            "actual_evidence": list(judge_result.wrong or []) or list(judge_result.extra or []) or [judge_result.actual or trace.extracted_output],
-            "downstream_impact": "planning user can proceed with the generated plan" if status == "fulfilled" else (judge_result.reasoning_summary or "planning user cannot rely on the current planning output to complete the business task"),
-            "blocking": status in {"not_fulfilled", "not_evaluable"},
-            "evidence_refs": list(getattr(trace, "evidence_refs", []) or []),
-        }
-
-    @staticmethod
-    def _prioritized_ext_repo_files(ext_path: Path, limit: int = 100) -> List[Path]:
-        """Order ext_repo .py files so attribution-critical paths surface in catalog.
-
-        Priority: workflow/steps > workflow/prompts > workflow > services > configs >
-        schemas > others. Skips __init__.py and __pycache__. Caps at `limit` to keep
-        catalog metadata bounded; current ext_repos have <100 real files."""
-        priority_prefixes = (
-            "app/workflow/steps/",
-            "app/workflow/prompts/",
-            "app/workflow/",
-            "app/services/",
-            "app/configs/",
-            "app/schemas/",
-            "app/api/",
-            "app/analysis_func/",
-            "app/fallback/",
-            "app/utils/",
-            "app/",
-        )
-
-        def rank(p: Path) -> tuple:
-            rel = str(p.relative_to(ext_path))
-            for i, prefix in enumerate(priority_prefixes):
-                if rel.startswith(prefix):
-                    return (i, rel)
-            return (len(priority_prefixes), rel)
-
-        candidates = [
-            p for p in ext_path.rglob("*.py")
-            if p.name != "__init__.py" and "__pycache__" not in p.parts
-        ]
-        return sorted(candidates, key=rank)[:limit]
-
-    @staticmethod
-    def _trace_failure_stages(trace) -> List[str]:
-        """Stages from execution_trace with status failed/suspicious, in order of appearance."""
-        exec_trace = getattr(trace, "execution_trace", None) or []
-        stages: List[str] = []
-        for node in exec_trace:
-            if not isinstance(node, dict):
-                continue
-            stage = node.get("stage") or node.get("node") or node.get("name")
-            status = node.get("status")
-            if stage and status in {"failed", "suspicious"} and stage not in stages:
-                stages.append(stage)
-        return stages
-
-    def _select_ext_repo_files_by_stage(self, ext_path: Path, trace) -> List[Path]:
-        """Narrow ext_repo catalog by trace failure signals; fallback to priority ranking."""
-        implicated = self._trace_failure_stages(trace)
-        if not implicated:
-            chain = getattr(trace, "execution_trace", None) or []
-            if chain and isinstance(chain[-1], dict):
-                last_stage = chain[-1].get("stage") or chain[-1].get("node")
-                if last_stage:
-                    implicated = [last_stage]
-        if not implicated:
-            implicated = ["intent_recognition"]  # earliest stage fallback
-
-        prefix_union: List[str] = []
-        for stage in implicated:
-            for prefix in STAGE_FILE_PREFIXES.get(stage, ()):
-                if prefix not in prefix_union:
-                    prefix_union.append(prefix)
-
-        if not prefix_union:
-            # No prefixes mapped: keep top-3 from priority list to retain some catalog
-            return self._prioritized_ext_repo_files(ext_path, limit=3)
-
-        candidates = [
-            p for p in ext_path.rglob("*.py")
-            if p.name != "__init__.py" and "__pycache__" not in p.parts
-        ]
-
-        def matches_prefix(rel: str) -> Optional[int]:
-            for i, prefix in enumerate(prefix_union):
-                if rel.startswith(prefix):
-                    return i
-            return None
-
-        scored: List[tuple] = []
-        for p in candidates:
-            rel = str(p.relative_to(ext_path))
-            idx = matches_prefix(rel)
-            if idx is None:
-                continue
-            scored.append((idx, rel, p))
-
-        scored.sort(key=lambda x: (x[0], x[1]))
-        return [p for _, _, p in scored[:ATTRIBUTE_CATALOG_FILE_CAP]]
-
-    def build_attribute_context(self, trace, judge_result) -> Dict[str, Any]:
-        source_config_paths = {}
-        ext_repo = self.spec.application.get("external_repo") if isinstance(self.spec.application, dict) else None
-        if ext_repo:
-            ext_path = Path(ext_repo)
-            if ext_path.exists():
-                for py_file in self._select_ext_repo_files_by_stage(ext_path, trace):
-                    try:
-                        source_config_paths[f"ext_repo:{py_file.relative_to(ext_path)}"] = str(py_file)
-                    except Exception:
-                        pass
-        for doc_key, doc_rel in (self.spec.documents or {}).items():
-            if doc_key.startswith("source_"):
-                p = Path(self.spec.root) / str(doc_rel)
-                if p.exists():
-                    source_config_paths[f"project_doc:{doc_key}"] = str(p)
-        return {
-            "application_boundary": self._application_boundary_from_trace(trace),
-            "chain_nodes_to_check": list(trace.execution_trace or []),
-            "earliest_stage_order": ["request_normalization", "intent_recognition", "field_clarification", "session_merge", "path_dispatch", "planning_function", "result_assembly", "sse_generation", "adapter_extraction"],
-            "reference_contract": self._reference_contract(trace),
-            "output_summary": (trace.project_fields or {}).get("planning_summary") if isinstance(trace.project_fields, dict) else trace.extracted_output,
-            "source_config_paths": source_config_paths,
-            "attribute_standard": "Only attribute failures grounded in current RunTrace/JudgeResult/project docs; no historical-case field carryover. Use source_code_evidence to locate exact code/config responsible for the error.",
-        }
+    def trace_state_graph(self) -> Dict[str, Any]:
+        graph = self.extend_default_trace_graph("collect_evidence", ["marketing_planning_boundary_evidence"])
+        graph["limits"] = {**(graph.get("limits") or {}), "max_steps": 28, "max_retries_per_state": 1}
+        return graph
 
     def trace_state_graph(self) -> Dict[str, Any]:
         graph = self.extend_default_trace_graph("collect_evidence", ["marketing_planning_boundary_evidence"])
@@ -420,7 +153,7 @@ class Adapter(LegacyProjectAdapter):
         if not trace:
             return {"status": "failed", "missing_evidence": ["trace"]}
         scenario = trace.scenario or (trace.normalized_request or {}).get("scenario") or ""
-        application_boundary = self._application_boundary_from_trace(trace)
+        application_boundary = application_boundary_from_trace(trace)
         evidence = {
             "scenario": scenario,
             "session_id": trace.session_id,
@@ -442,7 +175,7 @@ class Adapter(LegacyProjectAdapter):
         if not trace:
             return []
         scenario = trace.scenario or (trace.normalized_request or {}).get("scenario") or ""
-        return [{"type": "marketing_planning_state_boundary", "state_id": state_id, "application_boundary": self._application_boundary_from_trace(trace), "scenario": scenario, "shared_service_boundary": "local configured service only"}]
+        return [{"type": "marketing_planning_state_boundary", "state_id": state_id, "application_boundary": application_boundary_from_trace(trace), "scenario": scenario, "shared_service_boundary": "local configured service only"}]
 
     def attribution_probes(self, trace, judge_result):
         target_probe = self._target_value_unit_probe(trace, judge_result)
