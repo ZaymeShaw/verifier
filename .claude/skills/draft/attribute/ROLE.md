@@ -70,7 +70,7 @@ attribute 角色特有的门禁（通用门禁见 `../SKILL.md`）：
 
 - 同一批冻结 case，current 和 draft 各跑一遍。
 - 比"证据质量 / 链路定位 / 不过拟合 / 不伪造"，不比刷分。
-- **异常冒泡，不吞**——某 case 抛异常时该 case 标 blocked，不计入"draft 更优"。
+- **异常直接冒泡，不吞**——任一 case 抛异常即终止本次对比，不生成可用于 promotion 的报告。
 - `decision_rule`：draft 在证据质量/链路定位任一维度优于 current 且不弱于其他维度，且不伪造强度、不引入 overfit → 可考虑 promotion。Blocked case 不计入。
 
 ## tool 边界

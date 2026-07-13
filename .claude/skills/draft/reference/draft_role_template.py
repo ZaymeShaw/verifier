@@ -1,6 +1,6 @@
 """Draft 实现模板（按 spec/draft/draft.md 阶段 3 写）。
 
-复制到 impl/projects/<project>/draft/<role>.py 后填项目实现。
+本文件是结构说明，不是具体项目 draft 的复制源。实际生成必须复制当前 production `<role>.py`，保持公开结构原样。
 
 **关键：本模板和正式版 impl/projects/<project>/<role>.py 同结构**
 （顶层 helper + 顶层 <role>_failure / judge_trace 函数入口 + class ProjectXxx(ProjectXxx) 继承式扩展点）。
@@ -77,7 +77,7 @@ def judge_trace(spec: ProjectSpec, adapter, trace: RunTrace, expected_intent: Op
 # === 类继承式实现（按自省结果填所有 @abstractmethod + 按需覆盖 optional）===
 # 正式版 <role>.py 也是这种结构。生成具体 draft 文件时，类名必须直接使用
 # 当前 production 的公开类名（例如 QAJudge / QAAttribute），不能保留 DraftXxx 名称。
-# 下方 DraftJudge 仅是未实例化模板占位名。
+# 下方类名仅用于说明，实际 draft 不使用该占位名。
 
 class DraftJudge(ProjectJudge):
     """Draft 版的项目层 Judge 实现。

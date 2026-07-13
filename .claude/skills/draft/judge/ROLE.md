@@ -69,7 +69,7 @@ judge 角色特有的门禁（通用门禁见 `../SKILL.md`）：
 
 - 同一批冻结 case，current 和 draft 各跑一遍。
 - 比"判定准确性 / 业务期望提取 / 不过拟合 / 不伪造"，不比刷分。
-- **异常冒泡，不吞**——某 case 抛异常时该 case 标 blocked，不计入"draft 更优"。
+- **异常直接冒泡，不吞**——任一 case 抛异常即终止本次对比，不生成可用于 promotion 的报告。
 - `decision_rule`：draft 在判定准确性/业务期望提取任一维度优于 current 且不弱于其他维度，且不伪造判定、不引入 overfit → 可考虑 promotion。Blocked case 不计入。
 
 ## tool 边界
@@ -93,7 +93,7 @@ draft tool 必须用现有 `impl/tools/protocol.py` 的 `VerifiableTool` / `Tool
 - mock 对比报告显示 draft 在判定准确性/业务期望提取/泛化风险上优于或不弱于 current。
 - 不伪造 not_evaluable → fulfilled。
 - production loader 不加载 draft；judge draft 固定由对比脚本 direct import 离线运行，不新增 `judge_draft` loader 开关。人工确认后直接覆盖 production `judge.py`。
-- 人工确认后才 promotion：搬移 `draft/judge.py` → `judge.py`，`draft/tools/` → `tools/`，`project.yaml` 中 `judge_draft.enabled` 设为 `false`。
+- 人工确认后直接覆盖 `draft/judge.py` → `judge.py`；judge 不配置 `judge_draft` loader 开关。
 
 ## 与现有 attribute skill 的关系
 
