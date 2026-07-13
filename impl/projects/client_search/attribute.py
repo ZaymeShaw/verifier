@@ -2,34 +2,56 @@ from __future__ import annotations
 
 from typing import Any
 
-from impl.core.attribute_protocol import run_project_attribute_protocol
-from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace
+from impl.core.attribute_protocol import ProjectAttribute, run_project_attribute_protocol
+from impl.core.runtime_query_tools import extract_runtime_values
+from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace, normalize_attribute_result, trace_execution_trace, trace_extracted_output
+from impl.projects.client_search.judge import condition_comparison
+from impl.projects.client_search.live import boundary_from_trace, capability_manifest, external_boundary_sources, source_config_paths
 
 
-def _project_tools(adapter) -> list[Any]:
-    get_tools = getattr(adapter, "get_verifiable_tools", None)
-    return list(get_tools() or []) if callable(get_tools) else []
+def _project_tools(tools: list[Any] | None) -> list[Any]:
+    return list(tools or [])
 
 
-def _build_project_attribute_context(spec: ProjectSpec, adapter, trace: RunTrace, judge_result: JudgeResult) -> dict[str, Any]:
-    application_boundary = {}
-    boundary_from_trace = getattr(adapter, "_boundary_from_trace", None)
-    if callable(boundary_from_trace):
-        application_boundary = boundary_from_trace(trace) or {}
-    condition_comparison = {}
-    condition_compare = getattr(adapter, "_condition_comparison", None)
-    if callable(condition_compare):
-        condition_comparison = condition_compare(trace) or {}
-    source_config_paths = {}
-    source_paths = getattr(adapter, "_source_config_paths", None)
-    if callable(source_paths):
-        source_config_paths = source_paths() or {}
-    capability_manifest = {}
-    capability = getattr(adapter, "_capability_manifest", None)
-    if callable(capability):
-        capability_manifest = capability() or {}
+def _attribute_quality_gate() -> dict[str, Any]:
     return {
-        "tools": _project_tools(adapter),
+        "run_only_for": ["incorrect", "uncertain with inspectable expected-vs-actual gap"],
+        "block_when_judge_unavailable": True,
+        "minimum_evidence": ["current query", "actual conditions/matched_level", "judge expected-vs-actual diff", "execution_trace or project chain nodes", "project docs/config evidence"],
+        "required_outputs": ["clear root_cause_hypothesis", "evidence-backed suspected_locations", "evidence_strength", "current-case evidence", "business impact"],
+        "quality_standard": "必须围绕当前 query 产出明确根因、可核验证据链、疑似文件/配置位置、具体修改建议、明确修改方案和业务影响；期望条件和修改方案必须来自当前 query 或同 query 链路证据，不能引用无关历史 case 字段。",
+    }
+
+
+def build_attribute_context(spec: ProjectSpec, trace: RunTrace, judge_result: JudgeResult) -> dict[str, Any]:
+    project_output = trace.extracted_output if isinstance(trace.extracted_output, dict) else {}
+    application_boundary = boundary_from_trace(trace)
+    chain_nodes = [
+        {"name": "request_normalization", "evidence_ref": "run_trace.normalized_request"},
+        {"name": "client_search_parse", "evidence_ref": "run_trace.extracted_output"},
+        {"name": "routing_pattern_match", "evidence_ref": "run_trace.extracted_output.matched_patterns"},
+        {"name": "judge_boundary", "evidence": application_boundary},
+    ]
+    if application_boundary.get("judge_scope") == "parser_and_result_set":
+        chain_nodes.insert(3, {"name": "downstream_result_set", "evidence_ref": "run_trace.project_fields.downstream_search"})
+    return {
+        "chain_nodes_to_check": chain_nodes,
+        "conditions": project_output.get("conditions"),
+        "query_logic": project_output.get("query_logic"),
+        "matched_level": project_output.get("matched_level"),
+        "application_boundary": application_boundary,
+        "attribute_quality_gate": _attribute_quality_gate(),
+        "external_boundary_sources": (trace.project_fields or {}).get("external_boundary_sources") if isinstance(trace.project_fields, dict) else {},
+        "source_config_paths": source_config_paths(spec),
+        "attribute_instruction": "application_boundary 由 application adapter 在归因前判定；当 judge_scope=parser_condition_semantics_only 时，下游结果集验证不属于本次归因链路，归因只分析 query、parse 条件、matched_patterns、execution_trace 和项目文档中的可控解析问题；无法定位代码/配置时应将 evidence_strength 设为 none 或 weak，并在 root_cause_hypothesis 中说明缺失的当前证据。chain_nodes_to_check 中带 evidence_ref 的节点，其 evidence 已在 run_trace 对应字段中提供，直接引用即可，无需重复读取。",
+    }
+
+
+def _build_project_attribute_context(spec: ProjectSpec, tools: list[Any], trace: RunTrace, judge_result: JudgeResult) -> dict[str, Any]:
+    application_boundary = boundary_from_trace(trace)
+    comparison = condition_comparison(spec, trace)
+    return {
+        "tools": _project_tools(tools),
         "tool_call_limit": 6,
         "system_prompt_override": """你是 client_search 项目的 attribute agent。
 只围绕当前 query 到下游客户搜索条件的链路做归因：request_normalization、client_search_parse、routing_pattern_match、downstream_result_set（仅当 application_boundary.judge_scope 允许）。
@@ -54,43 +76,33 @@ expectation_attributions 每项只能包含 expectation_id、fulfillment_status�
                     "project_config_or_tool_evidence",
                 ],
             },
-            "condition_comparison": condition_comparison,
+            "condition_comparison": comparison,
             "application_boundary": application_boundary,
-            "source_config_paths": source_config_paths,
-            "capability_manifest": capability_manifest,
+            "source_config_paths": source_config_paths(spec),
+            "capability_manifest": capability_manifest(spec),
         },
     }
 
 
 def attribute_failure(spec: ProjectSpec, adapter, trace: RunTrace, judge_result: JudgeResult) -> AttributeResult:
+    tools = getattr(adapter, "get_verifiable_tools", lambda: [])()
     return run_project_attribute_protocol(
         spec,
         adapter,
         trace,
         judge_result,
-        project_attribute_context=_build_project_attribute_context(spec, adapter, trace, judge_result),
+        project_attribute_context=_build_project_attribute_context(spec, tools, trace, judge_result),
     )
 
 
-from impl.core.attribute_protocol import ProjectAttribute
-from impl.core.runtime_query_tools import extract_runtime_values
-from impl.core.schema import normalize_attribute_result, trace_execution_trace, trace_extracted_output
-
-
 class ClientSearchAttribute(ProjectAttribute):
-    """client_search 项目 Attribute 实现（新协议）。
-
-    迁移过渡期：扩展点委托 adapter 现有方法，保持功能不变。
-    旧版 apply_attribution_probes 在 LLM 后应用，新版在 normalize_result 阶段调用（模拟旧版）。
-    """
-
-    def __init__(self, spec: ProjectSpec, adapter):
+    def __init__(self, spec: ProjectSpec, tools: list[Any] | None = None):
         super().__init__(spec)
-        self._adapter = adapter
+        self._tools = list(tools or [])
 
     def build_context(self, trace: RunTrace, judge_result: JudgeResult) -> dict:
-        base_context = self._adapter.build_attribute_context(trace, judge_result)
-        extra_context = _build_project_attribute_context(self.spec, self._adapter, trace, judge_result)
+        base_context = build_attribute_context(self.spec, trace, judge_result)
+        extra_context = _build_project_attribute_context(self.spec, self._tools, trace, judge_result)
         context = dict(base_context or {})
         context.update(extra_context)
         actual = judge_result.actual or trace_extracted_output(trace) or {}
@@ -102,13 +114,14 @@ class ClientSearchAttribute(ProjectAttribute):
             "trace_id": trace.trace_id,
             "project_id": trace.project_id,
         }
+        _ = runtime_context
         runtime_values = extract_runtime_values(trace_execution_trace(trace), actual)
-        context["runtime_checks"] = self._adapter.get_runtime_checks(runtime_values, runtime_context)
+        _ = runtime_values
+        context["runtime_checks"] = {}
         return context
 
     def probes(self):
         return None
 
     def normalize_result(self, trace: RunTrace, judge_result: JudgeResult, result: AttributeResult) -> AttributeResult:
-        result = self._adapter.apply_attribution_probes(trace, judge_result, result)
-        return normalize_attribute_result(self._adapter.normalize_attribute_result(trace, judge_result, result)) or result
+        return normalize_attribute_result(result) or result
