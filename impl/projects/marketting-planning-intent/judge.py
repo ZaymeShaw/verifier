@@ -196,9 +196,8 @@ from impl.core.judge_protocol import ProjectJudge
 class MarketingIntentJudge(ProjectJudge):
     """marketting-planning-intent 项目 Judge 实现（新协议）。"""
 
-    def __init__(self, spec: ProjectSpec, adapter):
+    def __init__(self, spec: ProjectSpec):
         super().__init__(spec)
-        self._adapter = adapter
 
     def build_context(self, trace: RunTrace) -> dict:
         return _build_core_context(trace)

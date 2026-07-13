@@ -367,9 +367,8 @@ from impl.core.schema import normalize_attribute_result as normalize_core_attrib
 class MarketingIntentAttribute(ProjectAttribute):
     """marketting-planning-intent 项目 Attribute 实现（新协议）。"""
 
-    def __init__(self, spec: ProjectSpec, adapter):
+    def __init__(self, spec: ProjectSpec):
         super().__init__(spec)
-        self._adapter = adapter
 
     def build_context(self, trace: RunTrace, judge_result: JudgeResult) -> dict:
         base_context = build_attribute_context(self.spec, trace, judge_result)

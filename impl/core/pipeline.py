@@ -7,19 +7,17 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Mapping, Optional
 
 from .analysis import analyze_project
-from .attribute import attribute_failure
 from .check import check_chain
 from .cluster import cluster_attributes
 from .frontend_view import build_frontend_view
 from .table_view import build_case_pool_table, build_case_pool_table_from_runs, build_trace_table_row, build_trace_table_row_from_run, display_input_for_project
 from .interaction_protocol import normalize_case_interaction, resolve_ready, ready_from_spec
-from .judge import judge_trace, generate_reference
-from .live import build_live_request, interaction_contract, run_live, trace_from_live_result
+from .judge import generate_reference
+from .live import interaction_contract, trace_from_live_result
 from .mock_agent import MockAgent, build_spec_from_project, load_live_schema
 from .live_stub import LiveStubGenerationError, LiveStubSchemaError, generate_live_output_with_check
-from .project_loader import load_adapter, load_project, load_project_attribute, load_project_judge, list_projects
-from .runtime_query_tools import extract_runtime_values
-from .schema import AttributeResult, BatchRunResult, CheckReport, ClusterSummary, FallbackDecision, FrontendViewModel, JudgeResult, LiveExecutionResult, MockSpec, ProjectAnalysis, RunTrace, SingleTurnCase, TraceExecutionContext, normalize_attribute_result, normalize_check_report, normalize_cluster_summary, normalize_frontend_view, normalize_judge_result, normalize_mock_case, normalize_mock_dataset, normalize_mock_spec, normalize_run_trace, to_dict, trace_execution_trace, trace_extracted_output, trace_input, trace_normalized_request, trace_output_source
+from .project_loader import load_adapter, load_project, load_project_role_instance, list_projects
+from .schema import AttributeResult, BatchRunResult, CheckReport, ClusterSummary, FallbackDecision, FrontendViewModel, JudgeResult, LiveExecutionResult, MockSpec, ProjectAnalysis, RunTrace, SingleTurnCase, TraceExecutionContext, normalize_attribute_result, normalize_check_report, normalize_cluster_summary, normalize_frontend_view, normalize_judge_result, normalize_mock_case, normalize_mock_dataset, normalize_mock_spec, normalize_run_trace, to_dict, trace_extracted_output, trace_input, trace_normalized_request, trace_output_source
 
 logger = logging.getLogger(__name__)
 from .state_machine import TraceStateMachineRunner, flatten_gate_decisions, flatten_transition_decisions
@@ -93,17 +91,12 @@ def live_run(project_id: str, case: SingleTurnCase | Dict[str, Any]) -> RunTrace
     adapter = load_adapter(spec)
     normalized_case = _case_from_input(project_id, normalize_mock_case(input_data) or SingleTurnCase(id="", input=dict(input_data or {})))
     contract = interaction_contract(normalized_case)
-    # 走协议层入口：adapter.live().deliver()（新协议主流程）
-    # 兼容旧路径：adapter 未迁移时（无 live() 或 live() 返回非 ProjectLive），走 run_live
     from impl.core.live_protocol import ProjectLive
-    live = adapter.live() if hasattr(adapter, "live") else None
-    if isinstance(live, ProjectLive):
-        result = live.deliver(normalized_case, contract)
-    else:
-        # 兼容旧路径（adapter 未迁移时）
-        live_request = build_live_request(adapter, normalized_case, project_id)
-        result = run_live(spec, adapter, normalized_case, live_request, contract)
-    trace = trace_from_live_result(adapter, result)
+    live = adapter.live()
+    if not isinstance(live, ProjectLive):
+        raise TypeError(f"{project_id} adapter.live() must return ProjectLive")
+    result = live.deliver(normalized_case, contract)
+    trace = trace_from_live_result(result)
     trace.execution_mode = "provided" if result.output_source == "provided_output" else "live"
     trace.ready = ready_from_spec(spec)
     return trace
@@ -137,83 +130,42 @@ def _normalize_attribute_schema_payload(attribute_result: AttributeResult) -> At
     return normalize_attribute_result(attribute_result) or attribute_result
 
 
-def _run_core_judge(spec, adapter, project_id: str, trace: RunTrace, expected_intent: Optional[str] = None) -> JudgeResult:
-    pre_judge_result = adapter.pre_judge_result(trace, expected_intent=expected_intent)
-    if pre_judge_result is not None:
-        return _enforce_judge_live_schema(project_id, trace, adapter.reconcile_judge_result(trace, pre_judge_result))
-    project_judge_context = adapter.build_judge_context(trace)
-    project_judge_context = {**(project_judge_context or {}), "intent_frame": adapter.build_intent_frame(trace)}
-    try:
-        result = judge_trace(spec, trace, expected_intent=expected_intent, project_judge_context=project_judge_context)
-    except ValueError as e:
-        logger.error(f"[pipeline] judge LLM 产出不合规，阻断: {e}")
-        fallback = JudgeResult(
-            trace_id=trace.trace_id,
-            project_id=project_id,
-            overall_fulfillment={"status": "not_evaluable"},
-            reasoning_summary=str(e)[:500],
-            evidence=["llm_output_validation_failed"],
-        )
-        try:
-            return _enforce_judge_live_schema(project_id, trace, adapter.reconcile_judge_result(trace, fallback))
-        except ValueError:
-            return fallback
-    return _enforce_judge_live_schema(project_id, trace, adapter.reconcile_judge_result(trace, result))
-
-
-def _run_core_attribute(spec, adapter, trace: RunTrace, judge_result: JudgeResult) -> AttributeResult:
-    project_attribute_context = adapter.build_attribute_context(trace, judge_result)
-    project_attribute_context = dict(project_attribute_context or {})
-    actual = judge_result.actual or trace_extracted_output(trace) or {}
-    expected = judge_result.expected or trace.reference_contract or {}
-    runtime_context = {
-        "expected": expected,
-        "actual": actual,
-        "reference": trace.reference_contract or {},
-        "trace_id": trace.trace_id,
-        "project_id": trace.project_id,
-    }
-    runtime_values = extract_runtime_values(trace_execution_trace(trace), actual)
-    project_attribute_context["runtime_checks"] = adapter.get_runtime_checks(runtime_values, runtime_context)
-    result = attribute_failure(spec, trace, judge_result, project_attribute_context=project_attribute_context)
-    result = adapter.apply_attribution_probes(trace, judge_result, result)
-    return _normalize_attribute_schema_payload(adapter.normalize_attribute_result(trace, judge_result, result))
-
-
 def judge(project_id: str, trace: RunTrace, expected_intent: Optional[str] = None) -> JudgeResult:
     spec = load_project(project_id)
     adapter = load_adapter(spec)
     if not getattr(trace, "ready", None):
         trace.ready = ready_from_spec(spec)
-    # 走协议层入口：adapter.judge().judge_trace()（新协议主流程）
     from impl.core.judge_protocol import ProjectJudge
-    judge_inst = adapter.judge() if hasattr(adapter, "judge") else None
-    if isinstance(judge_inst, ProjectJudge):
+    # 显式启用项目级 draft 时加载其协议实现，和 production 使用同一模板方法入口。
+    if (spec.judge_draft or {}).get("enabled") is True:
+        judge_inst = load_project_role_instance(spec, "judge", adapter)
+        if not isinstance(judge_inst, ProjectJudge):
+            raise TypeError("enabled judge draft must provide a ProjectJudge implementation")
         result = judge_inst.judge_trace(trace, expected_intent=expected_intent)
         return _enforce_judge_live_schema(project_id, trace, normalize_judge_result(result) or result)
-    # 兼容旧路径：项目 judge.py 模块的函数式 judge_trace
-    project_judge = load_project_judge(spec)
-    if project_judge is not None and hasattr(project_judge, "judge_trace"):
-        result = project_judge.judge_trace(spec, adapter, trace, expected_intent=expected_intent)
-        return _enforce_judge_live_schema(project_id, trace, normalize_judge_result(result) or result)
-    return _run_core_judge(spec, adapter, project_id, trace, expected_intent=expected_intent)
+    judge_inst = adapter.judge()
+    if not isinstance(judge_inst, ProjectJudge):
+        raise TypeError(f"{project_id} adapter.judge() must return ProjectJudge")
+    result = judge_inst.judge_trace(trace, expected_intent=expected_intent)
+    return _enforce_judge_live_schema(project_id, trace, normalize_judge_result(result) or result)
 
 
 def attribute(project_id: str, trace: RunTrace, judge_result: JudgeResult) -> AttributeResult:
     spec = load_project(project_id)
     adapter = load_adapter(spec)
-    # 走协议层入口：adapter.attribute().attribute_failure()（新协议主流程）
     from impl.core.attribute_protocol import ProjectAttribute
-    attr_inst = adapter.attribute() if hasattr(adapter, "attribute") else None
-    if isinstance(attr_inst, ProjectAttribute):
+    # 显式启用项目级 draft 时加载其协议实现，和 production 使用同一模板方法入口。
+    if (spec.attribute_draft or {}).get("enabled") is True:
+        attr_inst = load_project_role_instance(spec, "attribute", adapter)
+        if not isinstance(attr_inst, ProjectAttribute):
+            raise TypeError("enabled attribute draft must provide a ProjectAttribute implementation")
         result = attr_inst.attribute_failure(trace, judge_result)
         return _normalize_attribute_schema_payload(result)
-    # 兼容旧路径：项目 attribute.py 模块的函数式 attribute_failure
-    project_attribute = load_project_attribute(spec)
-    if project_attribute is not None and hasattr(project_attribute, "attribute_failure"):
-        result = project_attribute.attribute_failure(spec, adapter, trace, judge_result)
-        return _normalize_attribute_schema_payload(result)
-    return _run_core_attribute(spec, adapter, trace, judge_result)
+    attr_inst = adapter.attribute()
+    if not isinstance(attr_inst, ProjectAttribute):
+        raise TypeError(f"{project_id} adapter.attribute() must return ProjectAttribute")
+    result = attr_inst.attribute_failure(trace, judge_result)
+    return _normalize_attribute_schema_payload(result)
 
 
 def _satisfied_fulfillment_status(judge_result: JudgeResult) -> Optional[str]:
@@ -297,7 +249,7 @@ def frontend_view(
     spec = load_project(project_id)
     extensions = {}
     if trace:
-        extensions = load_adapter(spec).build_frontend_extensions(trace)
+        extensions = load_adapter(spec).tools().frontend_extensions(trace)
     return build_frontend_view(spec, trace, judge_result, attribute_result, cluster_summary, check_report, extensions)
 
 
@@ -368,7 +320,7 @@ def _unsupported_interactive_run(project_id: str, case_id: str, source_case: Dic
         fallback_type="unsupported",
         status="needs_human_review",
         reason="interactive_intent is not supported by this project adapter",
-        missing_evidence=["adapter.run_interactive"],
+        missing_evidence=["live.run_interactive"],
         recoverable=True,
         needs_human_review=True,
         quality_flags=["unsupported_interactive_intent"],
@@ -403,14 +355,14 @@ def _unsupported_interactive_run(project_id: str, case_id: str, source_case: Dic
         project_id=project_id,
         overall_fulfillment={"status": "not_evaluable"},
         reasoning_summary="该项目 adapter 不支持 interactive_intent，已将该 case 限界为 not_evaluable，不中断批次。",
-        evidence=["adapter.run_interactive missing"],
+        evidence=["live.run_interactive missing"],
     )
     attribute_result = AttributeResult(
         trace_id=trace.trace_id,
         project_id=project_id,
         case_id=case_id,
         root_cause_hypothesis="当前项目未声明或实现 interactive_intent adapter hook。",
-        evidence=["adapter.run_interactive missing"],
+        evidence=["live.run_interactive missing"],
         evidence_strength="weak",
     )
     run = _run_payload(trace, judge_result, attribute_result, case_id=case_id, execution_mode="interactive_intent", output_source="unsupported_interactive_intent", error=trace.error)
@@ -422,9 +374,10 @@ def _batch_case(index: int, case: Dict[str, Any], project_id: str, expected_inte
     if normalized and normalized.mode == "interactive_intent":
         try:
             adapter = load_adapter(load_project(project_id))
-            if not hasattr(adapter, "run_interactive"):
+            live = adapter.live()
+            if not hasattr(live, "run_interactive"):
                 return _unsupported_interactive_run(project_id, normalized.case_id, normalized.source_case)
-            run = adapter.run_interactive(normalized)
+            run = live.run_interactive(normalized)
             trace = _run_trace(run)
             if trace:
                 trace.case_id = trace.case_id or normalized.case_id

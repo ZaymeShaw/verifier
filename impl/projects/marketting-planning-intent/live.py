@@ -162,9 +162,8 @@ from impl.core.live_protocol import RealServiceLive
 class MarketingIntentLive(RealServiceLive):
     """marketting-planning-intent 项目 Live 实现（新协议）。"""
 
-    def __init__(self, spec: ProjectSpec, adapter):
+    def __init__(self, spec: ProjectSpec):
         super().__init__(spec)
-        self._adapter = adapter
 
     def build_request(self, case: SingleTurnCase | MultiTurnCase) -> Dict[str, Any]:
         return build_request(case)

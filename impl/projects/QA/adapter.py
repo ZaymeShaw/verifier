@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from impl.core.adapter_v2 import ProjectAdapter
-from impl.core.schema import ProjectSpec, RunTrace
+from impl.core.schema import ProjectSpec
 
 
 class Adapter(ProjectAdapter):
@@ -32,11 +32,3 @@ class Adapter(ProjectAdapter):
         from impl.projects.QA.tools import QATools
 
         return QATools(self.spec)
-
-    def build_frontend_extensions(self, trace: RunTrace):
-        return {
-            "schema_protocol_extensions": trace.project_fields,
-            "scenarios": self.spec.frontend_extensions.get("scenarios") or [],
-            "score_dimensions": self.spec.frontend_extensions.get("score_dimensions") or [],
-            "error_taxonomy": self.spec.frontend_extensions.get("error_taxonomy") or [],
-        }

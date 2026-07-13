@@ -132,7 +132,7 @@ class MockAgent:
             },
         )
 
-    # --- 运行时逐轮：被项目 adapter.run_interactive 委托 ---
+    # --- 运行时逐轮：由项目 Live 的 run_interactive 调用 ---
 
     def next_turn(self, case: Dict[str, Any], previous_turns: List[Dict[str, Any]], live_feedback: Dict[str, Any]) -> Dict[str, Any]:
         trace_id = f"mock-agent-next-turn-{uuid.uuid4()}"

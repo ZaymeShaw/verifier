@@ -9,7 +9,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, List
 from typing import final as typing_final
-from impl.core.schema import ProjectSpec
+from impl.core.schema import ProjectSpec, RunTrace
 from impl.core.protocol_base import check_forbidden_overrides
 
 
@@ -136,6 +136,8 @@ class _ToolsProtocol(ABC):
         默认返回空 dict。
         """
         return {}
+    def frontend_extensions(self, trace: RunTrace) -> Dict[str, Any]:
+        return {"schema_protocol_extensions": trace.project_fields}
 
 
 class ProjectTools(_ToolsProtocol):

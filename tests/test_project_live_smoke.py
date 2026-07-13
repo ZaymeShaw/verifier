@@ -5,7 +5,7 @@ from pathlib import Path
 
 from impl.core.pipeline import live_run
 from impl.core.schema import LiveExecutionResult, LiveRequest, MultiTurnInteraction, MultiTurnPolicy, ProjectSpec
-from impl.core.live import _apply_interaction_state
+from impl.core.live_protocol import _LiveProtocol
 
 
 _MP_LIVE_PATH = Path(__file__).resolve().parents[1] / "impl" / "projects" / "marketting-planning" / "live.py"
@@ -13,6 +13,14 @@ _MP_LIVE_SPEC = importlib.util.spec_from_file_location("test_marketting_planning
 assert _MP_LIVE_SPEC is not None and _MP_LIVE_SPEC.loader is not None
 mp_live = importlib.util.module_from_spec(_MP_LIVE_SPEC)
 _MP_LIVE_SPEC.loader.exec_module(mp_live)
+
+
+class _InteractionHarness:
+    _multi_turn_accumulated_fields = _LiveProtocol._multi_turn_accumulated_fields
+    _live_multi_turn_result = _LiveProtocol._live_multi_turn_result
+
+
+_INTERACTION_HARNESS = _InteractionHarness()
 
 
 def _stages(trace) -> list[str]:
@@ -73,12 +81,15 @@ def test_marketting_planning_intent_live_run_smoke():
         assert "confidence" in trace.extracted_output
 
 
-def test_marketting_planning_intent_trace_uses_project_taxonomy():
+def test_marketting_planning_intent_normalized_request_matches_live_schema_dataclass():
     trace = live_run("marketting-planning-intent", {"query": "帮我识别营销意图", "reference": {"intent": "nbev_planning"}})
 
-    stages = _stages(trace)
-    assert "adapter_extraction" in stages
-    assert "intent_output.extract" not in stages
+    assert trace.normalized_request["scenario"] == "intent_recognition"
+    assert trace.normalized_request["query"] == "帮我识别营销意图"
+    assert trace.normalized_request["reference"] == {}
+    assert trace.normalized_request["expected_intent"] is None
+    assert isinstance(trace.normalized_request["metadata"], dict)
+    assert trace.normalized_request["session_id"].startswith("eval-")
 
 
 def test_marketting_planning_shared_session_string_false_is_false():
@@ -288,7 +299,7 @@ def test_multi_turn_state_accumulated_fields_uses_latest_declared_session_summar
         turns=[{"role": "user", "content": "目标1200"}, {"role": "user", "content": "规划"}],
     )
 
-    _apply_interaction_state(result, request, MultiTurnInteraction(policy=MultiTurnPolicy()))
+    _LiveProtocol._apply_interaction_state(_INTERACTION_HARNESS, result, request, MultiTurnInteraction(policy=MultiTurnPolicy()))
 
     assert result.multi_turn_state is not None
     assert result.multi_turn_state.accumulated_fields == {"target_value": 1200}
@@ -317,7 +328,7 @@ def test_multi_turn_state_does_not_guess_accumulated_fields_from_cards():
         turns=[{"role": "user", "content": "规划"}],
     )
 
-    _apply_interaction_state(result, request, MultiTurnInteraction(policy=MultiTurnPolicy()))
+    _LiveProtocol._apply_interaction_state(_INTERACTION_HARNESS, result, request, MultiTurnInteraction(policy=MultiTurnPolicy()))
 
     assert result.multi_turn_state is not None
     assert result.multi_turn_state.accumulated_fields == {}
