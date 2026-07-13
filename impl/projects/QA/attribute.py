@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from impl.core.attribute_protocol import run_project_attribute_protocol
-from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace
+from impl.core.attribute_protocol import ProjectAttribute
+from impl.core.runtime_query_tools import extract_runtime_values
+from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace, normalize_attribute_result, trace_execution_trace, trace_extracted_output
+from impl.core.summary import summary_from_attribution
 
 
 def _as_text(value: Any) -> str:
@@ -61,7 +63,7 @@ def _qa_local_evidence_probe(trace: RunTrace, judge_result: JudgeResult, request
     }
 
 
-def _build_project_attribute_context(spec: ProjectSpec, adapter, trace: RunTrace, judge_result: JudgeResult) -> dict[str, Any]:
+def _build_project_attribute_context(spec: ProjectSpec, trace: RunTrace, judge_result: JudgeResult) -> dict[str, Any]:
     request = trace.normalized_request if isinstance(trace.normalized_request, dict) else {}
     reference = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}
     actual = judge_result.actual or trace.extracted_output or {}
@@ -88,57 +90,92 @@ def _build_project_attribute_context(spec: ProjectSpec, adapter, trace: RunTrace
     }
 
 
-def attribute_failure(spec: ProjectSpec, adapter, trace: RunTrace, judge_result: JudgeResult) -> AttributeResult:
-    return run_project_attribute_protocol(
-        spec,
-        adapter,
-        trace,
-        judge_result,
-        project_attribute_context=_build_project_attribute_context(spec, adapter, trace, judge_result),
+def _build_attribute_context(trace: RunTrace, judge_result: JudgeResult) -> dict[str, Any]:
+    return {
+        "chain_nodes_to_check": list(trace.execution_trace or []),
+        "reference_contract": trace.reference_contract if isinstance(trace.reference_contract, dict) else {},
+        "attribute_standard": "Only attribute QA failures when judge has current-case expected/actual evidence; provided output never calls an external QA service.",
+    }
+
+
+def _runtime_checks(trace: RunTrace, judge_result: JudgeResult) -> dict[str, Any]:
+    actual = judge_result.actual or trace_extracted_output(trace) or {}
+    expected = judge_result.expected or trace.reference_contract or {}
+    runtime_context = {
+        "expected": expected,
+        "actual": actual,
+        "reference": trace.reference_contract or {},
+        "trace_id": trace.trace_id,
+        "project_id": trace.project_id,
+    }
+    extract_runtime_values(trace_execution_trace(trace), actual)
+    _ = runtime_context
+    return {}
+
+
+def _patch_chinese_text_fields(attribute_result: AttributeResult) -> AttributeResult:
+    en_to_zh = {
+        "unsupported root-cause evidence": "根因证据不充分",
+        "current case evidence does not support suspected locations or patch direction": "当前 case 证据不足以支撑疑似位置或补丁方向",
+        "unsupported root-cause evidence:": "根因证据不充分：",
+        "current case evidence does not support": "当前 case 证据不足以支撑",
+        "suspected locations or patch direction": "疑似位置或补丁方向",
+        "no_issue": "无问题",
+        "needs_human_review": "需人工复核",
+        "implementation_bug": "实现缺陷",
+        "model_capability_gap": "模型能力缺陷",
+        "boundary_limitation": "边界限制",
+    }
+    val = attribute_result.root_cause_hypothesis
+    if val and isinstance(val, str):
+        for en, zh in en_to_zh.items():
+            val = val.replace(en, zh)
+        attribute_result.root_cause_hypothesis = val
+    for ea in (attribute_result.expectation_attributions or []):
+        if not isinstance(ea, dict):
+            continue
+        for field in ("root_cause_hypothesis",):
+            val = ea.get(field)
+            if val and isinstance(val, str):
+                for en, zh in en_to_zh.items():
+                    val = val.replace(en, zh)
+                ea[field] = val
+    return attribute_result
+
+
+def _blocked_attribute_result(trace: RunTrace, judge_result: JudgeResult, reason: str) -> AttributeResult:
+    evidence = list(judge_result.evidence or [judge_result.reasoning_summary or reason])
+    result = AttributeResult(
+        trace_id=trace.trace_id,
+        project_id=trace.project_id,
+        case_id=str(trace.input.get("case_id") or ""),
+        suspected_locations=[],
+        evidence=evidence,
+        evidence_strength="none",
+        root_cause_hypothesis="当前证据不足以定位 QA 业务根因，需要语义 judge 或人工复核补足证据。",
     )
-
-
-from impl.core.attribute_protocol import ProjectAttribute
-from impl.core.runtime_query_tools import extract_runtime_values
-from impl.core.schema import normalize_attribute_result, trace_execution_trace, trace_extracted_output
+    result.summary = summary_from_attribution({
+        "expectation_attributions": result.expectation_attributions,
+        "root_cause_hypothesis": result.root_cause_hypothesis,
+        "evidence_strength": result.evidence_strength,
+    })
+    return result
 
 
 class QAAttribute(ProjectAttribute):
-    """QA 项目 Attribute 实现（新协议）。
-
-    迁移过渡期：扩展点委托 adapter 现有方法，保持功能不变。
-    旧版 apply_attribution_probes 在 LLM 后应用（修改 result），新版模板方法在 LLM 前运行 probes（放入 context）。
-    为保持功能不变，QAAttribute 在 normalize_result 阶段调用 adapter.apply_attribution_probes（模拟旧版 LLM 后应用）。
-    """
-
-    def __init__(self, spec: ProjectSpec, adapter):
-        super().__init__(spec)
-        self._adapter = adapter
+    """QA 项目 Attribute 实现（新协议）。"""
 
     def build_context(self, trace: RunTrace, judge_result: JudgeResult) -> dict:
-        # 产出含 runtime_checks 的完整 context（与旧版 run_project_attribute_protocol 一致）
-        base_context = self._adapter.build_attribute_context(trace, judge_result)
-        extra_context = _build_project_attribute_context(self.spec, self._adapter, trace, judge_result)
-        context = dict(base_context or {})
-        context.update(extra_context)
-        actual = judge_result.actual or trace_extracted_output(trace) or {}
-        expected = judge_result.expected or trace.reference_contract or {}
-        runtime_context = {
-            "expected": expected,
-            "actual": actual,
-            "reference": trace.reference_contract or {},
-            "trace_id": trace.trace_id,
-            "project_id": trace.project_id,
-        }
-        runtime_values = extract_runtime_values(trace_execution_trace(trace), actual)
-        context["runtime_checks"] = self._adapter.get_runtime_checks(runtime_values, runtime_context)
+        context = _build_attribute_context(trace, judge_result)
+        context.update(_build_project_attribute_context(self.spec, trace, judge_result))
+        context["runtime_checks"] = _runtime_checks(trace, judge_result)
         return context
 
-    def probes(self):
-        # 旧版 probes 在 LLM 后应用（normalize_result 阶段），这里返回 None 避免重复
-        return None
-
     def normalize_result(self, trace: RunTrace, judge_result: JudgeResult, result: AttributeResult) -> AttributeResult:
-        # 模拟旧版：先 apply_attribution_probes（LLM 后应用），再 normalize_attribute_result
-        result = self._adapter.apply_attribution_probes(trace, judge_result, result)
-        return normalize_attribute_result(self._adapter.normalize_attribute_result(trace, judge_result, result)) or result
+        result = normalize_attribute_result(result) or result
+        overall = judge_result.overall_fulfillment or {}
+        status = overall.get("status") or "not_evaluable"
+        if status == "not_evaluable":
+            reason = "QA judge 处于 not_evaluable 状态，缺少可用语义判定，不能产出正式失败归因。"
+            return _blocked_attribute_result(trace, judge_result, reason)
+        return _patch_chinese_text_fields(result)

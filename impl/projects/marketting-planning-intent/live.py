@@ -11,6 +11,23 @@ from impl.core.schema import ExecutionTraceEvent, LiveExecutionResult, LiveReque
 APPLICATION_BOUNDARY = {"scope": "single_turn_intent_recognition", "excludes": ["multi_turn_planning", "sse_card_generation"]}
 
 
+def build_request(case: SingleTurnCase | MultiTurnCase) -> dict[str, Any]:
+    input_data = dict(case.input or {})
+    query = input_data.get("query") or ""
+    reference = input_data.get("reference") or {}
+    expected_intent = input_data.get("expected_intent") or (reference.get("intent") if isinstance(reference, dict) else None)
+    session_id = str(input_data.get("session_id") or f"eval-{case.id or input_data.get('case_id') or input_data.get('id') or int(time.time() * 1000)}")
+    return {
+        "case_id": str(case.id or input_data.get("case_id") or input_data.get("id") or f"intent-case-{int(time.time() * 1000)}"),
+        "session_id": session_id,
+        "query": str(query),
+        "scenario": str(input_data.get("scenario") or "intent_recognition"),
+        "expected_intent": expected_intent,
+        "reference": reference if isinstance(reference, dict) else {"intent": reference},
+        "metadata": dict(input_data.get("metadata") or {}),
+    }
+
+
 def _live_request_body(request: LiveRequest | dict[str, Any]) -> dict[str, Any]:
     payload = request.normalized_request if isinstance(request, LiveRequest) else request
     query = str(payload.get("query") or "")
@@ -150,8 +167,7 @@ class MarketingIntentLive(RealServiceLive):
         self._adapter = adapter
 
     def build_request(self, case: SingleTurnCase | MultiTurnCase) -> Dict[str, Any]:
-        live_request = self._adapter.build_request(case)
-        return live_request.normalized_request
+        return build_request(case)
 
     def deliver_real(self, request: LiveRequest) -> Any:
         import time as _time
