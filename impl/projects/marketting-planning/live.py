@@ -4,9 +4,10 @@ import json
 import time
 import urllib.error
 import urllib.request
-from typing import Any
+from typing import Any, Dict, List, Optional
 
-from impl.core.schema import ExecutionTraceEvent, LiveExecutionResult, LiveRequest, MultiTurnCase, ProjectSpec, SingleTurnCase
+from impl.core.live_protocol import RealServiceLive
+from impl.core.schema import ExecutionTraceEvent, LiveExecutionResult, LiveMultiTurnState, LiveRequest, MultiTurnCase, ProjectSpec, RunTrace, SingleTurnCase
 
 
 def _attach_request(raw: Any, request: dict[str, Any]) -> Any:
@@ -487,22 +488,191 @@ def provided_output_raw(case: SingleTurnCase | MultiTurnCase, request: LiveReque
     return _attach_request({}, request.normalized_request)
 
 
-from impl.core.live_protocol import RealServiceLive
+def _normalize_turns(turns: Any) -> List[Dict[str, Any]]:
+    if not isinstance(turns, list):
+        return []
+    normalized = []
+    for item in turns:
+        if isinstance(item, dict):
+            normalized.append({"role": str(item.get("role") or "user"), "content": str(item.get("content") or item.get("query") or item.get("text") or ""), **({"output": item.get("output")} if "output" in item else {})})
+        else:
+            normalized.append({"role": "user", "content": str(item)})
+    return normalized
+
+
+def _last_user_content(turns: List[Dict[str, Any]]) -> str:
+    for turn in reversed(turns):
+        if turn.get("role") == "user" and turn.get("content"):
+            return str(turn.get("content"))
+    return ""
+
+
+def _extract_query(input_data: Dict[str, Any], turns: List[Dict[str, Any]]) -> str:
+    for value in (
+        input_data.get("query"),
+        _last_user_content(turns),
+    ):
+        if isinstance(value, dict):
+            value = value.get("content") or value.get("query") or value.get("text")
+        if value is not None and str(value).strip():
+            return str(value)
+    return ""
+
+
+def _current_turn(turns: List[Dict[str, Any]], query: str) -> Dict[str, Any]:
+    if turns:
+        for turn in reversed(turns):
+            if turn.get("role") == "user" and turn.get("content"):
+                return turn
+        return turns[-1]
+    return {"role": "user", "content": str(query)} if query else {}
+
+
+def _bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None or value == "":
+        return False
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "y", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "n", "off"}:
+            return False
+    return False
+
+
+def _normalize_boundary(boundary: Any) -> Dict[str, Any]:
+    data = dict(boundary or {}) if isinstance(boundary, dict) else {}
+    return {"dependency_status": data.get("dependency_status") or data.get("external_dependency") or "available", "allow_fallback": bool(data.get("allow_fallback") or data.get("fallback_allowed")), "excluded_evidence": _list(data.get("excluded_evidence")), "notes": str(data.get("notes") or "")}
+
+
+def _normalize_reference(reference: Any, input_data: Dict[str, Any], scenario: str) -> Dict[str, Any]:
+    ref = dict(reference or {}) if isinstance(reference, dict) else {}
+    if input_data.get("expected_stage") and "expected_stage" not in ref:
+        ref["expected_stage"] = input_data.get("expected_stage")
+    if input_data.get("expected_path_types") and "required_path_types" not in ref:
+        ref["required_path_types"] = _list(input_data.get("expected_path_types"))
+    if input_data.get("expected_cards") and "required_cards" not in ref:
+        ref["required_cards"] = _list(input_data.get("expected_cards"))
+    if "allow_fallback" not in ref and isinstance(input_data.get("boundary"), dict):
+        ref["allow_fallback"] = bool(input_data["boundary"].get("allow_fallback"))
+    if scenario and "scenario" not in ref:
+        ref["scenario"] = scenario
+    return ref
+
+
+def _infer_scenario(input_data: Dict[str, Any], turns: List[Dict[str, Any]]) -> str:
+    text = " ".join([str(input_data.get("query") or input_data.get("user_intent") or "")] + [str(turn.get("content") or "") for turn in turns])
+    if any(word in text for word in ["缺", "补充", "澄清"]):
+        return "clarification"
+    if any(word in text for word in ["诗", "天气", "闲聊"]):
+        return "non_agent_intent"
+    if any(word in text for word in ["不可用", "兜底", "fallback"]):
+        return "fallback_data_unavailable"
+    if len(turns) > 1:
+        return "multi_turn_field_accumulation"
+    return "execution_planning"
+
+
+def build_request(case: SingleTurnCase | MultiTurnCase, project_id: str) -> Dict[str, Any]:
+    input_data = dict(case.input or {})
+    turns = _normalize_turns(input_data.get("turns"))
+    query = _extract_query(input_data, turns)
+    if not turns and query:
+        turns = [{"role": "user", "content": str(query)}]
+    elif turns and not query:
+        query = _last_user_content(turns)
+    case_id = str(case.id or input_data.get("case_id") or input_data.get("id") or f"marketing-case-{int(time.time() * 1000)}")
+    shared_session = _bool(input_data.get("shared_session"))
+    declared_session = input_data.get("session_id")
+    session_id = str(declared_session) if shared_session and declared_session else f"eval-{case_id}"
+    scenario = str(input_data.get("scenario") or case.scenario or _infer_scenario(input_data, turns))
+    boundary = _normalize_boundary(input_data.get("boundary") or {})
+    case_reference = case.reference if isinstance(case.reference, dict) else {}
+    reference = _normalize_reference(input_data.get("reference") or case_reference or {}, input_data, scenario)
+    first_user_turn = next((turn.get("content") for turn in turns if turn.get("role") == "user" and turn.get("content")), "")
+    current_turn = _current_turn(turns, query)
+    return {
+        "case_id": case_id,
+        "session_id": session_id,
+        "shared_session": shared_session,
+        "user_intent": str(input_data.get("user_intent") or query or first_user_turn or scenario),
+        "query": str(query or current_turn.get("content") or ""),
+        "turns": turns,
+        "current_turn": current_turn,
+        "scenario": scenario,
+        "expected_stage": input_data.get("expected_stage") or reference.get("expected_stage"),
+        "expected_path_types": _list(input_data.get("expected_path_types") or reference.get("required_path_types")),
+        "expected_cards": _list(input_data.get("expected_cards") or reference.get("required_cards")),
+        "metadata": dict(input_data.get("metadata") or {}),
+        "boundary": boundary,
+        "reference": reference,
+        "project_id": project_id,
+    }
+
+
+def _interactive_assistant_content(output: Dict[str, Any]) -> str:
+    stage = output.get("stage") or "unknown"
+    missing_fields = _list((output.get("session_summary") or {}).get("missing_fields"))
+    cards = [card.get("path_type") for card in output.get("card_summary") or [] if card.get("path_type")]
+    parts = [f"stage={stage}"]
+    if missing_fields:
+        parts.append("missing=" + ",".join(str(item) for item in missing_fields))
+    if cards:
+        parts.append("cards=" + ",".join(str(item) for item in cards))
+    return " · ".join(parts)
+
+
+def _interactive_turn_trace(turn_index: int, user_input: Dict[str, Any], output: Dict[str, Any], expectations: List[Dict[str, Any]]) -> Dict[str, Any]:
+    expectation = next((item for item in expectations if int(item.get("turn") or 0) == turn_index), {})
+    stage = output.get("stage") or "unknown"
+    missing_fields = _list((output.get("session_summary") or {}).get("missing_fields"))
+    path_evidence = [card.get("path_type") for card in output.get("card_summary") or [] if card.get("path_type")]
+    failures = []
+    if expectation.get("stage") and expectation.get("stage") != stage:
+        failures.append("stage")
+    expected_missing = _list(expectation.get("missing_fields"))
+    if expected_missing and not missing_fields:
+        failures.append("missing_fields_absent")
+    for path_type in _list(expectation.get("required_path_types")):
+        if path_type not in path_evidence:
+            failures.append(f"path_type:{path_type}")
+    return {
+        "turn_index": turn_index,
+        "user_input": {"query": str(user_input.get("query") or "")},
+        "stage": stage,
+        "missing_fields": missing_fields,
+        "path_evidence": path_evidence,
+        "card_evidence": [{"path_type": card.get("path_type"), "card_code": card.get("card_code"), "card_name": card.get("card_name")} for card in output.get("card_summary") or []],
+        "judge_verdict": "incorrect" if failures else "correct",
+        "error_summary": failures,
+    }
+
+
+def _interactive_final_verdict(turn_traces: List[Dict[str, Any]], stop_reason: str) -> str:
+    if any(turn.get("judge_verdict") == "incorrect" for turn in turn_traces):
+        return "incorrect"
+    if stop_reason != "intent_resolved":
+        return "uncertain"
+    return "correct"
 
 
 class MarketingPlanningLive(RealServiceLive):
-    """marketting-planning 项目 Live 实现（新协议）。
+    """marketting-planning 项目 Live 实现（新协议）。"""
 
-    迁移过渡期：扩展点委托模块级函数和 adapter 现有方法。
-    """
-
-    def __init__(self, spec: ProjectSpec, adapter):
+    def __init__(self, spec: ProjectSpec, adapter=None):
         super().__init__(spec)
         self._adapter = adapter
+        self._mock_agent_instance = None
 
     def build_request(self, case: SingleTurnCase | MultiTurnCase) -> Dict[str, Any]:
-        live_request = self._adapter.build_request(case)
-        return live_request.normalized_request
+        return build_request(case, self.spec.project_id)
+
+    def deliver_provided(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Any:
+        return provided_output_raw(case, request)
 
     def deliver_real(self, request: LiveRequest) -> Any:
         import time as _time
@@ -547,3 +717,153 @@ class MarketingPlanningLive(RealServiceLive):
 
     def build_execution_trace(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> list:
         return build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output, self.spec)
+
+    def build_interactive_turn(self, case: Dict[str, Any], previous_turns: List[Dict[str, Any]]) -> Dict[str, Any]:
+        mock_agent_turn = self._mock_agent_next_turn(case, previous_turns)
+        if mock_agent_turn is not None:
+            return mock_agent_turn
+        user_intent = case.get("user_intent") if isinstance(case.get("user_intent"), dict) else {}
+        goal = str(user_intent.get("goal") or case.get("query") or case.get("user_intent") or "")
+        if not previous_turns:
+            return {"query": goal, "turn_index": 1}
+        missing_fields = []
+        for turn in previous_turns:
+            missing_fields.extend(_list(turn.get("missing_fields")))
+        if "target_value" in missing_fields:
+            return {"query": str(user_intent.get("target_value") or ""), "turn_index": len(previous_turns) + 1}
+        if "path_types" in missing_fields:
+            return {"query": "、".join(str(item) for item in _list(user_intent.get("path_type_intent"))), "turn_index": len(previous_turns) + 1}
+        return {"query": goal, "turn_index": len(previous_turns) + 1}
+
+    def _mock_agent_next_turn(self, case: Dict[str, Any], previous_turns: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        try:
+            from impl.core.mock_agent import MockAgent, load_live_schema
+            if load_live_schema(self.spec.project_id) is None:
+                return None
+            if not self._mock_agent_instance:
+                self._mock_agent_instance = MockAgent(self.spec)
+            live_feedback = {}
+            if previous_turns:
+                last = previous_turns[-1] if isinstance(previous_turns[-1], dict) else {}
+                live_feedback = {"missing_fields": _list(last.get("missing_fields")), "stage": last.get("stage")}
+            return self._mock_agent_instance.next_turn(case, previous_turns, live_feedback)
+        except Exception:
+            return None
+
+    def run_interactive(self, case) -> Dict[str, Any]:
+        source_case = dict(case.source_case or {})
+        interaction = dict(case.interaction or {})
+        policy = dict(case.policy or {})
+        max_turns = max(1, int(policy.get("max_turns") or 4))
+        turn_expectations = interaction.get("turn_expectations") or []
+        turn_outputs = source_case.get("turn_outputs") if isinstance(source_case.get("turn_outputs"), list) else []
+        transcript: List[Dict[str, Any]] = []
+        turn_traces: List[Dict[str, Any]] = []
+        stop_reason = "max_turns"
+        session_id = f"interactive-{case.case_id}"
+        start = time.time()
+        raw_responses: List[Any] = []
+
+        for _ in range(max_turns):
+            next_turn = self.build_interactive_turn(source_case, turn_traces)
+            transcript.append({"role": "user", "content": str(next_turn.get("query") or "")})
+            request_input = {
+                "case_id": case.case_id,
+                "session_id": session_id,
+                "shared_session": True,
+                "query": next_turn.get("query"),
+                "turns": transcript,
+                "scenario": source_case.get("scenario") or "interactive_intent",
+                "reference": source_case.get("reference") or {},
+            }
+            request = LiveRequest(
+                project_id=self.spec.project_id,
+                raw_input=request_input,
+                case_id=case.case_id,
+                normalized_request=self.build_request(SingleTurnCase(id=case.case_id, input=request_input)),
+                execution_mode="live_service",
+                session_id=session_id,
+                turns=transcript,
+            )
+            if len(turn_traces) < len(turn_outputs):
+                raw = self.deliver_provided(SingleTurnCase(id=case.case_id, input={"output": turn_outputs[len(turn_traces)]}), request)
+            else:
+                candidate = self.deliver_real(request)
+                raw = candidate.raw_response if isinstance(candidate, LiveExecutionResult) else candidate
+            raw_responses.append(raw)
+            extracted_result = self.extract_output(raw, request)
+            turns = extracted_result.get("turns") if isinstance(extracted_result, dict) else None
+            extracted = turns[-1] if isinstance(turns, list) and turns and isinstance(turns[-1], dict) else extracted_result
+            turn_trace = _interactive_turn_trace(len(turn_traces) + 1, next_turn, extracted, turn_expectations)
+            turn_traces.append(turn_trace)
+            transcript.append({"role": "assistant", "content": _interactive_assistant_content(extracted), "stage": extracted.get("stage") or "unknown", "extracted_summary": turn_trace.get("error_summary") or turn_trace.get("judge_verdict") or ""})
+            if extracted.get("stage") == "planning" and not (extracted.get("session_summary") or {}).get("missing_fields"):
+                stop_reason = "intent_resolved"
+                break
+
+        final_stage = turn_traces[-1].get("stage") if turn_traces else "unknown"
+        final_verdict = _interactive_final_verdict(turn_traces, stop_reason)
+        conversation_summary = {
+            "turn_count": len(turn_traces),
+            "final_stage": final_stage,
+            "stop_reason": stop_reason,
+        }
+        final_output = {
+            "stage": final_stage,
+            "conversation_summary": conversation_summary,
+            "turn_results": turn_traces,
+            "final_turn": turn_traces[-1] if turn_traces else {},
+        }
+        trace = RunTrace(
+            trace_id=f"interactive-{case.case_id}",
+            project_id=self.spec.project_id,
+            case_id=case.case_id,
+            input=source_case,
+            normalized_request={"case_id": case.case_id, "interaction_mode": "interactive_intent", "max_turns": max_turns, "policy": policy, "user_intent": source_case.get("user_intent") or source_case.get("input", {}).get("user_intent") or {}},
+            raw_response={"turn_responses": raw_responses},
+            extracted_output=final_output,
+            execution_mode="interactive_intent",
+            output_source="interactive_adapter",
+            scenario=str(source_case.get("scenario") or "interactive_intent"),
+            reference_contract=dict(source_case.get("reference") or {}),
+            project_fields={},
+            execution_trace=[
+                ExecutionTraceEvent(stage="interactive_turn", status=turn.get("judge_verdict"), evidence={"turn_index": turn.get("turn_index"), "stage": turn.get("stage"), "missing_fields": turn.get("missing_fields")})
+                for turn in turn_traces
+            ],
+            status="ok" if final_verdict == "correct" else "error",
+            interaction_mode="interactive_intent",
+            multi_turn_input={"user_intent": source_case.get("user_intent") or source_case.get("input", {}).get("user_intent") or {}, "policy": policy, "conversation_summary": conversation_summary},
+            error="" if final_verdict == "correct" else "interactive intent incomplete",
+        )
+        trace.stop_reason = stop_reason
+        trace.conversation_summary = conversation_summary
+        live_result = LiveExecutionResult(
+            project_id=self.spec.project_id,
+            case_id=case.case_id,
+            session_id=session_id,
+            raw_input=source_case,
+            normalized_request=trace.normalized_request,
+            call_status="succeeded",
+            raw_response={"turn_responses": raw_responses},
+            runtime_ms=int((time.time() - start) * 1000),
+            extracted_output=final_output,
+            output_source="interactive_adapter",
+            execution_trace=list(trace.execution_trace or []),
+            project_fields={},
+            interaction_mode="interactive_intent",
+            multi_turn_state=LiveMultiTurnState(session_id=session_id, turn_index=len(turn_traces), transcript=transcript, accumulated_fields=final_output, missing_fields=_list((turn_traces[-1] if turn_traces else {}).get("missing_fields")), stop_reason=stop_reason),
+        )
+        trace.live_result = live_result
+        judge = {
+            "trace_id": trace.trace_id,
+            "project_id": self.spec.project_id,
+            "reasoning_summary": f"interactive_intent final_stage={final_stage}, stop_reason={stop_reason}",
+        }
+        attribute = {
+            "trace_id": trace.trace_id,
+            "project_id": self.spec.project_id,
+            "case_id": case.case_id,
+            "root_cause_hypothesis": "" if final_verdict == "correct" else "系统回复未满足当前 interactive_intent 的 turn_expectations 或未在 max_turns 内完成。",
+        }
+        return {"case_id": case.case_id, "execution_mode": "interactive_intent", "output_source": live_result.output_source, "trace": trace, "judge": judge, "attribute": attribute}
