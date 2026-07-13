@@ -1,68 +1,35 @@
-# Draft Comparison Report
+# Draft 结论
 
-## Scope
+## 目标
 
-- Project: `<project_id>`
-- Role: `<attribute / judge / ...>`
-- Current implementation: `<impl/projects/<project>/<role>.py or core fallback>`
-- Draft implementation: `impl/projects/<project>/draft/<role>.py`
-- Mock data source: `<draft config frozen mock dataset>`
-- Config: `<draft config path>`
+- Objective: `<本轮真正要改善什么>`
+- Review: `<用户如何判断是否改善>`
+- Project / role: `<project_id> / <role>`
+- Frozen cases: `<mock_source>`
 
-## Result
+## 实际探索与改动
 
-Conclusion: draft better / draft not better yet / blocked
+- 检查了：`<源码 / 配置 / 文档 / 现有 comparator 或 tool>`
+- 实测了：`<局部链路 / 业务接口 / probe>`
+- 观察到：`<目标相关事实>`
+- 因此只改了：`<draft 改动及原因>`
 
-## Summary table
+## Current vs Draft
 
-| Case | Status (current → draft) | Strength / Confidence (current → draft) | Draft improvement | Risk |
-| --- | --- | --- | --- | --- |
-| `<case_key>` | `<status>` → `<status>` | `<strength>` → `<strength>` | `<evidence / link localization / judgment accuracy delta>` | `<overfit / inflation / missing evidence / faking risk>` |
+| Case | Current 的目标相关行为 | Draft 行为 | 关键实验/证据 |
+| --- | --- | --- | --- |
+| `<case>` | `<事实>` | `<事实>` | `<可复现证据>` |
 
-## Evidence quality
+## 按 Review 判断
 
-- Current gaps:
-  - ...
-- Draft improvements:
-  - ...
-- Remaining blockers:
-  - ...
+- `<review 原则>`：通过 / 不通过 / 证据不足 — `<理由>`
 
-## Link localization (attribute 专属)
+字段更多、文本更长、结构更丰富或 confidence 更高不能作为通过理由。
 
-- Current stops at: `<module name / stage name>`
-- Draft drills down to: `<specific tool / code path / config key>`
+## 结论
 
-## Business expectation extraction (judge 专属)
+- Objective 是否真正改善：是 / 否 / 证据不足
+- 遗留问题：`<blocker>`
+- Promotion：建议 / 不建议
 
-- Current extraction:
-  - ...
-- Draft extraction:
-  - ...
-
-## Anti-overfit check
-
-- Mock dataset unchanged during loop: pass / fail
-- User-requested config changes applied: none / listed below
-- Case id / sample index hardcoding: pass / fail
-- Current-case-only evidence: pass / fail
-- Canonical standard preserved: pass / fail
-- Missing evidence does not produce strong / high confidence: pass / fail
-- Fulfilled cases not forced into failure: pass / fail
-- not_evaluable not wrapped as fulfilled / not_fulfilled: pass / fail
-
-## Decision
-
-Promotion recommendation: yes / no
-
-Required follow-up before promotion:
-
-- [ ] `draft/<role>.py` 可 import，`__init_subclass__` 不报错
-- [ ] 当前协议所有 `@abstractmethod` 已实现（对照自省结果）
-- [ ] 没有覆盖模板方法或内部方法
-- [ ] 签名与 production `ProjectXxx` 一致
-- [ ] 代表 case 的 targeted run 或局部函数验证通过
-- [ ] mock 对比报告显示 draft 在证据质量/链路定位/泛化风险上优于或不弱于 current
-- [ ] tool/probe failed 不会伪造 strong
-- [ ] production loader 在 `<role>_draft.enabled=false` 时不加载 draft
-- [ ] 人工确认后才 promotion：搬移 `draft/<role>.py` → `<role>.py`，`draft/tools/` → `tools/`，`project.yaml` 中 `<role>_draft.enabled` 设为 `false`
+只有 objective 真正改善、review 逐条通过、frozen case 无退化且后台硬门禁通过，才等待用户人工确认 promotion。

@@ -2,9 +2,8 @@
 # 默认不配置或 enabled: false 时，production 加载项目根目录 <role>.py 或 core fallback。
 # enabled: true 时，load_project_<role>() 加载 draft/<role>.py 做离线验证。
 #
-# 当前仅 attribute_draft 支持通过 loader 临时切换（impl/core/project_loader.py）。
-# judge draft 始终通过离线 direct import 做 current vs draft 对比，不配置 judge_draft，
-# 也不要求为 draft 机制修改 production loader；人工确认后直接覆盖 production judge.py。
+# attribute 和 judge 都支持通过 loader 做项目级 draft 切换。
+# 两个角色可独立开启；enabled: true 时 module 必须存在且位于当前项目 draft/ 下。
 
 attribute_draft:
   # 是否临时使用 impl/projects/<project>/draft/attribute.py；只应在人工确认的验证场景开启。
@@ -15,3 +14,9 @@ attribute_draft:
 
   # 开启原因；用于审查和报告，不参与运行判断。
   reason: "Manual validation of draft attribution before promotion."
+
+# Judge 使用相同的项目级切换语义。
+judge_draft:
+  enabled: false
+  module: "draft/judge.py"
+  reason: "Manual validation of draft judge before promotion."

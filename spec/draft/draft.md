@@ -1,169 +1,197 @@
-修订版：纯 draft 骨架（角色无关、协议无关）
+verifier/spec/draft/draft.md
 
-阶段 0：config 初始化
+目标
 
-project_id: "<project>"
-objective: |                  # 本轮 draft 要改什么
-...
-mock_source: "<path>"         # 冻结评测数据来源
-material:                     # 项目知识来源
-- path: "..."
-    note: "..."
-mock_frozen: true
-review: |
-...
-max_iterations: 5
-report_path: "impl/projects/<project>/draft/<role>_comparison_report.md"
-# 角色特异扩展字段从角色层补
+围绕一个明确的优化目标，在固定数据上探索并改进项目层角色实现（attribute / judge / 后续可扩展角色），用真实运行证据判断 draft 是否比 current
+更好，再由人工决定是否 promotion。不追求字段更多或报告更完整。
 
-阶段 1：material 收集（独立于 mock）
+适配范围
 
-按 config 的 material 字段读项目源码/配置/文档/<role>_boundary-template.md/现有 adapter/tool/schema，建立项目知识。
+适用于 impl/core/<role>_protocol.py 定义的项目层角色。当前覆盖 attribute 和 judge；后续角色按同一机制扩展，不由本 spec 预判扩展点清单。
 
-产出：draft 对项目的理解，不进 case。约束：只读不改。
+输入
 
-阶段 2：mock 数据构建/加载（独立于 material）
+用户提供 config，真正驱动工作的是其中四项：
 
-加载 mock_source，构建冻结的评测 case。
+- objective：本轮要改善的目标行为，描述到可观察程度。
+- material：理解项目和寻找优化路径时应读的源码、配置、文档、trace、已有 tool。
+- mock_source：项目已有的固定 mock 数据集，整个 loop 不修改。
+- review：用户判断目标是否真正改善的原则，结论必须逐条回答。
 
-case 契约（draft 机制只定这三条）：
+其余字段（project_id、role、max_iterations、report_path 等）只承载运行参数，不构成优化目标本身。
 
-1. case 装的是"跑一次 draft 所需的全部入参"——具体字段由当前 ProjectXxx 的模板方法签名 + 扩展点签名派生，draft 不预判字段名。
-2. case 必须带"期望"——对比 current vs draft 时判断哪边对，"期望"形态由角色/项目定（reference / expected_intent / 业务标注 / expected_check 都行）。
-3. case 冻结，loop 中不改，要改必须用户明确更新 config。
+工作循环
 
-阶段 3：draft 实现（按当前协议规范）
+理解 objective 和 material
+→ 加载并固定 mock_source
+→ 运行 current，找到目标差距
+→ 探索代码/配置/业务链路/已有检查能力，实测优化方向
+→ 将有效改动写入 draft
+→ 在同一数据上运行 current/draft
+→ 按 review 和真实实验判断目标差异 
+→ 用户可补充需求 → 修 draft/tool → 再验证
+→ draft 真正优于 current，或达到上限后记录 blocker
 
-draft 实现落在 impl/projects/<project>/draft/<role>.py，继承 ProjectXxx：
+循环中允许反复回到探索阶段；不要求一次走完。每一轮应留下：
 
-from impl.core.<role>_protocol import ProjectXxx
+- 目标
+- 实际探索与改动
+- 关键实验与观察
+- current/draft 的目标相关差异
+- 按 review 的结论和遗留问题
 
-class DraftXxx(ProjectXxx):
-    """Draft 版的项目层实现。"""
+draft 实现要求
 
-    # 实现当前协议要求的所有 @abstractmethod（具体哪些由 *_protocol.py 决定）
-    def build_context(self, ...):
-        return {
-            "system_prompt_override": """...""",
-            "user_prompt_extras": {...},
-            "tools": [...],  # 可选
-        }
+- 位于 impl/projects/<project>/draft/<role>.py。
+- 与 production <role>.py 结构一致，promotion 时可直接覆盖，不需要改名或改构造签名。
+- 实现协议自省得到的 abstract_methods；不覆盖模板方法和内部方法。
+- draft 不被 production loader 自动加载；只有 project.yaml 的 <role>_draft.enabled: true 时通过统一 loader 加载。
+- promotion 前所有改动只在 draft/ 下，不动 production。
+固定数据
 
-    # 可选覆盖的扩展点按需覆盖
-    ...
+- mock_source 必须指向项目已有数据，不另生成冻结副本。
+- loop 中不得修改 mock 数据；要换数据必须用户明确更新 config。
+- skill 在加载和每轮运行前后对参与评测的源数据建立摘要基线，变化即终止 loop。
+- 用户明确更新 config 后才可建立新基线。
 
-协议约束（draft 机制只定这三条硬约束，不预判扩展点清单）：
+current/draft 对比
 
-1. 继承 ProjectXxx，不另写函数式入口。
-2. 不覆盖模板方法（@final）和内部方法（_ 前缀）——协议层 _FORBIDDEN_OVERRIDES + __init_subclass__ 已经硬约束，draft 自然受约束。
-3. 实现当前协议要求的所有 @abstractmethod——清单由当前 *_protocol.py 决定，draft 不预判。
+- 同一批固定 case，current 和 draft 各跑一遍。
+- 对比脚本只保留两边原始结果和异常，不输出通用“更优”结论。
+- 是否真正改善由 skill 结合 objective、真实实验、项目已有 comparator/runtime check 和 review 判断。
+- 字段更多、文本更长、结构更复杂、confidence 更高都不能单独证明改善。
+- 异常直接冒泡，不包装成成功，不生成可用于 promotion 的报告。
 
-tool 接入（attribute/judge 都可能用，按效果定）：
+硬约束
 
-- draft 在 build_context 返回的 tools 里挂项目特异 tool（来自 impl/projects/<project>/draft/tools/）。
-- tool 经统一 ToolRegistry + ToolOrchestrator + agno 桥接，不经项目 adapter 中转。
-- 角色特异的 tool 边界（如 judge 默认屏蔽内部代码信息）由角色层定，draft 机制不规定。
+以下由协议、loader、check 脚本和人工流程共同保证，不需要在 SKILL 中反复陈述：
 
-阶段 4：自检
+- draft 遵守当前协议；abstract methods 必须实现；模板方法和内部方法不可覆盖。
+- draft 默认不进入 production；promotion 必须人工确认。
+- mock 数据固定；要改必须用户明确更新 config。
+- 证据来自当前运行、真实代码链路、业务接口或项目已有检查标准；prompt 声明不是证据。
+- 不写死 case、不伪造强度、不把异常包装成成功、不把 fulfilled 强判失败。
+- promotion 后关闭 <role>_draft.enabled。
 
-- draft 实现继承 ProjectXxx，未覆盖模板方法/内部方法（__init_subclass__ 检查通过）。
-- 当前协议要求的所有 @abstractmethod 都实现了。
-- 入口签名（模板方法）和正式版一致——loader 切换无感。
-- 无 case id / 样本序号 / 当前样本专属数值硬编码。
-- 不伪造强度——证据不足时按角色规则标（attribute: none/weak；judge: not_evaluable），不伪造 strong / 不假装判断得了。
-- fulfilled case 不被强行失败。
-- tool（如有）经 ToolRegistry + agno 桥接，不经项目 adapter 中转。
-- draft 落在 draft/，loader 默认不加载。
-- 已做 compile/import + 局部 probe 或 targeted run。
+角色
 
-阶段 5：current vs draft 对比
+attribute：内部技术视角，可探索代码链路，证据强度由当前成功运行的 probe/runtime check 决定。
 
-同一批冻结 case，current（正式版 ProjectXxx 实现）和 draft 各跑一遍，比"证据质量 / 链路定位 / 不过拟合 / 不伪造"，不比刷分。
+judge：外部业务视角，默认不读取内部代码；状态只使用 fulfilled / not_fulfilled / not_evaluable；证据不足时保持 not_evaluable。
 
-对比逻辑骨架（角色特异的是 _result_summary 抽取的字段——由角色层根据当前 XxxResult schema 定）：
+角色细节由对应 ROLE.md 给，不在本 spec 预判。
 
-def compare_<role>_outputs(spec, adapter, cases, current_impl, draft_impl):
-    rows = []
-    for case in cases:
-        current_out = _result_summary(_run_<role>(current_impl, spec, adapter, case))
-        draft_out = _result_summary(_run_<role>(draft_impl, spec, adapter, case))
-        rows.append({
-            "case_key": case.get("case_key"),
-            "case_status": _case_status(case),  # 角色特异，从 case 里取状态字段
-            "current": current_out,
-            "draft": draft_out,
-            "quality_notes": _quality_notes(current_out, draft_out),
-        })
-    return {
-        "case_count": len(rows),
-        "rows": rows,
-        "decision_rule": "Promote only when draft improves evidence quality / link localization without overfit or inflated strength.",
-    }
+promotion
 
-_run_<role> 怎么从 case 取参数喂给模板方法、_result_summary 抽哪些字段、_case_status 从 case 取什么——这三处角色特异，由角色层根据当前协议签名 + schema
-定。draft 机制不预判。
+只有满足以下条件时才给出 promotion 建议，并等待人工确认：
 
-阶段 6：loop 迭代 / promotion
+- objective 真正改善，并且按 review 逐条通过。
+- 固定数据上无退化。
+- draft 通过 check 脚本：可编译、可加载、协议实现完整、灰度配置可实例化。
+- 无 overfit、无伪造、无异常被吞。
 
-读 config → 收集 material → 构建冻结 mock → 生成 draft 实现
-    → 自检通过？
-        → 否：修 draft，回到自检
-        → 是：current vs draft 对比
-            → draft 更优？
-                → 是：出对比报告 + promotion checklist，等用户确认
-                → 否：用户用 prompt 调整需求 → 修 draft/tool → 回到对比
-    → 达 max_iterations 还没更优？
-        → 记录 blocker，出报告，不 promotion
-        
-promotion checklist：
+promotion 由人工执行：覆盖 draft/<role>.py → <role>.py，搬移 draft/tools/ → tools/，关闭 <role>_draft.enabled。skill 不自动执行。
 
-- draft 类可 import，继承 ProjectXxx。
-- 当前协议要求的所有 @abstractmethod 实现完整。
-- 代表 case 的 targeted run 通过。
-- mock 对比报告显示 draft 优于或不弱于 current。
-- 不伪造强度 / 不强判。
-- production loader 不加载 draft。
-- 人工确认后才 promotion：搬移 draft/<role>.py → <role>.py，project.yaml 关掉 *_draft.enabled。
+不属于本 spec 的事
 
-阶段 7（可选）：一次性结论
-
-draft 跑对比时顺带产出当前 case 的一次性结论作为"效果预览"，不等同 promotion。
-
----
-draft 机制角色无关的部分 vs 角色特异部分（重新划清）
-
-draft 机制本身（角色无关，公共层写死）：
-
-- 7 个阶段流程。
-- config 字段骨架（project_id / objective / mock_source / material / mock_frozen / review / max_iterations / report_path）。
-- 三条硬约束：继承 ProjectXxx、不覆盖模板方法/内部方法、实现当前协议所有 @abstractmethod。
-- 三条 case 契约：装全部入参、带期望、冻结。
-- decision_rule：比证据质量/链路定位/不过拟合/不伪造，不比刷分。
-- promotion 必须人工确认。
-
-角色特异部分（角色层填，draft 机制不预判）：
-
-- case 具体字段（从当前 ProjectXxx 模板方法签名 + 扩展点签名派生）。
-- _run_<role> 怎么从 case 取参喂给模板方法。
-- _result_summary 抽哪些字段（从当前 XxxResult schema 派生）。
-- _case_status 从 case 取什么状态字段。
-- 角色特异的 tool 边界（如 judge 默认屏蔽内部代码）。
-- 角色特异的"伪造强度"判定（attribute: 伪造 strong；judge: 伪造 fulfilled/not_fulfilled）。
-
----
-一个新问题想确认
-
-既然 case 结构和扩展点清单都"由当前协议派生、draft 不预判"，那 draft skill 在执行阶段 2/3 时，怎么知道当前协议长什么样？
-
-我理解是：draft skill 在跑的时候，先读 impl/core/<role>_protocol.py——动态发现 ProjectXxx 的方法表（哪些是 @abstractmethod、哪些是 @final、哪些是 _
-前缀、模板方法签名是什么）。draft skill 不靠"自己脑子里记的扩展点清单"，靠"读当前协议文件"。
-
-这意味着 draft skill 要有一段"协议自省"逻辑——读 *_protocol.py，提取 ProjectXxx 的方法签名和扩展点清单。这段逻辑本身是 draft
-机制的一部分（角色无关），但提取出来的结果是角色特异的。
-
-这个理解对吗？还是你期望 draft 实现者（人或 AI）自己去读协议、draft skill 不做自省？你指点。
+- 不预判扩展点清单：由协议自省动态发现。
+- 不预判 case 字段：由当前 ProjectXxx 模板方法签名派生。
+- 不预判 result_summary 字段：由当前 XxxResult schema 决定。
+- 不替代项目已有 comparator/runtime check/tool，只复用或补充上下文。
+- 不与 /attribute skill 合并；当前阶段两者并存，互不修改。
 
 
 
 
-这个理解对的，就是你说的那样
+-----------
+
+
+三点都合理，按顺序回答。
+
+1. config 与运行时 prompt 的职责平衡
+
+建议这样划分：
+
+config（用户管控方向）
+
+- objective：本轮要改善什么、约束、偏好。
+- review：怎样算改善。
+- material：探索时应读哪些源码、配置、文档、工具。
+- mock_source：固定数据集。
+- max_iterations、report_path：运行参数。
+
+config 是“用户给的方向”，一次确定后整轮稳定，不随单次对话漂移。
+
+运行时 prompt（执行细节）
+
+- 某次探索发现具体可疑函数、想试某个 probe；
+- 针对当前 case 的临时假设；
+- 用户看到某轮结果后补充“再深入 parser 那条分支”。
+
+prompt 是“执行过程中的具体优化点”，可以频繁变化，由 skill 翻译成对当前 draft/实验的调整，但不改 config。
+
+平衡原则：
+
+- config 决定“目标、约束、验收标准”，不由 prompt 覆盖。
+- prompt 决定“这一步怎么探索、改哪个点、用什么实验”，但不能改 mock 数据、review 原则或 promotion 判定。
+- 若 prompt 反复要求改 config 层面的事（例如改 objective、换数据集），skill 应提示用户更新 config，而不是在 prompt 里临时承载，否则下一轮就丢失方向。
+
+这样既允许灵活补充细节，又防止“config 是形式、实际靠 prompt 驱动”的失控。
+
+2. reference / scripts / template 的管理
+
+同意。建议在 skill 目录下放一个 MAP.md（或 INDEX.md），只做映射，不进 SKILL.md：
+
+.claude/skills/draft/
+├── SKILL.md          # 只讲目标和思考方式
+├── MAP.md            # 文件用途与调用关系
+├── reference/        # 模板与说明
+├── scripts/          # 可执行脚本
+└── <role>/
+├── ROLE.md
+└── scripts/
+
+MAP.md 内容示例：    
+
+| 文件 | 用途 | 何时用 |
+|---|---|---|
+| reference/draft_config_template.yaml | config 字段与项目关联方式 | 用户准备 config 时 |
+| scripts/introspect_protocol.py | 协议自省，拿 abstract methods | 写 draft 前 |
+| scripts/check_draft.py | 校验 draft 可加载、协议完整 | 每轮修改后 |
+| attribute/scripts/compare_attribute.py | 同数据运行 current/draft | 验证阶段 |
+| judge/scripts/compare_judge.py | 同上，judge 角色 | 验证阶段 |
+| reference/project_yaml_draft_switch_template.yaml | 灰度配置开关 | promotion 时 |
+
+SKILL.md 不再列文件树，只保留目标和思考方式；执行者需要找工具时看 MAP.md。
+
+3. 理想流程：用户给方向，AI 自主探索并固化成 agent/工作流
+
+这个方向我觉得对，且和当前架构一致。落地形态：
+
+用户给 config（objective + material + review + mock_source）
+↓
+AI 探索 material：读源码、跑 current、定位首个偏离点
+↓
+AI 构建本轮需要的 agno agent / tool / probe
+↓
+AI 把有效探索固化成 draft：role 实现 + 必要的 draft tools
+↓
+AI 在固定数据上自验证，按 review 判断
+↓
+未达标 → 回到探索；达标 → 给 promotion 建议，等人工确认
+↓
+promoted 后，draft 成为新的 production baseline
+
+关键点：
+
+- AI 不是被动走流程，而是主动决定“这次该建什么 probe、调什么局部链路、引入什么 tool”。
+- 这些产物落在 impl/projects/<project>/draft/ 下，遵循 ProjectXxx 协议和 VerifiableTool。
+- 经过多轮后，项目会沉淀出一套稳定可复用的 agent/tool/probe 组合，作为后续优化的基线。
+- skill 不只是“跑一次对比”，而是“积累一个可演进的优化体系”。
+
+实现上需要补的：
+
+- 允许 draft 自带 draft/tools/、draft/probes/、draft/context_builders/，只要遵守协议。
+- check_draft.py 只校验协议合规与可加载，不限定 draft 内部结构。
+- compare 脚本保持中立，提供事实。
+- MAP.md 记录沉淀下来的工具与 probe，让下一轮探索可复用。
