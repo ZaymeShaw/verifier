@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import json
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Dict, List, Optional
 
-from .adapter import ProjectAdapter
+from .adapter_v2 import ProjectAdapter
 from .schema import ProjectSpec
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -181,6 +182,7 @@ def load_project(project_id: str) -> ProjectSpec:
         frontend_extensions=dict(data.get("frontend_extensions") or {}),
         endpoint_discovery=dict(data.get("endpoint_discovery") or {}),
         attribute_draft=dict(data.get("attribute_draft") or {}),
+        judge_draft=dict(data.get("judge_draft") or {}),
         root=str(project_root),
         source_project=_resolve_source_project(data, project_root),
     )
@@ -191,8 +193,8 @@ def _load_project_module(spec: ProjectSpec, filename: str, role: str) -> Optiona
 
     spec/info-volume.md: core only defines the protocol and dispatch seam.  Project
     judge/attribute strategies live in impl/projects/<project>/{role}.py when a
-    project opts in.  draft/ attribute is loaded only when project.yaml explicitly
-    enables attribute_draft for manual validation; default production never auto-loads draft.
+    project opts in. A draft role is loaded only when project.yaml explicitly
+    enables <role>_draft for manual validation; default production never auto-loads draft.
     """
     module_path = Path(spec.root) / filename
     if not module_path.exists():
@@ -206,26 +208,103 @@ def _load_project_module(spec: ProjectSpec, filename: str, role: str) -> Optiona
     return module
 
 
-def _safe_draft_attribute_filename(spec: ProjectSpec) -> Optional[str]:
-    draft_cfg = spec.attribute_draft if isinstance(spec.attribute_draft, dict) else {}
-    if draft_cfg.get("enabled") is not True:
+def _safe_draft_role_filename(spec: ProjectSpec, role: str) -> Optional[str]:
+    draft_cfg = getattr(spec, f"{role}_draft", {})
+    if not isinstance(draft_cfg, dict) or draft_cfg.get("enabled") is not True:
         return None
-    module = str(draft_cfg.get("module") or "draft/attribute.py")
+    module = str(draft_cfg.get("module") or f"draft/{role}.py")
     module_path = Path(module)
     if module_path.is_absolute() or ".." in module_path.parts or module_path.parts[:1] != ("draft",):
-        raise ValueError("attribute_draft.module must be a relative path under draft/")
+        raise ValueError(f"{role}_draft.module must be a relative path under draft/")
+    draft_root = (Path(spec.root) / "draft").resolve()
+    resolved_module = (Path(spec.root) / module_path).resolve()
+    if not resolved_module.is_relative_to(draft_root):
+        raise ValueError(f"{role}_draft.module must resolve under the project draft/ directory")
+    if not resolved_module.is_file():
+        raise FileNotFoundError(f"enabled {role} draft module not found: {resolved_module}")
     return module
 
 
 def load_project_judge(spec: ProjectSpec) -> Optional[ModuleType]:
+    draft_filename = _safe_draft_role_filename(spec, "judge")
+    if draft_filename:
+        return _load_project_module(spec, draft_filename, "judge_draft")
     return _load_project_module(spec, "judge.py", "judge")
 
 
 def load_project_attribute(spec: ProjectSpec) -> Optional[ModuleType]:
-    draft_filename = _safe_draft_attribute_filename(spec)
+    draft_filename = _safe_draft_role_filename(spec, "attribute")
     if draft_filename:
         return _load_project_module(spec, draft_filename, "attribute_draft")
     return _load_project_module(spec, "attribute.py", "attribute")
+
+
+def load_project_tools(spec: ProjectSpec) -> Any:
+    module_path = Path(spec.root) / "tools.py"
+    if module_path.is_file():
+        module = _load_project_module(spec, "tools.py", "tools")
+    else:
+        module = _load_project_module(spec, "tools/project_tools.py", "tools")
+    if module is None:
+        from .tools_protocol import ProjectTools
+
+        return ProjectTools(spec)
+
+    from .tools_protocol import ProjectTools
+
+    candidates = [
+        value
+        for value in vars(module).values()
+        if inspect.isclass(value)
+        and value.__module__ == module.__name__
+        and issubclass(value, ProjectTools)
+        and value is not ProjectTools
+    ]
+    if len(candidates) != 1:
+        source = getattr(module, "__file__", module.__name__)
+        raise TypeError(f"{source} must define exactly one ProjectTools subclass")
+    return candidates[0](spec)
+
+
+def load_project_role_instance(
+    spec: ProjectSpec,
+    role: str,
+    adapter: Any,
+) -> Optional[Any]:
+    if role == "judge":
+        from .judge_protocol import ProjectJudge
+
+        module = load_project_judge(spec)
+        protocol = ProjectJudge
+    elif role == "attribute":
+        from .attribute_protocol import ProjectAttribute
+
+        module = load_project_attribute(spec)
+        protocol = ProjectAttribute
+    else:
+        raise ValueError(f"unsupported project role: {role}")
+    if module is None:
+        return None
+
+    candidates = [
+        value
+        for value in vars(module).values()
+        if inspect.isclass(value)
+        and value.__module__ == module.__name__
+        and issubclass(value, protocol)
+        and value is not protocol
+    ]
+    if len(candidates) != 1:
+        source = getattr(module, "__file__", module.__name__)
+        raise TypeError(f"{source} must define exactly one {protocol.__name__} subclass")
+
+    role_class = candidates[0]
+    parameters = list(inspect.signature(role_class).parameters.values())
+    if [parameter.name for parameter in parameters] == ["spec"]:
+        return role_class(spec)
+    if [parameter.name for parameter in parameters] == ["spec", "adapter"]:
+        return role_class(spec, adapter)
+    raise TypeError(f"{role_class.__name__} constructor must be (spec) or (spec, adapter)")
 
 
 def load_adapter(spec: ProjectSpec) -> ProjectAdapter:

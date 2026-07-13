@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, Iterable, Mapping, Optional
 from .analysis import analyze_project
 from .check import check_chain
 from .cluster import cluster_attributes
-from .frontend_view import build_frontend_view
+from .frontend_view import build_frontend_view, project_frontend_extensions
 from .table_view import build_case_pool_table, build_case_pool_table_from_runs, build_trace_table_row, build_trace_table_row_from_run, display_input_for_project
 from .interaction_protocol import normalize_case_interaction, resolve_ready, ready_from_spec
 from .judge import generate_reference
@@ -249,7 +249,7 @@ def frontend_view(
     spec = load_project(project_id)
     extensions = {}
     if trace:
-        extensions = load_adapter(spec).tools().frontend_extensions(trace)
+        extensions = project_frontend_extensions(spec, trace)
     return build_frontend_view(spec, trace, judge_result, attribute_result, cluster_summary, check_report, extensions)
 
 
@@ -373,10 +373,7 @@ def _batch_case(index: int, case: Dict[str, Any], project_id: str, expected_inte
     normalized = normalize_case_interaction(project_id, case, index) if isinstance(case, dict) else None
     if normalized and normalized.mode == "interactive_intent":
         try:
-            adapter = load_adapter(load_project(project_id))
-            live = adapter.live()
-            if not hasattr(live, "run_interactive"):
-                return _unsupported_interactive_run(project_id, normalized.case_id, normalized.source_case)
+            live = load_adapter(load_project(project_id)).live()
             run = live.run_interactive(normalized)
             trace = _run_trace(run)
             if trace:

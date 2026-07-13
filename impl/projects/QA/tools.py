@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from impl.core.tools_protocol import ProjectTools
-from impl.core.schema import ProjectSpec, RunTrace
+from impl.core.schema import ProjectSpec
 
 
 class QATools(ProjectTools):
@@ -31,11 +31,3 @@ class QATools(ProjectTools):
         """运行时检查"""
         # QA 项目没有特殊运行时检查
         return {}
-
-    def frontend_extensions(self, trace: RunTrace) -> Dict[str, Any]:
-        return {
-            "schema_protocol_extensions": trace.project_fields,
-            "scenarios": self.spec.frontend_extensions.get("scenarios") or [],
-            "score_dimensions": self.spec.frontend_extensions.get("score_dimensions") or [],
-            "error_taxonomy": self.spec.frontend_extensions.get("error_taxonomy") or [],
-        }

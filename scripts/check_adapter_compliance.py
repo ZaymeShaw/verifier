@@ -20,10 +20,10 @@ from typing import List, Tuple
 # 允许的方法名（访问器 + _load_* + 属性）
 ALLOWED_METHODS = frozenset({
     # 访问器
-    'live', 'mock', 'judge', 'attribute', 'tools',
+    'live', 'mock', 'judge', 'attribute',
     # 加载方法
-    '_load_live', '_load_mock', '_load_judge', '_load_attribute', '_load_tools',
-    '_load_live_draft', '_load_attribute_draft', '_load_tools_draft',
+    '_load_live', '_load_mock', '_load_judge', '_load_attribute',
+    '_load_live_draft', '_load_attribute_draft',
     # 初始化和属性
     '__init__', '__init_subclass__',
     # 属性访问器

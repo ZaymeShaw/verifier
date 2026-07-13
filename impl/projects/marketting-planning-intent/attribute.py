@@ -4,7 +4,6 @@ import importlib.util
 from pathlib import Path
 from typing import Any, Dict, List
 
-from impl.core.attribute_protocol import run_project_attribute_protocol
 from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace
 
 
@@ -347,18 +346,6 @@ def _build_project_attribute_context(spec: ProjectSpec, trace: RunTrace, judge_r
             "intent_contract_probe": intent_probe,
         },
     }
-
-
-def attribute_failure(spec: ProjectSpec, adapter, trace: RunTrace, judge_result: JudgeResult) -> AttributeResult:
-    return run_project_attribute_protocol(
-        spec,
-        adapter,
-        trace,
-        judge_result,
-        project_attribute_context=_build_project_attribute_context(spec, trace, judge_result),
-    )
-
-
 from impl.core.attribute_protocol import ProjectAttribute
 from impl.core.runtime_query_tools import extract_runtime_values
 from impl.core.schema import normalize_attribute_result as normalize_core_attribute_result, trace_execution_trace, trace_extracted_output

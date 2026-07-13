@@ -6,8 +6,12 @@ from typing import Callable
 from unittest.mock import patch
 
 import impl.core.pipeline as pipeline
-from impl.core.live import build_live_request, interaction_contract, live_multi_turn_result, run_live, trace_from_live_result
-from impl.core.adapter import ProjectAdapter
+from impl.core.live import interaction_contract, live_multi_turn_result, trace_from_live_result
+from impl.core.adapter_v2 import ProjectAdapter
+from impl.core.attribute_protocol import ProjectAttribute
+from impl.core.judge_protocol import ProjectJudge
+from impl.core.live_protocol import ProvidedOutputLive
+from impl.core.mock_protocol import ProjectMock
 from impl.core.schema import normalize_multi_turn_trace_summary
 from impl.core.schema.attribute import AttributeResult
 from impl.core.schema.check import CheckReport
@@ -21,32 +25,41 @@ from impl.core.schema.project import ProjectAnalysis, ProjectSpec
 from impl.core.schema.trace import RunTrace
 
 
-class FixtureAdapter(ProjectAdapter):
-    def build_request(self, case):
-        request = load_fixture("impl.core.schema.live.LiveRequest")
-        request.case_id = case.id
-        request.raw_input = case.input
-        request.normalized_request = {"query": case.input.get("query", ""), "fixture_adapter": True}
-        request.execution_mode = "provided_output"
-        return request
+class FixtureLive(ProvidedOutputLive):
+    def deliver_provided(self, case, request):
+        return case.output or {}
 
-    def extract_output(self, raw_response):
+    def extract_output(self, raw_response, request):
         return raw_response if isinstance(raw_response, dict) else {}
 
-    def build_mock_cases(self):
-        return [load_fixture(SingleTurnCase, as_dict=True)]
 
-    def build_mock_datasets(self):
-        return [load_fixture("impl.core.schema.mock.MockDataset", as_dict=True)]
+class FixtureMock(ProjectMock):
+    def build_user_intent(self, scenario):
+        return {"scenario": scenario, "query": "fixture"}
 
-    def build_frontend_extensions(self, trace):
-        return {"fixture_extension": trace.trace_id}
 
-    def collect_state_evidence(self, state_id, context):
-        return [load_fixture("impl.core.schema.evidence.EvidenceRef")]
+class FixtureJudge(ProjectJudge):
+    def build_context(self, trace):
+        return {}
 
-    def attribution_probes(self, trace, judge_result):
-        return [{"probe": "fixture_probe", "status": "passed", "evidence": ["fixture evidence"], "target": "adapter.extract_output"}]
+
+class FixtureAttribute(ProjectAttribute):
+    def build_context(self, trace, judge_result):
+        return {}
+
+
+class FixtureAdapter(ProjectAdapter):
+    def _load_live(self):
+        return FixtureLive(self.spec)
+
+    def _load_mock(self):
+        return FixtureMock(self.spec)
+
+    def _load_judge(self):
+        return FixtureJudge(self.spec)
+
+    def _load_attribute(self):
+        return FixtureAttribute(self.spec)
 
 
 @dataclass(frozen=True)
@@ -94,9 +107,7 @@ def _patched_project_runtime():
     adapter = _adapter()
     with patch.object(pipeline, "load_project", return_value=_spec()), \
         patch.object(pipeline, "load_adapter", return_value=adapter), \
-        patch.object(pipeline, "analyze_project", return_value=load_fixture(ProjectAnalysis)), \
-        patch.object(pipeline, "judge_trace", return_value=_judge()), \
-        patch.object(pipeline, "attribute_failure", return_value=_attribute()):
+        patch.object(pipeline, "analyze_project", return_value=load_fixture(ProjectAnalysis)):
         yield adapter
 
 
@@ -108,19 +119,14 @@ def _case_from_input() -> object:
     return pipeline._case_from_input("fixture_project", load_fixture(SingleTurnCase))
 
 
-def _build_live_request() -> object:
-    return build_live_request(_adapter(), load_fixture(SingleTurnCase), "fixture_project")
-
-
-def _call_live() -> object:
-    spec = _spec()
-    adapter = _adapter()
-    request = load_fixture("impl.core.schema.live.LiveRequest")
-    return run_live(spec, adapter, load_fixture(SingleTurnCase), request)
+def _deliver_live() -> object:
+    case = load_fixture(SingleTurnCase)
+    case.output = load_fixture(LiveExecutionResult).extracted_output
+    return _adapter().live().deliver(case)
 
 
 def _trace_from_live_result() -> object:
-    return trace_from_live_result(_adapter(), load_fixture(LiveExecutionResult))
+    return trace_from_live_result(load_fixture(LiveExecutionResult))
 
 
 def _multi_turn_trace_summary() -> object:
@@ -230,8 +236,7 @@ def _run_chain_with_patched_steps() -> object:
 
 FIXTURE_CHECKS = [
     FixtureCheck("pipeline.case_from_input", "impl.core.pipeline._case_from_input", "case 输入进入核心链路前先规范成 SingleTurnCase。", _case_from_input),
-    FixtureCheck("live.build_live_request", "impl.core.live.build_live_request", "mock case -> LiveRequest，是 live 执行入口。", _build_live_request),
-    FixtureCheck("live.run_live", "impl.core.live.run_live", "LiveRequest -> LiveExecutionResult，是业务系统调用/提取边界。", _call_live),
+    FixtureCheck("live.deliver", "impl.core.live_protocol.ProjectLive.deliver", "case -> LiveExecutionResult，是 live 协议公开执行入口。", _deliver_live),
     FixtureCheck("live.trace_from_live_result", "impl.core.live.trace_from_live_result", "LiveExecutionResult -> RunTrace，是 trace 层入口。", _trace_from_live_result),
     FixtureCheck("schema.multi_turn_trace_summary", "impl.core.schema.normalize_multi_turn_trace_summary", "多轮 trace 汇总结构是 issue4/issue5 的关键链路。", _multi_turn_trace_summary),
     FixtureCheck("live.live_multi_turn_result", "impl.core.live.live_multi_turn_result", "多轮 live result 聚合是 live/trace 边界。", _live_multi_turn_result),

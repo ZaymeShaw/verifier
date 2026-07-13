@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from impl.core.judge_protocol import run_project_judge_protocol
 from impl.core.schema import JudgeResult, ProjectSpec, RunTrace, to_dict
 
 
@@ -180,16 +179,6 @@ def _build_core_context(trace: RunTrace) -> dict:
 
 
 # spec/info-volume.md：marketing-planning-intent 的 judge 策略属于项目层；core.judge 只保留通用 fulfillment 协议。
-def judge_trace(spec: ProjectSpec, adapter, trace: RunTrace, expected_intent: Optional[str] = None) -> JudgeResult:
-    return run_project_judge_protocol(
-        spec,
-        adapter,
-        trace,
-        expected_intent=expected_intent,
-        project_judge_context=_build_core_context(trace),
-    )
-
-
 from impl.core.judge_protocol import ProjectJudge
 
 

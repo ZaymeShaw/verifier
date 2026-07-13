@@ -13,12 +13,11 @@ class ProjectAdapter(ABC):
 
     只做加载并暴露各专项模块，不承载任何业务逻辑。
 
-    项目继承这个类，只需实现 5 个 _load_* 方法：
+    项目继承这个类，只需实现 4 个 _load_* 方法：
     - _load_live: 返回 ProjectLive 实例
     - _load_mock: 返回 ProjectMock 实例
     - _load_judge: 返回 ProjectJudge 实例
     - _load_attribute: 返回 ProjectAttribute 实例
-    - _load_tools: 返回 ProjectTools 实例
     """
 
     def __init__(self, spec: ProjectSpec):
@@ -40,10 +39,6 @@ class ProjectAdapter(ABC):
     def attribute(self):
         """访问 ProjectAttribute 实例。"""
         return self._get_or_load("attribute")
-
-    def tools(self):
-        """访问 ProjectTools 实例。"""
-        return self._get_or_load("tools")
 
     def _get_or_load(self, key: str, loader_name: Optional[str] = None) -> Any:
         """懒加载并缓存专项模块实例"""
@@ -77,9 +72,4 @@ class ProjectAdapter(ABC):
     @abstractmethod
     def _load_attribute(self):
         """加载 ProjectAttribute 实例"""
-        pass
-
-    @abstractmethod
-    def _load_tools(self):
-        """加载 ProjectTools 实例"""
         pass

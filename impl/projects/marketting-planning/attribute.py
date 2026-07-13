@@ -5,10 +5,9 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from impl.core.attribute_protocol import ProjectAttribute, run_project_attribute_protocol
+from impl.core.attribute_protocol import ProjectAttribute
 from impl.core.runtime_query_tools import extract_runtime_values
 from impl.core.schema import AttributeResult, ExecutionTraceEvent, JudgeResult, ProjectSpec, RunTrace, normalize_attribute_result, to_dict, trace_execution_trace, trace_extracted_output
-from .tools import MarketingPlanningTools
 
 _STAGE_ORDER = [
     "request_normalization",
@@ -180,7 +179,24 @@ def build_attribute_context(trace: RunTrace, judge_result: JudgeResult, spec: Pr
 
 
 def get_runtime_checks(runtime_values: Dict[str, Any], context: Dict[str, Any] | None = None) -> Dict[str, Any]:
-    return MarketingPlanningTools(None).runtime_checks(runtime_values, context)
+    context = context or {}
+    expected = context.get("expected") if isinstance(context.get("expected"), dict) else {}
+    actual = context.get("actual") if isinstance(context.get("actual"), dict) else {}
+    checks: Dict[str, Any] = {}
+    expected_stage = expected.get("expected_stage") or expected.get("stage")
+    actual_stage = actual.get("stage") or actual.get("current_stage")
+    if expected_stage or actual_stage:
+        checks["stage_match"] = {
+            "expected": expected_stage,
+            "actual": actual_stage,
+            "match": bool(expected_stage) and expected_stage == actual_stage,
+        }
+    if runtime_values:
+        checks["runtime_values"] = runtime_values
+    reference = context.get("reference") if isinstance(context.get("reference"), dict) else {}
+    if reference:
+        checks["reference_contract"] = reference
+    return checks
 
 
 def apply_attribution_probes(trace: RunTrace, judge_result: JudgeResult, attribute_result: AttributeResult) -> AttributeResult:
@@ -312,18 +328,6 @@ def _build_project_attribute_context(spec: ProjectSpec, trace: RunTrace, judge_r
             "planning_output_probe": planning_probe,
         },
     }
-
-
-def attribute_failure(spec: ProjectSpec, adapter, trace: RunTrace, judge_result: JudgeResult) -> AttributeResult:
-    return run_project_attribute_protocol(
-        spec,
-        adapter,
-        trace,
-        judge_result,
-        project_attribute_context=_build_project_attribute_context(spec, trace, judge_result),
-    )
-
-
 class MarketingPlanningAttribute(ProjectAttribute):
     """marketting-planning 项目 Attribute 实现（新协议）。"""
 

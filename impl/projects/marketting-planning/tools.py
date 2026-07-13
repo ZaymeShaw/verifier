@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from impl.core.schema import ProjectSpec, RunTrace
+from impl.core.schema import ProjectSpec
 from impl.core.tools_protocol import ProjectTools
 
 
@@ -47,12 +47,3 @@ class MarketingPlanningTools(ProjectTools):
         if reference:
             checks["reference_contract"] = reference
         return checks
-
-    def frontend_extensions(self, trace: RunTrace) -> Dict[str, Any]:
-        return {
-            "schema_protocol_extensions": trace.project_fields,
-            "scenarios": self.spec.frontend_extensions.get("scenarios") or [],
-            "stages": self.spec.frontend_extensions.get("stages") or [],
-            "path_types": self.spec.frontend_extensions.get("path_types") or [],
-            "output_summary_shape": ["stage", "event_summary", "card_summary", "session_summary", "fallback", "errors"],
-        }

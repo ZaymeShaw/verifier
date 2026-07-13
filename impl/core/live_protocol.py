@@ -413,6 +413,9 @@ class _LiveProtocol(ABC):
         """扩展点：构建执行轨迹。项目可选覆盖。"""
         return []
 
+    def run_interactive(self, case: Any) -> Dict[str, Any]:
+        raise NotImplementedError(f"{self.__class__.__name__} 不支持 interactive_intent")
+
     def normalize_result(self, result: LiveExecutionResult) -> LiveExecutionResult:
         """扩展点：后处理结果。项目可选覆盖。"""
         return result

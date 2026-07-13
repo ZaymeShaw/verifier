@@ -5,7 +5,7 @@
 现场生成 impl/projects/<project>/ 下的项目层骨架。
 
 不写死方法名/基类文件名：角色基类从 *_protocol.py 的 Project<Role> 发现，
-必须实现项从 __abstractmethods__ 发现，adapter 基类动态发现（排除 LegacyProjectAdapter）。
+必须实现项从 __abstractmethods__ 发现，adapter 基类动态发现。
 协议演进（新增抽象方法、新增角色、基类改名）时，生成内容自动跟着变。
 
 用法:

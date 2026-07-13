@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from impl.core.attribute_protocol import run_project_attribute_protocol
+from impl.core.attribute_protocol import ProjectAttribute
 from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace
 from impl.projects.client_search.draft.tools.extra_params_condition_probe import compare_extra_params_to_conditions
 
@@ -84,7 +84,11 @@ def _client_search_draft_probe(adapter, trace: RunTrace, judge_result: JudgeResu
 
 
 def _build_project_attribute_context(spec: ProjectSpec, adapter, trace: RunTrace, judge_result: JudgeResult) -> dict[str, Any]:
+    from impl.core.project_loader import load_project_tools
+
+    tools = load_project_tools(spec).verifiable_tools()
     return {
+        "tools": list(tools or []),
         "tool_call_limit": 6,
         "system_prompt_override": """你是 client_search 项目的 draft attribute agent。
 只基于当前 RunTrace、JudgeResult、adapter condition_comparison、extra_params_condition_probe 和项目配置/工具证据归因。
@@ -106,13 +110,10 @@ expectation_attributions 每项只能包含 expectation_id、fulfillment_status�
             "client_search_draft_probe": _client_search_draft_probe(adapter, trace, judge_result),
         },
     }
+class ClientSearchAttribute(ProjectAttribute):
+    def __init__(self, spec: ProjectSpec, adapter):
+        super().__init__(spec)
+        self._adapter = adapter
 
-
-def attribute_failure(spec: ProjectSpec, adapter, trace: RunTrace, judge_result: JudgeResult) -> AttributeResult:
-    return run_project_attribute_protocol(
-        spec,
-        adapter,
-        trace,
-        judge_result,
-        project_attribute_context=_build_project_attribute_context(spec, adapter, trace, judge_result),
-    )
+    def build_context(self, trace: RunTrace, judge_result: JudgeResult) -> dict[str, Any]:
+        return _build_project_attribute_context(self.spec, self._adapter, trace, judge_result)

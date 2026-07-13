@@ -34,11 +34,6 @@ from scripts._protocol_discovery import (
 )
 
 
-def adapter_is_legacy(adapter_cls: Type, legacy_base: Type) -> bool:
-    """adapter 是否走 LegacyProjectAdapter 兼容路径。"""
-    return legacy_base is not None and issubclass(adapter_cls, legacy_base)
-
-
 @dataclass
 class Finding:
     level: str  # "error" | "warn"
@@ -66,12 +61,10 @@ def list_projects() -> List[str]:
     )
 
 
-def verify_project(project_id: str, roles: List[Tuple[str, Type]], adapter_base: Type, legacy_base: Type) -> ProjectReport:
+def verify_project(project_id: str, roles: List[Tuple[str, Type]], adapter_base: Type) -> ProjectReport:
     """校验单个项目。
 
-    新协议项目（继承中转站 ProjectAdapter）：完整校验角色文件 + _load_* + 实例化。
-    Legacy 兼容项目（继承 LegacyProjectAdapter）：只校验已实现 _load_* 的角色，缺失角色 warn。
-    旧形态项目（继承旧版 impl.core.adapter.ProjectAdapter）：跳过新协议检查，warn 提示未迁移。
+    中转站项目：完整校验角色文件、_load_* 和实例化。
     """
     report = ProjectReport(project_id=project_id)
     project_dir = ROOT / "impl" / "projects" / project_id
@@ -97,38 +90,21 @@ def verify_project(project_id: str, roles: List[Tuple[str, Type]], adapter_base:
             if adapter_cls is None:
                 report.findings.append(Finding("error", "adapter", "adapter.py 未定义 Adapter 类"))
 
-    # 判断 adapter 形态
-    is_legacy = adapter_cls is not None and adapter_is_legacy(adapter_cls, legacy_base)
-    is_station = adapter_cls is not None and issubclass(adapter_cls, adapter_base) and not is_legacy
-    if adapter_cls is not None and not is_legacy and not is_station:
-        # 旧形态（继承旧版 impl.core.adapter.ProjectAdapter，非 v2）
-        report.findings.append(Finding(
-            "warn", "adapter",
-            "项目使用旧版 adapter（非 v2 中转站形态），未迁移到新协议，跳过新协议符合性检查。"
-            "建议按 spec/adapter.md 迁移到 ProjectAdapter。"
-        ))
+    if adapter_cls is not None and not issubclass(adapter_cls, adapter_base):
+        report.findings.append(Finding("error", "adapter", "项目 Adapter 必须继承中转站 ProjectAdapter。"))
         return report
 
     # 各角色：文件存在 + 类可实例化
     # Legacy 项目：只校验已实现 _load_<role> 的角色；缺失的 warn（兼容期允许）
     for role, role_base in roles:
         role_path = project_dir / f"{role}.py"
+        if role == "tools" and not role_path.exists():
+            role_path = project_dir / "tools" / "project_tools.py"
         load_method = f"_load_{role}"
         role_required = load_method in required_loads
 
-        # Legacy 项目：项目自己没重写 _load_<role> 的角色，跳过（走旧路径）
-        if is_legacy and adapter_cls is not None:
-            project_defined = load_method in adapter_cls.__dict__
-            if not project_defined:
-                if role_required:
-                    report.findings.append(Finding(
-                        "warn", role,
-                        f"Legacy 项目未迁移 {role} 角色（_load_{role} 未实现，走旧路径）。"
-                    ))
-                continue
-
         if not role_path.exists():
-            if role_required and not is_legacy:
+            if role_required:
                 report.findings.append(Finding("error", role, f"{role}.py 不存在"))
             else:
                 report.findings.append(Finding("warn", role, f"{role}.py 不存在"))
@@ -147,7 +123,12 @@ def verify_project(project_id: str, roles: List[Tuple[str, Type]], adapter_base:
         impl_cls = None
         for attr in dir(role_mod):
             obj = getattr(role_mod, attr)
-            if isinstance(obj, type) and issubclass(obj, role_base) and obj is not role_base:
+            if (
+                isinstance(obj, type)
+                and obj.__module__ == role_mod.__name__
+                and issubclass(obj, role_base)
+                and obj is not role_base
+            ):
                 impl_cls = obj
                 break
         if impl_cls is None:
@@ -175,7 +156,7 @@ def verify_project(project_id: str, roles: List[Tuple[str, Type]], adapter_base:
                 pass
 
     # 新协议项目：adapter 的 _load_* 必须齐全
-    if is_station and adapter_cls is not None:
+    if adapter_cls is not None:
         for load_method in required_loads:
             if not load_method.startswith("_load_") or load_method.endswith("_draft"):
                 continue
@@ -195,10 +176,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     roles = discover_role_bases()
-    adapter_base, legacy_base = discover_adapter_bases()
+    adapter_base, _ = discover_adapter_bases()
     print(f"[verify] adapter 基类: {adapter_base.__module__}.{adapter_base.__name__}")
-    if legacy_base:
-        print(f"[verify] Legacy 兼容层: {legacy_base.__module__}.{legacy_base.__name__}")
     print(f"[verify] 发现角色: {[r for r, _ in roles]}")
     print(f"[verify] adapter _load_* 要求: {sorted(getattr(adapter_base, '__abstractmethods__', set()))}")
     print()
@@ -210,7 +189,7 @@ def main(argv=None):
 
     all_passed = True
     for pid in projects:
-        report = verify_project(pid, roles, adapter_base, legacy_base)
+        report = verify_project(pid, roles, adapter_base)
         status = "✅ 通过" if report.passed else "❌ 不通过"
         print(f"[verify] {pid}: {status}")
         for f in report.findings:

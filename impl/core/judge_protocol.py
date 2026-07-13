@@ -157,7 +157,7 @@ class _JudgeProtocol(ABC):
         """扩展点：后处理结果。项目可选覆盖。
 
         默认实现：用 normalize_judge_result 函数兜底，保证 JudgeResult 字段完整。
-        与旧版 run_project_judge_protocol 的归一化逻辑一致。
+        与协议模板方法的归一化逻辑一致。
         """
         return normalize_judge_result(result) or result
 
@@ -181,41 +181,3 @@ class ProjectJudge(_JudgeProtocol):
         if spec is not None:
             from impl.core.mock_agent import load_live_schema
             self.live_schema = load_live_schema(spec.project_id)
-
-
-# === 向后兼容：旧版函数式入口 ===
-# 项目 judge.py 仍通过 run_project_judge_protocol 调用，
-# 内部委托给通用层 judge.judge_trace。
-# 迁移完成后可删除。
-
-def run_project_judge_protocol(
-    spec: ProjectSpec,
-    adapter,
-    trace: RunTrace,
-    expected_intent: Optional[str] = None,
-    project_judge_context: Optional[Dict[str, Any]] = None,
-) -> JudgeResult:
-    """旧版函数式入口：调用核心 judge_trace 并应用 adapter 的协调逻辑。"""
-    pre_judge_result = adapter.pre_judge_result(trace, expected_intent=expected_intent)
-    if pre_judge_result is not None:
-        normalized_pre = normalize_judge_result(adapter.normalize_judge_result(trace, pre_judge_result)) or pre_judge_result
-        return adapter.reconcile_judge_result(trace, normalized_pre)
-
-    try:
-        result = core_judge_trace(
-            spec,
-            trace,
-            expected_intent=expected_intent,
-            project_judge_context=project_judge_context or {},
-        )
-    except ValueError as exc:
-        logger.error(f"[{spec.project_id}.judge] judge LLM 产出不合规，阻断: {exc}")
-        result = JudgeResult(
-            trace_id=trace.trace_id,
-            project_id=spec.project_id,
-            overall_fulfillment={"status": "not_evaluable"},
-            reasoning_summary=str(exc)[:500],
-            evidence=["llm_output_validation_failed"],
-        )
-    normalized = normalize_judge_result(adapter.normalize_judge_result(trace, result)) or result
-    return adapter.reconcile_judge_result(trace, normalized)

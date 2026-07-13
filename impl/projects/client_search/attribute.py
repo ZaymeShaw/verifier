@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from impl.core.attribute_protocol import ProjectAttribute, run_project_attribute_protocol
-from impl.core.runtime_query_tools import extract_runtime_values
-from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace, normalize_attribute_result, trace_execution_trace, trace_extracted_output
+from impl.core.attribute_protocol import ProjectAttribute
+from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace, normalize_attribute_result
 from impl.projects.client_search.judge import condition_comparison
 from impl.projects.client_search.live import boundary_from_trace, capability_manifest, external_boundary_sources, source_config_paths
 
@@ -82,19 +81,6 @@ expectation_attributions 每项只能包含 expectation_id、fulfillment_status�
             "capability_manifest": capability_manifest(spec),
         },
     }
-
-
-def attribute_failure(spec: ProjectSpec, adapter, trace: RunTrace, judge_result: JudgeResult) -> AttributeResult:
-    tools = getattr(adapter, "get_verifiable_tools", lambda: [])()
-    return run_project_attribute_protocol(
-        spec,
-        adapter,
-        trace,
-        judge_result,
-        project_attribute_context=_build_project_attribute_context(spec, tools, trace, judge_result),
-    )
-
-
 class ClientSearchAttribute(ProjectAttribute):
     def __init__(self, spec: ProjectSpec, tools: list[Any] | None = None):
         super().__init__(spec)
@@ -105,18 +91,6 @@ class ClientSearchAttribute(ProjectAttribute):
         extra_context = _build_project_attribute_context(self.spec, self._tools, trace, judge_result)
         context = dict(base_context or {})
         context.update(extra_context)
-        actual = judge_result.actual or trace_extracted_output(trace) or {}
-        expected = judge_result.expected or trace.reference_contract or {}
-        runtime_context = {
-            "expected": expected,
-            "actual": actual,
-            "reference": trace.reference_contract or {},
-            "trace_id": trace.trace_id,
-            "project_id": trace.project_id,
-        }
-        _ = runtime_context
-        runtime_values = extract_runtime_values(trace_execution_trace(trace), actual)
-        _ = runtime_values
         context["runtime_checks"] = {}
         return context
 

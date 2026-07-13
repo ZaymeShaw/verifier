@@ -37,10 +37,3 @@ class Adapter(ProjectAdapter):
         module = importlib.util.module_from_spec(module_spec)
         module_spec.loader.exec_module(module)
         return module.MarketingIntentAttribute(self.spec)
-
-    def _load_tools(self):
-        path = Path(self.spec.root) / "tools.py"
-        module_spec = importlib.util.spec_from_file_location(f"impl_project_{self.spec.project_id}_tools", path)
-        module = importlib.util.module_from_spec(module_spec)
-        module_spec.loader.exec_module(module)
-        return module.MarketingIntentTools(self.spec)

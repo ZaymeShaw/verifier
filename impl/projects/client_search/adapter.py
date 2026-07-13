@@ -3,7 +3,6 @@ from __future__ import annotations
 from impl.core.adapter_v2 import ProjectAdapter
 from impl.core.schema import ProjectSpec
 from impl.projects.client_search.mock import ClientSearchMock
-from impl.projects.client_search.tools.project_tools import ClientSearchTools
 
 
 class Adapter(ProjectAdapter):
@@ -22,8 +21,7 @@ class Adapter(ProjectAdapter):
         return ClientSearchJudge(self.spec)
 
     def _load_attribute(self):
+        from impl.core.project_loader import load_project_tools
         from impl.projects.client_search.attribute import ClientSearchAttribute
-        return ClientSearchAttribute(self.spec, self.tools().verifiable_tools())
 
-    def _load_tools(self):
-        return ClientSearchTools(self.spec)
+        return ClientSearchAttribute(self.spec, load_project_tools(self.spec).verifiable_tools())

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from impl.core.judge_protocol import ProjectJudge, run_project_judge_protocol
+from impl.core.judge_protocol import ProjectJudge
 from impl.core.schema import JudgeResult, ProjectSpec, RunTrace, normalize_judge_result, to_dict
 
 
@@ -204,18 +204,6 @@ def default_fulfillment_assessment(trace, judge_result, expectation):
         "blocking": status in {"not_fulfilled", "not_evaluable"},
         "evidence_refs": list(getattr(trace, "evidence_refs", []) or []),
     }
-
-
-def judge_trace(spec: ProjectSpec, adapter, trace: RunTrace, expected_intent: Optional[str] = None) -> JudgeResult:
-    return run_project_judge_protocol(
-        spec,
-        adapter,
-        trace,
-        expected_intent=expected_intent,
-        project_judge_context=_build_core_context(spec, trace),
-    )
-
-
 class MarketingPlanningJudge(ProjectJudge):
     """marketting-planning 项目 Judge 实现（新协议）。"""
 

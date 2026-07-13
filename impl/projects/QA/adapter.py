@@ -27,8 +27,3 @@ class Adapter(ProjectAdapter):
         from impl.projects.QA.attribute import QAAttribute
 
         return QAAttribute(self.spec)
-
-    def _load_tools(self):
-        from impl.projects.QA.tools import QATools
-
-        return QATools(self.spec)

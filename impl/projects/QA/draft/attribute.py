@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from impl.core.attribute_protocol import run_project_attribute_protocol
-from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace
+from impl.core.attribute_protocol import ProjectAttribute
+from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace, normalize_attribute_result
+from impl.projects.QA.attribute import _blocked_attribute_result, _build_attribute_context, _runtime_checks
 from impl.projects.QA.draft.tools.grounding_gap import analyze_grounding_gap
 
 
@@ -81,13 +82,23 @@ def _build_project_attribute_context(spec: ProjectSpec, adapter, trace: RunTrace
             "qa_draft_probe": _qa_draft_probe(trace, judge_result),
         },
     }
+class QAAttribute(ProjectAttribute):
+    def __init__(self, spec: ProjectSpec, adapter):
+        super().__init__(spec)
+        self._adapter = adapter
 
+    def build_context(self, trace: RunTrace, judge_result: JudgeResult) -> dict[str, Any]:
+        context = _build_attribute_context(trace, judge_result)
+        context.update(_build_project_attribute_context(self.spec, self._adapter, trace, judge_result))
+        context["runtime_checks"] = _runtime_checks(trace, judge_result)
+        return context
 
-def attribute_failure(spec: ProjectSpec, adapter, trace: RunTrace, judge_result: JudgeResult) -> AttributeResult:
-    return run_project_attribute_protocol(
-        spec,
-        adapter,
-        trace,
-        judge_result,
-        project_attribute_context=_build_project_attribute_context(spec, adapter, trace, judge_result),
-    )
+    def normalize_result(self, trace: RunTrace, judge_result: JudgeResult, result: AttributeResult) -> AttributeResult:
+        result = normalize_attribute_result(result) or result
+        if (judge_result.overall_fulfillment or {}).get("status") == "not_evaluable":
+            return _blocked_attribute_result(
+                trace,
+                judge_result,
+                "QA judge 处于 not_evaluable 状态，缺少可用语义判定，不能产出正式失败归因。",
+            )
+        return result

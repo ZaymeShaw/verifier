@@ -130,13 +130,9 @@ def _expectation_attribution_panel(attribute: Optional[AttributeResult]) -> dict
 
 def _verifiable_tool_panel(spec: ProjectSpec) -> dict:
     try:
-        from .project_loader import load_adapter
-        adapter = load_adapter(spec)
-        tools_fn = getattr(adapter, "get_verifiable_tools", None)
-        if not tools_fn:
-            return {"available": False, "catalog": [], "reason": "adapter has no get_verifiable_tools"}
+        from .project_loader import load_project_tools
         catalog = []
-        for vt in tools_fn():
+        for vt in load_project_tools(spec).verifiable_tools():
             catalog.append({
                 "tool_id": vt.tool_id,
                 "description": vt.description,
@@ -147,6 +143,15 @@ def _verifiable_tool_panel(spec: ProjectSpec) -> dict:
         return {"available": bool(catalog), "catalog": catalog}
     except Exception as exc:
         return {"available": False, "catalog": [], "reason": f"failed to load verifiable tools: {exc}"}
+
+
+def project_frontend_extensions(spec: ProjectSpec, trace: RunTrace) -> Dict[str, Any]:
+    configured = dict(spec.frontend_extensions or {})
+    configured.pop("implementation_standard", None)
+    return {
+        "schema_protocol_extensions": trace.project_fields,
+        **configured,
+    }
 
 
 def build_frontend_view(

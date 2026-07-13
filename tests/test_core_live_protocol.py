@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from impl.core import live
+from impl.core.live_protocol import ProvidedOutputLive, RealServiceLive
 from impl.core.schema import ExecutionTraceEvent, LiveExecutionResult, LiveRequest, ProjectSpec, SingleTurnCase
 
 
@@ -23,48 +23,40 @@ class _LiveSchema:
         self.check = checker
 
 
-class _Adapter:
-    def __init__(self):
-        self.real_called = False
+class _LiveBehavior:
+    real_called = False
 
-    def build_request(self, case: SingleTurnCase) -> LiveRequest:
-        return LiveRequest(
-            project_id="demo",
-            raw_input=dict(case.input or {}),
-            case_id=str(case.id or "case-1"),
-            normalized_request=dict(case.input or {}),
-        )
+    def build_request(self, case: SingleTurnCase) -> dict[str, Any]:
+        return dict(case.input or {})
 
-    def call_or_prepare(self, request: LiveRequest) -> Any:
-        self.real_called = True
-        return {"answer": "real"}
-
-    def provided_output_raw(self, case: SingleTurnCase, request: LiveRequest) -> Any:
-        return case.output or {}
-
-    def extract_output(self, raw_response: Any) -> dict[str, Any]:
+    def extract_output(self, raw_response: Any, request: LiveRequest) -> dict[str, Any]:
         if isinstance(raw_response, dict):
             return {"answer": raw_response.get("answer") or raw_response.get("actual_answer") or ""}
         return {"answer": str(raw_response)}
 
-    def build_execution_trace(self, input_data: dict[str, Any], request: dict[str, Any], raw_response: Any, extracted_output: dict[str, Any]) -> list[ExecutionTraceEvent]:
-        return [ExecutionTraceEvent(stage="adapter.extract_output", status="ok", evidence=extracted_output)]
-
-    def project_fields(self, raw_response: Any, extracted_output: dict[str, Any]) -> dict[str, Any]:
-        return {}
-
-    def application_boundary(self, raw_response: Any, extracted_output: dict[str, Any]) -> dict[str, Any]:
-        return {}
+    def build_execution_trace(self, raw_response: Any, extracted_output: dict[str, Any], request: LiveRequest) -> list[ExecutionTraceEvent]:
+        return [ExecutionTraceEvent(stage="live.extract_output", status="ok", evidence=extracted_output)]
 
 
-class _FailingAdapter(_Adapter):
-    def call_or_prepare(self, request: LiveRequest) -> Any:
+class _ProvidedLive(_LiveBehavior, ProvidedOutputLive):
+    def deliver_provided(self, case: SingleTurnCase, request: LiveRequest) -> Any:
+        return case.output or {}
+
+
+class _RealLive(_LiveBehavior, RealServiceLive):
+    def deliver_real(self, request: LiveRequest) -> Any:
+        self.real_called = True
+        return {"answer": "real"}
+
+
+class _FailingLive(_RealLive):
+    def deliver_real(self, request: LiveRequest) -> Any:
         self.real_called = True
         raise RuntimeError("service unavailable")
 
 
-class _FailedResultAdapter(_Adapter):
-    def call_or_prepare(self, request: LiveRequest) -> LiveExecutionResult:
+class _FailedResultLive(_RealLive):
+    def deliver_real(self, request: LiveRequest) -> LiveExecutionResult:
         self.real_called = True
         return LiveExecutionResult(
             project_id=request.project_id,
@@ -77,8 +69,8 @@ class _FailedResultAdapter(_Adapter):
         )
 
 
-class _ProtocolFailureAdapter(_Adapter):
-    def call_or_prepare(self, request: LiveRequest) -> LiveExecutionResult:
+class _ProtocolFailureLive(_RealLive):
+    def deliver_real(self, request: LiveRequest) -> LiveExecutionResult:
         self.real_called = True
         return LiveExecutionResult(
             project_id=request.project_id,
@@ -94,23 +86,23 @@ def _spec(ready: list[str] | None = None) -> ProjectSpec:
     return ProjectSpec(project_id="demo", name="demo", common={"ready": ready or []}, root="/path/that/does/not/exist")
 
 
-def _patch_schema(monkeypatch, request_ok: bool = True, output_ok: bool = True) -> None:
-    monkeypatch.setattr(live, "load_live_schema", lambda project_id: _LiveSchema(_Checker(request_ok=request_ok, output_ok=output_ok)))
+def _live(instance_type, *, ready: list[str] | None = None, request_ok: bool = True, output_ok: bool = True):
+    instance = instance_type(_spec(ready))
+    instance.live_schema = _LiveSchema(_Checker(request_ok=request_ok, output_ok=output_ok))
+    return instance
 
 
 def _stages(result: LiveExecutionResult) -> list[str]:
     return [event.stage for event in result.execution_trace]
 
 
-def test_provided_mode_does_not_call_real_service(monkeypatch):
-    _patch_schema(monkeypatch)
-    adapter = _Adapter()
+def test_provided_mode_does_not_call_real_service():
+    project_live = _live(_ProvidedLive, ready=["output"])
     case = SingleTurnCase(id="case-1", input={"question": "q"}, output={"answer": "provided"})
-    request = live.build_live_request(adapter, case, "demo")
 
-    result = live.run_live(_spec(ready=["output"]), adapter, case, request)
+    result = project_live.deliver(case)
 
-    assert not adapter.real_called
+    assert not project_live.real_called
     assert result.call_status == "succeeded"
     assert result.output_source == "provided_output"
     assert result.extracted_output == {"answer": "provided"}
@@ -118,15 +110,12 @@ def test_provided_mode_does_not_call_real_service(monkeypatch):
     assert "live_schema.validate_output" in _stages(result)
 
 
-def test_schema_mismatch_is_diagnostic_not_fallback(monkeypatch):
-    _patch_schema(monkeypatch, request_ok=False, output_ok=False)
-    adapter = _Adapter()
-    case = SingleTurnCase(id="case-1", input={"question": "q"})
-    request = live.build_live_request(adapter, case, "demo")
+def test_schema_mismatch_is_diagnostic_not_fallback():
+    project_live = _live(_RealLive, request_ok=False, output_ok=False)
 
-    result = live.run_live(_spec(), adapter, case, request)
+    result = project_live.deliver(SingleTurnCase(id="case-1", input={"question": "q"}))
 
-    assert adapter.real_called
+    assert project_live.real_called
     assert result.call_status == "succeeded"
     assert result.fallbacks == []
     assert result.extracted_output == {"answer": "real"}
@@ -136,15 +125,12 @@ def test_schema_mismatch_is_diagnostic_not_fallback(monkeypatch):
     assert all(item["status"] == "failed" for item in validation)
 
 
-def test_real_exception_creates_fallback_without_output_validation(monkeypatch):
-    _patch_schema(monkeypatch)
-    adapter = _FailingAdapter()
-    case = SingleTurnCase(id="case-1", input={"question": "q"})
-    request = live.build_live_request(adapter, case, "demo")
+def test_real_exception_creates_fallback_without_output_validation():
+    project_live = _live(_FailingLive)
 
-    result = live.run_live(_spec(), adapter, case, request)
+    result = project_live.deliver(SingleTurnCase(id="case-1", input={"question": "q"}))
 
-    assert adapter.real_called
+    assert project_live.real_called
     assert result.call_status == "failed"
     assert result.output_source == "live_service_unavailable"
     assert result.fallbacks
@@ -152,13 +138,10 @@ def test_real_exception_creates_fallback_without_output_validation(monkeypatch):
     assert "live_schema.validate_output" not in _stages(result)
 
 
-def test_failed_live_result_keeps_request_validation_visible(monkeypatch):
-    _patch_schema(monkeypatch, request_ok=False, output_ok=True)
-    adapter = _FailedResultAdapter()
-    case = SingleTurnCase(id="case-1", input={"question": "q"})
-    request = live.build_live_request(adapter, case, "demo")
+def test_failed_live_result_keeps_request_validation_visible():
+    project_live = _live(_FailedResultLive, request_ok=False)
 
-    result = live.run_live(_spec(), adapter, case, request)
+    result = project_live.deliver(SingleTurnCase(id="case-1", input={"question": "q"}))
 
     assert result.call_status == "failed"
     assert result.output_source == "live_service_unavailable"
@@ -168,13 +151,10 @@ def test_failed_live_result_keeps_request_validation_visible(monkeypatch):
     assert "live_schema.validate_output" not in _stages(result)
 
 
-def test_failed_protocol_result_is_not_reported_as_service_unavailable(monkeypatch):
-    _patch_schema(monkeypatch)
-    adapter = _ProtocolFailureAdapter()
-    case = SingleTurnCase(id="case-1", input={"question": "q"})
-    request = live.build_live_request(adapter, case, "demo")
+def test_failed_protocol_result_is_not_reported_as_service_unavailable():
+    project_live = _live(_ProtocolFailureLive)
 
-    result = live.run_live(_spec(), adapter, case, request)
+    result = project_live.deliver(SingleTurnCase(id="case-1", input={"question": "q"}))
 
     assert result.call_status == "failed"
     assert result.output_source == "live_protocol_error"
