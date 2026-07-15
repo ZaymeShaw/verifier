@@ -12,6 +12,22 @@ import subprocess
 import sys
 from pathlib import Path
 
+try:
+    import yaml
+except ImportError:
+    yaml = None
+
+
+# 配置文件路径常量（避免重复计算）
+CONFIG_PATH = (
+    Path(__file__).parent.parent
+    / "skills" / "issue-manager" / "config.yaml"
+)
+MARKER_DIR = (
+    Path(__file__).parent.parent.parent
+    / "skills" / "issue-manager" / "active"
+)
+
 
 def has_uncommitted_changes() -> bool:
     result = subprocess.run(
@@ -23,15 +39,10 @@ def has_uncommitted_changes() -> bool:
 
 
 def load_config() -> dict:
-    config_path = (
-        Path(__file__).parent.parent
-        / "skills" / "issue-manager" / "config.yaml"
-    )
-    if not config_path.exists():
+    if not CONFIG_PATH.exists() or yaml is None:
         return {}
     try:
-        import yaml
-        with open(config_path) as f:
+        with open(CONFIG_PATH) as f:
             return yaml.safe_load(f) or {}
     except Exception:
         return {}
@@ -82,20 +93,15 @@ def get_dynamic_protected_branches() -> tuple:
         pass
 
     # 从 config.yaml 读取 repo.main_branch
-    try:
-        config_path = (
-            Path(__file__).parent.parent
-            / "skills" / "issue-manager" / "config.yaml"
-        )
-        if config_path.exists():
-            import yaml
-            with open(config_path) as f:
+    if CONFIG_PATH.exists() and yaml is not None:
+        try:
+            with open(CONFIG_PATH) as f:
                 config = yaml.safe_load(f) or {}
             main_branch = config.get("repo", {}).get("main_branch")
             if main_branch and main_branch not in branches:
                 branches.append(main_branch)
-    except Exception:
-        pass
+        except Exception:
+            pass
 
     return tuple(branches)
 
@@ -201,11 +207,13 @@ def main():
 
     # 硬编码安全约束：禁止任何直接 git push 到 main/master/trunk/develop/dev
     if is_direct_push_to_protected(command):
+        # 展示动态获取的完整受保护分支列表
+        dynamic_branches = get_dynamic_protected_branches()
         msg = (
             "\n" + "=" * 60 + "\n"
             "SECURITY BLOCKED: Direct push to protected branch detected\n"
             f"Command: {command}\n"
-            f"Protected branches: {', '.join(PROTECTED_BRANCHES)}\n"
+            f"Protected branches: {', '.join(dynamic_branches)}\n"
             "Issue-Manager 不允许直接推送到受保护分支。\n"
             "请使用 'python3 .claude/skills/issue-manager/manage.py publish <id>'\n"
             "  该命令会硬编码推送到 issue-{N}-{slug}-pr 分支并创建 PR\n"
@@ -259,14 +267,10 @@ def main():
         # 跳过特殊场景：checkout -b/-B 创建新分支（target 是新分支名，允许）
         # 但如果是 checkout <非issue分支>，应该提示
         if target and not target.startswith("-"):
-            marker_dir = (
-                Path(__file__).parent.parent.parent
-                / "skills" / "issue-manager" / "active"
-            )
             # 如果目标分支不是任何 active issue 的分支，提示用户
             # 但允许 checkout 到 main 等基础分支（仅警告不 block）
             is_issue_branch = bool(re.match(r"^issue-\d+-", target))
-            if is_issue_branch and not is_active_issue_branch(target, marker_dir):
+            if is_issue_branch and not is_active_issue_branch(target, MARKER_DIR):
                 msg = (
                     "\n" + "=" * 60 + "\n"
                     f"Issue-Manager PreCommand: BLOCKED git checkout {target}\n"
