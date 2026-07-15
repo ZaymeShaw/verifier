@@ -474,13 +474,24 @@ created_at: {__import__('datetime').datetime.now().isoformat()}
         return len([line for line in result.stdout.strip().split("\n") if line])
 
     def _has_uncommitted_changes(self) -> bool:
-        """检查是否有未提交改动"""
+        """检查是否有未提交改动（排除印记目录本身）"""
         result = subprocess.run(
             ["git", "status", "--porcelain"],
             capture_output=True,
             text=True,
         )
-        return bool(result.stdout)
+        if not result.stdout:
+            return False
+        # 排除印记目录下的文件（这些是 skill 管理的，不算用户改动）
+        active_dir_rel = ".claude/skills/issue-manager/active/"
+        for line in result.stdout.strip().split("\n"):
+            if not line:
+                continue
+            # line 形如 " M path" 或 "?? path"
+            path = line[3:]
+            if not path.startswith(active_dir_rel):
+                return True
+        return False
 
     def _check_branch_tracking(self) -> tuple:
         """检查分支对比情况"""
