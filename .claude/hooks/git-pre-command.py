@@ -38,7 +38,18 @@ def load_config() -> dict:
 
 
 def extract_bash_command(tool_input: dict) -> str:
-    return (tool_input or {}).get("command", "")
+    """从 tool_input 中提取命令字符串
+    支持 Bash 工具的 'command' 字段和 mcp__ide__executeCode 的 'code' 字段
+    """
+    if not tool_input:
+        return ""
+    # Bash 工具
+    if "command" in tool_input:
+        return tool_input["command"]
+    # mcp__ide__executeCode 工具（Jupyter kernel 执行 !cmd 或 %shell cmd）
+    if "code" in tool_input:
+        return tool_input["code"]
+    return ""
 
 
 def is_git_command(cmd: str, subcommand: str) -> bool:
@@ -91,7 +102,7 @@ def get_dynamic_protected_branches() -> tuple:
 
 def is_direct_push_to_protected(cmd: str) -> bool:
     """检测是否是直接 git push 到受保护分支（如 main）"""
-    # 必须是 git push 命令
+    # 必须是 git push 命令（无论是否在 bash -c/eval/$() 中）
     if not re.search(r"\bgit\s+push\b", cmd):
         return False
 
@@ -102,19 +113,21 @@ def is_direct_push_to_protected(cmd: str) -> bool:
 
     # 检查动态受保护分支（硬编码 + 远程默认 + 配置）
     protected_branches = get_dynamic_protected_branches()
+    # 后面允许的边界字符：空白、行尾、冒号、分号、&、)、|、>、<、引号
+    # 这样可拦截：分号后命令、管道、&&、$() 包装、重定向、引号包装
+    end_boundary = r"(?=\s|$|:|;|&|\)|\||>|<|'|\")"
     for branch in protected_branches:
         escaped = re.escape(branch)
         # 完整匹配：<branch> 作为独立 token
-        # 边界：前面是行首或空白，后面是行尾/空白/冒号（不能是 - 或字母数字）
-        if re.search(rf"(?:^|\s){escaped}(?=\s|$|:)", cmd):
+        if re.search(rf"(?:^|\s|'|\"){escaped}{end_boundary}", cmd):
             return True
         # refspec dst: <src>:<branch>
-        if re.search(rf":{escaped}(?=\s|$)", cmd):
+        if re.search(rf":{escaped}{end_boundary}", cmd):
             return True
         # 前缀匹配 release/* 等
-        if re.search(rf"(?:^|\s){escaped}/\S+(?=\s|$)", cmd):
+        if re.search(rf"(?:^|\s|'|\"){escaped}/\S+{end_boundary}", cmd):
             return True
-        if re.search(rf":{escaped}/\S+(?=\s|$)", cmd):
+        if re.search(rf":{escaped}/\S+{end_boundary}", cmd):
             return True
     return False
 
