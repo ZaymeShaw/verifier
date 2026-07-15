@@ -47,18 +47,104 @@ def is_git_command(cmd: str, subcommand: str) -> bool:
 
 
 # 硬编码受保护分支列表，禁止直接 push 到这些分支
-PROTECTED_BRANCHES = ("main", "master", "trunk", "develop", "dev")
+PROTECTED_BRANCHES = ("main", "master", "trunk", "develop", "dev", "production", "prod", "release", "hotfix")
+
+
+def get_dynamic_protected_branches() -> tuple:
+    """动态获取受保护分支：硬编码 + 远程默认分支 + HEAD 引用的分支"""
+    branches = list(PROTECTED_BRANCHES)
+
+    # 获取远程默认分支（origin/HEAD）
+    try:
+        result = subprocess.run(
+            ["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if result.returncode == 0:
+            # 形如 origin/main
+            default_branch = result.stdout.strip().split("/", 1)[-1]
+            if default_branch and default_branch not in branches:
+                branches.append(default_branch)
+    except Exception:
+        pass
+
+    # 从 config.yaml 读取 repo.main_branch
+    try:
+        config_path = (
+            Path(__file__).parent.parent
+            / "skills" / "issue-manager" / "config.yaml"
+        )
+        if config_path.exists():
+            import yaml
+            with open(config_path) as f:
+                config = yaml.safe_load(f) or {}
+            main_branch = config.get("repo", {}).get("main_branch")
+            if main_branch and main_branch not in branches:
+                branches.append(main_branch)
+    except Exception:
+        pass
+
+    return tuple(branches)
 
 
 def is_direct_push_to_protected(cmd: str) -> bool:
     """检测是否是直接 git push 到受保护分支（如 main）"""
-    for branch in PROTECTED_BRANCHES:
-        # git push <remote> <branch>
-        if re.search(rf"\bgit\s+push\s+\S+\s+{branch}\b", cmd):
+    # 必须是 git push 命令
+    if not re.search(r"\bgit\s+push\b", cmd):
+        return False
+
+    # 先检查 PR 目标分支模式：issue-{N}-{slug}-pr
+    # PR 目标分支只能通过 manage.py publish 推送，禁止直接 push
+    if re.search(r"\bissue-\d+-[^\s:]+-pr\b", cmd):
+        return True
+
+    # 检查动态受保护分支（硬编码 + 远程默认 + 配置）
+    protected_branches = get_dynamic_protected_branches()
+    for branch in protected_branches:
+        escaped = re.escape(branch)
+        # 完整匹配：<branch> 作为独立 token
+        # 边界：前面是行首或空白，后面是行尾/空白/冒号（不能是 - 或字母数字）
+        if re.search(rf"(?:^|\s){escaped}(?=\s|$|:)", cmd):
             return True
-        # git push <remote> <src>:<branch>
-        if re.search(rf"\bgit\s+push\s+\S+\s+\S+:{branch}\b", cmd):
+        # refspec dst: <src>:<branch>
+        if re.search(rf":{escaped}(?=\s|$)", cmd):
             return True
+        # 前缀匹配 release/* 等
+        if re.search(rf"(?:^|\s){escaped}/\S+(?=\s|$)", cmd):
+            return True
+        if re.search(rf":{escaped}/\S+(?=\s|$)", cmd):
+            return True
+    return False
+
+
+def extract_push_target_branch(cmd: str) -> str:
+    """从 git push 命令中提取目标分支名（refspec 的 dst 部分）"""
+    # git push <remote> <src>:<dst>
+    m = re.search(r"\bgit\s+push\s+\S+\s+\S+:([^/\s:]+(?:/[^/\s:]+)*)", cmd)
+    if m:
+        return m.group(1)
+    # git push <remote> <branch>（src 和 dst 同名）
+    m = re.search(r"\bgit\s+push\s+\S+\s+([^/\s:]+(?:/[^/\s:]+)*)\s*$", cmd)
+    if m and not m.group(1).startswith("-"):
+        return m.group(1)
+    return ""
+
+
+def is_issue_branch_name(branch: str) -> bool:
+    """检查分支名是否符合 issue-{N}-{slug} 模式"""
+    return bool(re.match(r"^issue-\d+-", branch))
+
+
+def is_direct_push_to_issue_work_branch(cmd: str) -> bool:
+    """检测是否直接 push 到 issue 工作分支（应通过 publish 推到 -pr 分支）"""
+    target = extract_push_target_branch(cmd)
+    if not target:
+        return False
+    # issue 工作分支：issue-{N}-{slug}（不以 -pr 结尾）
+    if is_issue_branch_name(target) and not target.endswith("-pr"):
+        return True
     return False
 
 
@@ -110,6 +196,20 @@ def main():
             "Issue-Manager 不允许直接推送到受保护分支。\n"
             "请使用 'python3 .claude/skills/issue-manager/manage.py publish <id>'\n"
             "  该命令会硬编码推送到 issue-{N}-{slug}-pr 分支并创建 PR\n"
+            + "=" * 60 + "\n"
+        )
+        print(msg, file=sys.stderr)
+        sys.exit(2)
+
+    # 安全约束：禁止直接 push 到 issue 工作分支（绕过 publish 流程）
+    if is_direct_push_to_issue_work_branch(command):
+        target = extract_push_target_branch(command)
+        msg = (
+            "\n" + "=" * 60 + "\n"
+            f"SECURITY BLOCKED: Direct push to issue work branch: {target}\n"
+            f"Command: {command}\n"
+            "Issue 工作分支必须通过 publish 命令推送（推到 -pr 后缀分支）。\n"
+            "请使用: python3 .claude/skills/issue-manager/manage.py publish <id>\n"
             + "=" * 60 + "\n"
         )
         print(msg, file=sys.stderr)
