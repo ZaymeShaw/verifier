@@ -378,7 +378,7 @@ status: in_progress
 created_at: {__import__('datetime').datetime.now().isoformat()}
 
 # 可选：关联的本地 issue 文件
-# local_issue_file: issue/{issue_id}-{slug}.md
+# local_issue_file: issue/{N}-{slug}.md
 
 # 可选：备注
 # notes: ""
