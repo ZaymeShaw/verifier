@@ -1,0 +1,46 @@
+# Issue-Manager Skill 配置
+# manage.py 与 hook 脚本均读取此文件，单一配置源
+
+repo:
+  # 远程名，默认 origin
+  remote: origin
+  # 主分支名，作为 pull/PR base 的参考
+  main_branch: main
+
+paths:
+  # 印记目录（相对项目根），存放所有 in_progress issue 的印记文件
+  active_dir: .claude/skills/issue-manager/active
+  # PR body 模板
+  pr_body_template: .claude/skills/issue-manager/templates/pr-body.md
+
+branch:
+  # 工作分支命名模板，{N} 为 issue 编号，{slug} 为 slugified 标题
+  pattern: "issue-{N}-{slug}"
+  # PR 接收分支命名模板，远程 main 的保护副本
+  pr_target_pattern: "issue-{N}-{slug}-pr"
+
+pre_checks:
+  # pull 前是否检查未提交改动（true=严格模式）
+  check_uncommitted_before_pull: true
+  # pull 前是否检查当前分支未合并 commit
+  check_unmerged_commits_before_pull: true
+
+publish:
+  # publish 前置检查：要求相对 origin/main 的实质代码 commit 数下限
+  min_real_commits: 1
+  # 测试命令；为空则跳过测试关卡（不推荐）
+  test_command: ""
+  # 是否要求用户确认后才 push
+  require_user_confirmation: true
+
+reminder:
+  # 会话启动时扫描印记目录，最多展示多少条 in_progress issue
+  max_display: 5
+
+git_pre_command_hooks:
+  # PreCommand hook 是否对 git checkout 误切换做提示/阻断
+  checkout_guard: true
+  # PreCommand hook 是否对 git pull 前未 stash/commit 做提示
+  pull_guard: true
+  # PreCommand hook 是否对 git fetch 做轻提示（一般放行）
+  fetch_guard: false
