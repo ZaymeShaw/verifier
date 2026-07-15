@@ -128,16 +128,27 @@ class IssueManager:
     def checkout(self, issue_id: str):
         """checkout <id> - 切换到该 issue 的分支"""
         N = self._parse_issue_id(issue_id)
-        slug = self._get_slug()
-        branch_pattern = self.config["branch"]["pattern"].format(N=N, slug=slug)
+        import yaml
 
-        # 检查印记文件
-        marker_file_path = self.active_dir / f"issue-{N}-{slug}.yaml"
-        if not marker_file_path.exists():
-            print(f"印记文件不存在: {marker_file_path}")
-            print("可用 issue:")
-            self._list_issues()
+        # 从印记文件读取 slug，确保切换到正确的分支
+        marker_file_path = None
+        for f in self.active_dir.glob(f"issue-{N}-*.yaml"):
+            marker_file_path = f
+            break
+
+        if not marker_file_path:
+            print(f"✗ 找不到 issue {N} 的印记文件")
+            print(f"  请先执行 pull {N} 创建印记文件")
             return
+
+        with open(marker_file_path) as f:
+            marker_data = yaml.safe_load(f)
+        slug = marker_data.get("slug")
+        if not slug:
+            print(f"✗ 印记文件损坏：缺少 slug 字段")
+            return
+
+        branch_pattern = f"issue-{N}-{slug}"
 
         # 检查当前是否有未提交改动才能 checkout
         if self._has_uncommitted_changes():
@@ -160,12 +171,36 @@ class IssueManager:
     def publish(self, issue_id: str):
         """publish <id> - 身份校验 → 前置检查 → 测试 → 确认 → push → PR"""
         N = self._parse_issue_id(issue_id)
-        slug = self._get_slug()
-        branch_pattern = self.config["branch"]["pattern"].format(N=N, slug=slug)
+
+        # ===== 安全机制：从印记文件读取 slug，而不是重新生成 =====
+        # 这样确保 publish 推送的分支与 pull 创建的分支完全一致
+        import yaml
+
+        # 查找该 issue 的印记文件
+        marker_file_path = None
+        for f in self.active_dir.glob(f"issue-{N}-*.yaml"):
+            marker_file_path = f
+            break
+
+        if not marker_file_path:
+            print(f"✗ 安全拦截：找不到 issue {N} 的印记文件")
+            print(f"  请先执行 pull {N} 创建印记文件")
+            return
+
+        # 从印记文件读取 slug
+        with open(marker_file_path) as f:
+            marker_data = yaml.safe_load(f)
+        slug = marker_data.get("slug")
+        if not slug:
+            print(f"✗ 印记文件损坏：缺少 slug 字段")
+            return
 
         # 硬编码安全约束：PR 目标分支必须以 -pr 结尾，绝不允许直接推送到 main
         PR_TARGET_BRANCH = f"issue-{N}-{slug}-pr"
-        if PR_TARGET_BRANCH.endswith("-pr") is False:
+        WORK_BRANCH = f"issue-{N}-{slug}"
+
+        # 双重校验：PR_TARGET_BRANCH 必须以 -pr 结尾
+        if not PR_TARGET_BRANCH.endswith("-pr"):
             print(f"✗ 安全拦截：PR 目标分支命名不合规: {PR_TARGET_BRANCH}")
             print("  PR 目标分支必须以 '-pr' 结尾，禁止直接推送到 main")
             return
@@ -178,13 +213,11 @@ class IssueManager:
                 print(f"  禁止推送到: {protected}")
                 return
 
-        marker_file_path = self.active_dir / f"issue-{N}-{slug}.yaml"
-        if not marker_file_path.exists():
-            print(f"印记文件不存在: {marker_file_path}")
-            return
-
         print(f"[publish] Publishing issue {N}")
-        print(f"  安全策略: PR 目标分支硬编码为 {PR_TARGET_BRANCH}")
+        print(f"  印记文件: {marker_file_path}")
+        print(f"  工作分支: {WORK_BRANCH}")
+        print(f"  PR 目标: {PR_TARGET_BRANCH}")
+        print(f"  安全策略: 从印记文件读取 slug，确保分支一致")
 
         # Step 1: 身份校验 (已在 checkout 检查当前分支模式)
         print("\n[1/6] 身份校验...")
