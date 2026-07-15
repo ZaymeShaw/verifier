@@ -130,6 +130,9 @@ def is_direct_push_to_protected(cmd: str) -> bool:
         # refspec dst: <src>:<branch>
         if re.search(rf":{escaped}{end_boundary}", cmd):
             return True
+        # 完整 refspec 形式：refs/heads/<branch>
+        if re.search(rf"refs/heads/{escaped}{end_boundary}", cmd):
+            return True
         # 前缀匹配 release/* 等
         if re.search(rf"(?:^|\s|'|\"){escaped}/\S+{end_boundary}", cmd):
             return True
