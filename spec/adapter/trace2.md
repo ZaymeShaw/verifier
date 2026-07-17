@@ -85,10 +85,10 @@ class MockIntentOutput:
 字段含义：
 
 - `user_context`：用户身份、背景、经验与当前处境；
-- `system_understanding`：用户主观上对系统的了解，允许有限、不完整或错误；
+- `system_understanding`：用户主观上对当前被测业务 `<project>` 的了解，允许有限、不完整或错误；这里的“系统”专指用户正在使用的业务产品或 Agent，不是 verifier 测评系统；
 - `user_intent`：用户希望达到的实际目标；
 - `query`：用户最初表达；
-- `scenario`：交互场景；
+- `scenario`：当前 `<project>` 内部的业务交互场景，不是项目名。项目名由 `project_id` 单独表达；例如 `project_id=deerflow` 时，scenario 可以是 `clarification`；
 
 `MockIntentOutput` 禁止包含：
 
@@ -97,6 +97,8 @@ class MockIntentOutput:
 - Judge/Attribute 信息；
 - 系统真实能力边界或内部完成标准；
 - Trace、Raw Response 或运行日志。
+
+生成 `system_understanding` 时只能使用真实用户可能接触的信息，例如被测 `<project>` 的产品名称、入口说明、用户既往使用经验和已经看到的业务回复。不得把 verifier、Judge、Evaluation、内部工具链或项目真实能力答案写入用户认知。
 
 ## 4. execute_live
 
@@ -193,6 +195,21 @@ def infer_user_intent(
 当信息不足以形成可靠用户模型时，多轮交互停止并记录 `intent_unavailable`，不得虚构用户继续运行。
 
 多轮项目必须实现该签名，不得依赖 execute_live 调用方一定提供 Intent。协议层分别校验输入 REQUEST_SCHEMA 和输出 MockIntentOutput；项目实现负责理解自身 Request 中哪些内容能够支持用户意图推断。
+
+协议层通过抽象基类强制该要求：
+
+```python
+class MultiTurnInteractiveMock(ABC):
+    @abstractmethod
+    def infer_user_intent(
+        self,
+        initial_request: REQUEST_SCHEMA,
+    ) -> MockIntentOutput:
+        """从合法首轮 Request 反推有限用户模型。"""
+        raise NotImplementedError
+```
+
+所有多轮项目 Mock 必须继承该抽象协议并实现方法；未实现的项目在实例化或项目 check 阶段失败，不能等到运行中再静默降级。单轮 Mock 协议不声明该抽象方法。
 
 ## 6. 多轮用户决策
 
@@ -330,6 +347,9 @@ Trace 中展示的 Input 必须来自实际投递 Request，不得用候选 Case
 - Intent 缺失时多轮按需反推；
 - 反推失败不会编造 Intent；
 - MockIntent/UserIntent 不含 live_request；
+- scenario 与 project_id 语义独立，scenario 只能取项目内业务场景；
+- system_understanding 只描述用户对被测业务 project 的认知，不泄漏 verifier 信息；
+- 未实现 infer_user_intent 的多轮 Mock 无法实例化且项目 check 失败；
 - 决定 stop 后不再构建或投递 Request；
 - 决定 continue 后只构建一轮 Request；
 - safety_max_turns 仅作为熔断且停止原因准确；
@@ -354,7 +374,7 @@ Trace 中展示的 Input 必须来自实际投递 Request，不得用候选 Case
 9. deerflow 与 marketting-planning 的 `max_turns()` 固定为 4；
 10. 当前停止主要依赖 AI 回复关键词，不是模拟用户的轻量主观决策；
 11. 当前 MockNextTurnOutput 只包含 query，不支持独立的继续/停止决策；
-12. Trace 尚未完整记录用户模型来源、决策结果和安全停止原因。
+12. Trace 尚未完整记录决策结果和安全停止原因。
 
 ## 2. Schema Changes
 
@@ -363,8 +383,9 @@ Trace 中展示的 Input 必须来自实际投递 Request，不得用候选 Case
 3. 将 MockCase.intent 调整为可选字段，MockCase.live_request 保持必填；
 4. 新增 `MockInteractionTurn`、`MockInteractionState` 与 `MockContinueDecision`；
 5. 为停止原因增加统一枚举；
-6. 更新 normalize、serialize、accessor、fixture 和 schema hook；
-7. 历史数据中的 `intent.live_request` 只读迁移到 Case 顶层 `live_request`，不得继续写回 Intent。
+6. 在 `MultiTurnInteractiveMock` 增加 `infer_user_intent` 的 `@abstractmethod`，由抽象协议和项目 check 双重保证；
+7. 更新 normalize、serialize、accessor、fixture 和 schema hook；
+8. 历史数据中的 `intent.live_request` 只读迁移到 Case 顶层 `live_request`，不得继续写回 Intent。
 
 ## 3. Mock Changes
 
@@ -422,6 +443,7 @@ Trace 中展示的 Input 必须来自实际投递 Request，不得用候选 Case
 
 - 实现 Request 用户表达字段映射；
 - 必须实现 `infer_user_intent(initial_request: REQUEST_SCHEMA) -> MockIntentOutput`；
+- 通过继承 `MultiTurnInteractiveMock` 的 `@abstractmethod` 在类实例化时强制实现，不允许仅靠文档约定；
 - 将 should_stop 关键词逻辑迁移为 decide_next_action；
 - 将 build_next_request 切换到统一 InteractionState；
 - 提高 safety_max_turns，并验证正常用例主要由用户决定停止。
