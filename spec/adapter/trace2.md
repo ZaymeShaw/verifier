@@ -29,6 +29,8 @@ Mock 扮演有限认知的真实用户，负责：
 - 在每轮响应后进行轻量级继续/停止判断；
 - 仅在决定继续后构建下一轮 Live Request。
 
+`infer_user_intent` 是所有多轮项目必须实现的协议方法。因为 execute_live 允许 intent 缺失，多轮实现必须具备仅从合法首轮 Request 建立用户模型的能力。单轮项目不要求实现该方法。
+
 Mock 不读取 Reference、Judge、Attribute、系统内部完成标准或其他评估答案。
 
 ### 2.2 Live 层
@@ -189,6 +191,8 @@ def infer_user_intent(
 - 推断结果只能表达 Request 中有证据支持的用户认知和意图。
 
 当信息不足以形成可靠用户模型时，多轮交互停止并记录 `intent_unavailable`，不得虚构用户继续运行。
+
+多轮项目必须实现该签名，不得依赖 execute_live 调用方一定提供 Intent。协议层分别校验输入 REQUEST_SCHEMA 和输出 MockIntentOutput；项目实现负责理解自身 Request 中哪些内容能够支持用户意图推断。
 
 ## 6. 多轮用户决策
 
@@ -417,12 +421,58 @@ Trace 中展示的 Input 必须来自实际投递 Request，不得用候选 Case
 多轮项目：
 
 - 实现 Request 用户表达字段映射；
-- 实现或接入轻量 Intent 反推；
+- 必须实现 `infer_user_intent(initial_request: REQUEST_SCHEMA) -> MockIntentOutput`；
 - 将 should_stop 关键词逻辑迁移为 decide_next_action；
 - 将 build_next_request 切换到统一 InteractionState；
 - 提高 safety_max_turns，并验证正常用例主要由用户决定停止。
 
-## 7. 数据迁移 Changes
+## 7. Intent 入参职责影响
+
+本次变更不能机械地删除所有 Intent 入参。需要按方法职责分为三类。
+
+### 7.1 必须改为 Request-first 的方法
+
+- `ProjectLive.execute_live(intent, ctx)` 改为 `execute_live(initial_request, ctx, intent=None)`；
+- 单轮 `_execute_single_turn(intent, ctx)` 改为接收 initial_request，不再调用 Mock 构建首轮 Request；
+- 多轮 `_execute_multi_turn(intent, ctx)` 改为接收 initial_request 和可选 Intent，首轮先执行 Request，缺 Intent 时调用 infer_user_intent；
+- `trace_from_live(live, case, intent=None)` 改为从 Case 分别提取必填 live_request 与可选 intent，不再把 Request 回填 Intent；
+- `live._resolve_intent(case, mock)` 不再作为每次执行的必经步骤。已有 Intent 时只做读取/校验；Intent 缺失时，单轮保持为空，多轮交给 infer_user_intent；
+- pipeline 的 `live_run`、`run_chain`、batch case 和 interactive case 入口需要传递首轮 Request 与可选 Intent。
+
+### 7.2 仍应以 Intent 为输入的方法
+
+- `build_user_intent(scenario) -> MockIntentOutput` 仍负责生成用户模型；
+- `build_initial_request(intent) -> REQUEST_SCHEMA` 仍是模拟生成路径中的 Intent→Request 映射；
+- `MockAgent.build_live_request` 及 `build_live_request_from_intent` 可迁移命名为 build_initial_request，但语义仍以 Intent 为输入；
+- QA、client_search、marketting-planning-intent 等单轮项目的首轮 Request 构建方法仍接收 Intent，只是不再由 execute_live 内部调用。
+
+这些方法承担的正是 Intent→Request 映射职责，协议变化不应将其改成 Request 输入。
+
+### 7.3 改为统一 InteractionState 的方法
+
+- `build_next_request(intent, accumulated)` 改为 `build_next_request(state)`；
+- `should_stop(transcript, last_result)` 被 `decide_next_action(state)` 替代；
+- deerflow 与 marketting-planning 的对应项目实现同步迁移；
+- MockAgent.next_turn 改为读取受限 InteractionState，不能接收完整 Trace 或评估信息。
+
+### 7.4 不属于本次 Intent 协议的同名参数
+
+Judge、Attribute、draft tool 中的 `user_intent: str` 或 `expected_intent` 是评估输入，不是 MockIntentOutput，也不参与 Request 构建。本次不得仅因参数名包含 intent 就修改其签名；只需确保它们从 RunTrace 或显式评估输入读取，不接触 Mock 内部决策。
+
+### 7.5 直接影响文件
+
+一次性迁移至少覆盖：
+
+- `impl/core/live_protocol.py`；
+- `impl/core/trace.py`；
+- `impl/core/pipeline.py`；
+- `impl/core/mock_protocol.py`；
+- `impl/core/mock_agent.py`；
+- `impl/core/schema/mock.py` 及 normalize/fixture/accessor；
+- 五个项目的 mock 实现；
+- core live、Mock 协议、batch、fixture、schema hook 与前端相关测试。
+
+## 8. 数据迁移 Changes
 
 1. 扫描 `verifier/data`、项目 fixture 与 core fixture 中的 Intent；
 2. 将 `intent.live_request` 提升到 Case 顶层 `live_request`；
@@ -430,7 +480,7 @@ Trace 中展示的 Input 必须来自实际投递 Request，不得用候选 Case
 4. 无 Intent 的历史 Case 保持 intent 为空，不为满足 schema 而补造；
 5. 数据迁移保持只读旧格式兼容，并为新写入格式禁止 Intent 内 live_request。
 
-## 8. 测试与验收 Changes
+## 9. 测试与验收 Changes
 
 1. 更新协议、schema hook、fixture、项目和前端测试；
 2. 为单轮项目验证“Request 必填、Intent 可选”；
@@ -442,7 +492,7 @@ Trace 中展示的 Input 必须来自实际投递 Request，不得用候选 Case
 8. 核对前端不再出现 Input A、Output B 或结果错误归位；
 9. 批量回归历史 fixture，确认旧格式可读、新格式不再写入污染字段。
 
-## 9. 迁移顺序
+## 10. 迁移顺序
 
 1. 先新增 schema 与兼容读取，不立即删除旧字段读取；
 2. 改造 Mock 与 execute_live 新签名；
