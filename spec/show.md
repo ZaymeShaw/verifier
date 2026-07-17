@@ -14,6 +14,32 @@
 
 `show_schema` 只控制展示投影，不改变业务协议、数据内容、Judge 输入或 Trace 原件。
 
+## 1.1 文档范围分类
+
+本文明确区分两类内容：
+
+### 项目长期标准
+
+这是新项目接入和现有项目持续维护时必须遵守的稳定契约，包括：
+
+- `show_schema.py` 的位置和 `SHOW_SCHEMA` 结构；
+- input_fields、output_fields 的字段路径语法和业务含义；
+- 项目级 schema/fixture 校验要求；
+- 前端对展示投影、完整事实和原始 Trace 的通用展示规则；
+- Show Schema 不得修改 Trace 原件或业务输出的边界。
+
+### 当前迁移变更
+
+这是当前仓库从现状迁移到长期标准时需要完成的一次性工程改造，包括：
+
+- 修复现有多轮 transcript 的用户表达提取问题；
+- 为 RunTrace 补存 mock_intent 和逐轮 mock_message；
+- 为当前 5 个业务项目及 fixture 补齐 show_schema；
+- 改造现有前端 Trace JSON 展示；
+- 为历史 Trace 和缺失 show_schema 的迁移窗口提供兼容降级。
+
+除明确标记为“当前迁移变更”的章节外，其余要求均属于项目长期标准。
+
 ## 2. 设计原则
 
 - 完整性：任何摘要都不能替代或删除原始 Trace。
@@ -25,6 +51,8 @@
 - 顺序稳定：字段在列表中的顺序就是展示优先级。
 
 ## 3. 项目文件
+
+本节属于**项目长期标准**。
 
 每个项目在以下位置提供展示声明：
 
@@ -67,9 +95,13 @@ class ShowSchema:
 - `input_fields` 相对于项目 REQUEST_SCHEMA；
 - `output_fields` 相对于项目 EXTRACT_OUTPUT_SCHEMA；
 - 第一项是主展示字段，其余项是结构化要点；
+- 第一项必须指向标量值，业务项目应优先选择能代表用户表达或 AI 主回复的字符串字段；
+- 后续项允许指向标量、对象或列表；
 - v1 不支持 label、renderer、formatter 或项目自定义展示函数。
 
 ## 4. 字段路径语法
+
+本节属于**项目长期标准**。
 
 字段选择器使用受限字符串路径，不引入完整 JSONPath。
 
@@ -93,7 +125,17 @@ tool_calls[0].name
 
 字段路径由后端统一解析。前端只消费后端生成的展示投影，不重复实现路径解析规则。
 
-## 5. 协议层前置：保存 Mock Intent
+路径校验分为三个层级：
+
+- `schema-valid`：路径可由 REQUEST_SCHEMA 或 EXTRACT_OUTPUT_SCHEMA 的 dataclass/JSON Schema 结构静态证明；
+- `fixture-valid`：路径进入 `Dict[str, Any]` 等动态结构，静态类型无法证明，但可由代表性 fixture 验证；
+- `runtime-missing`：路径配置合法，但某次运行没有产生该值，只影响该字段展示，不使整个 Trace 失败。
+
+项目 check 必须覆盖 schema-valid；动态字典路径还必须覆盖 fixture-valid。
+
+## 5. 当前迁移变更：补齐 Mock 事实
+
+本节属于**当前迁移变更**。迁移完成后，新增字段成为 RunTrace 长期协议的一部分。
 
 `trace_from_live()` 在执行前已经获得 `MockIntentOutput`，但当前 `RunTrace` 没有保存该事实，导致运行后无法稳定展示 Mock 用户信息。
 
@@ -120,7 +162,44 @@ scenario
 - 不从 request 反推或重建 Mock intent；
 - 缺失 intent 的历史 Trace 允许 `mock_intent = null`，前端明确显示“无 Mock Intent”。
 
+### 5.1 逐轮 Mock 表达
+
+当前多轮 transcript 只尝试读取 request 顶层的 `query` 或 `content`。这对以下真实 REQUEST_SCHEMA 不成立：
+
+```text
+marketting-planning: request.user_text
+deerflow: request.input.messages[-1].content
+```
+
+因此迁移时必须修复事实记录，不能只用 Show Schema 把页面修饰正确。
+
+每条 turn_record 新增协议字段：
+
+```python
+mock_message: str
+```
+
+多轮 ProjectMock 新增语义提取扩展点：
+
+```python
+def extract_mock_message(self, request: REQUEST_SCHEMA) -> str:
+    ...
+```
+
+该方法只从本轮已生成并通过 REQUEST_SCHEMA 校验的 request 中提取 Mock 实际表达，不生成新内容。多轮项目必须实现；协议层在 `build_next_request()` 后立即调用，并把结果传给 `TraceContext.record_turn()`。这是迁移完成后的多轮项目长期标准。
+
+要求：
+
+- mock_message 是 Mock 本轮实际表达，不是前端从 request 猜测的摘要；
+- 多轮 mock 在生成下一轮 request 时同步提供该语义事实；
+- TraceContext 将 mock_message 与同一轮 request、raw_response、extracted_output 一起记录；
+- conversation_transcript 从逐轮 mock_message 和 AI 输出生成，不再硬编码 `query/content`；
+- Show Schema 仅决定 request/output 哪些字段优先展示，不参与 Trace 原件构造；
+- 历史 Trace 缺少 mock_message 时，展示层可以用 input_fields 第一项生成兼容摘要，但必须标记为 derived，不回写原 Trace。
+
 ## 6. 后端展示投影
+
+本节属于**项目长期标准**。
 
 后端加载项目 `SHOW_SCHEMA`，针对每条 RunTrace 生成只读展示投影：
 
@@ -142,6 +221,8 @@ scenario
   "turns": [
     {
       "turn_index": 0,
+      "mock_message": "有子女的客户",
+      "mock_message_source": "trace",
       "input": [
         {"path": "user_text", "value": "有子女的客户"},
         {"path": "extra_input_params", "value": {}}
@@ -160,9 +241,13 @@ scenario
 
 投影中的 `path` 保留值的来源，避免摘要失去可追溯性。投影只用于前端显示，不回写 RunTrace。
 
+展示投影在读取/响应阶段动态生成，不持久化到 RunTrace、MockCase 或 case pool。修改 Show Schema 后，历史 Trace 应立即使用新规则重新投影，不能继续展示旧摘要。
+
 单轮与多轮统一从 `turn_records` 生成轮次卡片。若历史单轮 Trace 没有 `turn_records`，允许从 `normalized_request`、`raw_response`、`extracted_output` 构造只读兼容视图，但不得修改原 Trace。
 
 ## 7. 前端信息架构
+
+本节属于**项目长期标准**。
 
 ### 7.1 默认展开
 
@@ -179,7 +264,8 @@ Mock 用户
 - input_fields 第一项作为 Mock 输入主内容；
 - output_fields 第一项作为 AI 输出主内容；
 - 其余字段按声明顺序显示为结构化要点；
-- 空值保留字段名并显示“无值”，避免用户误以为字段未配置；
+- 主字段为空时保留字段名并显示“主展示字段无值”，将其作为可见的数据质量信号；
+- 次要字段为空时不占用主视图，在“已配置但本轮为空”折叠区中列出；
 - 长文本可以在视觉上收起，但必须提供展开入口，不能丢弃内容。
 
 ### 7.2 每轮完整事实
@@ -212,7 +298,11 @@ Gate / Transition Decisions
 
 Trace 区域最后保留“完整原始 Trace JSON”折叠面板，内容来自未经展示投影裁剪的 RunTrace。
 
+完整 Raw Response、每轮完整事实和完整 Trace 应在用户展开时再格式化/挂载到 DOM，不能为批量列表中的每一行预先生成大体积 JSON 节点。
+
 ## 8. Output 与 Reference
+
+本节属于**项目长期标准**。
 
 用例表中的 Output 和 Reference 保持相邻，并统一使用 `SHOW_SCHEMA.output_fields` 生成核心展示。
 
@@ -224,14 +314,20 @@ Trace 区域最后保留“完整原始 Trace JSON”折叠面板，内容来自
 
 ## 9. 加载与错误处理
 
-- 项目存在 `live_schema.py` 时必须存在 `show_schema.py`；
-- show_schema 缺失、类型错误、列表为空或路径不合法，项目 check 失败；
+本节同时规定长期标准和迁移期降级边界。
+
+- 项目存在 `live_schema.py` 时必须存在 `show_schema.py`，这是项目长期标准；
+- show_schema 缺失、类型错误、列表为空或路径不合法时，项目 check 失败；
+- 迁移窗口或历史项目缺失 show_schema 时，运行结果和完整 Trace 仍必须返回，前端降级为完整 JSON 展示并明确提示“缺少 Show Schema”；
+- 缺失 Show Schema 不能导致整批用例无数据、永久 pending 或前端渲染中断；
 - 非法配置不能由前端静默忽略；
 - 单条运行数据缺失某个合法路径时，仅该字段显示“无值”，Trace 仍可展示；
 - 历史 Trace 缺少 mock_intent 时兼容读取，不伪造用户信息；
 - 完整原始 Trace 始终可用，即使展示投影生成失败。
 
 ## 10. 校验职责
+
+本节属于**项目长期标准**。
 
 协议层负责：
 
@@ -255,11 +351,14 @@ Trace 区域最后保留“完整原始 Trace JSON”折叠面板，内容来自
 
 ## 11. 测试要求
 
+本节属于**项目长期标准**；当前迁移必须为既有项目补齐相同覆盖。
+
 协议测试至少覆盖：
 
 - ShowSchema 两个列表的类型、非空和去重校验；
+- 第一项为标量且优先为字符串的校验；
 - 简单路径、嵌套路径、数组下标和 `[-1]`；
-- 非法路径被项目 check 捕获；
+- schema-valid、fixture-valid 和 runtime-missing 三类行为；
 - RunTrace.mock_intent 的构造、normalize、序列化和 fixture；
 - 单轮与多轮展示投影；
 - 缺失运行值显示为空但不报错；
@@ -272,6 +371,7 @@ Trace 区域最后保留“完整原始 Trace JSON”折叠面板，内容来自
 - output_fields 全部可由 EXTRACT_OUTPUT_SCHEMA 解析；
 - 代表性 fixture 能提取出预期核心输入和输出；
 - 多轮项目每轮均使用相同规则生成摘要。
+- 多轮项目逐轮 mock_message 与实际 request 用户表达一致。
 
 前端测试至少覆盖：
 
@@ -282,16 +382,58 @@ Trace 区域最后保留“完整原始 Trace JSON”折叠面板，内容来自
 - 完整原始 Trace 位于最后；
 - 长内容的展开不会导致信息丢失。
 
-## 12. 实施顺序
+## 12. 当前迁移变更清单
 
-1. 在协议层为 RunTrace 增加 mock_intent，并完成兼容与测试；
-2. 新增 ShowSchema、加载器、路径解析器和静态校验；
-3. 为 fixture、client_search、deerflow、QA、marketting-planning 等现有项目补齐 show_schema；
-4. 后端生成展示投影；
-5. 前端将当前完整 JSON 首屏改为轮次卡片，同时保留完整事实；
-6. 执行协议测试、项目测试和浏览器 UAT。
+本节只描述**当前仓库的一次性迁移任务**，不是未来每个业务项目都要重复实施的步骤。
+
+### 12.1 协议层迁移
+
+1. 为 RunTrace 增加 mock_intent，并完成 normalize、序列化、accessor 和 fixture 兼容；
+2. 为 turn_records 增加 mock_message，修复 conversation_transcript 的硬编码提取；
+3. 新增 ShowSchema、项目加载器、受限字符串路径解析器；
+4. 新增 schema-valid、fixture-valid 校验和 runtime-missing 行为；
+5. 新增只读、动态生成的展示投影；
+6. 保证展示投影失败不影响 RunTrace 原件返回。
+
+### 12.2 当前业务项目迁移
+
+当前项目迁移采用以下映射；迁移验收必须使用业务 fixture 验证这些字段能稳定表达核心内容：
+
+| 项目 | input_fields | output_fields |
+|---|---|---|
+| QA | `question`, `contexts` | `actual_answer` |
+| client_search | `user_text` | `robot_text`, `conditions`, `query_logic`, `confidence` |
+| deerflow | `input.messages[-1].content` | `reply_text`, `stage`, `tool_calls`, `errors` |
+| marketting-planning | `user_text` | `robot_text`, `stage`, `card_summary`, `session_summary`, `errors` |
+| marketting-planning-intent | `query` | `intent`, `confidence`, `target_value`, `path_types` |
+
+迁移任务包括：
+
+1. 为上述 5 个项目新增 show_schema.py；
+2. 为 core fixture、fixture-project 和测试 fixture 注册 Show Schema；
+3. 使用各项目代表性 fixture 校验动态路径和主字段非空；
+4. 为所有多轮项目实现 extract_mock_message，并修复 deerflow、marketting-planning 的逐轮 mock_message 记录；
+5. 执行跨项目批量回归，防止 input/output 跨 case 或跨轮错配。
+
+### 12.3 前端迁移
+
+1. 将当前 Trace 首屏的完整 JSON 改为 Mock 用户 + 轮次卡片；
+2. 保留每轮 Request、Raw Response、Extracted Output 完整展开；
+3. 将全局技术事实放在轮次之后；
+4. 将完整原始 Trace 放在最后；
+5. 对大 JSON 使用展开时渲染；
+6. 对缺失/非法 Show Schema 提供可见降级，不阻断整批数据。
+
+### 12.4 验收迁移
+
+1. 执行协议、项目、fixture 与前端自动化测试；
+2. 在 QA、client_search、deerflow、marketting-planning、marketting-planning-intent 各抽取单轮和多轮代表用例；
+3. 浏览器 UAT 核对 Mock 表达、AI 输出、完整事实和原始 Trace；
+4. 确认历史结果仍可读取，缺失 Show Schema 时不会无数据或永久 pending。
 
 ## 13. 非目标
+
+本节属于**项目长期标准**。
 
 - 不允许 show_schema 修改、清洗或补全业务数据；
 - 不在 show_schema 中定义 Judge 或 Attribute 的展示；
