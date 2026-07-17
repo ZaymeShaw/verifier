@@ -10,8 +10,8 @@ from impl.core.schema.occam import field_role
 FLOW_FIXTURES = [
     ("1. case -> live_run 输入 SingleTurnCase", "impl.core.schema.mock.SingleTurnCase", "SingleTurnCase"),
     ("2. _build_live_request 输出 LiveRequest", "impl.core.schema.live.LiveRequest", "LiveRequest"),
-    ("3. _call_live 输出 LiveExecutionResult", "impl.core.schema.live.LiveExecutionResult", "LiveExecutionResult"),
-    ("4. _trace_from_live_result 输出 RunTrace", "impl.core.schema.trace.RunTrace", "RunTrace"),
+    ("3. execute_live 输出 EXTRACT_OUTPUT_SCHEMA", "impl.core.live_protocol.ProjectLive", "ProjectLive"),
+    ("4. trace_from_live 输出 RunTrace", "impl.core.schema.trace.RunTrace", "RunTrace"),
     ("5. judge 输出 JudgeResult", "impl.core.schema.judge.JudgeResult", "JudgeResult"),
     ("6. attribute 输出 AttributeResult", "impl.core.schema.attribute.AttributeResult", "AttributeResult"),
     ("7. frontend/table 输出 TraceTableRow", "impl.core.schema.table.TraceTableRow", "TraceTableRow"),

@@ -140,9 +140,10 @@ def _planning_output_probe(trace: RunTrace, judge_result: JudgeResult) -> dict[s
 
 
 def _application_boundary_from_trace(trace: RunTrace) -> dict[str, Any]:
-    live_result = getattr(trace, "live_result", None)
-    if live_result and isinstance(getattr(live_result, "application_boundary", None), dict) and live_result.application_boundary:
-        return live_result.application_boundary
+    from impl.core.schema import trace_application_boundary
+    boundary = trace_application_boundary(trace)
+    if boundary:
+        return boundary
     empty_boundary: dict[str, Any] = {}
     return empty_boundary
 

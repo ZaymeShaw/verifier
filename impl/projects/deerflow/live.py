@@ -12,10 +12,9 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional
 
-from impl.core.live_protocol import RealServiceLive
+from impl.core.live_protocol import LiveServiceUnavailableError, MultiTurnInteractiveLive, RealServiceLive
 from impl.core.schema import (
     ExecutionTraceEvent,
-    LiveExecutionResult,
     LiveMultiTurnState,
     LiveRequest,
     MultiTurnCase,
@@ -123,33 +122,6 @@ def _infer_scenario(input_data: Dict[str, Any], turns: List[Dict[str, Any]]) -> 
     if len(turns) > 1:
         return "multi_turn_dimension_accumulation"
     return "single_turn_planning"
-
-
-def build_request(case: SingleTurnCase | MultiTurnCase, project_id: str) -> Dict[str, Any]:
-    """把 case.input 翻译成 normalized_request（= REQUEST_SCHEMA 形状）。"""
-    input_data = dict(case.input or {})
-    turns = _normalize_turns(input_data.get("turns"))
-    query = _extract_query(input_data, turns)
-    if not turns and query:
-        turns = [{"role": "user", "content": str(query)}]
-    elif turns and not query:
-        query = _last_user_content(turns)
-    case_id = str(case.id or input_data.get("case_id") or input_data.get("id") or f"deerflow-case-{int(time.time() * 1000)}")
-    scenario = str(input_data.get("scenario") or case.scenario or _infer_scenario(input_data, turns))
-    boundary = _normalize_boundary(input_data.get("boundary") or {})
-    case_reference = case.reference if isinstance(case.reference, dict) else {}
-    reference = _normalize_reference(input_data.get("reference") or case_reference or {}, input_data, scenario)
-    return {
-        "query": str(query or _current_turn(turns, query).get("content") or ""),
-        "user_intent": str(input_data.get("user_intent") or query or scenario),
-        "turns": turns,
-        "scenario": scenario,
-        "expected_stage": str(input_data.get("expected_stage") or reference.get("expected_stage") or ""),
-        "expected_dimensions": _list(input_data.get("expected_dimensions") or reference.get("required_dimensions")),
-        "boundary": boundary,
-        "reference": reference,
-        "metadata": dict(input_data.get("metadata") or {}),
-    }
 
 
 def _attach_request(raw: Any, request: Dict[str, Any]) -> Any:
@@ -273,11 +245,10 @@ def _stage_from_output(reply: str, tool_calls: list[dict[str, Any]], scripts: li
     return "unknown"
 
 
-def _session_summary(normalized_request: dict[str, Any], turn_index: int) -> dict[str, Any]:
+def _session_summary(normalized_request: dict[str, Any]) -> dict[str, Any]:
     expected_dimensions = _list(normalized_request.get("expected_dimensions"))
     return {
         "thread_id": str(normalized_request.get("case_id") or ""),
-        "turn_index": turn_index,
         "expected_dimensions": expected_dimensions,
         "accumulated_dimensions": [],
         "missing_dimensions": list(expected_dimensions),
@@ -302,14 +273,7 @@ def _errors_from_call(call_status: str, call_error: Optional[str]) -> list[str]:
     return []
 
 
-def _input_turn_for_index(request: LiveRequest, index: int) -> dict[str, Any]:
-    turns = request.normalized_request.get("turns") if isinstance(request.normalized_request, dict) else request.turns
-    if isinstance(turns, list) and index < len(turns) and isinstance(turns[index], dict):
-        return dict(turns[index])
-    return {}
-
-
-def extract_output(raw_response: Any, request: LiveRequest | None = None, index: int | None = None) -> dict[str, Any]:
+def extract_output(raw_response: Any, request: LiveRequest | dict[str, Any] | None = None, index: int | None = None) -> dict[str, Any]:
     """从 raw_response 中提取本轮输出。raw_response 形如 {"thread_id":..., "reply":..., "tool_calls":..., "messages":...}。"""
     data = _raw_payload(raw_response)
     if not isinstance(data, dict):
@@ -329,22 +293,17 @@ def extract_output(raw_response: Any, request: LiveRequest | None = None, index:
     scripts = _scripts_called(tool_calls)
     stage = _stage_from_output(reply, tool_calls, scripts)
     nbev_count = sum(1 for tc in tool_calls if tc.get("is_nbev_script"))
-    normalized_request = request.normalized_request if request is not None else {}
-    turn_index = index if index is not None else max(len(getattr(request, "turns", []) or []) - 1, 0)
+    normalized_request = request.normalized_request if isinstance(request, LiveRequest) else (request if isinstance(request, dict) else {})
     output = {
-        "turn_index": turn_index,
         "reply_text": reply,
         "tool_calls": tool_calls,
         "stage": stage,
         "nbev_tool_count": nbev_count,
         "scripts_called": scripts,
-        "session_summary": _session_summary(normalized_request if isinstance(normalized_request, dict) else {}, turn_index),
+        "session_summary": _session_summary(normalized_request if isinstance(normalized_request, dict) else {}),
         "fallback": _fallback_summary(str(data.get("call_status") or "succeeded"), data.get("call_error")),
         "errors": _errors_from_call(str(data.get("call_status") or "succeeded"), data.get("call_error")),
-        "input_turn": _input_turn_for_index(request, turn_index) if request is not None else {},
     }
-    if index is None and request is not None:
-        return {"turns": [output]}
     return output
 
 
@@ -360,28 +319,21 @@ def _application_boundary(normalized_request: dict[str, Any], output: dict[str, 
     }
 
 
-def _latest_turn_output(extracted_output: dict[str, Any]) -> dict[str, Any]:
-    turns = extracted_output.get("turns") if isinstance(extracted_output, dict) else None
-    if isinstance(turns, list) and turns and isinstance(turns[-1], dict):
-        return turns[-1]
-    return extracted_output if isinstance(extracted_output, dict) else {}
-
-
 def application_boundary(raw_response: Any | None = None, extracted_output: dict[str, Any] | None = None, request: LiveRequest | dict[str, Any] | None = None) -> dict[str, Any]:
     normalized_request = request.normalized_request if isinstance(request, LiveRequest) else request
-    latest = _latest_turn_output(extracted_output or {})
-    return _application_boundary(normalized_request or {}, latest)
+    output = extracted_output if isinstance(extracted_output, dict) else {}
+    return _application_boundary(normalized_request or {}, output)
 
 
 def build_execution_trace(input_data: dict[str, Any], request: dict[str, Any], raw_response: Any, extracted_output: dict[str, Any]) -> list[ExecutionTraceEvent]:
-    latest = _latest_turn_output(extracted_output or {})
+    latest = extracted_output if isinstance(extracted_output, dict) else {}
     expected_stage = request.get("expected_stage") or (request.get("reference") or {}).get("expected_stage")
     expected_dimensions = _list(request.get("expected_dimensions"))
     actual_scripts = _list(latest.get("scripts_called"))
     return [
         ExecutionTraceEvent(stage="request_normalization", status="ok" if request.get("turns") else "suspicious", evidence={"turn_count": len(request.get("turns") or []), "thread_id": request.get("case_id")}),
         ExecutionTraceEvent(stage="thread_creation", status="ok" if latest else "suspicious", evidence={"thread_id": request.get("case_id")}),
-        ExecutionTraceEvent(stage="turn_delivery", status="ok" if latest.get("reply_text") or latest.get("tool_calls") else "failed", evidence={"turn_index": latest.get("turn_index")}),
+        ExecutionTraceEvent(stage="turn_delivery", status="ok" if latest.get("reply_text") or latest.get("tool_calls") else "failed", evidence={"delivered": bool(latest.get("reply_text") or latest.get("tool_calls"))}),
         ExecutionTraceEvent(stage="message_history_read", status="ok" if latest.get("reply_text") else "suspicious", evidence={"reply_present": bool(latest.get("reply_text"))}),
         ExecutionTraceEvent(stage="reply_extraction", status="ok", evidence={"reply_length": len(str(latest.get("reply_text") or ""))}),
         ExecutionTraceEvent(stage="tool_call_extraction", status="ok", evidence={"tool_call_count": len(latest.get("tool_calls") or []), "nbev_count": latest.get("nbev_tool_count")}),
@@ -394,7 +346,7 @@ def project_fields(raw_response: Any | None = None, extracted_output: dict[str, 
     normalized_request = request.normalized_request if isinstance(request, LiveRequest) else request
     normalized_request = normalized_request if isinstance(normalized_request, dict) else {}
     output = extracted_output if isinstance(extracted_output, dict) else {}
-    latest = _latest_turn_output(output)
+    latest = output
     return {
         "scenario": normalized_request.get("scenario") or "",
         "case_id": normalized_request.get("case_id") or "",
@@ -415,19 +367,36 @@ def provided_output_raw(case: SingleTurnCase | MultiTurnCase, request: LiveReque
     return _attach_request({}, request.normalized_request)
 
 
-def deliver_raw_response(spec: ProjectSpec, request: LiveRequest) -> Any:
+def deliver_raw_response(spec: ProjectSpec, request: Any) -> Any:
     """真实投递：创建 thread → 发送每一轮 → 回看消息取本轮 AI 回复 + tool_calls。
 
     返回 {thread_id, reply, tool_calls, messages, call_status, call_error}。
+
+    request 形态：LiveRequest 或 dict（DeerflowApiRequest 形状：
+        {input: {messages: [{role, content}]}, config: {configurable: {thread_id}}}
     """
     base_url = str(spec.api.get("base_url") or "http://localhost:8001")
     timeout = float(spec.api.get("timeout") or 600)
-    model = str((spec.api.get("model")) or (request.normalized_request.get("metadata") or {}).get("model_name") or "minimax-m3")
-    turns = list(request.turns or [])
+    # 兼容 LiveRequest 和 dict
+    if isinstance(request, LiveRequest):
+        normalized_request = request.normalized_request if isinstance(request.normalized_request, dict) else {}
+        turns = list(request.turns or [])
+    else:
+        normalized_request = request if isinstance(request, dict) else {}
+        turns = []
+    # DeerflowApiRequest：input.messages 是对话消息
     if not turns:
-        normalized_query = str(request.normalized_request.get("query") or "")
+        input_field = normalized_request.get("input") if isinstance(normalized_request.get("input"), dict) else {}
+        messages_list = input_field.get("messages") if isinstance(input_field.get("messages"), list) else []
+        for m in messages_list:
+            if isinstance(m, dict):
+                turns.append({"role": str(m.get("role") or "user"), "content": str(m.get("content") or "")})
+    # 兜底：从 query 字段构造首轮
+    if not turns:
+        normalized_query = str(normalized_request.get("query") or "")
         if normalized_query:
             turns = [{"role": "user", "content": normalized_query}]
+    model = str((spec.api.get("model")) or (normalized_request.get("metadata") or {}).get("model_name") or "minimax-m3")
 
     if not _health_check(base_url):
         raise urllib.error.URLError(f"deer-flow Gateway 不可用: {base_url}/health")
@@ -453,71 +422,50 @@ def deliver_raw_response(spec: ProjectSpec, request: LiveRequest) -> Any:
         "messages": messages,
         "call_status": "succeeded",
         "call_error": None,
-    }, request.normalized_request)
+    }, normalized_request)
 
 
-class DeerflowLive(RealServiceLive):
-    """deerflow 项目 Live 实现（新协议）。"""
+class DeerflowLive(RealServiceLive, MultiTurnInteractiveLive):
+    """deerflow 项目 Live 实现。
+
+    继承 RealServiceLive（投递模式=真实服务）+ MultiTurnInteractiveLive（交互模式=多轮）。
+    多轮主循环现在在 execute_live 内部（spec 第十一节 2），不再通过独立的 deliver_multi_turn。
+    """
 
     def __init__(self, spec: ProjectSpec, adapter=None):
         super().__init__(spec)
         self._adapter = adapter
 
-    def build_request(self, case: SingleTurnCase | MultiTurnCase) -> Dict[str, Any]:
-        return build_request(case, self.spec.project_id)
+    def deliver_provided(self, request: LiveRequest) -> Any:
+        return provided_output_raw(None, request)
 
-    def deliver_provided(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Any:
-        return provided_output_raw(case, request)
-
-    def deliver_real(self, request: LiveRequest) -> Any:
-        start = time.time()
+    def deliver_real(self, request: Any) -> Any:
         try:
             raw_response = deliver_raw_response(self.spec, request)
-            call_status = "succeeded"
-            call_error = None
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            raw_response = None
-            call_status = "failed"
-            call_error = f"deer-flow Gateway unavailable: {exc}"
+            raise LiveServiceUnavailableError(f"deer-flow Gateway unavailable: {exc}") from exc
         except Exception as exc:
-            raw_response = None
-            call_status = "failed"
-            call_error = f"deer-flow delivery error: {exc}"
+            raise RuntimeError(f"deer-flow delivery error: {exc}") from exc
+        return raw_response
 
-        turn_index = max(len(request.turns or []) - 1, 0)
-        if call_status == "succeeded":
-            extracted_output = {"turns": [extract_output(raw_response, request, turn_index)]}
-        else:
-            extracted_output = {}
-        latest_output = extracted_output["turns"][-1] if extracted_output.get("turns") else {}
-        app_boundary = _application_boundary(request.normalized_request, latest_output)
+    def extract_output(self, raw_response: Any, request: Any) -> Dict[str, Any]:
+        turn_index = max(len(getattr(request, "turns", []) or []) - 1, 0)
+        return extract_output(raw_response, request, turn_index)
 
-        return LiveExecutionResult(
-            project_id=request.project_id,
-            case_id=request.case_id,
-            session_id=request.session_id or request.case_id,
-            raw_input=request.raw_input,
-            normalized_request=request.normalized_request,
-            call_status=call_status,
-            raw_response=raw_response,
-            call_error=call_error,
-            runtime_ms=int((time.time() - start) * 1000),
-            extracted_output=extracted_output,
-            output_source=request.execution_mode,
-            execution_trace=build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output) if call_status == "succeeded" else [],
-            project_fields=project_fields(raw_response, extracted_output, request, app_boundary) if call_status == "succeeded" else {},
-            application_boundary=app_boundary,
-            interaction_mode="interactive_intent" if request.turns else "single_turn",
-        )
-
-    def extract_output(self, raw_response: Any, request: LiveRequest) -> Dict[str, Any]:
-        return extract_output(raw_response, request, max(len(request.turns or []) - 1, 0))
-
-    def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest, application_boundary: Dict[str, Any]) -> Dict[str, Any]:
+    def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any], request: Any, application_boundary: Dict[str, Any]) -> Dict[str, Any]:
         return project_fields(raw_response, extracted_output, request, application_boundary)
 
-    def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> Dict[str, Any]:
+    def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any], request: Any) -> Dict[str, Any]:
         return application_boundary(raw_response, extracted_output, request)
 
-    def build_execution_trace(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> list:
-        return build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output)
+    def build_execution_trace(self, raw_response: Any, extracted_output: Dict[str, Any], request: Any) -> list:
+        return build_execution_trace(request.raw_input if hasattr(request, "raw_input") else {}, request.normalized_request if hasattr(request, "normalized_request") else request, raw_response, extracted_output)
+
+    def _summarize_assistant(self, extracted):
+        """deerflow 助手摘要：stage + tool_calls 概要。"""
+        stage = extracted.get("stage") or "unknown"
+        tool_count = len(extracted.get("tool_calls") or [])
+        parts = [f"stage={stage}"]
+        if tool_count:
+            parts.append(f"tools={tool_count}")
+        return " · ".join(parts)

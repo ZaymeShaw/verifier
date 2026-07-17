@@ -10,7 +10,7 @@ class MPIIntentCaseInput:
     """mock_agent 产出的 case.input 形状。"""
     query: str
     scenario: str = "intent_recognition"
-    expected_intent: str = ""
+    user_intent: str = ""
     reference: Dict[str, Any] = field(default_factory=dict)
     session_id: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -25,7 +25,7 @@ class MPIIntentNormalizedRequest:
     scenario: str
     reference: Dict[str, Any]
     metadata: Dict[str, Any]
-    expected_intent: Optional[str] = None
+    user_intent: Optional[str] = None
 
 
 @dataclass

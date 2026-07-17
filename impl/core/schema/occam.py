@@ -9,15 +9,16 @@ from typing import Any
 SCHEMA_FIELD_ROLES = {
     "RunTrace": {
         "canonical": [
-            "trace_id", "project_id", "case_id", "live_result", "status", "error",
+            "trace_id", "project_id", "case_id", "status", "error",
             "state_history", "gate_decisions", "transition_decisions", "evidence_refs",
             "fallbacks", "scenario", "interaction_mode", "session_id", "created_at",
+            "turn_records", "final_output_turn", "completion_status", "ready",
         ],
         "derived_alias": [
             "input", "normalized_request", "raw_response", "extracted_output",
             "execution_mode", "output_source", "application_boundary", "project_fields",
             "execution_trace", "runtime_logs", "stop_reason", "conversation_transcript",
-            "conversation_summary",
+            "conversation_summary", "turn_index", "reference_contract",
         ],
         "legacy_alias": ["multi_turn_input"],
     },
@@ -55,7 +56,8 @@ SCHEMA_FIELD_ROLES = {
         "view_only": ["project_id", "rows", "total", "summary"],
     },
     "ConversationTurn": {
-        "view_only": ["turn_index", "role", "content", "stage", "extracted_summary"],
+        "view_only": ["turn_index", "role", "content", "stage", "extracted_summary",
+                      "call_status", "runtime_ms", "error"],
     },
 }
 
@@ -72,18 +74,17 @@ PUBLIC_SCHEMA_FIELDS = {
 PUBLIC_SCHEMA_FIELDS.update({
     "RunTrace": [
         "trace_id", "project_id", "case_id", "input", "normalized_request", "raw_response",
-        "extracted_output", "live_result", "execution_mode", "output_source", "scenario",
+        "extracted_output", "execution_mode", "output_source", "scenario",
         "reference_contract", "application_boundary", "evidence_refs", "execution_trace",
         "status", "error", "fallbacks", "interaction_mode", "session_id", "created_at",
+        "conversation_transcript", "conversation_summary", "turn_records", "final_output_turn",
+        "completion_status", "stop_reason", "turn_index",
     ],
-    "LiveExecutionResult": [
-        "project_id", "case_id", "session_id", "raw_input", "normalized_request",
-        "call_status", "raw_response", "call_error", "runtime_ms", "extracted_output",
-        "output_source", "execution_trace", "evidence_refs", "application_boundary",
-        "interaction_mode", "multi_turn_state",
+    "LiveMultiTurnState": [
+        "session_id", "turn_index", "transcript", "accumulated_fields",
+        "missing_fields", "stop_reason", "turn_traces",
+        "conversation_summary", "final_stage",
     ],
-    "LiveMultiTurnState": ["session_id", "turn_index", "turns", "stop_reason", "final_output"],
-    "LiveMultiTurnResult": ["state", "trace"],
     "TraceStateRecord": ["state", "attempt", "status", "reason", "started_at", "ended_at", "metadata"],
     "GateDecision": ["gate_id", "gate_type", "passed", "recoverable", "recommended_transition", "reason"],
     "TransitionDecision": ["from_state", "to_state", "condition", "reason", "retry_count", "stop_reason"],
@@ -103,6 +104,8 @@ PUBLIC_SCHEMA_FIELDS.update({
     "ProjectAnalysis": None,
     "MockCasesResponse": None,
     "MockDatasetsResponse": None,
+    "MockBuildResponse": None,
+    "MockCase": ["id", "project_id", "scenario", "intent", "live_request", "output", "reference"],
     "RunChainResponse": None,
     "CasePoolsResponse": None,
     "CasePoolSaveResponse": None,
@@ -124,9 +127,13 @@ PUBLIC_SCHEMA_FIELDS.update({
 })
 PUBLIC_DROP_KEYS = {
     "raw_model_output", "raw_sections", "raw_sse", "raw_cards", "raw_text",
-    "downstream_payload", "project_fields", "runtime_logs", "conversation_transcript",
+    "downstream_payload", "project_fields", "runtime_logs",
     "multi_turn_input", "schema_protocol_extensions",
 }
+
+# 以下类型的字段允许 None 值不过滤（ready 协议控制存在性）
+_PUBLIC_ALLOW_NONE_FIELDS = frozenset({"output", "reference"})
+_PUBLIC_ALLOW_NONE_SCHEMAS = frozenset({"MockCase", "MockBuildResponse"})
 
 
 def field_role(schema_name: str, field_name: str) -> str:
@@ -154,12 +161,31 @@ def _to_public_dict(value: Any, seen: set[int]) -> Any:
         seen.add(value_id)
         try:
             schema_name = type(value).__name__
+            if schema_name == "MockCase":
+                intent = value.intent
+                return {
+                    "id": value.id,
+                    "project_id": value.project_id,
+                    "scenario": value.scenario,
+                    "intent": {
+                        "user_intent": intent.user_intent,
+                        "query": intent.query,
+                        "user_context": dict(intent.user_context or {}),
+                    },
+                    "live_request": dict(value.live_request or {}),
+                    "output": value.output,
+                    "reference": value.reference,
+                }
             public_fields = PUBLIC_SCHEMA_FIELDS.get(schema_name)
             field_names = [item.name for item in fields(value)] if public_fields is None else public_fields
+            # 部分类型允许 None 字段（ready 协议控制存在性）
+            allow_none = _PUBLIC_ALLOW_NONE_FIELDS if schema_name in _PUBLIC_ALLOW_NONE_SCHEMAS else set()
             return {
                 field_name: _to_public_dict(getattr(value, field_name), seen)
                 for field_name in field_names
-                if field_name not in PUBLIC_DROP_KEYS and hasattr(value, field_name) and getattr(value, field_name) not in (None, [], {})
+                if field_name not in PUBLIC_DROP_KEYS
+                and hasattr(value, field_name)
+                and (field_name in allow_none or getattr(value, field_name) not in (None, [], {}))
             }
         finally:
             seen.remove(value_id)

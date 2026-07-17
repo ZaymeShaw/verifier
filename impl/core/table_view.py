@@ -5,7 +5,7 @@ import importlib
 from collections import Counter
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
-from .schema import AttributeResult, CheckReport, FallbackDecision, FrontendViewModel, JudgeResult, RunTrace, normalize_attribute_result, normalize_check_report, normalize_frontend_view, normalize_judge_result, normalize_run_trace, to_dict, trace_conversation_transcript, trace_extracted_output, trace_output_source
+from .schema import AttributeResult, CheckReport, FallbackDecision, FrontendViewModel, JudgeResult, RunTrace, normalize_attribute_result, normalize_check_report, normalize_frontend_view, normalize_judge_result, normalize_run_trace, to_dict, trace_conversation_summary, trace_conversation_transcript, trace_extracted_output, trace_output_source, trace_turn_records
 from .schema.accessors import trace_input as get_trace_input
 from .schema.table import CasePoolTable, ConversationTurn, TraceTableRow
 from .summary import summary_from_attribution, summary_from_fulfillment
@@ -110,6 +110,26 @@ def _fulfillment_status(judge: Optional[JudgeResult], judge_summary: Dict[str, A
 
 
 def _conversation_detail(trace: RunTrace) -> Optional[List[ConversationTurn]]:
+    records = trace_turn_records(trace)
+    if records:
+        detail: List[ConversationTurn] = []
+        for index, record in enumerate(records, start=1):
+            request = record.get("request") if isinstance(record, dict) else None
+            output = record.get("extracted_output") if isinstance(record, dict) else None
+            output_data = output if isinstance(output, dict) else {}
+            detail.append(
+                ConversationTurn(
+                    turn_index=int(record.get("turn_index") or index),
+                    role="turn",
+                    content=_first_scalar(request),
+                    stage=str(output_data.get("stage") or ""),
+                    extracted_summary=_short_value(output),
+                    call_status=str(record.get("call_status") or ""),
+                    runtime_ms=int(record.get("runtime_ms") or 0),
+                    error=str(record.get("error") or ""),
+                )
+            )
+        return detail
     turns = trace_conversation_transcript(trace)
     if not isinstance(turns, list) or not turns:
         return None
@@ -134,15 +154,7 @@ def _conversation_detail(trace: RunTrace) -> Optional[List[ConversationTurn]]:
 
 
 def _conversation_summary(trace: RunTrace) -> Dict[str, Any]:
-    multi_turn = trace.multi_turn_input if isinstance(trace.multi_turn_input, dict) and trace.multi_turn_input else {}
-    if isinstance(trace.conversation_summary, dict) and trace.conversation_summary:
-        return dict(trace.conversation_summary)
-    if isinstance(multi_turn.get("conversation_summary"), dict):
-        return dict(multi_turn.get("conversation_summary") or {})
-    extracted = trace.extracted_output if isinstance(trace.extracted_output, dict) else {}
-    if isinstance(extracted.get("conversation_summary"), dict):
-        return dict(extracted.get("conversation_summary") or {})
-    return {}
+    return trace_conversation_summary(trace)
 
 
 def _status(trace: RunTrace, judge: Optional[JudgeResult], judge_summary: Dict[str, Any], case_context: Dict[str, Any]) -> str:
@@ -260,7 +272,7 @@ def build_trace_table_row(
     input_payload = get_trace_input(trace) if get_trace_input(trace) not in (None, {}, "") else case_context.get("input") or case_context.get("case_input") or ""
     status = _status(trace, judge, judge_summary, case_context)
     fulfillment_status = _fulfillment_status(judge, judge_summary, status)
-    fallbacks = _fallbacks(trace, trace.live_result, judge, attribute, check)
+    fallbacks = _fallbacks(trace, judge, attribute, check)
     fallback_summary = _fallback_summary(fallbacks)
     check_summary = _check_summary(check)
     quality_flags = list(judge_summary.get("quality_flags") or []) + list(attribution_summary.get("quality_flags") or []) + list(fallback_summary.get("quality_flags") or [])

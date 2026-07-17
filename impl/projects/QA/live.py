@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from impl.core.schema import ExecutionTraceEvent, LiveExecutionResult, LiveRequest, MultiTurnCase, ProjectSpec, SingleTurnCase
+from impl.core.schema import ExecutionTraceEvent, LiveRequest, MultiTurnCase, ProjectSpec, SingleTurnCase
 
 APPLICATION_BOUNDARY = {"scope": "qa_semantic_answer_evaluation", "external_service_required": False}
 
@@ -19,10 +19,24 @@ def provided_output_raw(case: SingleTurnCase | MultiTurnCase, request: LiveReque
     return _attach_request(raw_response, request.normalized_request)
 
 
+def provided_output_from_request(normalized: Dict[str, Any]) -> Any:
+    """从已归一化的请求中提取 provided output（normalized 已包含 output 字段）。"""
+    raw_response = normalized.get("output") or {"actual_answer": ""}
+    return _attach_request(raw_response, normalized)
+
+
 def extract_output(raw_response: Any) -> Dict[str, Any]:
     if isinstance(raw_response, dict):
-        return {"actual_answer": str(raw_response.get("actual_answer") or raw_response.get("answer") or raw_response.get("text") or "")}
-    return {"actual_answer": str(raw_response or "")}
+        supported_keys = ("actual_answer", "answer", "text")
+        if not any(key in raw_response for key in supported_keys):
+            raise ValueError("QA provided output must contain one of: actual_answer, answer, text")
+        answer = next((raw_response.get(key) for key in supported_keys if raw_response.get(key) not in (None, "")), "")
+    else:
+        answer = raw_response
+    normalized = str(answer or "").strip()
+    if not normalized:
+        raise ValueError("QA provided output actual_answer must be non-empty")
+    return {"actual_answer": normalized}
 
 
 def project_fields(raw_response: Any, extracted_output: Dict[str, Any], request: Dict[str, Any] | None = None) -> Dict[str, Any]:
@@ -55,33 +69,18 @@ def build_execution_trace(input_data: Dict[str, Any], request: Dict[str, Any], r
     ]
 
 
-from impl.core.live_protocol import ProvidedOutputLive
+from impl.core.live_protocol import ProvidedOutputLive, SingleTurnLive
 
 
-class QALive(ProvidedOutputLive):
+class QALive(ProvidedOutputLive, SingleTurnLive):
     """QA 项目 Live 实现（新协议）：只读取 case 中的预制输出，不调用外部服务。
 
     复用模块级函数，扩展点签名统一使用 LiveRequest。
     """
 
-    def build_request(self, case: SingleTurnCase | MultiTurnCase) -> Dict[str, Any]:
-        # 方案 A：mock 直接对接 live_schema，build_request 不做形状翻译。
-        # case.input 已是 QAInput 形状（= REQUEST_SCHEMA），直接透传作为 normalized_request。
-        input_data = dict(case.input or {}) if hasattr(case, "input") else {}
-        # 补默认值，保持 QAInput 形状完整，不改形状
-        normalized = {
-            "question": str(input_data.get("question") or ""),
-            "contexts": list(input_data.get("contexts") or []),
-            "reference": dict(input_data.get("reference") or {}),
-            "metadata": dict(input_data.get("metadata") or {}),
-            "scenario": str(input_data.get("scenario") or "qa_default"),
-            "data_quality_flags": list(input_data.get("data_quality_flags") or []),
-            "output": dict(input_data.get("output") or getattr(case, "output", {}) or {}),
-        }
-        return normalized
-
-    def deliver_provided(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Any:
-        return provided_output_raw(case, request)
+    def deliver_provided(self, request: LiveRequest) -> Any:
+        normalized = request.normalized_request if isinstance(request.normalized_request, dict) else {}
+        return provided_output_from_request(normalized)
 
     def extract_output(self, raw_response: Any, request: LiveRequest) -> Dict[str, Any]:
         return extract_output(raw_response)

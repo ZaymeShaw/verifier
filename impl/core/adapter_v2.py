@@ -18,6 +18,10 @@ class ProjectAdapter(ABC):
     - _load_mock: 返回 ProjectMock 实例
     - _load_judge: 返回 ProjectJudge 实例
     - _load_attribute: 返回 ProjectAttribute 实例
+
+    前置条件：live/mock 实例加载后会被注入 _adapter 和 spec 引用（adapter_v2 自动完成）。
+    trace_from_live / live._resolve_intent / _mock_instance 等均依赖 _adapter 已注入，
+    未注入时调用会 raise RuntimeError。项目层不应自行构造 live/mock 实例绕过 adapter。
     """
 
     def __init__(self, spec: ProjectSpec):
@@ -49,7 +53,14 @@ class ProjectAdapter(ABC):
                 raise NotImplementedError(
                     f"{self.__class__.__name__} 未实现 {loader_method}() 方法"
                 )
-            self._cache[key] = loader()
+            instance = loader()
+            # 前置条件注入：live/mock 实例需要 _adapter 引用才能访问 mock / spec，
+            # trace_from_live / _resolve_intent / _mock_instance 都依赖此注入；
+            # spec 同步注入，避免 trace 层再单独传 spec 参数。
+            if key in ("live", "mock"):
+                setattr(instance, "_adapter", self)
+                setattr(instance, "spec", self.spec)
+            self._cache[key] = instance
         return self._cache[key]
 
     # === 子类必须实现的加载方法 ===

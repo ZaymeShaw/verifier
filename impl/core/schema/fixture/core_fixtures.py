@@ -11,7 +11,13 @@ from impl.core.schema.attribute import AttributeResult, ExpectationAttribution
 from impl.core.schema.evidence import EvidenceRef, ExecutionTraceEvent, ProbeResult
 from impl.core.schema.fallback import FallbackDecision
 from impl.core.schema.judge import BusinessExpectation, FulfillmentAssessment, GapItem, JudgeResult
+from impl.core.schema.cluster import ClusterSummary
+from impl.core.schema.check import CheckReport
+from impl.core.schema.frontend import FrontendViewModel
+from impl.core.schema.mock import MockCase, MockIntentOutput, SingleTurnCase
+from impl.core.schema.project import ProjectAnalysis, ProjectSpec
 from impl.core.schema.trace import RunTrace
+from .fixture import register_fixture
 
 TRACE_ID = "trace-fixture-001"
 PROJECT_ID = "fixture-project"
@@ -142,3 +148,31 @@ def run_trace() -> RunTrace:
         status="ok",
         scenario="schema-fixture-single-turn",
     )
+
+
+def single_turn_case() -> SingleTurnCase:
+    return SingleTurnCase(id=CASE_ID, input={"query": "上海 30-40岁 高净值客户"}, output=_output(), reference=_reference(), scenario="schema-fixture-single-turn", user_intent="搜索上海、30到40岁、高净值客户", metadata={"project_id": PROJECT_ID})
+
+
+def mock_case() -> MockCase:
+    case = single_turn_case()
+    return MockCase(id=case.id, project_id=PROJECT_ID, scenario=case.scenario, intent=MockIntentOutput(user_intent=case.user_intent, query=case.input["query"], user_context={}), live_request=case.input, output=case.output, reference=case.reference)
+
+
+def project_spec() -> ProjectSpec:
+    return ProjectSpec(project_id=PROJECT_ID, name="Fixture Project", common={"ready": ["output", "reference"]})
+
+
+register_fixture(RunTrace, "default", run_trace)
+register_fixture(JudgeResult, "default", judge_result)
+register_fixture(JudgeResult, "incorrect", incorrect_judge_result)
+register_fixture(AttributeResult, "default", attribute_result)
+register_fixture(AttributeResult, "no_issue", lambda: AttributeResult(trace_id=TRACE_ID, project_id=PROJECT_ID, case_id=CASE_ID, expectation_attributions=[no_issue_expectation_attribution()]))
+register_fixture(AttributeResult, "boundary", lambda: AttributeResult(trace_id=TRACE_ID, project_id=PROJECT_ID, case_id=CASE_ID, expectation_attributions=[boundary_expectation_attribution()]))
+register_fixture(ClusterSummary, "default", lambda: ClusterSummary(project_id=PROJECT_ID, clusters=[]))
+register_fixture(CheckReport, "default", lambda: CheckReport(passed=True, verification_results=["fixture verified"]))
+register_fixture(FrontendViewModel, "default", lambda: FrontendViewModel(project_info={"project_id": PROJECT_ID}))
+register_fixture(ProjectSpec, "default", project_spec)
+register_fixture(ProjectAnalysis, "default", lambda: ProjectAnalysis(project_id=PROJECT_ID))
+register_fixture(SingleTurnCase, "default", single_turn_case)
+register_fixture(MockCase, "default", mock_case)

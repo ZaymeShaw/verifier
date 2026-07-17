@@ -9,7 +9,7 @@ from .check import CheckReport
 from .cluster import ClusterSummary
 from .frontend import FrontendViewModel
 from .judge import JudgeResult
-from .mock import MockDataset, SingleTurnCase
+from .mock import MockCase, MockDataset
 from .project import ProjectAnalysis
 from .table import CasePoolTable, TraceTableRow
 from .trace import RunTrace
@@ -26,7 +26,7 @@ class ApiEnvelope:
 @dataclass
 class MockCasesResponse:
     project_id: str
-    cases: List[SingleTurnCase]
+    cases: List[MockCase]
 
 
 @dataclass
@@ -72,7 +72,6 @@ API_ENDPOINT_SCHEMAS = {
     "/api/mock_cases": {"input": "ProjectRequest", "output": "impl.core.schema.api.MockCasesResponse"},
     "/api/mock_datasets": {"input": "ProjectRequest", "output": "impl.core.schema.api.MockDatasetsResponse"},
     "/api/mock/build_intent": {"input": "MockBuildIntentRequest", "output": "impl.core.schema.api.MockBuildResponse"},
-    "/api/mock/build_interaction": {"input": "MockBuildInteractionRequest", "output": "impl.core.schema.api.MockBuildResponse"},
     "/api/judge": {"input": "JudgeRequest", "output": "impl.core.schema.judge.JudgeResult"},
     "/api/attribute": {"input": "AttributeRequest", "output": "impl.core.schema.attribute.AttributeResult"},
     "/api/cluster": {"input": "ClusterRequest", "output": "impl.core.schema.cluster.ClusterSummary"},

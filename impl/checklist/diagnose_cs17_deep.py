@@ -25,7 +25,7 @@ def deep_diagnose_cs17():
     print("="*60)
 
     input_data = {"query": "男性或者女性客户"}
-    expected_intent = '{"expected_logic":"AND","expected_conditions":[{"field":"clientSex","operator":"MATCH","value":"男"},{"field":"clientSex","operator":"MATCH","value":"女"}]}'
+    user_intent = '{"expected_logic":"AND","expected_conditions":[{"field":"clientSex","operator":"MATCH","value":"男"},{"field":"clientSex","operator":"MATCH","value":"女"}]}'
 
     # Step 1: Run trace
     print("\n[Step 1] Running trace...")
@@ -41,7 +41,7 @@ def deep_diagnose_cs17():
     judge_result = judge(
         project_id="client_search",
         trace=trace,
-        expected_intent=expected_intent,
+        user_intent=user_intent,
     )
 
     print(f"  Verdict: {judge_result.verdict}")
@@ -81,7 +81,7 @@ def deep_diagnose_cs17():
     # Step 4: 保存完整诊断
     result = {
         "input": input_data,
-        "expected_intent": expected_intent,
+        "user_intent": user_intent,
         "trace": to_dict(trace),
         "judge": to_dict(judge_result),
     }

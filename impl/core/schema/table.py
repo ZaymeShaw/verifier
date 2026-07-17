@@ -12,6 +12,9 @@ class ConversationTurn:
     content: str
     stage: str = ""
     extracted_summary: str = ""
+    call_status: str = ""
+    runtime_ms: int = 0
+    error: str = ""
 
 
 @dataclass

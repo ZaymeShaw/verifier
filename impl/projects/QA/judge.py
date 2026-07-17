@@ -67,7 +67,7 @@ def _build_core_context(spec: ProjectSpec, trace: RunTrace) -> dict:
             "请将 user prompt 中的 critical_intent_dimensions 作为拆分 business_expectations 的骨架，围绕当前问题、上下文/参考答案依赖、事实性、忠实性、矛盾风险和答案可用性判断 fulfillment。\n"
         )
     return {
-        "expected_intent": context.get("expected_intent"),
+        "user_intent": context.get("user_intent"),
         "intent_frame": intent_frame,
         "system_prompt_extras": system_extras,
         "user_prompt_extras": to_dict({

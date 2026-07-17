@@ -4,8 +4,7 @@ import importlib.util
 from pathlib import Path
 
 from impl.core.pipeline import live_run
-from impl.core.schema import LiveExecutionResult, LiveRequest, MultiTurnInteraction, MultiTurnPolicy, ProjectSpec
-from impl.core.live_protocol import _LiveProtocol
+from impl.core.schema import LiveRequest, ProjectSpec
 
 
 _MP_LIVE_PATH = Path(__file__).resolve().parents[1] / "impl" / "projects" / "marketting-planning" / "live.py"
@@ -13,14 +12,6 @@ _MP_LIVE_SPEC = importlib.util.spec_from_file_location("test_marketting_planning
 assert _MP_LIVE_SPEC is not None and _MP_LIVE_SPEC.loader is not None
 mp_live = importlib.util.module_from_spec(_MP_LIVE_SPEC)
 _MP_LIVE_SPEC.loader.exec_module(mp_live)
-
-
-class _InteractionHarness:
-    _multi_turn_accumulated_fields = _LiveProtocol._multi_turn_accumulated_fields
-    _live_multi_turn_result = _LiveProtocol._live_multi_turn_result
-
-
-_INTERACTION_HARNESS = _InteractionHarness()
 
 
 def _stages(trace) -> list[str]:
@@ -32,6 +23,7 @@ def test_qa_live_run_provided_smoke():
         "input": {"question": "q", "contexts": []},
         "output": {"actual_answer": "a"},
         "reference": {"actual_answer": "a"},
+        "user_intent": "根据上下文回答问题",
     })
 
     assert trace.status == "ok"
@@ -42,81 +34,96 @@ def test_qa_live_run_provided_smoke():
     assert "live_schema.validate_output" in _stages(trace)
 
 
+def test_qa_invalid_provided_output_produces_error_trace():
+    trace = live_run("QA", {
+        "input": {"question": "q", "contexts": []},
+        "output": {"wrong_field": "not an answer"},
+        "user_intent": "根据上下文回答问题",
+    })
+
+    assert trace.status == "error"
+    assert trace.execution_mode == "provided"
+    assert trace.extracted_output == {}
+    assert trace.completion_status == "failed"
+    assert trace.turn_records[0]["call_status"] == "failed"
+    assert "must contain one of" in trace.error
+
+
 def _assert_live_smoke_trace(trace) -> None:
-    assert trace.execution_mode == "live"
-    assert trace.live_result.call_status in {"succeeded", "failed"}
+    assert trace.execution_mode in {"live", "interactive_intent"}
+    assert trace.status in {"ok", "error"}
     assert "live_schema.validate_request" in _stages(trace)
-    if trace.live_result.call_status == "succeeded":
+    if trace.status == "ok":
         assert trace.status == "ok"
         assert trace.output_source == "live_service"
         assert "live_schema.validate_output" in _stages(trace)
     else:
         assert trace.status == "error"
-        assert trace.output_source == "live_service_unavailable"
-        assert trace.live_result.call_error
+        assert trace.error
         assert trace.fallbacks
         fallback = trace.fallbacks[0]
         assert fallback.source_stage == "live"
         assert fallback.fallback_type == "live_error"
-        assert "live_service_unavailable" in fallback.quality_flags
         assert "live_schema.validate_output" not in _stages(trace)
 
 
 def test_client_search_live_run_smoke():
-    trace = live_run("client_search", {"user_text": "有生存金未领取的客户"})
+    trace = live_run("client_search", {"user_text": "有生存金未领取的客户", "user_intent": "搜索有生存金未领取的客户"})
 
     _assert_live_smoke_trace(trace)
     assert trace.normalized_request.get("user_text") == "有生存金未领取的客户"
-    if trace.live_result.call_status == "succeeded":
+    if trace.status == "ok":
         assert trace.extracted_output.get("query")
         assert isinstance(trace.extracted_output.get("conditions"), list)
 
 
 def test_marketting_planning_intent_live_run_smoke():
-    trace = live_run("marketting-planning-intent", {"query": "帮我识别营销意图", "reference": {"intent": "nbev_planning"}})
+    trace = live_run("marketting-planning-intent", {"query": "帮我识别营销意图", "user_intent": "识别营销意图", "reference": {"intent": "nbev_planning"}})
 
     _assert_live_smoke_trace(trace)
-    if trace.live_result.call_status == "succeeded":
+    if trace.status == "ok":
         assert "intent" in trace.extracted_output
         assert "confidence" in trace.extracted_output
 
 
 def test_marketting_planning_intent_normalized_request_matches_live_schema_dataclass():
-    trace = live_run("marketting-planning-intent", {"query": "帮我识别营销意图", "reference": {"intent": "nbev_planning"}})
+    trace = live_run("marketting-planning-intent", {"query": "帮我识别营销意图", "user_intent": "识别营销意图", "reference": {"intent": "nbev_planning"}})
 
     assert trace.normalized_request["scenario"] == "intent_recognition"
     assert trace.normalized_request["query"] == "帮我识别营销意图"
     assert trace.normalized_request["reference"] == {}
-    assert trace.normalized_request["expected_intent"] is None
+    assert trace.normalized_request["user_intent"] == "识别营销意图"
     assert isinstance(trace.normalized_request["metadata"], dict)
     assert trace.normalized_request["session_id"].startswith("eval-")
 
 
-def test_marketting_planning_shared_session_string_false_is_false():
+def test_marketting_planning_case_transport_fields_do_not_leak_into_live_request():
     trace = live_run("marketting-planning", {
         "case_id": "shared-session-string-false",
         "query": "帮我做NBEV规划",
+        "user_intent": "完成NBEV规划",
         "turns": [{"role": "user", "content": "帮我做NBEV规划"}],
         "shared_session": "false",
         "session_id": "declared-session",
     })
 
-    assert trace.normalized_request.get("shared_session") is False
-    assert trace.normalized_request.get("session_id") == "eval-shared-session-string-false"
+    assert "shared_session" not in trace.normalized_request
+    assert trace.normalized_request.get("session_id") != "declared-session"
 
 
 def test_marketting_planning_live_run_smoke():
-    trace = live_run("marketting-planning", {"query": "帮我做NBEV规划", "turns": [{"role": "user", "content": "帮我做NBEV规划"}]})
+    trace = live_run("marketting-planning", {"query": "帮我做NBEV规划", "user_intent": "完成NBEV规划", "turns": [{"role": "user", "content": "帮我做NBEV规划"}]})
 
     _assert_live_smoke_trace(trace)
-    assert trace.normalized_request.get("turns")
-    if trace.live_result.call_status == "succeeded":
-        assert isinstance(trace.extracted_output.get("turns"), list)
-        assert len(trace.extracted_output["turns"]) == 1
-        assert trace.extracted_output["turns"][0].get("input_turn") == trace.normalized_request["turns"][-1]
-        assert "extra_output_params" not in trace.extracted_output["turns"][0]
-        assert "event_summary" in trace.extracted_output["turns"][0]
-        assert "card_summary" in trace.extracted_output["turns"][0]
+    assert trace.normalized_request.get("user_text") == "帮我做NBEV规划"
+    assert trace.turn_records
+    if trace.status == "ok":
+        assert "turns" not in trace.extracted_output
+        assert trace.turn_records
+        assert trace.final_output_turn == len(trace.turn_records)
+        assert "extra_output_params" not in trace.extracted_output
+        assert "event_summary" in trace.extracted_output
+        assert "card_summary" in trace.extracted_output
 
 
 def test_marketting_planning_raw_sse_replay_extracts_business_evidence():
@@ -268,67 +275,3 @@ def test_marketting_planning_completion_allows_business_evidence_after_terminal(
     assert summary["protocol_completed"] is True
     assert summary["business_completed"] is True
     assert summary["completed"] is True
-
-
-def test_multi_turn_state_accumulated_fields_uses_latest_declared_session_summary():
-    result = LiveExecutionResult(
-        project_id="demo",
-        case_id="case-1",
-        session_id="session-1",
-        call_status="succeeded",
-        extracted_output={
-            "turns": [
-                {
-                    "stage": "clarification",
-                    "session_summary": {"accumulated_fields": {"target_value": 1200}},
-                },
-                {
-                    "stage": "planning",
-                    "card_summary": [{"path_type": "premium_growth"}],
-                    "session_summary": {"missing_fields": []},
-                },
-            ]
-        },
-    )
-    request = LiveRequest(
-        project_id="demo",
-        case_id="case-1",
-        session_id="session-1",
-        raw_input={},
-        normalized_request={"turns": [{"role": "user", "content": "目标1200"}, {"role": "user", "content": "规划"}]},
-        turns=[{"role": "user", "content": "目标1200"}, {"role": "user", "content": "规划"}],
-    )
-
-    _LiveProtocol._apply_interaction_state(_INTERACTION_HARNESS, result, request, MultiTurnInteraction(policy=MultiTurnPolicy()))
-
-    assert result.multi_turn_state is not None
-    assert result.multi_turn_state.accumulated_fields == {"target_value": 1200}
-
-
-def test_multi_turn_state_does_not_guess_accumulated_fields_from_cards():
-    result = LiveExecutionResult(
-        project_id="demo",
-        case_id="case-1",
-        session_id="session-1",
-        call_status="succeeded",
-        extracted_output={
-            "turns": [{
-                "stage": "planning",
-                "card_summary": [{"path_type": "premium_growth", "business_evidence": {"target_value": 1200}}],
-                "session_summary": {"missing_fields": []},
-            }]
-        },
-    )
-    request = LiveRequest(
-        project_id="demo",
-        case_id="case-1",
-        session_id="session-1",
-        raw_input={},
-        normalized_request={"turns": [{"role": "user", "content": "规划"}]},
-        turns=[{"role": "user", "content": "规划"}],
-    )
-
-    _LiveProtocol._apply_interaction_state(_INTERACTION_HARNESS, result, request, MultiTurnInteraction(policy=MultiTurnPolicy()))
-
-    assert result.multi_turn_state is not None
-    assert result.multi_turn_state.accumulated_fields == {}

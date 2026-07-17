@@ -41,6 +41,7 @@ PROJECT_ID = PROJECT_IDS[0]
 
 _PROJECT_FLOW_CACHE: Dict[str, Dict[str, Any]] = {}
 _MOCK_CASE_CACHE: Dict[str, Dict[str, Any]] = {}
+_MOCK_CASES_CACHE: Dict[str, List[Dict[str, Any]]] = {}
 _PROJECT_LOCKS: Dict[str, RLock] = {}
 _CACHE_LOCK = RLock()
 _PROGRESS_LOCK = RLock()
@@ -210,7 +211,7 @@ API_FIXTURE_CHECKS = [
     ApiCase(
         "batch_run",
         "/api/batch_run",
-        lambda project_id: {"project": project_id, "cases": [real_project_case(project_id)], "concurrency": 1},
+        lambda project_id: {"project": project_id, "cases": [real_interactive_case(project_id)], "concurrency": 1},
         "impl.core.schema.batch.BatchRunResult",
     ),
     ApiCase(
@@ -248,6 +249,7 @@ def flow_progress(message: str) -> None:
 
 
 def real_project_case(project_id: str) -> Dict[str, Any]:
+    """单条 case：取 mock_cases 返回的第一条（用于 live_run / run_chain / trace 等单 case 端点）。"""
     lock = project_lock(project_id)
     with lock:
         if project_id not in _MOCK_CASE_CACHE:
@@ -259,8 +261,43 @@ def real_project_case(project_id: str) -> Dict[str, Any]:
             if not cases:
                 raise AssertionError(f"/api/mock_cases returned no cases for {project_id}")
             _MOCK_CASE_CACHE[project_id] = cases[0]
+            _MOCK_CASES_CACHE[project_id] = list(cases)
             flow_progress(f"[case-cache-done] {project_id} /api/mock_cases")
         return _MOCK_CASE_CACHE[project_id]
+
+
+def _is_interactive_case(case: Dict[str, Any]) -> bool:
+    interaction = case.get("interaction") if isinstance(case, dict) else None
+    if not isinstance(interaction, dict):
+        return False
+    return str(interaction.get("mode") or "") == "interactive_intent"
+
+
+def real_interactive_case(project_id: str) -> Dict[str, Any]:
+    """优先取 interactive_intent fixture，覆盖多轮路径；找不到则退化到 cases[0]。"""
+    cases = real_project_cases(project_id)
+    for case in cases:
+        if _is_interactive_case(case):
+            return case
+    return cases[0] if cases else real_project_case(project_id)
+
+
+def real_project_cases(project_id: str) -> List[Dict[str, Any]]:
+    """全部 case：取 mock_cases 返回的完整列表（用于 batch_run 覆盖单轮+多轮路径）。"""
+    lock = project_lock(project_id)
+    with lock:
+        if project_id not in _MOCK_CASES_CACHE:
+            flow_progress(f"[case-cache-start] {project_id} /api/mock_cases")
+            status_code, response = call_api_raw("/api/mock_cases", {"project": project_id})
+            if status_code != 200:
+                raise AssertionError(f"/api/mock_cases failed for {project_id}: {response}")
+            cases = response.get("cases") or []
+            if not cases:
+                raise AssertionError(f"/api/mock_cases returned no cases for {project_id}")
+            _MOCK_CASE_CACHE[project_id] = cases[0]
+            _MOCK_CASES_CACHE[project_id] = list(cases)
+            flow_progress(f"[case-cache-done] {project_id} /api/mock_cases")
+        return list(_MOCK_CASES_CACHE[project_id])
 
 
 def project_flow(project_id: str) -> Dict[str, Any]:

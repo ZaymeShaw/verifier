@@ -46,7 +46,7 @@ def _frontend_standard(spec: ProjectSpec) -> dict:
 
 
 def _display_contract(reference_panel: dict, trace: Optional[RunTrace]) -> dict:
-    output_source = "trace.live_result.extracted_output" if trace and trace_extracted_output(trace) else "judge.actual"
+    output_source = "trace.extracted_output" if trace and trace_extracted_output(trace) else "judge.actual"
     return {
         "output_source": output_source,
         "reference_source": reference_panel.get("source") or "missing",

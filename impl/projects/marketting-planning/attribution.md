@@ -1,6 +1,6 @@
 # marketting-planning attribution
 
-归因必须从当前 case 的 `execution_trace`、`extracted_output`、`LiveExecutionResult.application_boundary`、reference contract 和业务文档出发，不能复用历史 case 字段或硬编码个别 query。
+归因必须从当前 case 的 `RunTrace.execution_trace`、每轮/最终 `extracted_output`、`RunTrace.application_boundary`、reference contract 和业务文档出发，不能复用历史 case 字段或硬编码个别 query。
 
 ## 阶段顺序
 

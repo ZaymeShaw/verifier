@@ -42,13 +42,33 @@ class MPNormalizedRequest:
 
 
 @dataclass
+class MPExtraInputParams:
+    """业务 API extra_input_params 字段（对齐 MarketingPlanningRequest.extra_input_params）。"""
+    agent_args: Dict[str, Any] = field(default_factory=dict)
+    args: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class MPApiRequest:
-    """真实业务 API 请求 body。"""
+    """真实业务 API 请求 body（对齐 MarketingPlanningRequest）。"""
     session_id: str
     trace_id: str
     org_id: str = "eval-org"
     user_text: str = ""
-    extra_input_params: Dict[str, Any] = field(default_factory=dict)
+    history: List[Any] = field(default_factory=list)
+    user_action: str = ""
+    action_scenario: str = ""
+    user_id: Optional[str] = None
+    ts: int = 0
+    token: str = ""
+    app_scenario: str = "customer_service"
+    docs_num: int = 5
+    source: str = "offline_task"
+    extra_input_params: MPExtraInputParams = field(default_factory=MPExtraInputParams)
+    application_setting: Optional[Dict[str, Any]] = None
+    module_name: Optional[str] = None
+    model_name: Optional[str] = None
+    scenario: Optional[str] = None
 
 
 # 兼容旧名称：真实 API body，不作为 live normalized_request schema 使用。
@@ -148,14 +168,6 @@ class MPTurnOutput:
     session_summary: MPSessionSummary = field(default_factory=MPSessionSummary)
     fallback: MPFallbackSummary = field(default_factory=MPFallbackSummary)
     errors: List[str] = field(default_factory=list)
-    turn_index: Optional[int] = None
-    input_turn: Optional[Dict[str, Any]] = None
-
-
-@dataclass
-class MPExtractOutput:
-    """trace.extracted_output 顶层形状。"""
-    turns: List[MPTurnOutput]
 
 
 @dataclass

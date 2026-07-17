@@ -1,0 +1,49 @@
+project_id: marketting-planning-intent
+
+# MPI 项目定位：NBEV 达成路径规划系统的意图识别
+# 用户：保险公司销售人员或管理者
+# 7 类意图：other, customer_portrait, nbev_planning, nbev_planning_fallback,
+#           achievement_measurement_adjustment, team_portrait, target_value_adjustment
+
+objective: |
+  1. 识别 mock 数据覆盖不足：当前 65 条 trace 只有 2 种 query，且都判错
+     - "帮我看看上季度买了重疾险的客户都是啥样的？" → 应 customer_portrait，实判 other
+     - "哎呀，这个月队伍那边好像有点状况，帮我瞅瞅到底是啥问题？" → 应 team_portrait，实判 other
+     - 缺失：nbev_planning、nbev_planning_fallback、achievement_measurement_adjustment、
+             target_value_adjustment 四种意图的 query
+
+  2. 识别意图识别能力缺陷：
+     - 口语化的客户/队伍画像查询识别失败
+     - 可能是 Tier 0 正则未覆盖口语表达（如 "客户都是啥样的"）
+     - 或 LLM fallback 返回 other/confidence=0.5，未起到补救作用
+
+  3. 通过 probe 验证 LLM 返回：
+     - draft attribute 应调用实际 API 或模拟 LLM 返回
+     - 定位是 prompt 问题、规则问题还是数据问题
+
+material:
+  - path: impl/projects/marketting-planning-intent/intent.md
+    note: 7 种意图定义和典型 query 示例
+  - path: impl/projects/marketting-planning-intent/application.md
+    note: 项目边界和 API 定义
+  - path: impl/projects/marketting-planning-intent/judge_boundary.md
+    note: Judge 判定边界
+  - path: impl/projects/marketting-planning-intent/attribution.md
+    note: 归因链路定义
+  - path: impl/projects/marketting-planning-intent/mock.md
+    note: Mock 数据生成规则
+
+mock_source:
+  iteration_cases: impl/data/context_store/marketting-planning-intent
+  unseen_cases: []
+
+review: |
+  1. Mock 数据覆盖度：能否识别出只覆盖 2/7 种意图的 gap
+  2. 意图识别准确性：能否定位 prompt/rule 层面的具体缺陷
+  3. 归因深度：能否通过 probe 验证 LLM 返回，定位根因
+  4. 泛化能力：对未见 case 不应退化
+
+max_iterations: 3
+
+report_path: impl/projects/marketting-planning-intent/draft/report.md
+

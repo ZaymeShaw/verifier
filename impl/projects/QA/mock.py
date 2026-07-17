@@ -4,27 +4,35 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict
 
-from impl.core.mock_protocol import ProjectMock
+from impl.core.mock_protocol import ProjectMock, SingleTurnMock
 from impl.core.schema import ProjectSpec, RunTrace, SingleTurnCase, MultiTurnCase
 
 
-class QAMock(ProjectMock):
-    """QA 项目 Mock 实现"""
+class QAMock(SingleTurnMock, ProjectMock):
+    """QA 项目 Mock 实现。
 
-    def build_user_intent(self, scenario: str) -> Dict[str, Any]:
-        """扮演用户产意图：委托 MockAgent.build_intent"""
+    继承 SingleTurnMock（交互模式=单轮）+ ProjectMock。
+    实现 build_user_intent（场景级意图）+ build_live_request（单轮 request）。
+    """
+
+    def build_user_intent(self, scenario: str):
+        """扮演用户产意图：委托 MockAgent.build_intent 并转 MockIntentOutput。"""
         from impl.core.mock_agent import MockAgent, build_spec_from_project
         agent = MockAgent(self.spec)
         build_spec = build_spec_from_project(self.spec, scenario=scenario)
-        result = agent.build_intent(build_spec)
-        return {
-            "query": result.input.get("query", ""),
-            "expected_intent": result.expected_intent,
-            "user_intent": result.input.get("user_intent", ""),
-            "input": result.input,
-        }
+        return MockAgent.intent_output(agent.build_intent(build_spec))
+
+    def build_live_request(self, intent) -> Dict[str, Any]:
+        """产单轮 request：委托 MockAgent 把意图翻译成 REQUEST_SCHEMA 形状。"""
+        if intent.live_request is not None:
+            return intent.live_request
+        from impl.core.mock_agent import MockAgent, build_spec_from_project, build_live_request_from_intent
+        agent = MockAgent(self.spec)
+        scenario = str(getattr(intent, "scenario", "") or "")
+        build_spec = build_spec_from_project(self.spec, scenario=scenario)
+        return build_live_request_from_intent(agent, build_spec, intent).input
 
     def normalize_case(
         self,

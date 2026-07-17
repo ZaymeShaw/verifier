@@ -2,112 +2,295 @@
 
 四层文件关系：
 - live_protocol.py: 协议层（_LiveProtocol，主流程实现）+ 操作层（ProjectLive，扩展点）
-- live.py: 通用层（工具函数：fallback_decision, generate_live_output_with_check 等）
+- live.py: 通用层（工具函数：fallback_decision 等）
 - projects/<project>/live.py: 项目层（实现扩展点）
 """
 from __future__ import annotations
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any, List
+from contextvars import ContextVar
+from typing import TYPE_CHECKING, Any, Optional, Dict, List
 from typing import final as typing_final
+if TYPE_CHECKING:
+    from impl.core.mock_agent import LiveSchema
+    from impl.core.trace import TraceContext
+    from impl.core.schema import MockIntentOutput
 from impl.core.schema import (
-    RunTrace, LiveExecutionResult, ExecutionTraceEvent, FallbackDecision,
-    LiveMultiTurnResult, LiveMultiTurnState, LiveRequest,
+    ExecutionTraceEvent, FallbackDecision,
+    LiveMultiTurnState, LiveRequest,
     ProjectSpec, SingleTurnCase, MultiTurnCase, MultiTurnInteraction,
-    normalize_live_execution_result, to_dict,
+    to_dict,
 )
 from impl.core.protocol_base import check_forbidden_overrides
 
 logger = logging.getLogger(__name__)
 
+# deliver_turn 的公开返回值保持 EXTRACT_OUTPUT_SCHEMA；raw_response/validation 等执行事实
+# 仅在当前执行上下文内临时传给 execute_live，避免 adapter 缓存的 Live 实例在并发批次中串 case。
+_TURN_FACTS: ContextVar[Optional[Dict[str, Any]]] = ContextVar("live_turn_facts", default=None)
+
+
+class LiveServiceUnavailableError(RuntimeError):
+    """业务服务不可达；区别于 request/output schema 等协议实现错误。"""
+
 
 class _LiveProtocol(ABC):
-    """
-    协议层：Live 投递主流程的具体实现。
+    """协议层：Live 投递主流程的具体实现。
 
-    主流程（deliver 模板方法）：
-    1. 构建请求（扩展点 build_request）
-    2. 校验请求（内部方法 _validate_request，使用 live_schema）
-    3. 判断投递路径（内部方法 _has_provided_output）
-    4. 执行投递（内部方法 _run_provided / _run_real_or_fallback）
-    5. 应用交互状态（内部方法 _apply_interaction_state，多轮处理）
-    6. 后处理（扩展点 normalize_result）
+    主流程（execute_live 模板方法）：
+    1. 通过 TraceContext 上报过程事实（由 trace 层注入）
+    2. 判断单轮/多轮（isinstance MultiTurnInteractiveLive）
+    3. 单轮：build_live_request → deliver_turn（real 路径）或 deliver_provided（provided 路径）
+    4. 多轮：循环 build_next_request → deliver_turn，停止判断只用 mock.should_stop
+    5. 返回 EXTRACT_OUTPUT_SCHEMA，不背 trace 字段
 
-    需要工具时从通用层取，需要项目定制时调用扩展点。
     项目不能修改流程的执行顺序。
     """
 
     _FORBIDDEN_OVERRIDES = frozenset({
-        'deliver',
+        'execute_live',
+        '_execute_single_turn',
+        '_execute_multi_turn',
         '_validate_request',
         '_validate_output',
         '_has_provided_output',
+        'deliver_turn',
         '_run_provided',
-        '_run_real_or_fallback',
-        '_candidate_to_result',
-        '_result_from_raw',
-        '_failed_live_result',
-        '_make_live_error_fallback',
-        '_apply_interaction_state',
-        '_multi_turn_accumulated_fields',
-        '_live_multi_turn_result',
+        '_build_fallback',
         '_append_validation',
-        '_build_request',
+        '_take_turn_facts',
     })
 
     def __init_subclass__(cls, **kwargs):
-        """检查子类是否覆盖了禁止的方法"""
         super().__init_subclass__(**kwargs)
         check_forbidden_overrides(cls, cls._FORBIDDEN_OVERRIDES)
 
     @typing_final
-    def deliver(
+    def execute_live(
         self,
-        case: SingleTurnCase | MultiTurnCase,
-        contract: Optional[MultiTurnInteraction] = None,
-    ) -> LiveExecutionResult:
+        intent: "MockIntentOutput",
+        ctx: "TraceContext",
+    ) -> Dict[str, Any]:
+        """模板方法：完整调用入口，输入 intent + ctx，输出 EXTRACT_OUTPUT_SCHEMA。
+
+        流程（spec/adapter/trace.md 第八节）：
+        1. 判断单轮/多轮（isinstance MultiTurnInteractiveLive）
+        2. 单轮：调 _execute_single_turn
+        3. 多轮：调 _execute_multi_turn
+
+        通过 ctx.record_turn() 上报每轮过程事实，由 trace 层收集。
         """
-        模板方法：Live 投递主流程的具体实现。
-
-        流程：
-        1. 构建请求（扩展点 + 内部方法）
-        2. 校验请求（内部方法，使用 live_schema）
-        3. 判断投递路径并执行（内部方法）
-        4. 应用交互状态（内部方法，多轮处理）
-        5. 后处理（扩展点）
-        """
-        # 1. 构建请求（内部方法，调用扩展点 build_request）
-        request = self._build_request(case)
-
-        # 2. 判断投递路径并执行（内部方法）
-        if self._has_provided_output(case, request):
-            result = self._run_provided(case, request)
-        else:
-            result = self._run_real_or_fallback(case, request)
-
-        # 3. 应用交互状态（内部方法，多轮处理）
-        self._apply_interaction_state(result, request, contract)
-
-        # 4. 后处理（扩展点）
-        final_result = self.normalize_result(result)
-
-        return final_result
+        turn_count_before = int(getattr(ctx, "turn_count", 0) or 0)
+        try:
+            if isinstance(self, MultiTurnInteractiveLive):
+                return self._execute_multi_turn(intent, ctx)
+            return self._execute_single_turn(intent, ctx)
+        except Exception as exc:
+            # build request / request schema 等在 record_turn 前失败时，也必须形成失败 trace，
+            # 不能被 trace_from_live 吞成 status=ok 的空输出。
+            if int(getattr(ctx, "turn_count", 0) or 0) == turn_count_before:
+                ctx.record_execution_error(str(exc))
+            raise
 
     # === 内部方法：主流程的各个步骤 ===
 
-    def _build_request(self, case: SingleTurnCase | MultiTurnCase) -> LiveRequest:
-        """内部方法：构建 LiveRequest。调用扩展点 build_request。"""
-        normalized = self.build_request(case)
-        return LiveRequest(
-            project_id=self.spec.project_id,
-            raw_input=dict(getattr(case, "input", {}) or {}),
-            case_id=str(getattr(case, "id", "") or ""),
-            normalized_request=normalized if isinstance(normalized, dict) else {},
+    def _execute_single_turn(
+        self,
+        intent: "MockIntentOutput",
+        ctx: "TraceContext",
+    ) -> Dict[str, Any]:
+        """单轮执行路径。"""
+        mock = self._mock_instance()
+        request = mock.build_live_request(intent)
+        # 判断走 provided 还是 real：_has_provided_output 已检查 spec ready + ProvidedOutputLive
+        if self._has_provided_output():
+            # provided 路径：不走 deliver_turn，由 deliver_provided → extract_output → 校验
+            output, raw_response, error, fallbacks, validations, delivery_request = self._run_provided(request)
+            application_boundary = self.application_boundary(raw_response, output, delivery_request) if error is None else {}
+            project_fields = self.project_fields(raw_response, output, delivery_request, application_boundary) if error is None else {}
+            execution_trace = self.build_execution_trace(raw_response, output, delivery_request) if error is None else []
+            ctx.record_turn(
+                request=request,
+                raw_response=raw_response,
+                extracted_output=output,
+                call_status="succeeded" if error is None else "failed",
+                runtime_ms=None,
+                error=error,
+                fallbacks=fallbacks,
+                validation=validations,
+                execution_trace=execution_trace,
+                application_boundary=application_boundary,
+                project_fields=project_fields,
+            )
+            ctx.finish_execution(
+                stop_reason="single_turn_completed" if error is None else "execution_error",
+                transcript=[],
+                final_output_turn=1 if error is None else None,
+                completion_status="completed" if error is None else "failed",
+            )
+            return output
+
+        # real 路径：调 deliver_turn（deliver_real → extract_output → 校验）
+        start = time.time()
+        try:
+            output = self.deliver_turn(request)
+            runtime_ms = int((time.time() - start) * 1000)
+            facts = self._take_turn_facts()
+            raw_response = facts.get("raw_response")
+            application_boundary = self.application_boundary(raw_response, output, request)
+            project_fields = self.project_fields(raw_response, output, request, application_boundary)
+            execution_trace = list(facts.get("validation") or []) + list(self.build_execution_trace(raw_response, output, request) or [])
+            ctx.record_turn(
+                request=request,
+                raw_response=raw_response,
+                extracted_output=output,
+                call_status="succeeded",
+                runtime_ms=runtime_ms,
+                error=None,
+                fallbacks=[],
+                validation=[],
+                execution_trace=execution_trace,
+                application_boundary=application_boundary,
+                project_fields=project_fields,
+            )
+            ctx.finish_execution(
+                stop_reason="single_turn_completed",
+                transcript=[],
+                final_output_turn=1,
+                completion_status="completed",
+            )
+            return output
+        except Exception as exc:
+            runtime_ms = int((time.time() - start) * 1000)
+            facts = self._take_turn_facts()
+            fallback = self._build_fallback(request, str(exc), unavailable=isinstance(exc, (LiveServiceUnavailableError, OSError)))
+            ctx.record_turn(
+                request=request,
+                raw_response=facts.get("raw_response"),
+                extracted_output={},
+                call_status="failed",
+                runtime_ms=runtime_ms,
+                error=str(exc),
+                fallbacks=[fallback],
+                validation=list(facts.get("validation") or []),
+            )
+            ctx.finish_execution(
+                stop_reason="execution_error",
+                transcript=[],
+                final_output_turn=None,
+                completion_status="failed",
+            )
+            raise
+
+    def _execute_multi_turn(
+        self,
+        intent: "MockIntentOutput",
+        ctx: "TraceContext",
+    ) -> Dict[str, Any]:
+        """多轮执行路径：循环 build_next_request → deliver_turn，停止只用 mock.should_stop。
+
+        主循环在 execute_live 内部（spec 第十一节 2）。TraceContext 收集每轮过程事实。
+        每轮 output 独立符合 EXTRACT_OUTPUT_SCHEMA；完整轮次事实只进入 TraceContext。
+        """
+        mock = self._mock_for_multi_turn()
+        max_turns = max(1, int(mock.max_turns() if hasattr(mock, "max_turns") else 4))
+
+        extracted_turns: List[Dict[str, Any]] = []
+        transcript: List[Dict[str, Any]] = []
+        last_output: Optional[Dict[str, Any]] = None
+        stop_reason = "max_turns"
+        session_id = f"interactive-{getattr(intent, 'scenario', '') or 'session'}"
+
+        accumulated: Optional[Dict[str, Any]] = None
+        for turn_index in range(max_turns):
+            # build_next_request：首轮 accumulated=None，后续轮看上一轮累积
+            try:
+                request = mock.build_next_request(intent, accumulated)
+            except Exception as exc:
+                logger.warning("mock.build_next_request failed at turn %d: %s", turn_index + 1, exc, exc_info=True)
+                request = None
+            if not isinstance(request, dict) or not request:
+                goal = str(getattr(intent, "query", "") or "")
+                request = {"query": goal}
+
+            user_query = str(request.get("query") or request.get("content") or "")
+            transcript.append({"role": "user", "content": user_query, "query": user_query})
+
+            start = time.time()
+            try:
+                output = self.deliver_turn(request)
+                runtime_ms = int((time.time() - start) * 1000)
+                facts = self._take_turn_facts()
+                raw_response = facts.get("raw_response")
+                application_boundary = self.application_boundary(raw_response, output, request)
+                project_fields = self.project_fields(raw_response, output, request, application_boundary)
+                execution_trace = list(facts.get("validation") or []) + list(self.build_execution_trace(raw_response, output, request) or [])
+                ctx.record_turn(
+                    request=request,
+                    raw_response=raw_response,
+                    extracted_output=output,
+                    call_status="succeeded",
+                    runtime_ms=runtime_ms,
+                    error=None,
+                    fallbacks=[],
+                    validation=[],
+                    execution_trace=execution_trace,
+                    application_boundary=application_boundary,
+                    project_fields=project_fields,
+                )
+                extracted_turns.append(output)
+                last_output = output
+            except Exception as exc:
+                runtime_ms = int((time.time() - start) * 1000)
+                facts = self._take_turn_facts()
+                fallback = self._build_fallback(request, str(exc), unavailable=isinstance(exc, (LiveServiceUnavailableError, OSError)))
+                ctx.record_turn(
+                    request=request,
+                    raw_response=facts.get("raw_response"),
+                    extracted_output={},
+                    call_status="failed",
+                    runtime_ms=runtime_ms,
+                    error=str(exc),
+                    fallbacks=[fallback],
+                    validation=list(facts.get("validation") or []),
+                )
+                stop_reason = "live_error"
+                break
+
+            # 累积：本轮 output 和 transcript，供下一轮 build_next_request
+            accumulated = {
+                "turns": extracted_turns,
+                "transcript": transcript,
+                "last_output": last_output,
+            }
+            transcript.append({
+                "role": "assistant",
+                "content": self._summarize_assistant(output),
+                "stage": output.get("stage") if isinstance(output, dict) else None,
+            })
+
+            # 停止判断：只用 mock.should_stop（spec 第十一节 9）
+            if hasattr(mock, "should_stop") and mock.should_stop(transcript, last_output):
+                stop_reason = "mock_should_stop"
+                break
+
+        final_output_turn = len(extracted_turns) if last_output is not None else None
+        completion_status = "completed" if last_output is not None and stop_reason != "live_error" else "failed"
+        ctx.finish_execution(
+            session_id=session_id,
+            stop_reason=stop_reason,
+            transcript=transcript,
+            final_output_turn=final_output_turn,
+            completion_status=completion_status,
         )
+        if last_output is None:
+            raise RuntimeError(f"{self.spec.project_id} multi-turn execution produced no valid output")
+        # 多轮返回最后一轮有效的项目 EXTRACT_OUTPUT_SCHEMA；完整 turns 由 TraceContext 持有。
+        return last_output
 
     def _validate_request(self, payload: Any) -> Optional[ExecutionTraceEvent]:
-        """内部方法：使用 live_schema 校验请求。"""
+        """内部方法：使用 live_schema 校验请求。校验失败抛 ValueError，不降级。"""
         if self.live_schema is None or not hasattr(self.live_schema, "check"):
             return None
         try:
@@ -117,18 +300,20 @@ class _LiveProtocol(ABC):
                     stage="live_schema.validate_request", status="ok",
                     evidence={"project_id": self.spec.project_id}
                 )
-            evidence = {"project_id": self.spec.project_id, "kind": "request", "error": "request 不符合 live_schema"}
-            logger.warning(f"[live_schema] request check failed for {self.spec.project_id}: {evidence['error']}")
-            return ExecutionTraceEvent(stage="live_schema.validate_request", status="failed", evidence=evidence)
-        except Exception as exc:
-            logger.warning(f"[live_schema] request check exception for {self.spec.project_id}: {exc}")
-            return ExecutionTraceEvent(
-                stage="live_schema.validate_request", status="failed",
-                evidence={"project_id": self.spec.project_id, "kind": "request", "error": str(exc)}
+            raise ValueError(
+                f"[live_schema] request check failed for {self.spec.project_id}: "
+                f"request 不符合 live_schema.REQUEST_SCHEMA。payload keys: "
+                f"{list(payload.keys()) if isinstance(payload, dict) else type(payload).__name__}"
             )
+        except ValueError:
+            raise
+        except Exception as exc:
+            raise ValueError(
+                f"[live_schema] request check exception for {self.spec.project_id}: {exc}"
+            ) from exc
 
     def _validate_output(self, payload: Any) -> Optional[ExecutionTraceEvent]:
-        """内部方法：使用 live_schema 校验输出。"""
+        """内部方法：使用 live_schema 校验输出。校验失败抛 ValueError，不降级。"""
         if self.live_schema is None or not hasattr(self.live_schema, "check"):
             return None
         try:
@@ -138,150 +323,62 @@ class _LiveProtocol(ABC):
                     stage="live_schema.validate_output", status="ok",
                     evidence={"project_id": self.spec.project_id}
                 )
-            evidence = {"project_id": self.spec.project_id, "kind": "output", "error": "output 不符合 live_schema"}
-            logger.warning(f"[live_schema] output check failed for {self.spec.project_id}: {evidence['error']}")
-            return ExecutionTraceEvent(stage="live_schema.validate_output", status="failed", evidence=evidence)
-        except Exception as exc:
-            logger.warning(f"[live_schema] output check exception for {self.spec.project_id}: {exc}")
-            return ExecutionTraceEvent(
-                stage="live_schema.validate_output", status="failed",
-                evidence={"project_id": self.spec.project_id, "kind": "output", "error": str(exc)}
+            raise ValueError(
+                f"[live_schema] output check failed for {self.spec.project_id}: "
+                f"output 不符合 live_schema.EXTRACT_OUTPUT_SCHEMA。payload keys: "
+                f"{list(payload.keys()) if isinstance(payload, dict) else type(payload).__name__}"
             )
-
-    def _has_provided_output(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> bool:
-        """内部方法：判断是否走 provided 投递路径。"""
-        from impl.core.interaction_protocol import resolve_ready
-        if not resolve_ready(self.spec, case).output:
-            return False
-        output = getattr(case, "output", None)
-        if isinstance(output, dict) and output:
-            return True
-        input_data = dict(getattr(case, "input", {}) or {})
-        return any(key in input_data for key in ("raw_response", "response", "output"))
-
-    def _run_provided(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> LiveExecutionResult:
-        """内部方法：provided 投递路径。"""
-        request_validation = self._validate_request(request.normalized_request)
-        setattr(request, "_live_schema_request_validation", request_validation)
-
-        raw_response = self.deliver_provided(case, request)
-        extracted_output = self.extract_output(raw_response, request)
-        application_boundary = self.application_boundary(raw_response, extracted_output, request)
-        result = LiveExecutionResult(
-            project_id=self.spec.project_id,
-            case_id=request.case_id,
-            session_id=request.session_id,
-            raw_input=request.raw_input,
-            normalized_request=request.normalized_request,
-            raw_response=raw_response,
-            extracted_output=extracted_output,
-            output_source="provided_output",
-            call_status="succeeded",
-            execution_trace=self.build_execution_trace(raw_response, extracted_output, request),
-            project_fields=self.project_fields(raw_response, extracted_output, request, application_boundary),
-            application_boundary=application_boundary,
-            interaction_mode="interactive_intent" if request.turns else "single_turn",
-        )
-        self._append_validation(result, self._validate_output(extracted_output))
-        return result
-
-    def _run_real_or_fallback(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> LiveExecutionResult:
-        """内部方法：real 投递路径，带 fallback。"""
-        request_validation = self._validate_request(request.normalized_request)
-        setattr(request, "_live_schema_request_validation", request_validation)
-
-        start = time.time()
-        try:
-            candidate = self.deliver_real(request)
+        except ValueError:
+            raise
         except Exception as exc:
-            stub = self.deliver_stub(case, request)
-            if stub is not None:
-                result = self._result_from_raw(request, stub, "stub", start)
-                self._append_validation(result, self._validate_output(result.extracted_output))
-                return result
-            return self._failed_live_result(request, str(exc))
+            raise ValueError(
+                f"[live_schema] output check exception for {self.spec.project_id}: {exc}"
+            ) from exc
 
-        result = self._candidate_to_result(request, candidate, start)
-        if result.call_status != "succeeded":
-            unavailable = result.output_source == "live_service_unavailable"
-            if not unavailable and result.output_source in ("", "live_service"):
-                result.output_source = "live_protocol_error"
-            if not result.fallbacks:
-                result.fallbacks = [self._make_live_error_fallback(request, result.call_error or "business service call failed", unavailable=unavailable)]
-            self._append_validation(result, None)
-            return result
-        self._append_validation(result, self._validate_output(result.extracted_output))
-        return result
+    def _has_provided_output(self) -> bool:
+        """内部方法：判断是否走 provided 路径。
 
-    def _candidate_to_result(self, request: LiveRequest, candidate: Any, start: float) -> LiveExecutionResult:
-        """内部方法：将 deliver_real 的候选结果归一化为 LiveExecutionResult。"""
-        if isinstance(candidate, LiveExecutionResult):
-            result = candidate
-        elif isinstance(candidate, dict) and {"project_id", "raw_input", "normalized_request", "extracted_output"}.intersection(candidate):
-            result = normalize_live_execution_result(candidate)
-            if result is None:
-                result = self._result_from_raw(request, candidate, request.execution_mode, start)
-        else:
-            result = self._result_from_raw(request, candidate, request.execution_mode, start)
-        if result.project_id != self.spec.project_id:
-            result.project_id = self.spec.project_id
-        if not result.case_id:
-            result.case_id = request.case_id
-        if not result.session_id:
-            result.session_id = request.session_id
-        if not result.raw_input:
-            result.raw_input = request.raw_input
-        if not result.normalized_request:
-            result.normalized_request = request.normalized_request
-        if result.runtime_ms is None:
-            result.runtime_ms = int((time.time() - start) * 1000)
-        return result
+        条件：
+        1. 当前 Live 实例是 ProvidedOutputLive 子类（具备 deliver_provided 能力）
+        2. spec.common.ready 声明了 output ready
+        """
+        from impl.core.live_protocol import ProvidedOutputLive
+        if not isinstance(self, ProvidedOutputLive):
+            return False
+        ready = self.spec.common.get("ready", []) if self.spec and isinstance(self.spec.common, dict) else []
+        return "output" in ready
 
-    def _result_from_raw(self, request: LiveRequest, raw_response: Any, output_source: str, start: float) -> LiveExecutionResult:
-        """内部方法：从原始响应构建 LiveExecutionResult。"""
-        extracted_output = self.extract_output(raw_response, request)
-        application_boundary = self.application_boundary(raw_response, extracted_output, request)
-        return LiveExecutionResult(
+    def _run_provided(
+        self,
+        request: Dict[str, Any],
+    ) -> tuple:
+        """内部方法：provided 路径。返回 output/raw_response/error/fallbacks/validations/request。"""
+        live_request = LiveRequest(
             project_id=self.spec.project_id,
-            case_id=request.case_id,
-            session_id=request.session_id,
-            raw_input=request.raw_input,
-            normalized_request=request.normalized_request,
-            raw_response=raw_response,
-            runtime_ms=int((time.time() - start) * 1000),
-            extracted_output=extracted_output,
-            output_source=output_source,
-            execution_trace=self.build_execution_trace(raw_response, extracted_output, request),
-            project_fields=self.project_fields(raw_response, extracted_output, request, application_boundary),
-            application_boundary=application_boundary,
-            interaction_mode="interactive_intent" if request.turns else "single_turn",
+            raw_input={},
+            case_id=str(request.get("case_id") or ""),
+            normalized_request=request,
+            execution_mode="provided",
+            session_id="",
         )
+        try:
+            request_validation = self._validate_request(request)
+            raw_response = self.deliver_provided(live_request)
+            output = self.extract_output(raw_response, live_request)
+            output_validation = self._validate_output(output)
+            return output, raw_response, None, [], [request_validation, output_validation], live_request
+        except Exception as exc:
+            fallback = self._build_fallback(live_request, str(exc), unavailable=False)
+            return {}, None, str(exc), [fallback], [], live_request
 
-    def _failed_live_result(self, request: LiveRequest, reason: str) -> LiveExecutionResult:
-        """内部方法：构建失败结果。"""
-        fallback = self._make_live_error_fallback(request, reason)
-        result = LiveExecutionResult(
-            project_id=self.spec.project_id,
-            case_id=request.case_id,
-            session_id=request.session_id,
-            raw_input=request.raw_input,
-            normalized_request=request.normalized_request,
-            call_status="failed",
-            call_error=reason,
-            output_source="live_service_unavailable",
-            execution_trace=[ExecutionTraceEvent(stage="project.call", status="failed", evidence=reason)],
-            interaction_mode="interactive_intent" if request.turns else "single_turn",
-            fallbacks=[fallback],
-        )
-        self._append_validation(result, None)
-        return result
-
-    def _make_live_error_fallback(self, request: LiveRequest, reason: str, unavailable: bool = True) -> FallbackDecision:
+    def _build_fallback(self, request: Any, reason: str, unavailable: bool = True) -> FallbackDecision:
         """内部方法：构建错误 fallback 决策。"""
         from impl.core.live import fallback_decision
         failure_type = "live_service_unavailable" if unavailable else "live_protocol_error"
+        case_id = getattr(request, "case_id", "") if hasattr(request, "case_id") else str(request.get("case_id", "") if isinstance(request, dict) else "")
+        session_id = getattr(request, "session_id", "") if hasattr(request, "session_id") else ""
         return fallback_decision(
-            fallback_id=f"live-error-{request.case_id or self.spec.project_id}",
+            fallback_id=f"live-error-{case_id or self.spec.project_id}",
             source_stage="live",
             fallback_type="live_error",
             status="error",
@@ -290,92 +387,123 @@ class _LiveProtocol(ABC):
             recoverable=unavailable,
             needs_human_review=True,
             quality_flags=[failure_type],
-            metadata={"case_id": request.case_id, "session_id": request.session_id, "failure_type": failure_type},
+            metadata={"case_id": case_id, "session_id": session_id, "failure_type": failure_type},
         )
 
-    def _multi_turn_accumulated_fields(self, extracted_output: Any) -> Dict[str, Any]:
-        """内部方法：提取多轮累积字段。"""
-        if not isinstance(extracted_output, dict):
-            return {}
-        candidates: list[dict[str, Any]] = []
-        turns = extracted_output.get("turns")
-        if isinstance(turns, list):
-            candidates.extend(turn for turn in reversed(turns) if isinstance(turn, dict))
-        candidates.append(extracted_output)
-        for candidate in candidates:
-            session_summary = candidate.get("session_summary") if isinstance(candidate, dict) else None
-            if isinstance(session_summary, dict) and isinstance(session_summary.get("accumulated_fields"), dict):
-                return dict(session_summary.get("accumulated_fields") or {})
-        return {}
-
-    def _apply_interaction_state(self, result: LiveExecutionResult, request: LiveRequest, contract: Optional[MultiTurnInteraction]) -> None:
-        """内部方法：应用交互状态（多轮处理）。"""
-        if contract is not None:
-            result.interaction_mode = contract.mode
-        elif request.turns or (isinstance(request.normalized_request, dict) and isinstance(request.normalized_request.get("turns"), list)):
-            result.interaction_mode = "interactive_intent"
-        if result.interaction_mode == "interactive_intent" or contract is not None:
-            turns = request.normalized_request.get("turns") if isinstance(request.normalized_request, dict) else request.turns
-            result.multi_turn_state = LiveMultiTurnState(
-                session_id=request.session_id,
-                transcript=list(turns or request.turns or []),
-                accumulated_fields=self._multi_turn_accumulated_fields(result.extracted_output),
-                stop_reason="live_error" if result.call_status != "succeeded" else "",
-            )
-            self._live_multi_turn_result(result)
-
-    def _live_multi_turn_result(self, result: LiveExecutionResult) -> None:
-        """内部方法：构建多轮结果。"""
-        from impl.core.live import live_multi_turn_result
-        live_multi_turn_result(result)
-
-    def _append_validation(self, target: LiveExecutionResult, event: Optional[ExecutionTraceEvent]) -> None:
+    def _append_validation(
+        self,
+        target_execution_trace: List[ExecutionTraceEvent],
+        event: Optional[ExecutionTraceEvent],
+    ) -> None:
         """内部方法：挂载校验结果到 execution_trace。"""
-        request_event = getattr(target, "_live_schema_request_validation", None)
-        if request_event is None and isinstance(target.normalized_request, dict):
-            request_event = self._validate_request(target.normalized_request)
-        if isinstance(request_event, ExecutionTraceEvent):
-            target.execution_trace.append(request_event)
         if event is not None:
-            target.execution_trace.append(event)
-        diagnostics = [to_dict(item) for item in target.execution_trace if getattr(item, "stage", "").startswith("live_schema.validate_")]
-        if diagnostics:
-            fields = dict(target.project_fields or {})
-            fields["live_schema_validation"] = diagnostics
-            target.project_fields = fields
+            target_execution_trace.append(event)
 
     # === 扩展点：项目可选覆盖 ===
 
-    def build_request(self, case: SingleTurnCase | MultiTurnCase) -> Dict[str, Any]:
-        """扩展点：构建请求参数（normalized_request）。项目可选覆盖。
+    @typing_final
+    def deliver_turn(self, request: Any) -> Dict[str, Any]:
+        """单次 real 投递（spec 第十节）。@final，项目不覆盖。
 
-        定位/目标：
-            把 case.input 翻译成 live 请求体形状（= live_schema.REQUEST_SCHEMA）。
-            mock 直接对接 live_schema，build_request 不做形状翻译，默认透传 case.input。
+        内部流程：
+        1. 校验 request 符合 REQUEST_SCHEMA
+        2. deliver_real(request) → raw_response
+        3. extract_output(raw_response, request) → EXTRACT_OUTPUT_SCHEMA
+        4. 校验 output 符合 EXTRACT_OUTPUT_SCHEMA
+        5. 返回 EXTRACT_OUTPUT_SCHEMA
 
-        参数：
-            case: 单轮或多轮用例，含 input/output/scenario 等字段。case.input 形状由 mock 产出。
+        raw_response 和校验事件仅保存在当前执行上下文，供 execute_live 上报 TraceContext；
+        不写入共享 Live 实例字段，避免并发 case 串数据。
         """
-        return dict(getattr(case, "input", {}) or {})
+        _TURN_FACTS.set(None)
+        request_validation = self._validate_request(request)
+        _TURN_FACTS.set({
+            "raw_response": None,
+            "validation": [event for event in (request_validation,) if event is not None],
+        })
+        raw_response = self.deliver_real(request)
+        output = self.extract_output(raw_response, request)
+        _TURN_FACTS.set({
+            "raw_response": raw_response,
+            "validation": [event for event in (request_validation,) if event is not None],
+        })
+        output_validation = self._validate_output(output)
+        _TURN_FACTS.set({
+            "raw_response": raw_response,
+            "validation": [event for event in (request_validation, output_validation) if event is not None],
+        })
+        return output
 
-    def deliver_real(self, request: LiveRequest) -> Any:
+    def _take_turn_facts(self) -> Dict[str, Any]:
+        facts = _TURN_FACTS.get() or {}
+        _TURN_FACTS.set(None)
+        return dict(facts)
+
+    def _mock_instance(self) -> Any:
+        """获取同项目的 Mock 实例。通过 _adapter.mock() 访问。"""
+        adapter = getattr(self, "_adapter", None)
+        if adapter is None:
+            raise RuntimeError(
+                f"{self.__class__.__name__} 缺少 _adapter，"
+                f"Pipeline 应在加载 Live 时注入 adapter 引用"
+            )
+        return adapter.mock()
+
+    def _resolve_intent(self, case: SingleTurnCase | MultiTurnCase | Dict[str, Any], mock: Any) -> "MockIntentOutput":
+        """算意图：优先从 case 取，不足则调 mock.build_user_intent 补充。
+
+        case 已有意图（case.user_intent 有值）时直接构造 MockIntentOutput，
+        避免重复 LLM 调用；case 没有意图时调 mock.build_user_intent(scenario) 跑一次 LLM。
+        """
+        from impl.core.schema import MockIntentOutput
+        if isinstance(case, dict):
+            case_user_intent = str(case.get("user_intent") or "")
+            case_metadata = dict(case.get("metadata") or {})
+            case_input = case.get("input") if isinstance(case.get("input"), dict) else {}
+            case_user_context = case_metadata.get("user_context") if isinstance(case_metadata.get("user_context"), dict) else {}
+            scenario = str(case.get("scenario") or "")
+        else:
+            case_user_intent = str(getattr(case, "user_intent", "") or "")
+            case_metadata = dict(getattr(case, "metadata", {}) or {})
+            case_user_context = case_metadata.get("user_context") if isinstance(case_metadata.get("user_context"), dict) else {}
+            scenario = str(getattr(case, "scenario", "") or "")
+            case_input = dict(getattr(case, "input", {}) or {})
+
+        query = str(
+            case_input.get("query")
+            or case_input.get("user_text")
+            or case_input.get("question")
+            or case_input.get("content")
+            or ""
+        )
+        # Persisted/imported cases already carry the authoritative user request.
+        # Do not replace it with a newly generated scenario example merely because
+        # the optional user_intent description is absent.
+        if case_user_intent or case_input:
+            return MockIntentOutput(
+                user_intent=case_user_intent or query,
+                query=query,
+                user_context=dict(case_user_context or {}),
+                scenario=scenario,
+            )
+        return mock.build_user_intent(scenario)
+
+    def deliver_real(self, request: Any) -> Any:
         """扩展点：真实投递。项目可选覆盖。
 
         定位/目标：
             调用业务系统（真实 API / 服务），返回 raw_response。
             这是 Live 的核心业务知识——如何调用业务系统无法通用化，必须由项目实现。
-            返回值可以是 raw_response（dict/对象）或完整 LiveExecutionResult。
 
         参数：
-            request: LiveRequest，含 project_id/case_id/raw_input/normalized_request/turns/session_id 等。
-                     normalized_request 形状符合 live_schema.REQUEST_SCHEMA。
+            request: REQUEST_SCHEMA 形状（项目特定 dict 或 LiveRequest）
         """
         raise NotImplementedError(
             f"{self.__class__.__name__} 未实现 deliver_real，"
             f"无法调用业务系统。如果是 provided-output 项目，请继承 ProvidedOutputLive。"
         )
 
-    def deliver_provided(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Any:
+    def deliver_provided(self, request: LiveRequest) -> Any:
         """扩展点：provided 投递。项目可选覆盖。
 
         定位/目标：
@@ -383,7 +511,6 @@ class _LiveProtocol(ABC):
             provided-output 项目必须实现。
 
         参数：
-            case: 单轮或多轮用例，含 output（provided 数据）。
             request: LiveRequest，含 normalized_request 等。
         """
         raise NotImplementedError(
@@ -391,48 +518,53 @@ class _LiveProtocol(ABC):
             f"无法从 case 取 provided output。如果是真实服务项目，请继承 RealServiceLive。"
         )
 
-    def deliver_stub(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Optional[Dict[str, Any]]:
+    def deliver_stub(self, request: Any) -> Optional[Dict[str, Any]]:
         """扩展点：stub 投递。项目可选覆盖。默认返回 None。"""
         return None
 
-    def extract_output(self, raw_response: Any, request: LiveRequest) -> Dict[str, Any]:
+    def extract_output(self, raw_response: Any, request: Any) -> Dict[str, Any]:
         """扩展点：提取输出。项目可选覆盖。"""
         if isinstance(raw_response, dict):
             return raw_response
         return {}
 
-    def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> Dict[str, Any]:
+    def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any], request: Any) -> Dict[str, Any]:
         """扩展点：应用边界。项目可选覆盖。"""
         return {}
 
-    def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest, application_boundary: Dict[str, Any]) -> Dict[str, Any]:
+    def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any], request: Any, application_boundary: Dict[str, Any]) -> Dict[str, Any]:
         """扩展点：项目字段。项目可选覆盖。"""
         return {}
 
-    def build_execution_trace(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> List[ExecutionTraceEvent]:
+    def build_execution_trace(self, raw_response: Any, extracted_output: Dict[str, Any], request: Any) -> List[ExecutionTraceEvent]:
         """扩展点：构建执行轨迹。项目可选覆盖。"""
         return []
 
-    def run_interactive(self, case: Any) -> Dict[str, Any]:
-        raise NotImplementedError(f"{self.__class__.__name__} 不支持 interactive_intent")
-
-    def normalize_result(self, result: LiveExecutionResult) -> LiveExecutionResult:
+    def normalize_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """扩展点：后处理结果。项目可选覆盖。"""
         return result
 
+    def _summarize_assistant(self, extracted: Dict[str, Any]) -> str:
+        """默认助手摘要（通用）。项目可覆盖以补充项目特化字段。"""
+        if not extracted:
+            return "empty"
+        keys = [k for k in ("stage", "status") if extracted.get(k)]
+        if keys:
+            return " · ".join(f"{k}={extracted[k]}" for k in keys)
+        return "ok"
+
 
 class ProjectLive(_LiveProtocol):
-    """
-    操作层：告诉项目哪些地方可以定制。
+    """操作层：告诉项目哪些地方可以定制。
 
     必须实现：
     - deliver_real 或 deliver_provided（二选一，通过继承中间基类指定）
 
     可选覆盖：
-    - build_request: 构建请求参数（默认透传 case.input）
     - deliver_stub
     - extract_output / application_boundary / project_fields / build_execution_trace
     - normalize_result
+    - _summarize_assistant（多轮项目）
     """
 
     def __init__(self, spec: ProjectSpec):
@@ -455,17 +587,8 @@ class RealServiceLive(ProjectLive):
     """
 
     @abstractmethod
-    def deliver_real(self, request: LiveRequest) -> Any:
-        """扩展点：真实投递。项目必须实现。
-
-        定位/目标：
-            调用业务系统（真实 API / 服务），返回 raw_response。
-            返回值可以是 raw_response（dict/对象）或完整 LiveExecutionResult。
-
-        参数：
-            request: LiveRequest，含 project_id/case_id/raw_input/normalized_request/turns/session_id 等。
-                     normalized_request 形状符合 live_schema.REQUEST_SCHEMA。
-        """
+    def deliver_real(self, request: Any) -> Any:
+        """扩展点：真实投递。项目必须实现。"""
         pass
 
 
@@ -479,14 +602,65 @@ class ProvidedOutputLive(ProjectLive):
     """
 
     @abstractmethod
-    def deliver_provided(self, case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Any:
-        """扩展点：provided 投递。项目必须实现。
-
-        定位/目标：
-            从 case.output 取 raw_response（provided-output 模式）。
-
-        参数：
-            case: 单轮或多轮用例，含 output（provided 数据）。
-            request: LiveRequest，含 normalized_request 等。
-        """
+    def deliver_provided(self, request: LiveRequest) -> Any:
+        """扩展点：provided 投递。项目必须实现。"""
         pass
+
+
+class SingleTurnLive:
+    """单轮交互模式 mixin。项目 Live 通过组合继承声明单轮形态。
+
+    使用方式：
+        class XxxLive(RealServiceLive, SingleTurnLive): ...
+        class XxxLive(ProvidedOutputLive, SingleTurnLive): ...
+
+    单轮 Live 不进入多轮主循环。execute_live 通过 isinstance(self, MultiTurnInteractiveLive)
+    判断是否走多轮路径；不继承 MultiTurnInteractiveLive 即视为单轮。
+    """
+
+    _FORBIDDEN_OVERRIDES = frozenset({
+        'deliver_multi_turn',  # 已废弃（trace.md 第十二节删除项）；单轮项目不应实现
+    })
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        check_forbidden_overrides(cls, cls._FORBIDDEN_OVERRIDES)
+
+
+class MultiTurnInteractiveLive:
+    """多轮交互模式 mixin。声明 execute_live 走多轮路径（_execute_multi_turn）。
+
+    使用方式：
+        class XxxLive(RealServiceLive, MultiTurnInteractiveLive): ...
+        class XxxLive(ProvidedOutputLive, MultiTurnInteractiveLive): ...
+
+    协议层提供的（项目不能覆盖）：
+    - execute_live: 完整调用入口（@final，在 _LiveProtocol）
+    - _execute_multi_turn: 多轮主循环（@final，在 _LiveProtocol）
+    - deliver_turn: 单次 real 投递（@final，在 _LiveProtocol）
+
+    协议层提供的默认实现（项目可选覆盖以注入项目特化语义）：
+    - _summarize_assistant: 默认通用摘要
+
+    项目必须实现（继承自 RealServiceLive / ProvidedOutputLive）：
+    - deliver_real 或 deliver_provided
+
+    项目不应该实现：
+    - 多轮主循环、transcript 累积、停止判断（停止判断在 mock.should_stop）
+    - judge/attribute 调用、run payload 组装
+
+    多轮主循环在 execute_live 内部（spec 第十一节 2），不再抽出独立的 deliver_multi_turn 模板方法
+    （spec 第十二节明确删除项）。多轮过程事实通过 TraceContext 上报，trace 层收集。
+    """
+
+    _FORBIDDEN_OVERRIDES = frozenset({
+        'deliver_multi_turn',  # 已废弃（trace.md 第十二节删除项），多轮主循环合并到 execute_live 内部
+    })
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        check_forbidden_overrides(cls, cls._FORBIDDEN_OVERRIDES)
+
+    def _mock_for_multi_turn(self) -> Any:
+        """获取同项目的 Mock 实例（多轮主循环用）。复用单轮的 _mock_instance。"""
+        return self._mock_instance()

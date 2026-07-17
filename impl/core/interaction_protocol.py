@@ -61,11 +61,16 @@ def _case_output(case: SingleTurnCase | MultiTurnCase | Dict[str, Any] | None) -
 
 @dataclass
 class NormalizedCaseInteraction:
+    # 多轮交互契约对象：live 层只读自身字段，不深入 source_case。
+    # source_case 字段保留是为了 trace 层组装 RunTrace 时使用，live 层不应该再读 source_case 字段。
     case_id: str
     mode: str
-    source_case: Dict[str, Any]
     execution_input: Dict[str, Any]
     interaction: Dict[str, Any]
+    scenario: str = ""
+    reference: Dict[str, Any] = field(default_factory=dict)
+    output: Dict[str, Any] = field(default_factory=dict)
+    source_case: Dict[str, Any] = field(default_factory=dict)
     adapter_payload: Dict[str, Any] = field(default_factory=dict)
     policy: Dict[str, Any] = field(default_factory=dict)
 
@@ -89,14 +94,21 @@ def normalize_case_interaction(project_id: str, case: Dict[str, Any] | SingleTur
     adapter_payload = {
         key: value
         for key, value in raw_case.items()
-        if key not in {"id", "case_id", "selected", "source", "status", "expected_intent"}
+        if key not in {"id", "case_id", "selected", "source", "status", "user_intent"}
     }
+    # 显式提取 live 层需要的字段，live 层不再深入 source_case
+    scenario = str(raw_case.get("scenario") or "")
+    reference = dict(raw_case.get("reference") or {}) if isinstance(raw_case.get("reference"), dict) else {}
+    output = dict(raw_case.get("output") or {}) if isinstance(raw_case.get("output"), dict) else {}
     return NormalizedCaseInteraction(
         case_id=case_id,
         mode=mode,
-        source_case=raw_case,
         execution_input=execution_input,
         interaction=normalized_interaction,
+        scenario=scenario,
+        reference=reference,
+        output=output,
+        source_case=raw_case,
         adapter_payload=adapter_payload,
         policy=dict((normalized_interaction.get("policy") or {}) if isinstance(normalized_interaction.get("policy"), dict) else {}),
     )
@@ -109,7 +121,7 @@ def _case_to_dict(case: SingleTurnCase | MultiTurnCase | None) -> Dict[str, Any]
         "id": case.id,
         "input": dict(case.input or {}),
         "scenario": case.scenario,
-        "expected_intent": case.expected_intent,
+        "user_intent": case.user_intent or "",
         "reference": case.reference,
         "source": case.source,
         "status": case.status,
@@ -118,7 +130,7 @@ def _case_to_dict(case: SingleTurnCase | MultiTurnCase | None) -> Dict[str, Any]
     if isinstance(case, SingleTurnCase) and isinstance(case.output, dict):
         result["output"] = case.output
     if isinstance(case, MultiTurnCase):
-        result["user_intent"] = dict(case.user_intent or {})
+        result["intent_plan"] = dict(case.intent_plan or {})
         result["interaction"] = {
             "mode": case.interaction.mode,
             "policy": {"max_turns": case.interaction.policy.max_turns, "stop_when": list(case.interaction.policy.stop_when or [])},
@@ -139,7 +151,7 @@ def _execution_input(case: Dict[str, Any] | SingleTurnCase | MultiTurnCase, case
         result = {
             key: value
             for key, value in raw_case.items()
-            if key not in {"id", "case_id", "selected", "source", "status", "expected_intent", "interaction", "mock_agent"}
+            if key not in {"id", "case_id", "selected", "source", "status", "user_intent", "interaction", "mock_agent"}
         }
     if mode == "static_turns" and "turns" in raw_case:
         result["turns"] = raw_case["turns"]

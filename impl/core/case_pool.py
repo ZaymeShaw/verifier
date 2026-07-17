@@ -5,7 +5,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
-from .schema import MockDataset, normalize_mock_case, normalize_mock_dataset, to_dict
+from .mock import parse_mock_case
+from .schema import to_dict
 
 ROOT = Path(__file__).resolve().parents[1]
 STORE_PATH = ROOT / "data" / "case_pools.json"
@@ -55,28 +56,19 @@ TRANSIENT_CASE_FIELDS = {
 
 
 def _strip_transient(case: Dict[str, Any]) -> Dict[str, Any]:
-    schema_case = normalize_mock_case(case)
-    durable = to_dict(schema_case) if schema_case is not None else dict(case or {})
+    durable = to_dict(parse_mock_case(case))
     return {key: value for key, value in durable.items() if key not in TRANSIENT_CASE_FIELDS}
 
 
-def _pool_schema(project_id: str, pool: Dict[str, Any]) -> MockDataset:
-    normalized = normalize_mock_dataset({
+def _pool_boundary_payload(project_id: str, pool: Dict[str, Any], *, include_cases: bool) -> Dict[str, Any]:
+    payload = {
         "dataset_id": pool.get("dataset_id") or pool.get("id") or f"pool-{project_id}",
         "name": pool.get("name") or "",
         "dimension_type": pool.get("dimension_type") or "case_pool",
         "description": pool.get("description") or "",
-        "cases": pool.get("cases") or [],
-        "case_count": pool.get("case_count") or len(pool.get("cases") or []),
-    })
-    return normalized or MockDataset(dataset_id=str(pool.get("id") or ""), name=str(pool.get("name") or ""), dimension_type="case_pool")
-
-
-def _pool_boundary_payload(project_id: str, pool: Dict[str, Any], *, include_cases: bool) -> Dict[str, Any]:
-    dataset = to_dict(_pool_schema(project_id, pool))
-    payload = {
-        **dataset,
-        "id": pool.get("id") or dataset.get("dataset_id"),
+        "case_count": len(pool.get("cases") or []),
+        "cases": [parse_mock_case(_strip_transient(case), project_id=project_id) for case in pool.get("cases") or []],
+        "id": pool.get("id") or pool.get("dataset_id") or f"pool-{project_id}",
         "created_at": pool.get("created_at") or "",
     }
     if not include_cases:

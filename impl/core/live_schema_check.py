@@ -146,14 +146,15 @@ class LiveSchemaCheck:
     def case(self, case: Any) -> bool:
         """校验一条 mock case 是否完整合规。按 ready 协议决定校验范围。
 
+        - request_data 从 case.get('live_request') 或 case.get('input') 取
         - output 在 ready → 必须有 output 且 output(case.output) 为 True
         - output 不在 ready → 不能有 output
         - reference 同理
-        - input 永远校验 request(case.input)
         """
         if not isinstance(case, dict):
             return False
-        if not self.request(case.get("input")):
+        request_data = case.get("live_request") or case.get("input")
+        if not isinstance(request_data, dict) or not self.request(request_data):
             return False
         has_output = "output" in case and case.get("output") is not None
         if "output" in self._ready:
@@ -178,7 +179,8 @@ class LiveSchemaCheck:
             return ["case 不是 dict"]
         cid = str(case.get("id") or case.get("case_id") or "")
         tag = f"[{cid}] " if cid else ""
-        if not self.request(case.get("input")):
+        request_data = case.get("live_request") or case.get("input")
+        if not isinstance(request_data, dict) or not self.request(request_data):
             errors.append(f"{tag}input 不符合 REQUEST_SCHEMA")
         has_output = "output" in case and case.get("output") is not None
         if "output" in self._ready:

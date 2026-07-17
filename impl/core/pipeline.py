@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Mapping, Optional
@@ -13,11 +14,11 @@ from .frontend_view import build_frontend_view, project_frontend_extensions
 from .table_view import build_case_pool_table, build_case_pool_table_from_runs, build_trace_table_row, build_trace_table_row_from_run, display_input_for_project
 from .interaction_protocol import normalize_case_interaction, resolve_ready, ready_from_spec
 from .judge import generate_reference
-from .live import interaction_contract, trace_from_live_result
 from .mock_agent import MockAgent, build_spec_from_project, load_live_schema
 from .live_stub import LiveStubGenerationError, LiveStubSchemaError, generate_live_output_with_check
 from .project_loader import load_adapter, load_project, load_project_role_instance, list_projects
-from .schema import AttributeResult, BatchRunResult, CheckReport, ClusterSummary, FallbackDecision, FrontendViewModel, JudgeResult, LiveExecutionResult, MockSpec, ProjectAnalysis, RunTrace, SingleTurnCase, TraceExecutionContext, normalize_attribute_result, normalize_check_report, normalize_cluster_summary, normalize_frontend_view, normalize_judge_result, normalize_mock_case, normalize_mock_dataset, normalize_mock_spec, normalize_run_trace, to_dict, trace_extracted_output, trace_input, trace_normalized_request, trace_output_source
+from .trace import trace_from_live
+from .schema import AttributeResult, BatchRunResult, CheckReport, ClusterSummary, FallbackDecision, FrontendViewModel, JudgeResult, MockSpec, ProjectAnalysis, RunTrace, SingleTurnCase, TraceExecutionContext, normalize_attribute_result, normalize_check_report, normalize_cluster_summary, normalize_frontend_view, normalize_judge_result, normalize_mock_case, normalize_mock_dataset, normalize_mock_spec, normalize_run_trace, to_dict, trace_extracted_output, trace_input, trace_normalized_request, trace_output_source
 
 logger = logging.getLogger(__name__)
 from .state_machine import TraceStateMachineRunner, flatten_gate_decisions, flatten_transition_decisions
@@ -77,7 +78,7 @@ def _case_from_input(project_id: str, case: SingleTurnCase) -> SingleTurnCase:
         input=dict(case.input or {}),
         output=case.output if isinstance(case.output, dict) else None,
         scenario=str(case.scenario or ""),
-        expected_intent=str(case.expected_intent or ""),
+        user_intent=str(case.user_intent or ""),
         reference=case.reference if isinstance(case.reference, dict) else None,
         source=str(case.source or project_id),
         status=str(case.status or "pending"),
@@ -86,20 +87,21 @@ def _case_from_input(project_id: str, case: SingleTurnCase) -> SingleTurnCase:
 
 
 def live_run(project_id: str, case: SingleTurnCase | Dict[str, Any]) -> RunTrace:
-    input_data = case.input if isinstance(case, SingleTurnCase) else case
+    """主流程入口：case → trace_from_live → RunTrace
+
+    流程（spec/adapter/trace.md 第 8 节）：
+    1. 加载 spec / adapter / live
+    2. 调 trace_from_live(live, case) 完成 trace 层职责（意图计算、execute_live、RunTrace 组装）
+
+    trace 和 live 串联方向单向依赖：trace 依赖 live，live 不依赖 trace。
+    """
     spec = load_project(project_id)
     adapter = load_adapter(spec)
-    normalized_case = _case_from_input(project_id, normalize_mock_case(input_data) or SingleTurnCase(id="", input=dict(input_data or {})))
-    contract = interaction_contract(normalized_case)
     from impl.core.live_protocol import ProjectLive
     live = adapter.live()
     if not isinstance(live, ProjectLive):
         raise TypeError(f"{project_id} adapter.live() must return ProjectLive")
-    result = live.deliver(normalized_case, contract)
-    trace = trace_from_live_result(result)
-    trace.execution_mode = "provided" if result.output_source == "provided_output" else "live"
-    trace.ready = ready_from_spec(spec)
-    return trace
+    return trace_from_live(live, case)
 
 
 def _normalize_judge_schema_payload(judge_result: JudgeResult) -> JudgeResult:
@@ -130,7 +132,7 @@ def _normalize_attribute_schema_payload(attribute_result: AttributeResult) -> At
     return normalize_attribute_result(attribute_result) or attribute_result
 
 
-def judge(project_id: str, trace: RunTrace, expected_intent: Optional[str] = None) -> JudgeResult:
+def judge(project_id: str, trace: RunTrace, user_intent: Optional[str] = None) -> JudgeResult:
     spec = load_project(project_id)
     adapter = load_adapter(spec)
     if not getattr(trace, "ready", None):
@@ -141,12 +143,12 @@ def judge(project_id: str, trace: RunTrace, expected_intent: Optional[str] = Non
         judge_inst = load_project_role_instance(spec, "judge", adapter)
         if not isinstance(judge_inst, ProjectJudge):
             raise TypeError("enabled judge draft must provide a ProjectJudge implementation")
-        result = judge_inst.judge_trace(trace, expected_intent=expected_intent)
+        result = judge_inst.judge_trace(trace, user_intent=user_intent)
         return _enforce_judge_live_schema(project_id, trace, normalize_judge_result(result) or result)
     judge_inst = adapter.judge()
     if not isinstance(judge_inst, ProjectJudge):
         raise TypeError(f"{project_id} adapter.judge() must return ProjectJudge")
-    result = judge_inst.judge_trace(trace, expected_intent=expected_intent)
+    result = judge_inst.judge_trace(trace, user_intent=user_intent)
     return _enforce_judge_live_schema(project_id, trace, normalize_judge_result(result) or result)
 
 
@@ -256,11 +258,12 @@ def frontend_view(
 def mock_spec(project_id: str) -> MockSpec:
     spec = load_project(project_id)
     analysis_result = analyze_project(project_id)
+    handoff = analysis_result.analysis_handoff if isinstance(analysis_result.analysis_handoff, dict) else {}
     mock = normalize_mock_spec({
         "input_modes": ["single_turn", "interactive_intent"],
-        "case_sources": analysis_result.mock_handoff.get("case_sources", []),
-        "intent_generation_guidance": json.dumps(analysis_result.mock_handoff.get("mock_guidance", {}), ensure_ascii=False),
-        "expected_intent_format": json.dumps(analysis_result.mock_handoff.get("expected_intent_format", {}), ensure_ascii=False),
+        "case_sources": handoff.get("case_sources", []),
+        "intent_generation_guidance": analysis_result.mock_guidance,
+        "user_intent_format": json.dumps(handoff.get("user_intent_format", {}), ensure_ascii=False),
     })
     return mock if mock is not None else MockSpec()
 
@@ -320,7 +323,7 @@ def _unsupported_interactive_run(project_id: str, case_id: str, source_case: Dic
         fallback_type="unsupported",
         status="needs_human_review",
         reason="interactive_intent is not supported by this project adapter",
-        missing_evidence=["live.run_interactive"],
+        missing_evidence=["MultiTurnInteractiveLive"],
         recoverable=True,
         needs_human_review=True,
         quality_flags=["unsupported_interactive_intent"],
@@ -332,22 +335,13 @@ def _unsupported_interactive_run(project_id: str, case_id: str, source_case: Dic
         case_id=case_id,
         input=source_case.get("input", source_case) if isinstance(source_case, dict) else {},
         normalized_request={},
-        live_result=LiveExecutionResult(
-            project_id=project_id,
-            case_id=case_id,
-            call_status="failed",
-            call_error="interactive_intent is not supported by this project adapter",
-            output_source="unsupported_interactive_intent",
-            interaction_mode="interactive_intent",
-            fallbacks=[fallback],
-        ),
         status="error",
         error="interactive_intent is not supported by this project adapter",
         runtime_logs=["interactive adapter hook missing"],
         execution_mode="interactive_intent",
         output_source="unsupported_interactive_intent",
         interaction_mode="interactive_intent",
-        execution_trace=[{"stage": "interactive.dispatch", "status": "failed", "evidence": "adapter does not implement run_interactive"}],
+        execution_trace=[{"stage": "interactive.dispatch", "status": "failed", "evidence": "adapter does not inherit MultiTurnInteractiveLive"}],
         fallbacks=[fallback],
     )
     judge_result = JudgeResult(
@@ -355,51 +349,80 @@ def _unsupported_interactive_run(project_id: str, case_id: str, source_case: Dic
         project_id=project_id,
         overall_fulfillment={"status": "not_evaluable"},
         reasoning_summary="该项目 adapter 不支持 interactive_intent，已将该 case 限界为 not_evaluable，不中断批次。",
-        evidence=["live.run_interactive missing"],
+        evidence=["MultiTurnInteractiveLive missing"],
     )
     attribute_result = AttributeResult(
         trace_id=trace.trace_id,
         project_id=project_id,
         case_id=case_id,
         root_cause_hypothesis="当前项目未声明或实现 interactive_intent adapter hook。",
-        evidence=["live.run_interactive missing"],
+        evidence=["MultiTurnInteractiveLive missing"],
         evidence_strength="weak",
     )
     run = _run_payload(trace, judge_result, attribute_result, case_id=case_id, execution_mode="interactive_intent", output_source="unsupported_interactive_intent", error=trace.error)
     return run
 
 
-def _batch_case(index: int, case: Dict[str, Any], project_id: str, expected_intent: Optional[str]) -> Dict[str, Any]:
-    normalized = normalize_case_interaction(project_id, case, index) if isinstance(case, dict) else None
+def _run_interactive_case(project_id: str, normalized: Any) -> Dict[str, Any]:
+    """多轮 case 执行入口：调 trace_from_live 完成多轮执行和 RunTrace 组装。
+
+    职责仅限：加载 spec/adapter/live、不支持场景的兜底、调 trace_from_live、跑下游链路。
+    意图计算由 trace_from_live 内部调 live._resolve_intent；trace 字段由 trace 层从 TraceContext 推导。
+    """
+    from impl.core.live_protocol import MultiTurnInteractiveLive
+
+    spec = load_project(project_id)
+    adapter = load_adapter(spec)
+    live = adapter.live()
+    if not isinstance(live, MultiTurnInteractiveLive):
+        return _unsupported_interactive_run(project_id, normalized.case_id, normalized.source_case)
+
+    # 调 trace 层入口（内部完成意图计算、execute_live、RunTrace 组装）
+    trace = trace_from_live(live, normalized)
+
+    # 继续单轮下游链路（judge/attribute/cluster/check/frontend_view）
+    judge_result = judge(project_id, trace, user_intent=None)
+    attribute_result = attribute(project_id, trace, judge_result)
+    cluster_summary = cluster(project_id, [attribute_result])
+    check_report = check(project_id, trace, judge_result, attribute_result, cluster_summary)
+    frontend = frontend_view(project_id, trace, judge_result, attribute_result, cluster_summary, check_report)
+
+    run = _run_payload(
+        trace,
+        judge_result,
+        attribute_result,
+        case_id=trace.case_id,
+        execution_mode=trace.execution_mode,
+        output_source=trace.output_source,
+    )
+    run["cluster"] = cluster_summary
+    run["check"] = check_report
+    run["frontend_view"] = frontend
+    run["table_row"] = build_trace_table_row(trace, judge_result, attribute_result, frontend, check_report, case_context=run)
+    return run
+
+
+def _batch_case(index: int, case: Dict[str, Any], project_id: str, user_intent: Optional[str]) -> Dict[str, Any]:
+    from impl.core.mock import mock_case_to_single_turn, parse_mock_case
+    stored_case = parse_mock_case(case, project_id=project_id)
+    runtime_case = to_dict(mock_case_to_single_turn(stored_case))
+    normalized = normalize_case_interaction(project_id, runtime_case, index)
     if normalized and normalized.mode == "interactive_intent":
-        try:
-            live = load_adapter(load_project(project_id)).live()
-            run = live.run_interactive(normalized)
-            trace = _run_trace(run)
-            if trace:
-                trace.case_id = trace.case_id or normalized.case_id
-                trace.execution_mode = trace.execution_mode or "interactive_intent"
-                trace.output_source = trace.output_source or "interactive_adapter"
-                run["trace"] = trace
-            run["case_id"] = trace.case_id if trace else normalized.case_id
-            run["execution_mode"] = trace.execution_mode if trace else "interactive_intent"
-            run["output_source"] = trace_output_source(trace) if trace else run.get("output_source") or "interactive_adapter"
-            if not run.get("table_row") and run.get("trace") and run.get("judge"):
-                run["table_row"] = build_trace_table_row(_run_trace(run), _run_judge(run), _run_attribute(run), _run_frontend_view(run), _run_check(run), case_context=run)
-            return run
-        except Exception as exc:
-            return _unsupported_interactive_run(project_id, normalized.case_id, normalized.source_case | {"interactive_error": str(exc)})
+        # _run_interactive_case 内部已处理 isinstance 不支持的兜底；
+        # 这里不要 catch 异常包装为 unsupported，否则会掩盖真实 bug。
+        return _run_interactive_case(project_id, normalized)
 
     case_input = normalized.execution_input if normalized else (case.get("input", case) if isinstance(case, dict) else case)
     if not isinstance(case_input, dict):
         case_input = {"value": case_input}
     case_id = normalized.case_id if normalized else f"case-{index + 1}"
-    case_expected = case.get("expected_intent") if isinstance(case, dict) else None
+    case_expected = stored_case.intent.user_intent
     MAX_RETRIES = 2
     last_exc = None
     for attempt in range(MAX_RETRIES + 1):
         try:
-            run = run_chain(project_id, case_input, expected_intent=case_expected or expected_intent)
+            # 传完整 case（含 scenario/user_intent/metadata），run_chain 内部用 normalize_mock_case 恢复
+            run = run_chain(project_id, runtime_case, user_intent=case_expected or user_intent)
             trace = _run_trace(run)
             if trace:
                 trace.case_id = trace.case_id or case_id
@@ -511,7 +534,7 @@ def _batch_error_run(index: int, case: Dict[str, Any], project_id: str, exc: Exc
 def batch_run(
     project_id: str,
     cases: Iterable[Dict[str, Any]],
-    expected_intent: Optional[str] = None,
+    user_intent: Optional[str] = None,
     concurrency: int = 4,
     on_case_done: Optional[Callable[[int, Dict[str, Any]], None]] = None,
 ) -> BatchRunResult:
@@ -524,7 +547,7 @@ def batch_run(
     max_workers = max(1, min(int(concurrency or 1), len(case_list)))
     runs_by_index: Dict[int, Dict[str, Any]] = {}
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(_batch_case, index, case, project_id, expected_intent): index for index, case in enumerate(case_list)}
+        futures = {executor.submit(_batch_case, index, case, project_id, user_intent): index for index, case in enumerate(case_list)}
         for future in as_completed(futures):
             index = futures[future]
             try:
@@ -570,9 +593,11 @@ def _run_chain_replay(project_id: str, trace: RunTrace, context: TraceExecutionC
     return runner.run(context)
 
 
-def run_chain(project_id: str, case_input: Dict[str, Any], expected_intent: Optional[str] = None) -> Dict[str, Any]:
-    trace = live_run(project_id, SingleTurnCase(id="", input=dict(case_input or {})))
-    judge_result = judge(project_id, trace, expected_intent=expected_intent)
+def run_chain(project_id: str, case_input: Dict[str, Any], user_intent: Optional[str] = None) -> Dict[str, Any]:
+    # case_input 可能是完整 case dict（含 scenario/user_intent/metadata）或仅 input dict；
+    # normalize_mock_case 能从两种形状恢复完整 SingleTurnCase
+    trace = live_run(project_id, case_input)
+    judge_result = judge(project_id, trace, user_intent=user_intent)
     attribute_result = attribute(project_id, trace, judge_result)
     cluster_summary = cluster(project_id, [attribute_result])
     check_report = check(project_id, trace, judge_result, attribute_result, cluster_summary)
@@ -588,6 +613,10 @@ def run_chain(project_id: str, case_input: Dict[str, Any], expected_intent: Opti
 def _fixture_mock_cases(project_id: str) -> list[Dict[str, Any]]:
     """Read persisted mock cases for API/check flows.
 
+    存储格式为 MockCase（三层：标识/intent/live_request）。
+    normalize_mock_case 兼容新旧两种格式，自动转换到 SingleTurnCase 形状
+    供下游 pipeline 消费。
+
     spec/live.md: mock cases are REQUEST_SCHEMA-shaped inputs.  Persisted fixtures are
     the stable source for API smoke checks; generation remains an explicit
     mock_build_* action, not an implicit fallback on every /api/mock_cases call.
@@ -598,7 +627,8 @@ def _fixture_mock_cases(project_id: str) -> list[Dict[str, Any]]:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, list):
         raise ValueError(f"mock cases file must contain a list: {path}")
-    return [to_dict(case) for case in (normalize_mock_case(item) for item in data) if case is not None]
+    from impl.core.mock import parse_mock_case
+    return [to_dict(parse_mock_case(item, project_id=project_id)) for item in data]
 
 
 def mock_build_intent(
@@ -608,6 +638,10 @@ def mock_build_intent(
     template: Optional[Dict[str, Any]] = None,
     required_input_fields: Optional[list[str]] = None,
 ) -> Dict[str, Any]:
+    """生成一条 mock case，返回 MockCase 存储格式。
+
+    MockCase 三层结构：标识 — intent — live_request。
+    """
     spec = load_project(project_id)
     build_spec = build_spec_from_project(spec, scenario=scenario)
     if intent_labels:
@@ -616,47 +650,59 @@ def mock_build_intent(
         build_spec.required_input_fields = list(required_input_fields or [])
     if template:
         build_spec.template = dict(template or {})
-    return to_dict(MockAgent(spec).build(build_spec))
-
-
-def mock_build_interaction(
-    project_id: str,
-    intent_result: Dict[str, Any],
-    live_context: Dict[str, Any],
-    previous_turns: list[Dict[str, Any]],
-) -> Dict[str, Any]:
-    spec = load_project(project_id)
-    next_turn = MockAgent(spec).next_turn(intent_result or {}, previous_turns or [], live_context or {})
-    case_id = str((intent_result or {}).get("case_id") or (intent_result or {}).get("id") or "")
-    input_data = dict((intent_result or {}).get("input") or {})
-    turns = list(input_data.get("turns") or previous_turns or [])
-    if next_turn.get("query"):
-        turns.append({"role": "user", "content": next_turn.get("query")})
-    input_data["turns"] = turns
-    input_data["query"] = next_turn.get("query") or input_data.get("query") or ""
-    return {
-        "case_id": case_id,
-        "input": input_data,
-        "scenario": str((intent_result or {}).get("scenario") or ""),
-        "metadata": {"source": "mock_agent_next_turn", "project_id": project_id, "next_turn": next_turn},
-    }
+    from impl.core.mock import build_mock_case
+    result = MockAgent(spec).build(build_spec)
+    mc = build_mock_case(spec, {"_result": result, "scenario": scenario})
+    # 直接返回 MockCase dataclass，让 to_public_dict 按 PUBLIC_SCHEMA_FIELDS['MockCase'] 序列化
+    # output/reference 即使为 None 也保留（ready 协议控制存在性）
+    return mc
 
 
 def _attach_case_table_rows(project_id: str, cases: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
     for case in cases:
         if isinstance(case, dict):
-            case["table_row"] = {"input": display_input_for_project(project_id, case.get("input"))}
+            request_data = case.get("live_request") or case.get("input") or {}
+            case["table_row"] = {"input": display_input_for_project(project_id, request_data)}
     return cases
+
+
+def _pick_fixtures_with_multiturn(fixtures: list[Dict[str, Any]], count: int) -> list[Dict[str, Any]]:
+    """从 fixtures 里挑 count 条，保证若存在 interactive_intent fixture 则至少带 1 条。
+
+    策略：先按文件顺序取前 count 条；若这批没有多轮 fixture，但 fixtures 里存在多轮 fixture，
+    则用第一条多轮 fixture 替换本批最后一条（保持 count 不变，不改变单轮 fixture 的相对顺序）。
+    """
+    if count <= 0 or not fixtures:
+        return list(fixtures[:max(0, count)])
+
+    def _is_multiturn(case: Dict[str, Any]) -> bool:
+        interaction = case.get("interaction") if isinstance(case, dict) else None
+        if not isinstance(interaction, dict):
+            return False
+        return str(interaction.get("mode") or "") == "interactive_intent"
+
+    picked = list(fixtures[:count])
+    if any(_is_multiturn(c) for c in picked):
+        return picked
+    first_mt = next((c for c in fixtures if _is_multiturn(c)), None)
+    if first_mt is None:
+        return picked
+    picked[-1] = first_mt
+    return picked
 
 
 def mock_cases(project_id: str, count: int = 3, cases_per_scenario: int = 0) -> list[Dict[str, Any]]:
     """生成 mock cases。优先用固化的 fixture；否则用 mock_agent LLM 动态生成。
 
     cases_per_scenario > 0 时按场景遍历生成（每场景 N 条），覆盖 count。
+
+    fixture 切片策略：默认 count 条里若存在 interaction.mode=interactive_intent
+    的多轮 fixture，至少带 1 条进入返回（否则多轮路径无法被下游 batch_run/验收覆盖）。
     """
     fixtures = _fixture_mock_cases(project_id)
     if fixtures:
-        return _attach_case_table_rows(project_id, fixtures[:count])
+        picked = _pick_fixtures_with_multiturn(fixtures, count)
+        return picked
     spec = load_project(project_id)
     live_schema = load_live_schema(project_id)
     scenarios = list(getattr(live_schema, "SCENARIO_ENUM", []) or []) or [""]
@@ -665,15 +711,17 @@ def mock_cases(project_id: str, count: int = 3, cases_per_scenario: int = 0) -> 
         for scenario in scenarios:
             for _ in range(cases_per_scenario):
                 built = mock_build_intent(project_id, scenario=scenario)
-                if built and isinstance(built.get("input"), dict):
-                    cases.append(built)
+                payload = to_dict(built) if built is not None else None
+                if payload and isinstance(payload.get("live_request"), dict):
+                    cases.append(payload)
     else:
         for scenario in scenarios[:count]:
             built = mock_build_intent(project_id, scenario=scenario)
-            if built and isinstance(built.get("input"), dict):
-                cases.append(built)
+            payload = to_dict(built) if built is not None else None
+            if payload and isinstance(payload.get("live_request"), dict):
+                cases.append(payload)
     _ = spec  # 保留 spec 引用以备扩展
-    return _attach_case_table_rows(project_id, cases)
+    return cases
 
 
 def mock_datasets(
@@ -705,20 +753,86 @@ def save_mock_cases(
     project_id: str,
     cases: list[Dict[str, Any]],
     output_path: Optional[str] = None,
+    skip_invalid: bool = False,
 ) -> Dict[str, Any]:
-    """把 cases 写入 JSON 文件。格式与 _fixture_mock_cases 读取的格式一致。
+    """把 cases 写入 JSON 文件，使用 MockCase 存储格式。
+
+    MockCase 三层结构：标识 — 意图层（intent）— API 请求层（live_request）。
+    case.input 校验通过后，转成 MockCase 格式再写盘。
 
     output_path:
         None 或 "default" → impl/data/<project>/mock_cases.json
         其他路径 → 按指定路径写
-    返回 {"path": ..., "case_count": ...}。
+
+    skip_invalid:
+        False（默认）— 如果有 case.input 不符合 REQUEST_SCHEMA，抛 ValueError 阻断固化
+        True — 跳过不符合 schema 的 case，只固化有效的
+
+    返回 {"saved": ..., "save_path": ..., "save_count": ..., "invalid_count": ..., "invalid_cases": ...}。
     """
+    # 校验：所有 case.input 必须符合 REQUEST_SCHEMA（基于 SingleTurnCase 形状校验）
+    live_schema = load_live_schema(project_id)
+    checker = getattr(live_schema, "check", None) if live_schema else None
+    valid_cases = []
+    invalid_cases = []
+
+    if checker:
+        for case in cases:
+            case_input = case.get("input") if isinstance(case, dict) else None
+            if not isinstance(case_input, dict):
+                invalid_cases.append({"case_id": str(case.get("id") or ""), "error": "input 不是 dict"})
+                continue
+            if not checker.request(case_input):
+                # 具体错误
+                errors = checker.case_errors(case) if hasattr(checker, "case_errors") else ["input 不符合 REQUEST_SCHEMA"]
+                invalid_cases.append({"case_id": str(case.get("id") or ""), "errors": errors})
+                continue
+            valid_cases.append(case)
+    else:
+        valid_cases = list(cases)
+
+    if invalid_cases and not skip_invalid:
+        raise ValueError(
+            f"save_mock_cases: {len(invalid_cases)} 个 case 不符合 REQUEST_SCHEMA，拒绝固化。"
+            f"invalid_cases={invalid_cases[:3]}... "
+            f"设置 skip_invalid=True 可跳过无效 case。"
+        )
+
+    # 转 MockCase 存储格式：三层分离（标识 / intent / live_request）
+    from impl.core.schema.normalize import normalize_mock_case
+    from impl.core.mock import single_turn_to_mock_case
+    mock_case_dicts = []
+    for case in valid_cases:
+        stc = normalize_mock_case(case)
+        if stc is None:
+            continue
+        mc = single_turn_to_mock_case(stc, project_id)
+        mock_case_dicts.append({
+            "id": mc.id,
+            "project_id": mc.project_id,
+            "scenario": mc.scenario,
+            "intent": {
+                "user_intent": mc.intent.user_intent,
+                "query": mc.intent.query,
+                "user_context": mc.intent.user_context,
+            },
+            "live_request": mc.live_request,
+            "output": mc.output,
+            "reference": mc.reference,
+        })
+
     target = IMPL_ROOT / "data" / project_id / "mock_cases.json"
     if output_path and output_path != "default":
         target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(cases, ensure_ascii=False, indent=2), encoding="utf-8")
-    return {"saved": True, "save_path": str(target), "save_count": len(cases)}
+    target.write_text(json.dumps(mock_case_dicts, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {
+        "saved": True,
+        "save_path": str(target),
+        "save_count": len(mock_case_dicts),
+        "invalid_count": len(invalid_cases),
+        "invalid_cases": invalid_cases if invalid_cases else None,
+    }
 
 
 def check_mock_data(project_id: str, data_path: Optional[str] = None, cases: Optional[list[Dict[str, Any]]] = None) -> Dict[str, Any]:

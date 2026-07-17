@@ -7,9 +7,10 @@ from impl.core.schema import JudgeResult, ProjectSpec, RunTrace, normalize_judge
 
 
 def application_boundary_from_trace(trace: RunTrace) -> dict[str, Any]:
-    live_result = getattr(trace, "live_result", None)
-    if live_result and isinstance(getattr(live_result, "application_boundary", None), dict) and live_result.application_boundary:
-        return live_result.application_boundary
+    from impl.core.schema import trace_application_boundary
+    boundary = trace_application_boundary(trace)
+    if boundary:
+        return boundary
     empty_boundary: dict[str, Any] = {}
     return empty_boundary
 
@@ -75,7 +76,7 @@ def _build_core_context(spec: ProjectSpec, trace: RunTrace) -> dict:
             "请将 user prompt 中的 critical_intent_dimensions 作为拆分 business_expectations 的骨架，围绕业务指标、目标值与单位、时间范围、拆解维度、stage 路由、planning 可执行性和 SSE 完整性交付判断 fulfillment。\n"
         )
     return {
-        "expected_intent": context.get("expected_intent"),
+        "user_intent": context.get("user_intent"),
         "intent_frame": intent_frame,
         "system_prompt_extras": system_extras,
         "user_prompt_extras": to_dict({

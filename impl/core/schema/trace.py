@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional
 from .base import GateDecision, SubagentResult, TransitionDecision, now_iso
 from .evidence import EvidenceRef, ExecutionTraceEvent
 from .fallback import FallbackDecision
-from .live import LiveExecutionResult
 
 if TYPE_CHECKING:
     from .attribute import AttributeResult
@@ -35,7 +34,7 @@ class TraceStateRecord:
 
 @dataclass
 class RunTrace:
-    # Trace 层：一次被测业务执行链路的主记录，是 judge/attribute 的核心输入；顶层字段是由 live_result 派生的稳定消费索引。
+    # Trace 层：一次被测业务执行链路的完整事实原件，是 judge/attribute/check 的统一输入。
     trace_id: str
     project_id: str
     case_id: str = ""
@@ -43,13 +42,12 @@ class RunTrace:
     normalized_request: Dict[str, Any] = field(default_factory=dict)
     raw_response: Any = None
     extracted_output: Dict[str, Any] = field(default_factory=dict)
-    live_result: Optional[LiveExecutionResult] = None
     execution_mode: str = ""
     output_source: str = ""
     scenario: str = ""
     reference_contract: Dict[str, Any] = field(default_factory=dict)
     application_boundary: Dict[str, Any] = field(default_factory=dict)
-    # project_fields 仅承载 adapter 私有补充；live 调用事实以 live_result 为准。
+    # project_fields 仅承载 adapter 私有补充；共享调用事实必须使用 RunTrace 顶层字段/turn_records。
     project_fields: Dict[str, Any] = field(default_factory=dict)
     runtime_logs: List[str] = field(default_factory=list)
     evidence_refs: List[EvidenceRef] = field(default_factory=list)
@@ -69,6 +67,11 @@ class RunTrace:
     ready: List[str] = field(default_factory=list)
     conversation_transcript: List[Dict[str, Any]] = field(default_factory=list)
     conversation_summary: Dict[str, Any] = field(default_factory=dict)
+    # 每轮业务调用的事实记录。每个 extracted_output 分别符合项目 EXTRACT_OUTPUT_SCHEMA；
+    # turns/transcript/stop_reason 属于 trace，不进入项目 output schema。
+    turn_records: List[Dict[str, Any]] = field(default_factory=list)
+    final_output_turn: Optional[int] = None
+    completion_status: str = ""
     multi_turn_input: Optional[Dict[str, Any]] = None
     fallbacks: List[FallbackDecision] = field(default_factory=list)
 
@@ -77,7 +80,7 @@ class RunTrace:
 class TraceExecutionContext:
     project_id: str
     input_data: Dict[str, Any]
-    expected_intent: Optional[str] = None
+    user_intent: Optional[str] = None
     trace: Optional[RunTrace] = None
     judge_result: Optional["JudgeResult"] = None
     attribute_result: Optional["AttributeResult"] = None

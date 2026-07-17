@@ -36,7 +36,7 @@ def _first_present(payload: dict[str, Any], keys: tuple[str, ...]) -> Any:
 
 
 def _intent_contract_probe(reference: dict[str, Any], actual: dict[str, Any], intent_evidence: dict[str, Any]) -> dict[str, Any]:
-    expected_intent = _first_present(reference, ("intent", "expected_intent", "label"))
+    expected_intent = _first_present(reference, ("intent", "user_intent", "label"))
     actual_intent = _first_present(actual, ("intent", "recognized_intent", "label", "raw_intent"))
     evidence_intent = _first_present(intent_evidence, ("intent", "recognized_intent", "label", "raw_intent"))
     expected_slots = reference.get("required_slots") or reference.get("slots") or []
@@ -256,7 +256,7 @@ def get_runtime_checks(runtime_values: Dict[str, Any], context: Dict[str, Any] |
     expected = context.get("expected") if isinstance(context.get("expected"), dict) else {}
     reference = context.get("reference") if isinstance(context.get("reference"), dict) else {}
     actual_intent = actual_intent or actual.get("intent")
-    expected_intent = expected.get("intent") or reference.get("intent") or context.get("expected_intent")
+    expected_intent = expected.get("intent") or reference.get("intent") or context.get("user_intent")
     if not raw_intent and not actual_intent and not expected_intent:
         return {"tool_type": "runtime_check", "check_type": "intent_mapping", "status": "not_applicable", "evidence": ["当前 trace 未提供 intent 映射检查所需的 raw_intent/intent/reference。"]}
 

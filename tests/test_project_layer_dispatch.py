@@ -231,7 +231,7 @@ def test_pipeline_prefers_enabled_draft_judge_protocol(monkeypatch):
         def build_context(self, trace):
             return {}
 
-        def pre_judge(self, trace, expected_intent=None):
+        def pre_judge(self, trace, user_intent=None):
             return JudgeResult(
                 trace_id=trace.trace_id,
                 project_id=trace.project_id,
@@ -277,7 +277,7 @@ def test_pipeline_rejects_adapter_without_judge_protocol(monkeypatch):
     monkeypatch.setattr(pipeline, "ready_from_spec", lambda spec_arg: [])
 
     with pytest.raises(AttributeError):
-        pipeline.judge("demo", RunTrace(trace_id="trace-1", project_id="demo"), expected_intent="intent")
+        pipeline.judge("demo", RunTrace(trace_id="trace-1", project_id="demo"), user_intent="intent")
 
 
 def test_pipeline_rejects_adapter_without_attribute_protocol(monkeypatch):

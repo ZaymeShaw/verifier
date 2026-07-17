@@ -54,6 +54,11 @@ def _json_error_summary(exc: json.JSONDecodeError) -> str:
     return f"{exc.msg} at line {exc.lineno} column {exc.colno} (char {exc.pos})"
 
 
+def _has_ambiguous_inline_quotes(text: str) -> bool:
+    """Reject repair that would guess whether prose quotes belong inside a JSON string."""
+    return bool(re.search(r'(?<=[\w\u4e00-\u9fff])"(?=[\w\u4e00-\u9fff])', text))
+
+
 def extract_json(text: str) -> Any:
     text = text.strip()
     if not text:
@@ -86,10 +91,13 @@ def extract_json(text: str) -> Any:
             return json.loads(text[start:])
         except json.JSONDecodeError as exc:
             parse_errors.append(f"bare JSON from first bracket: {_json_error_summary(exc)}")
-    try:
-        return json_repair.repair_json(text, return_objects=True)
-    except Exception as exc:
-        parse_errors.append(f"json_repair: {type(exc).__name__}: {exc}")
+    if _has_ambiguous_inline_quotes(text):
+        parse_errors.append("json_repair skipped: ambiguous unescaped quote inside string content")
+    else:
+        try:
+            return json_repair.repair_json(text, return_objects=True)
+        except Exception as exc:
+            parse_errors.append(f"json_repair: {type(exc).__name__}: {exc}")
     preview = text[:500]
     detail = "; ".join(parse_errors[-4:]) if parse_errors else "no JSON object or array found"
     raise JsonExtractionError(

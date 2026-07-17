@@ -30,19 +30,19 @@ def diagnose_llm_failures():
             "project": "marketting-planning-intent",
             "case_id": "mpi-required-slot-missing-1",
             "input": {"user_text": "我要做明年的目标达成规划"},
-            "expected_intent": '{"intent":"nbev_planning","min_confidence":0.7,"required_slots":["year"],"allow_fallback":false}',
+            "user_intent": '{"intent":"nbev_planning","min_confidence":0.7,"required_slots":["year"],"allow_fallback":false}',
         },
         {
             "project": "client_search",
             "case_id": "crosssell_car_customer_insurance-status-011",
             "input": {"query": "已购买保险的客户"},
-            "expected_intent": '{"expected_logic":"AND","expected_conditions":[{"field":"isBuyInsurance","operator":"MATCH","value":"是"}]}',
+            "user_intent": '{"expected_logic":"AND","expected_conditions":[{"field":"isBuyInsurance","operator":"MATCH","value":"是"}]}',
         },
         {
             "project": "client_search",
             "case_id": "logic_negative_existence-001",
             "input": {"query": "男性或者女性客户"},
-            "expected_intent": '{"expected_logic":"AND","expected_conditions":[{"field":"clientSex","operator":"MATCH","value":"男"},{"field":"clientSex","operator":"MATCH","value":"女"}]}',
+            "user_intent": '{"expected_logic":"AND","expected_conditions":[{"field":"clientSex","operator":"MATCH","value":"男"},{"field":"clientSex","operator":"MATCH","value":"女"}]}',
         },
     ]
 
@@ -65,7 +65,7 @@ def diagnose_llm_failures():
             judge_result = judge(
                 project_id=tc["project"],
                 trace=trace,
-                expected_intent=tc.get("expected_intent"),
+                user_intent=tc.get("user_intent"),
             )
 
             # Attribute the result

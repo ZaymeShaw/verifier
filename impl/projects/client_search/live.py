@@ -13,11 +13,10 @@ import yaml as _yaml
 
 from impl.core.http_client import call_project_api
 from impl.core.interaction_protocol import ready_from_spec
-from impl.core.live_protocol import RealServiceLive
+from impl.core.live_protocol import RealServiceLive, SingleTurnLive
 from impl.core.schema import (
     ExecutionTraceEvent,
     JudgeResult,
-    LiveExecutionResult,
     LiveRequest,
     MultiTurnCase,
     ProjectSpec,
@@ -117,27 +116,6 @@ def enhanced_rules(spec: ProjectSpec) -> dict:
         return data if isinstance(data, dict) else {}
     except Exception:
         return {}
-
-
-
-def build_request(spec: ProjectSpec, case: SingleTurnCase | MultiTurnCase) -> LiveRequest:
-    input_data = dict(case.input or {})
-    normalized_request = {
-        "user_text": input_data.get("user_text"),
-        "user_id": input_data.get("user_id") or "eval-user",
-        "trace_id": input_data.get("trace_id") or f"general-eval-{int(time.time() * 1000)}",
-        "session_id": input_data.get("session_id") or "general-eval-session",
-        "source": input_data.get("source") or "askbob",
-        "extra_input_params": dict(input_data.get("extra_input_params") or {}),
-    }
-    return LiveRequest(
-        project_id=spec.project_id,
-        raw_input=input_data,
-        case_id=str(case.id or ""),
-        normalized_request=normalized_request,
-        execution_mode="live_service",
-        session_id=input_data.get("session_id") or "general-eval-session",
-    )
 
 
 
@@ -298,9 +276,10 @@ def build_execution_trace(input_data: Dict[str, Any], request: Dict[str, Any], r
 
 
 def boundary_from_trace(trace: RunTrace, downstream: dict[str, Any] | None = None) -> dict[str, Any]:
-    live_result = getattr(trace, "live_result", None)
-    if live_result and isinstance(getattr(live_result, "application_boundary", None), dict) and live_result.application_boundary:
-        return live_result.application_boundary
+    from impl.core.schema import trace_application_boundary
+    boundary = trace_application_boundary(trace)
+    if boundary:
+        return boundary
     return _application_boundary(downstream or {})
 
 
@@ -371,41 +350,30 @@ def strip_non_ready_fields(spec: ProjectSpec, case: Dict[str, Any]) -> Dict[str,
     return case
 
 
-class ClientSearchLive(RealServiceLive):
+class ClientSearchLive(RealServiceLive, SingleTurnLive):
     def __init__(self, spec: ProjectSpec):
         super().__init__(spec)
 
-    def build_request(self, case: SingleTurnCase | MultiTurnCase) -> Dict[str, Any]:
-        return build_request(self.spec, case).normalized_request
-
-    def deliver_real(self, request: LiveRequest) -> Any:
+    def deliver_real(self, request: Any) -> Any:
+        normalized_request = request.normalized_request if isinstance(request, LiveRequest) else (request if isinstance(request, dict) else {})
         with _SERVICE_LOCK:
-            raw_response = call_project_api(self.spec, request.normalized_request)
+            raw_response = call_project_api(self.spec, normalized_request)
         if isinstance(raw_response, dict):
             raw_response = {**raw_response, "_downstream_search": _probe_downstream_search(self.spec, raw_response)}
-        extracted_output = extract_output(raw_response)
-        return LiveExecutionResult(
-            project_id=request.project_id,
-            case_id=request.case_id,
-            session_id=request.session_id,
-            raw_input=request.raw_input,
-            normalized_request=request.normalized_request,
-            raw_response=raw_response,
-            extracted_output=extracted_output,
-            output_source=request.execution_mode,
-            execution_trace=build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output),
-            project_fields=project_fields(raw_response, extracted_output, self.spec),
-            application_boundary=application_boundary(raw_response, extracted_output),
-        )
+        return raw_response
 
-    def extract_output(self, raw_response: Any, request: LiveRequest) -> Dict[str, Any]:
+    def extract_output(self, raw_response: Any, request: Any) -> Dict[str, Any]:
         return extract_output(raw_response)
 
-    def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest, application_boundary: Dict[str, Any]) -> Dict[str, Any]:
+    def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any], request: Any, application_boundary: Dict[str, Any]) -> Dict[str, Any]:
         return project_fields(raw_response, extracted_output, self.spec)
 
-    def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> Dict[str, Any]:
+    def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any], request: Any) -> Dict[str, Any]:
         return application_boundary(raw_response, extracted_output)
 
-    def build_execution_trace(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> list:
-        return build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output)
+    def build_execution_trace(self, raw_response: Any, extracted_output: Dict[str, Any], request: Any) -> list:
+        return build_execution_trace(
+            request.raw_input if hasattr(request, "raw_input") else {},
+            request.normalized_request if hasattr(request, "normalized_request") else (request if isinstance(request, dict) else {}),
+            raw_response, extracted_output,
+        )

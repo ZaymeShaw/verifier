@@ -70,7 +70,7 @@ def main(argv=None):
     p = sub.add_parser("judge")
     p.add_argument("--project", required=True)
     p.add_argument("--trace", required=True)
-    p.add_argument("--expected-intent")
+    p.add_argument("--user-intent")
 
     p = sub.add_parser("attribute")
     p.add_argument("--project", required=True)
@@ -90,12 +90,12 @@ def main(argv=None):
     p = sub.add_parser("run-chain")
     p.add_argument("--project", required=True)
     p.add_argument("--input", required=True)
-    p.add_argument("--expected-intent")
+    p.add_argument("--user-intent")
 
     p = sub.add_parser("batch-run")
     p.add_argument("--project", required=True)
     p.add_argument("--inputs", required=True)
-    p.add_argument("--expected-intent")
+    p.add_argument("--user-intent")
     p.add_argument("--concurrency", type=int, default=4)
 
     args = parser.parse_args(argv)
@@ -134,7 +134,7 @@ def main(argv=None):
         if not result.get("ok"):
             raise SystemExit(1)
     elif args.cmd == "judge":
-        emit(pipeline.judge(args.project, trace_from_json(load_json_arg(args.trace)), args.expected_intent))
+        emit(pipeline.judge(args.project, trace_from_json(load_json_arg(args.trace)), args.user_intent))
     elif args.cmd == "attribute":
         emit(pipeline.attribute(args.project, trace_from_json(load_json_arg(args.trace)), judge_from_json(load_json_arg(args.judge))))
     elif args.cmd == "cluster":
@@ -151,13 +151,13 @@ def main(argv=None):
         )
     elif args.cmd == "run-chain":
         _cli_check_request(args.project, load_json_arg(args.input))
-        emit(run_chain(args.project, load_json_arg(args.input), expected_intent=args.expected_intent))
+        emit(run_chain(args.project, load_json_arg(args.input), user_intent=args.user_intent))
     elif args.cmd == "batch-run":
         inputs = load_json_arg(args.inputs)
         if isinstance(inputs, list):
             for item in inputs:
                 _cli_check_request(args.project, item)
-        emit(pipeline.batch_run(args.project, inputs, expected_intent=args.expected_intent, concurrency=args.concurrency))
+        emit(pipeline.batch_run(args.project, inputs, user_intent=args.user_intent, concurrency=args.concurrency))
 
 
 def _cli_check_request(project_id: str, input_data: Any) -> None:

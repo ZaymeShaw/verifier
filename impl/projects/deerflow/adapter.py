@@ -23,7 +23,7 @@ class Adapter(ProjectAdapter):
 
     def _load_live(self):
         from impl.projects.deerflow.live import DeerflowLive
-        return DeerflowLive(self.spec)
+        return DeerflowLive(self.spec, self)
 
     def _load_mock(self):
         from impl.projects.deerflow.mock import DeerflowMock

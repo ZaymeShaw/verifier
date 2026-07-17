@@ -5,13 +5,38 @@ from typing import Any, Dict, List, Optional
 
 
 @dataclass
+class MockIntentOutput:
+    """mock_agent 意图生成输出（build_intent 结构化约束）。
+
+    三层结构（背景 → 意图 → 表达）：
+        user_context: 用户背景/画像/使用目标
+        user_intent:  用户基于背景产生的具体意图
+        query:        用户基于意图说出口的原话
+        scenario:     场景名称（trace.md 第五节：build_user_intent 输出时填充）
+        live_request: provided-output 项目预构建的请求（trace_from_live 设置，绕过 LLM）
+    """
+    user_intent: str
+    query: str
+    user_context: Dict[str, Any] = field(default_factory=dict)
+    scenario: str = ""
+    live_request: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class MockNextTurnOutput:
+    """mock_agent 下一轮生成输出（next_turn 结构化约束）。"""
+    query: str
+    turn_index: int = 0
+
+
+@dataclass
 class SingleTurnCase:
-    # Mock 层：单轮测试输入，承载用户输入、预期意图、参考输出和样本元数据。
+    # Mock 层：单轮测试输入，承载用户输入、参考输出和样本元数据。
     id: str
     input: Dict[str, Any]
     output: Optional[Dict[str, Any]] = None
     scenario: str = ""
-    expected_intent: str = ""
+    user_intent: str = ""
     reference: Optional[Dict[str, Any]] = None
     source: str = "user_written"
     status: str = "pending"
@@ -45,7 +70,7 @@ class MultiTurnInteraction:
 @dataclass
 class MultiTurnCase(SingleTurnCase):
     # Mock 层：多轮 case = 原始意图 + 交互策略 + mock agent 配置。
-    user_intent: Dict[str, Any] = field(default_factory=dict)
+    intent_plan: Dict[str, Any] = field(default_factory=dict)
     interaction: MultiTurnInteraction = field(default_factory=MultiTurnInteraction)
     mock_agent: Dict[str, Any] = field(default_factory=dict)
 
@@ -57,7 +82,7 @@ class MockDataset:
     name: str
     dimension_type: str
     description: str = ""
-    cases: List[SingleTurnCase | MultiTurnCase] = field(default_factory=list)
+    cases: List[MockCase] = field(default_factory=list)
     case_count: int = 0
 
 
@@ -67,7 +92,7 @@ class MockSpec:
     input_modes: List[str] = field(default_factory=list)
     case_sources: List[str] = field(default_factory=list)
     intent_generation_guidance: str = ""
-    expected_intent_format: str = ""
+    user_intent_format: str = ""
 
 
 @dataclass
@@ -89,6 +114,49 @@ class MockBuildResult:
     input: Dict[str, Any]                                             # query/turns/user_intent 等用户侧输入
     output: Optional[Dict[str, Any]] = None                          # 仅当 ready 含 output 时 mock_agent 产出
     reference: Optional[Dict[str, Any]] = None                       # 仅当 ready 含 reference 时 mock_agent 产出
-    expected_intent: Optional[str] = None
+    user_intent: str = ""
+    query: str = ""                                                   # 意图层用户原话（build_intent 产出后保留，build_live_request 不覆盖）
+    user_context: Dict[str, Any] = field(default_factory=dict)
     scenario: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+# ── MockCase 存储 schema（与运行时 SingleTurnCase 解耦） ──
+# 三层分离：元数据 → 意图层 → API 请求层。
+# 依赖链路：业务live系统+live协议层 → live schema → 项目扩展点+mock形状
+# mock依赖链路：build_intent → build_request → live schema.REQUEST_SCHEMA
+#
+# 对比旧 SingleTurnCase：
+#  旧格式：input 混了 REQUEST_SCHEMA 字段 + 冗余 scenario/metadata，
+#          user_intent/query 可能覆盖可能丢失，格式因项目而异。
+#  新格式：intent（MockIntentOutput）存用户原始语义（独立于 API 形状），
+#          live_request 存纯 REQUEST_SCHEMA 形状（零冗余），
+#          project_id 提到顶层。
+
+
+@dataclass
+class MockCase:
+    """统一 mock case 存储 schema。
+
+    三层分离：元数据 — 意图层 — API 请求层。
+    intent 复用 MockIntentOutput（build_intent 的结构化产出）。
+    live_request 对齐 live_schema.REQUEST_SCHEMA，零冗余。
+    output/reference 由 ready 协议控制存在性。
+
+    MockCase 只用于存储/传输（JSON 序列化），不流入 pipeline 运行时。
+    协议层提供 _to_mock_case() / _from_mock_case() 做边界转换。
+    """
+    # ── 标识 ──
+    id: str
+    project_id: str
+    scenario: str
+
+    # ── 意图层（build_intent 产出，复用 MockIntentOutput） ──
+    intent: MockIntentOutput
+
+    # ── API 请求层（build_request 产出，对齐 REQUEST_SCHEMA） ──
+    live_request: Dict[str, Any]
+
+    # ── ready 协议层 ──
+    output: Optional[Dict[str, Any]] = None
+    reference: Optional[Dict[str, Any]] = None

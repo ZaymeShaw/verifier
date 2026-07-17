@@ -327,9 +327,16 @@ def _build_core_context(spec: ProjectSpec, trace: RunTrace) -> Dict[str, Any]:
             "## client_search 意图关键维度\n"
             "请将 user prompt 中的 critical_intent_dimensions 作为拆分 business_expectations 的骨架。\n"
         )
+    system_extras.append(
+        "## client_search fulfillment_assessments 字段约束\n"
+        "`query_logic` / `conditions` / `matched_level` / `intent_summary` 是业务输出字段，属于 EXTRACT_OUTPUT 范畴，"
+        "**不得作为 fulfillment_assessments 的顶层字段输出**。"
+        "fulfillment_assessments 只能产 schema 定义的标准字段（expectation_id / status / expected_evidence / actual_evidence / downstream_impact / blocking 等），"
+        "把 conditions / query_logic 的对比证据写入 `expected_evidence` 与 `actual_evidence` 数组中即可。\n"
+    )
 
     return {
-        "expected_intent": context.get("expected_intent"),
+        "user_intent": context.get("user_intent"),
         "intent_frame": intent_frame,
         "system_prompt_extras": system_extras,
         "user_prompt_extras": to_dict({

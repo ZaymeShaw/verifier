@@ -6,26 +6,9 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict
 
-from impl.core.schema import ExecutionTraceEvent, LiveExecutionResult, LiveRequest, MultiTurnCase, ProjectSpec, SingleTurnCase
+from impl.core.schema import ExecutionTraceEvent, LiveRequest, MultiTurnCase, ProjectSpec, SingleTurnCase
 
 APPLICATION_BOUNDARY = {"scope": "single_turn_intent_recognition", "excludes": ["multi_turn_planning", "sse_card_generation"]}
-
-
-def build_request(case: SingleTurnCase | MultiTurnCase) -> dict[str, Any]:
-    input_data = dict(case.input or {})
-    query = input_data.get("query") or ""
-    reference = input_data.get("reference") or {}
-    expected_intent = input_data.get("expected_intent") or (reference.get("intent") if isinstance(reference, dict) else None)
-    session_id = str(input_data.get("session_id") or f"eval-{case.id or input_data.get('case_id') or input_data.get('id') or int(time.time() * 1000)}")
-    return {
-        "case_id": str(case.id or input_data.get("case_id") or input_data.get("id") or f"intent-case-{int(time.time() * 1000)}"),
-        "session_id": session_id,
-        "query": str(query),
-        "scenario": str(input_data.get("scenario") or "intent_recognition"),
-        "expected_intent": expected_intent,
-        "reference": reference if isinstance(reference, dict) else {"intent": reference},
-        "metadata": dict(input_data.get("metadata") or {}),
-    }
 
 
 def _live_request_body(request: LiveRequest | dict[str, Any]) -> dict[str, Any]:
@@ -128,7 +111,7 @@ def project_fields(raw_response: Any, extracted_output: dict[str, Any]) -> dict[
         "case_id": request.get("case_id") or "",
         "session_id": request.get("session_id") or "",
         "reference": request.get("reference") or {},
-        "expected_intent": request.get("expected_intent"),
+        "user_intent": request.get("user_intent"),
         "intent_evidence": intent_evidence(raw_response, extracted_output),
         "application_boundary": application_boundary(raw_response, extracted_output),
     }
@@ -156,50 +139,26 @@ def build_execution_trace(input_data: dict[str, Any], request: dict[str, Any], r
     ]
 
 
-from impl.core.live_protocol import RealServiceLive
+from impl.core.live_protocol import LiveServiceUnavailableError, RealServiceLive, SingleTurnLive
 
 
-class MarketingIntentLive(RealServiceLive):
+class MarketingIntentLive(RealServiceLive, SingleTurnLive):
     """marketting-planning-intent 项目 Live 实现（新协议）。"""
 
     def __init__(self, spec: ProjectSpec):
         super().__init__(spec)
 
-    def build_request(self, case: SingleTurnCase | MultiTurnCase) -> Dict[str, Any]:
-        return build_request(case)
-
     def deliver_real(self, request: LiveRequest) -> Any:
-        import time as _time
-        start = _time.time()
         try:
             body = json.dumps(_live_request_body(request), ensure_ascii=False).encode("utf-8")
             url = str(self.spec.api.get("base_url") or "").rstrip("/") + "/" + str(self.spec.api.get("endpoint") or "").lstrip("/")
             api_request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method=str(self.spec.api.get("method") or "POST").upper())
             with urllib.request.urlopen(api_request, timeout=float(self.spec.api.get("timeout") or 60)) as response:
-                raw_response = {"raw": response.read().decode("utf-8"), "request": request.normalized_request}
-            call_status = "succeeded"
-            call_error = None
+                normalized = request.normalized_request if isinstance(request, LiveRequest) else request
+                raw_response = {"raw": response.read().decode("utf-8"), "request": normalized}
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            raw_response = None
-            call_status = "failed"
-            call_error = f"marketing-planning intent service unavailable: {exc}"
-        extracted_output = extract_output(raw_response) if call_status == "succeeded" else {}
-        return LiveExecutionResult(
-            project_id=request.project_id,
-            case_id=request.case_id,
-            session_id=request.session_id,
-            raw_input=request.raw_input,
-            normalized_request=request.normalized_request,
-            call_status=call_status,
-            raw_response=raw_response,
-            call_error=call_error,
-            runtime_ms=int((_time.time() - start) * 1000),
-            extracted_output=extracted_output,
-            output_source=request.execution_mode,
-            execution_trace=build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output, self.spec),
-            project_fields=project_fields(raw_response, extracted_output),
-            application_boundary=application_boundary(raw_response, extracted_output),
-        )
+            raise LiveServiceUnavailableError(f"marketing-planning intent service unavailable: {exc}") from exc
+        return raw_response
 
     def extract_output(self, raw_response: Any, request: LiveRequest) -> Dict[str, Any]:
         return extract_output(raw_response)
@@ -211,4 +170,6 @@ class MarketingIntentLive(RealServiceLive):
         return application_boundary(raw_response, extracted_output)
 
     def build_execution_trace(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> list:
-        return build_execution_trace(request.raw_input, request.normalized_request, raw_response, extracted_output, self.spec)
+        normalized_request = request.normalized_request if isinstance(request, LiveRequest) else request
+        normalized_request = normalized_request if isinstance(normalized_request, dict) else {}
+        return build_execution_trace(normalized_request, normalized_request, raw_response, extracted_output, self.spec)

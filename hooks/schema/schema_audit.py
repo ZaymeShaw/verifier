@@ -542,16 +542,15 @@ def check_occam_runtime_invariants(cfg: Dict[str, Any]) -> List[Issue]:
             )
 
     attribute = load_fixture("impl.core.schema.attribute.AttributeResult")
-    divergence = attribute.earliest_divergence if isinstance(attribute.earliest_divergence, dict) else {}
-    if attribute.causal_category and not (divergence.get("stage") or divergence.get("node")):
+    if attribute.expectation_attributions and not attribute.root_cause_hypothesis:
         issues.append(
             Issue(
-                kind="attribute_missing_canonical_divergence",
+                kind="attribute_missing_root_cause_summary",
                 severity="error",
                 file="impl/core/schema/attribute.py",
-                symbol="AttributeResult.earliest_divergence",
-                message="AttributeResult should locate causal_category through earliest_divergence.stage or earliest_divergence.node in canonical fixtures.",
-                detected_format="missing earliest_divergence stage/node",
+                symbol="AttributeResult.root_cause_hypothesis",
+                message="Canonical attribution fixtures with expectation attributions must retain a root-cause summary.",
+                detected_format="missing root_cause_hypothesis",
             )
         )
     return issues

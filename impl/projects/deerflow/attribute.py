@@ -30,7 +30,7 @@ def _as_text(value: Any) -> str:
 
 def _planning_summary(trace: RunTrace) -> Dict[str, Any]:
     project_fields = trace.project_fields or {} if isinstance(trace.project_fields, dict) else {}
-    return project_fields.get("planning_summary") if isinstance(project_fields, dict) else {}
+    return project_fields.get("planning_summary") or {}
 
 
 def _deerflow_local_evidence_probe(trace: RunTrace, judge_result: JudgeResult, request: Dict[str, Any], reference: Dict[str, Any], actual: Dict[str, Any]) -> Dict[str, Any]:

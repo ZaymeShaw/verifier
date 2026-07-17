@@ -6,21 +6,22 @@ from impl.core.schema import JudgeResult, ProjectSpec, RunTrace, to_dict
 
 
 def application_boundary_from_trace(trace: RunTrace) -> dict[str, Any]:
-    live_result = getattr(trace, "live_result", None)
-    if live_result and isinstance(getattr(live_result, "application_boundary", None), dict) and live_result.application_boundary:
-        return live_result.application_boundary
+    from impl.core.schema import trace_application_boundary
+    boundary = trace_application_boundary(trace)
+    if boundary:
+        return boundary
     empty_boundary: dict[str, Any] = {}
     return empty_boundary
 
 
 def build_judge_context(trace: RunTrace) -> Dict[str, Any]:
     reference_contract = trace.reference_contract if isinstance(trace.reference_contract, dict) else {}
-    expected_intent = reference_contract.get("intent") or (trace.normalized_request or {}).get("expected_intent")
+    user_intent = reference_contract.get("intent") or (trace.normalized_request or {}).get("user_intent")
     return {
         "project_type": "single_turn_marketing_intent_recognition",
         "current_case_only": True,
         "reference_contract": reference_contract,
-        "expected_intent": expected_intent,
+        "user_intent": user_intent,
         "application_boundary": application_boundary_from_trace(trace),
         "critical_intent_dimensions": ["intent_label", "required_slots_or_entities", "confidence_threshold", "fallback_policy", "dispatch_boundary"],
     }
@@ -44,7 +45,7 @@ def build_intent_frame(trace: RunTrace) -> Dict[str, Any]:
         "output_semantics": "resolve the current user query to a safe marketing-planning intent label and required slots before planning dispatch",
         "business_task_type": "single_turn_marketing_intent_recognition",
         "critical_intent_dimensions": ["intent_label", "required_slots_or_entities", "confidence_threshold", "fallback_policy", "dispatch_boundary"],
-        "expected_intent": context.get("expected_intent"),
+        "user_intent": context.get("user_intent"),
         "reference_contract": context.get("reference_contract") or {},
         "boundary_rules": context.get("application_boundary") or {},
     }
@@ -57,7 +58,7 @@ def reference_output(reference: Dict[str, Any], trace: RunTrace) -> Dict[str, An
         confidence = output.get("confidence") if output.get("confidence") is not None else 1.0
     path_types = reference.get("path_types") if reference.get("path_types") is not None else reference.get("required_path_types")
     return {
-        "intent": str(reference.get("intent") or (trace.normalized_request or {}).get("expected_intent") or "unknown"),
+        "intent": str(reference.get("intent") or (trace.normalized_request or {}).get("user_intent") or "unknown"),
         "confidence": float(confidence) if isinstance(confidence, (int, float)) else 1.0,
         "target_value": reference.get("target_value") if reference.get("target_value") is not None else output.get("target_value"),
         "path_types": path_types if isinstance(path_types, list) else output.get("path_types"),
@@ -77,7 +78,7 @@ def intent_contract_reasoning_summary(trace: RunTrace, reference: Dict[str, Any]
     for item in list(missing or []) + list(wrong or []):
         if isinstance(item, dict):
             failed.append(str(item.get("requirement") or item.get("status") or item))
-    return f"当前单轮意图识别未满足 reference contract：query={query}，expected_intent={expected_intent}，actual_intent={actual_intent}，confidence={confidence}，min_confidence={min_confidence}，失败项={failed}，整体判定为 incorrect。"
+    return f"当前单轮意图识别未满足 reference contract：query={query}，user_intent={expected_intent}，actual_intent={actual_intent}，confidence={confidence}，min_confidence={min_confidence}，失败项={failed}，整体判定为 incorrect。"
 
 
 def normalize_judge_result(trace: RunTrace, judge_result: JudgeResult) -> JudgeResult:
@@ -92,7 +93,7 @@ def normalize_judge_result(trace: RunTrace, judge_result: JudgeResult) -> JudgeR
             judge_result.expected = output
     missing = list(judge_result.missing or [])
     wrong = list(judge_result.wrong or [])
-    expected_intent = reference.get("intent") or (trace.normalized_request or {}).get("expected_intent")
+    expected_intent = reference.get("intent") or (trace.normalized_request or {}).get("user_intent")
     actual_intent = output.get("intent")
     if expected_intent and actual_intent != expected_intent:
         wrong.append({"requirement": "intent", "expected_fragment": expected_intent, "actual_fragment": actual_intent, "status": "wrong", "evidence": ["normalized intent differs from reference intent"]})
@@ -152,7 +153,7 @@ def reconcile_judge_result(trace: RunTrace, judge_result: JudgeResult) -> JudgeR
     return judge_result
 
 
-def pre_judge_result(trace: RunTrace, expected_intent: Optional[str] = None) -> Optional[JudgeResult]:
+def pre_judge_result(trace: RunTrace, user_intent: Optional[str] = None) -> Optional[JudgeResult]:
     return None
 
 
@@ -167,7 +168,7 @@ def _build_core_context(trace: RunTrace) -> dict:
             "请将 user prompt 中的 critical_intent_dimensions 作为拆分 business_expectations 的骨架，围绕 intent label、必需 slots/entities、置信度阈值、fallback 策略和 dispatch 边界判断 fulfillment。\n"
         )
     return {
-        "expected_intent": context.get("expected_intent"),
+        "user_intent": context.get("user_intent"),
         "intent_frame": intent_frame,
         "system_prompt_extras": system_extras,
         "user_prompt_extras": to_dict({
@@ -194,8 +195,8 @@ class MarketingIntentJudge(ProjectJudge):
     def build_intent_frame(self, trace: RunTrace, context: Optional[dict] = None) -> dict:
         return build_intent_frame(trace)
 
-    def pre_judge(self, trace: RunTrace, expected_intent: Optional[str] = None) -> Optional[JudgeResult]:
-        return pre_judge_result(trace, expected_intent=expected_intent)
+    def pre_judge(self, trace: RunTrace, user_intent: Optional[str] = None) -> Optional[JudgeResult]:
+        return pre_judge_result(trace, user_intent=user_intent)
 
     def normalize_result(self, trace: RunTrace, result: JudgeResult) -> JudgeResult:
         from impl.core.schema import normalize_judge_result as normalize_core_judge_result

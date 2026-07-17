@@ -16,7 +16,7 @@
     <select id="project" onchange="switchProject()"></select>
     <label>Input JSON</label>
     <textarea id="input">{"query":"45岁女性保费10万以上"}</textarea>
-    <label>Expected Intent（可选，传给 judge agent）</label>
+    <label>User Intent（可选，传给 judge agent）</label>
     <textarea id="expected" placeholder="可留空；填写后用于 judge 当前 RunTrace。"></textarea>
     <div class="row">
       <button onclick="liveRun()">请求业务服务</button>
@@ -148,24 +148,32 @@ function renderStateMachine(trace, judge, attribute){
 }
 function renderConversation(trace){
   const row=tableRow();
-  const turns=row.conversation_detail || [];
+  let turns=(trace?.turn_records || []).map((record,index)=>{
+    const request=record.request || {};
+    const output=record.extracted_output || {};
+    const content=request.user_text || request.query || request.content || request.input?.messages?.at?.(-1)?.content || JSON.stringify(request);
+    const extracted=output.robot_text || output.reply_text || output.actual_answer || output.summary || JSON.stringify(output);
+    return {turn_index:record.turn_index || index+1,role:'turn',content,stage:output.stage || '',extracted_summary:extracted,call_status:record.call_status || '',runtime_ms:record.runtime_ms || 0,error:record.error || ''};
+  });
+  if(!turns.length){turns=row.conversation_detail || [];}
+  if(!turns.length && trace?.conversation_transcript){
+    turns=trace.conversation_transcript;
+  }
   if(!turns.length){return '';}
   const summary=row.conversation_summary || trace?.conversation_summary || {};
-  const rows=turns.map((turn,index)=>'<div class="kv"><b>第 '+escapeHtml(turn.turn_index || index+1)+' 轮 '+escapeHtml(turn.role || '-')+'：</b>'+escapeHtml(turn.content || '')+(turn.stage?' · 阶段：'+escapeHtml(turn.stage):'')+(turn.extracted_summary?' · 摘要：'+escapeHtml(turn.extracted_summary):'')+'</div>').join('');
-  return '<details class="inline-details" open><summary>多轮对话（'+escapeHtml(turns.length)+' 条消息）</summary><div style="padding:0 12px 10px">'+
+  const rows=turns.map((turn,index)=>'<div class="kv"><b>第 '+escapeHtml(turn.turn_index || index+1)+' 轮：</b>'+escapeHtml(turn.content || '')+(turn.stage?' · 阶段：'+escapeHtml(turn.stage):'')+(turn.extracted_summary?' · 输出：'+escapeHtml(turn.extracted_summary):'')+(turn.call_status?' · 状态：'+escapeHtml(turn.call_status):'')+(turn.runtime_ms?' · 耗时：'+escapeHtml(turn.runtime_ms)+'ms':'')+(turn.error?' · 错误：'+escapeHtml(turn.error):'')+'</div>').join('');
+  return '<details class="inline-details" open><summary>多轮执行（'+escapeHtml(turns.length)+' 轮）</summary><div style="padding:0 12px 10px">'+
     '<div class="kv"><b>停止原因：</b>'+escapeHtml(trace?.stop_reason || summary.stop_reason || '-')+'</div>'+
-    '<div class="kv"><b>最终阶段：</b>'+escapeHtml(summary.final_stage || trace?.extracted_output?.stage || '-')+'</div>'+rows+'</div></details>';
+    '<div class="kv"><b>最终阶段：</b>'+escapeHtml(summary.final_stage || trace?.extracted_output?.stage || trace?.live_result?.multi_turn_state?.final_stage || '-')+'</div>'+rows+'</div></details>';
 }
 function outputDisplayText(output){
   if(!output || typeof output!=='object'){return output || '';}
-  if(Array.isArray(output.turns) && output.turns.length){return outputDisplayText(output.turns[output.turns.length-1]);}
   if(output.summary || output.user_visible_text || output.actual_answer || output.robot_text){return output.summary || output.user_visible_text || output.actual_answer || output.robot_text;}
   if(output.query && Array.isArray(output.conditions)){return output.query+' → '+output.conditions.map(item=>[item.field,item.operator,item.value].filter(v=>v!==undefined).join(' ')).join('; ');}
   return Object.keys(output).length ? JSON.stringify(output, null, 2) : '';
 }
 function structuredDisplay(output){
   if(!output || typeof output!=='object'){return {};}
-  if(Array.isArray(output.turns)){return {turns: output.turns};}
   if(output.structured_output || output.logic){return output.structured_output || output.logic;}
   if(Array.isArray(output.conditions)){return {query:output.query,query_logic:output.query_logic,conditions:output.conditions};}
   return Object.keys(output).length ? output : {};
@@ -247,7 +255,7 @@ async function runJudge(){
     }
     const body={project:project(),trace:requireValue(currentTrace,'lastTrace')};
     const expected=expectedIntent();
-    if(expected){body.expected_intent=expected;}
+    if(expected){body.user_intent=expected;}
     const data=await post('/api/judge', body);
     currentJudge=data;currentAttribute=null;
     sessionStorage.setItem(scopedKey('lastJudge'), JSON.stringify(data));sessionStorage.removeItem(scopedKey('lastAttribute'));
@@ -271,7 +279,7 @@ async function runChain(){
   try{
     const body=payload();
     const expected=expectedIntent();
-    if(expected){body.expected_intent=expected;}
+    if(expected){body.user_intent=expected;}
     const data = await post('/api/run_chain', body);
     currentTrace=data.trace;currentJudge=data.judge;currentAttribute=data.attribute;currentCluster=data.cluster;currentView=data.frontend_view || null;
     sessionStorage.setItem(scopedKey('lastTrace'), JSON.stringify(currentTrace));

@@ -4,42 +4,96 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List
+import time
+from typing import Any, Dict, List, Optional
 
-from impl.core.mock_protocol import ProjectMock
+from impl.core.mock_protocol import MultiTurnInteractiveMock, ProjectMock
 from impl.core.schema import ProjectSpec, SingleTurnCase, MultiTurnCase
 
 
-class DeerflowMock(ProjectMock):
-    """deerflow 项目 Mock 实现"""
+class DeerflowMock(MultiTurnInteractiveMock, ProjectMock):
+    """deerflow 项目 Mock 实现。
 
-    def build_user_intent(self, scenario: str) -> Dict[str, Any]:
-        """扮演用户产意图：委托 MockAgent.build_intent"""
+    继承 MultiTurnInteractiveMock（交互模式=多轮）+ ProjectMock。
+    实现 build_user_intent（场景级意图）+ build_next_request（每轮 request）。
+
+    spec/adapter/trace.md 行 92：build_next_request 签名
+    (intent, accumulated) → REQUEST_SCHEMA。产出必须符合 live_schema.REQUEST_SCHEMA（DeerflowApiRequest）。
+    """
+
+    def build_user_intent(self, scenario: str):
+        """扮演用户产意图：委托 MockAgent.build_intent 并转 MockIntentOutput。"""
         from impl.core.mock_agent import MockAgent, build_spec_from_project
         agent = MockAgent(self.spec)
         build_spec = build_spec_from_project(self.spec, scenario=scenario)
-        result = agent.build_intent(build_spec)
+        return MockAgent.intent_output(agent.build_intent(build_spec))
+
+    def build_next_request(
+        self,
+        intent,
+        accumulated_output: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """产每一轮的 request。spec/adapter/trace.md 行 92。
+
+        协议层已经把 intent 算好传入，项目层直接使用，不自己调 build_user_intent。
+        - accumulated_output=None（首轮）：基于 intent 产首轮 request
+        - accumulated_output=<上一轮累积>（后续轮）：基于 intent + 历史累积产下一轮 request
+
+        产出必须符合 DeerflowApiRequest 形状（live_schema.REQUEST_SCHEMA）。
+        """
+        query = str(getattr(intent, "query", "") or "")
+        # 后续轮：用 MockAgent.next_turn 产下一句 query
+        if accumulated_output is not None:
+            from impl.core.mock_agent import MockAgent
+            agent = MockAgent(self.spec)
+            acc = accumulated_output if isinstance(accumulated_output, dict) else {}
+            transcript = [t for t in (acc.get("transcript") or []) if isinstance(t, dict)]
+            turns = [t for t in (acc.get("turns") or []) if isinstance(t, dict)]
+            last_turn = turns[-1] if turns else {}
+            live_feedback = {
+                "stage": last_turn.get("stage"),
+                "missing_fields": last_turn.get("missing_fields") or [],
+                "extracted_output": last_turn,
+            }
+            case_dict = {
+                "scenario": str(getattr(intent, "scenario", "") or "intent_recognition"),
+                "metadata": {"user_context": dict(getattr(intent, "user_context", {}) or {})},
+                "user_intent": str(getattr(intent, "user_intent", "") or ""),
+            }
+            next_query = str(agent.next_turn(case_dict, transcript, live_feedback).get("query") or query)
+            query = next_query or query
+
+        # 产出符合 DeerflowApiRequest 形状（live_schema.REQUEST_SCHEMA）
+        # 业务 API 两步：POST /api/threads 创建 thread，POST /api/threads/{tid}/runs/wait 发消息
+        # 此处只产 messages 的 user 消息，thread_id 由 deliver_real 阶段创建
         return {
-            "query": result.input.get("query", ""),
-            "expected_intent": result.expected_intent,
-            "user_intent": result.input.get("user_intent", ""),
-            "input": result.input,
+            "input": {
+                "messages": [{"role": "user", "content": query}],
+            },
+            "config": {
+                "configurable": {
+                    "thread_id": f"mock-{self.spec.project_id}-{int(time.time() * 1000)}",
+                },
+            },
         }
 
-    def next_turn(
-        self,
-        case: SingleTurnCase | MultiTurnCase,
-        previous_turns: List[Dict[str, Any]],
-        live_feedback: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """扮演用户追问（多轮项目）：委托 MockAgent 通用逻辑"""
-        from impl.core.mock_agent import MockAgent
-        agent = MockAgent(self.spec)
-        case_dict = {
-            "input": dict(getattr(case, "input", {}) or {}),
-            "scenario": str(getattr(case, "scenario", "") or ""),
-        }
-        return agent.next_turn(case_dict, previous_turns, live_feedback)
+    def max_turns(self) -> int:
+        """多轮主循环最大轮数。"""
+        return 4
+
+    def should_stop(self, transcript: List[Dict[str, Any]], last_result: Any) -> bool:
+        """多轮停止信号：达到 max_turns 或系统回复包含完成信号。"""
+        if not transcript:
+            return False
+        last_assistant = next(
+            (t for t in reversed(transcript) if isinstance(t, dict) and t.get("role") == "assistant"),
+            None,
+        )
+        if last_assistant:
+            content = str(last_assistant.get("content") or "")
+            if any(kw in content for kw in ("完成", "已为您", "报告已生成", "stage_complete")):
+                return True
+        return False
 
     def normalize_case(
         self,

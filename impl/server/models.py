@@ -42,12 +42,6 @@ class MockBuildIntentRequest(ApiRequest):
     required_input_fields: List[str] = Field(default_factory=list)
 
 
-class MockBuildInteractionRequest(ApiRequest):
-    intent_result: Optional[Dict[str, Any]] = None
-    live_context: Optional[Dict[str, Any]] = None
-    previous_turns: List[Dict[str, Any]] = Field(default_factory=list)
-
-
 class CasePoolsRequest(ProjectRequest):
     pass
 
@@ -67,7 +61,7 @@ class CasePoolDeleteRequest(ApiRequest):
 
 class JudgeRequest(ApiRequest):
     trace: Any = None
-    expected_intent: Optional[str] = None
+    user_intent: Optional[str] = None
 
 
 class AttributeRequest(ApiRequest):
@@ -97,13 +91,12 @@ class FrontendViewRequest(ApiRequest):
 
 class RunChainRequest(ApiRequest):
     input: Any = None
-    expected_intent: Optional[str] = None
+    user_intent: Optional[str] = None
 
 
 class BatchRunRequest(ApiRequest):
     cases: List[Dict[str, Any]] = Field(default_factory=list)
-    inputs: List[Dict[str, Any]] = Field(default_factory=list)
-    expected_intent: Optional[str] = None
+    user_intent: Optional[str] = None
     concurrency: Optional[int] = None
 
 

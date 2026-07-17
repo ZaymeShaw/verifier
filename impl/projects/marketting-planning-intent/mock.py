@@ -4,39 +4,41 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List
+import time
+from typing import Any, Dict
 
-from impl.core.mock_protocol import ProjectMock
+from impl.core.mock_protocol import ProjectMock, SingleTurnMock
 from impl.core.schema import ProjectSpec, SingleTurnCase, MultiTurnCase
 
 
-class MarketingIntentMock(ProjectMock):
-    """Marketing Planning Intent 项目 Mock 实现"""
+class MarketingIntentMock(SingleTurnMock, ProjectMock):
+    """Marketing Planning Intent 项目 Mock 实现。
 
-    def build_user_intent(self, scenario: str) -> Dict[str, Any]:
-        """扮演用户产意图：委托 MockAgent.build_intent"""
+    继承 SingleTurnMock（交互模式=单轮）+ ProjectMock。
+    退出多轮签名，实现 build_user_intent + build_live_request。
+    """
+
+    def build_user_intent(self, scenario: str):
+        """扮演用户产意图：委托 MockAgent.build_intent 并转 MockIntentOutput。"""
         from impl.core.mock_agent import MockAgent, build_spec_from_project
         agent = MockAgent(self.spec)
         build_spec = build_spec_from_project(self.spec, scenario=scenario)
-        result = agent.build_intent(build_spec)
-        return {
-            "query": result.input.get("query", ""),
-            "expected_intent": result.expected_intent,
-            "user_intent": result.input.get("user_intent", ""),
-            "input": result.input,
-        }
+        return MockAgent.intent_output(agent.build_intent(build_spec))
 
-    def next_turn(
-        self,
-        case: SingleTurnCase | MultiTurnCase,
-        previous_turns: List[Dict[str, Any]],
-        live_feedback: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """扮演用户追问（多轮项目）：委托 MockAgent 通用逻辑"""
-        from impl.core.mock_agent import MockAgent
-        agent = MockAgent(self.spec)
-        case_dict = {"input": dict(getattr(case, "input", {}) or {}), "scenario": str(getattr(case, "scenario", "") or "")}
-        return agent.next_turn(case_dict, previous_turns, live_feedback)
+    def build_live_request(self, intent) -> Dict[str, Any]:
+        """把用户表达确定性映射为 MPIIntentNormalizedRequest；API body 由 Live 扩展层转换。"""
+        if intent.live_request is not None:
+            return dict(intent.live_request)
+        session_id = f"eval-intent-{int(time.time() * 1000)}"
+        return {
+            "case_id": "",
+            "session_id": session_id,
+            "query": str(getattr(intent, "query", "") or getattr(intent, "user_intent", "") or ""),
+            "scenario": str(getattr(intent, "scenario", "") or "intent_recognition"),
+            "reference": {},
+            "metadata": {},
+            "user_intent": str(getattr(intent, "user_intent", "") or "") or None,
+        }
 
     def normalize_case(
         self,

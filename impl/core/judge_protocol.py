@@ -44,7 +44,7 @@ class _JudgeProtocol(ABC):
         check_forbidden_overrides(cls, cls._FORBIDDEN_OVERRIDES)
 
     @typing_final
-    def judge_trace(self, trace: RunTrace, expected_intent: Optional[str] = None) -> JudgeResult:
+    def judge_trace(self, trace: RunTrace, user_intent: Optional[str] = None) -> JudgeResult:
         """
         模板方法：Judge 判定主流程的具体实现。
 
@@ -56,18 +56,20 @@ class _JudgeProtocol(ABC):
         5. 协调结果（扩展点）
         """
         # 1. 预判（扩展点，可返回缓存）
-        pre_judge_result = self.pre_judge(trace, expected_intent=expected_intent)
+        pre_judge_result = self.pre_judge(trace, user_intent=user_intent)
         if pre_judge_result is not None:
             normalized_pre = self.normalize_result(trace, pre_judge_result)
             return self.reconcile_result(trace, normalized_pre)
 
         # 2. 构建上下文（扩展点）
         context = self.build_context(trace)
+        from impl.core.judge import build_judge_evidence_view
+        context = {**(context or {}), "judge_evidence": build_judge_evidence_view(trace)}
         context = {**(context or {}), "intent_frame": self.build_intent_frame(trace, context)}
 
         # 3. 调用 LLM 判定（内部方法，调用通用层）
         try:
-            raw_result = self._run_llm_judge(trace, context, expected_intent)
+            raw_result = self._run_llm_judge(trace, context, user_intent)
         except ValueError as e:
             logger.error(f"[judge_trace] LLM 产出不合规，阻断: {e}")
             raw_result = JudgeResult(
@@ -85,14 +87,14 @@ class _JudgeProtocol(ABC):
         return final_result
 
     def _run_llm_judge(self, trace: RunTrace, context: Dict[str, Any],
-                       expected_intent: Optional[str]) -> JudgeResult:
+                       user_intent: Optional[str]) -> JudgeResult:
         """内部方法：调用 LLM 判定。委托给通用层 judge.trace() 函数。"""
         from impl.core import judge as judge_module
 
         return judge_module.judge_trace(
             spec=self.spec,
             trace=trace,
-            expected_intent=expected_intent,
+            user_intent=user_intent,
             project_judge_context=context
         )
 
@@ -102,7 +104,7 @@ class _JudgeProtocol(ABC):
 
     # === 扩展点：项目可选覆盖 ===
 
-    def pre_judge(self, trace: RunTrace, expected_intent: Optional[str] = None) -> Optional[JudgeResult]:
+    def pre_judge(self, trace: RunTrace, user_intent: Optional[str] = None) -> Optional[JudgeResult]:
         """扩展点：预判。项目可选实现，返回缓存结果绕过 LLM 调用。默认返回 None。"""
         return None
 
@@ -111,7 +113,7 @@ class _JudgeProtocol(ABC):
         """扩展点：构建 Judge 上下文。项目必须实现。
 
         定位/目标：
-            构建 judge LLM 的上下文，含 expected_intent、intent_frame、
+            构建 judge LLM 的上下文，含 user_intent、intent_frame、
             system_prompt_extras、user_prompt_extras 等项目特有字段。
             产出的 context 会被 judge_trace 模板方法的 _run_llm_judge 传给通用层
             judge_trace 函数，驱动 LLM 判定。

@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict, List, Optional, Set
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
-from .llm_client import LlmClient, project_llm_client
 from .project_loader import load_project_document
-from .schema import BusinessExpectation, FulfillmentAssessment, GapItem, JudgeLLMOutput, JudgeReferenceOutput, JudgeResult, ProjectSpec, RunTrace, _non_empty_reference, normalize_business_expectation, normalize_fulfillment_assessment, normalize_gap_item, normalize_judge_result, to_dict, trace_application_boundary, trace_execution_trace, trace_extracted_output, trace_input, trace_normalized_request, trace_raw_response
+from .schema import BusinessExpectation, FulfillmentAssessment, GapItem, JudgeLLMOutput, JudgeReferenceOutput, JudgeResult, ProjectSpec, RunTrace, _non_empty_reference, normalize_business_expectation, normalize_fulfillment_assessment, normalize_gap_item, normalize_judge_result, to_dict, trace_application_boundary, trace_conversation_summary, trace_conversation_transcript, trace_execution_trace, trace_extracted_output, trace_input, trace_normalized_request, trace_raw_response, trace_stop_reason, trace_turn_records
 from .structured_output import StructuredOutputSpec
 from .summary import summary_from_fulfillment
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from .llm_client import LlmClient
 
 _FIELD_LIST_KEYS = frozenset(["conditions", "structured_output"])
 _JUDGE_RAW_RESPONSE_MAX_CHARS = 4000
@@ -56,23 +58,72 @@ def _compact_raw_response_for_judge(raw_response: Any) -> Any:
     return raw_response
 
 
-def _judge_run_trace_view(trace: RunTrace) -> Dict[str, Any]:
+def _judge_turn_view(turn: Any) -> Dict[str, Any]:
+    """Project one trace turn into judge evidence without transport-private raw payloads."""
+    if not isinstance(turn, dict):
+        return {}
+    allowed = (
+        "turn_index",
+        "request",
+        "extracted_output",
+        "call_status",
+        "runtime_ms",
+        "error",
+        "fallbacks",
+        "validation",
+        "execution_trace",
+        "application_boundary",
+        "project_fields",
+    )
+    return {key: turn.get(key) for key in allowed if key in turn}
+
+
+def build_judge_evidence_view(trace: RunTrace) -> Dict[str, Any]:
+    """把完整 RunTrace 确定性投影为 Judge 可消费的业务事实。
+
+    Judge 的事实源是 RunTrace，但不直接解释 adapter 私有路径或状态机内部结构。
+    raw_response 只在输出缺失或执行失败时作为补充证据暴露。
+    """
+    final_output = trace_extracted_output(trace)
+    turns = [_judge_turn_view(turn) for turn in trace_turn_records(trace)]
+    raw_response_evidence = None
+    if not final_output or str(trace.status or "") != "ok":
+        raw_response_evidence = _compact_raw_response_for_judge(trace_raw_response(trace))
+    missing_evidence = []
+    if not final_output:
+        missing_evidence.append("final_output")
+    if str(trace.status or "") != "ok":
+        missing_evidence.append("successful_execution")
     return {
         "trace_id": trace.trace_id,
         "project_id": trace.project_id,
         "case_id": trace.case_id,
-        "input": trace_input(trace),
+        "intent_input": trace_input(trace),
         "normalized_request": trace_normalized_request(trace),
-        "raw_response": _compact_raw_response_for_judge(trace_raw_response(trace)),
-        "extracted_output": trace_extracted_output(trace),
+        "final_output": final_output,
+        "final_output_turn": trace.final_output_turn,
+        "turns": turns,
+        "conversation_transcript": trace_conversation_transcript(trace),
+        "conversation_summary": trace_conversation_summary(trace),
+        "stop_reason": trace_stop_reason(trace),
+        "completion_status": str(trace.completion_status or ""),
         "execution_trace": trace_execution_trace(trace),
         "evidence_refs": to_dict(getattr(trace, "evidence_refs", None) or []),
+        "raw_response_evidence": raw_response_evidence,
+        "evidence_completeness": {
+            "complete": not missing_evidence,
+            "missing_evidence": missing_evidence,
+        },
         "application_boundary": trace_application_boundary(trace),
         "reference_contract": trace.reference_contract if isinstance(trace.reference_contract, dict) else {},
         "scenario": trace.scenario,
         "status": trace.status,
-        "error": trace.error,
+        "error": trace.error if str(trace.status or "") != "ok" else None,
     }
+
+
+# 兼容内部旧名称；所有新调用统一使用 build_judge_evidence_view。
+_judge_run_trace_view = build_judge_evidence_view
 
 
 def load_judge_boundary_standard(spec: ProjectSpec) -> Dict[str, Any]:
@@ -183,7 +234,7 @@ def _source_documents(spec: ProjectSpec) -> Dict[str, str]:
 def judge_trace(
     spec: ProjectSpec,
     trace: RunTrace,
-    expected_intent: Optional[str] = None,
+    user_intent: Optional[str] = None,
     llm: Optional[LlmClient] = None,
     project_judge_context: Optional[Dict[str, Any]] = None,
     has_actual: bool = True,
@@ -195,9 +246,9 @@ def judge_trace(
     judge_boundary = load_project_document(spec, "judge_boundary")
     judge_standard = load_project_document(spec, "judge_standard")
 
-    if not expected_intent and project_judge_context:
-        expected_intent = project_judge_context.get("expected_intent") or (
-            project_judge_context.get("intent_frame", {}).get("expected_intent")
+    if not user_intent and project_judge_context:
+        user_intent = project_judge_context.get("user_intent") or (
+            project_judge_context.get("intent_frame", {}).get("user_intent")
             if isinstance(project_judge_context.get("intent_frame"), dict)
             else None
         )
@@ -207,10 +258,10 @@ def judge_trace(
         "## 核心原则\n"
         "只基于当前 RunTrace、项目评判标准和动态检索的知识库内容判断，不继承历史 case。\n"
         "首要职责：理解用户/下游消费者的真实业务意图 → 派生 business_expectations → "
-        "判断 actual output 对 expectations 的 fulfillment。\n\n"
+        "基于完整执行链路（每轮 output、最终 output、交互过程和停止事实）判断 expectations 的 fulfillment。\n\n"
         "## expectation 拆分原则\n"
         "business_expectations 的粒度直接决定判断精度。每个 expectation 必须是原子可判定的——"
-        "仅凭 actual output 就能明确判定 fulfilled 或 not_fulfilled。\n"
+            "仅凭当前 Judge evidence 中的业务事实就能明确判定 fulfilled 或 not_fulfilled。\n"
         "- 一个 expectation 只描述一个可独立验证的结果维度\n"
         "- 多维度意图必须拆成多个 expectation\n"
         "- 每个 expectation 必须有明确的 acceptance_criteria\n"
@@ -224,7 +275,9 @@ def judge_trace(
             "  - fulfilled：该 expectation 完全满足\n"
             "  - not_fulfilled：该 expectation 未满足\n"
             "  - not_evaluable：当前无法评估\n"
-            "禁用 failed/passed/incorrect/wrong/met/unmet/partially_fulfilled/partial/success/fail/ok/unknown 等同义词。\n\n"
+            "禁用 failed/passed/incorrect/wrong/met/unmet/partially_fulfilled/partial/success/fail/ok/unknown 等同义词。\n"
+            "`fulfillment_assessments[*].expected_evidence` 与 `actual_evidence` **必须是数组**（JSON array / list），"
+            "即使只有一条证据也要用 `[...]` 包裹，不可直接用字符串或对象。\n\n"
         )
     system += (
         f"## 评估规范\n{evaluation}\n\n"
@@ -248,7 +301,7 @@ def judge_trace(
             "本次调用没有 actual output，你**只产 expected**（参考答案），不做 fulfillment 判定。\n"
             "你的 expected 是该输入下系统应当产出什么的标准答案。\n\n"
             "### expected 的产出步骤\n"
-            "1. 理解用户意图（run_trace.input / expected_intent / scenario）\n"
+            "1. 理解用户意图（run_trace.input / user_intent / scenario）\n"
             "2. 结合项目评估文档确定该场景下的标准答案应满足什么\n"
             "3. 派生 business_expectations，每条 expectation 的 expected_outcome 描述该输入下系统应当产出什么\n"
             "4. 把所有 expected_outcome 汇总成 expected 字段，按结构化输出约束的 JSON Schema 填入真实内容\n\n"
@@ -270,8 +323,8 @@ def judge_trace(
         "- 输出 JSON。"
     )
     user_payload = to_dict({
-        "expected_intent": expected_intent,
-        "run_trace": _judge_run_trace_view(trace),
+        "user_intent": user_intent,
+        "run_trace": build_judge_evidence_view(trace),
     })
     if project_judge_context:
         user_extras = project_judge_context.get("user_prompt_extras")
@@ -281,7 +334,11 @@ def judge_trace(
 
     tools = project_judge_context.get("tools") if project_judge_context else None
     tools = list(tools or [])
-    client = llm or project_llm_client(spec, role="judge", knowledge=None, tools=tools)
+    if llm is None:
+        from .llm_client import project_llm_client
+        client = project_llm_client(spec, role="judge", knowledge=None, tools=tools)
+    else:
+        client = llm
     client._caller = "judge"
 
     has_reference = _has_input_reference(trace)
@@ -304,7 +361,7 @@ def judge_trace(
         if inconsistencies:
             data["reasoning_summary"] = (data.get("reasoning_summary") or "") + f" [self_check_failed: {json.dumps(inconsistencies, ensure_ascii=False)}]"
 
-    return _build_judge_result_from_data(spec, trace, data, expected_intent, boundary_standard)
+    return _build_judge_result_from_data(spec, trace, data, user_intent, boundary_standard)
 
 
 def generate_reference(
@@ -323,7 +380,7 @@ def generate_reference(
         status="pending",
         scenario=intent.get("scenario", ""),
     )
-    expected_intent = intent.get("expected_intent")
+    user_intent_value = intent.get("user_intent")
     from .project_loader import load_adapter
     project_judge_context = None
     try:
@@ -332,7 +389,7 @@ def generate_reference(
         project_judge_context = {**(project_judge_context or {}), "intent_frame": adapter.build_intent_frame(trace)}
     except Exception:
         pass
-    result = judge_trace(spec, trace, expected_intent=expected_intent, llm=llm,
+    result = judge_trace(spec, trace, user_intent=user_intent_value, llm=llm,
                          project_judge_context=project_judge_context,
                          has_actual=False, has_reference=False)
     if result.expected is not None:
@@ -358,7 +415,10 @@ def _reprompt_judge(
 
 
 def _build_judge_output_spec(has_actual: bool, project_id: str = "", has_reference: bool = False) -> StructuredOutputSpec:
-    """构造 judge 调用的结构化输出约束。spec/info-volume.md 后只约束通用字段。"""
+    """构造 judge 调用的结构化输出约束。spec/info-volume.md 后只约束通用字段。
+
+    project_override: 项目级 schema 覆写，支持项目扩展 FulfillmentAssessment 字段。
+    """
     nested: Dict[str, StructuredOutputSpec] = {}
     require_expected = not (has_actual and has_reference)
     if project_id and require_expected:
@@ -418,7 +478,7 @@ def _build_judge_result_from_data(
     spec: ProjectSpec,
     trace: RunTrace,
     data: Dict[str, Any],
-    expected_intent: Optional[str],
+    user_intent: Optional[str],
     boundary_standard: Dict[str, Any],
 ) -> JudgeResult:
     evidence = list(data.get("evidence") or [])

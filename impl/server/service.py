@@ -97,9 +97,12 @@ def compact_run(run: Dict[str, Any]) -> Dict[str, Any]:
     return compact
 
 
-def compact_batch_result(batch_result: Any) -> Dict[str, Any]:
+def compact_batch_result(batch_result: Any, identities: list[Dict[str, Any]] | None = None) -> Dict[str, Any]:
     data = to_dict(batch_result)
     data["runs"] = [compact_run(run) for run in data.get("runs", [])]
+    for index, run in enumerate(data["runs"]):
+        if identities and index < len(identities):
+            run.update(identities[index])
     if data.get("table"):
         data["table"] = to_dict(normalize_case_pool_table(data.get("table")))
     else:
@@ -107,13 +110,14 @@ def compact_batch_result(batch_result: Any) -> Dict[str, Any]:
     return data
 
 
-def case_event(index: int, run: Dict[str, Any]) -> Dict[str, Any]:
+def case_event(index: int, run: Dict[str, Any], identity: Dict[str, Any] | None = None) -> Dict[str, Any]:
     compact = compact_run(run)
     table_row = compact.get("table_row") or {}
     judge_summary = table_row.get("judge_summary") or {}
     attribution_summary = table_row.get("attribution_summary") or {}
     reason = attribution_summary.get("summary_text") or judge_summary.get("reason") or compact.get("error") or ""
     return {
+        **(identity or {}),
         "index": index,
         "case_id": compact.get("case_id"),
         "status": table_row.get("fulfillment_status") or table_row.get("status") or compact.get("status") or "",
@@ -162,7 +166,8 @@ def live_run(data: Dict[str, Any]) -> Any:
 
 def mock_cases(data: Dict[str, Any]) -> MockCasesResponse:
     project = project_from(data)
-    return MockCasesResponse(project_id=project, cases=pipeline.mock_cases(project))
+    from ..core.mock import parse_mock_case
+    return MockCasesResponse(project_id=project, cases=[parse_mock_case(case, project_id=project) for case in pipeline.mock_cases(project)])
 
 
 def mock_datasets(data: Dict[str, Any]) -> MockDatasetsResponse:
@@ -178,17 +183,6 @@ def mock_build_intent(data: Dict[str, Any]) -> MockBuildResponse:
         intent_labels=data.get("intent_labels") or [],
         template=data.get("template"),
         required_input_fields=data.get("required_input_fields") or [],
-    )
-    return MockBuildResponse(project_id=project, case=case)
-
-
-def mock_build_interaction(data: Dict[str, Any]) -> MockBuildResponse:
-    project = project_from(data)
-    case = pipeline.mock_build_interaction(
-        project,
-        intent_result=data.get("intent_result") or {},
-        live_context=data.get("live_context") or {},
-        previous_turns=data.get("previous_turns") or [],
     )
     return MockBuildResponse(project_id=project, case=case)
 
@@ -212,7 +206,7 @@ def delete_case_pool(data: Dict[str, Any]) -> Any:
 
 
 def judge(data: Dict[str, Any]) -> Any:
-    return pipeline.judge(project_from(data), normalize_run_trace(data.get("trace")), data.get("expected_intent"))
+    return pipeline.judge(project_from(data), normalize_run_trace(data.get("trace")), data.get("user_intent"))
 
 
 def attribute(data: Dict[str, Any]) -> Any:
@@ -234,7 +228,7 @@ def check(data: Dict[str, Any]) -> Any:
 
 
 def run_chain(data: Dict[str, Any]) -> RunChainResponse:
-    run = pipeline.run_chain(project_from(data), data.get("input") or {}, expected_intent=data.get("expected_intent"))
+    run = pipeline.run_chain(project_from(data), data.get("input") or {}, user_intent=data.get("user_intent"))
     return RunChainResponse(
         trace=normalize_run_trace(run.get("trace")),
         judge=normalize_judge_result(run.get("judge")),
@@ -247,8 +241,12 @@ def run_chain(data: Dict[str, Any]) -> RunChainResponse:
 
 
 def batch_run(data: Dict[str, Any]) -> BatchRunResult:
+    from ..core.mock import parse_mock_case
+
     concurrency = max(1, min(int(data.get("concurrency") or 4), 8))
-    result = pipeline.batch_run(project_from(data), data.get("cases") or data.get("inputs") or [], expected_intent=data.get("expected_intent"), concurrency=concurrency)
+    project = project_from(data)
+    cases = [to_dict(parse_mock_case(case, project_id=project)) for case in (data.get("cases") or [])]
+    result = pipeline.batch_run(project, cases, user_intent=data.get("user_intent"), concurrency=concurrency)
     return BatchRunResult(
         project_id=result.project_id,
         total=result.total,

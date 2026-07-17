@@ -11,11 +11,13 @@ from __future__ import annotations
 import json
 import random
 import dataclasses
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from .llm_client import LlmClient, project_llm_client
 from .mock_agent import load_live_schema
 from .structured_output import StructuredOutputSpec
+
+if TYPE_CHECKING:
+    from .llm_client import LlmClient
 
 
 def _split_sentences(text: str) -> List[str]:
@@ -116,7 +118,7 @@ def generate_live_output(
 
     user = json.dumps({
         "user_intent": intent.get("input", {}),
-        "expected_intent": intent.get("expected_intent"),
+        "user_intent_summary": intent.get("user_intent"),
         "scenario": intent.get("scenario", ""),
     }, ensure_ascii=False)
 
@@ -126,7 +128,11 @@ def generate_live_output(
         description="live_stub 系统扮演 output",
     )
 
-    client = llm or LlmClient()
+    if llm is None:
+        from .llm_client import LlmClient
+        client = LlmClient()
+    else:
+        client = llm
     client._project_id = project_id
     client._caller = "live_stub"
     trace_id = f"live-stub-{project_id}-{random.randint(0, 999999)}"

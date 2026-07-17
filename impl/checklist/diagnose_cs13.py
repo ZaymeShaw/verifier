@@ -33,7 +33,7 @@ def diagnose_cs13():
 
     # Input
     input_data = {"query": "客户姓名是张伟的人"}
-    expected_intent = '{"expected_logic":"AND","expected_conditions":[{"field":"searchClientName","operator":"MATCH","value":"张伟"}]}'
+    user_intent = '{"expected_logic":"AND","expected_conditions":[{"field":"searchClientName","operator":"MATCH","value":"张伟"}]}'
 
     try:
         # Step 1: Run trace
@@ -51,7 +51,7 @@ def diagnose_cs13():
         judge_result = judge(
             project_id="client_search",
             trace=trace,
-            expected_intent=expected_intent,
+            user_intent=user_intent,
         )
 
         print(f"  Verdict: {judge_result.verdict}")

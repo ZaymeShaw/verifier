@@ -66,8 +66,15 @@ def test_project_live_schema_exports_dataclass_source_and_generated_json_schema(
         assert live_schema.EXTRACT_OUTPUT_JSON_SCHEMA == dataclass_to_json_schema(output_schema)
 
 
-def test_marketting_planning_extract_output_schema_is_top_level_turns():
+def test_marketting_planning_extract_output_schema_is_single_turn():
     live_schema = load_live_schema("marketting-planning")
-    assert live_schema.EXTRACT_OUTPUT_JSON_SCHEMA["required"] == ["turns"]
-    assert live_schema.check.output({"turns": [{"code": 0, "msg": "ok"}]})
-    assert not live_schema.check.output({"code": 0, "msg": "ok"})
+    assert "turns" not in live_schema.EXTRACT_OUTPUT_JSON_SCHEMA.get("properties", {})
+    assert live_schema.check.output({"code": 0, "msg": "ok"})
+    assert not live_schema.check.output({"turns": [{"code": 0, "msg": "ok"}]})
+
+
+def test_deerflow_extract_output_schema_is_single_turn():
+    live_schema = load_live_schema("deerflow")
+    assert "turns" not in live_schema.EXTRACT_OUTPUT_JSON_SCHEMA.get("properties", {})
+    assert live_schema.check.output({})
+    assert not live_schema.check.output({"turns": [{}]})

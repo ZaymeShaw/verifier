@@ -23,7 +23,6 @@ from .models import (
     JudgeRequest,
     LiveRunRequest,
     MockCasesRequest,
-    MockBuildInteractionRequest,
     MockBuildIntentRequest,
     MockDatasetsRequest,
     ProjectRequest,
@@ -85,11 +84,6 @@ def mock_build_intent(payload: MockBuildIntentRequest) -> JSONResponse:
     return route(service.mock_build_intent, payload)
 
 
-@router.post("/api/mock/build_interaction")
-def mock_build_interaction(payload: MockBuildInteractionRequest) -> JSONResponse:
-    return route(service.mock_build_interaction, payload)
-
-
 @router.post("/api/case_pools")
 def case_pools(payload: CasePoolsRequest) -> JSONResponse:
     return route(service.list_case_pools, payload)
@@ -142,7 +136,12 @@ def batch_run(payload: BatchRunRequest) -> JSONResponse:
 
 @router.post("/api/batch_start")
 def batch_start(payload: BatchStartRequest) -> JSONResponse:
-    return route(batch_jobs.start_batch, payload)
+    try:
+        return json_result(batch_jobs.start_batch(payload_dict(payload)))
+    except (TypeError, ValueError) as exc:
+        return json_result({"error": str(exc)}, status_code=422)
+    except Exception as exc:
+        return json_result({"error": str(exc)}, status_code=500)
 
 
 @router.post("/api/batch_status")

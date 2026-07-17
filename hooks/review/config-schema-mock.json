@@ -1,0 +1,46 @@
+{
+  "_comment": {
+    "purpose": "Mock/Schema 对齐校验 hook。大改动后自动运行 mock-check，确保 fixture 数据与 REQUEST_SCHEMA 严格对齐。",
+    "触发场景": "改动 schema/protocol/mock_agent/mock 数据时，自动校验一致性。",
+    "依赖链路": "业务live系统 + live协议层 → live schema → 项目扩展点 + mock形状。build_intent → build_request → live_schema.REQUEST_SCHEMA。",
+    "trigger.enabled": "总开关；false 时永远不触发。",
+    "trigger.successful_tool_names": "哪些工具调用算一次成功改文件；只有这些工具会被统计。",
+    "trigger.min_successful_edit_tools": "本轮成功改文件工具调用次数下限；少于这个次数就静默放行。",
+    "trigger.min_distinct_files": "本轮成功改动的不同文件数下限；少于这个文件数就静默放行。",
+    "trigger.distinct_file_keys": "从工具 input 的哪些字段取文件路径，用来计算不同文件数。",
+    "action.title": "本次 hook 的名称；会进入 systemMessage 标题，也可通过 {title} 显示在 block_reason。",
+    "action.prompt": "触发后真正要 Claude 执行的主指令；会原文放进 systemMessage 的 action 区域。",
+    "action.decision": "Stop hook 返回给 Claude Code 的 decision；通常填 block，表示拦停本轮并注入 systemMessage。",
+    "action.block_reason": "终端里看到的 Stop hook feedback 模板；只负责展示，不是实际执行指令。",
+    "block_reason.{title}": "替换为 action.title。",
+    "block_reason.{action_preview}": "替换为 action.prompt 的单行短摘要；太长会截断。",
+    "block_reason.{stats}": "替换为本轮统计。",
+    "block_reason.{config}": "替换为当前配置文件路径。",
+    "instructions.after_action": "action 执行完以后对最终输出的要求。",
+    "debug.dump": "true 时把 Stop hook stdin 写入 dump_path。",
+    "debug.dump_path": "debug.dump 为 true 时写入的文件路径。"
+  },
+  "trigger": {
+    "enabled": true,
+    "successful_tool_names": ["Edit", "MultiEdit", "Write", "NotebookEdit"],
+    "min_successful_edit_tools": 5,
+    "min_distinct_files": 3,
+    "distinct_file_keys": ["file_path", "notebook_path"]
+  },
+  "action": {
+    "title": "Mock/Schema 对齐校验",
+    "prompt": "本轮涉及大量改动，可能影响 mock 数据与 schema 的对齐。请执行：\n\n1. 运行 `python -m impl.cli mock-check` 检查所有项目的 fixture 是否符合 REQUEST_SCHEMA\n2. 如果有失败，检查 fixture 字段是否超出 schema 定义、或 schema 缺字段\n3. 按\"业务live系统 + live协议层 → live schema → 项目扩展点 + mock形状\"的依赖链路，确定是修 schema 还是修 fixture\n\n如果全部通过，简要报告结果。如果有失败，指出具体项目和字段。",
+    "decision": "block",
+    "block_reason": "📋 {title}：已触发；{stats}；下一步行动请执行 mock-check 校验"
+  },
+  "instructions": {
+    "after_action": [
+      "如果 mock-check 全部通过，只报告\"mock-check: 全部通过\"。",
+      "如果有失败，列出具体项目和字段，分析是 schema 漏定义还是 fixture 多字段。"
+    ]
+  },
+  "debug": {
+    "dump": false,
+    "dump_path": "/tmp/review-hook-schema-mock-stdin.json"
+  }
+}

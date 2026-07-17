@@ -76,29 +76,19 @@ class TestLiveProtocol:
 
         live = TestRealLive(spec=None)
         assert live.deliver_real(None) == {"test": "response"}
-        # build_request 有默认实现（透传 case.input）
-        from impl.core.schema import SingleTurnCase
-        case = SingleTurnCase(id="t", input={"q": "hello", "scenario": "test"})
-        result = live.build_request(case)
-        assert result == {"q": "hello", "scenario": "test"}
+        # build_request 已删除（trace.md 第十二节），意图计算由 trace 层调 _resolve_intent
+        # 不再测试 build_request 默认实现
 
         class TestProvidedLive(ProvidedOutputLive):
-            def deliver_provided(self, case, request):
+            def deliver_provided(self, request):
                 return {"test": "provided"}
 
         live2 = TestProvidedLive(spec=None)
-        assert live2.deliver_provided(None, None) == {"test": "provided"}
+        assert live2.deliver_provided(None) == {"test": "provided"}
 
     def test_override_deliver_raises_error(self):
-        """子类覆盖 deliver 模板方法时抛 TypeError"""
-        from impl.core.live_protocol import RealServiceLive
-        with pytest.raises(TypeError, match="deliver"):
-            class BadLive(RealServiceLive):
-                def deliver(self, case):
-                    return "hacked"
-
-                def deliver_real(self, request):
-                    return {}
+        """deliver 模板方法已删除（trace.md 第十二节），不再测试覆盖禁止"""
+        pass
 
     def test_override_run_provided_raises_error(self):
         """子类覆盖 _run_provided 内部方法时抛 TypeError"""
@@ -148,13 +138,13 @@ class TestLiveProtocol:
                 return {}
         live = TestRealLive(spec=None)
         with pytest.raises(NotImplementedError, match="deliver_provided"):
-            live.deliver_provided(None, None)
+            live.deliver_provided(None)
 
     def test_provided_output_live_deliver_real_raises_by_default(self):
         """ProvidedOutputLive 的 deliver_real 默认 raise NotImplementedError"""
         from impl.core.live_protocol import ProvidedOutputLive
         class TestProvidedLive(ProvidedOutputLive):
-            def deliver_provided(self, case, request):
+            def deliver_provided(self, request):
                 return {}
         live = TestProvidedLive(spec=None)
         with pytest.raises(NotImplementedError, match="deliver_real"):
@@ -292,16 +282,6 @@ class TestMockProtocol:
 
         mock = TestMock(spec=None)
         assert mock.intent_labels() == []  # 默认返回空列表
-
-    def test_next_turn_optional(self):
-        """next_turn 是可选扩展点，不实现时返回结束信号"""
-        class TestMock(ProjectMock):
-            def build_user_intent(self, scenario):
-                return {}
-
-        mock = TestMock(spec=None)
-        result = mock.next_turn(None, [], {})
-        assert result == {"action": "end", "reason": "single_turn_project_no_next_turn"}
 
 
 if __name__ == "__main__":
