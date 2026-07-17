@@ -85,7 +85,7 @@ class MockIntentOutput:
 字段含义：
 
 - `user_context`：用户身份、背景、经验与当前处境；
-- `system_understanding`：用户主观上对当前被测业务 `<project>` 的了解，允许有限、不完整或错误；这里的“系统”专指用户正在使用的业务产品或 Agent，不是 verifier 测评系统；
+- `system_understanding`：用户主观上对 `project_id` 所标识的被测业务系统的了解，允许有限、不完整或错误；这里的“系统”专指该业务产品或 Agent，不是某个 scenario，也不是 verifier 测评系统；
 - `user_intent`：用户希望达到的实际目标；
 - `query`：用户最初表达；
 - `scenario`：当前 `<project>` 内部的业务交互场景，不是项目名。项目名由 `project_id` 单独表达；例如 `project_id=deerflow` 时，scenario 可以是 `clarification`；
@@ -98,7 +98,7 @@ class MockIntentOutput:
 - 系统真实能力边界或内部完成标准；
 - Trace、Raw Response 或运行日志。
 
-生成 `system_understanding` 时只能使用真实用户可能接触的信息，例如被测 `<project>` 的产品名称、入口说明、用户既往使用经验和已经看到的业务回复。不得把 verifier、Judge、Evaluation、内部工具链或项目真实能力答案写入用户认知。
+生成 `system_understanding` 时，必须先由当前 ProjectSpec 确定 `project_id`，再且只能使用真实用户可能接触的该业务系统信息，例如产品名称、入口说明、用户既往使用经验和已经看到的业务回复。不得把 scenario 当成认知对象，也不得把 verifier、Judge、Evaluation、内部工具链或项目真实能力答案写入用户认知。
 
 ## 4. execute_live
 
