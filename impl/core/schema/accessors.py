@@ -4,6 +4,11 @@ from typing import Any, Dict, List
 
 from .evidence import ExecutionTraceEvent
 from .trace import RunTrace
+from .mock import MockIntentOutput
+
+
+def trace_mock_intent(trace: RunTrace | None) -> MockIntentOutput | None:
+    return trace.mock_intent if trace else None
 from .judge import JudgeResult
 from .attribute import AttributeResult
 

@@ -26,10 +26,14 @@ def test_trace_cell_uses_only_current_case_trace_and_is_collapsed():
     renderer = source[start:end]
 
     assert "const trace=item.trace;" in renderer
-    assert "frontend_view" not in renderer
+    assert "item.frontend_view?.project_extensions?.trace_show" in renderer
     assert "run_trace_summary" not in renderer
-    assert "<details><summary>展开完整 Trace</summary>" in renderer
-    assert "escapeHtml(JSON.stringify(trace,null,2))" in renderer
+    assert "完整原始 Trace JSON" in renderer
+    assert "Mock 用户" in renderer
+    assert "完整 Request" not in renderer
+    assert "完整 Raw Response" not in renderer
+    assert "完整 Extracted Output" not in renderer
+    assert "全局技术事实" not in renderer
     assert "无 Trace" in renderer
 
 
@@ -39,7 +43,7 @@ def test_output_cell_renders_only_schema_shaped_item_output():
     end = source.index("\nfunction ", start + 1)
     renderer = source[start:end]
 
-    assert "formatJsonCell(item.output,1800)" in renderer
+    assert "formatJsonCell(item.output)" in renderer
     assert "item.trace" not in renderer
     assert "interactionSummary" not in renderer
     assert "judge" not in renderer
@@ -60,19 +64,29 @@ def test_input_cell_renders_actual_live_schema_request_without_frontend_field_in
     assert "Input / Live Request" in source
 
 
+def test_single_chain_input_guard_has_canonical_comparator():
+    source = _summary_source()
+    assert "function sameInput(left,right)" in source
+    assert "function chainComparableInput(value)" in source
+    assert "delete result.reference" in source
+    assert "canonicalValue(chainComparableInput(left))" in source
+
+
 def test_output_and_reference_share_json_formatting():
     source = _summary_source()
 
-    assert "formatJsonCell(item.output,1800)" in source
-    assert "formatJsonCell(ref,1800)" in source
+    assert "formatJsonCell(item.output)" in source
+    assert "formatJsonCell(ref)" in source
+    assert "function renderSchemaFields" not in source
     assert "function inputReference(item){return item.reference || null;}" in source
 
 
 def test_trace_column_is_wide_enough_for_full_trace_json():
     source = _summary_source()
 
-    assert ".case-trace{min-width:720px;max-width:900px" in source
+    assert ".case-trace{min-width:760px;max-width:980px" in source
     assert ".case-output,.case-reference{min-width:420px;max-width:520px" in source
+    assert ".trace-scroll{max-height:430px;overflow:auto" in source
 
 
 def test_case_pool_empty_rows_span_new_trace_column():

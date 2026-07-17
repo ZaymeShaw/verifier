@@ -11,7 +11,7 @@ from .evidence import EvidenceRef, ExecutionTraceEvent, ProbeResult
 from .frontend import FrontendViewModel
 from .judge import BusinessExpectation, FulfillmentAssessment, GapItem, JudgeResult
 from .live import LiveRequest, LiveMultiTurnState
-from .mock import MockDataset, MockSpec, MultiTurnCase, MultiTurnInteraction, MultiTurnPolicy, MultiTurnTurnExpectation, SingleTurnCase
+from .mock import MockDataset, MockIntentOutput, MockSpec, MultiTurnCase, MultiTurnInteraction, MultiTurnPolicy, MultiTurnTurnExpectation, SingleTurnCase
 from .table import CasePoolTable, ConversationTurn, TraceTableRow
 from .trace import MultiTurnTraceSummary, RunTrace, TraceExecutionContext
 
@@ -530,10 +530,19 @@ def normalize_run_trace(value: Any) -> Optional[RunTrace]:
     application_boundary = data.get("application_boundary") if isinstance(data.get("application_boundary"), dict) else {}
     multi_turn_input = data.get("multi_turn_input") if isinstance(data.get("multi_turn_input"), dict) else None
     conversation_summary = data.get("conversation_summary") if isinstance(data.get("conversation_summary"), dict) else multi_turn_input.get("conversation_summary") if isinstance(multi_turn_input, dict) and isinstance(multi_turn_input.get("conversation_summary"), dict) else data.get("extracted_output", {}).get("conversation_summary") if isinstance(data.get("extracted_output"), dict) and isinstance(data.get("extracted_output", {}).get("conversation_summary"), dict) else {}
+    mock_intent_data = data.get("mock_intent") if isinstance(data.get("mock_intent"), dict) else {}
+    mock_intent = MockIntentOutput(
+        user_intent=str(mock_intent_data.get("user_intent") or ""),
+        query=str(mock_intent_data.get("query") or ""),
+        user_context=dict(mock_intent_data.get("user_context") or {}),
+        scenario=str(mock_intent_data.get("scenario") or ""),
+        live_request=dict(mock_intent_data.get("live_request")) if isinstance(mock_intent_data.get("live_request"), dict) else None,
+    ) if mock_intent_data else None
     return RunTrace(
         trace_id=str(data.get("trace_id") or ""),
         project_id=str(data.get("project_id") or ""),
         case_id=str(data.get("case_id") or input_data.get("case_id") or ""),
+        mock_intent=mock_intent,
         input=input_data,
         normalized_request=request_data,
         raw_response=data.get("raw_response"),

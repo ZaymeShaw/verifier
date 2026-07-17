@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from .check import CheckReport
     from .cluster import ClusterSummary
     from .judge import JudgeResult
+    from .mock import MockIntentOutput
 
 
 @dataclass
@@ -38,6 +39,7 @@ class RunTrace:
     trace_id: str
     project_id: str
     case_id: str = ""
+    mock_intent: Optional["MockIntentOutput"] = None
     input: Dict[str, Any] = field(default_factory=dict)
     normalized_request: Dict[str, Any] = field(default_factory=dict)
     raw_response: Any = None

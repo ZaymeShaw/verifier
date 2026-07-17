@@ -16,7 +16,7 @@ from .live import LiveMultiTurnState, LiveRequest
 from .mock import MockBuildResult, MockBuildSpec, MockCase, MockDataset, MockIntentOutput, MockNextTurnOutput, MockSpec, MultiTurnCase, MultiTurnInteraction, MultiTurnPolicy, MultiTurnTurnExpectation, SingleTurnCase
 from .project import ProjectAnalysis, ProjectSpec
 from .registry import SCHEMA_LAYERS
-from .accessors import judge_expected_actual_gaps, judge_primary_signal, trace_application_boundary, trace_conversation_summary, trace_conversation_transcript, trace_execution_trace, trace_extracted_output, trace_input, trace_normalized_request, trace_output_source, trace_project_fields, trace_raw_response, trace_stop_reason, trace_turn_records
+from .accessors import judge_expected_actual_gaps, judge_primary_signal, trace_application_boundary, trace_conversation_summary, trace_conversation_transcript, trace_execution_trace, trace_extracted_output, trace_input, trace_mock_intent, trace_normalized_request, trace_output_source, trace_project_fields, trace_raw_response, trace_stop_reason, trace_turn_records
 from .api import API_ENDPOINT_SCHEMAS, ApiEnvelope, CasePoolSaveResponse, CasePoolsResponse, MockBuildResponse, MockCasesResponse, MockDatasetsResponse, RunChainResponse
 from .occam import SCHEMA_FIELD_ROLES, field_role, to_public_dict
 from .table import CasePoolTable, ConversationTurn, TraceTableRow
@@ -47,6 +47,6 @@ __all__ = [
     "normalize_probe_result", "normalize_probe_results", "normalize_run_trace", "normalize_trace_execution_context",
     "normalize_trace_table_row", "normalize_trace_table_rows", "now_iso", "field_role", "to_dict", "to_public_dict",
     "trace_application_boundary", "trace_conversation_summary", "trace_conversation_transcript", "trace_execution_trace", "trace_extracted_output", "trace_turn_records",
-    "trace_input", "trace_normalized_request", "trace_output_source", "trace_project_fields", "trace_raw_response", "trace_stop_reason",
+    "trace_input", "trace_mock_intent", "trace_normalized_request", "trace_output_source", "trace_project_fields", "trace_raw_response", "trace_stop_reason",
     "judge_expected_actual_gaps", "judge_primary_signal",
 ]

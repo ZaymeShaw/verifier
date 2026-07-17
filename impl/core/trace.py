@@ -69,6 +69,7 @@ class TraceContext:
         execution_trace: Optional[List[ExecutionTraceEvent]] = None,
         application_boundary: Optional[Dict[str, Any]] = None,
         project_fields: Optional[Dict[str, Any]] = None,
+        mock_message: str = "",
     ) -> None:
         """execute_live 内部每轮 deliver_turn 后调用，上报本轮过程事实。"""
         from .schema import ExecutionTraceEvent
@@ -79,6 +80,7 @@ class TraceContext:
         ]
         self.turns.append({
             "turn_index": len(self.turns) + 1,
+            "mock_message": str(mock_message or ""),
             "request": request if isinstance(request, dict) else {},
             "raw_response": raw_response,
             "extracted_output": extracted_output if isinstance(extracted_output, dict) else {},
@@ -319,6 +321,7 @@ def trace_from_live(
         trace_id=trace_id,
         project_id=spec.project_id,
         case_id=case_id,
+        mock_intent=intent,
         input=source_input,
         normalized_request=normalized_request,
         raw_response=raw_response,

@@ -142,9 +142,18 @@ def run_trace() -> RunTrace:
         trace_id=TRACE_ID,
         project_id=PROJECT_ID,
         case_id=CASE_ID,
+        mock_intent=MockIntentOutput(user_intent="搜索上海、30到40岁、高净值客户", query="上海 30-40岁 高净值客户"),
         input={"query": "上海 30-40岁 高净值客户"},
         normalized_request={"query": "上海 30-40岁 高净值客户"},
         extracted_output=_output(),
+        turn_records=[{
+            "turn_index": 1,
+            "mock_message": "上海 30-40岁 高净值客户",
+            "request": {"query": "上海 30-40岁 高净值客户"},
+            "raw_response": None,
+            "extracted_output": _output(),
+            "call_status": "succeeded",
+        }],
         status="ok",
         scenario="schema-fixture-single-turn",
     )

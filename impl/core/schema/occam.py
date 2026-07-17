@@ -12,7 +12,7 @@ SCHEMA_FIELD_ROLES = {
             "trace_id", "project_id", "case_id", "status", "error",
             "state_history", "gate_decisions", "transition_decisions", "evidence_refs",
             "fallbacks", "scenario", "interaction_mode", "session_id", "created_at",
-            "turn_records", "final_output_turn", "completion_status", "ready",
+            "turn_records", "final_output_turn", "completion_status", "ready", "mock_intent",
         ],
         "derived_alias": [
             "input", "normalized_request", "raw_response", "extracted_output",
@@ -73,7 +73,7 @@ PUBLIC_SCHEMA_FIELDS = {
 }
 PUBLIC_SCHEMA_FIELDS.update({
     "RunTrace": [
-        "trace_id", "project_id", "case_id", "input", "normalized_request", "raw_response",
+        "trace_id", "project_id", "case_id", "mock_intent", "input", "normalized_request", "raw_response",
         "extracted_output", "execution_mode", "output_source", "scenario",
         "reference_contract", "application_boundary", "evidence_refs", "execution_trace",
         "status", "error", "fallbacks", "interaction_mode", "session_id", "created_at",

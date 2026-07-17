@@ -10,7 +10,7 @@
 4. 哪一轮发生校验失败、fallback 或调用错误；
 5. 最终输出来自哪一轮。
 
-本规范新增项目级 `show_schema`，由项目显式声明 REQUEST 与 EXTRACT_OUTPUT 中应优先展示的字段。前端使用该声明生成核心摘要，同时继续保留每轮完整事实和完整原始 Trace。
+本规范新增项目级 `show_schema`，由项目显式声明 REQUEST 与 EXTRACT_OUTPUT 中应优先展示的字段。前端使用该声明生成 Trace 核心摘要，同时通过一个完整原始 Trace 保留全部事实。
 
 `show_schema` 只控制展示投影，不改变业务协议、数据内容、Judge 输入或 Trace 原件。
 
@@ -214,6 +214,7 @@ Mock 用户
 第 1 轮：核心输入 + 核心输出 + 状态
 第 2 轮：核心输入 + 核心输出 + 状态
 ...
+完整原始 Trace
 ```
 
 每轮规则：
@@ -224,47 +225,30 @@ Mock 用户
 - 主字段为空时保留字段名并显示“主展示字段无值”，将其作为可见的数据质量信号；
 - 次要字段为空时不占用主视图，在“已配置但本轮为空”折叠区中列出；
 - 长文本可以在视觉上收起，但必须提供展开入口，不能丢弃内容。
+- Trace 单元格必须设置最大可视高度；多轮内容在单元格内部滚动，不能无限撑高表格行。
 
-### 6.2 每轮完整事实
+### 6.2 每轮核心事实
 
-每轮卡片下方提供折叠区：
-
-```text
-完整 Request
-完整 Raw Response
-完整 Extracted Output
-本轮 Validation / Fallback / Error / Execution Events
-```
+每轮卡片默认只展示 Mock 核心输入、AI 核心输出、轮次状态和错误摘要。Request、Raw Response、Extracted Output、Validation、Fallback 与 Execution Events 不再分别生成折叠面板，统一由最后的完整原始 Trace 提供溯源。
 
 ### 6.3 全局非输入输出信息
 
-轮次卡片之后统一展示：
-
-```text
-Application Boundary
-Execution Trace
-Evidence Refs
-Runtime Logs
-State History
-Gate / Transition Decisions
-```
-
-这些字段不由 show_schema 控制，不与 Mock/AI 对话争夺主视觉层级。
+Application Boundary、Execution Trace、Evidence、Runtime Logs、State History、Gate/Transition Decisions 等非核心交互事实不单独占用默认视觉空间，统一包含在完整原始 Trace 中。
 
 ### 6.4 原始事实兜底
 
 Trace 区域最后保留“完整原始 Trace JSON”折叠面板，内容来自未经展示投影裁剪的 RunTrace。
 
-完整 Raw Response、每轮完整事实和完整 Trace 应在用户展开时再格式化/挂载到 DOM，不能为批量列表中的每一行预先生成大体积 JSON 节点。
+完整原始 Trace 应在用户展开时再格式化/挂载到 DOM，不能为批量列表中的每一行预先生成大体积 JSON 节点。
 
 ## 7. Output 与 Reference
 
-用例表中的 Output 和 Reference 保持相邻，并统一使用 `SHOW_SCHEMA.output_fields` 生成核心展示。
+用例表中的 Output 和 Reference 保持相邻，并保持改造前的完整 JSON 展示，不使用 Show Schema 做简写。
 
 - Output 的完整值继续来自 RunTrace.extracted_output；
 - Reference 的完整值继续来自 MockCase.reference 或 RunTrace.reference_contract；
-- 两者使用相同字段顺序；
-- 两者都保留完整 JSON 展开入口；
+- 两者使用完全相同的 JSON 格式化和完整内容规则，均不截断；
+- Show Schema 的 output_fields 只用于 Trace 轮次中的 AI 核心输出摘要；
 - show_schema 不改变 Output 与 Reference 的 EXTRACT_OUTPUT_SCHEMA 校验。
 
 ## 8. 加载与错误处理
@@ -296,7 +280,7 @@ Trace 区域最后保留“完整原始 Trace JSON”折叠面板，内容来自
 前端负责：
 
 - 根据展示投影渲染核心信息；
-- 提供每轮完整事实和完整 Trace 的展开入口；
+- 在 Trace 中默认展示每轮核心事实，并提供唯一的完整原始 Trace 展开入口；
 - 不猜测项目字段语义，不重新解释 schema。
 
 ## 10. 测试要求
@@ -310,7 +294,7 @@ Trace 区域最后保留“完整原始 Trace JSON”折叠面板，内容来自
 - RunTrace.mock_intent 的构造、normalize、序列化和 fixture；
 - 单轮与多轮展示投影；
 - 缺失运行值显示为空但不报错；
-- Output 与 Reference 使用相同 output_fields；
+- Output 与 Reference 保持既有完整 JSON 展示，并使用完全相同的格式；
 - 展示投影失败时完整 Trace 仍可查看。
 
 项目测试至少覆盖：
@@ -325,8 +309,10 @@ Trace 区域最后保留“完整原始 Trace JSON”折叠面板，内容来自
 
 - Mock 用户信息默认可见；
 - 多轮 Mock/AI 信息按轮次配对，不跨 case、不跨轮错配；
-- 每轮完整 Request、Raw Response、Extracted Output 可展开；
-- 全局技术事实位于轮次之后；
+- Output 与 Reference 不应用 show_schema 摘要、不截断，格式保持一致；
+- Trace 固定最大可视高度，超出后在单元格内部滚动；
+- 每轮默认只显示 Mock 核心输入、AI 核心输出、状态和错误；
+- 非核心请求、响应和技术事实不分别占位；
 - 完整原始 Trace 位于最后；
 - 长内容的展开不会导致信息丢失。
 
@@ -387,11 +373,13 @@ Trace 区域最后保留“完整原始 Trace JSON”折叠面板，内容来自
 ## 4. 前端 Changes
 
 1. 将当前 Trace 首屏的完整 JSON 改为 Mock 用户 + 轮次卡片；
-2. 保留每轮 Request、Raw Response、Extracted Output 完整展开；
-3. 将全局技术事实放在轮次之后；
-4. 将完整原始 Trace 放在最后；
-5. 对大 JSON 使用展开时渲染；
-6. 对缺失/非法 Show Schema 提供可见降级，不阻断整批数据。
+2. 保持 Output 与 Reference 的既有完整 JSON 展示和相同格式，不使用 show_schema 简写；
+3. 为 Trace 单元格设置最大可视高度和内部滚动，避免多轮数据撑高整行；
+4. 每轮仅突出 Mock 核心输入、AI 核心输出、状态和错误；
+5. 不再为 Request、Raw Response、Extracted Output 和全局技术事实分别占用视觉空间；
+6. 将包含上述全部事实的完整原始 Trace 放在最后；
+7. 对大 JSON 使用展开时渲染；
+8. 对缺失/非法 Show Schema 提供可见降级，不阻断整批数据。
 
 ## 5. 验收 Changes
 

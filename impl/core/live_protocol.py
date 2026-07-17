@@ -103,6 +103,7 @@ class _LiveProtocol(ABC):
         """单轮执行路径。"""
         mock = self._mock_instance()
         request = mock.build_live_request(intent)
+        mock_message = str(getattr(intent, "query", "") or "")
         # 判断走 provided 还是 real：_has_provided_output 已检查 spec ready + ProvidedOutputLive
         if self._has_provided_output():
             # provided 路径：不走 deliver_turn，由 deliver_provided → extract_output → 校验
@@ -122,6 +123,7 @@ class _LiveProtocol(ABC):
                 execution_trace=execution_trace,
                 application_boundary=application_boundary,
                 project_fields=project_fields,
+                mock_message=mock_message,
             )
             ctx.finish_execution(
                 stop_reason="single_turn_completed" if error is None else "execution_error",
@@ -153,6 +155,7 @@ class _LiveProtocol(ABC):
                 execution_trace=execution_trace,
                 application_boundary=application_boundary,
                 project_fields=project_fields,
+                mock_message=mock_message,
             )
             ctx.finish_execution(
                 stop_reason="single_turn_completed",
@@ -174,6 +177,7 @@ class _LiveProtocol(ABC):
                 error=str(exc),
                 fallbacks=[fallback],
                 validation=list(facts.get("validation") or []),
+                mock_message=mock_message,
             )
             ctx.finish_execution(
                 stop_reason="execution_error",
@@ -213,8 +217,10 @@ class _LiveProtocol(ABC):
             if not isinstance(request, dict) or not request:
                 goal = str(getattr(intent, "query", "") or "")
                 request = {"query": goal}
-
-            user_query = str(request.get("query") or request.get("content") or "")
+            if hasattr(mock, "extract_mock_message"):
+                user_query = str(mock.extract_mock_message(request) or "")
+            else:
+                user_query = str(request.get("query") or request.get("content") or "")
             transcript.append({"role": "user", "content": user_query, "query": user_query})
 
             start = time.time()
@@ -238,6 +244,7 @@ class _LiveProtocol(ABC):
                     execution_trace=execution_trace,
                     application_boundary=application_boundary,
                     project_fields=project_fields,
+                    mock_message=user_query,
                 )
                 extracted_turns.append(output)
                 last_output = output
@@ -254,6 +261,7 @@ class _LiveProtocol(ABC):
                     error=str(exc),
                     fallbacks=[fallback],
                     validation=list(facts.get("validation") or []),
+                    mock_message=user_query,
                 )
                 stop_reason = "live_error"
                 break

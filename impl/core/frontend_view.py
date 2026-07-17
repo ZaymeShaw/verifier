@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 from .schema import AttributeResult, CheckReport, ClusterSummary, FrontendViewModel, JudgeResult, ProjectSpec, RunTrace, _non_empty_reference, to_dict, trace_extracted_output, trace_normalized_request, trace_raw_response
 from .table_view import build_trace_table_row
 from .summary import summary_from_fulfillment
+from .show_schema import build_show_projection
 
 
 def _trace_reference(trace: Optional[RunTrace]) -> Any:
@@ -170,6 +171,11 @@ def build_frontend_view(
         extensions["frontend_standard"] = standard
     extensions["display_contract"] = _display_contract(reference_panel, trace)
     extensions["verifiable_tools"] = _verifiable_tool_panel(spec)
+    if trace:
+        try:
+            extensions["trace_show"] = build_show_projection(trace)
+        except Exception as exc:
+            extensions["trace_show"] = {"available": False, "reason": str(exc)}
     table_row = build_trace_table_row(trace, judge, attribute, None, check) if trace else None
     return FrontendViewModel(
         project_info={"project_id": spec.project_id, "name": spec.name, "description": spec.description},

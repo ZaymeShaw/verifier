@@ -81,6 +81,11 @@ class DeerflowMock(MultiTurnInteractiveMock, ProjectMock):
         """多轮主循环最大轮数。"""
         return 4
 
+    def extract_mock_message(self, request: Dict[str, Any]) -> str:
+        messages = ((request.get("input") or {}).get("messages") or []) if isinstance(request, dict) else []
+        last = messages[-1] if messages and isinstance(messages[-1], dict) else {}
+        return str(last.get("content") or "")
+
     def should_stop(self, transcript: List[Dict[str, Any]], last_result: Any) -> bool:
         """多轮停止信号：达到 max_turns 或系统回复包含完成信号。"""
         if not transcript:
