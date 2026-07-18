@@ -78,7 +78,13 @@ def test_client_search_live_run_smoke():
 
 
 def test_marketting_planning_intent_live_run_smoke():
-    trace = live_run("marketting-planning-intent", {"query": "帮我识别营销意图", "user_intent": "识别营销意图", "reference": {"intent": "nbev_planning"}})
+    trace = live_run("marketting-planning-intent", {
+        "input": {
+            "session_id": "eval-mpi-smoke", "trace_id": "mpi-smoke", "org_id": "eval-org",
+            "user_text": "帮我识别营销意图",
+            "extra_input_params": {"agent_args": {"conversation_id": "eval-mpi-smoke", "message": {"content": "帮我识别营销意图", "content_type": "text"}}, "args": {"extensions": {}, "contexts": []}},
+        },
+    })
 
     _assert_live_smoke_trace(trace)
     if trace.status == "ok":
@@ -87,32 +93,42 @@ def test_marketting_planning_intent_live_run_smoke():
 
 
 def test_marketting_planning_intent_normalized_request_matches_live_schema_dataclass():
-    trace = live_run("marketting-planning-intent", {"query": "帮我识别营销意图", "user_intent": "识别营销意图", "reference": {"intent": "nbev_planning"}})
+    trace = live_run("marketting-planning-intent", {
+        "input": {
+            "session_id": "eval-mpi-normalized", "trace_id": "mpi-normalized", "org_id": "eval-org",
+            "user_text": "帮我识别营销意图",
+            "extra_input_params": {"agent_args": {}, "args": {}},
+        },
+    })
 
-    assert trace.normalized_request["scenario"] == "intent_recognition"
-    assert trace.normalized_request["query"] == "帮我识别营销意图"
-    assert trace.normalized_request["reference"] == {}
-    assert trace.normalized_request["user_intent"] == "识别营销意图"
-    assert isinstance(trace.normalized_request["metadata"], dict)
-    assert trace.normalized_request["session_id"].startswith("eval-")
+    assert trace.normalized_request["trace_id"] == "mpi-normalized"
+    assert trace.normalized_request["user_text"] == "帮我识别营销意图"
+    assert trace.normalized_request["org_id"] == "eval-org"
+    assert isinstance(trace.normalized_request["extra_input_params"], dict)
+    assert trace.normalized_request["session_id"] == "eval-mpi-normalized"
 
 
 def test_marketting_planning_case_transport_fields_do_not_leak_into_live_request():
     trace = live_run("marketting-planning", {
-        "case_id": "shared-session-string-false",
-        "query": "帮我做NBEV规划",
-        "user_intent": "完成NBEV规划",
-        "turns": [{"role": "user", "content": "帮我做NBEV规划"}],
-        "shared_session": "false",
         "session_id": "declared-session",
+        "trace_id": "declared-trace", "org_id": "eval-org", "user_text": "帮我做NBEV规划",
+        "history": [], "user_action": "send_message", "action_scenario": "marketing_planning",
+        "user_id": "eval-user", "ts": 1, "token": "mock_token", "app_scenario": "customer_service",
+        "docs_num": 5, "source": "offline_task", "extra_input_params": {"agent_args": {}, "args": {}},
     })
 
     assert "shared_session" not in trace.normalized_request
-    assert trace.normalized_request.get("session_id") != "declared-session"
+    assert trace.normalized_request.get("session_id") == "declared-session"
 
 
 def test_marketting_planning_live_run_smoke():
-    trace = live_run("marketting-planning", {"query": "帮我做NBEV规划", "user_intent": "完成NBEV规划", "turns": [{"role": "user", "content": "帮我做NBEV规划"}]})
+    trace = live_run("marketting-planning", {
+        "session_id": "eval-mp-smoke", "trace_id": "eval-mp-smoke", "org_id": "eval-org",
+        "user_text": "帮我做NBEV规划", "history": [], "user_action": "send_message",
+        "action_scenario": "marketing_planning", "user_id": "eval-user", "ts": 1,
+        "token": "mock_token", "app_scenario": "customer_service", "docs_num": 5,
+        "source": "offline_task", "extra_input_params": {"agent_args": {}, "args": {}},
+    })
 
     _assert_live_smoke_trace(trace)
     assert trace.normalized_request.get("user_text") == "帮我做NBEV规划"
@@ -171,7 +187,7 @@ def test_marketting_planning_raw_sse_replay_extracts_business_evidence():
         ],
     }
 
-    turn = mp_live.extract_output(raw_response, request, spec, 0)
+    turn = mp_live.extract_output([raw_response], spec)
 
     assert turn["event_summary"]["protocol_completed"] is True
     assert turn["event_summary"]["business_completed"] is True
@@ -239,7 +255,7 @@ def test_marketting_planning_card_fallback_marker_is_not_request_fallback():
         },
     }
 
-    turn = mp_live.extract_output(raw_response, request, spec, 0)
+    turn = mp_live.extract_output([raw_response], spec)
     boundary = mp_live.application_boundary(raw_response, {"turns": [turn]}, request, spec)
 
     assert turn["card_summary"][0]["fallback"] is True

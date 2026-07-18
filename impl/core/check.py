@@ -344,6 +344,27 @@ def _attribute_consistency_gaps(trace: Optional[RunTrace], judge: Optional[Judge
         gaps.append("Failure attribution missing root_cause_hypothesis or suspected_locations.")
     return gaps
 
+
+def _reallive_exchange_gaps(trace: RunTrace) -> list[str]:
+    """检查成功 RealLive Trace 是否保留了可验证的公共传输事实。"""
+    if trace.execution_mode not in {"live", "live_service", "interactive_intent"} or trace.status not in {"ok", "succeeded"}:
+        return []
+    gaps: list[str] = []
+    records = list(trace.turn_records or [])
+    if not records:
+        return ["Successful RealLive RunTrace missing turn_records with LiveExchange evidence."]
+    for index, record in enumerate(records, start=1):
+        exchanges = list(record.get("live_exchanges") or []) if isinstance(record, dict) else []
+        if not exchanges:
+            gaps.append(f"Successful RealLive turn {index} missing LiveExchange evidence.")
+            continue
+        values = [item if isinstance(item, dict) else vars(item) for item in exchanges]
+        if not any(bool(item.get("carries_live_request")) for item in values):
+            gaps.append(f"Successful RealLive turn {index} has no request-carrying LiveExchange.")
+        if not any(bool(item.get("contributes_raw_response")) for item in values):
+            gaps.append(f"Successful RealLive turn {index} has no raw-response LiveExchange.")
+    return gaps
+
 def _semantic_rule_gaps(spec: ProjectSpec) -> list[str]:
     gaps = []
     extensions = spec.frontend_extensions or {}
@@ -655,6 +676,7 @@ def check_chain(
             protocol_gaps.append("RunTrace has ok status but no raw_response.")
         if not trace_execution_trace(trace):
             protocol_gaps.append("RunTrace missing execution_trace for source -> API -> adapter verification.")
+        protocol_gaps.extend(_reallive_exchange_gaps(trace))
         consistency_gaps.extend(_downstream_boundary_gaps(trace, judge))
     else:
         protocol_gaps.append("Missing RunTrace; source -> run part of chain is not verified.")
@@ -684,6 +706,8 @@ def check_chain(
     if attribute:
         if trace and attribute.trace_id != trace.trace_id:
             consistency_gaps.append("AttributeResult trace_id does not match RunTrace.")
+        if trace and attribute.case_id != trace.case_id:
+            consistency_gaps.append("AttributeResult case_id does not match RunTrace.")
         if not attribute.root_cause_hypothesis:
             protocol_gaps.append("AttributeResult missing root_cause_hypothesis.")
         if not attribute.suspected_locations and not attribute.root_cause_hypothesis:

@@ -9,7 +9,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, List
 from typing import final as typing_final
-from impl.core.schema import ProjectSpec, SingleTurnCase, MultiTurnCase
+from impl.core.schema import MockContinueDecision, MockIntentOutput, ProjectSpec, SingleTurnCase, MultiTurnCase
 from impl.core.protocol_base import check_forbidden_overrides
 
 
@@ -273,7 +273,7 @@ class ProjectMock(_MockProtocol):
     - case.metadata["user_context"] 承载用户背景 dict。
     """
 
-    def build_live_request(
+    def build_initial_request(
         self,
         intent: MockIntentOutput,
     ) -> Dict[str, Any]:
@@ -283,16 +283,13 @@ class ProjectMock(_MockProtocol):
         case 参数已删除（trace.md 第十一节 6：case 不进 live 层，协议层也不传 case 给 mock）。
         单轮项目通常不覆盖。多轮项目通过 MultiTurnInteractiveMock 覆盖 build_next_request。
 
-        provided-output 项目：trace_from_live 把 case data 预构建成 live_request 并存入
-        intent.live_request，这里直接返回，不走 LLM。
+        仅用于 Intent 正向生成首轮 Request；execute_live 不调用此方法。
         """
-        if intent.live_request is not None:
-            return intent.live_request
-        from impl.core.mock_agent import MockAgent, build_spec_from_project, build_live_request_from_intent
+        from impl.core.mock_agent import MockAgent, build_spec_from_project, build_initial_request_from_intent
         agent = MockAgent(self.spec)
         scenario = str(getattr(intent, "scenario", "") or "")
         build_spec = build_spec_from_project(self.spec, scenario=scenario)
-        return build_live_request_from_intent(agent, build_spec, intent).input
+        return build_initial_request_from_intent(agent, build_spec, intent).input
 
     def __init__(self, spec: ProjectSpec):
         """
@@ -309,7 +306,7 @@ class ProjectMock(_MockProtocol):
             self.live_schema = load_live_schema(spec.project_id)
 
 
-class SingleTurnMock:
+class SingleTurnMock(ABC):
     """单轮交互模式 mixin。项目 Mock 通过组合继承声明单轮形态。
 
     使用方式：
@@ -323,7 +320,7 @@ class SingleTurnMock:
     """
 
     @abstractmethod
-    def build_live_request(
+    def build_initial_request(
         self,
         intent: MockIntentOutput,
     ) -> Dict[str, Any]:
@@ -343,16 +340,17 @@ class SingleTurnMock:
         pass
 
 
-class MultiTurnInteractiveMock:
+class MultiTurnInteractiveMock(ABC):
     """多轮交互模式 mixin。声明 Mock 支持 build_next_request + 多轮控制。
 
     使用方式：
         class XxxMock(MultiTurnInteractiveMock, ProjectMock): ...
 
     多轮 Mock 必须实现：
-    - build_next_request(intent, accumulated_output) -> Dict：产每轮 request
-    - max_turns() -> int：多轮主循环最大轮数
-    - should_stop(transcript, last_result) -> bool：停止信号判断
+    - infer_user_intent(initial_request) -> MockIntentOutput
+    - decide_next_action(intent, accumulated_output) -> MockContinueDecision
+    - build_next_request(intent, accumulated_output) -> Dict
+    - safety_max_turns() -> int
 
     多轮控制（max_turns/should_stop）是 mock 扮演用户的能力，由项目扩展层实现，
     不放在 case 里。live 协议层 execute_live 的多轮分支通过 mock 拿控制信息。
@@ -363,6 +361,20 @@ class MultiTurnInteractiveMock:
     """
 
     @abstractmethod
+    def infer_user_intent(self, initial_request: Dict[str, Any]) -> MockIntentOutput:
+        """从符合项目 REQUEST_SCHEMA 的首轮 Request 反推有限用户模型。"""
+        pass
+
+    @abstractmethod
+    def decide_next_action(
+        self,
+        intent: MockIntentOutput,
+        accumulated_output: Dict[str, Any],
+    ) -> MockContinueDecision:
+        """轻量判断模拟用户是否继续。"""
+        pass
+
+    @abstractmethod
     def build_next_request(
         self,
         intent: MockIntentOutput,
@@ -371,37 +383,22 @@ class MultiTurnInteractiveMock:
         """扩展点：产多轮每轮 request。多轮项目必须实现。
 
         定位/目标（spec/adapter/multiturn.md 第四节）：
-            把协议层算好的意图（intent）+ 历史累积（accumulated_output）翻译成具体一轮的 request。
+            把 intent + 标准化 accumulated_output 翻译成下一轮 request。
             返回形状符合 live_schema.REQUEST_SCHEMA。
             项目层直接基于 intent 和 accumulated_output 构造 request，不自己调 build_user_intent。
 
         参数：
-            intent: 协议层算好的意图层产出（user_intent / query / user_context）。
-            accumulated_output: 历史累积（{"turns": [...]} 形状），首轮为 None。
+            intent: 当前用户模型。
+            accumulated_output: 仅含各轮 live_request/extract_output/status/error 和控制字段。
         """
         pass
 
     @abstractmethod
-    def max_turns(self) -> int:
+    def safety_max_turns(self) -> int:
         """扩展点：多轮主循环最大轮数。多轮项目必须实现。
 
         定位/目标：
             项目扩展层定义多轮交互的最大轮数。
             live 协议层 execute_live 多轮分支通过此方法拿最大轮数，不读 case.interaction.policy。
-        """
-        pass
-
-    @abstractmethod
-    def should_stop(
-        self,
-        transcript: List[Dict[str, Any]],
-        last_result: Any,
-    ) -> bool:
-        """扩展点：多轮主循环停止信号判断。多轮项目必须实现。
-
-        定位/目标：
-            项目扩展层定义什么条件下停止主循环。
-            比如：用户表达满足、系统说完成、达到业务终态等。
-            live 协议层 execute_live 每轮后调此方法判断是否停止。
         """
         pass

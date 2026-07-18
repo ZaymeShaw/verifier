@@ -69,13 +69,18 @@ class TestLiveProtocol:
         # ProjectLive 自身不强制 deliver_real/deliver_provided
         # 项目应继承 RealServiceLive 或 ProvidedOutputLive
         from impl.core.live_protocol import RealServiceLive, ProvidedOutputLive
+        from impl.core.live_transport import LiveTransport
 
         class TestRealLive(RealServiceLive):
-            def deliver_real(self, request):
+            def deliver_real(self, request, transport):
+                return transport
+
+            def extract_output(self, raw_response):
                 return {"test": "response"}
 
         live = TestRealLive(spec=None)
-        assert live.deliver_real(None) == {"test": "response"}
+        transport = LiveTransport()
+        assert live.deliver_real(None, transport) is transport
         # build_request 已删除（trace.md 第十二节），意图计算由 trace 层调 _resolve_intent
         # 不再测试 build_request 默认实现
 
@@ -98,21 +103,24 @@ class TestLiveProtocol:
                 def _run_provided(self, case, request):
                     return "hacked"
 
-                def deliver_real(self, request):
+                def deliver_real(self, request, transport):
+                    return transport
+
+                def extract_output(self, raw_response):
                     return {}
 
     def test_extract_output_can_be_overridden(self):
         """extract_output 是扩展点，可以被覆盖"""
         from impl.core.live_protocol import RealServiceLive
         class TestLive2(RealServiceLive):
-            def deliver_real(self, request):
-                return {}
+            def deliver_real(self, request, transport):
+                return transport
 
-            def extract_output(self, raw_response, request):
+            def extract_output(self, raw_response):
                 return {"extracted": True}
 
         live = TestLive2(spec=None)
-        assert live.extract_output(None, None) == {"extracted": True}
+        assert live.extract_output([]) == {"extracted": True}
 
     def test_real_service_live_requires_deliver_real(self):
         """RealServiceLive 必须实现 deliver_real，未实现时无法实例化"""
@@ -134,7 +142,10 @@ class TestLiveProtocol:
         """RealServiceLive 的 deliver_provided 默认 raise NotImplementedError"""
         from impl.core.live_protocol import RealServiceLive
         class TestRealLive(RealServiceLive):
-            def deliver_real(self, request):
+            def deliver_real(self, request, transport):
+                return transport
+
+            def extract_output(self, raw_response):
                 return {}
         live = TestRealLive(spec=None)
         with pytest.raises(NotImplementedError, match="deliver_provided"):
@@ -148,7 +159,7 @@ class TestLiveProtocol:
                 return {}
         live = TestProvidedLive(spec=None)
         with pytest.raises(NotImplementedError, match="deliver_real"):
-            live.deliver_real(None)
+            live.deliver_real(None, None)
 
 
 class TestAttributeProtocol:
@@ -273,6 +284,25 @@ class TestMockProtocol:
             class BadMock2(ProjectMock):
                 pass
             BadMock2(spec=None)
+
+    def test_multi_turn_mock_must_implement_intent_inference(self):
+        from impl.core.mock_protocol import MultiTurnInteractiveMock
+
+        with pytest.raises(TypeError, match="infer_user_intent|abstract"):
+            class MissingInference(MultiTurnInteractiveMock, ProjectMock):
+                def build_user_intent(self, scenario):
+                    return {}
+
+                def decide_next_action(self, intent, accumulated_output):
+                    return None
+
+                def build_next_request(self, intent, accumulated_output=None):
+                    return {}
+
+                def safety_max_turns(self):
+                    return 12
+
+            MissingInference(spec=None)
 
     def test_intent_labels_optional(self):
         """intent_labels 是可选扩展点，不实现时返回空列表"""

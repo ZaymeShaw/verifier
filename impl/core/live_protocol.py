@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 import logging
+import inspect
 import time
 from abc import ABC, abstractmethod
 from contextvars import ContextVar
@@ -23,6 +24,7 @@ from impl.core.schema import (
     to_dict,
 )
 from impl.core.protocol_base import check_forbidden_overrides
+from impl.core.live_transport import LiveTransport, validate_real_transport
 
 logger = logging.getLogger(__name__)
 
@@ -69,10 +71,11 @@ class _LiveProtocol(ABC):
     @typing_final
     def execute_live(
         self,
-        intent: "MockIntentOutput",
+        initial_request: Dict[str, Any],
         ctx: "TraceContext",
+        intent: Optional["MockIntentOutput"] = None,
     ) -> Dict[str, Any]:
-        """模板方法：完整调用入口，输入 intent + ctx，输出 EXTRACT_OUTPUT_SCHEMA。
+        """模板方法：完整调用入口，首轮 Request 必填，Intent 可选。
 
         流程（spec/adapter/trace.md 第八节）：
         1. 判断单轮/多轮（isinstance MultiTurnInteractiveLive）
@@ -84,8 +87,8 @@ class _LiveProtocol(ABC):
         turn_count_before = int(getattr(ctx, "turn_count", 0) or 0)
         try:
             if isinstance(self, MultiTurnInteractiveLive):
-                return self._execute_multi_turn(intent, ctx)
-            return self._execute_single_turn(intent, ctx)
+                return self._execute_multi_turn(initial_request, ctx, intent)
+            return self._execute_single_turn(initial_request, ctx, intent)
         except Exception as exc:
             # build request / request schema 等在 record_turn 前失败时，也必须形成失败 trace，
             # 不能被 trace_from_live 吞成 status=ok 的空输出。
@@ -97,13 +100,17 @@ class _LiveProtocol(ABC):
 
     def _execute_single_turn(
         self,
-        intent: "MockIntentOutput",
+        initial_request: Dict[str, Any],
         ctx: "TraceContext",
+        intent: Optional["MockIntentOutput"] = None,
     ) -> Dict[str, Any]:
         """单轮执行路径。"""
-        mock = self._mock_instance()
-        request = mock.build_live_request(intent)
+        request = dict(initial_request or {})
         mock_message = str(getattr(intent, "query", "") or "")
+        if not mock_message:
+            mock = self._mock_instance()
+            if hasattr(mock, "extract_mock_message"):
+                mock_message = str(mock.extract_mock_message(request) or "")
         # 判断走 provided 还是 real：_has_provided_output 已检查 spec ready + ProvidedOutputLive
         if self._has_provided_output():
             # provided 路径：不走 deliver_turn，由 deliver_provided → extract_output → 校验
@@ -114,6 +121,7 @@ class _LiveProtocol(ABC):
             ctx.record_turn(
                 request=request,
                 raw_response=raw_response,
+                live_exchanges=[],
                 extracted_output=output,
                 call_status="succeeded" if error is None else "failed",
                 runtime_ms=None,
@@ -146,6 +154,7 @@ class _LiveProtocol(ABC):
             ctx.record_turn(
                 request=request,
                 raw_response=raw_response,
+                live_exchanges=list(facts.get("live_exchanges") or []),
                 extracted_output=output,
                 call_status="succeeded",
                 runtime_ms=runtime_ms,
@@ -171,6 +180,7 @@ class _LiveProtocol(ABC):
             ctx.record_turn(
                 request=request,
                 raw_response=facts.get("raw_response"),
+                live_exchanges=list(facts.get("live_exchanges") or []),
                 extracted_output={},
                 call_status="failed",
                 runtime_ms=runtime_ms,
@@ -189,38 +199,28 @@ class _LiveProtocol(ABC):
 
     def _execute_multi_turn(
         self,
-        intent: "MockIntentOutput",
+        initial_request: Dict[str, Any],
         ctx: "TraceContext",
+        intent: Optional["MockIntentOutput"] = None,
     ) -> Dict[str, Any]:
-        """多轮执行路径：循环 build_next_request → deliver_turn，停止只用 mock.should_stop。
+        """多轮执行路径：首轮 Request-first，之后先决策再构建下一轮。
 
         主循环在 execute_live 内部（spec 第十一节 2）。TraceContext 收集每轮过程事实。
         每轮 output 独立符合 EXTRACT_OUTPUT_SCHEMA；完整轮次事实只进入 TraceContext。
         """
         mock = self._mock_for_multi_turn()
-        max_turns = max(1, int(mock.max_turns() if hasattr(mock, "max_turns") else 4))
+        max_turns = max(1, int(mock.safety_max_turns()))
 
-        extracted_turns: List[Dict[str, Any]] = []
+        interaction_turns: List[Dict[str, Any]] = []
         transcript: List[Dict[str, Any]] = []
         last_output: Optional[Dict[str, Any]] = None
-        stop_reason = "max_turns"
-        session_id = f"interactive-{getattr(intent, 'scenario', '') or 'session'}"
+        stop_reason = ""
+        stopped_by_decision = False
+        session_id = f"interactive-{getattr(intent, 'scenario', '') or ctx.scenario or 'session'}"
 
-        accumulated: Optional[Dict[str, Any]] = None
+        request = dict(initial_request or {})
         for turn_index in range(max_turns):
-            # build_next_request：首轮 accumulated=None，后续轮看上一轮累积
-            try:
-                request = mock.build_next_request(intent, accumulated)
-            except Exception as exc:
-                logger.warning("mock.build_next_request failed at turn %d: %s", turn_index + 1, exc, exc_info=True)
-                request = None
-            if not isinstance(request, dict) or not request:
-                goal = str(getattr(intent, "query", "") or "")
-                request = {"query": goal}
-            if hasattr(mock, "extract_mock_message"):
-                user_query = str(mock.extract_mock_message(request) or "")
-            else:
-                user_query = str(request.get("query") or request.get("content") or "")
+            user_query = str(mock.extract_mock_message(request) or "") if hasattr(mock, "extract_mock_message") else str(request.get("query") or request.get("content") or "")
             transcript.append({"role": "user", "content": user_query, "query": user_query})
 
             start = time.time()
@@ -235,6 +235,7 @@ class _LiveProtocol(ABC):
                 ctx.record_turn(
                     request=request,
                     raw_response=raw_response,
+                    live_exchanges=list(facts.get("live_exchanges") or []),
                     extracted_output=output,
                     call_status="succeeded",
                     runtime_ms=runtime_ms,
@@ -246,8 +247,14 @@ class _LiveProtocol(ABC):
                     project_fields=project_fields,
                     mock_message=user_query,
                 )
-                extracted_turns.append(output)
                 last_output = output
+                interaction_turns.append({
+                    "turn_index": turn_index + 1,
+                    "live_request": dict(request),
+                    "extract_output": dict(output),
+                    "status": "succeeded",
+                    "error": None,
+                })
             except Exception as exc:
                 runtime_ms = int((time.time() - start) * 1000)
                 facts = self._take_turn_facts()
@@ -255,6 +262,7 @@ class _LiveProtocol(ABC):
                 ctx.record_turn(
                     request=request,
                     raw_response=facts.get("raw_response"),
+                    live_exchanges=list(facts.get("live_exchanges") or []),
                     extracted_output={},
                     call_status="failed",
                     runtime_ms=runtime_ms,
@@ -266,25 +274,76 @@ class _LiveProtocol(ABC):
                 stop_reason = "live_error"
                 break
 
-            # 累积：本轮 output 和 transcript，供下一轮 build_next_request
-            accumulated = {
-                "turns": extracted_turns,
-                "transcript": transcript,
-                "last_output": last_output,
-            }
             transcript.append({
                 "role": "assistant",
                 "content": self._summarize_assistant(output),
                 "stage": output.get("stage") if isinstance(output, dict) else None,
             })
 
-            # 停止判断：只用 mock.should_stop（spec 第十一节 9）
-            if hasattr(mock, "should_stop") and mock.should_stop(transcript, last_output):
-                stop_reason = "mock_should_stop"
+            if intent is None or not getattr(intent, "user_intent", "") or not getattr(intent, "query", ""):
+                try:
+                    intent = mock.infer_user_intent(dict(initial_request))
+                    if not getattr(intent, "user_intent", "") or not getattr(intent, "query", ""):
+                        raise ValueError("infer_user_intent returned empty required fields")
+                    ctx.set_intent(intent)
+                except Exception as exc:
+                    logger.warning("mock.infer_user_intent failed: %s", exc, exc_info=True)
+                    stop_reason = "intent_unavailable"
+                    break
+
+            accumulated = {
+                "turns": list(interaction_turns),
+                "current_turn": turn_index + 1,
+                "safety_max_turns": max_turns,
+            }
+            decision = None
+            decision_error: Optional[Exception] = None
+            for decision_attempt in range(2):
+                try:
+                    decision = mock.decide_next_action(intent, accumulated)
+                    decision_error = None
+                    break
+                except Exception as exc:
+                    decision_error = exc
+                    logger.warning(
+                        "mock.decide_next_action attempt %d/2 failed: %s",
+                        decision_attempt + 1,
+                        exc,
+                        exc_info=True,
+                    )
+            if decision is None:
+                stop_reason = "decision_error"
+                break
+            if (
+                decision.action == "stop"
+                and decision.stop_reason == "goal_satisfied"
+                and not self._has_visible_goal_evidence(output)
+            ):
+                from impl.core.schema import MockContinueDecision
+                decision = MockContinueDecision(
+                    action="stop",
+                    stop_reason="perceived_no_progress",
+                )
+            ctx.record_decision(decision)
+            if decision.action == "stop":
+                stop_reason = decision.stop_reason or "user_abandons"
+                stopped_by_decision = True
+                break
+            if turn_index + 1 >= max_turns:
+                stop_reason = "safety_max_turns"
+                break
+            try:
+                request = mock.build_next_request(intent, accumulated)
+            except Exception as exc:
+                logger.warning("mock.build_next_request failed at turn %d: %s", turn_index + 2, exc, exc_info=True)
+                stop_reason = "request_build_error"
+                break
+            if not isinstance(request, dict) or not request:
+                stop_reason = "request_build_error"
                 break
 
-        final_output_turn = len(extracted_turns) if last_output is not None else None
-        completion_status = "completed" if last_output is not None and stop_reason != "live_error" else "failed"
+        final_output_turn = len(interaction_turns) if last_output is not None else None
+        completion_status = "completed" if last_output is not None and stopped_by_decision else "failed"
         ctx.finish_execution(
             session_id=session_id,
             stop_reason=stop_reason,
@@ -296,6 +355,29 @@ class _LiveProtocol(ABC):
             raise RuntimeError(f"{self.spec.project_id} multi-turn execution produced no valid output")
         # 多轮返回最后一轮有效的项目 EXTRACT_OUTPUT_SCHEMA；完整 turns 由 TraceContext 持有。
         return last_output
+
+    @staticmethod
+    def _has_visible_goal_evidence(output: Any) -> bool:
+        """Reject goal_satisfied when the latest user-visible output is structurally empty."""
+        if not isinstance(output, dict) or not output:
+            return False
+        event_summary = output.get("event_summary")
+        if isinstance(event_summary, dict):
+            if event_summary.get("business_completed") is True:
+                return True
+            if (
+                event_summary.get("business_completed") is False
+                and event_summary.get("protocol_completed") is False
+            ):
+                return False
+        for key in ("robot_text", "reply_text", "answer", "content", "text"):
+            if str(output.get(key) or "").strip():
+                return True
+        for key in ("card_summary", "cards", "tool_calls"):
+            if output.get(key):
+                return True
+        stage = str(output.get("stage") or "").strip().lower()
+        return bool(stage and stage not in {"unknown", "empty", "error", "failed"})
 
     def _validate_request(self, payload: Any) -> Optional[ExecutionTraceEvent]:
         """内部方法：使用 live_schema 校验请求。校验失败抛 ValueError，不降级。"""
@@ -415,10 +497,11 @@ class _LiveProtocol(ABC):
 
         内部流程：
         1. 校验 request 符合 REQUEST_SCHEMA
-        2. deliver_real(request) → raw_response
-        3. extract_output(raw_response, request) → EXTRACT_OUTPUT_SCHEMA
-        4. 校验 output 符合 EXTRACT_OUTPUT_SCHEMA
-        5. 返回 EXTRACT_OUTPUT_SCHEMA
+        2. 创建公共 LiveTransport，deliver_real(request, transport) 返回同一个 transport
+        3. seal transport，从贡献响应生成 raw_response: list[Any]
+        4. extract_output(raw_response) → EXTRACT_OUTPUT_SCHEMA
+        5. 校验 output 符合 EXTRACT_OUTPUT_SCHEMA
+        6. 返回 EXTRACT_OUTPUT_SCHEMA
 
         raw_response 和校验事件仅保存在当前执行上下文，供 execute_live 上报 TraceContext；
         不写入共享 Live 实例字段，避免并发 case 串数据。
@@ -427,17 +510,36 @@ class _LiveProtocol(ABC):
         request_validation = self._validate_request(request)
         _TURN_FACTS.set({
             "raw_response": None,
+            "live_exchanges": [],
             "validation": [event for event in (request_validation,) if event is not None],
         })
-        raw_response = self.deliver_real(request)
-        output = self.extract_output(raw_response, request)
+        transport = LiveTransport()
+        try:
+            returned_transport = self.deliver_real(request, transport)
+            if returned_transport is not transport:
+                raise RuntimeError("deliver_real must return the LiveTransport provided by LiveProtocol")
+            transport.seal()
+            validate_real_transport(transport, request)
+            raw_response = transport.raw_responses()
+            output = self.extract_output(raw_response)
+        except Exception:
+            if not transport.sealed:
+                transport.seal()
+            _TURN_FACTS.set({
+                "raw_response": transport.raw_responses(),
+                "live_exchanges": transport.exchanges,
+                "validation": [event for event in (request_validation,) if event is not None],
+            })
+            raise
         _TURN_FACTS.set({
             "raw_response": raw_response,
+            "live_exchanges": transport.exchanges,
             "validation": [event for event in (request_validation,) if event is not None],
         })
         output_validation = self._validate_output(output)
         _TURN_FACTS.set({
             "raw_response": raw_response,
+            "live_exchanges": transport.exchanges,
             "validation": [event for event in (request_validation, output_validation) if event is not None],
         })
         return output
@@ -457,12 +559,8 @@ class _LiveProtocol(ABC):
             )
         return adapter.mock()
 
-    def _resolve_intent(self, case: SingleTurnCase | MultiTurnCase | Dict[str, Any], mock: Any) -> "MockIntentOutput":
-        """算意图：优先从 case 取，不足则调 mock.build_user_intent 补充。
-
-        case 已有意图（case.user_intent 有值）时直接构造 MockIntentOutput，
-        避免重复 LLM 调用；case 没有意图时调 mock.build_user_intent(scenario) 跑一次 LLM。
-        """
+    def _resolve_intent(self, case: SingleTurnCase | MultiTurnCase | Dict[str, Any], mock: Any) -> Optional["MockIntentOutput"]:
+        """只读取 Case 明确携带的可选 Intent；不从 Request 或 scenario 补造。"""
         from impl.core.schema import MockIntentOutput
         if isinstance(case, dict):
             case_user_intent = str(case.get("user_intent") or "")
@@ -477,30 +575,31 @@ class _LiveProtocol(ABC):
             scenario = str(getattr(case, "scenario", "") or "")
             case_input = dict(getattr(case, "input", {}) or {})
 
+        stored_intent = case_metadata.get("mock_intent") if isinstance(case_metadata.get("mock_intent"), dict) else {}
         query = str(
+            stored_intent.get("query")
+            or
             case_input.get("query")
             or case_input.get("user_text")
             or case_input.get("question")
             or case_input.get("content")
             or ""
         )
-        # Persisted/imported cases already carry the authoritative user request.
-        # Do not replace it with a newly generated scenario example merely because
-        # the optional user_intent description is absent.
-        if case_user_intent or case_input:
+        if (stored_intent and stored_intent.get("user_intent") and stored_intent.get("query")) or (case_user_intent and query):
             return MockIntentOutput(
-                user_intent=case_user_intent or query,
+                user_intent=str(stored_intent.get("user_intent") or case_user_intent or query),
                 query=query,
-                user_context=dict(case_user_context or {}),
-                scenario=scenario,
+                user_context=dict(stored_intent.get("user_context") or case_user_context or {}),
+                system_understanding=str(stored_intent.get("system_understanding") or ""),
+                scenario=str(stored_intent.get("scenario") or scenario),
             )
-        return mock.build_user_intent(scenario)
+        return None
 
-    def deliver_real(self, request: Any) -> Any:
+    def deliver_real(self, request: Any, transport: LiveTransport) -> LiveTransport:
         """扩展点：真实投递。项目可选覆盖。
 
         定位/目标：
-            调用业务系统（真实 API / 服务），返回 raw_response。
+            使用公共 transport 调用业务系统并返回传入的同一个 transport。
             这是 Live 的核心业务知识——如何调用业务系统无法通用化，必须由项目实现。
 
         参数：
@@ -530,8 +629,8 @@ class _LiveProtocol(ABC):
         """扩展点：stub 投递。项目可选覆盖。默认返回 None。"""
         return None
 
-    def extract_output(self, raw_response: Any, request: Any) -> Dict[str, Any]:
-        """扩展点：提取输出。项目可选覆盖。"""
+    def extract_output(self, raw_response: Any, request: Any = None) -> Dict[str, Any]:
+        """provided-output 兼容扩展点；RealServiceLive 必须实现单参数版本。"""
         if isinstance(raw_response, dict):
             return raw_response
         return {}
@@ -588,15 +687,34 @@ class ProjectLive(_LiveProtocol):
 class RealServiceLive(ProjectLive):
     """真实服务项目继承这个类。
 
-    deliver_real 是 @abstractmethod（必须实现）。
+    deliver_real / extract_output 是 @abstractmethod（必须实现）。
     deliver_provided 有默认实现（raise NotImplementedError）。
 
     继承此类后，项目只需实现 deliver_real，不需要实现 deliver_provided。
     """
 
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        expected = {"deliver_real": ["self", "request", "transport"], "extract_output": ["self", "raw_response"]}
+        for method_name, parameter_names in expected.items():
+            method = cls.__dict__.get(method_name)
+            if method is None:
+                continue
+            actual = list(inspect.signature(method).parameters)
+            if actual != parameter_names:
+                raise TypeError(
+                    f"{cls.__name__}.{method_name} signature must be "
+                    f"({', '.join(parameter_names)}), got ({', '.join(actual)})"
+                )
+
     @abstractmethod
-    def deliver_real(self, request: Any) -> Any:
+    def deliver_real(self, request: Any, transport: LiveTransport) -> LiveTransport:
         """扩展点：真实投递。项目必须实现。"""
+        pass
+
+    @abstractmethod
+    def extract_output(self, raw_response: list[Any]) -> Dict[str, Any]:
+        """只从公共层生成的真实响应列表提取 EXTRACT_OUTPUT_SCHEMA。"""
         pass
 
 

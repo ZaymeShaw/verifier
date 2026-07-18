@@ -24,10 +24,8 @@ class ClientSearchMock(SingleTurnMock, ProjectMock):
         build_spec = build_spec_from_project(self.spec, scenario=scenario)
         return MockAgent.intent_output(agent.build_intent(build_spec))
 
-    def build_live_request(self, intent) -> Dict[str, Any]:
+    def build_initial_request(self, intent) -> Dict[str, Any]:
         """把用户表达确定性映射为 ClientSearchRequest；不让 LLM 编造协议字段。"""
-        if intent.live_request is not None:
-            return dict(intent.live_request)
         return {
             "user_text": str(getattr(intent, "query", "") or getattr(intent, "user_intent", "") or ""),
             "user_id": "eval-user",

@@ -17,6 +17,7 @@ from impl.core.schema.frontend import FrontendViewModel
 from impl.core.schema.mock import MockCase, MockIntentOutput, SingleTurnCase
 from impl.core.schema.project import ProjectAnalysis, ProjectSpec
 from impl.core.schema.trace import RunTrace
+from impl.core.schema.live import LiveExchange
 from .fixture import register_fixture
 
 TRACE_ID = "trace-fixture-001"
@@ -153,9 +154,25 @@ def run_trace() -> RunTrace:
             "raw_response": None,
             "extracted_output": _output(),
             "call_status": "succeeded",
+            "live_exchanges": [live_exchange()],
         }],
         status="ok",
         scenario="schema-fixture-single-turn",
+    )
+
+
+def live_exchange() -> LiveExchange:
+    return LiveExchange(
+        exchange_id="live-exchange-fixture-001",
+        sequence=0,
+        transport="http",
+        method="POST",
+        url="http://fixture.invalid/search",
+        carries_live_request=True,
+        contributes_raw_response=True,
+        request={"query": "上海 30-40岁 高净值客户"},
+        status_code=200,
+        response=_output(),
     )
 
 
@@ -173,6 +190,7 @@ def project_spec() -> ProjectSpec:
 
 
 register_fixture(RunTrace, "default", run_trace)
+register_fixture(LiveExchange, "default", live_exchange)
 register_fixture(JudgeResult, "default", judge_result)
 register_fixture(JudgeResult, "incorrect", incorrect_judge_result)
 register_fixture(AttributeResult, "default", attribute_result)

@@ -212,7 +212,7 @@ def incomplete_state_attribute_result(trace: RunTrace, judge_result: JudgeResult
     return AttributeResult(
         trace_id=trace.trace_id,
         project_id=trace.project_id,
-        case_id=str(trace.input.get("case_id") or "") if isinstance(trace.input, dict) else "",
+        case_id=str(trace.case_id or ""),
         root_cause_hypothesis="状态机未完成归因质量门，当前只能保留待复核失败归因。",
         evidence=[reason],
         evidence_strength="none",
@@ -416,7 +416,7 @@ def _batch_case(index: int, case: Dict[str, Any], project_id: str, user_intent: 
     if not isinstance(case_input, dict):
         case_input = {"value": case_input}
     case_id = normalized.case_id if normalized else f"case-{index + 1}"
-    case_expected = stored_case.intent.user_intent
+    case_expected = stored_case.intent.user_intent if stored_case.intent is not None else ""
     MAX_RETRIES = 2
     last_exc = None
     for attempt in range(MAX_RETRIES + 1):
@@ -807,14 +807,17 @@ def save_mock_cases(
         if stc is None:
             continue
         mc = single_turn_to_mock_case(stc, project_id)
+        intent = mc.intent
         mock_case_dicts.append({
             "id": mc.id,
             "project_id": mc.project_id,
             "scenario": mc.scenario,
-            "intent": {
-                "user_intent": mc.intent.user_intent,
-                "query": mc.intent.query,
-                "user_context": mc.intent.user_context,
+            "intent": None if intent is None else {
+                "user_intent": intent.user_intent,
+                "query": intent.query,
+                "user_context": intent.user_context,
+                "system_understanding": intent.system_understanding,
+                "scenario": intent.scenario,
             },
             "live_request": mc.live_request,
             "output": mc.output,

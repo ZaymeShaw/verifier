@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 import time
 import urllib.error
-import urllib.request
 from typing import Any, Dict, List, Optional
 
 from impl.core.live_protocol import LiveServiceUnavailableError, MultiTurnInteractiveLive, RealServiceLive
+from impl.core.live_transport import LiveTransport
 from impl.core.schema import ExecutionTraceEvent, LiveRequest, MultiTurnCase, ProjectSpec, SingleTurnCase
 
 
@@ -39,15 +39,6 @@ def _live_request_body(request: LiveRequest | dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def deliver_raw_response(spec: ProjectSpec, request: Any) -> Any:
-    normalized_request = request.normalized_request if isinstance(request, LiveRequest) else (request if isinstance(request, dict) else {})
-    body = json.dumps(_live_request_body_from_dict(normalized_request), ensure_ascii=False).encode("utf-8")
-    url = str(spec.api.get("base_url") or "").rstrip("/") + "/" + str(spec.api.get("endpoint") or "").lstrip("/")
-    api_request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method=str(spec.api.get("method") or "POST").upper())
-    with urllib.request.urlopen(api_request, timeout=float(spec.api.get("timeout") or 120)) as response:
-        return _attach_request(response.read().decode("utf-8"), normalized_request)
-
-
 def _live_request_body_from_dict(payload: dict[str, Any]) -> dict[str, Any]:
     """从 dict 形态的 normalized_request 构造业务 API body。
 
@@ -73,6 +64,8 @@ def _request_from_raw(raw: Any) -> dict[str, Any]:
 
 
 def _raw_payload(raw: Any) -> Any:
+    if isinstance(raw, list):
+        raw = raw[0] if raw else {}
     if isinstance(raw, dict) and "raw" in raw:
         return raw.get("raw")
     return raw
@@ -351,7 +344,6 @@ def _event_summary(events: list[dict[str, Any]], spec: ProjectSpec, business_com
 
 def _session_summary(data: Any, raw_response: Any = None) -> dict[str, Any]:
     session = data.get("session") if isinstance(data, dict) and isinstance(data.get("session"), dict) else {}
-    request = _request_from_raw(raw_response if raw_response is not None else data)
     missing_fields = _list(session.get("missing_fields"))
     if not missing_fields:
         for event in _extract_events(data):
@@ -364,8 +356,8 @@ def _session_summary(data: Any, raw_response: Any = None) -> dict[str, Any]:
     evidence_declared = isinstance(session, dict) and any(key in session for key in ("required_fields", "accumulated_fields", "missing_fields"))
     evidence_status = "declared" if evidence_declared else "missing"
     return {
-        "session_id": str(session.get("session_id") or request.get("session_id") or ""),
-        "required_fields": _list(session.get("required_fields") or ((request.get("reference") or {}).get("session_requirements") or {}).get("required_fields")),
+        "session_id": str(session.get("session_id") or ""),
+        "required_fields": _list(session.get("required_fields")),
         "accumulated_fields": dict(session.get("accumulated_fields") or {}),
         "missing_fields": missing_fields,
         "evidence_declared": evidence_declared,
@@ -375,11 +367,9 @@ def _session_summary(data: Any, raw_response: Any = None) -> dict[str, Any]:
 
 def _extract_fallback(data: Any, cards: list[dict[str, Any]], raw_response: Any = None) -> dict[str, Any]:
     raw = data.get("fallback") if isinstance(data, dict) else None
-    request = _request_from_raw(raw_response if raw_response is not None else data)
-    boundary = request.get("boundary") or {}
     if isinstance(raw, dict):
-        return {"used": bool(raw.get("used")), "allowed": bool(raw.get("allowed") or boundary.get("allow_fallback")), "reason": str(raw.get("reason") or "")}
-    return {"used": False, "allowed": bool(boundary.get("allow_fallback")), "reason": ""}
+        return {"used": bool(raw.get("used")), "allowed": bool(raw.get("allowed")), "reason": str(raw.get("reason") or "")}
+    return {"used": False, "allowed": False, "reason": ""}
 
 
 def _extract_errors(data: Any, events: list[dict[str, Any]]) -> list[str]:
@@ -403,7 +393,7 @@ def _intent_fields(frame_body: dict[str, Any]) -> dict[str, str]:
     return {"intent": str(extra.get("intent") or frame_body.get("intent") or ""), "intent_name": str(extra.get("intent_name") or frame_body.get("intent_name") or "")}
 
 
-def extract_output(raw_response: Any, request: LiveRequest | None = None, spec: ProjectSpec | None = None, index: int | None = None) -> dict[str, Any]:
+def extract_output(raw_response: Any, spec: ProjectSpec | None = None) -> dict[str, Any]:
     data = _raw_payload(raw_response)
     frame = _last_response_frame(data)
     body = frame.get("data") if isinstance(frame.get("data"), dict) else {}
@@ -590,15 +580,22 @@ class MarketingPlanningLive(RealServiceLive, MultiTurnInteractiveLive):
     def deliver_provided(self, request: LiveRequest) -> Any:
         return provided_output_raw(None, request)
 
-    def deliver_real(self, request: Any) -> Any:
+    def deliver_real(self, request: Any, transport: LiveTransport) -> LiveTransport:
         try:
-            raw_response = deliver_raw_response(self.spec, request)
+            url = str(self.spec.api.get("base_url") or "").rstrip("/") + "/" + str(self.spec.api.get("endpoint") or "").lstrip("/")
+            transport.request(
+                str(self.spec.api.get("method") or "POST"), url,
+                json_body=request,
+                timeout=float(self.spec.api.get("timeout") or 120),
+                carries_live_request=True,
+                contributes_raw_response=True,
+            )
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             raise LiveServiceUnavailableError(f"marketing-planning service unavailable: {exc}") from exc
-        return raw_response
+        return transport
 
-    def extract_output(self, raw_response: Any, request: Any) -> Dict[str, Any]:
-        return extract_output(raw_response, request, self.spec, max(len(getattr(request, "turns", []) or []) - 1, 0))
+    def extract_output(self, raw_response: list[Any]) -> Dict[str, Any]:
+        return extract_output(raw_response, self.spec)
 
     def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any], request: Any, application_boundary: Dict[str, Any]) -> Dict[str, Any]:
         return project_fields(raw_response, extracted_output, request, self.spec, application_boundary)

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from .interaction_protocol import ready_from_spec
 from .project_loader import load_project_document
-from .schema import MockBuildResult, MockBuildSpec, MockIntentOutput, MockNextTurnOutput, ProjectSpec
+from .schema import MockBuildResult, MockBuildSpec, MockContinueDecision, MockIntentOutput, MockNextTurnOutput, ProjectSpec
 from .structured_output import StructuredOutputSpec, FREE_TEXT_OUTPUT, FREE_DICT_OUTPUT, dataclass_to_json_schema
 
 if TYPE_CHECKING:
@@ -37,6 +37,10 @@ _MOCK_NEXT_TURN_SPEC = StructuredOutputSpec.from_dataclass(
     required_nonempty=["query"],
     description="mock_agent 下一轮生成",
 )
+_MOCK_CONTINUE_DECISION_SPEC = StructuredOutputSpec.from_dataclass(
+    MockContinueDecision,
+    description="mock_agent 轻量继续判断",
+)
 # build_live_request 产出形状依赖运行时项目 REQUEST_SCHEMA dataclass。
 # 优先加载项目 schema 的 Request dataclass 做结构化约束；
 # 如果项目没有 dataclass，退回到 FREE_DICT_OUTPUT（仅要求非空 dict）。
@@ -59,7 +63,7 @@ class MockAgent:
 
     def build(self, build_spec: MockBuildSpec) -> MockBuildResult:
         intent_result = self.build_intent(build_spec)
-        live_request = self.build_live_request(intent_result, build_spec)
+        live_request = self.build_initial_request(intent_result, build_spec)
         return live_request
 
     # --- 第一步：意图构建（用户语义层，与 live 形状无关）---
@@ -85,14 +89,16 @@ class MockAgent:
         from .schema import MockIntentOutput
         return MockIntentOutput(
             user_intent=result.user_intent,
-            query=str(result.input.get("query") or ""),
+            query=str(result.query or result.input.get("query") or ""),
             user_context=dict(result.user_context or {}),
+            system_understanding=str(result.metadata.get("system_understanding") or ""),
+            scenario=result.scenario,
         )
 
 
     # --- 第二步：按 live_schema.REQUEST_SCHEMA 直接产出 normalized_request ---
 
-    def build_live_request(self, intent_result: MockBuildResult, build_spec: MockBuildSpec) -> MockBuildResult:
+    def build_initial_request(self, intent_result: MockBuildResult, build_spec: MockBuildSpec) -> MockBuildResult:
         """将意图映射为 live_schema.REQUEST_SCHEMA dataclass 形状的请求体。
 
         LLM 产出后用 live_schema.check.request() 兜底校验。若不符（LLM 偶发字段漂移），
@@ -209,6 +215,83 @@ class MockAgent:
         query = str(data.get("query") or "")
         return {"query": query, "turn_index": len(previous_turns) + 1}
 
+    def infer_user_intent(self, initial_request: Dict[str, Any], *, scenario: str = "") -> MockIntentOutput:
+        """从已校验的项目 Request 反推有限用户模型。"""
+        trace_id = f"mock-agent-infer-intent-{uuid.uuid4()}"
+        system = (
+            "你扮演正在使用当前业务系统的真实用户建模器。仅根据首轮请求中用户可见的内容，"
+            "反推用户表达、用户意图和其对该业务系统的有限认知。不得使用或猜测 verifier、Judge、"
+            "Evaluation、鉴权、session、内部 config 等信息；没有证据的 user_context 保持空对象，"
+            "没有证据的 system_understanding 保持空字符串。输出必须简短。"
+        )
+        data = self.llm.complete_json(
+            system,
+            json.dumps({"project_id": self.spec.project_id, "scenario": scenario, "initial_request": initial_request}, ensure_ascii=False),
+            trace_id=trace_id,
+            reasoning_effort="low",
+            output_spec=_MOCK_INTENT_SPEC,
+        )
+        if data.get("error"):
+            raise RuntimeError(f"infer_user_intent failed: {data.get('error')}")
+        return MockIntentOutput(
+            user_intent=str(data.get("user_intent") or "").strip(),
+            query=str(data.get("query") or "").strip(),
+            user_context=dict(data.get("user_context") or {}),
+            system_understanding=str(data.get("system_understanding") or "").strip(),
+            scenario=scenario,
+        )
+
+    def decide_next_action(
+        self,
+        intent: MockIntentOutput,
+        accumulated_output: Dict[str, Any],
+    ) -> MockContinueDecision:
+        """基于受限交互状态进行极简用户继续判断。"""
+        trace_id = f"mock-agent-continue-{uuid.uuid4()}"
+        data = self.llm.complete_json(
+            (
+                "你扮演真实用户，只判断是否还要继续使用当前业务系统。"
+                "目标已主观满足、用户不愿继续或主观认为无进展时停止；否则继续。"
+                "只能输出 action 和 stop_reason，不要解释。"
+            ),
+            json.dumps({
+                "intent": dataclasses.asdict(intent),
+                "accumulated_output": accumulated_output,
+            }, ensure_ascii=False),
+            trace_id=trace_id,
+            reasoning_effort="low",
+            output_spec=_MOCK_CONTINUE_DECISION_SPEC,
+        )
+        if data.get("error"):
+            raise RuntimeError(f"decide_next_action failed: {data.get('error')}")
+        raw_action = data.get("action")
+        reason = str(data.get("stop_reason") or "")
+        # 部分 provider 会把 discriminated action 序列化为一层对象。
+        # 只解包协议内的 continue/stop，不接受任意文本或其他动作。
+        if isinstance(raw_action, dict):
+            action = str(raw_action.get("type") or raw_action.get("action") or "")
+            reason = str(
+                raw_action.get("stop_reason")
+                or raw_action.get("reason")
+                or reason
+            )
+        else:
+            action = str(raw_action or "")
+        if action not in {"continue", "stop"}:
+            raise ValueError(f"invalid continue decision action: {action}")
+        if action == "continue":
+            reason = ""
+        elif reason not in {"goal_satisfied", "user_abandons", "perceived_no_progress"}:
+            # 部分 provider 未严格执行 JSON Schema enum；在公共层压回长期协议值。
+            lowered = reason.lower()
+            if any(marker in lowered for marker in ("目标", "达成", "满足", "完成", "satisfied", "achieved", "complete")):
+                reason = "goal_satisfied"
+            elif any(marker in lowered for marker in ("无进展", "没进展", "没有进展", "no progress", "stuck")):
+                reason = "perceived_no_progress"
+            else:
+                reason = "user_abandons"
+        return MockContinueDecision(action=action, stop_reason=reason)
+
     # --- prompt 构造 ---
 
     def _capability_context(self, project_id: str, scenario: str) -> str:
@@ -246,15 +329,18 @@ class MockAgent:
 
     def _intent_system_prompt(self, spec: MockBuildSpec) -> str:
         required_hint = f"input 必须包含字段：{', '.join(spec.required_input_fields)}。" if spec.required_input_fields else ""
-        capability = self._capability_context(spec.project_id, spec.scenario)
+        mock_doc = load_project_document(self.spec, "mock").strip()
+        user_visible_context = f"业务产品标识：{spec.project_id}。{self.spec.description or ''}{mock_doc[:800]}"
         base = (
             "你扮演真实终端用户，针对给定业务场景，用自然语言表达你想做的事。"
             f"场景：{spec.scenario}。{required_hint}"
-            f"{capability}"
+            f"{user_visible_context}"
             "要求："
             "1. query：口语化的用户原话，不要出现系统术语或 JSON 字段名；"
             "2. user_intent：一句话说明你想干什么，用业务术语准确概括；"
-            "3. user_context：描述用户的背景信息、画像和当前目标（可选）。"
+            "3. user_context：描述用户的背景信息、画像和当前目标（可选）；"
+            "4. system_understanding：只描述该用户对 project_id 对应业务产品的有限主观认知，"
+            "不能写 verifier、Judge、Evaluation、内部能力答案；没有用户可见证据时保持空字符串。"
         )
         base += f'输出 JSON，只包含必填字段：query，user_intent。'
         return base
@@ -298,6 +384,7 @@ class MockAgent:
     def _map_intent_result(self, spec: MockBuildSpec, data: Dict[str, Any]) -> MockBuildResult:
         user_intent = str(data.get("user_intent") or "").strip()
         user_context: Dict[str, Any] = data.get("user_context") or {}
+        system_understanding = str(data.get("system_understanding") or "").strip()
         query = str(data.get("query") or "").strip()
         input_data: Dict[str, Any] = {"query": query, "user_intent": user_intent}
         for field in spec.required_input_fields:
@@ -315,7 +402,7 @@ class MockAgent:
             query=query,
             user_context=user_context,
             scenario=spec.scenario,
-            metadata={"source": "mock_agent_llm", "ready": list(ready_from_spec(self.spec)), "project_id": spec.project_id},
+            metadata={"source": "mock_agent_llm", "ready": list(ready_from_spec(self.spec)), "project_id": spec.project_id, "system_understanding": system_understanding},
         )
 
     def _map_live_request_result(self, intent_result: MockBuildResult, build_spec: MockBuildSpec, data: Dict[str, Any]) -> MockBuildResult:
@@ -442,7 +529,7 @@ def build_spec_from_project(spec: ProjectSpec, scenario: str = "") -> MockBuildS
         ready=list(ready_from_spec(spec)),
     )
 
-def build_live_request_from_intent(agent: "MockAgent", build_spec: "MockBuildSpec", intent: "MockIntentOutput") -> "MockBuildResult":
+def build_initial_request_from_intent(agent: "MockAgent", build_spec: "MockBuildSpec", intent: "MockIntentOutput") -> "MockBuildResult":
     """协议层工具函数：把 MockIntentOutput 翻译成 REQUEST_SCHEMA 形状。
 
     供 ProjectMock.build_live_request 默认实现调用。
@@ -456,6 +543,6 @@ def build_live_request_from_intent(agent: "MockAgent", build_spec: "MockBuildSpe
         user_intent=intent.user_intent,
         user_context=dict(intent.user_context or {}),
         scenario=build_spec.scenario,
-        metadata={"source": "protocol_build_live_request"},
+        metadata={"source": "protocol_build_live_request", "system_understanding": intent.system_understanding},
     )
-    return agent.build_live_request(intent_result, build_spec)
+    return agent.build_initial_request(intent_result, build_spec)

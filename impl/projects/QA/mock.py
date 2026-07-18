@@ -24,15 +24,13 @@ class QAMock(SingleTurnMock, ProjectMock):
         build_spec = build_spec_from_project(self.spec, scenario=scenario)
         return MockAgent.intent_output(agent.build_intent(build_spec))
 
-    def build_live_request(self, intent) -> Dict[str, Any]:
+    def build_initial_request(self, intent) -> Dict[str, Any]:
         """产单轮 request：委托 MockAgent 把意图翻译成 REQUEST_SCHEMA 形状。"""
-        if intent.live_request is not None:
-            return intent.live_request
-        from impl.core.mock_agent import MockAgent, build_spec_from_project, build_live_request_from_intent
+        from impl.core.mock_agent import MockAgent, build_spec_from_project, build_initial_request_from_intent
         agent = MockAgent(self.spec)
         scenario = str(getattr(intent, "scenario", "") or "")
         build_spec = build_spec_from_project(self.spec, scenario=scenario)
-        return build_live_request_from_intent(agent, build_spec, intent).input
+        return build_initial_request_from_intent(agent, build_spec, intent).input
 
     def normalize_case(
         self,

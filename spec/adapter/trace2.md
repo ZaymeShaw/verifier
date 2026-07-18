@@ -85,7 +85,7 @@ class MockIntentOutput:
 字段含义：
 
 - `user_context`：用户身份、背景、经验与当前处境；
-- `system_understanding`：用户主观上对 `project_id` 所标识的被测业务系统的了解，允许有限、不完整或错误；这里的“系统”专指该业务产品或 Agent，不是某个 scenario，也不是 verifier 测评系统；
+- `system_understanding`：用户主观上对当前被测业务 `<project>` 的了解，允许有限、不完整或错误；这里的“系统”专指用户正在使用的业务产品或 Agent，不是 verifier 测评系统；
 - `user_intent`：用户希望达到的实际目标；
 - `query`：用户最初表达；
 - `scenario`：当前 `<project>` 内部的业务交互场景，不是项目名。项目名由 `project_id` 单独表达；例如 `project_id=deerflow` 时，scenario 可以是 `clarification`；
@@ -98,7 +98,7 @@ class MockIntentOutput:
 - 系统真实能力边界或内部完成标准；
 - Trace、Raw Response 或运行日志。
 
-生成 `system_understanding` 时，必须先由当前 ProjectSpec 确定 `project_id`，再且只能使用真实用户可能接触的该业务系统信息，例如产品名称、入口说明、用户既往使用经验和已经看到的业务回复。不得把 scenario 当成认知对象，也不得把 verifier、Judge、Evaluation、内部工具链或项目真实能力答案写入用户认知。
+生成 `system_understanding` 时只能使用真实用户可能接触的信息，例如被测 `<project>` 的产品名称、入口说明、用户既往使用经验和已经看到的业务回复。不得把 verifier、Judge、Evaluation、内部工具链或项目真实能力答案写入用户认知。
 
 ## 4. execute_live
 
@@ -229,19 +229,22 @@ observe latest output
 
 ```python
 @dataclass
-class MockInteractionState:
-    intent: MockIntentOutput
-    turns: list[MockInteractionTurn]
-    current_turn: int
-    safety_max_turns: int
-
-@dataclass
 class MockInteractionTurn:
     turn_index: int
     live_request: dict[str, Any]
     extract_output: dict[str, Any]
     status: str
     error: str | None = None
+```
+
+协议传参继续使用 `accumulated_output: dict`，其标准形状为：
+
+```python
+{
+    "turns": list[MockInteractionTurn],
+    "current_turn": int,
+    "safety_max_turns": int,
+}
 ```
 
 不传入 Raw Response、完整 RunTrace、Reference、Judge、Attribute、运行日志或内部执行事件。
@@ -276,12 +279,13 @@ class MockContinueDecision:
 
 ```python
 def build_next_request(
-    state: MockInteractionState,
+    intent: MockIntentOutput,
+    accumulated_output: dict[str, Any],
 ) -> REQUEST_SCHEMA:
     ...
 ```
 
-它与 `decide_next_action` 使用同一份 InteractionState。只有 action 为 `continue` 时才调用，输出必须通过 REQUEST_SCHEMA 校验。
+它保留现有 Intent + accumulated_output 的输入形式。`decide_next_action` 使用相同两个入参；accumulated_output 的标准结构仅包含各轮 live_request、extract_output、status/error 以及当前轮次和安全上限。只有 action 为 `continue` 时才调用，输出必须通过 REQUEST_SCHEMA 校验。
 
 ## 7. 最大轮数与停止原因
 
@@ -381,7 +385,7 @@ Trace 中展示的 Input 必须来自实际投递 Request，不得用候选 Case
 1. 从 `MockIntentOutput` 删除 `live_request`；
 2. 增加 `system_understanding`；
 3. 将 MockCase.intent 调整为可选字段，MockCase.live_request 保持必填；
-4. 新增 `MockInteractionTurn`、`MockInteractionState` 与 `MockContinueDecision`；
+4. 新增 `MockInteractionTurn` 与 `MockContinueDecision`，并定义 accumulated_output 标准形状；
 5. 为停止原因增加统一枚举；
 6. 在 `MultiTurnInteractiveMock` 增加 `infer_user_intent` 的 `@abstractmethod`，由抽象协议和项目 check 双重保证；
 7. 更新 normalize、serialize、accessor、fixture 和 schema hook；
@@ -392,7 +396,7 @@ Trace 中展示的 Input 必须来自实际投递 Request，不得用候选 Case
 1. 将首轮 Request 构建统一为 `build_initial_request(intent)`；
 2. 新增轻量 `infer_user_intent(initial_request: REQUEST_SCHEMA) -> MockIntentOutput`，并分别校验输入、输出 schema；
 3. 新增轻量 `decide_next_action(state)`；
-4. 将 `build_next_request` 改为读取统一 InteractionState；
+4. 保留 `build_next_request(intent, accumulated_output)` 签名，并标准化 accumulated_output 内容；
 5. 删除所有项目中 `if intent.live_request is not None` 旁路；
 6. 更新 Mock Agent 意图输出 schema，生成 `system_understanding`；
 7. 更新下一轮 Prompt：先进行独立短决策，决定继续后再调用 Request 构建；
@@ -445,7 +449,7 @@ Trace 中展示的 Input 必须来自实际投递 Request，不得用候选 Case
 - 必须实现 `infer_user_intent(initial_request: REQUEST_SCHEMA) -> MockIntentOutput`；
 - 通过继承 `MultiTurnInteractiveMock` 的 `@abstractmethod` 在类实例化时强制实现，不允许仅靠文档约定；
 - 将 should_stop 关键词逻辑迁移为 decide_next_action；
-- 将 build_next_request 切换到统一 InteractionState；
+- 保留 build_next_request 的现有签名，并切换到标准化 accumulated_output；
 - 提高 safety_max_turns，并验证正常用例主要由用户决定停止。
 
 ## 7. Intent 入参职责影响
@@ -470,12 +474,12 @@ Trace 中展示的 Input 必须来自实际投递 Request，不得用候选 Case
 
 这些方法承担的正是 Intent→Request 映射职责，协议变化不应将其改成 Request 输入。
 
-### 7.3 改为统一 InteractionState 的方法
+### 7.3 共享标准 accumulated_output 的方法
 
-- `build_next_request(intent, accumulated)` 改为 `build_next_request(state)`；
-- `should_stop(transcript, last_result)` 被 `decide_next_action(state)` 替代；
+- `build_next_request(intent, accumulated_output)` 保持签名不变，但 accumulated_output 改为标准受限结构；
+- `should_stop(transcript, last_result)` 被 `decide_next_action(intent, accumulated_output)` 替代；
 - deerflow 与 marketting-planning 的对应项目实现同步迁移；
-- MockAgent.next_turn 改为读取受限 InteractionState，不能接收完整 Trace 或评估信息。
+- MockAgent.next_turn 改为读取受限 accumulated_output，不能接收完整 Trace 或评估信息。
 
 ### 7.4 不属于本次 Intent 协议的同名参数
 

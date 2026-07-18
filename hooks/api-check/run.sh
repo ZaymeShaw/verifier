@@ -15,16 +15,32 @@ fi
 UAT_PORT=$("$PYTHON_BIN" -c "from impl.core.config import get_uat_config; print(get_uat_config().port)" 2>/dev/null || echo "8021")
 export VERIFIER_UAT_PORT="${VERIFIER_UAT_PORT:-${UAT_PORT}}"
 
-# 自动重启：先停掉旧服务，再启动新服务
+# 自动重启：必须等端口完全释放后再启动。否则 health 可能误命中旧进程，
+# 而新进程因 bind 失败退出，使整批报告在中途变成 http_error。
 if lsof -ti:"$VERIFIER_UAT_PORT" >/dev/null 2>&1; then
     echo "[api-check] killing existing verifier on port $VERIFIER_UAT_PORT..."
-    kill "$(lsof -ti:"$VERIFIER_UAT_PORT")" 2>/dev/null || true
-    sleep 2
-    # 如果还没死，强杀
+    for pid in $(lsof -ti:"$VERIFIER_UAT_PORT"); do
+        kill "$pid" 2>/dev/null || true
+    done
+
+    for _ in $(seq 1 30); do
+        if ! lsof -ti:"$VERIFIER_UAT_PORT" >/dev/null 2>&1; then
+            break
+        fi
+        sleep 0.2
+    done
+
     if lsof -ti:"$VERIFIER_UAT_PORT" >/dev/null 2>&1; then
         echo "[api-check] force killing stuck verifier..."
-        kill -9 "$(lsof -ti:"$VERIFIER_UAT_PORT")" 2>/dev/null || true
+        for pid in $(lsof -ti:"$VERIFIER_UAT_PORT"); do
+            kill -9 "$pid" 2>/dev/null || true
+        done
         sleep 1
+    fi
+
+    if lsof -ti:"$VERIFIER_UAT_PORT" >/dev/null 2>&1; then
+        echo "ERROR: port $VERIFIER_UAT_PORT is still occupied" >&2
+        exit 1
     fi
 fi
 
@@ -48,6 +64,11 @@ trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
 # 等待服务就绪
 echo "[api-check] waiting for server to be ready..."
 for i in $(seq 1 30); do
+    if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+        echo "ERROR: verifier process exited before becoming ready" >&2
+        wait "$SERVER_PID" || true
+        exit 1
+    fi
     if curl -s "http://127.0.0.1:$VERIFIER_UAT_PORT/health" >/dev/null 2>&1; then
         echo "[api-check] server ready on port $VERIFIER_UAT_PORT"
         break

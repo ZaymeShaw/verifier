@@ -38,6 +38,31 @@ def test_strict_transport_boundary_accepts_only_mock_case():
         parse_mock_case({**_case(), "status": "pending"})
 
 
+def test_request_first_case_allows_intent_to_be_absent():
+    request_first = {**_case(), "intent": None}
+    parsed = parse_mock_case(request_first, project_id="client_search")
+
+    assert parsed.intent is None
+    assert mock_case_to_single_turn(parsed).input == {"user_text": "有子女的客户"}
+    assert to_public_dict(parsed)["intent"] is None
+
+
+def test_mock_intent_is_independent_from_live_request():
+    parsed = parse_mock_case({
+        **_case(),
+        "intent": {
+            "user_intent": "找客户",
+            "query": "有子女的客户",
+            "user_context": {},
+            "system_understanding": "我知道这个产品可以按自然语言筛选客户",
+        },
+    })
+
+    public = to_public_dict(parsed)
+    assert "live_request" not in public["intent"]
+    assert public["intent"]["system_understanding"] == "我知道这个产品可以按自然语言筛选客户"
+
+
 def test_mock_cases_api_source_is_canonical_mock_case():
     cases = pipeline._fixture_mock_cases("client_search")
     assert cases

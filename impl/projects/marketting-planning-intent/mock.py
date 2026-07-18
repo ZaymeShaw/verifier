@@ -25,19 +25,19 @@ class MarketingIntentMock(SingleTurnMock, ProjectMock):
         build_spec = build_spec_from_project(self.spec, scenario=scenario)
         return MockAgent.intent_output(agent.build_intent(build_spec))
 
-    def build_live_request(self, intent) -> Dict[str, Any]:
-        """把用户表达确定性映射为 MPIIntentNormalizedRequest；API body 由 Live 扩展层转换。"""
-        if intent.live_request is not None:
-            return dict(intent.live_request)
+    def build_initial_request(self, intent) -> Dict[str, Any]:
+        """把用户表达确定性映射为真实 API REQUEST_SCHEMA。"""
         session_id = f"eval-intent-{int(time.time() * 1000)}"
+        query = str(getattr(intent, "query", "") or getattr(intent, "user_intent", "") or "")
         return {
-            "case_id": "",
             "session_id": session_id,
-            "query": str(getattr(intent, "query", "") or getattr(intent, "user_intent", "") or ""),
-            "scenario": str(getattr(intent, "scenario", "") or "intent_recognition"),
-            "reference": {},
-            "metadata": {},
-            "user_intent": str(getattr(intent, "user_intent", "") or "") or None,
+            "trace_id": session_id,
+            "org_id": "eval-org",
+            "user_text": query,
+            "extra_input_params": {
+                "agent_args": {"conversation_id": session_id, "message": {"content": query, "content_type": "text"}},
+                "args": {"extensions": {}, "contexts": []},
+            },
         }
 
     def normalize_case(

@@ -12,8 +12,8 @@ from .fallback import FallbackDecision
 from .evidence import EvidenceRef, ExecutionTraceEvent, ProbeResult
 from .frontend import FrontendViewModel
 from .judge import BusinessExpectation, FulfillmentAssessment, GapItem, JudgeLLMOutput, JudgeReferenceOutput, JudgeResult, _item_value
-from .live import LiveMultiTurnState, LiveRequest
-from .mock import MockBuildResult, MockBuildSpec, MockCase, MockDataset, MockIntentOutput, MockNextTurnOutput, MockSpec, MultiTurnCase, MultiTurnInteraction, MultiTurnPolicy, MultiTurnTurnExpectation, SingleTurnCase
+from .live import LiveExchange, LiveMultiTurnState, LiveRequest
+from .mock import MockBuildResult, MockBuildSpec, MockCase, MockContinueDecision, MockDataset, MockInteractionTurn, MockIntentOutput, MockNextTurnOutput, MockSpec, MultiTurnCase, MultiTurnInteraction, MultiTurnPolicy, MultiTurnTurnExpectation, SingleTurnCase
 from .project import ProjectAnalysis, ProjectSpec
 from .registry import SCHEMA_LAYERS
 from .accessors import judge_expected_actual_gaps, judge_primary_signal, trace_application_boundary, trace_conversation_summary, trace_conversation_transcript, trace_execution_trace, trace_extracted_output, trace_input, trace_mock_intent, trace_normalized_request, trace_output_source, trace_project_fields, trace_raw_response, trace_stop_reason, trace_turn_records
@@ -29,7 +29,7 @@ __all__ = [
     "CheckReport", "ClusterSummary", "ConversationTurn", "EVENT_STATUSES", "EvidenceRef", "ExecutionTraceEvent",
     "ExpectationAttribution", "FALLBACK_STATUSES", "FULFILLMENT_STATUSES", "FallbackDecision", "FrontendViewModel",
     "FulfillmentAssessment", "GapItem", "GateDecision", "INTERACTION_MODES", "JudgeLLMOutput", "JudgeReferenceOutput", "JudgeResult", "LayerConfig",
-    "LiveMultiTurnState", "LiveRequest", "MockBuildResponse", "MockBuildResult", "MockBuildSpec", "MockCase", "MockCasesResponse", "MockDatasetsResponse", "MockIntentOutput", "MockNextTurnOutput",
+    "LiveExchange", "LiveMultiTurnState", "LiveRequest", "MockBuildResponse", "MockBuildResult", "MockBuildSpec", "MockCase", "MockCasesResponse", "MockContinueDecision", "MockDatasetsResponse", "MockInteractionTurn", "MockIntentOutput", "MockNextTurnOutput",
     "MockDataset", "MockSpec", "MultiTurnCase", "MultiTurnInteraction", "MultiTurnPolicy",
     "MultiTurnTraceSummary", "MultiTurnTurnExpectation", "ProbeResult", "ProjectAnalysis", "ProjectSpec", "RunChainResponse",
     "RunTrace", "SCHEMA_FIELD_ROLES", "SCHEMA_LAYERS", "SchemaLayerConfig", "SingleTurnCase", "SubagentResult",

@@ -139,6 +139,8 @@ def build_mock_case(spec: ProjectSpec, case_data: Dict[str, Any]) -> "MockCase":
                 user_intent=str(case_data.get("user_intent") or ""),
                 query=str(inp.get("query") or case_data.get("user_intent") or ""),
                 user_context=dict(case_data.get("user_context") or case_data.get("metadata", {}).get("user_context", {})),
+                system_understanding=str(case_data.get("system_understanding") or case_data.get("metadata", {}).get("system_understanding", "")),
+                scenario=str(case_data.get("scenario") or ""),
             ),
             live_request=inp,
             output=case_data.get("output"),
@@ -154,6 +156,8 @@ def build_mock_case(spec: ProjectSpec, case_data: Dict[str, Any]) -> "MockCase":
             user_intent=result.user_intent or "",
             query=result.query or str((result.input or {}).get("query", "")),
             user_context=dict(result.user_context or {}),
+            system_understanding=str(meta.get("system_understanding") or ""),
+            scenario=result.scenario or case_data.get("scenario", ""),
         ),
         live_request=dict(result.input or {}),
         output=result.output,
@@ -182,8 +186,16 @@ def mock_case_to_single_turn(mc: "MockCase") -> SingleTurnCase:
         "project_id": mc.project_id,
         "source": "mock_case_api",
     }
-    if mc.intent.user_context:
+    if mc.intent is not None and mc.intent.user_context:
         metadata["user_context"] = dict(mc.intent.user_context)
+    if mc.intent is not None:
+        metadata["mock_intent"] = {
+            "user_intent": mc.intent.user_intent,
+            "query": mc.intent.query,
+            "user_context": dict(mc.intent.user_context or {}),
+            "system_understanding": mc.intent.system_understanding,
+            "scenario": mc.intent.scenario,
+        }
 
     return SingleTurnCase(
         id=mc.id,
@@ -191,7 +203,7 @@ def mock_case_to_single_turn(mc: "MockCase") -> SingleTurnCase:
         output=mc.output,
         reference=mc.reference,
         scenario=mc.scenario,
-        user_intent=mc.intent.user_intent,
+        user_intent=mc.intent.user_intent if mc.intent is not None else "",
         metadata=metadata,
     )
 
@@ -205,16 +217,16 @@ def parse_mock_case(value: Any, *, project_id: str = "") -> MockCase:
     if isinstance(value, MockCase):
         case = value
     elif isinstance(value, dict):
-        required = {"id", "project_id", "scenario", "intent", "live_request", "output", "reference"}
+        required = {"id", "project_id", "scenario", "live_request", "output", "reference"}
         missing = sorted(required.difference(value))
         if missing:
             raise ValueError(f"MockCase 缺少字段: {', '.join(missing)}")
-        unknown = sorted(set(value).difference(required))
+        unknown = sorted(set(value).difference(required | {"intent"}))
         if unknown:
             raise ValueError(f"MockCase 包含未知字段: {', '.join(unknown)}")
         intent = value.get("intent")
-        if not isinstance(intent, dict):
-            raise ValueError("MockCase.intent 必须是对象")
+        if intent is not None and not isinstance(intent, dict):
+            raise ValueError("MockCase.intent 必须是对象或 null")
         live_request = value.get("live_request")
         if not isinstance(live_request, dict):
             raise ValueError("MockCase.live_request 必须是对象")
@@ -226,9 +238,9 @@ def parse_mock_case(value: Any, *, project_id: str = "") -> MockCase:
                 user_intent=str(intent.get("user_intent") or ""),
                 query=str(intent.get("query") or ""),
                 user_context=dict(intent.get("user_context") or {}),
+                system_understanding=str(intent.get("system_understanding") or ""),
                 scenario=str(intent.get("scenario") or ""),
-                live_request=dict(intent.get("live_request")) if isinstance(intent.get("live_request"), dict) else None,
-            ),
+            ) if isinstance(intent, dict) else None,
             live_request=dict(live_request),
             output=value.get("output"),
             reference=value.get("reference"),

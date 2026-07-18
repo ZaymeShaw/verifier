@@ -4,16 +4,15 @@ import json
 import threading
 import time
 import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Any, Dict
 from urllib.parse import urljoin
 
 import yaml as _yaml
 
-from impl.core.http_client import call_project_api
 from impl.core.interaction_protocol import ready_from_spec
 from impl.core.live_protocol import RealServiceLive, SingleTurnLive
+from impl.core.live_transport import LiveTransport
 from impl.core.schema import (
     ExecutionTraceEvent,
     JudgeResult,
@@ -152,7 +151,7 @@ def provided_output_raw(case: SingleTurnCase | MultiTurnCase, request: LiveReque
 
 
 
-def _probe_downstream_search(spec: ProjectSpec, raw_response: Dict[str, Any]) -> Dict[str, Any]:
+def _probe_downstream_search(spec: ProjectSpec, raw_response: Dict[str, Any], transport: LiveTransport) -> Any:
     config = spec.application.get("downstream_search") if isinstance(spec.application, dict) else None
     if not isinstance(config, dict) or not config.get("enabled", True):
         return {"status": "not_configured"}
@@ -171,22 +170,33 @@ def _probe_downstream_search(spec: ProjectSpec, raw_response: Dict[str, Any]) ->
     if not base_url.strip("/") or not endpoint:
         return {"status": "not_configured", "payload": payload}
     url = urljoin(base_url, endpoint)
-    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    search_request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method=str(config.get("method") or "POST").upper())
     try:
-        with urllib.request.urlopen(search_request, timeout=float(config.get("timeout") or 3)) as response:
-            text = response.read().decode("utf-8")
-        try:
-            result = json.loads(text)
-        except json.JSONDecodeError:
-            result = {"text": text}
-        return {"status": "ok", "url": url, "payload": payload, "result": result}
+        view = transport.request(
+            str(config.get("method") or "POST"), url,
+            json_body=payload,
+            timeout=float(config.get("timeout") or 3),
+            contributes_raw_response=True,
+        )
+        return view.response
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         return {"status": "unavailable", "url": url, "payload": payload, "error": str(exc)}
 
 
 
+def _raw_items(raw_response: Any) -> list[Any]:
+    return list(raw_response) if isinstance(raw_response, list) else [raw_response]
+
+
+def _main_response(raw_response: Any) -> Any:
+    items = _raw_items(raw_response)
+    return items[0] if items else {}
+
+
 def application_boundary(raw_response: Any, extracted_output: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    raw_items = _raw_items(raw_response)
+    if len(raw_items) > 1:
+        return _application_boundary({"status": "ok"})
+    raw_response = raw_items[0] if raw_items else {}
     if not isinstance(raw_response, dict):
         return _application_boundary({})
     downstream_search = raw_response.get("_downstream_search") if isinstance(raw_response.get("_downstream_search"), dict) else {}
@@ -224,6 +234,7 @@ def _empty_result_reason(query: str, extra: Dict[str, Any]) -> str:
 
 
 def extract_output(raw_response: Any) -> Dict[str, Any]:
+    raw_response = _main_response(raw_response)
     if not isinstance(raw_response, dict):
         return {"code": -1, "msg": str(raw_response), "query": "", "conditions": []}
     extra = (((raw_response.get("data") or {}).get("extra_output_params")) or {})
@@ -248,13 +259,15 @@ def extract_output(raw_response: Any) -> Dict[str, Any]:
 
 
 def project_fields(raw_response: Any, extracted_output: Dict[str, Any], spec: ProjectSpec | None = None) -> Dict[str, Any]:
+    raw_items = _raw_items(raw_response)
+    raw_response = raw_items[0] if raw_items else {}
     extra = {}
     if isinstance(raw_response, dict):
         data = raw_response.get("data") if isinstance(raw_response.get("data"), dict) else {}
         extra = data.get("extra_output_params") if isinstance(data.get("extra_output_params"), dict) else {}
     empty_result_reason = _empty_result_reason(extracted_output.get("query", ""), extra)
     return {
-        "downstream_search": raw_response.get("_downstream_search") if isinstance(raw_response, dict) and isinstance(raw_response.get("_downstream_search"), dict) else {},
+        "downstream_search": {"status": "ok", "result": raw_items[1]} if len(raw_items) > 1 else {},
         "external_boundary_sources": external_boundary_sources(spec) if spec is not None else {"config_paths": {}},
         "empty_result_reason": empty_result_reason,
         "is_empty_result": bool(empty_result_reason),
@@ -354,15 +367,26 @@ class ClientSearchLive(RealServiceLive, SingleTurnLive):
     def __init__(self, spec: ProjectSpec):
         super().__init__(spec)
 
-    def deliver_real(self, request: Any) -> Any:
+    def deliver_real(self, request: Any, transport: LiveTransport) -> LiveTransport:
         normalized_request = request.normalized_request if isinstance(request, LiveRequest) else (request if isinstance(request, dict) else {})
+        api = self.spec.api
+        base = str(api.get("base_url") or "").rstrip("/") + "/"
+        endpoint = str(api.get("endpoint") or "").lstrip("/")
+        url = urljoin(base, endpoint)
         with _SERVICE_LOCK:
-            raw_response = call_project_api(self.spec, normalized_request)
-        if isinstance(raw_response, dict):
-            raw_response = {**raw_response, "_downstream_search": _probe_downstream_search(self.spec, raw_response)}
-        return raw_response
+            view = transport.request(
+                str(api.get("method") or "POST"), url,
+                json_body=normalized_request,
+                headers=dict(api.get("headers") or {}),
+                timeout=float(api.get("timeout") or 30),
+                carries_live_request=True,
+                contributes_raw_response=True,
+            )
+            if isinstance(view.response, dict):
+                _probe_downstream_search(self.spec, view.response, transport)
+        return transport
 
-    def extract_output(self, raw_response: Any, request: Any) -> Dict[str, Any]:
+    def extract_output(self, raw_response: list[Any]) -> Dict[str, Any]:
         return extract_output(raw_response)
 
     def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any], request: Any, application_boundary: Dict[str, Any]) -> Dict[str, Any]:

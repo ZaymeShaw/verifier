@@ -9,10 +9,10 @@ from __future__ import annotations
 import json
 import time
 import urllib.error
-import urllib.request
 from typing import Any, Dict, List, Optional
 
 from impl.core.live_protocol import LiveServiceUnavailableError, MultiTurnInteractiveLive, RealServiceLive
+from impl.core.live_transport import LiveTransport
 from impl.core.schema import (
     ExecutionTraceEvent,
     LiveMultiTurnState,
@@ -135,63 +135,25 @@ def _request_from_raw(raw: Any) -> dict[str, Any]:
 
 
 def _raw_payload(raw: Any) -> Any:
+    if isinstance(raw, list):
+        for item in reversed(raw):
+            if isinstance(item, list):
+                return item
+        return raw[-1] if raw else {}
     if isinstance(raw, dict) and "raw" in raw:
         return raw.get("raw")
     return raw
 
 
-def _post_json(url: str, body: Dict[str, Any], timeout: float) -> Any:
-    data = json.dumps(body, ensure_ascii=False).encode("utf-8")
-    req = urllib.request.Request(
-        url, data=data,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as response:
-        return json.loads(response.read().decode("utf-8"))
-
-
-def _get_json(url: str, timeout: float) -> Any:
-    with urllib.request.urlopen(url, timeout=timeout) as response:
-        return json.loads(response.read().decode("utf-8"))
-
-
-def _health_check(base_url: str, timeout: float = 5.0) -> bool:
-    try:
-        _get_json(f"{base_url.rstrip('/')}/health", timeout)
-        return True
-    except Exception:
-        return False
-
-
-def _create_thread(base_url: str, timeout: float) -> str:
-    result = _post_json(f"{base_url.rstrip('/')}/api/threads", {}, timeout)
-    if isinstance(result, dict) and result.get("thread_id"):
-        return str(result["thread_id"])
-    raise RuntimeError(f"create thread failed: {result}")
-
-
-def _send_turn_wait(base_url: str, thread_id: str, message: str, timeout: float, model: str = "minimax-m3") -> None:
-    body = {
-        "input": {"messages": [{"role": "user", "content": message}]},
-        "config": {"configurable": {"model_name": model}},
-    }
-    _post_json(f"{base_url.rstrip('/')}/api/threads/{thread_id}/runs/wait", body, timeout)
-
-
-def _read_messages(base_url: str, thread_id: str, timeout: float) -> list[dict[str, Any]]:
-    result = _get_json(f"{base_url.rstrip('/')}/api/threads/{thread_id}/messages", timeout)
-    if isinstance(result, list):
-        return result
-    return []
-
-
 def _extract_reply_and_tool_calls(messages: list[dict[str, Any]]) -> tuple[str, list[dict[str, Any]]]:
-    """从历史消息中取最新 AI 回复文本 + tool_calls。"""
+    """从历史消息中取最新业务 AI 回复，排除标题等 middleware 生成物。"""
     reply = ""
     tool_calls: list[dict[str, Any]] = []
     for message in reversed(messages):
         if not isinstance(message, dict):
+            continue
+        caller = str((message.get("metadata") or {}).get("caller") or "")
+        if caller.startswith("middleware:"):
             continue
         content = message.get("content")
         if not isinstance(content, dict):
@@ -273,15 +235,12 @@ def _errors_from_call(call_status: str, call_error: Optional[str]) -> list[str]:
     return []
 
 
-def extract_output(raw_response: Any, request: LiveRequest | dict[str, Any] | None = None, index: int | None = None) -> dict[str, Any]:
-    """从 raw_response 中提取本轮输出。raw_response 形如 {"thread_id":..., "reply":..., "tool_calls":..., "messages":...}。"""
-    data = _raw_payload(raw_response)
-    if not isinstance(data, dict):
-        data = {}
-    reply = str(data.get("reply") or "")
-    tool_calls_raw = data.get("tool_calls") or []
-    if not isinstance(tool_calls_raw, list):
-        tool_calls_raw = []
+def extract_output(raw_response: Any) -> dict[str, Any]:
+    """只从公共层生成的真实响应列表提取本轮输出。"""
+    responses = list(raw_response) if isinstance(raw_response, list) else [raw_response]
+    messages = next((item for item in reversed(responses) if isinstance(item, list)), [])
+    create_response = next((item for item in responses if isinstance(item, dict) and item.get("thread_id")), {})
+    reply, tool_calls_raw = _extract_reply_and_tool_calls(messages)
     tool_calls = [
         {
             "name": str(tc.get("name") or ""),
@@ -293,16 +252,22 @@ def extract_output(raw_response: Any, request: LiveRequest | dict[str, Any] | No
     scripts = _scripts_called(tool_calls)
     stage = _stage_from_output(reply, tool_calls, scripts)
     nbev_count = sum(1 for tc in tool_calls if tc.get("is_nbev_script"))
-    normalized_request = request.normalized_request if isinstance(request, LiveRequest) else (request if isinstance(request, dict) else {})
     output = {
         "reply_text": reply,
         "tool_calls": tool_calls,
         "stage": stage,
         "nbev_tool_count": nbev_count,
         "scripts_called": scripts,
-        "session_summary": _session_summary(normalized_request if isinstance(normalized_request, dict) else {}),
-        "fallback": _fallback_summary(str(data.get("call_status") or "succeeded"), data.get("call_error")),
-        "errors": _errors_from_call(str(data.get("call_status") or "succeeded"), data.get("call_error")),
+        "session_summary": {
+            "thread_id": str(create_response.get("thread_id") or ""),
+            "expected_dimensions": [],
+            "accumulated_dimensions": [],
+            "missing_dimensions": [],
+            "evidence_declared": bool(messages),
+            "evidence_status": "declared" if messages else "missing",
+        },
+        "fallback": _fallback_summary("succeeded", None),
+        "errors": [],
     }
     return output
 
@@ -330,9 +295,10 @@ def build_execution_trace(input_data: dict[str, Any], request: dict[str, Any], r
     expected_stage = request.get("expected_stage") or (request.get("reference") or {}).get("expected_stage")
     expected_dimensions = _list(request.get("expected_dimensions"))
     actual_scripts = _list(latest.get("scripts_called"))
+    thread_id = str(((latest.get("session_summary") or {}).get("thread_id")) or "")
     return [
-        ExecutionTraceEvent(stage="request_normalization", status="ok" if request.get("turns") else "suspicious", evidence={"turn_count": len(request.get("turns") or []), "thread_id": request.get("case_id")}),
-        ExecutionTraceEvent(stage="thread_creation", status="ok" if latest else "suspicious", evidence={"thread_id": request.get("case_id")}),
+        ExecutionTraceEvent(stage="request_normalization", status="ok" if request.get("turns") else "suspicious", evidence={"turn_count": len(request.get("turns") or [])}),
+        ExecutionTraceEvent(stage="thread_resolution", status="ok" if thread_id else "suspicious", evidence={"thread_id": thread_id}),
         ExecutionTraceEvent(stage="turn_delivery", status="ok" if latest.get("reply_text") or latest.get("tool_calls") else "failed", evidence={"delivered": bool(latest.get("reply_text") or latest.get("tool_calls"))}),
         ExecutionTraceEvent(stage="message_history_read", status="ok" if latest.get("reply_text") else "suspicious", evidence={"reply_present": bool(latest.get("reply_text"))}),
         ExecutionTraceEvent(stage="reply_extraction", status="ok", evidence={"reply_length": len(str(latest.get("reply_text") or ""))}),
@@ -350,7 +316,8 @@ def project_fields(raw_response: Any | None = None, extracted_output: dict[str, 
     return {
         "scenario": normalized_request.get("scenario") or "",
         "case_id": normalized_request.get("case_id") or "",
-        "thread_id": normalized_request.get("case_id") or "",
+        # thread_id 只能来自真实业务响应（或业务输出中的同源提取），不能以 case_id 冒充。
+        "thread_id": str(((latest.get("session_summary") or {}).get("thread_id")) or ""),
         "expected_stage": normalized_request.get("expected_stage"),
         "expected_dimensions": _list(normalized_request.get("expected_dimensions")),
         "planning_summary": {key: latest.get(key) for key in ("stage", "reply_text", "tool_calls", "scripts_called", "session_summary", "fallback", "errors")},
@@ -367,64 +334,6 @@ def provided_output_raw(case: SingleTurnCase | MultiTurnCase, request: LiveReque
     return _attach_request({}, request.normalized_request)
 
 
-def deliver_raw_response(spec: ProjectSpec, request: Any) -> Any:
-    """真实投递：创建 thread → 发送每一轮 → 回看消息取本轮 AI 回复 + tool_calls。
-
-    返回 {thread_id, reply, tool_calls, messages, call_status, call_error}。
-
-    request 形态：LiveRequest 或 dict（DeerflowApiRequest 形状：
-        {input: {messages: [{role, content}]}, config: {configurable: {thread_id}}}
-    """
-    base_url = str(spec.api.get("base_url") or "http://localhost:8001")
-    timeout = float(spec.api.get("timeout") or 600)
-    # 兼容 LiveRequest 和 dict
-    if isinstance(request, LiveRequest):
-        normalized_request = request.normalized_request if isinstance(request.normalized_request, dict) else {}
-        turns = list(request.turns or [])
-    else:
-        normalized_request = request if isinstance(request, dict) else {}
-        turns = []
-    # DeerflowApiRequest：input.messages 是对话消息
-    if not turns:
-        input_field = normalized_request.get("input") if isinstance(normalized_request.get("input"), dict) else {}
-        messages_list = input_field.get("messages") if isinstance(input_field.get("messages"), list) else []
-        for m in messages_list:
-            if isinstance(m, dict):
-                turns.append({"role": str(m.get("role") or "user"), "content": str(m.get("content") or "")})
-    # 兜底：从 query 字段构造首轮
-    if not turns:
-        normalized_query = str(normalized_request.get("query") or "")
-        if normalized_query:
-            turns = [{"role": "user", "content": normalized_query}]
-    model = str((spec.api.get("model")) or (normalized_request.get("metadata") or {}).get("model_name") or "minimax-m3")
-
-    if not _health_check(base_url):
-        raise urllib.error.URLError(f"deer-flow Gateway 不可用: {base_url}/health")
-
-    thread_id = _create_thread(base_url, timeout)
-    reply = ""
-    tool_calls: list[dict[str, Any]] = []
-    messages: list[dict[str, Any]] = []
-    for turn in turns:
-        if turn.get("role") != "user":
-            continue
-        message = str(turn.get("content") or "")
-        if not message:
-            continue
-        _send_turn_wait(base_url, thread_id, message, timeout, model=model)
-        messages = _read_messages(base_url, thread_id, timeout)
-        reply, tool_calls = _extract_reply_and_tool_calls(messages)
-
-    return _attach_request({
-        "thread_id": thread_id,
-        "reply": reply,
-        "tool_calls": tool_calls,
-        "messages": messages,
-        "call_status": "succeeded",
-        "call_error": None,
-    }, normalized_request)
-
-
 class DeerflowLive(RealServiceLive, MultiTurnInteractiveLive):
     """deerflow 项目 Live 实现。
 
@@ -439,18 +348,52 @@ class DeerflowLive(RealServiceLive, MultiTurnInteractiveLive):
     def deliver_provided(self, request: LiveRequest) -> Any:
         return provided_output_raw(None, request)
 
-    def deliver_real(self, request: Any) -> Any:
+    def deliver_real(self, request: Any, transport: LiveTransport) -> LiveTransport:
         try:
-            raw_response = deliver_raw_response(self.spec, request)
+            normalized_request = request if isinstance(request, dict) else {}
+            base_url = str(self.spec.api.get("base_url") or "http://localhost:8001").rstrip("/")
+            timeout = float(self.spec.api.get("timeout") or 600)
+            transport.get(f"{base_url}/health", timeout=min(timeout, 5.0))
+            configurable = ((normalized_request.get("config") or {}).get("configurable") or {}) if isinstance(normalized_request, dict) else {}
+            thread_id = str(configurable.get("thread_id") or "")
+            if not thread_id:
+                created = transport.post(
+                    f"{base_url}/api/threads", json_body={}, timeout=timeout,
+                    contributes_raw_response=True,
+                )
+                created_payload = created.response if isinstance(created.response, dict) else {}
+                thread_id = str(created_payload.get("thread_id") or "")
+                if not thread_id:
+                    raise RuntimeError(f"create thread failed: {created.response}")
+            transport.post(
+                f"{base_url}/api/threads/{thread_id}/runs/wait",
+                json_body=normalized_request,
+                timeout=timeout,
+                carries_live_request=True,
+            )
+            transport.get(
+                f"{base_url}/api/threads/{thread_id}/messages",
+                timeout=timeout,
+                contributes_raw_response=True,
+            )
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            failed = transport.exchanges[-1] if transport.exchanges else None
+            if (
+                failed is not None
+                and failed.status_code == 404
+                and "/api/threads/" in failed.url
+            ):
+                stale_thread_id = str(configurable.get("thread_id") or thread_id or "")
+                raise RuntimeError(
+                    f"deer-flow thread_not_found: {stale_thread_id or failed.url}"
+                ) from exc
             raise LiveServiceUnavailableError(f"deer-flow Gateway unavailable: {exc}") from exc
         except Exception as exc:
             raise RuntimeError(f"deer-flow delivery error: {exc}") from exc
-        return raw_response
+        return transport
 
-    def extract_output(self, raw_response: Any, request: Any) -> Dict[str, Any]:
-        turn_index = max(len(getattr(request, "turns", []) or []) - 1, 0)
-        return extract_output(raw_response, request, turn_index)
+    def extract_output(self, raw_response: list[Any]) -> Dict[str, Any]:
+        return extract_output(raw_response)
 
     def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any], request: Any, application_boundary: Dict[str, Any]) -> Dict[str, Any]:
         return project_fields(raw_response, extracted_output, request, application_boundary)

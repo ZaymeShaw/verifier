@@ -34,6 +34,7 @@ from impl.core.schema.fixture import load_fixture
 PROJECT_IDS = [
     "QA",
     "client_search",
+    "deerflow",
     "marketting-planning",
     "marketting-planning-intent",
 ]
@@ -523,6 +524,8 @@ def run_api_case(case: ApiCase, project_id: str) -> Dict[str, Any]:
             except Exception as exc:
                 schema_check = "fail"
                 schema_error = str(exc)
+            if schema_check == "pass":
+                update_canonical_flow(project_id, case.name, response)
         else:
             schema_check = "http_error"
             schema_error = str(response.get("error") or response)
@@ -536,7 +539,7 @@ def run_api_case(case: ApiCase, project_id: str) -> Dict[str, Any]:
     live_schema_ok = _check_api_request_with_live_schema(project_id, request)
     curl, curl_note = replayable_curl(case.path, request) if request else ("", "request build failed")
     flow_progress(f"[case-done] {project_id} {case.name} source={source} http={status_code} schema={schema_check} elapsed={elapsed:.1f}s")
-    return {
+    row = {
         "project": project_id,
         "case": case.name,
         "api": f"POST {case.path}",
@@ -551,6 +554,92 @@ def run_api_case(case: ApiCase, project_id: str) -> Dict[str, Any]:
         "schema_error": schema_error,
         "source": source,
     }
+    row.update(business_status(case.name, response))
+    return row
+
+
+def update_canonical_flow(project_id: str, case_name: str, response: Dict[str, Any]) -> None:
+    """Propagate each real API result to later consumers in the same project chain."""
+    with project_lock(project_id):
+        if case_name == "run_chain":
+            _PROJECT_FLOW_CACHE[project_id] = copy.deepcopy(response)
+            return
+        key_by_case = {
+            "judge": "judge",
+            "attribute": "attribute",
+            "cluster": "cluster",
+            "check": "check",
+            "frontend_view": "frontend_view",
+        }
+        key = key_by_case.get(case_name)
+        if key and project_id in _PROJECT_FLOW_CACHE:
+            _PROJECT_FLOW_CACHE[project_id][key] = copy.deepcopy(response)
+
+
+def business_status(case_name: str, response: Dict[str, Any]) -> Dict[str, Any]:
+    """Expose business outcome separately from HTTP/schema validity."""
+    result = {
+        "trace_status": "",
+        "completion_status": "",
+        "stop_reason": "",
+        "judge_fulfillment": "",
+        "check_passed": "",
+        "business_check": "not_applicable",
+        "business_error": "",
+    }
+    if not isinstance(response, dict):
+        result["business_check"] = "fail"
+        result["business_error"] = "response is not an object"
+        return result
+
+    trace = response.get("trace") if case_name == "run_chain" else response
+    if case_name == "batch_run":
+        runs = [item for item in (response.get("runs") or []) if isinstance(item, dict)]
+        failed = []
+        for item in runs:
+            run_trace = item.get("trace") or {}
+            run_judge = item.get("judge") or {}
+            run_check = item.get("check") or {}
+            if run_trace.get("status") not in {"ok", "succeeded"}:
+                failed.append(str(run_trace.get("error") or run_trace.get("stop_reason") or "trace_error"))
+            if (run_judge.get("overall_fulfillment") or {}).get("status") == "not_fulfilled":
+                failed.append("judge:not_fulfilled")
+            if run_check.get("passed") is False:
+                failed.append("check:false")
+        result["business_check"] = "fail" if failed else ("pass" if runs else "not_evaluable")
+        result["business_error"] = "; ".join(dict.fromkeys(failed))
+        return result
+
+    if case_name in {"live_run", "run_chain", "trace"} and isinstance(trace, dict):
+        result["trace_status"] = str(trace.get("status") or "")
+        result["completion_status"] = str(trace.get("completion_status") or "")
+        result["stop_reason"] = str(trace.get("stop_reason") or "")
+        if trace.get("status") not in {"ok", "succeeded"}:
+            result["business_check"] = "fail"
+            result["business_error"] = str(trace.get("error") or trace.get("stop_reason") or "trace_error")
+        else:
+            result["business_check"] = "executed"
+
+    judge = response.get("judge") if case_name == "run_chain" else (response if case_name == "judge" else {})
+    if isinstance(judge, dict) and judge:
+        fulfillment = str((judge.get("overall_fulfillment") or {}).get("status") or "")
+        result["judge_fulfillment"] = fulfillment
+        if fulfillment == "fulfilled":
+            result["business_check"] = "pass"
+        elif fulfillment == "not_fulfilled":
+            result["business_check"] = "fail"
+            result["business_error"] = "judge:not_fulfilled"
+        elif fulfillment:
+            result["business_check"] = "not_evaluable"
+
+    check = response.get("check") if case_name == "run_chain" else (response if case_name == "check" else {})
+    if isinstance(check, dict) and isinstance(check.get("passed"), bool):
+        result["check_passed"] = check["passed"]
+        if check["passed"] is False:
+            result["business_check"] = "fail"
+            issues = check.get("issues") or []
+            result["business_error"] = "; ".join(str(item) for item in issues) or "check:false"
+    return result
 
 
 def iter_api_project_rows(progress: Optional[Callable[[Dict[str, Any], int, int], None]] = None) -> List[Dict[str, Any]]:
@@ -561,13 +650,15 @@ def iter_api_project_rows(progress: Optional[Callable[[Dict[str, Any], int, int]
     matrix = api_case_matrix()
     total = len(matrix)
     try:
-        with ThreadPoolExecutor(max_workers=min(API_MAX_WORKERS, total)) as executor:
-            futures = [executor.submit(run_api_case, case, project_id) for case, project_id in matrix]
+        # Projects remain parallel, but each project's dependent API chain is sequential.
+        # This guarantees that Judge → Attribute → Check → Frontend consume one canonical flow.
+        with ThreadPoolExecutor(max_workers=min(API_MAX_WORKERS, len(PROJECT_IDS))) as executor:
+            futures = [executor.submit(run_project_api_rows, project_id, None, total) for project_id in PROJECT_IDS]
             for future in as_completed(futures):
-                row = future.result()
-                rows.append(row)
-                if progress:
-                    progress(row, len(rows), total)
+                for row in future.result():
+                    rows.append(row)
+                    if progress:
+                        progress(row, len(rows), total)
     finally:
         _SHOW_FLOW_PROGRESS = previous_progress
     order = {(case.name, project_id): index for index, (case, project_id) in enumerate(matrix)}
@@ -611,6 +702,13 @@ def write_api_check_csv(output_dir: Optional[Path] = None) -> Path:
         "checked_response_path",
         "schema_check",
         "schema_error",
+        "trace_status",
+        "completion_status",
+        "stop_reason",
+        "judge_fulfillment",
+        "check_passed",
+        "business_check",
+        "business_error",
     ]
     with csv_path.open("w", encoding="utf-8", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
@@ -633,6 +731,13 @@ def write_api_check_csv(output_dir: Optional[Path] = None) -> Path:
                 "checked_response_path": json_cell(row["checked_response_path"]),
                 "schema_check": row["schema_check"],
                 "schema_error": row["schema_error"],
+                "trace_status": row["trace_status"],
+                "completion_status": row["completion_status"],
+                "stop_reason": row["stop_reason"],
+                "judge_fulfillment": row["judge_fulfillment"],
+                "check_passed": row["check_passed"],
+                "business_check": row["business_check"],
+                "business_error": row["business_error"],
             })
     return csv_path
 
@@ -679,6 +784,13 @@ def write_api_check_excel(output_dir: Optional[Path] = None, show_progress: bool
         "curl_note",
         "schema_check",
         "schema_error",
+        "trace_status",
+        "completion_status",
+        "stop_reason",
+        "judge_fulfillment",
+        "check_passed",
+        "business_check",
+        "business_error",
         "expected_schema",
         "checked_response_path",
         "curl",
@@ -721,6 +833,13 @@ def write_api_check_excel(output_dir: Optional[Path] = None, show_progress: bool
             row["curl_note"],
             row["schema_check"],
             row["schema_error"],
+            row["trace_status"],
+            row["completion_status"],
+            row["stop_reason"],
+            row["judge_fulfillment"],
+            row["check_passed"],
+            row["business_check"],
+            row["business_error"],
             row["expected_schema"],
             json_cell(row["checked_response_path"]),
             excel_curl_cell(row["curl"], curl_script_path),
@@ -738,12 +857,23 @@ def write_api_check_excel(output_dir: Optional[Path] = None, show_progress: bool
         "D": 12,
         "E": 14,
         "F": 36,
-        "G": 42,
-        "H": 24,
-        "I": 80,
-        "J": 80,
-        "K": 80,
-        "L": 100,
+        "G": 18,
+        "H": 32,
+        "I": 16,
+        "J": 18,
+        "K": 22,
+        "L": 22,
+        "M": 14,
+        "N": 18,
+        "O": 60,
+        "P": 42,
+        "Q": 32,
+        "R": 80,
+        "S": 80,
+        "T": 80,
+        "U": 80,
+        "V": 100,
+        "W": 100,
     }
     for column, width in widths.items():
         sheet.column_dimensions[column].width = width

@@ -55,11 +55,13 @@ class TraceContext:
     transcript: List[Dict[str, Any]] = field(default_factory=list)
     final_output_turn: Optional[int] = None
     completion_status: str = ""
+    intent: Optional[Any] = None
 
     def record_turn(
         self,
         request: Any = None,
         raw_response: Any = None,
+        live_exchanges: Optional[List[Any]] = None,
         extracted_output: Optional[Dict[str, Any]] = None,
         call_status: str = "succeeded",
         runtime_ms: Optional[int] = None,
@@ -82,6 +84,7 @@ class TraceContext:
             "turn_index": len(self.turns) + 1,
             "mock_message": str(mock_message or ""),
             "request": request if isinstance(request, dict) else {},
+            "live_exchanges": list(live_exchanges or []),
             "raw_response": raw_response,
             "extracted_output": extracted_output if isinstance(extracted_output, dict) else {},
             "call_status": call_status,
@@ -104,6 +107,18 @@ class TraceContext:
             final_output_turn=None,
             completion_status="failed",
         )
+
+    def set_intent(self, intent: Any) -> None:
+        """记录执行期按需反推得到的用户模型。"""
+        self.intent = intent
+
+    def record_decision(self, decision: Any) -> None:
+        """把本轮轻量用户决定附着到最新轮次事实。"""
+        if self.turns:
+            self.turns[-1]["continue_decision"] = {
+                "action": str(getattr(decision, "action", "") or ""),
+                "stop_reason": str(getattr(decision, "stop_reason", "") or ""),
+            }
 
     def finish_execution(
         self,
@@ -214,26 +229,26 @@ def trace_from_live(
         if isinstance(normalized_case, SingleTurnCase) and isinstance(normalized_case.reference, dict):
             reference_contract = dict(normalized_case.reference)
 
-    # 算意图（intent 未传入时调 live._resolve_intent）
+    # Intent 可选：只读取 Case 已明确携带的用户模型，不在 trace 层从 Request 猜测。
     if intent is None:
         intent = live._resolve_intent(case_for_intent, mock)
 
-    # 用 case 数据预构建请求：仅当 case.input 已符合 REQUEST_SCHEMA 时（固化 fixture 场景），
-    # 才注入 intent.live_request 避免 mock.build_live_request 走 LLM 编造请求。
-    # 不匹配 REQUEST_SCHEMA 的 case 仍走正常 build_live_request LLM 路径（不掩盖 mock LLM 失败）。
-    if not isinstance(case, NormalizedCaseInteraction):
-        if isinstance(normalized_case, SingleTurnCase) and isinstance(normalized_case.input, dict) and normalized_case.input:
-            request_candidate = dict(normalized_case.input)
-            live_schema_check = getattr(live, "live_schema", None)
-            checker = getattr(live_schema_check, "check", None) if live_schema_check is not None else None
-            if checker is not None and hasattr(checker, "request") and checker.request(request_candidate):
-                delivery_request = dict(request_candidate)
-                ready = set(ready_from_spec(spec))
-                if "output" in ready and isinstance(normalized_case.output, dict):
-                    delivery_request["output"] = dict(normalized_case.output)
-                if "reference" in ready and isinstance(normalized_case.reference, dict) and "reference" not in delivery_request:
-                    delivery_request["reference"] = dict(normalized_case.reference)
-                intent.live_request = delivery_request if checker.request(delivery_request) else request_candidate
+    if isinstance(normalized_case, NormalizedCaseInteraction):
+        initial_request = dict(normalized_case.execution_input.get("input") or {})
+    else:
+        initial_request = dict(getattr(normalized_case, "input", {}) or {})
+
+    # provided-output 只在 REQUEST_SCHEMA 明确接受增强字段时使用增强后的首轮请求。
+    ready = set(ready_from_spec(spec))
+    if not isinstance(normalized_case, NormalizedCaseInteraction):
+        delivery_request = dict(initial_request)
+        if "output" in ready and isinstance(getattr(normalized_case, "output", None), dict):
+            delivery_request["output"] = dict(normalized_case.output)
+        if "reference" in ready and isinstance(getattr(normalized_case, "reference", None), dict) and "reference" not in delivery_request:
+            delivery_request["reference"] = dict(normalized_case.reference)
+        checker = getattr(getattr(live, "live_schema", None), "check", None)
+        if checker is not None and hasattr(checker, "request") and checker.request(delivery_request):
+            initial_request = delivery_request
 
     # 构造 TraceContext
     ctx = TraceContext(
@@ -242,13 +257,14 @@ def trace_from_live(
         scenario=scenario,
         reference_contract=reference_contract,
         multi_turn=is_multi_turn,
+        intent=intent,
     )
 
     # 调 execute_live 拿最后一轮有效的 EXTRACT_OUTPUT_SCHEMA。
     # 每轮 output 和完整交互事实由 ctx 持有，不把 {"turns": [...]} 混入项目 output schema。
     execution_error = ""
     try:
-        output = live.execute_live(intent, ctx)
+        output = live.execute_live(initial_request, ctx, intent)
     except Exception as exc:
         # execute_live 负责先把失败事实写入 ctx；trace 层只组装 error trace。
         execution_error = str(exc)
@@ -270,7 +286,7 @@ def trace_from_live(
             output_source = "live_service"
 
     # 提取 normalized_request（从 ctx 首轮 request）
-    normalized_request = ctx.last_request() if ctx.turns else {}
+    normalized_request = ctx.turn_request(0) if ctx.turns else dict(initial_request)
 
     # 提取 raw_response（单轮取首轮，多轮取所有）
     raw_response = ctx.last_raw_response() if not is_multi_turn else ctx.all_raw_responses()
@@ -291,6 +307,11 @@ def trace_from_live(
         if last_turn["call_status"] != "succeeded":
             call_status = "error"
             call_error = last_turn.get("error") or ""
+    # 控制阶段失败（意图推断、继续决策、下一轮 Request 构建或安全熔断）
+    # 不一定会生成失败的业务调用轮次，但仍是整条 execute_live 链路失败。
+    if ctx.completion_status == "failed" and call_status == "ok":
+        call_status = "error"
+        call_error = ctx.stop_reason or "live_execution_failed"
 
     # 多轮状态
     stop_reason = ctx.stop_reason
@@ -310,18 +331,14 @@ def trace_from_live(
         if turn.get("project_fields"):
             project_fields.update(dict(turn.get("project_fields") or {}))
 
-    source_input = {}
-    if hasattr(case_for_intent, "input") and isinstance(case_for_intent.input, dict):
-        source_input = dict(case_for_intent.input)
-    elif isinstance(case_for_intent, dict):
-        source_input = dict(case_for_intent.get("input") or {}) if isinstance(case_for_intent.get("input"), dict) else dict(case_for_intent)
+    source_input = dict(initial_request)
 
     trace_id = f"{spec.project_id}:{case_id}:{int(time.time() * 1000)}"
     trace = RunTrace(
         trace_id=trace_id,
         project_id=spec.project_id,
         case_id=case_id,
-        mock_intent=intent,
+        mock_intent=ctx.intent or intent,
         input=source_input,
         normalized_request=normalized_request,
         raw_response=raw_response,

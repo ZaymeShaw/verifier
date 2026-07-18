@@ -148,7 +148,7 @@ def _blocked_attribute_result(trace: RunTrace, judge_result: JudgeResult, reason
     result = AttributeResult(
         trace_id=trace.trace_id,
         project_id=trace.project_id,
-        case_id=str(trace.input.get("case_id") or ""),
+        case_id=str(trace.case_id or ""),
         suspected_locations=[],
         evidence=evidence,
         evidence_strength="none",

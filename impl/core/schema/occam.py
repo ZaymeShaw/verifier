@@ -167,10 +167,12 @@ def _to_public_dict(value: Any, seen: set[int]) -> Any:
                     "id": value.id,
                     "project_id": value.project_id,
                     "scenario": value.scenario,
-                    "intent": {
+                    "intent": None if intent is None else {
                         "user_intent": intent.user_intent,
                         "query": intent.query,
                         "user_context": dict(intent.user_context or {}),
+                        "system_understanding": intent.system_understanding,
+                        "scenario": intent.scenario,
                     },
                     "live_request": dict(value.live_request or {}),
                     "output": value.output,

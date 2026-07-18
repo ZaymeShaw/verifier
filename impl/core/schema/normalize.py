@@ -264,9 +264,9 @@ def normalize_mock_case(value: Any) -> Optional[SingleTurnCase | MultiTurnCase]:
     if not data:
         return None
 
-    # MockCase 新格式：包含 intent + live_request 字段
+    # MockCase 新格式：live_request 必填，intent 可选。
     # 三层分离：标识 — intent — live_request。input 从 live_request 取。
-    if "intent" in data and "live_request" in data:
+    if "live_request" in data:
         intent_data = data.get("intent") if isinstance(data.get("intent"), dict) else {}
         live_request = data.get("live_request") if isinstance(data.get("live_request"), dict) else {}
         base = {
@@ -287,6 +287,14 @@ def normalize_mock_case(value: Any) -> Optional[SingleTurnCase | MultiTurnCase]:
         user_context = intent_data.get("user_context")
         if isinstance(user_context, dict) and user_context:
             base["metadata"]["user_context"] = dict(user_context)
+        if intent_data:
+            base["metadata"]["mock_intent"] = {
+                "user_intent": str(intent_data.get("user_intent") or ""),
+                "query": str(intent_data.get("query") or ""),
+                "user_context": dict(intent_data.get("user_context") or {}),
+                "system_understanding": str(intent_data.get("system_understanding") or ""),
+                "scenario": str(intent_data.get("scenario") or ""),
+            }
         _check_normalized_case_with_live_schema(data)
         return SingleTurnCase(**base)
 
@@ -535,8 +543,8 @@ def normalize_run_trace(value: Any) -> Optional[RunTrace]:
         user_intent=str(mock_intent_data.get("user_intent") or ""),
         query=str(mock_intent_data.get("query") or ""),
         user_context=dict(mock_intent_data.get("user_context") or {}),
+        system_understanding=str(mock_intent_data.get("system_understanding") or ""),
         scenario=str(mock_intent_data.get("scenario") or ""),
-        live_request=dict(mock_intent_data.get("live_request")) if isinstance(mock_intent_data.get("live_request"), dict) else None,
     ) if mock_intent_data else None
     return RunTrace(
         trace_id=str(data.get("trace_id") or ""),

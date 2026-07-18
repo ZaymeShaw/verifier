@@ -1,30 +1,13 @@
 from __future__ import annotations
 
 import json
-import time
 import urllib.error
-import urllib.request
 from typing import Any, Dict
 
 from impl.core.schema import ExecutionTraceEvent, LiveRequest, MultiTurnCase, ProjectSpec, SingleTurnCase
+from impl.core.live_transport import LiveTransport
 
 APPLICATION_BOUNDARY = {"scope": "single_turn_intent_recognition", "excludes": ["multi_turn_planning", "sse_card_generation"]}
-
-
-def _live_request_body(request: LiveRequest | dict[str, Any]) -> dict[str, Any]:
-    payload = request.normalized_request if isinstance(request, LiveRequest) else request
-    query = str(payload.get("query") or "")
-    session_id = str(payload.get("session_id") or f"eval-{payload.get('case_id') or int(time.time() * 1000)}")
-    return {
-        "session_id": session_id,
-        "trace_id": str(payload.get("case_id") or session_id),
-        "org_id": str((payload.get("metadata") or {}).get("org_id") or "eval-org"),
-        "user_text": query,
-        "extra_input_params": {
-            "agent_args": {"conversation_id": session_id, "message": {"content": query, "content_type": "text"}},
-            "args": {"extensions": {}, "contexts": []},
-        },
-    }
 
 
 def provided_output_raw(case: SingleTurnCase | MultiTurnCase, request: LiveRequest) -> Any:
@@ -58,6 +41,8 @@ def _first_value(value: Any, keys: list[str]) -> Any:
 
 
 def _raw_payload(raw_response: Any) -> Any:
+    if isinstance(raw_response, list):
+        raw_response = raw_response[0] if raw_response else {}
     return raw_response.get("raw") if isinstance(raw_response, dict) and "raw" in raw_response else raw_response
 
 
@@ -104,14 +89,12 @@ def intent_evidence(raw_response: Any, extracted_output: dict[str, Any]) -> dict
     }
 
 
-def project_fields(raw_response: Any, extracted_output: dict[str, Any]) -> dict[str, Any]:
-    request = raw_response.get("request") if isinstance(raw_response, dict) else {}
+def project_fields(raw_response: Any, extracted_output: dict[str, Any], request: dict[str, Any] | None = None) -> dict[str, Any]:
+    request = request if isinstance(request, dict) else {}
     return {
         "scenario": request.get("scenario") or "intent_recognition",
-        "case_id": request.get("case_id") or "",
+        "trace_id": request.get("trace_id") or "",
         "session_id": request.get("session_id") or "",
-        "reference": request.get("reference") or {},
-        "user_intent": request.get("user_intent"),
         "intent_evidence": intent_evidence(raw_response, extracted_output),
         "application_boundary": application_boundary(raw_response, extracted_output),
     }
@@ -122,7 +105,7 @@ def application_boundary(raw_response: Any | None = None, extracted_output: dict
 
 
 def _api_status(raw_response: Any, extracted_output: dict[str, Any]) -> str:
-    if not isinstance(raw_response, dict) or not raw_response.get("raw"):
+    if not _raw_payload(raw_response):
         return "failed"
     if extracted_output.get("intent") and extracted_output.get("intent") != "unknown":
         return "ok"
@@ -132,8 +115,8 @@ def _api_status(raw_response: Any, extracted_output: dict[str, Any]) -> str:
 def build_execution_trace(input_data: dict[str, Any], request: dict[str, Any], raw_response: Any, extracted_output: dict[str, Any], spec: ProjectSpec | None = None) -> list[ExecutionTraceEvent]:
     endpoint = spec.api.get("endpoint") if spec is not None else None
     return [
-        ExecutionTraceEvent(stage="request_normalization", status="ok" if request.get("query") else "suspicious", evidence={"query": request.get("query")}),
-        ExecutionTraceEvent(stage="intent_api_call", status=_api_status(raw_response, extracted_output), evidence={"endpoint": endpoint, "raw_response_present": isinstance(raw_response, dict) and bool(raw_response.get("raw"))}),
+        ExecutionTraceEvent(stage="request_normalization", status="ok" if request.get("user_text") else "suspicious", evidence={"user_text": request.get("user_text")}),
+        ExecutionTraceEvent(stage="intent_api_call", status=_api_status(raw_response, extracted_output), evidence={"endpoint": endpoint, "raw_response_present": bool(_raw_payload(raw_response))}),
         ExecutionTraceEvent(stage="adapter_extraction", status="ok" if extracted_output.get("intent") else "failed", evidence=extracted_output),
         ExecutionTraceEvent(stage="label_mapping", status="ok" if extracted_output.get("intent") != "unknown" else "suspicious", evidence={"intent": extracted_output.get("intent")}),
     ]
@@ -148,23 +131,26 @@ class MarketingIntentLive(RealServiceLive, SingleTurnLive):
     def __init__(self, spec: ProjectSpec):
         super().__init__(spec)
 
-    def deliver_real(self, request: LiveRequest) -> Any:
+    def deliver_real(self, request: Any, transport: LiveTransport) -> LiveTransport:
         try:
-            body = json.dumps(_live_request_body(request), ensure_ascii=False).encode("utf-8")
             url = str(self.spec.api.get("base_url") or "").rstrip("/") + "/" + str(self.spec.api.get("endpoint") or "").lstrip("/")
-            api_request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method=str(self.spec.api.get("method") or "POST").upper())
-            with urllib.request.urlopen(api_request, timeout=float(self.spec.api.get("timeout") or 60)) as response:
-                normalized = request.normalized_request if isinstance(request, LiveRequest) else request
-                raw_response = {"raw": response.read().decode("utf-8"), "request": normalized}
+            transport.request(
+                str(self.spec.api.get("method") or "POST"), url,
+                json_body=request,
+                timeout=float(self.spec.api.get("timeout") or 60),
+                carries_live_request=True,
+                contributes_raw_response=True,
+            )
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             raise LiveServiceUnavailableError(f"marketing-planning intent service unavailable: {exc}") from exc
-        return raw_response
+        return transport
 
-    def extract_output(self, raw_response: Any, request: LiveRequest) -> Dict[str, Any]:
+    def extract_output(self, raw_response: list[Any]) -> Dict[str, Any]:
         return extract_output(raw_response)
 
     def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest, application_boundary: Dict[str, Any]) -> Dict[str, Any]:
-        return project_fields(raw_response, extracted_output)
+        normalized = request.normalized_request if isinstance(request, LiveRequest) else request
+        return project_fields(raw_response, extracted_output, normalized)
 
     def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> Dict[str, Any]:
         return application_boundary(raw_response, extracted_output)

@@ -1,9 +1,30 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 
 from .base import now_iso
+
+
+@dataclass(frozen=True)
+class LiveExchange:
+    """RealLive 一次物理传输的公共事实原件。仅由 LiveTransport 生成。"""
+
+    exchange_id: str
+    sequence: int
+    transport: str
+    method: str
+    url: str
+    carries_live_request: bool = False
+    contributes_raw_response: bool = False
+    request_headers: Dict[str, Any] = field(default_factory=dict)
+    request: Any = None
+    status_code: Optional[int] = None
+    response_headers: Dict[str, Any] = field(default_factory=dict)
+    response: Any = None
+    error: Optional[str] = None
+    started_at: str = ""
+    finished_at: str = ""
 
 
 @dataclass

@@ -1,25 +1,25 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 
 @dataclass
 class MockIntentOutput:
     """mock_agent 意图生成输出（build_intent 结构化约束）。
 
-    三层结构（背景 → 意图 → 表达）：
+    四层结构（背景 → 系统认知 → 意图 → 表达）：
         user_context: 用户背景/画像/使用目标
+        system_understanding: 用户对 project_id 对应业务系统的主观认知
         user_intent:  用户基于背景产生的具体意图
         query:        用户基于意图说出口的原话
         scenario:     场景名称（trace.md 第五节：build_user_intent 输出时填充）
-        live_request: provided-output 项目预构建的请求（trace_from_live 设置，绕过 LLM）
     """
     user_intent: str
     query: str
     user_context: Dict[str, Any] = field(default_factory=dict)
+    system_understanding: str = ""
     scenario: str = ""
-    live_request: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -27,6 +27,28 @@ class MockNextTurnOutput:
     """mock_agent 下一轮生成输出（next_turn 结构化约束）。"""
     query: str
     turn_index: int = 0
+
+
+@dataclass
+class MockInteractionTurn:
+    """轻量 Mock 决策可见的一轮交互事实。"""
+    turn_index: int
+    live_request: Dict[str, Any]
+    extract_output: Dict[str, Any]
+    status: str
+    error: Optional[str] = None
+
+
+@dataclass
+class MockContinueDecision:
+    """模拟用户的极简继续/停止决定。"""
+    action: Literal["continue", "stop"]
+    stop_reason: Literal[
+        "",
+        "goal_satisfied",
+        "user_abandons",
+        "perceived_no_progress",
+    ] = ""
 
 
 @dataclass
@@ -151,11 +173,11 @@ class MockCase:
     project_id: str
     scenario: str
 
-    # ── 意图层（build_intent 产出，复用 MockIntentOutput） ──
-    intent: MockIntentOutput
-
     # ── API 请求层（build_request 产出，对齐 REQUEST_SCHEMA） ──
     live_request: Dict[str, Any]
+
+    # ── 意图层（可选；可能尚未从 Request 反推） ──
+    intent: Optional[MockIntentOutput] = None
 
     # ── ready 协议层 ──
     output: Optional[Dict[str, Any]] = None

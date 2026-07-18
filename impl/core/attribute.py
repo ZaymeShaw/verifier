@@ -175,7 +175,7 @@ def _fulfilled_attribute_result(spec: ProjectSpec, trace: RunTrace, judge: Judge
     result = AttributeResult(
         trace_id=trace.trace_id,
         project_id=trace.project_id,
-        case_id=str(trace.input.get("case_id") or "") if isinstance(trace.input, dict) else "",
+        case_id=str(trace.case_id or ""),
         expectation_attributions=attributions,
         root_cause_hypothesis="业务预期已达成，无根因。",
         evidence=evidence,
@@ -201,7 +201,7 @@ def _llm_call_failed_attribute_result(spec: ProjectSpec, trace: RunTrace, judge:
     result = AttributeResult(
         trace_id=trace.trace_id,
         project_id=trace.project_id,
-        case_id=str(trace.input.get("case_id") or "") if isinstance(trace.input, dict) else "",
+        case_id=str(trace.case_id or ""),
         expectation_attributions=attributions,
         root_cause_hypothesis=f"attribute agent LLM 调用失败，无法完成正式归因: {error_text}",
         evidence=[error_text],
@@ -276,7 +276,7 @@ def attribute_failure(
     result = AttributeResult(
         trace_id=trace.trace_id,
         project_id=trace.project_id,
-        case_id=str(trace.input.get("case_id") or "") if isinstance(trace.input, dict) else "",
+        case_id=str(trace.case_id or ""),
         expectation_attributions=expectation_attributions,
         suspected_locations=list(data.get("suspected_locations") or []),
         root_cause_hypothesis=str(data.get("root_cause_hypothesis") or ""),

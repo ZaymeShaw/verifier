@@ -8,7 +8,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from impl.core.mock_protocol import MultiTurnInteractiveMock, ProjectMock
-from impl.core.schema import ProjectSpec, SingleTurnCase, MultiTurnCase
+from impl.core.schema import MockContinueDecision, MockIntentOutput, ProjectSpec, SingleTurnCase, MultiTurnCase
 
 
 class MarketingPlanningMock(MultiTurnInteractiveMock, ProjectMock):
@@ -41,28 +41,27 @@ class MarketingPlanningMock(MultiTurnInteractiveMock, ProjectMock):
 
         产出必须符合 MPApiRequest 形状（live_schema.REQUEST_SCHEMA）。
         """
-        session_id = f"mock-{self.spec.project_id}-{int(time.time() * 1000)}"
-        query = str(getattr(intent, "query", "") or "")
-        # 首轮 query 用 intent.query；后续轮用 MockAgent.next_turn 产出
-        if accumulated_output is not None:
-            from impl.core.mock_agent import MockAgent
-            agent = MockAgent(self.spec)
-            acc = accumulated_output if isinstance(accumulated_output, dict) else {}
-            transcript = [t for t in (acc.get("transcript") or []) if isinstance(t, dict)]
-            turns = [t for t in (acc.get("turns") or []) if isinstance(t, dict)]
-            last_turn = turns[-1] if turns else {}
-            live_feedback = {
-                "stage": last_turn.get("stage"),
-                "missing_fields": last_turn.get("missing_fields") or [],
-                "extracted_output": last_turn,
-            }
-            case_dict = {
-                "scenario": str(getattr(intent, "scenario", "") or "intent_recognition"),
-                "metadata": {"user_context": dict(getattr(intent, "user_context", {}) or {})},
-                "user_intent": str(getattr(intent, "user_intent", "") or ""),
-            }
-            next_query = str(agent.next_turn(case_dict, transcript, live_feedback).get("query") or query)
-            query = next_query or query
+        from impl.core.mock_agent import MockAgent
+        agent = MockAgent(self.spec)
+        acc = accumulated_output if isinstance(accumulated_output, dict) else {}
+        turns = [t for t in (acc.get("turns") or []) if isinstance(t, dict)]
+        last_turn = turns[-1] if turns else {}
+        prior_request = last_turn.get("live_request") if isinstance(last_turn.get("live_request"), dict) else {}
+        session_id = str(prior_request.get("session_id") or f"mock-{self.spec.project_id}-{int(time.time() * 1000)}")
+        last_output = last_turn.get("extract_output") if isinstance(last_turn.get("extract_output"), dict) else {}
+        live_feedback = {
+            "stage": last_output.get("stage"),
+            "missing_fields": last_output.get("missing_fields") or [],
+            "extracted_output": last_output,
+        }
+        case_dict = {
+            "scenario": str(getattr(intent, "scenario", "") or "intent_recognition"),
+            "metadata": {"user_context": dict(getattr(intent, "user_context", {}) or {})},
+            "user_intent": str(getattr(intent, "user_intent", "") or ""),
+        }
+        query = str(agent.next_turn(case_dict, turns, live_feedback).get("query") or "")
+        if not query:
+            raise ValueError("MockAgent.next_turn 未生成下一轮 query")
 
         # 产出符合 MPApiRequest 形状（live_schema.REQUEST_SCHEMA）
         return {
@@ -85,27 +84,19 @@ class MarketingPlanningMock(MultiTurnInteractiveMock, ProjectMock):
             },
         }
 
-    def max_turns(self) -> int:
-        """多轮主循环最大轮数。"""
-        return 4
+    def infer_user_intent(self, initial_request: Dict[str, Any]) -> MockIntentOutput:
+        from impl.core.mock_agent import MockAgent
+        return MockAgent(self.spec).infer_user_intent(initial_request, scenario=str(initial_request.get("scenario") or "multi_turn_field_accumulation"))
+
+    def decide_next_action(self, intent: MockIntentOutput, accumulated_output: Dict[str, Any]) -> MockContinueDecision:
+        from impl.core.mock_agent import MockAgent
+        return MockAgent(self.spec).decide_next_action(intent, accumulated_output)
+
+    def safety_max_turns(self) -> int:
+        return 12
 
     def extract_mock_message(self, request: Dict[str, Any]) -> str:
         return str(request.get("user_text") or "") if isinstance(request, dict) else ""
-
-    def should_stop(self, transcript: List[Dict[str, Any]], last_result: Any) -> bool:
-        """多轮停止信号：达到 max_turns 或系统回复包含完成信号。"""
-        if not transcript:
-            return False
-        # 检查最后一轮 assistant 回复是否含完成信号
-        last_assistant = next(
-            (t for t in reversed(transcript) if isinstance(t, dict) and t.get("role") == "assistant"),
-            None,
-        )
-        if last_assistant:
-            content = str(last_assistant.get("content") or "")
-            if any(kw in content for kw in ("完成", "已为您", "规划已生成", "stage_complete")):
-                return True
-        return False
 
     def normalize_case(
         self,

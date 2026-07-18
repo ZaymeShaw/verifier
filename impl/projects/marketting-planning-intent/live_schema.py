@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from impl.core.live_schema_check import LiveSchemaCheck
 from impl.core.structured_output import dataclass_to_json_schema
-from .schema import MPIIntentExtractOutput, MPIIntentNormalizedRequest
+from .schema import MPIIntentApiRequest, MPIIntentExtractOutput
 
 API_ENDPOINT = "/api/v1/marketing-planning/intent-recognition"
 
@@ -21,10 +21,10 @@ INTENT_LABELS = [
     "team_portrait",
     "target_value_adjustment",
 ]
-REQUIRED_INPUT_FIELDS = ["query"]
+REQUIRED_INPUT_FIELDS = ["session_id", "trace_id", "org_id", "user_text", "extra_input_params"]
 READY = ["reference"]
 
-REQUEST_SCHEMA = MPIIntentNormalizedRequest
+REQUEST_SCHEMA = MPIIntentApiRequest
 EXTRACT_OUTPUT_SCHEMA = MPIIntentExtractOutput
 REQUEST_JSON_SCHEMA = dataclass_to_json_schema(REQUEST_SCHEMA)
 EXTRACT_OUTPUT_JSON_SCHEMA = dataclass_to_json_schema(EXTRACT_OUTPUT_SCHEMA)
