@@ -4,6 +4,7 @@ import hashlib
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
+from itertools import combinations
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence
 
 from .errors import (
@@ -42,6 +43,53 @@ def _record_payload(record: ContextUnitRecord) -> tuple:
         record.status,
         tuple(sorted(record.tags.items())),
     )
+
+
+def _normalize_queries(queries: Sequence[str]) -> tuple[str, ...]:
+    raw_queries = (queries,) if isinstance(queries, str) else queries
+    normalized = []
+    seen = set()
+    for query in raw_queries:
+        text = str(query).strip()
+        if text and text not in seen:
+            seen.add(text)
+            normalized.append(text)
+    return tuple(normalized)
+
+
+def _find_covering_candidate_ids(
+    per_query_hits: Sequence[Sequence[Mapping[str, Any]]],
+    candidate_limit: int,
+) -> Optional[tuple[str, ...]]:
+    nonempty_hits = [hits for hits in per_query_hits if hits]
+    if not nonempty_hits:
+        return ()
+
+    candidate_ids = tuple(
+        dict.fromkeys(str(hit["id"]) for hits in nonempty_hits for hit in hits)
+    )
+    max_cover_size = min(candidate_limit, len(nonempty_hits))
+    for cover_size in range(1, max_cover_size + 1):
+        best_cover = None
+        for candidate_group in combinations(candidate_ids, cover_size):
+            candidate_set = set(candidate_group)
+            ranks = []
+            for hits in nonempty_hits:
+                matching_ranks = [
+                    rank
+                    for rank, hit in enumerate(hits, start=1)
+                    if str(hit["id"]) in candidate_set
+                ]
+                if not matching_ranks:
+                    break
+                ranks.append(min(matching_ranks))
+            else:
+                score = (sum(ranks), tuple(ranks), candidate_group)
+                if best_cover is None or score < best_cover[0]:
+                    best_cover = (score, candidate_group)
+        if best_cover is not None:
+            return best_cover[1]
+    return None
 
 
 class ContextRuntime:
@@ -193,7 +241,7 @@ class ContextRuntime:
         top_k_per_query: Optional[int] = None,
     ) -> List[Mapping[str, Any]]:
         policy.assert_enabled()
-        normalized_queries = tuple(dict.fromkeys(str(query).strip() for query in queries if str(query).strip()))
+        normalized_queries = _normalize_queries(queries)
         if not normalized_queries:
             raise ContextValidationError("queries must contain at least one non-empty query")
         if len(normalized_queries) > policy.query_limit:
@@ -203,7 +251,7 @@ class ContextRuntime:
         requested_top_k = policy.top_k_per_query if top_k_per_query is None else int(top_k_per_query)
         if requested_top_k <= 0:
             raise ContextValidationError("top_k_per_query must be positive")
-        effective_top_k = min(requested_top_k, policy.top_k_per_query, policy.candidate_limit)
+        effective_top_k = min(requested_top_k, policy.top_k_per_query)
         query_vectors = self.embedding_provider.embed(normalized_queries)
         if len(query_vectors) != len(normalized_queries):
             raise ContextValidationError("embedding provider returned a mismatched query batch")
@@ -254,25 +302,81 @@ class ContextRuntime:
                 if query not in item["matched_queries"]:
                     item["matched_queries"].append(query)
 
-        # Round-robin selection prevents one broad query from occupying every candidate slot.
-        selected_ids = []
-        rank = 0
-        while len(selected_ids) < policy.candidate_limit:
-            added = False
-            for hits in per_query_hits:
-                if rank < len(hits):
-                    unit_id = str(hits[rank]["id"])
+        # First preserve one distinct candidate per non-empty query. A previously
+        # selected candidate may cover another query when no slot remains.
+        selected_ids: List[str] = []
+        uncovered_queries: List[str] = []
+        for query, hits in zip(normalized_queries, per_query_hits):
+            if not hits:
+                continue
+
+            selected_for_query = None
+            if len(selected_ids) < policy.candidate_limit:
+                for hit in hits:
+                    unit_id = str(hit["id"])
                     if unit_id not in selected_ids:
                         selected_ids.append(unit_id)
-                        added = True
-                        if len(selected_ids) >= policy.candidate_limit:
-                            break
-            if not added:
+                        selected_for_query = unit_id
+                        break
+
+            if selected_for_query is None:
+                selected_for_query = next(
+                    (str(hit["id"]) for hit in hits if str(hit["id"]) in selected_ids),
+                    None,
+                )
+
+            if selected_for_query is None:
+                uncovered_queries.append(query)
+
+        if uncovered_queries:
+            # A shared candidate may cover several queries even when it was not
+            # the first hit for the earlier query. Query limits keep this exact
+            # recovery search small; it only runs after the ordered fast path
+            # cannot satisfy the candidate budget.
+            covering_ids = _find_covering_candidate_ids(
+                per_query_hits, policy.candidate_limit
+            )
+            if covering_ids is None:
+                nonempty_query_count = sum(bool(hits) for hits in per_query_hits)
+                raise ContextBudgetError(
+                    "candidate limit "
+                    f"{policy.candidate_limit} cannot cover {nonempty_query_count} non-empty queries; "
+                    "reduce queries or raise the policy candidate limit"
+                )
+
+            covering_id_set = set(covering_ids)
+            selected_ids = []
+            for hits in per_query_hits:
+                selected_for_query = next(
+                    (
+                        str(hit["id"])
+                        for hit in hits
+                        if str(hit["id"]) in covering_id_set
+                    ),
+                    None,
+                )
+                if selected_for_query and selected_for_query not in selected_ids:
+                    selected_ids.append(selected_for_query)
+
+        # Fill the remaining budget by cross-query relevance without reordering
+        # the coverage candidates selected above.
+        remaining = [
+            item for unit_id, item in aggregate.items() if unit_id not in selected_ids
+        ]
+        remaining.sort(
+            key=lambda item: (
+                -float(item["_rrf"]),
+                -float(item["_score"]),
+                int(item["_first_query"]),
+                item["id"],
+            )
+        )
+        for item in remaining:
+            if len(selected_ids) >= policy.candidate_limit:
                 break
-            rank += 1
+            selected_ids.append(str(item["id"]))
 
         selected = [aggregate[unit_id] for unit_id in selected_ids]
-        selected.sort(key=lambda item: (-float(item["_rrf"]), -float(item["_score"]), item["id"]))
         return [
             {
                 "id": item["id"],
@@ -333,11 +437,16 @@ class ContextRun:
     def __init__(self, *, runtime: ContextRuntime, policy: _RunContextPolicy):
         self._runtime = runtime
         self._policy = policy
+        self._candidate_refs_by_id: Dict[str, str] = {}
+        self._candidate_ids_by_ref: Dict[str, str] = {}
+        self._next_candidate_ref = 1
         self._debug: Dict[str, Any] = {
             "policy": policy.debug_dict(),
             "mandatory_ids": list(policy.mandatory_ids),
             "search_queries": [],
+            "query_candidate_coverage": {},
             "candidate_ids": [],
+            "candidate_refs": {},
             "loaded_ids": [],
             "content_chars": {},
             "content_hashes": {},
@@ -346,15 +455,48 @@ class ContextRun:
     def search_context_units(
         self, queries: Sequence[str], top_k_per_query: Optional[int] = None
     ) -> List[Mapping[str, Any]]:
-        items = self._runtime._search(queries, self._policy, top_k_per_query=top_k_per_query)
-        self._debug["search_queries"].extend(str(query) for query in queries)
+        normalized_queries = _normalize_queries(queries)
+        items = self._runtime._search(
+            normalized_queries, self._policy, top_k_per_query=top_k_per_query
+        )
+        self._debug["search_queries"].extend(normalized_queries)
+        coverage = self._debug["query_candidate_coverage"]
+        for query in normalized_queries:
+            coverage.setdefault(query, [])
+        referenced_items = []
         for item in items:
-            if item["id"] not in self._debug["candidate_ids"]:
-                self._debug["candidate_ids"].append(item["id"])
-        return items
+            unit_id = str(item["id"])
+            selection_ref = self._candidate_refs_by_id.get(unit_id)
+            if selection_ref is None:
+                while True:
+                    selection_ref = f"C{self._next_candidate_ref}"
+                    self._next_candidate_ref += 1
+                    if (
+                        selection_ref not in self._candidate_ids_by_ref
+                        and self._runtime.registry.get(selection_ref) is None
+                    ):
+                        break
+                self._candidate_refs_by_id[unit_id] = selection_ref
+                self._candidate_ids_by_ref[selection_ref] = unit_id
+                self._debug["candidate_refs"][selection_ref] = unit_id
+            referenced_item = dict(item)
+            referenced_item["selection_ref"] = selection_ref
+            referenced_items.append(referenced_item)
+            if unit_id not in self._debug["candidate_ids"]:
+                self._debug["candidate_ids"].append(unit_id)
+            for query in item["matched_queries"]:
+                query_ids = coverage.setdefault(query, [])
+                if unit_id not in query_ids:
+                    query_ids.append(unit_id)
+        return referenced_items
 
     def load_context_units(self, unit_ids: Sequence[str]) -> List[ContextUnit]:
-        units = self._runtime._load(unit_ids, self._policy)
+        resolved_ids = [
+            self._candidate_ids_by_ref.get(str(unit_id).strip(), str(unit_id).strip())
+            for unit_id in unit_ids
+            if str(unit_id).strip()
+        ]
+        units = self._runtime._load(resolved_ids, self._policy)
         for unit in units:
             if unit.id not in self._debug["loaded_ids"]:
                 self._debug["loaded_ids"].append(unit.id)
@@ -371,7 +513,12 @@ class ContextRun:
                 "policy": dict(self._debug["policy"]),
                 "mandatory_ids": list(self._debug["mandatory_ids"]),
                 "search_queries": list(self._debug["search_queries"]),
+                "query_candidate_coverage": {
+                    query: list(unit_ids)
+                    for query, unit_ids in self._debug["query_candidate_coverage"].items()
+                },
                 "candidate_ids": list(self._debug["candidate_ids"]),
+                "candidate_refs": dict(self._debug["candidate_refs"]),
                 "loaded_ids": list(self._debug["loaded_ids"]),
                 "content_chars": dict(self._debug["content_chars"]),
                 "content_hashes": dict(self._debug["content_hashes"]),

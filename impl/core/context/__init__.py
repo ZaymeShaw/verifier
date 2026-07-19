@@ -10,7 +10,11 @@ from .adapters import (
 from .bootstrap import DEFAULT_CONTEXT_DATA_ROOT, build_context_runtime
 from .models import ContextUnit, ContextUnitRecord
 from .runtime import ContextRun, ContextRuntime
-from .tools import GuardedContextTools
+from .tools import (
+    CONTEXT_CANDIDATE_SELECTION_INSTRUCTIONS,
+    CONTEXT_QUERY_PLANNING_INSTRUCTIONS,
+    GuardedContextTools,
+)
 
 __all__ = [
     "BaseContextAdapter",
@@ -19,6 +23,8 @@ __all__ = [
     "ContextRuntime",
     "ContextUnit",
     "ContextUnitRecord",
+    "CONTEXT_CANDIDATE_SELECTION_INSTRUCTIONS",
+    "CONTEXT_QUERY_PLANNING_INSTRUCTIONS",
     "DEFAULT_CONTEXT_DATA_ROOT",
     "GuardedContextTools",
     "build_context_runtime",

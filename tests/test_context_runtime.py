@@ -18,6 +18,11 @@ from impl.core.context.errors import (
 )
 from impl.core.context.models import ContextUnitRecord
 from impl.core.context.resolvers import CompositeContentResolver, FileContentResolver
+from impl.core.context.tools import (
+    CONTEXT_CANDIDATE_SELECTION_INSTRUCTIONS,
+    CONTEXT_QUERY_PLANNING_INSTRUCTIONS,
+    GuardedContextTools,
+)
 
 
 PUBLIC_POLICY = {
@@ -62,6 +67,61 @@ def build_runtime(tmp_path: Path, *, provider=None, resolver=None, project_polic
         public_policy=PUBLIC_POLICY,
         project_policy=project_policy,
     )
+
+
+def install_scripted_search(runtime, monkeypatch, hits_by_query):
+    """Replace semantic ranking with stable per-query hits for coverage tests."""
+
+    queries = tuple(hits_by_query)
+    query_by_marker = {index + 1: query for index, query in enumerate(queries)}
+    marker_by_query = {query: [float(index + 1)] for index, query in enumerate(queries)}
+
+    monkeypatch.setattr(
+        runtime.embedding_provider,
+        "embed",
+        lambda texts: [marker_by_query[str(text)] for text in texts],
+    )
+
+    def scripted_search(query_vector, *, limit, **_kwargs):
+        query = query_by_marker[int(query_vector[0])]
+        hits = []
+        for rank, unit_id in enumerate(hits_by_query[query], start=1):
+            record = runtime.registry.get(unit_id)["record"]
+            hits.append(
+                {
+                    "id": unit_id,
+                    "name": record.name,
+                    "description": record.description,
+                    "score": 1.0 - rank / 100.0,
+                    "record": record,
+                }
+            )
+        return hits[:limit]
+
+    monkeypatch.setattr(runtime.vector_index, "search", scripted_search)
+
+
+def test_guarded_tools_publish_generic_multi_query_planning_contract(tmp_path):
+    runtime = build_runtime(tmp_path)
+    tools = GuardedContextTools(
+        runtime.start_run(role="judge", operation="evaluate")
+    )
+
+    assert "独立知识需求" in CONTEXT_QUERY_PLANNING_INSTRUCTIONS
+    assert "不是权威证据" in CONTEXT_QUERY_PLANNING_INSTRUCTIONS
+    assert "atomic" in tools.search_context_units.__doc__
+    assert "逐字保留" in CONTEXT_QUERY_PLANNING_INSTRUCTIONS
+    assert "隐含属性" in CONTEXT_QUERY_PLANNING_INSTRUCTIONS
+    assert "凭空增加" in CONTEXT_QUERY_PLANNING_INSTRUCTIONS
+    assert "完整任务改写" in CONTEXT_QUERY_PLANNING_INSTRUCTIONS
+    assert "client_search" not in CONTEXT_QUERY_PLANNING_INSTRUCTIONS
+    assert "Judge" not in CONTEXT_QUERY_PLANNING_INSTRUCTIONS
+    assert "matched_queries" in CONTEXT_CANDIDATE_SELECTION_INSTRUCTIONS
+    assert "selection_ref" in CONTEXT_CANDIDATE_SELECTION_INSTRUCTIONS
+    assert "对象归属" in CONTEXT_CANDIDATE_SELECTION_INSTRUCTIONS
+    assert "candidate_limit" in CONTEXT_CANDIDATE_SELECTION_INSTRUCTIONS
+    assert "load_limit" in CONTEXT_CANDIDATE_SELECTION_INSTRUCTIONS
+    assert "client_search" not in CONTEXT_CANDIDATE_SELECTION_INSTRUCTIONS
 
 
 def test_context_record_requires_exactly_one_content_source_and_is_immutable():
@@ -141,6 +201,159 @@ def test_multi_query_search_preserves_diversity_and_never_returns_content(tmp_pa
     assert all(item["matched_queries"] for item in candidates)
     debug = run.debug_snapshot()["context_debug"]
     assert set(debug["candidate_ids"]) == {"routing", "field"}
+
+
+def test_search_treats_one_string_as_one_query(tmp_path, monkeypatch):
+    runtime = build_runtime(tmp_path)
+    runtime.register_context_unit(make_record("single"))
+    install_scripted_search(runtime, monkeypatch, {"single need": ["single"]})
+    run = runtime.start_run(role="judge", operation="evaluate")
+
+    candidates = run.search_context_units(" single need ")
+
+    assert [item["id"] for item in candidates] == ["single"]
+    assert run.debug_snapshot()["context_debug"]["search_queries"] == ["single need"]
+
+
+def test_search_assigns_stable_run_refs_and_load_accepts_them(tmp_path, monkeypatch):
+    runtime = build_runtime(tmp_path)
+    runtime.register_context_units([make_record("first"), make_record("second")])
+    install_scripted_search(
+        runtime,
+        monkeypatch,
+        {
+            "first need": ["first"],
+            "second need": ["first", "second"],
+        },
+    )
+    run = runtime.start_run(role="judge", operation="evaluate")
+
+    first_search = run.search_context_units(["first need"])
+    second_search = run.search_context_units(["second need"], top_k_per_query=2)
+
+    assert first_search[0]["selection_ref"] == "C1"
+    assert second_search[0]["selection_ref"] == "C1"
+    assert second_search[1]["selection_ref"] == "C2"
+    loaded = run.load_context_units(["C2", "C1"])
+    assert [unit.id for unit in loaded] == ["second", "first"]
+    debug = run.debug_snapshot()["context_debug"]
+    assert debug["candidate_refs"] == {"C1": "first", "C2": "second"}
+    assert debug["loaded_ids"] == ["second", "first"]
+
+
+def test_selection_refs_do_not_shadow_exact_stable_ids(tmp_path, monkeypatch):
+    runtime = build_runtime(tmp_path)
+    runtime.register_context_units([make_record("C1"), make_record("other")])
+    install_scripted_search(runtime, monkeypatch, {"need": ["other"]})
+    run = runtime.start_run(role="judge", operation="evaluate")
+
+    candidate = run.search_context_units(["need"])[0]
+
+    assert candidate["selection_ref"] == "C2"
+    assert run.load_context_units(["C1"])[0].id == "C1"
+    assert run.load_context_units(["C2"])[0].id == "other"
+
+
+def test_search_normalizes_queries_preserves_coverage_order_and_records_debug(tmp_path, monkeypatch):
+    runtime = build_runtime(tmp_path)
+    runtime.register_context_units(
+        [make_record("shared"), make_record("second-best"), make_record("supplement")]
+    )
+    install_scripted_search(
+        runtime,
+        monkeypatch,
+        {
+            "first need": ["shared", "supplement"],
+            "second need": ["shared", "second-best"],
+        },
+    )
+    run = runtime.start_run(role="judge", operation="evaluate")
+
+    candidates = run.search_context_units(
+        [" first need ", "", "first need", "second need"],
+        top_k_per_query=2,
+    )
+
+    assert [item["id"] for item in candidates[:2]] == ["shared", "second-best"]
+    assert candidates[0]["matched_queries"] == ["first need", "second need"]
+    debug = run.debug_snapshot()["context_debug"]
+    assert debug["search_queries"] == ["first need", "second need"]
+    assert debug["query_candidate_coverage"] == {
+        "first need": ["shared", "supplement"],
+        "second need": ["shared", "second-best"],
+    }
+
+
+def test_search_reuses_one_candidate_that_covers_multiple_queries(tmp_path, monkeypatch):
+    runtime = build_runtime(
+        tmp_path,
+        project_policy={"default": {"candidate_limit": 1}},
+    )
+    runtime.register_context_unit(make_record("shared"))
+    install_scripted_search(
+        runtime,
+        monkeypatch,
+        {"first need": ["shared"], "second need": ["shared"]},
+    )
+    run = runtime.start_run(role="judge", operation="evaluate")
+
+    candidates = run.search_context_units(["first need", "second need"])
+
+    assert [item["id"] for item in candidates] == ["shared"]
+    assert candidates[0]["matched_queries"] == ["first need", "second need"]
+
+
+def test_search_recovers_shared_candidate_when_first_hits_would_exhaust_budget(tmp_path, monkeypatch):
+    runtime = build_runtime(
+        tmp_path,
+        project_policy={"default": {"candidate_limit": 1}},
+    )
+    runtime.register_context_units(
+        [make_record("first-only"), make_record("second-only"), make_record("shared")]
+    )
+    install_scripted_search(
+        runtime,
+        monkeypatch,
+        {
+            "first need": ["first-only", "shared"],
+            "second need": ["second-only", "shared"],
+        },
+    )
+    run = runtime.start_run(role="judge", operation="evaluate")
+
+    candidates = run.search_context_units(
+        ["first need", "second need"], top_k_per_query=2
+    )
+
+    assert [item["id"] for item in candidates] == ["shared"]
+    assert candidates[0]["matched_queries"] == ["first need", "second need"]
+
+
+def test_search_fails_when_candidate_budget_cannot_cover_nonempty_queries(tmp_path, monkeypatch):
+    runtime = build_runtime(
+        tmp_path,
+        project_policy={"default": {"candidate_limit": 2}},
+    )
+    runtime.register_context_units(
+        [make_record("first"), make_record("second"), make_record("third")]
+    )
+    install_scripted_search(
+        runtime,
+        monkeypatch,
+        {
+            "first need": ["first"],
+            "second need": ["second"],
+            "third need": ["third"],
+        },
+    )
+    run = runtime.start_run(role="judge", operation="evaluate")
+
+    with pytest.raises(ContextBudgetError, match="cannot cover 3 non-empty queries"):
+        run.search_context_units(["first need", "second need", "third need"])
+
+    debug = run.debug_snapshot()["context_debug"]
+    assert debug["search_queries"] == []
+    assert debug["query_candidate_coverage"] == {}
 
 
 def test_load_rechecks_entire_batch_and_does_not_leak_allowed_subset(tmp_path):
