@@ -170,6 +170,10 @@ def build_show_projection(trace: Any) -> Dict[str, Any]:
         "mock": mock,
         "overview": {
             "status": str(getattr(trace, "status", "") or ""),
+            "completion_status": str(getattr(trace, "completion_status", "") or ""),
+            "execution_error": str(getattr(trace, "error", "") or ""),
+            "interaction_controller_status": str(getattr(trace, "interaction_controller_status", "not_run") or "not_run"),
+            "interaction_controller_error": str(getattr(trace, "interaction_controller_error", "") or ""),
             "interaction_mode": str(getattr(trace, "interaction_mode", "") or ""),
             "turn_count": len(turns),
             "stop_reason": str(getattr(trace, "stop_reason", "") or ""),

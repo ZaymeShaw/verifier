@@ -4,6 +4,7 @@ import logging
 from typing import Any, Dict, Optional, Set
 
 from impl.core.judge_protocol import ProjectJudge
+from impl.core.judge import ensure_business_expectation
 from impl.core.project_loader import load_field_provider
 from impl.core.schema import JudgeResult, ProjectSpec, RunTrace, normalize_judge_result, to_dict, trace_extracted_output
 from impl.projects.client_search.live import FIELD_PATTERNS, application_boundary as live_application_boundary, boundary_from_trace, capability_manifest, enhanced_rules, external_boundary_sources, state_executors as live_state_executors, trace_state_graph as live_trace_state_graph, value_mappings
@@ -226,23 +227,37 @@ def apply_condition_comparison(trace: RunTrace, judge_result: JudgeResult, compa
         judge_result.missing = missing
         judge_result.extra = extra
     if wrong or missing or extra:
+        ensure_business_expectation(
+            judge_result,
+            "client_search:search_condition_contract",
+            blocking=True,
+            expected_outcome="搜索条件保持字段、操作符、值和逻辑的下游可执行语义",
+            acceptance_criteria=["wrong、missing、extra 均为空"],
+            downstream_consumer="client_search",
+        )
         assessment = {
             "expectation_id": "client_search:search_condition_contract",
             "status": "not_fulfilled",
             "expected_evidence": [outputs.get("expected")],
             "actual_evidence": [outputs.get("actual"), {"wrong": wrong, "missing": missing, "extra": extra}],
             "downstream_impact": "wrong/missing/extra conditions change the target customer population",
-            "blocking": True,
         }
         judge_result.fulfillment_assessments = [assessment]
     elif outputs and not judge_result.fulfillment_assessments:
+        ensure_business_expectation(
+            judge_result,
+            "client_search:search_condition_contract",
+            blocking=True,
+            expected_outcome="搜索条件保持字段、操作符、值和逻辑的下游可执行语义",
+            acceptance_criteria=["wrong、missing、extra 均为空"],
+            downstream_consumer="client_search",
+        )
         judge_result.fulfillment_assessments = [{
             "expectation_id": "client_search:search_condition_contract",
             "status": "fulfilled",
             "expected_evidence": [outputs.get("expected")],
             "actual_evidence": [outputs.get("actual")],
             "downstream_impact": "search conditions cover the target customer population",
-            "blocking": True,
         }]
     if trace.extracted_output:
         judge_result.actual = trace.extracted_output

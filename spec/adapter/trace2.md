@@ -271,9 +271,10 @@ class MockContinueDecision:
 - 使用严格结构化输出和很小的输出 token 上限；
 - 不输出自由文本长解释；
 - 判断模拟用户的主观行为，不判断系统客观上是否符合 Evaluation；
+- `continue` 表示目标尚未满足，但交互仍有实质进展，例如获得了新信息、新结果或问题范围正在收敛；证据不足以停止时也应继续；
 - `goal_satisfied` 表示用户从可见结果主观认为目的已达到；
-- `user_abandons` 表示用户不愿继续；
-- `perceived_no_progress` 表示用户主观认为继续没有价值。
+- `user_abandons` 表示用户明确不愿继续；
+- `perceived_no_progress` 表示经过持续交互后长期没有实质进展，例如反复询问相同问题、连续失败，且没有新增有效信息、结果或目标收敛；不得仅因为尚未交付最终结果或仍在进行合理澄清而使用该状态。
 
 ### 6.4 后续 Request
 

@@ -28,7 +28,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import typing
-from typing import Any, Dict, List, Optional, Type, Union, get_args, get_origin, get_type_hints
+from typing import Any, Dict, List, Literal, Optional, Type, Union, get_args, get_origin, get_type_hints
 
 
 # ------------------------------------------------------------------
@@ -102,6 +102,38 @@ def _type_to_schema(tp: Any, _defs: dict, _seen: set) -> Dict[str, Any]:
         return schema
 
     origin = get_origin(tp)
+
+    # Literal[...]：同时保留 JSON 基本类型与精确枚举值。
+    # 若缺少该分支，Literal 会退化成 {}，prompt 与响应校验都会丢失协议约束。
+    if origin is Literal:
+        values = list(get_args(tp))
+        if nullable and None not in values:
+            values.append(None)
+
+        json_types: List[str] = []
+        for value in values:
+            if value is None:
+                json_type = "null"
+            elif isinstance(value, bool):
+                json_type = "boolean"
+            elif isinstance(value, int):
+                json_type = "integer"
+            elif isinstance(value, float):
+                json_type = "number"
+            elif isinstance(value, str):
+                json_type = "string"
+            else:
+                raise TypeError(
+                    f"Literal 值必须是 JSON 基本类型，收到 {value!r} ({type(value).__name__})"
+                )
+            if json_type not in json_types:
+                json_types.append(json_type)
+
+        if len(json_types) == 1:
+            return {"type": json_types[0], "enum": values}
+        if json_types:
+            return {"type": json_types, "enum": values}
+        return {"enum": values}
 
     # List[X] / list
     if origin in (list, List):

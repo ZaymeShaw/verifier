@@ -74,6 +74,9 @@ class RunTrace:
     turn_records: List[Dict[str, Any]] = field(default_factory=list)
     final_output_turn: Optional[int] = None
     completion_status: str = ""
+    # 交互控制器（Mock 用户）状态与被测业务执行状态分离。
+    interaction_controller_status: str = "not_run"
+    interaction_controller_error: str = ""
     multi_turn_input: Optional[Dict[str, Any]] = None
     fallbacks: List[FallbackDecision] = field(default_factory=list)
 

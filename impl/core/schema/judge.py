@@ -11,6 +11,8 @@ from .fallback import FallbackDecision
 class BusinessExpectation:
     # Judge 层：从用户意图推导出的业务期望。
     expectation_id: str
+    # 是否阻断整体业务目标。该属性属于期望本身，必须在评估 actual 前确定。
+    blocking: bool
     downstream_consumer: str = ""
     user_intent: str = ""
     expected_outcome: str = ""
@@ -30,7 +32,6 @@ class FulfillmentAssessment:
     expected_evidence: List[Any] = field(default_factory=list)
     actual_evidence: List[Any] = field(default_factory=list)
     downstream_impact: str = ""
-    blocking: bool = False
     confidence: Optional[float] = None
     evidence_refs: List[Dict[str, Any]] = field(default_factory=list)
 
@@ -77,7 +78,6 @@ class JudgeLLMOutput:
     # 作为 StructuredOutputSpec.from_dataclass 的 dataclass 来源，传给 complete_json。
     business_expectations: List[BusinessExpectation] = field(default_factory=list)
     fulfillment_assessments: List[FulfillmentAssessment] = field(default_factory=list)
-    overall_fulfillment: Dict[str, Any] = field(default_factory=dict)
     expected: Any = None
     # actual 是 live 系统真实输出，由代码从 RunTrace 填充；LLM 不产 actual，避免把摘要/比较中间态污染主字段。
     missing: List[GapItem] = field(default_factory=list)

@@ -26,6 +26,10 @@ class TraceTableRow:
     output_summary: str = ""
     reference_summary: str = ""
     status: str = ""
+    execution_status: str = ""
+    execution_error: str = ""
+    interaction_controller_status: str = "not_run"
+    interaction_controller_error: str = ""
     execution_mode: str = ""
     output_source: str = ""
     score: Optional[float] = None

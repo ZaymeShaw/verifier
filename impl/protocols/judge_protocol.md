@@ -16,9 +16,9 @@ Fields:
 
 - `intent_model`: 意图优先的核心对象，包含 raw_user_request、explicit_intents、implicit_business_intents、constraints、success_definition、blocking_requirements、intent_evidence。judge 必须先构建 intent_model，再从 intent_model 派生 business_expectations。
 - `consumer_contract`: who consumes the output and what business contract the current run must satisfy
-- `business_expectations`: expectation-level units rebuilt from user intent, project docs, case reference, and downstream contract
-- `fulfillment_assessments`: one assessment per business expectation with status `fulfilled`, `not_fulfilled`, or `not_evaluable` — these three values are the only allowed status vocabulary
-- `overall_fulfillment`: aggregate `status`, `blocking_expectations`, and downstream impact. `status` uses the same three-value vocabulary
+- `business_expectations`: expectation-level units rebuilt from user intent, project docs, case reference, and downstream contract. Every expectation must declare `blocking` before actual-output comparison; only a missing core user outcome, safety floor, or project hard contract is blocking.
+- `fulfillment_assessments`: one assessment per business expectation with status `fulfilled`, `not_fulfilled`, or `not_evaluable` — these three values are the only allowed status vocabulary. Assessments must not contain or redefine `blocking`.
+- `overall_fulfillment`: verifier-derived aggregate `status` and `blocking_expectations`. Any blocking `not_fulfilled` yields `not_fulfilled`; otherwise any blocking `not_evaluable` or missing blocking assessment yields `not_evaluable`; otherwise status is `fulfilled`. Non-blocking gaps remain visible but do not fail the overall user goal.
 - `verdict`: derived compatibility summary computed by the verifier from `overall_fulfillment.status` and `boundary_decision.within_evaluable_scope`. Mapping: `fulfilled` → `correct`; `not_fulfilled` with in-scope blocking → `incorrect`; `not_evaluable` / out-of-scope → `uncertain`. The judge LLM must omit this field.
 - `score`: derived from fulfillment_assessments by `_compute_score`. Returns `None` only when no evaluable assessments exist. The judge LLM must omit this field.
 - `confidence`: optional, judge-emitted self-assessment of evidence quality (0-1)
@@ -54,7 +54,7 @@ Boundary decision:
 
 Self-check:
 
-After the LLM returns, the verifier runs `_judge_self_check` to detect inconsistencies between the LLM's `fulfillment_assessments`, `overall_fulfillment.status`, and any prose claims. On failure the verifier issues exactly one reprompt with the specific inconsistencies appended. If the second response is still inconsistent, the verifier:
+After the LLM returns, the verifier runs `_judge_self_check` to detect invalid status vocabulary, unknown expectation IDs, and missing assessments. `overall_fulfillment.status` is computed deterministically after project reconciliation and never triggers a reprompt. When a reprompt is necessary, it includes the previous complete JSON, exact error paths, and an instruction to preserve unaffected fields.
 
 - adds `self_check_failed` to `quality_flags`
 - sets `needs_human_review = true`
@@ -68,12 +68,12 @@ When the underlying LLM call errors out, the verifier returns a minimal honest `
 
 Adapter contract gates:
 
-Project adapters can enforce deterministic contract checks (e.g. `marketting-planning` stage/event/path contracts, `marketting-planning-intent` intent contract, QA gold-answer match) by **injecting fulfillment assessments**, not by writing `verdict` or `score`. The pattern:
+Project adapters can enforce deterministic contract checks (e.g. `marketting-planning` stage/event/path contracts, `marketting-planning-intent` intent contract, QA gold-answer match) by injecting a blocking business expectation and its fulfillment assessment. They must not write the final overall status. The pattern:
 
 1. The adapter detects a contract failure in `normalize_judge_result(trace, judge_result)`.
-2. The adapter appends `{"expectation_id": "<contract>:<requirement>", "status": "not_fulfilled", "blocking": True, "evidence": [...], "downstream_impact": "..."}` to `judge_result.fulfillment_assessments`.
-3. The adapter records the deterministic evidence in `verdict_derivation.project_deterministic_evidence` and adds project-specific `quality_flags`.
-4. The verifier then runs `reconcile_equivalent_judge_result` (semantic equivalence flips) and finally `ensure_fulfillment_judge_result`, which calls `_compute_verdict` / `_compute_score` from the now-complete fulfillment assessments. The adapter never touches `verdict` or `score` directly.
+2. The adapter appends or updates `BusinessExpectation(expectation_id="<contract>:<requirement>", blocking=True, ...)`.
+3. The adapter appends the corresponding assessment without a `blocking` field.
+4. After all project reconciliation, the verifier computes `overall_fulfillment.status` once from the complete expectation/assessment pair set.
 
 Rules:
 
@@ -85,7 +85,7 @@ Rules:
 - Fixed judge conflict behavior belongs in the generic template/protocol explanation and judge implementation, not in user-filled project fields.
 - The user-facing boundary document only needs to explain the project evaluation boundary in plain language.
 - Internal fields such as `evaluation_boundary`, `primary_assessment`, `contrast_assessments`, and `boundary_decision` are judge output fields, not user-filled boundary fields.
-- Judge records boundary classification in `boundary_decision`; uncontrollable external limitations should not be expressed as `not_fulfilled` blocking assessments. The verifier maps out-of-scope cases to `uncertain` via `_compute_verdict`.
+- Uncontrollable external limitations must not be expressed as blocking business expectations. Their assessments remain `not_evaluable` evidence without failing an otherwise fulfilled in-scope user goal.
 - Evaluable system-responsibility errors remain judge failures even when an external limitation also exists; the boundary classification only excludes pure out-of-boundary limitations.
 - The final `verdict` is derived from exactly one primary fulfillment assessment set under exactly one primary boundary, by the single-point `_compute_verdict` function.
 - Contrast boundaries are allowed only to explain gaps unless the project boundary explicitly says they affect the fulfillment assessment.

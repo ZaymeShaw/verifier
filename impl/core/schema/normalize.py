@@ -214,6 +214,10 @@ def normalize_trace_table_row(value: Any) -> Optional[TraceTableRow]:
         output_summary=str(data.get("output_summary") or ""),
         reference_summary=str(data.get("reference_summary") or ""),
         status=_normalize_trace_status(data.get("status")),
+        execution_status=_normalize_trace_status(data.get("execution_status")),
+        execution_error=str(data.get("execution_error") or ""),
+        interaction_controller_status=str(data.get("interaction_controller_status") or "not_run"),
+        interaction_controller_error=str(data.get("interaction_controller_error") or ""),
         execution_mode=str(data.get("execution_mode") or ""),
         output_source=str(data.get("output_source") or ""),
         score=data.get("score"),
@@ -400,6 +404,8 @@ def normalize_business_expectation(value: Any) -> Optional[BusinessExpectation]:
     data = _as_dict(value)
     if not data:
         return None
+    if "blocking" not in data:
+        raise ValueError("BusinessExpectation.blocking 为必填协议字段")
     return BusinessExpectation(
         expectation_id=str(data.get("expectation_id") or data.get("id") or ""),
         downstream_consumer=str(data.get("downstream_consumer") or ""),
@@ -409,6 +415,7 @@ def normalize_business_expectation(value: Any) -> Optional[BusinessExpectation]:
         acceptance_criteria=_as_list(data.get("acceptance_criteria")),
         boundary=data.get("boundary") if isinstance(data.get("boundary"), dict) else {},
         priority=str(data.get("priority") or "normal"),
+        blocking=bool(data.get("blocking")),
         evidence_refs=_as_list(data.get("evidence_refs")),
     )
 
@@ -422,6 +429,8 @@ def normalize_fulfillment_assessment(value: Any) -> Optional[FulfillmentAssessme
     data = _as_dict(value)
     if not data:
         return None
+    if "blocking" in data:
+        raise ValueError("FulfillmentAssessment.blocking 已删除；blocking 必须定义在对应 BusinessExpectation")
     return FulfillmentAssessment(
         expectation_id=str(data.get("expectation_id") or data.get("id") or ""),
         status=_normalize_fulfillment_status(data.get("status")),
@@ -429,7 +438,6 @@ def normalize_fulfillment_assessment(value: Any) -> Optional[FulfillmentAssessme
         expected_evidence=_as_list(data.get("expected_evidence")),
         actual_evidence=_as_list(data.get("actual_evidence")),
         downstream_impact=str(data.get("downstream_impact") or ""),
-        blocking=bool(data.get("blocking")),
         confidence=data.get("confidence"),
         evidence_refs=_as_list(data.get("evidence_refs")),
     )
@@ -579,6 +587,8 @@ def normalize_run_trace(value: Any) -> Optional[RunTrace]:
         turn_records=list(data.get("turn_records") or []),
         final_output_turn=int(data.get("final_output_turn")) if data.get("final_output_turn") is not None else None,
         completion_status=str(data.get("completion_status") or ""),
+        interaction_controller_status=str(data.get("interaction_controller_status") or "not_run"),
+        interaction_controller_error=str(data.get("interaction_controller_error") or ""),
         multi_turn_input=multi_turn_input,
         fallbacks=normalize_fallback_decisions(data.get("fallbacks")),
         ready=list(data.get("ready") or []),

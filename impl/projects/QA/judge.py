@@ -4,6 +4,7 @@ import re
 from typing import Any, Dict, Optional
 
 from impl.core.judge_protocol import ProjectJudge
+from impl.core.judge import ensure_business_expectation
 from impl.core.schema import JudgeResult, ProjectSpec, RunTrace, normalize_judge_result, to_dict
 
 
@@ -129,7 +130,15 @@ def _enrich_semantic_judge(trace: RunTrace, judge_result: JudgeResult, scenario:
         overall = judge_result.overall_fulfillment or {}
         status = overall.get("status") or "not_evaluable"
         req_name = f"answer_quality_for_{scenario}" if scenario else "qa_answer_quality"
-        judge_result.fulfillment_assessments = [{"expectation_id": req_name, "status": status, "expected_evidence": [reference], "actual_evidence": [actual], "downstream_impact": judge_result.reasoning_summary or "QA answer quality judged for current sample", "blocking": status == "not_fulfilled", "evidence_refs": []}]
+        ensure_business_expectation(
+            judge_result,
+            req_name,
+            blocking=True,
+            expected_outcome="回答满足当前问题的核心意图并保持事实可靠",
+            acceptance_criteria=["回答核心问题", "无关键事实错误"],
+            downstream_consumer="QA 用户",
+        )
+        judge_result.fulfillment_assessments = [{"expectation_id": req_name, "status": status, "expected_evidence": [reference], "actual_evidence": [actual], "downstream_impact": judge_result.reasoning_summary or "QA answer quality judged for current sample", "evidence_refs": []}]
     judge_result.reasoning_summary = judge_result.reasoning_summary or f"QA answer quality judged for current sample (scenario={scenario or 'unknown'})"
     return _scrub_placeholder_ids(judge_result)
 
@@ -170,11 +179,19 @@ def _fallback_judge_from_sample_label(trace: RunTrace, judge_result: JudgeResult
         f"expected_error_type={error_type or 'none'}",
         "sample_label_source=metadata.expected_quality",
     ]
+    ensure_business_expectation(
+        judge_result,
+        "QA:sample_expected_quality",
+        blocking=True,
+        expected_outcome="QA 回答达到当前样本标注的核心质量要求",
+        acceptance_criteria=["回答质量与样本标签一致"],
+        downstream_consumer="QA 用户",
+    )
     judge_result.fulfillment_assessments = list(judge_result.fulfillment_assessments or []) + [{
         "expectation_id": "QA:sample_expected_quality", "status": status,
         "expected_evidence": [expected_reference], "actual_evidence": [actual],
         "downstream_impact": "QA answer is acceptable for the current user" if is_correct else "QA user cannot rely on the answer quality for this sample",
-        "blocking": not is_correct, "evidence_refs": [],
+        "evidence_refs": [],
     }]
     judge_result.expected = expected_reference
     judge_result.actual = actual
@@ -206,13 +223,20 @@ def _fallback_judge(trace: RunTrace, judge_result: JudgeResult) -> Optional[Judg
     if labeled:
         return labeled
     reason = "QA 本地 fallback 只记录样本证据完整性；语义正确性必须由 LLM judge 或人工复核判定。"
+    ensure_business_expectation(
+        judge_result,
+        "QA:local_evidence_probe",
+        blocking=False,
+        expected_outcome="记录当前样本是否具备语义评估所需证据",
+        acceptance_criteria=["reference 或 contexts 可用于语义核验"],
+        downstream_consumer="QA 评估流程",
+    )
     judge_result.fulfillment_assessments = list(judge_result.fulfillment_assessments or []) + [{
         "expectation_id": "QA:local_evidence_probe",
         "status": "not_evaluable",
         "expected_evidence": [expected_reference],
         "actual_evidence": [actual],
         "downstream_impact": reason,
-        "blocking": False,
     }]
     judge_result.expected = expected_reference
     judge_result.actual = actual
@@ -235,10 +259,17 @@ def _weak_quality_probe(trace: RunTrace, judge_result: JudgeResult) -> JudgeResu
     reason = "qa_weak_quality 没有 reference 或 contexts，只能作为质量估计样本，不能产出正式语义正确/错误判定。"
     judge_result.actual = actual
     judge_result.expected = judge_result.expected or _generate_reference(request, str(actual.get("actual_answer") or ""), [], "qa_weak_quality")
+    ensure_business_expectation(
+        judge_result,
+        "QA:weak_quality_probe",
+        blocking=False,
+        expected_outcome="记录弱质量样本是否具备正式语义判断条件",
+        acceptance_criteria=["存在可核验 reference 或 contexts"],
+        downstream_consumer="QA 评估流程",
+    )
     judge_result.fulfillment_assessments = list(judge_result.fulfillment_assessments or []) + [{
         "expectation_id": "QA:weak_quality_probe",
         "status": "not_evaluable",
-        "blocking": False,
         "evidence": [reason],
         "downstream_impact": reason,
     }]
@@ -262,10 +293,18 @@ def _gold_answer_exact_probe(trace: RunTrace, judge_result: JudgeResult) -> Opti
         f"actual_length={len(actual_text)}",
         f"reference_length={len(golden_text)}",
     ]
+    ensure_business_expectation(
+        judge_result,
+        "QA:gold_answer_exact_match",
+        blocking=False,
+        expected_outcome="actual answer 与 gold answer 完全一致",
+        acceptance_criteria=["文本完全一致"],
+        downstream_consumer="QA 评估流程",
+    )
     judge_result.fulfillment_assessments = list(judge_result.fulfillment_assessments or []) + [
         {"expectation_id": "QA:gold_answer_exact_match", "status": "fulfilled",
          "expected_evidence": [reference], "actual_evidence": [actual],
-         "downstream_impact": "用户获得了完整准确的答案", "blocking": False, "evidence_refs": []},
+         "downstream_impact": "用户获得了完整准确的答案", "evidence_refs": []},
     ]
     judge_result.expected = reference
     judge_result.actual = actual

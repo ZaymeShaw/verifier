@@ -10,10 +10,27 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, List, Callable
 from typing import final as typing_final
-from impl.core.schema import RunTrace, JudgeResult, AttributeResult, ProjectSpec
+from impl.core.schema import RunTrace, JudgeResult, AttributeResult, ProjectSpec, to_dict
 from impl.core.protocol_base import check_forbidden_overrides
+from impl.core.summary import summary_from_attribution
 
 logger = logging.getLogger(__name__)
+
+
+def _has_evidence_payload(value: Any) -> bool:
+    """Return whether probe/runtime output contains usable current-run evidence."""
+    if isinstance(value, list):
+        return any(_has_evidence_payload(item) for item in value)
+    if not isinstance(value, dict) or not value:
+        return bool(value)
+    if value.get("probe_status") == "failed":
+        return False
+    evidence_items = {
+        key: item
+        for key, item in value.items()
+        if key not in {"probe_error", "probe_status"}
+    }
+    return any(item not in (None, "", [], {}) for item in evidence_items.values())
 
 
 class _AttributeProtocol(ABC):
@@ -70,10 +87,12 @@ class _AttributeProtocol(ABC):
         raw_result = self._run_llm_attribute(trace, judge_result, context)
 
         # 4. 校验输出（内部方法）
-        validated_result = self._validate_attribute_output(raw_result)
+        validated_result = self._validate_attribute_output(raw_result, context, judge_result)
 
         # 5. 后处理（扩展点）
         final_result = self.normalize_result(trace, judge_result, validated_result)
+        # summary 是派生字段，必须反映校验/项目后处理后的最终证据强度。
+        final_result.summary = summary_from_attribution(to_dict(final_result))
 
         return final_result
 
@@ -104,8 +123,13 @@ class _AttributeProtocol(ABC):
             project_attribute_context=context
         )
 
-    def _validate_attribute_output(self, result: AttributeResult) -> AttributeResult:
-        """内部方法：校验 LLM 输出格式。"""
+    def _validate_attribute_output(
+        self,
+        result: AttributeResult,
+        context: Optional[Dict[str, Any]] = None,
+        judge_result: Optional[JudgeResult] = None,
+    ) -> AttributeResult:
+        """内部方法：校验 LLM 输出格式与最低证据门槛。"""
         if result is None:
             raise ValueError("attribute 输出为 None")
 
@@ -116,6 +140,19 @@ class _AttributeProtocol(ABC):
 
         allowed_strengths = {"none", "weak", "medium", "strong"}
         if result.evidence_strength and result.evidence_strength not in allowed_strengths:
+            result.evidence_strength = "weak"
+
+        context = context or {}
+        probe_results = context.get("probe_results")
+        runtime_checks = context.get("runtime_checks")
+        judge_status = (judge_result.overall_fulfillment or {}).get("status") if judge_result else ""
+        # fulfilled 快速路径由确定性代码生成 strong；这里只约束失败归因中的模型自报强证据。
+        if (
+            result.evidence_strength == "strong"
+            and judge_status != "fulfilled"
+            and not _has_evidence_payload(probe_results)
+            and not _has_evidence_payload(runtime_checks)
+        ):
             result.evidence_strength = "weak"
 
         return result

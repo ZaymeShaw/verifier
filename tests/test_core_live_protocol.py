@@ -150,6 +150,30 @@ def test_multi_turn_returns_last_output_and_keeps_all_turn_facts_in_context():
     assert ctx.completion_status == "completed"
 
 
+def test_mock_continue_decision_prompt_defines_all_states_and_long_term_no_progress():
+    class Llm:
+        def __init__(self):
+            self.system = ""
+
+        def complete_json(self, system, *_args, **_kwargs):
+            self.system = system
+            return {"action": "continue", "stop_reason": ""}
+
+    llm = Llm()
+    decision = MockAgent(_spec(), llm=llm).decide_next_action(
+        MockIntentOutput(user_intent="完成规划", query="开始规划"),
+        {"turns": [], "current_turn": 1},
+    )
+
+    assert decision == MockContinueDecision(action="continue", stop_reason="")
+    assert "continue：目标尚未满足，但交互仍有实质进展" in llm.system
+    assert "goal_satisfied：用户从可见结果主观认为目标已经满足" in llm.system
+    assert "user_abandons：用户明确不愿继续交互" in llm.system
+    assert "perceived_no_progress：经过持续交互后长期没有实质进展" in llm.system
+    assert "合理且有推进作用的澄清" in llm.system
+    assert "证据不足以停止时也选择 continue" in llm.system
+
+
 def test_mock_continue_decision_normalizes_provider_free_text_reason():
     class Llm:
         def complete_json(self, *_args, **_kwargs):
@@ -294,3 +318,74 @@ def test_output_validation_failure_is_not_hidden_by_fallback_output():
 
     assert ctx.completion_status == "failed"
     assert ctx.turns[-1]["call_status"] == "failed"
+
+
+def test_multi_turn_controller_decision_error_preserves_last_business_output():
+    class BrokenDecisionMock(_MultiMock):
+        def decide_next_action(self, intent, accumulated):
+            raise ValueError("mock clock context missing")
+
+    live = _live(_MultiLive, BrokenDecisionMock())
+    ctx = TraceContext(project_id="demo", case_id="case-controller-error", multi_turn=True)
+
+    output = live.execute_live(
+        {"query": "turn-1"},
+        ctx,
+        MockIntentOutput(user_intent="get a plan", query="turn-1"),
+    )
+
+    assert output == {"answer": "turn-1"}
+    assert ctx.stop_reason == "decision_error"
+    assert ctx.completion_status == "incomplete"
+    assert ctx.final_output_turn == 1
+    assert ctx.interaction_controller_status == "error"
+    assert ctx.interaction_controller_error == "mock clock context missing"
+    assert ctx.turns[-1]["call_status"] == "succeeded"
+
+
+def test_trace_keeps_controller_error_separate_from_business_execution_status():
+    class BrokenDecisionMock(_MultiMock):
+        def decide_next_action(self, intent, accumulated):
+            raise RuntimeError("controller provider unavailable")
+
+    live = _live(_MultiLive, BrokenDecisionMock())
+    case = SingleTurnCase(
+        id="case-controller-trace",
+        input={"query": "turn-1"},
+        user_intent="get a plan",
+        scenario="multi",
+    )
+
+    trace = trace_from_live(live, case)
+
+    assert trace.status == "ok"
+    assert trace.error in (None, "")
+    assert trace.extracted_output == {"answer": "turn-1"}
+    assert trace.completion_status == "incomplete"
+    assert trace.stop_reason == "decision_error"
+    assert trace.interaction_controller_status == "error"
+    assert trace.interaction_controller_error == "controller provider unavailable"
+
+
+def test_invalid_next_request_is_recorded_as_controller_error():
+    class InvalidRequestMock(_MultiMock):
+        def decide_next_action(self, intent, accumulated):
+            return MockContinueDecision(action="continue")
+
+        def build_next_request(self, intent, accumulated):
+            return {}
+
+    live = _live(_MultiLive, InvalidRequestMock())
+    ctx = TraceContext(project_id="demo", case_id="case-invalid-next-request", multi_turn=True)
+
+    output = live.execute_live(
+        {"query": "turn-1"},
+        ctx,
+        MockIntentOutput(user_intent="get a plan", query="turn-1"),
+    )
+
+    assert output == {"answer": "turn-1"}
+    assert ctx.stop_reason == "request_build_error"
+    assert ctx.completion_status == "incomplete"
+    assert ctx.interaction_controller_status == "error"
+    assert "empty or invalid request" in ctx.interaction_controller_error

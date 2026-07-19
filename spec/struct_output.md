@@ -79,6 +79,8 @@ LLM 返回后立刻校验：字段缺失、类型错、空内容（空字符串/
 
 `StructuredOutputSpec` 从 dataclass 提取 JSON Schema 时，支持嵌套 dataclass（比如 `JudgeLLMOutput.business_expectations: List[BusinessExpectation]`，`BusinessExpectation` 又是 dataclass，递归提取成 JSON Schema 的 `properties`/`$defs`）。但有一个硬约束：**嵌套层级里只能包含可序列化的内容**——基本类型（str/int/float/bool）、list、dict、嵌套 dataclass 这些可以；不能再把任意 Python 类、函数、复杂对象塞进 dataclass 字段里。这样保证提取出的 JSON Schema 是干净的、能直接传给 `response_format` 和校验器的标准 schema。
 
+Judge 的 `blocking` 只属于 `BusinessExpectation`，并且是结构化输出必填字段；`FulfillmentAssessment` 不得包含 `blocking`。模型先按用户核心目的、安全底线和项目强契约声明 expectation 是否阻断，再判断对应 assessment。`overall_fulfillment.status` 是公共代码在项目扩展完成后确定性派生的字段，模型输出的同名状态不作为最终结果，也不因状态不同触发 reprompt。
+
 
 
 

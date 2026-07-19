@@ -33,6 +33,16 @@ def _decode_body(payload: bytes) -> Any:
         return {"text": text}
 
 
+def _decode_http_error_body(exc: urllib.error.HTTPError) -> Any:
+    """Best-effort decode without masking the original HTTP failure."""
+    if exc.fp is None:
+        return None
+    try:
+        return _decode_body(exc.read())
+    except (AttributeError, KeyError, OSError):
+        return None
+
+
 @dataclass(frozen=True)
 class LiveResponseView:
     """供项目继续编排下一次调用的只读真实响应视图。"""
@@ -133,7 +143,7 @@ class LiveTransport:
         except urllib.error.HTTPError as exc:
             status_code = int(exc.code)
             response_headers = dict(exc.headers.items()) if exc.headers else {}
-            response_payload = _decode_body(exc.read())
+            response_payload = _decode_http_error_body(exc)
             error = str(exc)
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             error = str(exc)

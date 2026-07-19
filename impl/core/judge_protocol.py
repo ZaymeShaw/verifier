@@ -59,7 +59,9 @@ class _JudgeProtocol(ABC):
         pre_judge_result = self.pre_judge(trace, user_intent=user_intent)
         if pre_judge_result is not None:
             normalized_pre = self.normalize_result(trace, pre_judge_result)
-            return self.reconcile_result(trace, normalized_pre)
+            reconciled_pre = self.reconcile_result(trace, normalized_pre)
+            from impl.core.judge import finalize_judge_result
+            return finalize_judge_result(reconciled_pre)
 
         # 2. 构建上下文（扩展点）
         context = self.build_context(trace)
@@ -83,8 +85,8 @@ class _JudgeProtocol(ABC):
         # 4. 归一化 + 协调结果（扩展点）
         normalized = self.normalize_result(trace, raw_result)
         final_result = self.reconcile_result(trace, normalized)
-
-        return final_result
+        from impl.core.judge import finalize_judge_result
+        return finalize_judge_result(final_result)
 
     def _run_llm_judge(self, trace: RunTrace, context: Dict[str, Any],
                        user_intent: Optional[str]) -> JudgeResult:

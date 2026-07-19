@@ -215,7 +215,7 @@ function renderTraceCell(item){
   if(!show || !show.available){return '<div><b>Trace ID：</b>'+escapeHtml(traceId)+'</div><div class="muted">状态：'+escapeHtml(status)+' · 缺少 Show Schema，显示原始 Trace</div>'+collapsedJson('完整原始 Trace JSON',trace);}
   const overview=show.overview||{};const mock=show.mock||{};
   let html='<div class="trace-scroll"><div><b>Trace ID：</b>'+escapeHtml(traceId)+'</div>';
-  html+='<div class="trace-overview"><b>执行概览</b><div>状态：'+escapeHtml(overview.status||status)+'　模式：'+escapeHtml(overview.interaction_mode||'-')+'　轮数：'+escapeHtml(overview.turn_count??0)+'</div><div class="muted">停止原因：'+escapeHtml(overview.stop_reason||'-')+'　最终输出轮次：'+escapeHtml(overview.final_output_turn??'-')+'</div></div>';
+  html+='<div class="trace-overview"><b>执行概览</b><div>业务执行：'+escapeHtml(overview.status||status)+'　完成度：'+escapeHtml(overview.completion_status||trace.completion_status||'-')+'　模式：'+escapeHtml(overview.interaction_mode||'-')+'　轮数：'+escapeHtml(overview.turn_count??0)+'</div><div class="muted">停止原因：'+escapeHtml(overview.stop_reason||'-')+'　最终输出轮次：'+escapeHtml(overview.final_output_turn??'-')+'</div>'+(overview.execution_error?'<div class="error-text">业务执行错误：'+escapeHtml(overview.execution_error)+'</div>':'')+'<div class="muted">Mock 控制器：'+escapeHtml(overview.interaction_controller_status||trace.interaction_controller_status||'not_run')+(overview.interaction_controller_error?' · '+escapeHtml(overview.interaction_controller_error):'')+'</div></div>';
   html+='<div class="trace-mock"><b>Mock 用户</b><div>'+escapeHtml(mock.user_intent||mock.query||'无 Mock Intent')+'</div><div class="muted">表达：'+escapeHtml(mock.query||'-')+'　场景：'+escapeHtml(mock.scenario||trace.scenario||'-')+'</div>'+(mock.user_context&&Object.keys(mock.user_context).length?'<div class="trace-field"><b>用户画像</b>'+escapeHtml(shortText(mock.user_context,500))+'</div>':'')+'</div>';
   (show.turns||[]).forEach((turn,index)=>{const primaryOut=(turn.output||[])[0]||{};const secondary=(turn.output||[]).slice(1).filter(field=>field.found&&field.value!==null&&field.value!==''&&!(Array.isArray(field.value)&&!field.value.length));const exchanges=turn.live_exchange_summary||[];const exchangeLine=exchanges.length?'<div class="muted">真实调用：'+exchanges.map(exchange=>escapeHtml((exchange.method||'?')+' '+(exchange.url||'?')+' → '+(exchange.status_code??'error'))).join('　')+'</div>':'';html+='<div class="trace-turn"><b>第 '+escapeHtml(turn.turn_index||index+1)+' 轮</b> <span class="pill '+(turn.status==='succeeded'?'ok':'bad')+'">'+escapeHtml(turn.status||'-')+'</span> <span class="muted">'+escapeHtml(turn.runtime_ms??'-')+' ms</span><div class="trace-side"><div class="trace-message"><b>Mock 输入</b><div>'+escapeHtml(turn.mock_message||'主展示字段无值')+'</div></div><div class="trace-message ai"><b>AI 输出</b><div>'+escapeHtml(shortText(primaryOut.value,900)||'主展示字段无值')+'</div>'+secondary.map(field=>'<div class="trace-field"><b>'+escapeHtml(field.path)+'</b>'+escapeHtml(shortText(field.value,600))+'</div>').join('')+'</div></div>'+exchangeLine+(turn.error?'<div class="pill bad">'+escapeHtml(turn.error)+'</div>':'')+'</div>';});
   html+=collapsedJson('完整原始 Trace JSON（含请求、响应与技术事实）',trace)+'</div>';
@@ -326,8 +326,9 @@ function _judgeSummaryFromNested(item){
   const panel=judgePanel(item), fulfillment=fulfillmentPanel(item);
   if(!panel || !Object.keys(panel).length){return null;}
   const assessments=fulfillment.matrix || panel.fulfillment_assessments || [];
+  const expectations=panel.business_expectations || [];
   const status=fulfillment.overall_fulfillment?.status || panel.display_status || panel.overall_fulfillment?.status || '';
-  const blocking=assessments.filter(x=>x.blocking).length;
+  const blocking=(fulfillment.matrix || expectations).filter(x=>x.blocking).length;
   return {status,fulfillment_status:status,score:null,reason:judgeReason(item),assessment_count:assessments.length,blocking_count:blocking};
 }
 function renderCaseJudge(item){

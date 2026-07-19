@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from impl.core.judge_protocol import ProjectJudge
+from impl.core.judge import ensure_business_expectation
 from impl.core.schema import JudgeResult, ProjectSpec, RunTrace, normalize_judge_result, to_dict
 
 
@@ -179,10 +180,18 @@ def normalize_judge_result_for_project(spec: ProjectSpec, trace: RunTrace, judge
     for failure in failures:
         requirement = failure.get("requirement") or "contract"
         evidence_text = "; ".join(failure.get("evidence") or []) or failure.get("status") or "mismatch"
+        expectation_id = f"deerflow_contract:{requirement}"
+        ensure_business_expectation(
+            judge_result,
+            expectation_id,
+            blocking=True,
+            expected_outcome=f"满足 DeerFlow 项目契约：{requirement}",
+            acceptance_criteria=[failure.get("expected_fragment") or requirement],
+            downstream_consumer="DeerFlow 下游流程",
+        )
         judge_result.fulfillment_assessments = list(judge_result.fulfillment_assessments or []) + [{
-            "expectation_id": f"deerflow_contract:{requirement}",
+            "expectation_id": expectation_id,
             "status": "not_fulfilled",
-            "blocking": True,
             "evidence": evidence_text,
             "downstream_impact": failure_downstream_impact(requirement, failure),
         }]

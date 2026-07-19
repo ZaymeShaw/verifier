@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 import urllib.error
 from typing import Any, Dict, List, Optional
@@ -113,7 +114,7 @@ def _infer_scenario(input_data: Dict[str, Any], turns: List[Dict[str, Any]]) -> 
         [str(input_data.get("query") or input_data.get("user_intent") or "")] +
         [str(turn.get("content") or "") for turn in turns]
     )
-    if any(word in text for word in ["缺", "补充", "澄清", "需要"]):
+    if "澄清" in text or _looks_like_clarification_reply(text):
         return "clarification"
     if any(word in text for word in ["天气", "闲聊", "讲个", "诗"]):
         return "non_agent_intent"
@@ -146,9 +147,7 @@ def _raw_payload(raw: Any) -> Any:
 
 
 def _extract_reply_and_tool_calls(messages: list[dict[str, Any]]) -> tuple[str, list[dict[str, Any]]]:
-    """从历史消息中取最新业务 AI 回复，排除标题等 middleware 生成物。"""
-    reply = ""
-    tool_calls: list[dict[str, Any]] = []
+    """从同一条最新业务 AI 消息提取回复和工具调用，禁止跨轮拼接。"""
     for message in reversed(messages):
         if not isinstance(message, dict):
             continue
@@ -156,22 +155,20 @@ def _extract_reply_and_tool_calls(messages: list[dict[str, Any]]) -> tuple[str, 
         if caller.startswith("middleware:"):
             continue
         content = message.get("content")
-        if not isinstance(content, dict):
+        if not isinstance(content, dict) or content.get("type") != "ai":
             continue
-        if content.get("type") != "ai":
-            continue
-        if not reply and content.get("content"):
-            value = content["content"]
-            reply = value if isinstance(value, str) else str(value)
-        for tc in content.get("tool_calls") or []:
-            if isinstance(tc, dict):
-                tool_calls.append({
-                    "name": str(tc.get("name") or ""),
-                    "args": dict(tc.get("args") or {}) or {},
-                })
-        if reply and tool_calls:
-            break
-    return reply, tool_calls
+        value = content.get("content")
+        reply = value if isinstance(value, str) else str(value or "")
+        tool_calls = [
+            {
+                "name": str(tc.get("name") or ""),
+                "args": dict(tc.get("args") or {}) or {},
+            }
+            for tc in content.get("tool_calls") or []
+            if isinstance(tc, dict)
+        ]
+        return reply, tool_calls
+    return "", []
 
 
 def _is_nbev_tool_call(tool_call: dict[str, Any]) -> bool:
@@ -191,20 +188,61 @@ def _scripts_called(tool_calls: list[dict[str, Any]]) -> list[str]:
     return found
 
 
-def _stage_from_output(reply: str, tool_calls: list[dict[str, Any]], scripts: list[str]) -> str:
+def _looks_like_planning_reply(reply: str) -> bool:
+    text = str(reply or "").strip()
+    if not text:
+        return False
+    artifact_marker = any(
+        marker in text
+        for marker in ("执行计划", "营销规划", "行动方案", "实施方案", "推进计划", "时间表", "里程碑")
+    )
+    dimensions = sum(
+        marker in text
+        for marker in ("目标", "策略", "步骤", "阶段", "执行", "时间", "预算", "指标", "风险", "负责人")
+    )
+    structured = bool(re.search(r"(?:^|\n)\s*(?:#{1,6}\s*|[-*]\s+|\d+[.、])", text))
+    # “为了制定执行计划，请补充……”只是请求信息，不是已经交付规划产物。
+    return structured and (artifact_marker or dimensions >= 3)
+
+
+def _looks_like_clarification_reply(reply: str) -> bool:
+    text = str(reply or "").strip()
+    if not text:
+        return False
+    patterns = (
+        r"请(?:先)?提供",
+        r"请(?:再)?补充",
+        r"请确认",
+        r"需要先(?:了解|确认|补充|提供)",
+        r"还缺少",
+        r"缺少.{0,12}(?:信息|资料|参数|维度)",
+        r"为了.{0,24}(?:请提供|请补充|需要提供)",
+    )
+    return any(re.search(pattern, text) for pattern in patterns)
+
+
+def _stage_inference(reply: str, tool_calls: list[dict[str, Any]], scripts: list[str]) -> tuple[str, str]:
+    tool_names = {str(tc.get("name") or "") for tc in tool_calls if isinstance(tc, dict)}
+    if "ask_clarification" in tool_names:
+        return "clarification", "current_message_ask_clarification"
     if scripts:
-        return "planning"
-    has_nbev = any(_is_nbev_tool_call(tc) for tc in tool_calls)
-    if has_nbev:
-        return "planning"
+        return "planning", "nbev_script"
+    if any(_is_nbev_tool_call(tc) for tc in tool_calls):
+        return "planning", "nbev_tool_call"
+    if _looks_like_planning_reply(reply):
+        return "planning", "structured_planning_reply"
+    if _looks_like_clarification_reply(reply):
+        return "clarification", "explicit_missing_information_request"
     reply_lower = (reply or "").lower()
-    if any(word in reply_lower for word in ["澄清", "需要", "请提供", "请问", "缺", "补充"]):
-        return "clarification"
     if any(word in reply_lower for word in ["无法", "sorry", "不能", "不支持", "闲聊"]):
-        return "non_agent"
+        return "non_agent", "non_agent_reply"
     if reply:
-        return "intent"
-    return "unknown"
+        return "intent", "nonempty_business_reply"
+    return "unknown", "empty_reply"
+
+
+def _stage_from_output(reply: str, tool_calls: list[dict[str, Any]], scripts: list[str]) -> str:
+    return _stage_inference(reply, tool_calls, scripts)[0]
 
 
 def _session_summary(normalized_request: dict[str, Any]) -> dict[str, Any]:

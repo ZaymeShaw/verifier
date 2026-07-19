@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from impl.core.judge_protocol import ProjectJudge
+from impl.core.judge import ensure_business_expectation
 from impl.core.schema import JudgeResult, ProjectSpec, RunTrace, normalize_judge_result, to_dict
 
 
@@ -129,10 +130,18 @@ def normalize_judge_result_for_project(trace: RunTrace, judge_result: JudgeResul
         requirement = failure.get("requirement") or "contract"
         evidence_text = "; ".join(failure.get("evidence") or []) or failure.get("status") or "mismatch"
         downstream_impact = failure_downstream_impact(requirement, failure)
+        expectation_id = f"mp_contract:{requirement}"
+        ensure_business_expectation(
+            judge_result,
+            expectation_id,
+            blocking=True,
+            expected_outcome=f"满足营销规划项目契约：{requirement}",
+            acceptance_criteria=[failure.get("expected_fragment") or requirement],
+            downstream_consumer="营销规划用户",
+        )
         judge_result.fulfillment_assessments.append({
-            "expectation_id": f"mp_contract:{requirement}",
+            "expectation_id": expectation_id,
             "status": "not_fulfilled",
-            "blocking": True,
             "evidence": evidence_text,
             "downstream_impact": downstream_impact,
         })
@@ -181,6 +190,7 @@ def default_business_expectation(trace, judge_result):
         "downstream_consumer": "marketing planning user",
         "required_capabilities": ["stage_routing", "field_clarification", "path_card_generation", "fallback_boundary", "sse_completion"],
         "boundary": build_judge_context(trace).get("application_boundary") or {},
+        "blocking": True,
     }
     user_intent = str((trace.normalized_request or {}).get("user_intent") or (trace.normalized_request or {}).get("query") or trace.input or "")
     expectation.update(
@@ -202,7 +212,6 @@ def default_fulfillment_assessment(trace, judge_result, expectation):
         "expected_evidence": list(judge_result.missing or []) or [judge_result.expected or trace.reference_contract or {}],
         "actual_evidence": list(judge_result.wrong or []) or list(judge_result.extra or []) or [judge_result.actual or trace.extracted_output],
         "downstream_impact": "planning user can proceed with the generated plan" if status == "fulfilled" else (judge_result.reasoning_summary or "planning user cannot rely on the current planning output to complete the business task"),
-        "blocking": status in {"not_fulfilled", "not_evaluable"},
         "evidence_refs": list(getattr(trace, "evidence_refs", []) or []),
     }
 class MarketingPlanningJudge(ProjectJudge):

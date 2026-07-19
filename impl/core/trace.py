@@ -55,6 +55,8 @@ class TraceContext:
     transcript: List[Dict[str, Any]] = field(default_factory=list)
     final_output_turn: Optional[int] = None
     completion_status: str = ""
+    interaction_controller_status: str = "not_run"
+    interaction_controller_error: str = ""
     intent: Optional[Any] = None
 
     def record_turn(
@@ -111,6 +113,11 @@ class TraceContext:
     def set_intent(self, intent: Any) -> None:
         """记录执行期按需反推得到的用户模型。"""
         self.intent = intent
+
+    def record_interaction_controller(self, status: str, error: Optional[Any] = None) -> None:
+        """记录 Mock 用户控制器状态，不污染被测业务执行状态。"""
+        self.interaction_controller_status = str(status or "not_run")
+        self.interaction_controller_error = str(error or "")
 
     def record_decision(self, decision: Any) -> None:
         """把本轮轻量用户决定附着到最新轮次事实。"""
@@ -309,7 +316,7 @@ def trace_from_live(
             call_error = last_turn.get("error") or ""
     # 控制阶段失败（意图推断、继续决策、下一轮 Request 构建或安全熔断）
     # 不一定会生成失败的业务调用轮次，但仍是整条 execute_live 链路失败。
-    if ctx.completion_status == "failed" and call_status == "ok":
+    if ctx.completion_status == "failed" and call_status == "ok" and ctx.final_output_turn is None:
         call_status = "error"
         call_error = ctx.stop_reason or "live_execution_failed"
 
@@ -322,6 +329,8 @@ def trace_from_live(
         "final_output_turn": ctx.final_output_turn,
         "completion_status": ctx.completion_status,
         "stop_reason": ctx.stop_reason,
+        "interaction_controller_status": ctx.interaction_controller_status,
+        "interaction_controller_error": ctx.interaction_controller_error,
     }
     application_boundary = {}
     project_fields = {}
@@ -366,5 +375,7 @@ def trace_from_live(
         turn_records=list(ctx.turns),
         final_output_turn=ctx.final_output_turn,
         completion_status=ctx.completion_status,
+        interaction_controller_status=ctx.interaction_controller_status,
+        interaction_controller_error=ctx.interaction_controller_error,
     )
     return normalize_run_trace(trace)

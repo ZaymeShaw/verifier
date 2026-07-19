@@ -79,7 +79,7 @@ def _fulfillment_panel(judge: Optional[JudgeResult]) -> dict:
                 "required_capabilities": list(_item_value(expectation, "required_capabilities", []) or []),
                 "status": _item_value(assessment, "status", "not_evaluable"),
                 "score": _item_value(assessment, "score"),
-                "blocking": bool(_item_value(assessment, "blocking", False)),
+                "blocking": bool(_item_value(expectation, "blocking", False)),
                 "downstream_impact": _item_value(assessment, "downstream_impact", ""),
             }
         )
@@ -94,7 +94,16 @@ def _judge_panel(judge: Optional[JudgeResult]) -> dict:
         return {}
     panel = to_dict(judge)
     gaps = {"wrong": list(judge.wrong or []), "missing": list(judge.missing or []), "extra": list(judge.extra or [])}
-    blocking = [item for item in judge.fulfillment_assessments or [] if _item_value(item, "blocking", False)]
+    assessments_by_id = {
+        _item_value(item, "expectation_id", ""): item
+        for item in judge.fulfillment_assessments or []
+    }
+    blocking = [
+        assessments_by_id.get(_item_value(expectation, "expectation_id", ""), {})
+        for expectation in judge.business_expectations or []
+        if _item_value(expectation, "blocking", False)
+        and _item_value(assessments_by_id.get(_item_value(expectation, "expectation_id", ""), {}), "status", "") != "fulfilled"
+    ]
     summary = summary_from_fulfillment(to_dict(judge))
     panel.update(
         {

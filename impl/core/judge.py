@@ -137,14 +137,78 @@ def load_judge_boundary_standard(spec: ProjectSpec) -> Dict[str, Any]:
 _FULFILLMENT_STATUS_VOCAB = {"fulfilled", "not_fulfilled", "not_evaluable"}
 
 
-def _derive_overall_status(statuses: list[str]) -> str:
-    if not statuses:
+def _derive_overall_status(business_expectations: list[Any], assessments: list[Any]) -> str:
+    """Derive overall status only from expectations declared blocking before comparison."""
+    blocking_ids = {
+        str(item.get("expectation_id") if isinstance(item, dict) else getattr(item, "expectation_id", ""))
+        for item in business_expectations or []
+        if bool(item.get("blocking") if isinstance(item, dict) else getattr(item, "blocking", False))
+    }
+    if not business_expectations or not assessments:
         return "not_evaluable"
-    if any(s == "not_fulfilled" for s in statuses):
+    if not blocking_ids:
+        return "fulfilled"
+    status_by_id = {
+        str(item.get("expectation_id") if isinstance(item, dict) else getattr(item, "expectation_id", "")):
+        str(item.get("status") if isinstance(item, dict) else getattr(item, "status", "")).strip().lower()
+        for item in assessments or []
+    }
+    blocking_statuses = [status_by_id.get(expectation_id, "not_evaluable") for expectation_id in blocking_ids]
+    if any(status == "not_fulfilled" for status in blocking_statuses):
         return "not_fulfilled"
-    if any(s == "not_evaluable" for s in statuses):
+    if any(status != "fulfilled" for status in blocking_statuses):
         return "not_evaluable"
     return "fulfilled"
+
+
+def ensure_business_expectation(
+    result: JudgeResult,
+    expectation_id: str,
+    *,
+    blocking: bool,
+    expected_outcome: str,
+    acceptance_criteria: Optional[list[Any]] = None,
+    downstream_consumer: str = "",
+) -> None:
+    """Add or update a project contract expectation without putting policy on its assessment."""
+    expectations = list(result.business_expectations or [])
+    for item in expectations:
+        item_id = item.get("expectation_id") if isinstance(item, dict) else getattr(item, "expectation_id", "")
+        if str(item_id or "") != expectation_id:
+            continue
+        if isinstance(item, dict):
+            item["blocking"] = blocking
+        else:
+            item.blocking = blocking
+        result.business_expectations = expectations
+        return
+    expectations.append(BusinessExpectation(
+        expectation_id=expectation_id,
+        downstream_consumer=downstream_consumer,
+        expected_outcome=expected_outcome,
+        acceptance_criteria=list(acceptance_criteria or []),
+        priority="high" if blocking else "normal",
+        blocking=blocking,
+    ))
+    result.business_expectations = expectations
+
+
+def finalize_judge_result(result: JudgeResult) -> JudgeResult:
+    """Apply the single public derivation after all project extensions have finished."""
+    normalized = normalize_judge_result(result) or result
+    overall = dict(normalized.overall_fulfillment or {})
+    overall["status"] = _derive_overall_status(
+        list(normalized.business_expectations or []),
+        list(normalized.fulfillment_assessments or []),
+    )
+    overall["blocking_expectations"] = [
+        item.expectation_id
+        for item in normalized.business_expectations or []
+        if bool(item.blocking)
+    ]
+    normalized.overall_fulfillment = overall
+    normalized.summary = summary_from_fulfillment(to_dict(normalized))
+    return normalized
 
 
 def _dict_value(value: Any) -> Dict[str, Any]:
@@ -160,12 +224,19 @@ def _judge_self_check(data: Dict[str, Any], business_expectations: list) -> list
         for item in (business_expectations or [])
         if isinstance(item, dict) and item.get("expectation_id")
     }
-    statuses: list[str] = []
+    assessment_ids: set[str] = set()
     for index, item in enumerate(assessments):
         if not isinstance(item, dict):
             continue
         status = str(item.get("status") or "").strip().lower()
-        statuses.append(status)
+        expectation_id = str(item.get("expectation_id") or "")
+        assessment_ids.add(expectation_id)
+        if expectation_id and expectation_id not in valid_ids:
+            inconsistencies.append({
+                "kind": "unknown_expectation_id",
+                "where": f"fulfillment_assessments[{index}].expectation_id",
+                "value": expectation_id,
+            })
         if status and status not in _FULFILLMENT_STATUS_VOCAB:
             inconsistencies.append({
                 "kind": "status_off_vocabulary",
@@ -173,25 +244,12 @@ def _judge_self_check(data: Dict[str, Any], business_expectations: list) -> list
                 "value": status,
                 "expected": "|".join(sorted(_FULFILLMENT_STATUS_VOCAB)),
             })
-    overall = data.get("overall_fulfillment") or {}
-    if isinstance(overall, dict):
-        overall_status = str(overall.get("status") or "").strip().lower()
-        if overall_status and overall_status not in _FULFILLMENT_STATUS_VOCAB:
-            inconsistencies.append({
-                "kind": "status_off_vocabulary",
-                "where": "overall_fulfillment.status",
-                "value": overall_status,
-                "expected": "|".join(sorted(_FULFILLMENT_STATUS_VOCAB)),
-            })
-        if overall_status and statuses:
-            derived = _derive_overall_status(statuses)
-            if derived != overall_status:
-                inconsistencies.append({
-                    "kind": "overall_status_mismatch",
-                    "where": "overall_fulfillment.status",
-                    "value": overall_status,
-                    "derived": derived,
-                })
+    for expectation_id in sorted(valid_ids - assessment_ids):
+        inconsistencies.append({
+            "kind": "missing_fulfillment_assessment",
+            "where": "fulfillment_assessments",
+            "expectation_id": expectation_id,
+        })
     return inconsistencies
 
 
@@ -265,19 +323,22 @@ def judge_trace(
         "- 一个 expectation 只描述一个可独立验证的结果维度\n"
         "- 多维度意图必须拆成多个 expectation\n"
         "- 每个 expectation 必须有明确的 acceptance_criteria\n"
+        "- 每个 expectation 必须在比较 actual 前确定 blocking：只有缺失后会阻断用户/下游核心目的、安全底线或项目强契约的 expectation 才设为 true\n"
+        "- fulfillment_assessments 只判断对应 expectation 的 status 和证据，不得重新定义 blocking\n"
         "- expectation_id 必须是描述性的中文短语，禁止使用 E1/E2/exp_01 等占位符 ID\n"
         "- reasoning_summary 必须是中文写成的判断依据\n\n"
     )
     if has_actual:
         system += (
             "## 输出词表\n"
-            "`fulfillment_assessments[*].status` 与 `overall_fulfillment.status` 必须从以下 3 个值中选择：\n"
+            "`fulfillment_assessments[*].status` 必须从以下 3 个值中选择：\n"
             "  - fulfilled：该 expectation 完全满足\n"
             "  - not_fulfilled：该 expectation 未满足\n"
             "  - not_evaluable：当前无法评估\n"
             "禁用 failed/passed/incorrect/wrong/met/unmet/partially_fulfilled/partial/success/fail/ok/unknown 等同义词。\n"
             "`fulfillment_assessments[*].expected_evidence` 与 `actual_evidence` **必须是数组**（JSON array / list），"
             "即使只有一条证据也要用 `[...]` 包裹，不可直接用字符串或对象。\n\n"
+            "不要输出 overall_fulfillment；公共层会在项目契约补充完成后根据 blocking expectations 确定性派生整体状态。\n\n"
         )
     system += (
         f"## 评估规范\n{evaluation}\n\n"
@@ -409,7 +470,9 @@ def _reprompt_judge(
     appendix = (
         "\n\n## 上次输出存在不一致\n"
         + json.dumps(inconsistencies, ensure_ascii=False)
-        + "\n请仅修正以上不一致后重新输出完整 JSON。"
+        + "\n## 上次完整输出\n"
+        + json.dumps(data, ensure_ascii=False)
+        + "\n请保留未报错字段，只修正以上路径后重新输出完整 JSON。"
     )
     return client.complete_json(system, user + appendix, trace_id=trace_id, output_spec=output_spec)
 
@@ -443,10 +506,10 @@ def _build_judge_output_spec(has_actual: bool, project_id: str = "", has_referen
         )
 
     if has_reference:
-        required_nonempty = ["business_expectations", "overall_fulfillment", "reasoning_summary"]
+        required_nonempty = ["business_expectations", "reasoning_summary"]
         description = "judge 判定输出（reference 已固化，仅产 fulfillment 判定）"
     else:
-        required_nonempty = ["expected", "business_expectations", "overall_fulfillment", "reasoning_summary"]
+        required_nonempty = ["expected", "business_expectations", "reasoning_summary"]
         description = "judge 判定输出（自产 reference + fulfillment 判定）"
     return StructuredOutputSpec.from_dataclass(
         JudgeLLMOutput,
@@ -494,15 +557,10 @@ def _build_judge_result_from_data(
 
     raw_assessments = list(data.get("fulfillment_assessments") or [])
     assessments = [item for item in (normalize_fulfillment_assessment(item) for item in raw_assessments) if item is not None]
-    overall = _dict_value(data.get("overall_fulfillment"))
-    overall_status = str(overall.get("status") or "").strip().lower()
-    if not overall_status:
-        statuses = [str(item.status or "").strip().lower() for item in assessments]
-        overall_status = _derive_overall_status(statuses)
-        overall["status"] = overall_status
-
     business_expectations: List[BusinessExpectation] = [item for item in (normalize_business_expectation(item) for item in list(data.get("business_expectations") or [])) if item is not None]
     fulfillment_assessments: List[FulfillmentAssessment] = assessments
+    overall = _dict_value(data.get("overall_fulfillment"))
+    overall["status"] = _derive_overall_status(business_expectations, fulfillment_assessments)
     missing_items: List[GapItem] = [normalize_gap_item(item, "missing") for item in list(data.get("missing") or [])]
     wrong_items: List[GapItem] = [normalize_gap_item(item, "wrong") for item in list(data.get("wrong") or [])]
     extra_items: List[GapItem] = [normalize_gap_item(item, "extra") for item in list(data.get("extra") or [])]

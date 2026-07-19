@@ -13,7 +13,7 @@ SchemaValidator 是唯一的通用校验类，不关心业务场景。
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Dict, List, Optional, get_args, get_origin, get_type_hints
+from typing import Any, Dict, List, Literal, Optional, get_args, get_origin, get_type_hints
 
 from .structured_output import StructuredOutputSpec
 
@@ -45,11 +45,24 @@ def _match_type(value: Any, tp: Any) -> tuple[bool, str]:
     # Any / 未知 → 通过
     if tp is Any:
         return True, ""
-    if value is None:
-        return True, ""  # None 由 required_nonempty 控制，这里不算类型错
 
     origin = get_origin(tp)
     args = get_args(tp)
+
+    # nullable 只能由 Optional/Union[..., None] 或 Literal[..., None] 声明。
+    # 非 nullable 字段不能仅因为“字段存在”就接受 JSON null。
+    if value is None:
+        if origin is Literal and any(candidate is None for candidate in args):
+            return True, ""
+        if any(candidate is type(None) for candidate in args):
+            return True, ""
+        return False, f"期望非 null 的 {tp!r}，实际 NoneType"
+
+    # Literal 同时约束类型和值；类型也必须精确匹配，避免 True 满足 Literal[1]。
+    if origin is Literal:
+        if any(type(value) is type(candidate) and value == candidate for candidate in args):
+            return True, ""
+        return False, f"期望枚举值之一 {list(args)!r}，实际 {type(value).__name__}：{value!r}"
 
     # Optional[X] → 剥离 Optional
     if origin is not None:

@@ -318,8 +318,6 @@ def _attribute_required(context: TraceExecutionContext) -> bool:
         status = _item_value(assessment, "status", "")
         if status in {"not_fulfilled", "not_evaluable"}:
             return True
-        if _item_value(assessment, "blocking", False):
-            return True
     overall = getattr(judge, "overall_fulfillment", {}) or {}
     overall_status = _item_value(overall, "status", "")
     if overall_status in {"not_fulfilled", "not_evaluable"}:

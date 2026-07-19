@@ -185,7 +185,9 @@ function renderTrace(trace){
   const output=trace.extracted_output || trace.live_result?.extracted_output || {};
   document.getElementById('traceHuman').innerHTML =
     '<div class="kv"><b>Trace ID：</b>'+escapeHtml(trace.trace_id || '')+'</div>'+
-    '<div class="kv"><b>状态：</b>'+escapeHtml(trace.status || '')+'</div>'+renderStateMachine(trace, currentJudge, currentAttribute)+
+    '<div class="kv"><b>业务执行：</b>'+escapeHtml(trace.status || '')+' · 完成度：'+escapeHtml(trace.completion_status || '-')+'</div>'+
+    (trace.error?'<div class="kv"><b>业务执行错误：</b>'+escapeHtml(trace.error)+'</div>':'')+
+    '<div class="kv"><b>Mock 控制器：</b>'+escapeHtml(trace.interaction_controller_status || 'not_run')+(trace.interaction_controller_error?' · '+escapeHtml(trace.interaction_controller_error):'')+'</div>'+renderStateMachine(trace, currentJudge, currentAttribute)+
     '<div class="kv"><b>Output / 被评估输出：</b>'+escapeHtml(outputDisplayText(output))+'</div>'+renderConversation(trace)+
     '<div class="kv"><b>结构化输出：</b>'+escapeHtml(JSON.stringify(structuredDisplay(output), null, 2))+'</div>';
 }
@@ -194,7 +196,7 @@ function renderFulfillment(judge){
   const assessments=judge.fulfillment_assessments || [];
   const byId={};
   assessments.forEach(item=>{byId[item.expectation_id || '']=item;});
-  const rows=expectations.map(exp=>{const assessment=byId[exp.expectation_id || ''] || {};return '<tr><td>'+escapeHtml(exp.expectation_id || '')+'</td><td>'+escapeHtml(exp.expected_outcome || '')+'</td><td>'+escapeHtml((exp.required_capabilities || []).join(', '))+'</td><td>'+escapeHtml(assessment.status || '-')+'</td><td>'+escapeHtml(assessment.blocking?'是':'否')+'</td></tr>';}).join('');
+  const rows=expectations.map(exp=>{const assessment=byId[exp.expectation_id || ''] || {};return '<tr><td>'+escapeHtml(exp.expectation_id || '')+'</td><td>'+escapeHtml(exp.expected_outcome || '')+'</td><td>'+escapeHtml((exp.required_capabilities || []).join(', '))+'</td><td>'+escapeHtml(assessment.status || '-')+'</td><td>'+escapeHtml(exp.blocking?'是':'否')+'</td></tr>';}).join('');
   return '<details class="inline-details" open><summary>业务预期达成矩阵（'+expectations.length+'项）</summary>'+
     '<div class="kv"><b>Overall Fulfillment：</b>'+escapeHtml(JSON.stringify(judge.overall_fulfillment || {}))+'</div>'+
     '<table style="width:100%;border-collapse:collapse"><thead><tr><th>Expectation</th><th>Expected Outcome</th><th>Capabilities</th><th>Status</th><th>Blocking</th></tr></thead><tbody>'+(rows || '<tr><td colspan="5" class="muted">无 fulfillment assessments</td></tr>')+'</tbody></table></details>';

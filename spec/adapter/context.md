@@ -1,772 +1,723 @@
-# 动态证据上下文治理协议
+# Agno-first 动态上下文协议
 
-本文定义 verifier 中 Mock、Judge、Attribute 等模型角色共用的动态上下文治理协议，并记录当前仓库迁移到该协议所需的一次性改造任务。
+本文规定 verifier 中 Mock、Judge、Attribute、Check 及项目扩展算法如何在 Agno 中按需发现、加载和使用上下文。目标不是把所有信息塞进 Prompt，而是在不越权、不丢失有效信息的前提下，以尽可能低的上下文成本获得足够证据。
+
+本文只定义上下文知识库相关协议。RunTrace、LiveExchange、Live Request、Extract Output、Judge 和 Attribute 等业务对象仍遵循各自既有协议。
 
 # 第一章：Spec 标准
 
-## 1. 目标
+## 1. 目标与边界
 
-上下文不是历史消息的简单拼接，而是某个模型角色在完成当前任务时可以使用的受治理证据集合。
+### 1.1 目标
 
-本协议的目标是：
+上下文系统必须同时满足：
 
-- 最大化有效信息密度，不损失完成当前任务所必需的信息；
-- 将完整事实存储与模型本次可见上下文分离；
-- 支持按需加载大体积或低频证据，而不是预先塞入全部内容；
-- 让 Mock、Judge、Attribute 复用同一套选择、预算、加载和审计机制；
-- 由公共层统一治理证据，由项目扩展层声明项目语义；
-- 复用 Agno 的运行时依赖和工具能力，但不把上下文所有权交给 Agno 自动 Memory/History；
-- 保证每项模型可见信息都有来源、选择原因和可追溯指针。
+1. **高信息密度**：默认只给模型任务、角色和少量必需信息；完整内容按需加载。
+2. **动态发现**：模型可以把一个任务拆成多个信息需求，一次发现并加载多条有用 ContextUnit。
+3. **角色隔离**：Mock、Judge、Attribute、Check 只能检索其职责允许的信息；语义相关性不能突破权限边界。
+4. **项目扩展**：公共信息由公共层接入，项目稳定知识可配置，项目动态对象由项目 Adapter 接入。
+5. **可验证效果**：当业务效果不好时，能通过对照实验判断是否由上下文缺失、召回、选择或组装不合理导致。
+6. **Agno-first**：Session、Run、Tool 调用和 Knowledge/VectorDb 能力优先交由 Agno；verifier 只补充 Agno 不负责的治理与路由边界。
 
-本协议不以减少 token 为唯一目标。压缩不得删除仍有效且无法从其他已选证据恢复的信息；超出直接注入预算的有效证据必须进入可按需加载目录，而不是静默丢弃。
+### 1.2 非目标
 
-## 2. 核心概念
+本协议不：
 
-### 2.1 Evidence
+- 重建一套 Agent、Session 或 Tool 框架；
+- 用上下文知识库替代原始业务事实存储；
+- 将完整 Trace、Raw Response 或代码无差别复制进向量库；
+- 承诺仅靠语义检索就能保证算法效果；
+- 允许项目通过 Prompt、配置或自建检索链绕过公共权限控制。
 
-Evidence 是上下文治理的最小事实单元。它可以来自 Case、Intent、Live Request、Extract Output、Raw Response、RunTrace、Reference、Judge、Attribute 工具结果、项目文档或代码定位结果。
+## 2. 最小概念集
+
+协议只公开两个上下文 schema：
+
+- `ContextUnit`：模型最终加载的一份完整信息；
+- `ContextUnitRecord`：Registry 中用于保存、过滤、检索和解析该信息的持久记录。
+
+其余对象均不是新的公共 schema：
+
+- Context Policy 是配置；
+- Policy 解析结果是一次 Run 内部的不可变值；
+- Search 结果是 Tool 的瞬时 JSON；
+- 向量条目是数据库内部派生记录；
+- 上下文调试信息写入 Agno Run metadata；
+- 注册逻辑由公共 Adapter、项目配置和项目 Adapter 承担。
+
+不得再为这些中间状态新增 `ContextUnitSummary`、`ContextSearchHit`、`ContextRegistration`、`EffectiveContextPolicy` 或 `ContextAssemblyAudit` 等公共领域对象。
+
+## 3. ContextUnit 与 ContextUnitRecord
+
+### 3.1 ContextUnit
 
 ```python
-@dataclass(frozen=True)
-class ContextEvidence:
-    evidence_id: str
-    source_kind: str
-    source_ref: str
-    path: str
-    value: Any
-    turn_index: int | None = None
-    created_at: str = ""
-    content_hash: str = ""
-    tags: list[str] = field(default_factory=list)
-    sensitivity: str = "normal"
+class ContextUnit:
+    id: str
+    name: str
+    description: str
+    content: str
+```
+
+字段语义：
+
+- `id`：稳定唯一标识，选择、加载、引用和效果实验均以它关联；
+- `name`：短名称，帮助人和模型快速识别；
+- `description`：高密度说明，描述内容、适用任务、边界及可回答的问题；
+- `content`：完整信息，只有模型明确加载后才进入上下文。
+
+ContextUnit 不携带 project、trace、role、operation、权限、向量分数、存储位置或生命周期。这些属于 Registry 与运行时治理层。
+
+`description` 必须让模型在不读取 `content` 的情况下判断“这条信息是否可能帮助当前任务”，但不能把完整内容复制进描述。推荐包含：
+
+- 这是什么；
+- 覆盖哪个对象、阶段或时间范围；
+- 能解决什么问题；
+- 明确不包含什么或何时不适用。
+
+### 3.2 ContextUnitRecord
+
+```python
+class ContextUnitRecord:
+    id: str
+    name: str
+    description: str
+    content: str | None
+    content_ref: str | None
+
+    project_id: str
+    scope: str
+    roles: list[str]
+    unit_type: str
+    source_type: str
+    status: str
+    tags: dict[str, str]
 ```
 
 约束：
 
-- `evidence_id` 在一次 RunTrace 内稳定且唯一；
-- `source_ref + path` 必须能定位回原始事实；
-- `value` 保留原始类型，不预先改写成自然语言总结；
-- Evidence 不包含模型对事实的推测；
-- 同一事实可以被多个角色选择，但不能复制成互不关联的来源；
-- secret、鉴权信息和与任务无关的个人数据不得仅因存在于 Request 中就成为可见 Evidence。
+- `id/name/description` 与加载后的 ContextUnit 一致；
+- `content` 与 `content_ref` 必须且只能填写一个；
+- 没有稳定外部来源的信息使用 `content`；
+- 已存在于 RunTrace、LiveExchange、Agno Run、项目文件或工具结果存储中的信息使用 `content_ref`；
+- `content_ref` 只是延迟加载位置，不代表所有信息必须拥有外部引用；
+- `roles/scope/status/unit_type/source_type/tags` 仅参与确定性过滤和鉴权；
+- Registry 可以内部保存 hash、更新时间和索引状态，但不得因此扩张公共 schema。
 
-### 2.2 ContextRequest
+### 3.3 Record 与 Unit 的关系
 
-ContextRequest 描述某次模型调用需要解决什么问题，而不是直接携带全部上下文。
-
-```python
-@dataclass(frozen=True)
-class ContextRequest:
-    project_id: str
-    trace_id: str
-    role: Literal["mock", "judge", "attribute"]
-    objective: str
-    phase: str
-    turn_index: int | None = None
-    required_capabilities: list[str] = field(default_factory=list)
-    direct_budget: int = 0
-```
-
-字段含义：
-
-- `role` 决定证据可见边界；
-- `objective` 是当前调用的具体任务，例如“判断模拟用户是否继续”或“判断输出是否满足 reference”；
-- `phase` 区分同一角色内部的步骤，例如 `infer_intent`、`decide_continue`、`judge_result`、`locate_cause`；
-- `required_capabilities` 声明本次必须覆盖的证据能力，不直接指定某个具体字段；
-- `direct_budget` 是直接注入区的软预算，不是有效信息的删除上限。
-
-ContextRequest 禁止携带最终 verdict、attribution 结论或其他本阶段尚未产生的答案。
-
-### 2.3 ContextBundle
-
-ContextBundle 是公共上下文层针对一次 ContextRequest 产生的受治理结果。
-
-```python
-@dataclass
-class ContextBundle:
-    core_evidence: list[ContextEvidence]
-    evidence_catalog: list[ContextEvidenceSummary]
-    omitted_evidence: list[ContextOmission]
-    selection_trace: list[ContextSelectionEvent]
-    direct_size: int
-    budget_exceeded: bool = False
-```
-
-四个区域的职责：
-
-- `core_evidence`：完成任务必需或高密度的信息，直接进入模型上下文；
-- `evidence_catalog`：未直接注入但仍可能有效的信息索引，模型可通过工具按需加载；
-- `omitted_evidence`：确定无效、重复、越权或被更新事实完全覆盖的信息及原因；
-- `selection_trace`：选择、去重、降级、目录化和动态加载的完整审计事实。
-
-`omitted_evidence` 只记录元信息和 omission reason，不重复保存被省略的大体积 value；原始值仍由 RunTrace 或其来源保存。
-
-## 3. 分层职责
-
-### 3.1 公共协议层
-
-公共层负责：
-
-- 建立统一 ContextRequest、Evidence、Bundle 与审计 schema；
-- 从通用 Case/Trace/Run 结构抽取 Evidence；
-- 执行角色权限过滤、去重、覆盖关系判断、预算分配和动态目录生成；
-- 提供统一的 `load_context_evidence` 工具；
-- 将 ContextBundle 接入 LLM 调用；
-- 记录本次实际注入和动态加载了哪些证据；
-- 对上下文缺失、越权、来源失效和预算异常进行结构化报错。
-
-公共层不理解某个业务字段的具体含义，不硬编码项目字段名、scenario 或业务完成规则。
-
-### 3.2 项目扩展层
-
-每个项目负责声明：
-
-- Request 中哪些路径代表用户表达、业务身份、会话连续性和内部 transport 噪声；
-- Output 中哪些路径代表主回复、未满足事项、阶段状态、业务结果和错误；
-- 哪些字段跨轮不可变，哪些字段由新一轮覆盖，哪些字段需要累积；
-- 哪些动态 dict 路径必须由 fixture 验证；
-- 项目知识、代码和工具证据如何建立索引；
-- 项目敏感字段及其角色可见范围。
-
-项目扩展层不得自行拼接完整 Prompt、复制公共去重算法或绕过角色权限。
-
-### 3.3 Agno 运行层
-
-Agno 负责：
-
-- 在一次 Agent run 前解析动态 dependencies；
-- 向模型提供公共层生成的直接上下文；
-- 暴露按需加载工具；
-- 执行模型和工具调用。
-
-Agno 不负责决定 Evidence 是否有效、哪个角色能看到什么、何时发生事实覆盖或哪些内容应进入目录。这些属于 verifier 公共上下文层。
-
-### 3.4 Trace 与 ContextStore
-
-RunTrace 保存完整业务执行事实。ContextStore 保存每次 LLM 调用实际看到的上下文、响应和上下文选择审计。
-
-二者不可互相替代：
-
-- RunTrace 回答“系统实际发生了什么”；
-- ContextStore 回答“模型当时看到了什么以及为什么”。
-
-模型上下文裁剪不得反向改写 RunTrace。
-
-## 4. 项目上下文声明
-
-每个项目在以下位置提供声明：
+`ContextUnitRecord` 是注册、存储、检索和权限治理形态；`ContextUnit` 是实际提供给模型的使用形态。二者不是两份相互独立的业务数据，也不是两个都需要项目实现的对象。
 
 ```text
-impl/projects/<project_id>/context_schema.py
+业务事实
+  -> 公共/项目 Adapter 构建 ContextUnitRecord
+  -> register_context_unit(record)
+  -> Registry 保存 Record，Vector Index 保存可检索信息
+  -> search_context_units(queries) 只返回候选 id/name/description
+  -> 模型选择一个或多个 id
+  -> load_context_units(ids) 读取并校验 Record
+  -> 根据 Record.content 或 Record.content_ref 取得完整内容
+  -> 返回 ContextUnit{id, name, description, content}
+  -> ContextUnit 进入当前 Agno Run
 ```
 
-模块导出 `CONTEXT_SCHEMA`：
+加载不是把 Record 原样暴露给模型。公共 Loader 必须：
+
+1. 按 ID 从 Registry 读取 ContextUnitRecord；
+2. 使用本次 Run 已解析的 Policy 再次校验 role、scope、operation、status、type 和预算；
+3. `content` 非空时直接读取；
+4. `content_ref` 非空时调用对应公共或项目 Content Loader，从权威来源解析完整内容；
+5. 校验内容仍与 Record 指向的来源一致；
+6. 只向模型返回 `id/name/description/content` 组成的 ContextUnit。
+
+因此项目扩展层通常只负责把项目事实适配为 ContextUnitRecord，以及在项目特有 `content_ref` 无法由公共层解析时提供 Content Loader；项目不负责自行构造或注入最终模型上下文。
+
+### 3.4 单元粒度
+
+一条信息在满足以下条件时适合作为独立 ContextUnit：模型可能单独需要它，而不需要同时加载其所属的整个大对象。
+
+应拆分：
+
+- 多轮 Trace 中可独立理解的交互轮次；
+- 大型项目文档中用途不同的章节；
+- 一次运行中相互独立的错误、工具结果或证据段；
+- Judge、Attribute 需要分别核验的事实链。
+
+应合并：
+
+- 离开彼此无法解释的小碎片；
+- 长期总是共同被检索和加载的重复单元；
+- 只增加 Token、不改变任务判断的信息。
+
+## 4. 存储与 Agno 托管边界
+
+### 4.1 三类存储
+
+1. **Agno 角色 Session 数据库**
+   - Mock、Judge、Attribute、Check 使用各自数据库；
+   - 同一 Trace 使用相同关联主键；
+   - 同角色重跑复用原 Session，并以新 Run 覆盖当前有效判断；
+   - Agno 托管 messages、runs、session state 和工具调用历史。
+
+2. **Context Registry（SQLite）**
+   - 按项目共享，不按角色重复建库；
+   - 权威保存 ContextUnitRecord；
+   - 根据 `id` 幂等注册、更新、失效；
+   - 负责 `content/content_ref` 解析和加载时再次鉴权。
+
+3. **Context Vector Index（本地持久化）**
+   - 按项目共享，同一 ContextUnit 只保存和生成一次向量；
+   - 保存 `id`、`name + description` 的 embedding 以及检索过滤字段；
+   - 阿里 Embedding 服务只生成向量，不承担 verifier 数据存储；
+   - 第一版使用 SQLite 持久化向量和过滤字段，通过 SQL 先过滤，再计算相似度 Top-K；
+   - 数据规模需要时可替换向量数据库，但不得改变本协议接口。
+
+完整内容仍以原始权威存储为先。向量索引不保存完整 content，不成为事实源。
+
+角色隔离不通过复制 Registry 或向量实现，而由 ContextUnitRecord 的治理字段和本次 Run 的 Policy 实现。同一条 ContextUnit 可以被多个角色合法复用，但每个角色只能检索和加载其 Policy 允许的范围。
+
+### 4.2 角色数据库与 Trace 关联
+
+不同角色分库是隔离边界，不用同一 Session 混合多角色历史。公共关联字段至少包含：
+
+- `project_id`；
+- `trace_id`；
+- `case_id`；
+- `role`；
+- `operation`；
+- `run_id`。
+
+跨角色关联通过 `trace_id/case_id` 完成，不通过共享 Session 完成。
+
+### 4.3 重跑
+
+同一角色、同一 Trace 重跑：
+
+- 保留原 Session 和可审计历史；
+- 新建 Run；
+- 旧判断退出“当前有效结果”；
+- 只属于旧判断的动态 ContextUnit 标记失效，不进入新 Run 的检索空间；
+- 原始 Trace、Exchange 和业务事实不得因重跑被篡改。
+
+## 5. ContextUnit 注册
+
+### 5.1 三种接入方式
+
+ContextUnit 的注册不使用通用 YAML 事件 DSL。注册来源按稳定性分为三类：
+
+1. **公共 Adapter 代码**
+   - 接入协议层标准对象；
+   - 例如 RunTrace、LiveExchange、Live Request/Output、Judge gap、Attribute result、可复用 Agno 历史；
+   - 由公共层保证稳定 ID、类型、scope、roles 和内容引用正确。
+
+2. **项目配置**
+   - 接入稳定、声明式的项目知识；
+   - 例如项目文档、字段定义、公开能力、固定规则、代码根目录；
+   - 配置只能缩小适用范围，不能扩张角色权限或解除禁止项。
+
+3. **项目 Adapter 代码**
+   - 接入只有项目知道如何解析的动态对象；
+   - 例如 DeerFlow workflow node、message event、gateway response、client_search 阶段结果；
+   - 项目 Adapter 产出 ContextUnitRecord，统一调用公共注册入口，不能直接写 Registry 或 Vector Index。
+
+这样既避免把类型与权限安全交给任意 YAML，又保留项目动态数据所需的表达能力。
+
+### 5.2 非实时项目知识初始化
+
+非实时、相对稳定的项目知识必须通过人工触发的项目初始化注册，不得在每次 Mock、Judge、Attribute 或 Check 运行时重新扫描、生成描述或调用 Embedding：
+
+```bash
+python -m impl.context init --project deerflow
+```
+
+初始化范围由项目配置声明，典型内容包括 Live Schema、字段定义、公开能力、固定规则、项目文档和需要长期检索的代码说明。
+
+```text
+读取项目配置
+  -> 公共/项目 Adapter 扫描稳定知识
+  -> 构造 ContextUnitRecord
+  -> 必要时生成 name/description
+  -> 调用 Embedding
+  -> 写入该项目共享的 Registry 和 Vector Index
+```
+
+description 的生成优先级为：
+
+1. 项目配置显式提供；
+2. Adapter 根据标准结构化字段确定性生成；
+3. 只有大型非结构化内容无法确定性描述时，才在该初始化命令中调用 LLM；
+4. 运行时 Search/Load 不得临时调用 LLM 生成或重写 description。
+
+为避免重复成本，Registry 内部只需维护最小缓存信息，不扩张 ContextUnitRecord 公共 schema：
+
+- `source_hash`：判断权威来源内容是否变化；
+- `description_hash`：判断既有 description 是否可复用；
+- `embedding_model`：判断向量是否需要按新模型重建。
+
+再次手工初始化同一项目时：
+
+- `source_hash` 未变化：复用 description 和 embedding；
+- 来源内容变化：重新生成受影响单元的 description 和 embedding；
+- 只修改 scope、roles、status 等治理字段：只更新 Registry 和索引过滤字段，不重新 Embedding；
+- Embedding 模型变化：只重建向量，不重新生成 content；
+- 本次配置已删除的稳定知识：将对应旧 Record 标记失效。
+
+本协议不设计自动增量初始化、后台文件监控或复杂初始化状态机。稳定知识明显变化后，由项目维护者再次手工运行初始化命令。
+
+### 5.3 动态注册入口
 
 ```python
-CONTEXT_SCHEMA = ProjectContextSchema(
-    request=EvidenceShape(
-        primary=["user_text"],
-        identity=["session_id", "org_id", "user_id"],
-        cumulative=["history"],
-        replaceable=["user_text"],
-        internal=["token", "trace_id", "ts"],
-        sensitive=["token"],
-    ),
-    output=EvidenceShape(
-        primary=["robot_text"],
-        unresolved=["missing_fields"],
-        state=["stage"],
-        errors=["errors"],
-    ),
+register_context_unit(record: ContextUnitRecord) -> None
+```
+
+公共入口必须：
+
+1. 校验 schema、`content/content_ref` 二选一和角色边界；
+2. 按 `id` 幂等写 Registry；
+3. 对 `name + description` 生成 embedding；
+4. 更新 Vector Index；
+5. 当源对象失效或重跑时同步撤销索引可见性。
+
+它不是“增量初始化”。它只处理运行过程中已经产生并确认成立、后续可能复用的业务事实。
+
+同一稳定 ID、相同内容的重复事件必须直接复用既有 Record 和 embedding；不得重复调用 Embedding。
+
+### 5.4 注册时机
+
+注册不是在启动时把所有可见数据一次性转成 ContextUnitRecord，也不是每次 Tool 调用后无条件注册。判断标准是：**后续模型是否可能需要独立发现并加载这份已经成立的信息**。
+
+| 信息类型 | 注册时机 | 示例 |
+|---|---|---|
+| 稳定项目知识 | 人工运行项目初始化命令时 | Live Schema、字段定义、公开能力、固定规则 |
+| 已完成的标准业务事实 | 原始对象成功完成并写入权威存储后 | LiveExchange、某轮 Live Request/Output |
+| 跨轮需要复用的历史 | 当前轮完成且事实被确认有效后 | Mock 用户认知、历轮用户可见交互 |
+| 诊断证据 | Tool 结果确认有跨步骤、跨轮次或审计价值时 | 错误日志、代码定位结果、接口验证结果 |
+| 当前 Run 的临时结果 | 默认不注册，直接使用 Tool Result | 一次性搜索结果、临时中间状态 |
+| 失败、不完整或被撤销的对象 | 不注册，或将既有 Record 标记失效 | 未完成 Exchange、无效响应、重跑覆盖的旧判断 |
+
+生命周期要求：
+
+- 稳定项目知识只由人工项目初始化读取项目配置后注册或更新；
+- 协议对象由公共生命周期事件触发公共 Adapter；
+- 项目动态对象只有在项目 Adapter 能确认它已成为可复用事实时才注册；
+- 当前 Tool 的即时返回可以直接供同一 Run 使用，不需要先经过 Registry；
+- 已注册来源发生变更、撤销或重跑覆盖时，必须同步更新 Record 和索引可见性；
+- 不得从未完成对象、模型猜测或前端展示文本反向伪造 ContextUnitRecord。
+
+不得自动把所有字段、日志或 Tool 输出都注册为 ContextUnit。
+
+## 6. Policy：确定性权限与预算
+
+### 6.1 定位
+
+Context Policy 只回答：某个 `role + operation + project_id` 在本次 Run 中**允许、必须、禁止和最多加载什么**。它不负责语义相关性判断，也不决定最终加载哪条候选。
+
+Policy 至少表达：
+
+- allowed / forbidden roles、scopes、unit types、source types；
+- mandatory unit selectors；
+- candidate 数量、加载条数和 Token 预算；
+- 当前 project、trace、run 的可见范围。
+
+运行时统一解析：
+
+```python
+policy = context_policy.resolve(
+    role=role,
+    operation=operation,
+    project_id=project_id,
+    trace_id=trace_id,
+    run_id=run_id,
 )
 ```
 
-长期 schema 至少支持以下语义类别：
+解析结果只是本次 Run 内部不可变值，不定义为 `EffectiveContextPolicy` 公共 schema。Search、Load、mandatory 解析、Prompt 组装和结果校验必须共享这一份值。
 
-- `primary`：本对象最能表达业务含义的字段；
-- `identity`：跨轮持续但通常不进入模型自然语言上下文的调用身份；
-- `cumulative`：历史累积字段；
-- `replaceable`：后值可覆盖前值的状态字段；
-- `unresolved`：尚未解决且会影响下一步的事项；
-- `state`：业务阶段或状态；
-- `errors`：业务错误；
-- `internal`：transport、运行和调试字段；
-- `sensitive`：必须脱敏或禁止进入模型的字段。
+权限必须执行两次：Search 先使用 Policy 将 project、role、operation、scope、type 和 status 固化为检索范围，再在该范围内计算向量相似度；Load 根据候选 ID 取得 Record 后，使用同一份 Policy 再次鉴权，通过后才可解析完整 content。即使模型猜到或从历史获知禁止单元 ID，也不能绕过 Load 鉴权。
 
-字段路径语法复用 `show_schema` 的受限路径协议。静态 dataclass 路径必须 schema-valid；动态 dict 路径必须 fixture-valid。
+### 6.2 多层配置
 
-项目声明只描述语义和权限，不声明任意评分函数，也不执行项目代码。
+Policy 可以由公共默认、Role、Operation、Project 和 Run 限制组成。合并原则是限制性合并：
 
-## 5. 角色可见边界
+- 下层可缩小范围或预算；
+- 项目可声明项目特有 unit type、source type 和 mandatory 单元；
+- 下层不得解除上层 forbidden；
+- Run 临时配置不能跨角色、跨项目或跨 Trace 扩权。
 
-### 5.1 Mock
+同一角色允许有多个 operation。Mock 至少区分 intent inference、continue decision、next request build；Judge 和 Attribute 也可按项目任务细分 operation。核心必需信息和预算随 operation 变化，而非按角色永久固定一套上下文。
 
-Mock 只模拟有限认知的真实用户。允许看到：
+### 6.3 典型角色边界
 
-- MockIntentOutput；
-- 实际 Live Request 中用户可见或用户产生的部分；
-- 各轮 Extract Output 中用户可见的业务回复、当前状态和错误；
-- 项目对终端用户公开的产品信息。
+- Mock：只能使用用户可见的项目认知、Intent、历轮 Live Request 和 Extract Output；不得看到 Reference、Judge、Attribute 或系统内部实现。
+- Judge：可使用 Request、Output、Reference、真实 Exchange 和判定规则；不得读取与当前 case 无关的其他 Trace。
+- Attribute：可使用 Trace、Exchange、Judge 结论、项目代码、日志和诊断工具结果；仍受 project/trace 边界限制。
+- Check：可使用协议、项目配置、代码和验证结果；不能凭借检查角色读取无关业务数据。
 
-Mock 禁止看到：
+## 7. 多需求检索与多单元加载
 
-- Reference；
-- Judge 结果、评分标准和 blocking expectations；
-- Attribute 结果、代码根因和内部修复建议；
-- 仅服务端可见的鉴权、内部 config、运行日志和 Raw Response；
-- 被测系统真实能力答案或内部完成标准。
-
-### 5.2 Judge
-
-Judge 允许看到：
-
-- 用户 Intent 与首轮/多轮实际 Request；
-- Extract Output 与 Reference；
-- 判断正确性所需的业务执行证据；
-- 稳定的评判标准和项目 evaluation 约束。
-
-Judge 默认不直接读取完整 Raw Response、内部代码和历史 Attribute 结论。只有当项目声明某项评判能力必须依赖原始证据时，才通过目录按需加载。
-
-### 5.3 Attribute
-
-Attribute 允许看到：
-
-- Judge 已确认的实际差距；
-- 与差距相关的 Request、Output、Raw Response、Execution Trace；
-- 项目代码、工具和局部链路验证证据；
-- 已执行工具的结构化结果。
-
-Attribute 不得把未加载的代码或工具结果当成已验证事实，也不得使用无关 case 的历史归因补当前结论。
-
-### 5.4 Check 与其他角色
-
-新增角色必须先在公共角色策略中声明可见来源和禁止来源，不能仅通过 caller 字符串自动获得全部上下文。
-
-## 6. 信息密度算法
-
-### 6.1 定义
-
-有效信息是满足以下任一条件的 Evidence：
-
-- 完成当前 objective 必需；
-- 改变模型可作出的合法判断或下一步动作；
-- 证明某个结论的来源；
-- 表达仍未解决的约束、冲突或错误；
-- 是按需加载其他证据所必需的索引。
-
-无效信息包括：
-
-- 与当前 role/objective 无关的字段；
-- 空值、格式性包装和无语义 transport 噪声；
-- 已被相同来源、相同路径的更新事实完全覆盖且不存在冲突的旧值；
-- 与已选 Evidence 完全相同的重复值；
-- 越权、敏感或来源无法验证的信息；
-- 模型生成但没有证据支持的补齐内容。
-
-信息密度不以“字符越短越好”定义，而以单位直接上下文中有效、互补、可行动且可追溯的信息比例定义。
-
-### 6.2 确定性选择流程
-
-公共算法按以下顺序执行：
+### 7.1 唯一运行主链
 
 ```text
-collect evidence
-→ enforce role visibility
-→ normalize atomic units
-→ remove empty and transport noise
-→ exact deduplicate
-→ resolve superseded state
-→ preserve conflicts and unresolved facts
-→ satisfy required capability coverage
-→ select high-density direct context
-→ index remaining effective evidence
-→ expose on-demand loader
-→ record selection trace
+角色算法开始(role, operation, project_id, trace_id, task)
+  -> Runtime 解析本次 Policy
+  -> 加载 mandatory ContextUnits
+  -> 首次 Prompt 仅包含任务、角色、mandatory 内容和受限 Tools
+  -> 模型把任务拆成 1..N 个信息需求
+  -> search_context_units(queries=[...])
+  -> Runtime 在固定 Search Scope 中逐 query 检索
+  -> 合并、去重并保留各需求的候选覆盖
+  -> 模型选择 0..N 个 unit IDs
+  -> load_context_units(ids=[...])
+  -> Runtime 整批鉴权、解析和预算校验
+  -> 多个完整 ContextUnits 返回同一 Run
+  -> 模型可继续调用业务 Tools、再次检索或输出结果
 ```
 
-每一步都必须是可测试、可解释的确定性操作。不得调用额外模型生成上下文摘要，也不得使用与项目 fixture 绑定的关键词规则。
-
-### 6.3 覆盖与冲突
-
-只有同时满足以下条件，旧 Evidence 才能被标记为 `superseded`：
-
-- 同一来源语义路径；
-- 项目声明该路径为 replaceable；
-- 新 Evidence 的 turn_index 或版本更晚；
-- 新旧事实不存在需要 Judge/Attribute 观察的冲突。
-
-以下信息不得因“已有更新值”而删除：
-
-- 用户目标或约束发生变化的事实；
-- 未解决事项的出现、消失和重新出现；
-- 错误状态变化；
-- Judge 需要比较的实际值与 Reference；
-- Attribute 需要定位的前后链路差异。
-
-### 6.4 直接上下文优先级
-
-在角色权限允许的前提下，直接上下文按以下词典序优先级选择：
-
-1. 当前 objective 的必需证据；
-2. 未解决目标、缺失字段、冲突和错误；
-3. 最新用户行为与最新系统业务回复；
-4. 影响当前判断的跨轮有效约束；
-5. 结论的最短充分来源证据；
-6. 可加载证据的索引；
-7. 已被后续事实覆盖的历史状态；
-8. transport 与运行噪声。
-
-同一优先级中优先选择能够覆盖更多 required_capabilities、且与已选 Evidence 重复更少的条目。
-
-### 6.5 预算与不丢失原则
-
-`direct_budget` 是软预算。算法达到预算后：
-
-- 仍有效但非必需的 Evidence 进入 `evidence_catalog`；
-- 模型可以通过 `load_context_evidence` 按 evidence_id、tag、turn 或 capability 加载；
-- 必需 Evidence 不得被截断成失去业务语义的片段；
-- 所有仍必需 Evidence 都无法放入预算时，允许 `budget_exceeded=True`，并完整注入必需集合；
-- 不允许为了满足 token 指标静默删除有效信息；
-- 不允许使用不可追溯的模型摘要替代原始证据。
-
-大字段可以生成确定性 preview，但 preview 必须附原始 evidence_id 和完整加载入口。Preview 只允许采用结构化字段选择、固定头尾窗口或项目声明的主字段，不进行语义改写。
-
-## 7. 动态加载协议
-
-公共层提供统一工具：
+### 7.2 多需求搜索
 
 ```python
-def load_context_evidence(
-    evidence_ids: list[str] | None = None,
-    tags: list[str] | None = None,
-    turn_indexes: list[int] | None = None,
-    capability: str = "",
-) -> ContextLoadResult:
-    ...
+search_context_units(
+    queries: list[str],
+    top_k_per_query: int | None = None,
+) -> list[dict]
 ```
 
-约束：
+模型先把任务拆为多个独立信息需求，而不是只写一个过宽查询。例如 Attribute 可同时提出：
 
-- 工具只能访问当前 ContextRequest 已授权的 evidence catalog；
-- 不能通过猜路径读取 catalog 外的文件、Trace 或其他 case；
-- 返回项继续携带 evidence_id、source_ref、path 和 value；
-- 每次加载记录到 selection_trace 和 ContextStore；
-- 同一 evidence 重复加载时返回稳定结果，并标记 cache hit；
-- 加载失败必须显式返回 `not_found`、`forbidden`、`source_changed` 或 `budget_blocked`；
-- 工具返回不能包含 Judge/Attribute 尚未授权的答案。
+- “第三轮真实 Raw Response 中的错误”；
+- “familyrelation 字段的提取逻辑”；
+- “该项目 gateway 404 的路由配置”。
 
-Mock 的轻量继续判断默认不开放自由检索，只允许加载项目声明的用户可见证据。Judge 与 Attribute 可根据职责开放更广目录。
+实现过程：
 
-## 8. Agno 集成边界
+1. Runtime 根据已解析 Policy 固化 Search Scope；模型不能提交 scope、role、project 或权限过滤条件；
+2. 查询文本批量调用阿里 Embedding；
+3. 每个 query 在本地索引中分别取 Top-K；
+4. 结果按 `id` 去重并融合排序；
+5. 融合时保留信息需求多样性，不能让一个 query 的近似结果占满全部候选；
+6. Tool JSON 返回 `id/name/description/matched_queries`，不返回完整 content；
+7. 模型可从候选中选择多条，也可一条都不选。
 
-### 8.1 采用的能力
+Search 是受限 Agno Tool，不是数据库 schema。它查询 Registry 对应的本地 Vector Index。
 
-长期实现复用 Agno：
+### 7.3 批量加载
 
-- `dependencies`：在每次 run 前动态解析 ContextBundle；
-- `add_dependencies_to_context` 或等价显式消息注入：加入公共层已经选择好的 core_evidence；
-- tools：暴露 `load_context_evidence`；
-- RunContext：向工具传递当前授权目录和 trace identity。
+```python
+load_context_units(unit_ids: list[str]) -> list[ContextUnit]
+```
 
-公共上下文层必须在 Agno 注入之前完成权限和信息密度治理。不得把完整 RunTrace 作为 dependency 后再要求模型自行筛选。
+加载必须：
 
-### 8.2 默认关闭的能力
+- 去重并保持首次出现顺序；
+- 对整批 ID 再次检查 role、scope、status、type 和累计预算；
+- 并行解析可独立的 `content_ref`；
+- 任一单元越权、失效或无法解析时整批失败，不返回半批内容；
+- 成功后一次返回多条完整 ContextUnit；
+- 超大内容通过预先拆分的子单元处理，不静默截断。
 
-评测角色默认保持：
+模型可以在同一 Agno Run 中交替调用 Context Search/Load 和项目业务 Tools。即时 Tool Result 可直接用于当前推理；持久复用时再走注册链。
+
+### 7.4 角色算法中的接入时点
+
+Context Runtime 在每个角色 operation 开始时接入，但不要求运行前一次性组装全部上下文：
+
+1. operation 开始，Runtime 解析本次 Policy；
+2. 自动加载少量 mandatory ContextUnit；
+3. 首次调用模型；
+4. 模型根据当前任务判断缺失的一个或多个信息需求；
+5. 模型按需 Search、批量 Load，或调用业务 Tool；
+6. 信息仍不足时可继续一轮 Search/Load；
+7. 模型输出角色结果，Runtime 保存 `context_debug`。
+
+因此“接入 Context Runtime”不等于“把知识库全部注入角色 Prompt”。mandatory 之外的信息只有在当前 operation 实际需要时才加载。
+
+## 8. 信息密度与 Prompt 组装
+
+### 8.1 首次上下文
+
+首次 LLM 输入只包含：
+
+- 当前角色与 operation；
+- 当前任务；
+- 当前 case/trace 的最小身份信息；
+- Policy 规定的 mandatory ContextUnits；
+- Search/Load Tools 的简短使用说明；
+- 当前 operation 必需的业务 Tools。
+
+不得默认拼入完整历史、完整 Trace、完整项目文档或全部工具结果。
+
+### 8.2 候选与完整内容分离
+
+路由阶段只使用 `name + description`。只有模型选择的单元才加载 `content`。因此选择付出的上下文成本由少量高密度候选描述组成，而不是候选全集的完整文本。
+
+### 8.3 预算
+
+预算至少覆盖：
+
+- 单次 query 数量；
+- 每个 query 的候选数；
+- 融合后的总候选数；
+- 单次和累计加载单元数；
+- ContextUnit 累计 Token；
+- Tool 调用次数。
+
+预算耗尽时返回明确错误，由模型在已有信息上完成任务；不得自动扩大窗口或加载全部内容。
+
+本版本只规定必须存在这些硬边界，不固定各角色和 operation 的具体数值。具体预算、动态调整和效果/成本权衡作为后续独立设计议题；在该设计完成前，各 operation 必须使用可配置的保守默认上限，不能以“预算待定”为由取消限制。
+
+## 9. 上下文效果诊断
+
+### 9.1 要解决的问题
+
+这里诊断的是**算法效果是否因为上下文构造不合理而变差**，不是只检查权限错误、加载失败或 Token 超限。
+
+仅记录“检索了什么、加载了什么”不能证明上下文好坏。必须在固定 case 上进行反事实对照。
+
+### 9.2 Current / Oracle Context 对照
+
+对效果不佳的固定 case，至少运行两组：
+
+1. **Current**：使用当前 Policy、检索、选择和组装链路；
+2. **Oracle Context**：保持同一模型、Prompt、Tools、角色权限和业务输入，但绕过动态路由，人工或离线程序提供一组充分且仍然合法的上下文。
+
+Oracle Context 不是“所有信息”，更不能越权。例如 Mock 的 Oracle 仍不能包含 Reference、Judge、Attribute 或内部代码。
+
+判断：
+
+- Oracle 显著优于 Current：问题位于上下文注册、检索、候选描述、选择、加载或组装；
+- Oracle 与 Current 都差：优先检查模型、Prompt、Tool、业务算法、事实源或目标定义，而不是盲目增加 ContextUnit；
+- Current 接近 Oracle：上下文链路已不是主要瓶颈。
+
+### 9.3 定位具体 ContextUnit
+
+确认是上下文问题后，对 Oracle 和 Current 做组合实验：
+
+- **前向增加**：向 Current 逐条或成组增加候选单元；
+- **后向消融**：从 Oracle 逐条或成组移除单元；
+- **交互组合**：验证单元组合是否共同起效，不能只看单条边际贡献。
+
+示例：
 
 ```text
-db/session persistence       off
-add_history_to_context       off
-user memory                  off
-agentic memory               off
-automatic session summary   off
-cross-session search         off
+Current         0.45
+Current + C     0.70
+Current + E     0.52
+Current + C + E 0.90
 ```
 
-原因：
+这说明 C 有独立价值，E 单独价值有限，但 C+E 存在显著组合价值。不能因为 E 的单条提升小就删除它。
 
-- 每个 case 必须相互隔离；
-- 自动历史可能把其他步骤或其他 case 的答案带入当前判断；
-- 自动 Memory/Summary 的生成和更新不受 verifier 证据协议约束；
-- 同一信息若同时由 Agno history 和 ContextBundle 注入，会重复占用上下文并产生冲突版本。
+根据实验结果采取动作：
 
-若未来某个非评测产品角色需要持久会话，必须另行定义 session scope、冲突优先级和审计协议，不能复用 Mock/Judge/Attribute 默认配置直接开启。
+| 观察 | 修复动作 |
+|---|---|
+| 权威来源有关键事实，但没有对应单元 | 新增 ContextUnit |
+| 直接注入有效，但 Search 未召回 | 调整 name、description、粒度或索引 |
+| 已召回但模型未选择，直接加载有效 | 改善候选描述、需求拆解或选择指引 |
+| 已加载但无收益或造成退化 | 删除、降级为低优先候选或限制 operation |
+| 单元只有部分内容有效 | 拆分 |
+| 多单元长期共同使用且高度重复 | 合并 |
+| 只对特定任务有效 | 收窄到对应 operation |
 
-### 8.3 单一上下文所有权
+新增、删除、拆分、合并、描述修改和 Policy 调整都必须走 draft/离线优化：在失败 case 与未参与调优的回归 case 上比较业务效果、Token 和检索路径，改善且无明显退化后再推广。
 
-一次评测 LLM 调用只能有一个上下文治理所有者：verifier ContextProvider。
+### 9.4 最小调试记录
 
-Agno 负责装载和执行，不得在 ContextProvider 之外自动增加 history、memory、knowledge references 或 session state。若某项 Agno 能力被启用，必须作为 ContextProvider 的显式 EvidenceSource 注册，并进入同一 selection trace。
+为支持复现上述实验，Context Runtime 将最小调试数据写入 Agno Run metadata，不建立独立 Audit schema 或 Agent：
 
-## 9. 公共接口
-
-长期公共接口为：
-
-```python
-class ContextProvider(Protocol):
-    def build(self, request: ContextRequest) -> ContextBundle:
-        ...
-
-class EvidenceSource(Protocol):
-    def collect(self, request: ContextRequest) -> list[ContextEvidence]:
-        ...
-
-class ProjectContextExtension(Protocol):
-    def schema(self) -> ProjectContextSchema:
-        ...
+```json
+{
+  "context_debug": {
+    "policy": {},
+    "mandatory_ids": [],
+    "search_queries": [],
+    "candidate_ids": [],
+    "loaded_ids": [],
+    "prompt_tokens": {},
+    "content_hashes": {}
+  }
+}
 ```
 
-LLM 公共入口接收 ContextRequest，而不是由每个角色自行把大型对象序列化进 user prompt：
+该记录用于重放 Current、构造 Oracle 对照和进行消融；它本身不负责判断哪条 ContextUnit 有价值。
 
-```python
-def complete_json(
-    system: str,
-    user: str,
-    *,
-    context_request: ContextRequest | None,
-    trace_id: str,
-    output_spec: StructuredOutputSpec,
-) -> dict[str, Any]:
-    ...
-```
+## 10. 公共层与项目扩展层
 
-`context_request=None` 只允许用于确实没有外部证据的纯结构化生成调用；调用方不得借此绕过角色上下文协议。
+### 10.1 公共层负责
 
-## 10. 与多轮 Mock 的关系
+- ContextUnit / ContextUnitRecord schema；
+- Registry、Embedding、Vector Index；
+- 公共协议对象 Adapter；
+- Policy 解析及限制性合并；
+- guarded Search/Load Tools；
+- mandatory 与 Prompt 组装；
+- Agno Session/Run 关联；
+- `context_debug` 记录与离线实验工具；
+- 权限、预算、幂等、重跑和回归测试。
 
-Trace v2 的 `accumulated_output` 保持现有函数签名，但其值不再由 Live 层直接拼接完整历史，而由 ContextProvider 为 `role=mock`、`phase=decide_continue/build_next_request` 生成。
+### 10.2 项目扩展层负责
 
-```python
-def decide_next_action(
-    intent: MockIntentOutput,
-    accumulated_output: dict[str, Any],
-) -> MockContinueDecision:
-    ...
+- 稳定项目知识配置；
+- 动态项目对象 Adapter；
+- 项目特有的 unit type、source type 和 operation；
+- 项目角色 Prompt 与业务 Tools；
+- Oracle Context 样本或构造规则；
+- 项目固定 case 上的效果和退化验证。
 
-def build_next_request(
-    intent: MockIntentOutput,
-    accumulated_output: dict[str, Any],
-) -> REQUEST_SCHEMA:
-    ...
-```
+项目扩展层不得：
 
-两个方法的输入输出签名保持不变。`accumulated_output` 必须是 ContextBundle 的公开序列化形状，不允许重新塞入完整 RunTrace，也不允许项目扩展层自行发明另一套累计结构。
+- 自建绕过公共 Policy 的上下文拼接链；
+- 直接写 Registry 或 Vector Index；
+- 通过配置解除公共 forbidden；
+- 将 Reference、Judge 或内部实现泄漏给 Mock；
+- 为提高召回而默认加载整个项目知识库。
 
-多轮 Request 的业务连续性仍由项目扩展层负责：项目以最近一轮合法 Request 为模板，只更新协议允许变化的字段；公共 ContextProvider 负责提供必要事实，但不替项目构造 Request。
+## 11. 验收标准
 
-## 11. Judge 与 Attribute 的复用
+### 11.1 功能与安全
 
-### 11.1 Judge
+- ContextUnitRecord 可幂等注册、更新、失效和按 ID 加载；
+- inline content 与 content_ref 均可解析，且严格二选一；
+- Search Scope 只能由 Runtime 生成，模型无法扩大；
+- 多 query 可发现覆盖不同信息需求的多条候选；
+- 批量加载可同时返回多条 ContextUnit，并满足整批鉴权和累计预算；
+- 不同 project、trace、role、operation 的数据不互相泄漏；
+- 重跑保留审计历史，同时旧判断和旧动态单元退出当前结果；
+- Agno 业务 Tool 与 Context Search/Load 可在同一 Run 内协作。
 
-Judge 的 ContextRequest 至少声明：
+### 11.2 算法效果
 
-```text
-role=judge
-objective=判断实际交互是否满足用户目标与 Reference
-required_capabilities=[intent, actual_output, reference, execution_status]
-```
-
-核心区优先包含最短充分的 Intent、Actual、Reference 和失败状态；完整多轮、Raw Response 与非关键 Trace 进入目录。Judge 若发现证据不足，通过工具加载，不得把“未预载”等同于“不存在”。
-
-### 11.2 Attribute
-
-Attribute 的 ContextRequest 至少声明：
-
-```text
-role=attribute
-objective=定位 Judge 已确认差距的最早失败环节
-required_capabilities=[judge_gap, execution_chain, relevant_project_evidence]
-```
-
-核心区包含 Judge gap、相关轮次和已有执行证据；代码、完整日志、工具结果进入目录并按定位过程动态加载。Attribute 结论必须引用实际加载的 evidence_id。
-
-### 11.3 角色隔离
-
-Mock、Judge、Attribute 可以复用同一 ContextProvider，但不能复用同一 ContextBundle。每个角色、phase 和调用轮次必须重新执行权限与选择流程。
-
-## 12. 错误与降级
-
-上下文阶段使用稳定错误类型：
-
-- `context_source_error`：证据源读取失败；
-- `context_schema_error`：项目声明或路径不合法；
-- `context_forbidden`：请求访问越权证据；
-- `context_required_missing`：必需 capability 没有证据；
-- `context_source_changed`：目录建立后原始来源发生变化；
-- `context_budget_exceeded`：必需集合超过软预算；
-- `context_load_error`：按需工具加载失败。
-
-处理原则：
-
-- 必需证据缺失时不得用空对象、历史 case 或模型猜测补齐；
-- `budget_exceeded` 不是业务失败，但必须记录；
-- 越权和来源变化必须阻断对应加载；
-- 非必需 EvidenceSource 失败可以继续，但必须进入 selection_trace；
-- 上下文错误的原始结构化证据必须进入 ContextStore 和 RunTrace control event。
-
-## 13. 审计协议
-
-每次模型调用至少记录：
-
-- ContextRequest；
-- core evidence IDs；
-- catalog evidence IDs；
-- omission reason 统计；
-- direct_size 与预算；
-- 动态加载请求和结果；
-- ContextProvider 版本；
-- 项目 context schema 版本；
-- 最终实际发送给模型的 messages；
-- 模型响应、耗时和错误。
-
-不得只保存最终 Prompt 而不保存 Evidence 选择依据；也不得只保存 Evidence ID 而无法复原当时发送的实际内容。
-
-## 14. 测试与验收
-
-### 14.1 公共协议测试
-
-必须覆盖：
-
-- 角色权限矩阵；
-- 空值、重复值和 superseded 状态的确定性处理；
-- 冲突事实不会被覆盖删除；
-- soft budget、catalog 和 budget_exceeded；
-- 动态加载授权、缓存与来源变化；
-- ContextStore 能重建模型实际输入；
-- Agno history/memory/session 默认关闭；
-- 不同 case、role、phase 的 ContextBundle 隔离。
-
-### 14.2 项目扩展测试
-
-每个项目必须覆盖：
-
-- context_schema 路径的 schema-valid 或 fixture-valid；
-- user-visible/internal/sensitive 分类正确；
-- 多轮 identity 与 session 配置保持连续；
-- replaceable/cumulative 字段行为符合真实 API；
-- 不同 scenario 不被固定默认值污染。
-
-### 14.3 信息密度测试
-
-至少构造以下固定测试：
-
-- 12 轮、每轮含大 Request/Output 的多轮交互；
-- 大量重复状态但只有少量变化的交互；
-- 早期约束到后期仍有效的交互；
-- 中途用户修改目标的冲突交互；
-- Judge 需要加载完整 Raw Response 的场景；
-- Attribute 需要逐步加载代码与局部链路证据的场景。
-
-验收不只比较 token 数，还必须断言：所有 required capability 可获得、有效历史约束未丢失、无越权证据、结论引用可回溯。
+- 固定失败 case 可重放 Current；
+- 可在不改变模型、Prompt、Tools 和角色边界的前提下运行 Oracle Context；
+- 可执行单条和组合的前向增加、后向消融；
+- 能区分“没有合适单元”“未召回”“未选择”“加载无效”和“非上下文问题”；
+- ContextUnit/Policy 变更同时报告业务指标、Token、候选与加载路径；
+- 在未参与调优的回归 case 上无明显退化。
 
 # 第二章：Changes
 
-## 1. 当前实现差异
+## 1. 现状差异
 
-当前仓库与长期协议存在以下差异：
+当前实现与本标准的主要差异：
 
-1. `LlmClient` 直接接收 system/user 字符串，各角色自行序列化上下文；
-2. Mock 的 accumulated_output 保存并重复发送全部轮次 Request/Output，没有预算和目录；
-3. Judge 与 Attribute 各自构造 Prompt，缺少统一 ContextRequest 和权限矩阵；
-4. `context_store.py` 只保存最终 messages/response，不保存证据选择过程；
-5. Agno Memory、History、Knowledge 与持久 Session 当前明确关闭，这是正确的隔离基线；
-6. Agno dependencies 尚未用于 verifier 动态上下文注入；
-7. 现有 `knowledge_base.py` 被禁用，且其定位偏项目知识 RAG，不能直接承担全角色证据治理；
-8. show_schema 只服务前端展示，不能直接作为完整 ContextSchema，但字段路径解析器可以复用；
-9. deerflow 与 marketting-planning 的下一轮 Request 会重造并覆盖业务身份/配置；
-10. 两个多轮项目在 Intent 缺失时硬编码 scenario；
-11. Mock 控制阶段错误只留下通用 stop_reason，原始错误没有进入 Trace control event；
-12. 当前测试没有覆盖动态加载、上下文权限、长多轮信息密度和项目 Request 连续性。
+1. 上下文主要依赖 Prompt 拼接或零散 ContextRecord，缺少统一 ContextUnit 主链；
+2. `SemanticVectorDb` 以内存为主，尚未形成持久 Registry + 本地 Vector Index；
+3. 搜索多为单 query，尚不能按多个信息需求融合发现多条 ContextUnit；
+4. 缺少批量、整批鉴权的 `load_context_units(ids)`；
+5. 公共对象、稳定项目知识和动态项目对象的注册职责尚未清晰分层；
+6. Context Policy 的 role + operation 解析、限制性合并和共享执行尚不完整；
+7. Agno Session、Context Registry 和业务 Trace 的关联尚未统一；
+8. 缺少可复现的 Current / Oracle Context / 组合消融效果评估；
+9. 调试记录分散，无法稳定重放上下文选择路径；
+10. `impl/data/context_store/<project>/` 等旧数据需要只读保留，不能伪造成新 ContextUnit。
 
-## 2. 一次性 schema 改造
+## 2. 一次性改造任务
 
-新增公共 schema：
+### 2.1 收敛协议与模型
 
-- `ContextRequest`；
-- `ContextEvidence`；
-- `ContextEvidenceSummary`；
-- `ContextOmission`；
-- `ContextSelectionEvent`；
-- `ContextBundle`；
-- `ContextLoadResult`；
-- `ProjectContextSchema` 与 `EvidenceShape`。
+1. 只保留 ContextUnit、ContextUnitRecord 两个公开上下文 schema；
+2. 删除或内化 ContextUnitSummary、ContextSearchHit、ContextRegistration、EffectiveContextPolicy、ContextAssemblyAudit 等中间概念；
+3. 明确 `content/content_ref` 二选一和稳定 ID 规则；
+4. 清理重复的角色上下文拼接路径。
 
-扩展 `ContextRecord`：
+### 2.2 建立存储
 
-- 增加 context_request；
-- 增加 core/catalog/omitted evidence IDs；
-- 增加 selection_trace；
-- 增加动态加载记录；
-- 增加 provider/schema version；
-- 保留现有完整 messages 和 response 字段。
+1. 新建 SQLite Context Registry；
+2. 将现有 SemanticVectorDb 改为本地持久化实现；
+3. 使用 `impl/config.yaml` 指向的阿里 Embedding 配置生成向量；
+4. 先用 SQL 做 project/scope/role/type/status/tags 过滤，再计算相似度；
+5. 建立角色 Agno Session 数据库与 trace_id/case_id 关联；
+6. Registry 和 Vector Index 按项目共享，同一 ContextUnit 不因角色不同重复生成向量；
+7. 旧 context_store 数据只读保留，不自动迁移为事实。
 
-历史 ContextRecord 只读兼容：缺少新字段时按“legacy-untracked-context”读取，不反推或伪造 selection trace。
+### 2.3 建立注册链
 
-## 3. 一次性公共层实现
+1. 实现 `python -m impl.context init --project <project_id>` 手工项目初始化命令；
+2. 为稳定项目知识提供受限配置和公共/项目 Adapter；
+3. 实现 `source_hash/description_hash/embedding_model` 最小缓存，避免重复摘要和 Embedding；
+4. 实现 `register_context_unit(record)` 动态事实公共入口；
+5. 为 RunTrace、LiveExchange、Request/Output、Judge gap、Attribute result 和稳定历史实现公共 Adapter；
+6. 为 DeerFlow 等项目实现动态对象 Adapter；
+7. 不实现自动增量初始化、后台扫描或通用 YAML Registration Rules DSL；
+8. 增加源对象更新、失效和重跑时的索引同步。
 
-新增公共模块，职责拆分为：
+### 2.4 建立运行链
+
+1. 实现 `context_policy.resolve(role, operation, project_id, trace_id, run_id)`；
+2. 让 mandatory、Search、Load、Prompt 和结果校验共享同一解析值；
+3. 实现多 query `search_context_units`、候选融合、去重和需求多样性保护；
+4. 实现 `load_context_units(ids)` 的顺序、去重、整批鉴权、累计预算、并行解析和原子失败；
+5. 将受限 Search/Load 注册为 Agno Tools；
+6. 允许与项目业务 Tools 在同一 Run 中交替调用；
+7. 首次 Prompt 改为任务 + mandatory + Tools，不再默认拼入全部历史与 Trace；
+8. 确保 Policy 在 Search 固化范围和 Load 读取内容前分别执行一次。
+
+### 2.5 迁移角色与 operation
+
+角色迁移必须渐进实施，顺序为：
+
+1. **Attribute**：先接入 Trace、Exchange、代码、日志和工具结果。它的信息类型最丰富，也最适合验证多需求检索、批量加载、效果提升和 Token 降低；
+2. **Judge**：再接入 Request、Output、Reference、真实 Exchange 和判定规则，验证 mandatory、证据边界与结果引用；
+3. **Mock**：公共链路稳定后，分别为 `intent_inference`、`continue_decision`、`next_request_build` 定义 Policy，不允许整个 Mock 共用一套固定上下文；
+4. **Check 与项目扩展**：最后接入协议、项目配置、代码、验证结果，以及 DeerFlow 等项目特有知识和动态 Adapter。
+
+各项目只补充项目特有知识、Adapter、operation、Prompt 和 Tools，不复制公共 Registry、Search、Load 或 Policy 链路。
+
+### 2.6 首个最小闭环
+
+第一次实施只打通以下路径：
 
 ```text
-context_provider.py       构造 ContextBundle
-context_sources.py        通用 EvidenceSource
-context_selection.py      权限、去重、覆盖、预算算法
-context_tools.py          load_context_evidence
-context_policy.py         角色权限和 required capability
+真实 RunTrace / LiveExchange
+  -> 公共 Adapter 注册 ContextUnitRecord
+  -> Attribute 将定位任务拆成多个 query
+  -> Search 返回覆盖不同需求的候选
+  -> Attribute 批量加载多个 ContextUnit
+  -> 生成归因结果
+  -> 使用 Current / Oracle Context 对照验证
 ```
 
-实现顺序：
+该闭环必须先回答：
 
-1. 从 RunTrace/Case/Reference/JudgeResult 抽取稳定 Evidence；
-2. 实现角色可见矩阵；
-3. 实现空值过滤、精确去重和 replaceable 覆盖算法；
-4. 实现 direct soft budget、catalog 和 deterministic preview；
-5. 实现受授权目录限制的动态加载工具；
-6. 将 selection trace 写入 ContextStore；
-7. 将上下文错误写入 RunTrace control event。
+1. ContextUnitRecord 能否从 inline content 或 content_ref 可靠还原完整 ContextUnit；
+2. 多 query 是否能发现多条互补而非重复的信息；
+3. Attribute 的归因效果是否改善；
+4. 输入 Token 和无效内容是否下降；
+5. 权限、Trace 对齐和原始证据是否保持不变。
 
-不得在第一版引入模型摘要、向量相似度去重或自动学习权重。只有确定性版本建立基线后，才能通过独立 spec 讨论更复杂算法。
+只有这个闭环通过 UAT，才继续迁移 Judge、Mock、Check 和更多项目知识。
 
-## 4. 一次性 Agno 桥接
+### 2.7 建立效果优化闭环
 
-更新 `project_llm_client` 与 `LlmClient.complete_json`：
+1. 在 Agno Run metadata 写入最小 `context_debug`；
+2. 实现固定 case 的 Current 重放；
+3. 支持在相同模型、Prompt、Tools 和权限下运行 Oracle Context；
+4. 实现单条及组合的前向增加、后向消融；
+5. 将结论映射为新增、删除、拆分、合并、描述修改或 operation 收窄；
+6. 接入 draft 流程，在失败 case 和独立回归 case 上验证效果、Token 与退化。
 
-1. 接收可选 ContextRequest；
-2. 在 Agent run 前调用 ContextProvider；
-3. 使用 Agno run dependencies 注入 core_evidence；
-4. 向允许动态加载的角色注册 `load_context_evidence` 工具；
-5. 通过 RunContext 绑定 trace_id、role 和授权 catalog；
-6. 保存 Agno 最终构造的实际 messages 与 selection trace；
-7. 继续保持 db、history、memory、session summary 和 cross-session search 关闭；
-8. 加入防重复检查，禁止同一 evidence 同时从手写 user prompt 和 dependencies 注入。
+## 3. UAT
 
-桥接期间保留无 ContextRequest 的旧调用兼容，但必须记录 caller，并通过迁移清单逐一消除应该接入而未接入的调用。
+至少选择 api-check 中覆盖 Mock、Live、Judge、Attribute 的真实 case，并覆盖 DeerFlow：
 
-## 5. 一次性 Mock 接入
+1. 验证同一任务可拆出多个 query，并发现多条互补 ContextUnit；
+2. 验证模型可一次加载多条单元；
+3. 验证 Mock 无法搜索或加载 Reference/Judge/Attribute；
+4. 验证跨 project、trace、role 和 operation 不泄漏；
+5. 验证 inline content、content_ref、失效和重跑；
+6. 验证 Current/Oracle 差异能正确区分上下文问题与非上下文问题；
+7. 对至少一个 ContextUnit 做组合消融，确认不是只按单条贡献误删；
+8. 比较改造前后的业务结果、输入 Token、候选数、加载数和工具调用数；
+9. 重复执行同一项目初始化时，未变化知识不重新生成 description 或 embedding；
+10. 同一 ContextUnit 被多个角色允许使用时只保存一份向量，但 Search 和 Load 均按各角色 Policy 鉴权；
+11. `git diff --check`、相关单元测试、集成测试和 `sh run.sh api-check` 全部通过后再切换默认链路。
 
-第一阶段只切换 Mock，用它验证公共机制：
+## 4. 切换完成标准
 
-1. `infer_user_intent` 使用 `role=mock/phase=infer_intent`；
-2. `decide_next_action` 使用 `role=mock/phase=decide_continue`；
-3. `build_next_request` 使用 `role=mock/phase=build_next_request`；
-4. Live 层不再自行组装全部 accumulated_output；
-5. Mock core evidence 保留 Intent、最近用户行为、最新业务回复、仍有效约束和未解决事项；
-6. 历史有效 Evidence 进入 catalog；
-7. 继续判断默认只使用 core evidence，禁止自由读取 Reference/Judge/Attribute；
-8. 下一轮构建只开放用户可见 catalog；
-9. 删除两个多轮项目的固定 scenario；无法从 Request 证明时保持空值；
-10. 控制阶段异常写入结构化 Trace event。
-
-完成后使用固定假 LLM 验证 ContextBundle，不依赖真实外部模型判断测试是否通过。
-
-## 6. 一次性项目扩展改造
-
-为以下项目新增 `context_schema.py`：
-
-- QA；
-- client_search；
-- deerflow；
-- marketting-planning-intent；
-- marketting-planning。
-
-其中多轮项目同时修复 Request 连续性：
-
-### 6.1 deerflow
-
-- 保留上一轮完整 `config.configurable`；
-- 按真实 Deerflow API 语义更新 input.messages；
-- 禁止缺失 thread_id 时用时间戳伪造身份；
-- 明确 messages 是逐轮单消息还是累积消息，并用项目测试锁定；
-- scenario 不从项目默认值硬编码。
-
-### 6.2 marketting-planning
-
-- 以上一轮合法 MPApiRequest 为模板；
-- 保留 org_id、user_id、token、session_id、application_setting、module_name、model_name 等上下文；
-- 按真实 API 语义更新 user_text、history、trace_id、ts 和 extra_input_params.message；
-- 删除 eval-user、mock-token、eval-org 等续轮占位值；
-- scenario 只来自可证明的 Request 字段或保持空值。
-
-单轮项目只需声明 Request/Output 的证据语义和敏感字段，不增加无用的多轮扩展方法。
-
-## 7. 一次性 Judge 接入
-
-Mock 阶段稳定后：
-
-1. 将 Judge 手写 Prompt 中的 Intent、Output、Reference 和 Trace 拼接迁移为 ContextRequest；
-2. 定义 Judge required capabilities；
-3. 默认直接注入最短充分评判证据；
-4. Raw Response 和完整多轮进入目录；
-5. Judge 使用动态工具加载后必须在结果证据中引用 evidence_id；
-6. 移除与 ContextProvider 重复的 Prompt 裁剪和字段猜测逻辑；
-7. 验证相同输入在迁移前后 verdict 不退化，且无 Reference 泄漏到 Mock。
-
-## 8. 一次性 Attribute 接入
-
-Judge 稳定后：
-
-1. 将 judge gap、Trace、代码和工具结果注册为 EvidenceSource；
-2. 核心区只放差距与最相关执行链路；
-3. 代码、日志和局部测试结果按需加载；
-4. 每条归因结论必须引用已加载 evidence_id；
-5. 工具调用结果进入 catalog 后可被后续步骤加载，但不自动复制全部历史工具输出；
-6. 删除与公共 ContextProvider 重复的 tool-result 压缩逻辑；
-7. 验证无关 case 的历史归因不会进入当前 bundle。
-
-## 9. 数据与 fixture 迁移
-
-- `impl/data/context_store` 历史文件只读保留；
-- 不为历史记录伪造 selection trace；
-- 新 ContextRecord 使用版本字段区分协议；
-- RunTrace fixture 增加 control event 与 context audit 引用；
-- 为每个项目增加 context_schema fixture；
-- 大型 Raw Response fixture 只保存一份原件，ContextBundle 使用 evidence_id 引用；
-- verifier 根目录 `data` 中的业务 case 不因上下文协议整体重写；
-- 只有 schema 字段确实发生变化的 fixture 才迁移，禁止无意义格式化 churn。
-
-## 10. 回归与 UAT 任务
-
-### 10.1 自动化
-
-- 公共 ContextProvider 单元测试；
-- 角色权限矩阵测试；
-- 五项目 context_schema hook；
-- Mock 长多轮信息密度测试；
-- deerflow/marketting-planning Request 连续性测试；
-- Judge 动态加载完整 Raw Response 测试；
-- Attribute 动态加载代码和工具结果测试；
-- ContextStore 可重放模型实际输入测试；
-- Agno 自动 history/memory 保持关闭的配置测试；
-- 不同 case 并发上下文隔离测试。
-
-### 10.2 实际 UAT
-
-按阶段执行：
-
-1. Mock：至少运行一个 6 轮以上交互，检查 Prompt 不随完整 Trace 线性膨胀；
-2. Judge：运行需要和不需要 Raw Response 的 case，确认只在后者发生动态加载；
-3. Attribute：运行真实失败 case，确认代码与局部链路证据按需加载且结论可回溯；
-4. 前端：完整 Trace 保持原样，同时可以查看每个角色的 core/catalog/loaded/omitted 审计信息；
-5. 隔离：并发运行两个相同 project 的 case，确认 evidence catalog 和动态加载不串 case。
-
-## 11. 切换与清理
-
-迁移完成的判定条件：
-
-- Mock、Judge、Attribute 均通过 ContextRequest 获取受治理上下文；
-- 角色代码不再直接序列化完整 RunTrace；
-- Agno 自动 Memory/History 仍关闭；
-- 项目字段语义全部来自 context_schema；
-- 动态加载与 selection trace 可审计；
-- 长多轮没有有效信息丢失，直接 Prompt 不再随完整 Trace 无界增长；
-- 两个多轮项目保持真实 Request 连续性；
-- 全量测试与真实 UAT 通过。
-
-切换完成后删除：
-
-- 角色内部重复的历史裁剪与 Prompt 拼接代码；
-- 未被任何调用使用的旧 knowledge/context 兼容参数；
-- 项目层 eval-user、mock-token 等续轮占位构造；
-- 固定 scenario fallback；
-- 已被 ContextStore v2 替代且无读取方的旧上下文辅助代码。
-
-任何删除必须先通过引用扫描和回归证明不再被前端、报告或历史读取接口使用。
+- 所有角色通过同一 Context Runtime 获取上下文；
+- 公共对象、项目稳定知识和项目动态对象分别通过明确入口注册；
+- 不存在绕过公共 Policy 的私有 Prompt 拼接或检索链；
+- Registry、Vector Index、Agno Session 和业务 Trace 可通过稳定 ID 追溯；
+- 多需求检索、多单元加载、权限隔离和预算控制通过 UAT；
+- 上下文效果问题可通过 Current / Oracle Context / 组合消融被定位并进入 draft 优化；
+- 旧数据只读保留，切换不依赖伪造迁移数据。

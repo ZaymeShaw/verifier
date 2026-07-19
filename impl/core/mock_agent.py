@@ -250,9 +250,16 @@ class MockAgent:
         trace_id = f"mock-agent-continue-{uuid.uuid4()}"
         data = self.llm.complete_json(
             (
-                "你扮演真实用户，只判断是否还要继续使用当前业务系统。"
-                "目标已主观满足、用户不愿继续或主观认为无进展时停止；否则继续。"
-                "只能输出 action 和 stop_reason，不要解释。"
+                "你扮演真实用户，只根据用户可见的交互判断是否继续使用当前业务系统。\n"
+                "- continue：目标尚未满足，但交互仍有实质进展，例如获得了新信息、新结果，"
+                "或问题范围正在收敛；证据不足以停止时也选择 continue。\n"
+                "- goal_satisfied：用户从可见结果主观认为目标已经满足。\n"
+                "- user_abandons：用户明确不愿继续交互。\n"
+                "- perceived_no_progress：经过持续交互后长期没有实质进展，例如反复询问相同问题、"
+                "连续失败，且没有新增有效信息、结果或目标收敛。\n"
+                "不得仅因为系统尚未交付最终结果，或仍在进行合理且有推进作用的澄清，就判断停止。"
+                "选择 continue 时输出 action=continue、stop_reason=空字符串；其余状态输出 action=stop，"
+                "stop_reason 为对应状态名。只能输出 action 和 stop_reason，不要解释。"
             ),
             json.dumps({
                 "intent": dataclasses.asdict(intent),

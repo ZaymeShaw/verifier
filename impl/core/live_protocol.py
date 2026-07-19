@@ -288,6 +288,7 @@ class _LiveProtocol(ABC):
                     ctx.set_intent(intent)
                 except Exception as exc:
                     logger.warning("mock.infer_user_intent failed: %s", exc, exc_info=True)
+                    ctx.record_interaction_controller("error", exc)
                     stop_reason = "intent_unavailable"
                     break
 
@@ -312,8 +313,10 @@ class _LiveProtocol(ABC):
                         exc_info=True,
                     )
             if decision is None:
+                ctx.record_interaction_controller("error", decision_error)
                 stop_reason = "decision_error"
                 break
+            ctx.record_interaction_controller("ok")
             if (
                 decision.action == "stop"
                 and decision.stop_reason == "goal_satisfied"
@@ -336,14 +339,24 @@ class _LiveProtocol(ABC):
                 request = mock.build_next_request(intent, accumulated)
             except Exception as exc:
                 logger.warning("mock.build_next_request failed at turn %d: %s", turn_index + 2, exc, exc_info=True)
+                ctx.record_interaction_controller("error", exc)
                 stop_reason = "request_build_error"
                 break
             if not isinstance(request, dict) or not request:
+                ctx.record_interaction_controller(
+                    "error",
+                    "mock.build_next_request returned an empty or invalid request",
+                )
                 stop_reason = "request_build_error"
                 break
 
         final_output_turn = len(interaction_turns) if last_output is not None else None
-        completion_status = "completed" if last_output is not None and stopped_by_decision else "failed"
+        if last_output is None:
+            completion_status = "failed"
+        elif stopped_by_decision:
+            completion_status = "completed"
+        else:
+            completion_status = "incomplete"
         ctx.finish_execution(
             session_id=session_id,
             stop_reason=stop_reason,

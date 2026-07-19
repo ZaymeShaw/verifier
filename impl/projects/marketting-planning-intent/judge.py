@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from impl.core.schema import JudgeResult, ProjectSpec, RunTrace, to_dict
+from impl.core.judge import ensure_business_expectation
 
 
 def application_boundary_from_trace(trace: RunTrace) -> dict[str, Any]:
@@ -121,6 +122,14 @@ def normalize_judge_result(trace: RunTrace, judge_result: JudgeResult) -> JudgeR
     judge_result.expected = reference_output(reference, trace) if reference else judge_result.expected
     blocking_wrong = [item for item in wrong if isinstance(item, dict) and item.get("requirement") in {"intent", "allow_fallback", "min_confidence"}]
     gate_failed = bool(missing or blocking_wrong)
+    ensure_business_expectation(
+        judge_result,
+        "intent_contract",
+        blocking=True,
+        expected_outcome="识别符合项目契约的意图、必需槽位、fallback 边界和最低置信度",
+        acceptance_criteria=["intent 匹配", "必需槽位齐全", "fallback 合法", "confidence 达标"],
+        downstream_consumer="营销规划意图路由",
+    )
     if gate_failed:
         evidence_summary = {
             "missing": [item.get("requirement") for item in missing if isinstance(item, dict)],
@@ -130,22 +139,18 @@ def normalize_judge_result(trace: RunTrace, judge_result: JudgeResult) -> JudgeR
         judge_result.fulfillment_assessments.append({
             "expectation_id": "intent_contract",
             "status": "not_fulfilled",
-            "blocking": True,
             "evidence": evidence_str,
             "downstream_impact": intent_contract_reasoning_summary(trace, reference, output, missing, wrong, "incorrect"),
         })
-        judge_result.overall_fulfillment = {"status": "not_fulfilled", "blocking_expectations": ["intent_contract"]}
         judge_result.reasoning_summary = intent_contract_reasoning_summary(trace, reference, output, missing, wrong, "incorrect")
         return judge_result
     judge_result.fulfillment_assessments.append({
         "expectation_id": "intent_contract",
         "status": "fulfilled",
-        "blocking": True,
         "evidence": f"intent={actual_intent}; confidence={confidence}; min_confidence={min_confidence}",
         "downstream_impact": intent_contract_reasoning_summary(trace, reference, output, [], [], "correct"),
     })
     judge_result.reasoning_summary = judge_result.reasoning_summary or intent_contract_reasoning_summary(trace, reference, output, [], [], "correct")
-    judge_result.overall_fulfillment = judge_result.overall_fulfillment or {"status": "fulfilled", "blocking_expectations": []}
     return judge_result
 
 

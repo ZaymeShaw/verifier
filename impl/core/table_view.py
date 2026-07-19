@@ -173,13 +173,14 @@ def _root_cause(attribute: Optional[AttributeResult]) -> str:
 
 def _judge_summary(trace: RunTrace, judge: Optional[JudgeResult], case_context: Dict[str, Any]) -> Dict[str, Any]:
     if not judge:
-        return {}
-    if trace.error or case_context.get("error"):
+        execution_error = trace.error or str(case_context.get("error") or "")
+        if not execution_error:
+            return {}
         return {
-            "status": trace.error or str(case_context.get("error") or ""),
+            "status": execution_error,
             "fulfillment_status": "",
             "score": None,
-            "reason": trace.error or str(case_context.get("error") or ""),
+            "reason": execution_error,
             "reason_source": "execution_error",
             "reason_stage": "execution",
             "is_formal_attribution": False,
@@ -287,6 +288,10 @@ def build_trace_table_row(
         output_summary=_short_value(_output(trace, view, judge, case_context)),
         reference_summary=_short_value(_reference(trace, view, judge, case_context, input_payload)),
         status=status,
+        execution_status=str(trace.status or ""),
+        execution_error=str(trace.error or case_context.get("error") or ""),
+        interaction_controller_status=str(trace.interaction_controller_status or "not_run"),
+        interaction_controller_error=str(trace.interaction_controller_error or ""),
         execution_mode=str(case_context.get("execution_mode") or trace.execution_mode or ""),
         output_source=str(case_context.get("output_source") or trace_output_source(trace) or ""),
         score=judge_summary.get("score"),

@@ -8,6 +8,11 @@ _FAILURE_DIMENSION_STATUSES = {"not_fulfilled"}
 
 def aggregate_failure_dimensions(judge: dict) -> list[dict]:
     assessments = judge.get("fulfillment_assessments") or []
+    blocking_by_id = {
+        str(item.get("expectation_id") or ""): bool(item.get("blocking"))
+        for item in (judge.get("business_expectations") or [])
+        if isinstance(item, dict)
+    }
     reasoning = judge.get("reasoning_summary") or ""
     dimensions: list[dict] = []
     for item in assessments:
@@ -36,7 +41,7 @@ def aggregate_failure_dimensions(judge: dict) -> list[dict]:
         dimensions.append({
             "expectation_id": item.get("expectation_id") or "",
             "status": status,
-            "blocking": bool(item.get("blocking")),
+            "blocking": blocking_by_id.get(str(item.get("expectation_id") or ""), False),
             "downstream_impact": item.get("downstream_impact") or "",
             "evidence": " | ".join(evidence_parts) if evidence_parts else "",
         })
@@ -56,11 +61,14 @@ def summary_from_fulfillment(judge: dict) -> dict:
     fulfillment_status = overall.get("status") or ""
     assessments = judge.get("fulfillment_assessments") or []
     assessment_count = len(assessments)
-    blocking_count = len([item for item in assessments if isinstance(item, dict) and item.get("blocking")])
+    expectations = judge.get("business_expectations") or []
+    blocking_count = len([item for item in expectations if isinstance(item, dict) and item.get("blocking")])
+    nonblocking_failures = len([dim for dim in dimensions if not dim["blocking"]])
 
     if fulfillment_status == "fulfilled":
         tail = f" · {reasoning_summary}" if reasoning_summary else ""
-        reason = f"fulfilled · {blocking_count} blocking expectations all met{tail}"
+        incomplete = f" · {nonblocking_failures} non-blocking gaps" if nonblocking_failures else ""
+        reason = f"fulfilled · {blocking_count} blocking expectations all met{incomplete}{tail}"
         reason_source = "aggregated_fulfillment"
     elif fulfillment_status == "not_fulfilled":
         blocking_ids = [dim["expectation_id"] for dim in dimensions if dim["blocking"] and dim["expectation_id"]]

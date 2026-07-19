@@ -48,6 +48,7 @@ def business_expectation() -> BusinessExpectation:
         acceptance_criteria=EXPECTED_CONDITIONS,
         boundary={"within_evaluable_scope": True},
         priority="blocking",
+        blocking=True,
     )
 
 
@@ -59,7 +60,6 @@ def fulfillment_assessment() -> FulfillmentAssessment:
         expected_evidence=EXPECTED_CONDITIONS,
         actual_evidence=EXPECTED_CONDITIONS,
         downstream_impact="下游客户检索条件完整",
-        blocking=True,
         confidence=0.95,
     )
 
@@ -90,7 +90,6 @@ def incorrect_judge_result() -> JudgeResult:
             expected_evidence=EXPECTED_CONDITIONS,
             actual_evidence=EXPECTED_CONDITIONS[:2],
             downstream_impact="资产等级缺失会扩大搜索结果范围",
-            blocking=True,
             confidence=0.9,
         )
     ]

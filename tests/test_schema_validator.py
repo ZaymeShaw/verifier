@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Literal, Optional
+
+import pytest
 
 from impl.core.judge import _build_judge_output_spec
-from impl.core.schema import AttributeLLMOutput
+from impl.core.schema import AttributeLLMOutput, MockContinueDecision
 from impl.core.schema_validator import SchemaValidator
 from impl.core.structured_output import StructuredOutputSpec, enforce_output
 
@@ -75,6 +77,96 @@ def test_required_nonempty_adds_scene_required_and_nonempty_constraint():
         strict=True,
         allow_extra=True,
     ) == []
+
+
+def test_literal_fields_render_enum_schema_and_validate_exact_values():
+    spec = StructuredOutputSpec.from_dataclass(MockContinueDecision)
+    schema = spec.json_schema()
+
+    assert schema["properties"]["action"] == {
+        "type": "string",
+        "enum": ["continue", "stop"],
+    }
+    assert schema["properties"]["stop_reason"] == {
+        "type": "string",
+        "enum": [
+            "",
+            "goal_satisfied",
+            "user_abandons",
+            "perceived_no_progress",
+        ],
+    }
+    assert schema["required"] == ["action"]
+
+    validator = SchemaValidator(spec)
+    assert validator.validate({"action": "continue"}) == []
+    assert validator.validate(
+        {"action": "stop", "stop_reason": "goal_satisfied"}
+    ) == []
+
+    invalid_action_errors = validator.validate({"action": "finish"})
+    assert len(invalid_action_errors) == 1
+    assert "字段类型不匹配：action" in invalid_action_errors[0]
+    assert "continue" in invalid_action_errors[0]
+    assert "stop" in invalid_action_errors[0]
+
+    null_action_errors = validator.validate({"action": None})
+    assert len(null_action_errors) == 1
+    assert "字段类型不匹配：action" in null_action_errors[0]
+
+    with pytest.raises(ValueError, match="字段类型不匹配：action"):
+        enforce_output({"action": {}, "stop_reason": {}}, spec, caller="mock_agent")
+
+
+@dataclass
+class MixedLiteralOutput:
+    value: Literal["auto", 1, False, None]
+
+
+def test_literal_schema_preserves_mixed_json_types_and_none():
+    spec = StructuredOutputSpec.from_dataclass(MixedLiteralOutput)
+
+    assert spec.json_schema()["properties"]["value"] == {
+        "type": ["string", "integer", "boolean", "null"],
+        "enum": ["auto", 1, False, None],
+    }
+
+    validator = SchemaValidator(spec)
+    assert validator.validate({"value": "auto"}) == []
+    assert validator.validate({"value": 1}) == []
+    assert validator.validate({"value": False}) == []
+    assert validator.validate({"value": None}) == []
+    assert validator.validate({"value": True})
+
+
+@dataclass
+class OptionalLiteralOutput:
+    mode: Optional[Literal["auto", "manual"]]
+
+
+def test_optional_literal_schema_and_validator_allow_declared_null_only():
+    spec = StructuredOutputSpec.from_dataclass(OptionalLiteralOutput)
+
+    assert spec.json_schema()["properties"]["mode"] == {
+        "type": ["string", "null"],
+        "enum": ["auto", "manual", None],
+    }
+
+    validator = SchemaValidator(spec)
+    assert validator.validate({"mode": "auto"}) == []
+    assert validator.validate({"mode": None}) == []
+    assert validator.validate({"mode": "other"})
+
+
+def test_non_nullable_primitive_rejects_json_null():
+    spec = StructuredOutputSpec.from_dataclass(DemoOutput)
+
+    errors = SchemaValidator(spec).validate(
+        {"required_id": None, "nullable_required": None}
+    )
+
+    assert len(errors) == 1
+    assert "字段类型不匹配：required_id" in errors[0]
 
 
 def test_attribute_llm_schema_expands_expectation_attribution_items():
