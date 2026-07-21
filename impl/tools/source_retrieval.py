@@ -198,15 +198,9 @@ class ProjectSourceFileProvider:
                     "description": "project adapter implementation (测评侧归一化层，非原业务系统根因落点)",
                 }
 
-        # 4. 原业务系统：application.external_repo (如 marketing-planning 的仓库根)
-        application = dict(getattr(self.spec, "application", None) or {})
-        external_repo = application.get("external_repo")
-        if external_repo and Path(external_repo).exists():
-            walk_business_root(Path(external_repo), "ext_repo")
-
-        # 4.1 evals 接入时声明的用户侧项目。这里是业务资料/源码的授权根，
-        # 不是 verifier 项目层的 adapter 目录。
-        source_project = str(getattr(self.spec, "source_project", "") or "")
+        # 4. 业务源码的唯一运行时入口来自 ProjectSpec 的 canonical source。
+        source_path = getattr(self.spec, "source_path", None)
+        source_project = source_path() if callable(source_path) else str(getattr(self.spec, "source_project", "") or "")
         if source_project and Path(source_project).exists():
             walk_business_root(Path(source_project), "source_project")
 
@@ -215,8 +209,8 @@ class ProjectSourceFileProvider:
         source_roots = endpoint_cfg.get("source_roots") or []
         for rel in source_roots:
             p = Path(str(rel))
-            if not p.is_absolute() and project_root:
-                p = (project_root / p).resolve()
+            if not p.is_absolute() and source_project:
+                p = (Path(source_project) / p).resolve()
             if p.exists():
                 walk_business_root(p, "endpoint_src")
 

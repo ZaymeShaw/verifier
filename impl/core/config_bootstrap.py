@@ -73,7 +73,7 @@ def _parse_dotenv_value(raw_value: str, line_number: int) -> str:
 
 def render_env_example(environment: EnvironmentRegistry) -> str:
     lines = [
-        "# Generated from impl/config.yaml. Do not add unregistered variables.",
+        "# Generated from all registered verifier configuration domains. Do not add unregistered variables.",
         "# Copy required local values to .env; never commit .env.",
         "",
     ]

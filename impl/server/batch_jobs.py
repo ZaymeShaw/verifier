@@ -4,11 +4,12 @@ import threading
 import uuid
 from typing import Any, Dict, Iterable
 
+from ..core.config import get_runtime_config
 from ..core import pipeline
 from ..core.schema import to_dict
 from .service import case_event, compact_batch_result, project_from
 
-MAX_BATCH_EVENTS = 200
+MAX_BATCH_EVENTS = get_runtime_config().execution.batch_event_history_limit
 BATCH_JOBS: Dict[str, Dict[str, Any]] = {}
 
 
@@ -38,7 +39,11 @@ def start_batch(data: Dict[str, Any]) -> Dict[str, Any]:
     from ..core.mock import parse_mock_case
 
     project = project_from(data)
-    concurrency = max(1, min(int(data.get("concurrency") or 4), 8))
+    execution = get_runtime_config().execution
+    concurrency = max(
+        1,
+        min(int(data.get("concurrency") or execution.batch_concurrency_default), execution.batch_concurrency_max),
+    )
     raw_cases = data.get("cases") or []
     cases = [to_dict(parse_mock_case(case, project_id=project)) for case in raw_cases]
     job_id = uuid.uuid4().hex

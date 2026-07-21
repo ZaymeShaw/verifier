@@ -28,12 +28,11 @@ class ClientSearchFieldDefinitionProvider:
         if self._cached_data is not None:
             return self._cached_data
 
-        field_def_path = self.spec.documents.get('source_field_definitions')
+        field_def_path = self.spec.source_path("field_definitions")
         if not field_def_path:
             raise ValueError(f"Field definitions not configured for project {self.spec.project_id}")
 
-        # Resolve path relative to project root
-        full_path = Path(self.spec.root) / field_def_path
+        full_path = Path(field_def_path)
         if not full_path.exists():
             raise FileNotFoundError(f"Field definitions file not found: {field_def_path}")
 

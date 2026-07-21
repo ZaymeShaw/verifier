@@ -11,8 +11,11 @@ from .config_schema import (
     BrowserConfig,
     ConfigError,
     ConfigValueSource,
+    ContextConfig,
     EmbeddingConfig,
     EnvironmentVariableSpec,
+    ExecutionConfig,
+    JudgeConfig,
     LlmConfig,
     PythonConfig,
     ParsedRuntimeConfig,
@@ -47,7 +50,7 @@ def resolve_runtime_config(
     parsed = parse_runtime_document(load_yaml_document(config_path))
     process_environment = dict(os.environ if environ is None else environ)
     dotenv = parse_dotenv(dotenv_path)
-    accepted_names = parsed.environment.accepted_names()
+    accepted_names = parsed.environment.accepted_names() | _discover_product_environment_names(config_path)
     unknown_dotenv = sorted(set(dotenv) - accepted_names)
     if unknown_dotenv:
         raise ConfigError(f"unregistered dotenv variable: {unknown_dotenv[0]}")
@@ -64,23 +67,19 @@ def resolve_runtime_config(
             if getattr(policy, field_name) is not None:
                 field_path = f"llm.role_policies.{role}.{field_name}"
                 sources[field_path] = ConfigValueSource(kind="yaml", name=f"{yaml_source}#{field_path}")
-    compatibility_warnings: list[str] = []
-
     by_binding: dict[str, EnvironmentVariableSpec] = {}
     for variable in parsed.environment.variables.values():
         by_binding[variable.bind] = variable
         selected = _select_environment_value(variable, process_environment, dotenv)
         if selected is None:
             continue
-        raw_value, source_kind, source_name, warning = selected
+        raw_value, source_kind, source_name = selected
         values[variable.bind] = convert_environment_value(variable, raw_value)
         sources[variable.bind] = ConfigValueSource(
             kind=source_kind,
             name=source_name,
             secret=variable.secret,
         )
-        if warning:
-            compatibility_warnings.append(warning)
 
     for field_path, raw_value in (cli_overrides or {}).items():
         variable = by_binding.get(field_path)
@@ -131,11 +130,49 @@ def resolve_runtime_config(
             retrieval_top_k=int(values["embedding.retrieval_top_k"]),
             trust_env_proxy=bool(values["embedding.trust_env_proxy"]),
         ),
+        execution=ExecutionConfig(
+            case_retry_attempts=int(values["execution.case_retry_attempts"]),
+            batch_concurrency_default=int(values["execution.batch_concurrency_default"]),
+            batch_concurrency_max=int(values["execution.batch_concurrency_max"]),
+            batch_event_history_limit=int(values["execution.batch_event_history_limit"]),
+        ),
+        context=ContextConfig(
+            data_root=str(values["context.data_root"]),
+            store_root=str(values["context.store_root"]),
+            max_records_per_project=int(values["context.max_records_per_project"]),
+            candidate_limit=int(values["context.candidate_limit"]),
+            load_limit=int(values["context.load_limit"]),
+            content_char_budget=int(values["context.content_char_budget"]),
+            query_limit=int(values["context.query_limit"]),
+            top_k_per_query=int(values["context.top_k_per_query"]),
+        ),
+        judge=JudgeConfig(raw_response_max_chars=int(values["judge.raw_response_max_chars"])),
         environment=parsed.environment,
         sources=MappingProxyType(dict(sources)),
-        warnings=tuple(compatibility_warnings),
+        warnings=(),
         missing_required=missing_required,
     )
+
+
+def _discover_product_environment_names(config_path: Path) -> frozenset[str]:
+    """Discover project/knowledge registrations without loading either config domain."""
+    root = config_path.parent.parent if config_path.parent.name == "impl" else config_path.parent
+    names: set[str] = set()
+    for pattern in ("impl/projects/*/project.yaml", "projects/*/project.yaml"):
+        for path in root.glob(pattern):
+            try:
+                document = load_yaml_document(path)
+            except (ConfigError, OSError):
+                continue
+            variables = ((document.get("environment") or {}).get("variables") or {})
+            if not isinstance(variables, dict):
+                continue
+            for name, raw_variable in variables.items():
+                if isinstance(name, str):
+                    names.add(name)
+                if not isinstance(raw_variable, dict):
+                    continue
+    return frozenset(names)
 
 
 def _base_values(parsed: ParsedRuntimeConfig) -> dict[str, Any]:
@@ -160,6 +197,19 @@ def _base_values(parsed: ParsedRuntimeConfig) -> dict[str, Any]:
         "embedding.dimensions": parsed.embedding.dimensions,
         "embedding.retrieval_top_k": parsed.embedding.retrieval_top_k,
         "embedding.trust_env_proxy": parsed.embedding.trust_env_proxy,
+        "execution.case_retry_attempts": parsed.execution.case_retry_attempts,
+        "execution.batch_concurrency_default": parsed.execution.batch_concurrency_default,
+        "execution.batch_concurrency_max": parsed.execution.batch_concurrency_max,
+        "execution.batch_event_history_limit": parsed.execution.batch_event_history_limit,
+        "context.data_root": parsed.context.data_root,
+        "context.store_root": parsed.context.store_root,
+        "context.max_records_per_project": parsed.context.max_records_per_project,
+        "context.candidate_limit": parsed.context.candidate_limit,
+        "context.load_limit": parsed.context.load_limit,
+        "context.content_char_budget": parsed.context.content_char_budget,
+        "context.query_limit": parsed.context.query_limit,
+        "context.top_k_per_query": parsed.context.top_k_per_query,
+        "judge.raw_response_max_chars": parsed.judge.raw_response_max_chars,
     }
 
 
@@ -167,39 +217,12 @@ def _select_environment_value(
     variable: EnvironmentVariableSpec,
     process_environment: Mapping[str, str],
     dotenv: Mapping[str, str],
-) -> Optional[tuple[str, str, str, str]]:
-    canonical_present = variable.name in process_environment or variable.name in dotenv
-    present_aliases = [
-        alias
-        for alias in variable.legacy_aliases
-        if alias.name in process_environment or alias.name in dotenv
-    ]
-    if canonical_present and present_aliases:
-        aliases = ", ".join(alias.name for alias in present_aliases)
-        raise ConfigError(
-            f"both canonical environment variable {variable.name} and legacy alias {aliases} are set"
-        )
-    if len(present_aliases) > 1:
-        aliases = ", ".join(alias.name for alias in present_aliases)
-        raise ConfigError(f"multiple legacy aliases are set for {variable.name}: {aliases}")
-    if canonical_present:
-        if variable.name in process_environment:
-            return process_environment[variable.name], "process_env", variable.name, ""
-        return dotenv[variable.name], "dotenv", variable.name, ""
-    if not present_aliases:
-        return None
-    alias = present_aliases[0]
-    if alias.name in process_environment:
-        source_kind = "legacy_process_env"
-        raw_value = process_environment[alias.name]
-    else:
-        source_kind = "legacy_dotenv"
-        raw_value = dotenv[alias.name]
-    warning = (
-        f"legacy environment alias {alias.name} was used for {variable.name}; "
-        f"migrate before {alias.remove_after}"
-    )
-    return raw_value, source_kind, alias.name, warning
+) -> Optional[tuple[str, str, str]]:
+    if variable.name in process_environment:
+        return process_environment[variable.name], "process_env", variable.name
+    if variable.name in dotenv:
+        return dotenv[variable.name], "dotenv", variable.name
+    return None
 
 
 def initialize_runtime_config(

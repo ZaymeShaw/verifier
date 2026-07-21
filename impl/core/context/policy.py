@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, FrozenSet, Mapping, Optional, Tuple
 
+from ..config import get_runtime_config
 from .errors import ContextAuthorizationError, ContextConfigurationError
 from .models import ContextUnitRecord
 
@@ -25,12 +26,13 @@ _ALLOWED_RULE_KEYS = {
     "top_k_per_query",
 }
 
+_context_config = get_runtime_config().context
 _DEFAULT_LIMITS = {
-    "candidate_limit": 20,
-    "load_limit": 8,
-    "content_char_budget": 100_000,
-    "query_limit": 4,
-    "top_k_per_query": 5,
+    "candidate_limit": _context_config.candidate_limit,
+    "load_limit": _context_config.load_limit,
+    "content_char_budget": _context_config.content_char_budget,
+    "query_limit": _context_config.query_limit,
+    "top_k_per_query": _context_config.top_k_per_query,
 }
 
 

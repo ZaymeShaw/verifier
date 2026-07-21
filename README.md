@@ -7,10 +7,10 @@
 ## 目录
 
 - `impl/`：核心实现、项目适配、协议和前端页面。
-- `impl/projects/`：各项目的评测配置与 adapter。
+- `impl/projects/<project>/project.yaml`：各项目唯一正式运行配置；同目录保存 adapter 和角色实现。
 - `impl/frontend/`：本地分析界面。
 - `.claude/skills/`：Claude Code skill 定义。
-- `projects/`、`data/`、`search-test-case/`：项目资料、样例数据和历史验证记录。
+- `projects/<project>/project.yaml`：evals / harness AI 的唯一知识路由；`data/`、`search-test-case/` 保存样例和历史证据。
 
 ## 环境要求
 
@@ -25,7 +25,7 @@ cp .env.example .env
 # PYTHON_EXECUTABLE=/path/to/agno/python
 ```
 
-非敏感默认值和允许覆盖的环境变量统一登记在 `impl/config.yaml`。进程环境优先于 `.env`；未登记变量不能影响 verifier。`LLM_API_KEY` 和 `DEEPSEEK_BASE_URL` 只作为有退出期限的旧别名兼容，不应继续用于新部署。
+公共默认值登记在 `impl/config.yaml`，项目值登记在 `impl/projects/<project>/project.yaml`，知识路由变量登记在 `projects/<project>/project.yaml`。进程环境优先于根 `.env`；未登记变量不能影响 verifier。模型秘密只使用规范变量 `DEEPSEEK_API_KEY`，旧别名不再接受。
 
 ### Python 解释器选择
 
@@ -40,7 +40,7 @@ bash run.sh uat               # 启动 UAT 服务（端口 8021）
 bash run.sh cli projects      # 跑 impl.cli
 bash run.sh check1            # 跑 checklist check1
 bash run.sh api-check         # 跑 api-check（自动启动/复用 UAT 服务）
-bash run.sh config-check      # 校验公共配置、.env 和消费者旁路
+bash run.sh config-check      # 校验三层配置、模板、.env、路径和消费者旁路
 bash run.sh python <args>     # 用正确解释器跑任意 python 命令
 ```
 

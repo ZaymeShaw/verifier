@@ -161,30 +161,14 @@ def audit_project_implementation_standard(spec: ProjectSpec) -> list[str]:
 
 
 def _load_project_specs_from_root(root: Path) -> list[ProjectSpec]:
-    from .project_loader import load_simple_yaml, _resolve_source_project
+    from .project_config import resolve_project_config
 
     specs = []
     projects_root = root / "impl" / "projects"
     if not projects_root.exists():
         return specs
     for cfg_path in sorted(projects_root.glob("*/project.yaml")):
-        data = load_simple_yaml(cfg_path)
-        project_root = cfg_path.parent
-        specs.append(
-            ProjectSpec(
-                project_id=str(data.get("project_id") or project_root.name),
-                name=str(data.get("name") or project_root.name),
-                description=str(data.get("description") or ""),
-                adapter=str(data.get("adapter") or "adapter.py"),
-                capabilities=list(data.get("capabilities") or []),
-                documents=dict(data.get("documents") or {}),
-                api=dict(data.get("api") or {}),
-                application=dict(data.get("application") or {}),
-                frontend_extensions=dict(data.get("frontend_extensions") or {}),
-                root=str(project_root),
-                source_project=_resolve_source_project(data, project_root),
-            )
-        )
+        specs.append(resolve_project_config(cfg_path.parent.name, projects_dir=projects_root, dotenv_path=root / ".env"))
     return specs
 
 

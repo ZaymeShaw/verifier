@@ -1,20 +1,54 @@
-project_id: example
-name: 客户搜索
-description: 代理人通过自然语言从数据库中搜索客户
+schema_version: 1
 
-common:
-  source:
-    repo: /Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search
+project:
+  id: client_search
+  name: 客户搜索
+  description: 通过自然语言生成并验证客户搜索条件
 
+documents:
+  startup:
+    path: start.md
+    type: startup
+    required: true
+    description: 客户搜索本地服务启动和可用性检查
   api:
-    base_url: http://localhost:8000
-    endpoint: /api/v1/client_search_query_parse_no_encipher
-    method: POST
-    timeout: 10
+    path: readme.md
+    type: api
+    required: true
+    description: 客户搜索接口、请求和响应说明
+  requirements:
+    path: config.md
+    type: requirements
+    required: true
+    description: 客户搜索字段配置与业务规则
+  prompt:
+    path: prompt.md
+    type: reference
+    required: true
+    description: 业务系统当前提示词和语义映射资料
+  judge_boundary:
+    path: judge_boundary-template.md
+    type: judge_boundary
+    required: true
+    description: 客户搜索可评价范围和业务边界
+  judge_reference:
+    path: judge.md
+    type: reference
+    required: true
+    description: 客户搜索 judge 补充资料
 
-  start:
-    command: verifier/projects/client_search/start.md
-  
+source:
+  repository: ${CLIENT_SEARCH_REPO}
+
+onboarding:
+  interaction: single_turn
   ready: []
 
-extra: {}
+environment:
+  variables:
+    CLIENT_SEARCH_REPO:
+      bind: source.repository
+      type: path
+      required: false
+      secret: false
+      description: client_search 业务源码位置，仅供 evals 和 harness AI 读取

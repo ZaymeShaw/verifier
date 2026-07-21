@@ -1,94 +1,131 @@
-project_id: deerflow
-name: 基于 deerflow 的营销规划
-description: 评估基于 deer-flow Gateway 的多轮营销规划智能体，verifier 通过 HTTP 调用 Gateway 续接 thread 上下文，逐轮投递用户消息并回看历史获取 AI 回复与 tool_calls。
-adapter: adapter.py
-source_project: /Users/xiaozijian/WorkSpace/package/deer-flow/deer-flow
-capabilities: ["live_run", "judge", "attribute", "cluster", "check", "scenario", "multi_turn"]
-common:
-  ready: []
-api:
-  base_url: http://127.0.0.1:8001
-  endpoint: /api/threads
-  method: POST
-  timeout: 600
-application:
-  mode: existing_service_required
-  primary_path: /api/threads/{thread_id}/runs/wait
-  external_repo: /Users/xiaozijian/WorkSpace/package/deer-flow/deer-flow
-  modify_external_repo: false
-  startup_command: bash /Users/xiaozijian/WorkSpace/package/deer-flow/deer-flow/report/deploy.sh
-attribute_draft:
-  enabled: true
-  module: draft/attribute.py
-  reason: Batch attribution validation through the 8021 UAT frontend.
-documents:
-  application: application.md
-  mock: mock.md
-  evaluation: evaluation.md
-  judge_boundary: judge_boundary.md
-  attribution: attribution.md
-  checklist: checklist.md
-  implementation_standard: implementation_standard.md
-  source_lead_agent_prompt: /Users/xiaozijian/WorkSpace/package/deer-flow/deer-flow/backend/packages/harness/deerflow/agents/lead_agent/prompt.py
-frontend_extensions:
-  scenarios: ["single_turn_planning", "multi_turn_dimension_accumulation", "clarification", "non_agent_intent", "service_unavailable"]
-  stages: ["intent", "clarification", "planning", "non_agent", "fallback", "unknown"]
-  dimensions: ["product", "team", "customer", "activity", "unknown"]
-  error_taxonomy: ["request_normalization", "thread_creation", "turn_delivery", "message_history_read", "reply_extraction", "tool_call_extraction", "stage_inference", "multi_turn_accumulation", "external_dependency", "needs_human_review", "none"]
-  core_forbidden_markers: []
-  implementation_standard:
-    api:
-      shape: deer-flow Gateway HTTP multi-turn POST with thread_id checkpointer
-      source: report/gateway_multi_turn.py and report/gateway_simple.py
-    application:
-      start_run: existing required service at api.base_url; start via startup_command when unavailable
-      boundary: deer-flow Gateway service is in scope; external data unavailability may be boundary metadata
-    request_construction:
-      builder: Adapter.build_request normalizes turns, session/thread_id, scenario, dimensions, and reference
-      required_inputs: [query]
-    output_extraction:
-      extractor: Adapter.extract_output summarizes reply text, tool_calls, stage, session, fallback, and errors per turn
-      normalized_output: turns with reply_text, tool_calls, stage, session_summary, fallback, errors
-    reference_handling:
-      source_priority: [input_reference, expected_stage, expected_dimensions, judge_generated, missing]
-      alignment: reference contract compared against compact stage/dimension/tool_call output shape
-    judge_boundary:
-      document: judge_boundary.md
-      gate: application_boundary determines judge_scope and fallback allowance before fulfillment reconciliation
-    attribution_trace:
-      document: attribution.md
-      trace_nodes: [request_normalization, thread_creation, turn_delivery, message_history_read, reply_extraction, tool_call_extraction, stage_inference, multi_turn_accumulation]
-    frontend_view:
-      live: render reply_text, tool_calls, stage, fallback, Judge, Attribute, and project extension panels
-      summary: show scenario-aware compact case-pool rows with Output and Reference aligned by stage/dimension semantics
-    batch_persistence:
-      case_shape: id, selected, input, output, reference, metadata, scenario, source, status, error
-      transient_results: do not persist full message history, trace, judge, attribute, or frontend_view as durable case-pool source data
-    check_evidence:
-      documents: [application.md, mock.md, evaluation.md, judge_boundary.md, attribution.md, checklist.md]
-      tests: []
-  check_rules:
-    require_scenario: true
+schema_version: 1
 
-role_assets:
-  - asset_id: attribute_investigation
-    kind: investigation
+project:
+  id: deerflow
+  name: 基于 deerflow 的营销规划
+  description: 评估基于 deer-flow Gateway 的多轮营销规划智能体，verifier 通过 HTTP 调用 Gateway 续接 thread 上下文，逐轮投递用户消息并回看历史获取 AI 回复与 tool_calls。
+  capabilities: [live_run, judge, attribute, cluster, check, scenario, multi_turn]
+  resources:
+    source:
+      repository: ""
+      paths:
+        lead_agent_prompt: backend/packages/harness/deerflow/agents/lead_agent/prompt.py
+
+runtime:
+  mode: existing_service_required
+  local_deployment:
     enabled: true
-    roles: [attribute]
-    production_path: investigation/attribute
-    candidate_path: draft/investigation/attribute
-    replace: true
-  - asset_id: attribute_investigation_tools
-    kind: tool
+  interaction:
+    mode: multi_turn
+  ready: []
+  services:
+    primary:
+      base_url: http://127.0.0.1:8001
+      endpoint: /api/threads
+      method: POST
+      timeout_seconds: 600
+      healthcheck:
+        endpoint: /health
+        request_timeout_seconds: 5
+        interval_seconds: 2
+        startup_timeout_seconds: 120
+  extra:
+    mock_cases:
+      description: deerflow mock case 的正式来源策略
+      value_type: mapping
+      schema_version: 1
+      consumers: [impl.core.pipeline]
+      value:
+        source: dynamic
+
+verifier:
+  attribution:
     enabled: true
-    roles: [attribute]
-    production_path: tools/investigation_tools.py
-    candidate_path: draft/tools/investigation_tools.py
-    replace: true
-  - asset_id: attribute_investigation_context_builder
-    kind: context_builder
-    enabled: true
-    roles: [attribute]
-    production_path: context_builders/attribute_investigation.py
-    candidate_path: draft/context_builders/attribute_investigation.py
-    replace: true
+  roles:
+    attribute:
+      draft:
+        enabled: true
+        module: draft/attribute.py
+        reason: Batch attribution validation through the 8021 UAT frontend.
+    mock:
+      draft:
+        enabled: false
+        module: draft/mock.py
+        reason: Frozen Current/Draft validation of the NBEV internal-staff Mock user model.
+  presentation:
+    interactive_scenarios: [multi_turn_dimension_accumulation]
+    scenarios: [single_turn_planning, multi_turn_dimension_accumulation, clarification, authorization_boundary, non_agent_intent, service_unavailable]
+    stages: [intent, clarification, planning, non_agent, fallback, unknown]
+    dimensions: [product, team, customer, activity, unknown]
+    error_taxonomy: [request_normalization, thread_creation, turn_delivery, message_history_read, reply_extraction, tool_call_extraction, stage_inference, multi_turn_accumulation, external_dependency, needs_human_review, none]
+    core_forbidden_markers: []
+  extra:
+    check_rules:
+      description: deerflow case 必须携带场景标识
+      value_type: mapping
+      schema_version: 1
+      consumers: [impl.core.check]
+      value:
+        require_scenario: true
+  assets:
+    - asset_id: mock_investigation
+      kind: investigation
+      enabled: true
+      roles: [mock]
+      production_path: investigation/mock
+      candidate_path: draft/investigation/mock
+      replace: true
+    - asset_id: mock_investigation_context_builder
+      kind: context_builder
+      enabled: true
+      roles: [mock]
+      production_path: context_builders/mock_investigation.py
+      candidate_path: draft/context_builders/mock_investigation.py
+      replace: true
+    - asset_id: mock_business_input_validator
+      kind: tool
+      enabled: true
+      roles: [mock]
+      production_path: tools/mock_validation_tools.py
+      candidate_path: draft/tools/mock_validation_tools.py
+      replace: true
+    - asset_id: attribute_investigation
+      kind: investigation
+      enabled: true
+      roles: [attribute]
+      production_path: investigation/attribute
+      candidate_path: draft/investigation/attribute
+      replace: true
+    - asset_id: attribute_investigation_tools
+      kind: tool
+      enabled: true
+      roles: [attribute]
+      production_path: tools/investigation_tools.py
+      candidate_path: draft/tools/investigation_tools.py
+      replace: true
+    - asset_id: attribute_investigation_context_builder
+      kind: context_builder
+      enabled: true
+      roles: [attribute]
+      production_path: context_builders/attribute_investigation.py
+      candidate_path: draft/context_builders/attribute_investigation.py
+      replace: true
+
+environment:
+  variables:
+    DEERFLOW_REPO:
+      bind: project.resources.source.repository
+      type: path
+      required: true
+      secret: false
+      description: deer-flow 业务源码挂载位置及本地启动根目录
+    DEERFLOW_BASE_URL:
+      bind: runtime.services.primary.base_url
+      type: url
+      required: false
+      secret: false
+      description: deer-flow Gateway 服务地址
+
+metadata:
+  initialized_from: ../../../projects/deerflow/project.yaml
+  source_revision: null

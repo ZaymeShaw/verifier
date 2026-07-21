@@ -1,58 +1,34 @@
-project_id: example
-name: 示例项目
-description: 简短说明这个项目测什么
+# Formal project runtime configuration template. Runtime never loads this file.
+schema_version: 1
 
-common:
-  source:
-    repo:
+project:
+  id: my_project
+  name: 示例项目
+  description: 简短说明这个项目测什么
+  capabilities: [single_turn, judge, check]
 
-  api:
-    base_url:
-    endpoint:
-    method: POST
-    timeout: 60
+runtime:
+  # existing_service_required | existing_service_optional | uploaded_output_evaluation
+  mode: uploaded_output_evaluation
+  interaction:
+    mode: single_turn
+  ready: [output, reference]
 
-  start:
-    command:
+verifier:
+  # Every project must choose one boolean. Manual attribution is a run override.
+  attribution:
+    enabled: false
 
-  docs:
-    demand: 
+metadata:
+  initialized_from: ../../../projects/my_project/project.yaml
+  source_revision: null
 
-extra: {}
-
-# ---- 可选：临时启用 draft attribute / judge ----
-# 默认关闭；只有人工验证 draft 时才开启。两个角色独立切换，不自动 promotion。
-attribute_draft:
-  enabled: false
-  module: draft/attribute.py
-  reason:
-
-judge_draft:
-  enabled: false
-  module: draft/judge.py
-  reason:
-
-mock_draft:
-  enabled: false
-  module: draft/mock.py
-  reason:
-
-# Production/Draft 共用同一组能力开关和 Role 权限。candidate_path 只在候选存在时填写。
-role_assets: []
-
-# ---- 可选：API 端点自动发现 ----
-# 不配置此字段则跳过扫描，完全兼容现有项目。
-# 配置后，启动时通用引擎自动扫描业务系统源码中的 API 端点，
-# 构建为可调用 VerifiableTool，注册到 ToolRegistry。
-endpoint_discovery:
-  source_roots:               # 业务系统源码根路径（相对于项目根目录）
-    - ../../../projects/your_project
-  framework: fastapi           # 使用的 Web 框架：fastapi | flask | grpc | generic
-  scan_patterns: ["*.py"]      # 扫描文件类型，默认 *.py
-  exclude_patterns:            # 排除路径，默认排除 test/migrations/venv
-    - "*/test/*"
-    - "*/migrations/*"
-    - "*/venv/*"
-  blacklist:
-    methods: ["PUT", "DELETE", "PATCH"]    # 可选
-    route_keywords: ["reload", "reindex", "delete", "update", "create", "write"]
+# Add environment only when this project owns environment bindings:
+# environment:
+#   variables:
+#     MY_PROJECT_BASE_URL:
+#       bind: runtime.services.primary.base_url
+#       type: url
+#       required: false
+#       secret: false
+#       description: my_project service address

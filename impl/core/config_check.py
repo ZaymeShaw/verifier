@@ -6,11 +6,14 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import MappingProxyType
 from typing import Iterable, Mapping, Optional
 
 from .config import ROOT, resolve_runtime_config
 from .config_bootstrap import render_env_example
-from .config_schema import ConfigError
+from .config_schema import ConfigError, EnvironmentRegistry, EnvironmentVariableSpec, load_yaml_document
+from .knowledge_route import load_project_knowledge_route
+from .project_config import parse_project_document, resolve_project_config
 
 
 _PERSONAL_PATH = re.compile(r"/(?:Users|home)/[^/\s]+/")
@@ -72,6 +75,56 @@ def check_runtime_config_contract(
         else:
             report.warnings.append(message)
 
+    project_registries: dict[str, EnvironmentRegistry] = {}
+    knowledge_registries: dict[str, EnvironmentRegistry] = {}
+    impl_projects = {
+        path.parent.name: path
+        for path in sorted((root / "impl" / "projects").glob("*/project.yaml"))
+    }
+    knowledge_projects = {
+        path.parent.name: path
+        for path in sorted((root / "projects").glob("*/project.yaml"))
+    }
+    if set(impl_projects) != set(knowledge_projects):
+        missing_impl = sorted(set(knowledge_projects) - set(impl_projects))
+        missing_route = sorted(set(impl_projects) - set(knowledge_projects))
+        report.add(
+            ConfigCheckIssue(
+                code="project_route_mismatch",
+                message=f"impl-only={missing_route}; knowledge-only={missing_impl}",
+                path=str(root / "projects"),
+            )
+        )
+    for project_id, config_file in impl_projects.items():
+        try:
+            spec = resolve_project_config(
+                project_id,
+                projects_dir=root / "impl" / "projects",
+                dotenv_path=dotenv_path,
+                environ=environ,
+            )
+            project_registries[project_id] = spec.environment or EnvironmentRegistry(MappingProxyType({}))
+            report.warnings.extend(spec.metadata.get("warnings") or [])
+        except (ConfigError, OSError) as exc:
+            report.add(ConfigCheckIssue(code="project_config_invalid", message=str(exc), path=str(config_file)))
+        for line, value in _personal_paths(config_file.read_text(encoding="utf-8")):
+            report.add(ConfigCheckIssue("personal_path", f"project config contains personal path: {value}", str(config_file), line))
+    for project_id, route_file in knowledge_projects.items():
+        try:
+            route = load_project_knowledge_route(project_id, knowledge_root=root / "projects")
+            knowledge_registries[project_id] = route.environment
+        except (ConfigError, OSError) as exc:
+            report.add(ConfigCheckIssue(code="knowledge_route_invalid", message=str(exc), path=str(route_file)))
+        for line, value in _personal_paths(route_file.read_text(encoding="utf-8")):
+            report.add(ConfigCheckIssue("personal_path", f"knowledge route contains personal path: {value}", str(route_file), line))
+    _check_cross_layer_environments(report, project_registries, knowledge_registries)
+
+    template_path = root / "impl" / "projects" / "project.template.yaml"
+    try:
+        parse_project_document(load_yaml_document(template_path), project_id=None, project_root=template_path.parent)
+    except (ConfigError, OSError) as exc:
+        report.add(ConfigCheckIssue("project_template_invalid", str(exc), str(template_path)))
+
     for line, value in _personal_paths(config_path.read_text(encoding="utf-8")):
         report.add(
             ConfigCheckIssue(
@@ -98,7 +151,13 @@ def check_runtime_config_contract(
         )
 
     env_example_path = root / ".env.example"
-    expected_example = render_env_example(resolved.environment)
+    combined_environment = _combined_environment(
+        report,
+        resolved.environment,
+        project_registries,
+        knowledge_registries,
+    )
+    expected_example = render_env_example(combined_environment)
     actual_example = env_example_path.read_text(encoding="utf-8") if env_example_path.is_file() else ""
     if actual_example != expected_example:
         report.add(
@@ -109,9 +168,65 @@ def check_runtime_config_contract(
             )
         )
 
-    for issue in _scan_public_config_bypasses(root, resolved.environment.accepted_names()):
+    for issue in _scan_public_config_bypasses(root, combined_environment.accepted_names()):
         report.add(issue)
     return report
+
+
+def _check_cross_layer_environments(
+    report: ConfigCheckReport,
+    project_registries: Mapping[str, EnvironmentRegistry],
+    knowledge_registries: Mapping[str, EnvironmentRegistry],
+) -> None:
+    for project_id in sorted(set(project_registries) & set(knowledge_registries)):
+        impl_variables = project_registries[project_id].variables
+        route_variables = knowledge_registries[project_id].variables
+        for name in sorted(set(impl_variables) & set(route_variables)):
+            impl = impl_variables[name]
+            route = route_variables[name]
+            if (impl.type, impl.required, impl.secret) != (route.type, route.required, route.secret):
+                report.add(
+                    ConfigCheckIssue(
+                        code="environment_contract_mismatch",
+                        message=f"{name} has inconsistent type/required/secret across project and knowledge route",
+                        path=project_id,
+                    )
+                )
+
+
+def _combined_environment(
+    report: ConfigCheckReport,
+    public: EnvironmentRegistry,
+    project_registries: Mapping[str, EnvironmentRegistry],
+    knowledge_registries: Mapping[str, EnvironmentRegistry],
+) -> EnvironmentRegistry:
+    variables: dict[str, EnvironmentVariableSpec] = dict(public.variables)
+    owners: dict[str, str] = {name: "public" for name in variables}
+    for layer, registries in (("project", project_registries), ("knowledge", knowledge_registries)):
+        for project_id, registry in registries.items():
+            for name, variable in registry.variables.items():
+                existing = variables.get(name)
+                if existing is None:
+                    variables[name] = variable
+                    owners[name] = f"{layer}:{project_id}"
+                    continue
+                same_project_pair = owners[name] in {f"project:{project_id}", f"knowledge:{project_id}"}
+                compatible = (existing.type, existing.required, existing.secret) == (
+                    variable.type,
+                    variable.required,
+                    variable.secret,
+                )
+                if not same_project_pair or not compatible:
+                    report.add(
+                        ConfigCheckIssue(
+                            code="environment_name_duplicate",
+                            message=f"{name} is defined by both {owners[name]} and {layer}:{project_id}",
+                        )
+                    )
+                elif layer == "project":
+                    variables[name] = variable
+                    owners[name] = f"project:{project_id}"
+    return EnvironmentRegistry(variables=MappingProxyType(variables))
 
 
 def _scan_public_config_bypasses(root: Path, registered_names: Iterable[str]) -> list[ConfigCheckIssue]:
@@ -240,7 +355,7 @@ def _personal_paths(text: str) -> list[tuple[int, str]]:
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description="Validate the verifier public configuration contract")
+    parser = argparse.ArgumentParser(description="Validate the verifier configuration contract")
     parser.add_argument("--require-runtime-secrets", action="store_true")
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args(argv)

@@ -4,6 +4,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
+from .config import get_runtime_config
 from .project_loader import load_project_document
 from .schema import BusinessExpectation, FulfillmentAssessment, GapItem, JudgeLLMOutput, JudgeReferenceOutput, JudgeResult, ProjectSpec, RunTrace, _non_empty_reference, normalize_business_expectation, normalize_fulfillment_assessment, normalize_gap_item, normalize_judge_result, to_dict, trace_application_boundary, trace_conversation_summary, trace_conversation_transcript, trace_execution_trace, trace_extracted_output, trace_input, trace_normalized_request, trace_raw_response, trace_stop_reason, trace_turn_records
 from .structured_output import StructuredOutputSpec
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
     from .llm_client import LlmClient
 
 _FIELD_LIST_KEYS = frozenset(["conditions", "structured_output"])
-_JUDGE_RAW_RESPONSE_MAX_CHARS = 4000
+_JUDGE_RAW_RESPONSE_MAX_CHARS = get_runtime_config().judge.raw_response_max_chars
 
 
 def _extract_fields_from_trace(trace: RunTrace) -> Set[str]:

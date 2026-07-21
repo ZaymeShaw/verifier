@@ -14,21 +14,23 @@
 from __future__ import annotations
 
 import argparse
-import importlib
 import inspect
 import sys
 from pathlib import Path
 from typing import Dict, List, Tuple, Type
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts._protocol_discovery import (
+from scripts._protocol_discovery import (  # noqa: E402
     class_prefix,
     discover_adapter_base,
     discover_role_bases,
 )
+from impl.core.knowledge_route import ProjectKnowledgeRoute, load_project_knowledge_route  # noqa: E402
 
 
 def adapter_load_methods(adapter_base: Type) -> List[str]:
@@ -108,7 +110,7 @@ def render_adapter_stub(project_id: str, adapter_base: Type, roles: List[Tuple[s
     """生成 adapter.py：继承 ProjectAdapter，实现所有 _load_* 方法。"""
     base_module = adapter_base.__module__
     base_name = adapter_base.__name__
-    class_name = f"Adapter"
+    class_name = "Adapter"
     loads = adapter_load_methods(adapter_base)
     lines = [
         f'"""{project_id} 项目的 Adapter（scaffold 生成，待填充）。',
@@ -208,8 +210,48 @@ class {prefix}ExtractOutput:
 '''
 
 
+def render_project_config(route: ProjectKnowledgeRoute) -> str:
+    """Render a reviewable canonical ProjectConfig from the sole knowledge route."""
+    uploaded = "output" in route.ready
+    document = {
+        "schema_version": 1,
+        "project": {
+            "id": route.project_id,
+            "name": route.name,
+            "description": route.description,
+            "capabilities": [route.interaction],
+        },
+        "runtime": {
+            "mode": "uploaded_output_evaluation" if uploaded else "existing_service_optional",
+            "interaction": {"mode": route.interaction},
+            "ready": list(route.ready),
+        },
+        "verifier": {"attribution": {"enabled": False}},
+        "metadata": {
+            "initialized_from": f"../../../projects/{route.project_id}/project.yaml",
+            "source_revision": None,
+        },
+    }
+    if route.source_repository:
+        document["project"]["resources"] = {"source": {"repository": ""}}
+        document["environment"] = {
+            "variables": {
+                variable.name: {
+                    "bind": "project.resources.source.repository",
+                    "type": variable.type,
+                    "required": variable.required,
+                    "secret": variable.secret,
+                    "description": variable.description,
+                }
+                for variable in route.environment.variables.values()
+            }
+        }
+    return yaml.safe_dump(document, allow_unicode=True, sort_keys=False)
+
+
 def scaffold(project_id: str, force: bool = False) -> Dict[str, str]:
     """生成项目骨架。返回 {相对路径: 'created'/'skipped'}。"""
+    route = load_project_knowledge_route(project_id)
     roles = discover_role_bases()
     if not roles:
         raise RuntimeError("未发现任何 Project<Role> 协议基类，请检查 impl/core/*_protocol.py")
@@ -241,6 +283,7 @@ def scaffold(project_id: str, force: bool = False) -> Dict[str, str]:
     # live_schema + schema
     write("live_schema.py", render_live_schema_stub(project_id))
     write("schema/__init__.py", render_schema_init_stub(project_id))
+    write("project.yaml", render_project_config(route))
 
     return results
 

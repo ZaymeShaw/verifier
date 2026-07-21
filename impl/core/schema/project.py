@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from pathlib import Path
+from typing import Any, Dict, List, Mapping
+
+from ..config_schema import ConfigValueSource, EnvironmentRegistry
 
 
 @dataclass(frozen=True)
@@ -45,6 +48,63 @@ class ProjectSpec:
     role_assets: List[RoleAssetMapping] = field(default_factory=list)
     root: str = ""
     source_project: str = ""  # 用户侧项目目录（绝对路径），LLM 可据此查找需求材料
+    # Canonical schema-v1 sections.  The legacy-shaped fields above are a
+    # read-only compatibility view populated by ProjectConfigResolver; YAML no
+    # longer owns those names.
+    schema_version: int = 1
+    project: Dict[str, Any] = field(default_factory=dict)
+    runtime: Dict[str, Any] = field(default_factory=dict)
+    verifier: Dict[str, Any] = field(default_factory=dict)
+    environment: EnvironmentRegistry | None = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    config_sources: Mapping[str, ConfigValueSource] = field(default_factory=dict)
+
+    @property
+    def ready(self) -> List[str]:
+        return list(self.runtime.get("ready") or [])
+
+    @property
+    def interaction_mode(self) -> str:
+        interaction = self.runtime.get("interaction") or {}
+        return str(interaction.get("mode") or "single_turn")
+
+    @property
+    def runtime_mode(self) -> str:
+        return str(self.runtime.get("mode") or "")
+
+    @property
+    def attribution_enabled(self) -> bool:
+        attribution = self.verifier.get("attribution") or {}
+        return attribution.get("enabled") is True
+
+    @property
+    def local_deployment_enabled(self) -> bool:
+        local = self.runtime.get("local_deployment") or {}
+        return local.get("enabled") is True
+
+    @property
+    def presentation(self) -> Dict[str, Any]:
+        return dict(self.verifier.get("presentation") or {})
+
+    def service(self, service_id: str = "primary") -> Dict[str, Any]:
+        services = self.runtime.get("services") or {}
+        if service_id == "primary":
+            return dict(services.get("primary") or {})
+        return dict((services.get("dependencies") or {}).get(service_id) or {})
+
+    def role_draft(self, role: str) -> Dict[str, Any]:
+        role_config = (self.verifier.get("roles") or {}).get(role) or {}
+        return dict(role_config.get("draft") or {})
+
+    def source_path(self, path_id: str = "") -> str:
+        source = ((self.project.get("resources") or {}).get("source") or {})
+        repository = str(source.get("repository") or "")
+        if not repository:
+            return ""
+        if not path_id:
+            return repository
+        relative = str((source.get("paths") or {}).get(path_id) or "")
+        return str((Path(repository) / relative).resolve()) if relative else ""
 
 
 @dataclass

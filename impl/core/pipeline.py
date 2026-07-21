@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import time
+from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Mapping, Optional
@@ -22,6 +24,8 @@ from .schema import AttributeResult, BatchRunResult, CheckReport, ClusterSummary
 from .summary import summary_from_fulfillment
 
 logger = logging.getLogger(__name__)
+_manual_attribute_cache: dict[tuple[str, str], AttributeResult] = {}
+_manual_attribute_lock = threading.Lock()
 from .state_machine import TraceStateMachineRunner, flatten_gate_decisions, flatten_transition_decisions
 
 IMPL_ROOT = Path(__file__).resolve().parents[1]
@@ -97,6 +101,10 @@ def live_run(project_id: str, case: SingleTurnCase | Dict[str, Any]) -> RunTrace
     trace 和 live 串联方向单向依赖：trace 依赖 live，live 不依赖 trace。
     """
     spec = load_project(project_id)
+    if spec.local_deployment_enabled:
+        from .local_service import ensure_project_service
+
+        ensure_project_service(spec)
     adapter = load_adapter(spec)
     from impl.core.live_protocol import ProjectLive
     live = adapter.live()
@@ -161,8 +169,33 @@ def judge(project_id: str, trace: RunTrace, user_intent: Optional[str] = None) -
     return _enforce_judge_live_schema(project_id, trace, normalize_judge_result(result) or result)
 
 
-def attribute(project_id: str, trace: RunTrace, judge_result: JudgeResult) -> AttributeResult:
+def attribute(
+    project_id: str,
+    trace: RunTrace,
+    judge_result: JudgeResult,
+    *,
+    manual_override: bool = True,
+) -> AttributeResult:
     spec = load_project(project_id)
+    if not spec.attribution_enabled and not manual_override:
+        return AttributeResult(
+            trace_id=trace.trace_id,
+            project_id=trace.project_id,
+            case_id=str(trace.case_id or ""),
+            unresolved_reason="attribution disabled by project configuration",
+            summary={
+                "attribution_status": "skipped",
+                "execution_source": "project_default",
+                "manual_override": False,
+                "is_formal_attribution": False,
+            },
+        )
+    cache_key = (project_id, trace.trace_id)
+    if manual_override:
+        with _manual_attribute_lock:
+            cached = _manual_attribute_cache.get(cache_key)
+        if cached is not None:
+            return deepcopy(cached)
     adapter = load_adapter(spec)
     from impl.core.attribute_protocol import ProjectAttribute
     # 显式启用项目级 draft 时加载其协议实现，和 production 使用同一模板方法入口。
@@ -174,7 +207,8 @@ def attribute(project_id: str, trace: RunTrace, judge_result: JudgeResult) -> At
             from impl.core.attribute_environment import build_attribute_environment
             attr_inst.configure_execution_environment(build_attribute_environment(spec, trace))
         result = attr_inst.attribute_failure(trace, judge_result)
-        return _normalize_attribute_schema_payload(result)
+        normalized = _normalize_attribute_schema_payload(result)
+        return _record_manual_attribute(cache_key, normalized) if manual_override else normalized
     attr_inst = adapter.attribute()
     if not isinstance(attr_inst, ProjectAttribute):
         raise TypeError(f"{project_id} adapter.attribute() must return ProjectAttribute")
@@ -182,7 +216,19 @@ def attribute(project_id: str, trace: RunTrace, judge_result: JudgeResult) -> At
         from impl.core.attribute_environment import build_attribute_environment
         attr_inst.configure_execution_environment(build_attribute_environment(spec, trace))
     result = attr_inst.attribute_failure(trace, judge_result)
-    return _normalize_attribute_schema_payload(result)
+    normalized = _normalize_attribute_schema_payload(result)
+    return _record_manual_attribute(cache_key, normalized) if manual_override else normalized
+
+
+def _record_manual_attribute(key: tuple[str, str], result: AttributeResult) -> AttributeResult:
+    result.summary = {
+        **dict(result.summary or {}),
+        "execution_source": "manual_override",
+        "manual_override": True,
+    }
+    with _manual_attribute_lock:
+        _manual_attribute_cache[key] = deepcopy(result)
+    return result
 
 
 def _satisfied_fulfillment_status(judge_result: JudgeResult) -> Optional[str]:
@@ -205,7 +251,7 @@ def _resolve_attribute_fallback(
     if _satisfied_fulfillment_status(judge_result):
         context.attribute_result = incomplete_state_attribute_result(trace, judge_result)
         return context.attribute_result
-    context.attribute_result = attribute(project_id, trace, judge_result)
+    context.attribute_result = attribute(project_id, trace, judge_result, manual_override=False)
     return context.attribute_result
 
 
@@ -395,7 +441,7 @@ def _run_interactive_case(project_id: str, normalized: Any) -> Dict[str, Any]:
 
     # 继续单轮下游链路（judge/attribute/cluster/check/frontend_view）
     judge_result = judge(project_id, trace, user_intent=None)
-    attribute_result = attribute(project_id, trace, judge_result)
+    attribute_result = attribute(project_id, trace, judge_result, manual_override=False)
     cluster_summary = cluster(project_id, [attribute_result])
     check_report = check(project_id, trace, judge_result, attribute_result, cluster_summary)
     frontend = frontend_view(project_id, trace, judge_result, attribute_result, cluster_summary, check_report)
@@ -430,9 +476,11 @@ def _batch_case(index: int, case: Dict[str, Any], project_id: str, user_intent: 
         case_input = {"value": case_input}
     case_id = normalized.case_id if normalized else f"case-{index + 1}"
     case_expected = stored_case.intent.user_intent if stored_case.intent is not None else ""
-    MAX_RETRIES = 2
+    from .config import get_runtime_config
+
+    max_attempts = get_runtime_config().execution.case_retry_attempts
     last_exc = None
-    for attempt in range(MAX_RETRIES + 1):
+    for attempt in range(max_attempts):
         try:
             # 传完整 case（含 scenario/user_intent/metadata），run_chain 内部用 normalize_mock_case 恢复
             run = run_chain(project_id, runtime_case, user_intent=case_expected or user_intent)
@@ -448,7 +496,7 @@ def _batch_case(index: int, case: Dict[str, Any], project_id: str, user_intent: 
             return run
         except Exception as exc:
             last_exc = exc
-            if attempt < MAX_RETRIES:
+            if attempt + 1 < max_attempts:
                 continue
     error_text = str(last_exc)
     fallback = _fallback_decision(
@@ -471,7 +519,7 @@ def _batch_case(index: int, case: Dict[str, Any], project_id: str, user_intent: 
         normalized_request={},
         status="error",
         error=error_text,
-        runtime_logs=[f"batch case failed after {MAX_RETRIES + 1} attempts"],
+        runtime_logs=[f"batch case failed after {max_attempts} attempts"],
         execution_mode="error",
         output_source="batch_case_exception",
         fallbacks=[fallback],
@@ -607,7 +655,7 @@ def run_chain(project_id: str, case_input: Dict[str, Any], user_intent: Optional
     # normalize_mock_case 能从两种形状恢复完整 SingleTurnCase
     trace = live_run(project_id, case_input)
     judge_result = judge(project_id, trace, user_intent=user_intent)
-    attribute_result = attribute(project_id, trace, judge_result)
+    attribute_result = attribute(project_id, trace, judge_result, manual_override=False)
     cluster_summary = cluster(project_id, [attribute_result])
     check_report = check(project_id, trace, judge_result, attribute_result, cluster_summary)
     frontend = frontend_view(project_id, trace, judge_result, attribute_result, cluster_summary, check_report)

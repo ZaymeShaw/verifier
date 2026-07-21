@@ -14,7 +14,7 @@ import ast
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from impl.tools import ToolResult, VerifiableTool
 
@@ -167,11 +167,17 @@ class EndpointDiscovery:
 
     def _resolve_source_roots(self) -> List[Path]:
         roots: List[Path] = []
-        spec_root = Path(self.spec.root) if self.spec.root else Path()
+        source_path = getattr(self.spec, "source_path", None)
+        configured_source = source_path() if callable(source_path) else str(getattr(self.spec, "source_project", "") or "")
+        source_root = Path(configured_source) if configured_source else None
+        spec_root = Path(self.spec.root) if self.spec.root else None
         for rel in self.config.get("source_roots") or []:
             p = Path(str(rel))
             if not p.is_absolute():
-                p = (spec_root / p).resolve()
+                base = source_root or spec_root
+                if base is None:
+                    continue
+                p = (base / p).resolve()
             if p.exists():
                 roots.append(p)
         return roots

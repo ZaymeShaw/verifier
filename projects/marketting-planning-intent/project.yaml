@@ -1,23 +1,44 @@
-project_id: marketting-planning-intent
-name: 营销规划-意图识别
-description: 营销规划-意图识别
+schema_version: 1
 
-common:
-  source:
-    repo: /Users/xiaozijian/WorkSpace/package/marketing-planning
+project:
+  id: marketting-planning-intent
+  name: 营销规划意图识别
+  description: 单独评估营销规划服务的意图识别接口
 
+documents:
+  startup:
+    path: start.md
+    type: startup
+    required: true
+    description: 营销规划共享服务启动和健康检查
   api:
-    base_url: http://127.0.0.1:9006
-    endpoint: /api/v1/marketing-planning/intent-recognition
-    method: POST
-    timeout: 10
+    path: readme.md
+    type: api
+    required: true
+    description: 意图识别接口和响应说明
+  requirements:
+    path: marketplan-demand.md
+    type: requirements
+    required: true
+    description: 营销规划意图识别业务需求
+  intent_reference:
+    path: intent.md
+    type: reference
+    required: true
+    description: 意图标签和业务含义
 
-  start:
-    command: verifier/projects/marketting-planning-intent/start.md
-  
-  docs:
-    demand: verifier/projects/marketting-planning-intent/marketplan-demand.md
+source:
+  repository: ${MARKETTING_PLANNING_INTENT_REPO}
 
+onboarding:
+  interaction: single_turn
   ready: [reference]
 
-extra: {}
+environment:
+  variables:
+    MARKETTING_PLANNING_INTENT_REPO:
+      bind: source.repository
+      type: path
+      required: false
+      secret: false
+      description: 营销规划源码位置，仅供意图识别接入分析

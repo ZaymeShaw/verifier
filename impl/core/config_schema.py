@@ -103,12 +103,6 @@ class ConfigValueSource:
 
 
 @dataclass(frozen=True)
-class LegacyAliasSpec:
-    name: str
-    remove_after: str
-
-
-@dataclass(frozen=True)
 class EnvironmentVariableSpec:
     name: str
     bind: str
@@ -116,7 +110,6 @@ class EnvironmentVariableSpec:
     required: bool
     secret: bool
     description: str
-    legacy_aliases: tuple[LegacyAliasSpec, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -124,10 +117,7 @@ class EnvironmentRegistry:
     variables: Mapping[str, EnvironmentVariableSpec]
 
     def accepted_names(self) -> frozenset[str]:
-        names: set[str] = set(self.variables)
-        for variable in self.variables.values():
-            names.update(alias.name for alias in variable.legacy_aliases)
-        return frozenset(names)
+        return frozenset(self.variables)
 
 
 @dataclass(frozen=True)
@@ -204,6 +194,31 @@ class EmbeddingConfig:
 
 
 @dataclass(frozen=True)
+class ExecutionConfig:
+    case_retry_attempts: int
+    batch_concurrency_default: int
+    batch_concurrency_max: int
+    batch_event_history_limit: int
+
+
+@dataclass(frozen=True)
+class ContextConfig:
+    data_root: str
+    store_root: str
+    max_records_per_project: int
+    candidate_limit: int
+    load_limit: int
+    content_char_budget: int
+    query_limit: int
+    top_k_per_query: int
+
+
+@dataclass(frozen=True)
+class JudgeConfig:
+    raw_response_max_chars: int
+
+
+@dataclass(frozen=True)
 class RuntimeConfig:
     schema_version: int
     python: PythonConfig
@@ -212,6 +227,9 @@ class RuntimeConfig:
     browser: BrowserConfig
     llm: LlmConfig
     embedding: EmbeddingConfig
+    execution: ExecutionConfig
+    context: ContextConfig
+    judge: JudgeConfig
     environment: EnvironmentRegistry
     sources: Mapping[str, ConfigValueSource]
     warnings: tuple[str, ...] = ()
@@ -269,6 +287,23 @@ class RuntimeConfig:
                 "retrieval_top_k": self.embedding.retrieval_top_k,
                 "trust_env_proxy": self.embedding.trust_env_proxy,
             },
+            "execution": {
+                "case_retry_attempts": self.execution.case_retry_attempts,
+                "batch_concurrency_default": self.execution.batch_concurrency_default,
+                "batch_concurrency_max": self.execution.batch_concurrency_max,
+                "batch_event_history_limit": self.execution.batch_event_history_limit,
+            },
+            "context": {
+                "data_root": self.context.data_root,
+                "store_root": self.context.store_root,
+                "max_records_per_project": self.context.max_records_per_project,
+                "candidate_limit": self.context.candidate_limit,
+                "load_limit": self.context.load_limit,
+                "content_char_budget": self.context.content_char_budget,
+                "query_limit": self.context.query_limit,
+                "top_k_per_query": self.context.top_k_per_query,
+            },
+            "judge": {"raw_response_max_chars": self.judge.raw_response_max_chars},
             "sources": {
                 path: {"kind": source.kind, "name": source.name, "secret": source.secret}
                 for path, source in sorted(self.sources.items())
@@ -291,6 +326,9 @@ class ParsedRuntimeConfig:
     browser: BrowserConfig
     llm: LlmConfig
     embedding: EmbeddingConfig
+    execution: ExecutionConfig
+    context: ContextConfig
+    judge: JudgeConfig
     environment: EnvironmentRegistry
 
 
@@ -333,7 +371,7 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
     root = _mapping(data, "config")
     _reject_unknown(
         root,
-        {"schema_version", "python", "server", "uat", "browser", "llm", "embedding", "environment"},
+        {"schema_version", "python", "server", "uat", "browser", "llm", "embedding", "execution", "context", "judge", "environment"},
         "",
     )
     schema_version = _integer(_required(root, "schema_version", ""), "schema_version", minimum=1, maximum=1)
@@ -430,6 +468,36 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
         ),
     )
 
+    execution_data = _mapping(_required(root, "execution", ""), "execution")
+    _reject_unknown(execution_data, {"case_retry_attempts", "batch_concurrency_default", "batch_concurrency_max", "batch_event_history_limit"}, "execution")
+    execution = ExecutionConfig(
+        case_retry_attempts=_integer(_required(execution_data, "case_retry_attempts", "execution"), "execution.case_retry_attempts", minimum=1),
+        batch_concurrency_default=_integer(_required(execution_data, "batch_concurrency_default", "execution"), "execution.batch_concurrency_default", minimum=1),
+        batch_concurrency_max=_integer(_required(execution_data, "batch_concurrency_max", "execution"), "execution.batch_concurrency_max", minimum=1),
+        batch_event_history_limit=_integer(_required(execution_data, "batch_event_history_limit", "execution"), "execution.batch_event_history_limit", minimum=1),
+    )
+    if execution.batch_concurrency_default > execution.batch_concurrency_max:
+        raise ConfigError("execution.batch_concurrency_default cannot exceed batch_concurrency_max")
+
+    context_data = _mapping(_required(root, "context", ""), "context")
+    _reject_unknown(context_data, {"data_root", "store_root", "max_records_per_project", "candidate_limit", "load_limit", "content_char_budget", "query_limit", "top_k_per_query"}, "context")
+    context = ContextConfig(
+        data_root=_string(_required(context_data, "data_root", "context"), "context.data_root"),
+        store_root=_string(_required(context_data, "store_root", "context"), "context.store_root"),
+        max_records_per_project=_integer(_required(context_data, "max_records_per_project", "context"), "context.max_records_per_project", minimum=1),
+        candidate_limit=_integer(_required(context_data, "candidate_limit", "context"), "context.candidate_limit", minimum=1),
+        load_limit=_integer(_required(context_data, "load_limit", "context"), "context.load_limit", minimum=1),
+        content_char_budget=_integer(_required(context_data, "content_char_budget", "context"), "context.content_char_budget", minimum=1),
+        query_limit=_integer(_required(context_data, "query_limit", "context"), "context.query_limit", minimum=1),
+        top_k_per_query=_integer(_required(context_data, "top_k_per_query", "context"), "context.top_k_per_query", minimum=1),
+    )
+
+    judge_data = _mapping(_required(root, "judge", ""), "judge")
+    _reject_unknown(judge_data, {"raw_response_max_chars"}, "judge")
+    judge = JudgeConfig(
+        raw_response_max_chars=_integer(_required(judge_data, "raw_response_max_chars", "judge"), "judge.raw_response_max_chars", minimum=1)
+    )
+
     environment = _parse_environment(_required(root, "environment", ""))
     _validate_bindings(environment)
     return ParsedRuntimeConfig(
@@ -440,6 +508,9 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
         browser=browser,
         llm=llm,
         embedding=embedding,
+        execution=execution,
+        context=context,
+        judge=judge,
         environment=environment,
     )
 
@@ -488,29 +559,9 @@ def _parse_environment(value: Any) -> EnvironmentRegistry:
         variable_data = _mapping(raw_variable, f"environment.variables.{name}")
         _reject_unknown(
             variable_data,
-            {"bind", "type", "required", "secret", "description", "legacy_aliases"},
+            {"bind", "type", "required", "secret", "description"},
             f"environment.variables.{name}",
         )
-        aliases: list[LegacyAliasSpec] = []
-        raw_aliases = variable_data.get("legacy_aliases") or []
-        if not isinstance(raw_aliases, list):
-            raise ConfigError(f"invalid field environment.variables.{name}.legacy_aliases: expected list")
-        for index, raw_alias in enumerate(raw_aliases):
-            alias_path = f"environment.variables.{name}.legacy_aliases[{index}]"
-            alias_data = _mapping(raw_alias, alias_path)
-            _reject_unknown(alias_data, {"name", "remove_after"}, alias_path)
-            alias_name = _string(_required(alias_data, "name", alias_path), f"{alias_path}.name")
-            if not ENV_NAME_PATTERN.fullmatch(alias_name):
-                raise ConfigError(f"invalid environment variable alias {alias_name!r}")
-            aliases.append(
-                LegacyAliasSpec(
-                    name=alias_name,
-                    remove_after=_string(
-                        _required(alias_data, "remove_after", alias_path),
-                        f"{alias_path}.remove_after",
-                    ),
-                )
-            )
         variable = EnvironmentVariableSpec(
             name=name,
             bind=_string(_required(variable_data, "bind", f"environment.variables.{name}"), f"environment.variables.{name}.bind"),
@@ -521,12 +572,10 @@ def _parse_environment(value: Any) -> EnvironmentRegistry:
                 _required(variable_data, "description", f"environment.variables.{name}"),
                 f"environment.variables.{name}.description",
             ),
-            legacy_aliases=tuple(aliases),
         )
-        for accepted_name in (name, *(alias.name for alias in aliases)):
-            if accepted_name in accepted_names:
-                raise ConfigError(f"duplicate environment variable or alias {accepted_name}")
-            accepted_names.add(accepted_name)
+        if name in accepted_names:
+            raise ConfigError(f"duplicate environment variable {name}")
+        accepted_names.add(name)
         variables[name] = variable
     if not variables:
         raise ConfigError("invalid field environment.variables: expected non-empty mapping")
@@ -555,6 +604,8 @@ def _validate_bindings(environment: EnvironmentRegistry) -> None:
         "embedding.dimensions",
         "embedding.retrieval_top_k",
         "embedding.trust_env_proxy",
+        "context.data_root",
+        "context.store_root",
     }
     seen_bindings: set[str] = set()
     supported_types = {"string", "integer", "number", "boolean", "path", "url"}

@@ -112,7 +112,7 @@ def test_source_catalog_deduplicates_same_business_root_declared_twice(tmp_path)
 
     business_entries = [item for item in catalog if item["path"] == str(business_root / "intent.py")]
     assert len(business_entries) == 1
-    assert business_entries[0]["key"] == "ext_repo:intent.py"
+    assert business_entries[0]["key"] == "source_project:intent.py"
 
 
 

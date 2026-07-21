@@ -7,7 +7,6 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from impl.core.tools_protocol import ProjectTools
-from impl.core.schema import ProjectSpec
 from impl.tools import ToolRegistry, VerifiableTool
 from impl.projects.client_search.tools import (
     ClientSearchConditionCompareTool,
@@ -60,10 +59,9 @@ class ClientSearchTools(ProjectTools):
 
     def _source_config_paths(self) -> Dict[str, str]:
         """获取源码配置文件路径"""
-        from pathlib import Path
-        paths = {}
-        root = Path(self.spec.root)
-        for key, rel in (self.spec.documents or {}).items():
-            if key.startswith("source_") and "config/" in str(rel):
-                paths[key] = str((root / str(rel)).resolve())
-        return paths
+        return {
+            "source_field_definitions": self.spec.source_path("field_definitions"),
+            "source_field_enums": self.spec.source_path("field_enums"),
+            "source_value_mappings": self.spec.source_path("value_mappings"),
+            "source_enhanced_rules": self.spec.source_path("enhanced_rules"),
+        }

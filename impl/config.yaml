@@ -34,6 +34,25 @@ embedding:
   retrieval_top_k: 8
   trust_env_proxy: false
 
+execution:
+  case_retry_attempts: 3
+  batch_concurrency_default: 4
+  batch_concurrency_max: 8
+  batch_event_history_limit: 200
+
+context:
+  data_root: impl/data/context_runtime
+  store_root: impl/data/context_store
+  max_records_per_project: 200
+  candidate_limit: 20
+  load_limit: 8
+  content_char_budget: 100000
+  query_limit: 4
+  top_k_per_query: 5
+
+judge:
+  raw_response_max_chars: 4000
+
 environment:
   variables:
     PYTHON_EXECUTABLE:
@@ -98,9 +117,6 @@ environment:
       required: false
       secret: false
       description: 临时覆盖公共 LLM base URL
-      legacy_aliases:
-        - name: DEEPSEEK_BASE_URL
-          remove_after: P5
 
     DEEPSEEK_API_KEY:
       bind: llm.api_key
@@ -108,9 +124,6 @@ environment:
       required: true
       secret: true
       description: verifier 默认 DeepSeek API Key
-      legacy_aliases:
-        - name: LLM_API_KEY
-          remove_after: P5
 
     BAILIAN_API_KEY:
       bind: embedding.api_key
@@ -118,9 +131,6 @@ environment:
       required: false
       secret: true
       description: verifier 默认百炼 embedding API Key
-      legacy_aliases:
-        - name: DASHSCOPE_API_KEY
-          remove_after: P5
 
     BAILIAN_EMBEDDING_MODEL:
       bind: embedding.model
@@ -135,3 +145,17 @@ environment:
       required: false
       secret: false
       description: embedding HTTP 会话是否继承系统代理
+
+    CONTEXT_DATA_ROOT:
+      bind: context.data_root
+      type: path
+      required: false
+      secret: false
+      description: Context runtime 数据目录
+
+    CONTEXT_STORE_ROOT:
+      bind: context.store_root
+      type: path
+      required: false
+      secret: false
+      description: LLM context 记录存储目录

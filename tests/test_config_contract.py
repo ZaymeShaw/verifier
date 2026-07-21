@@ -46,6 +46,25 @@ embedding:
   retrieval_top_k: 8
   trust_env_proxy: false
 
+execution:
+  case_retry_attempts: 3
+  batch_concurrency_default: 4
+  batch_concurrency_max: 8
+  batch_event_history_limit: 200
+
+context:
+  data_root: impl/data/context_runtime
+  store_root: impl/data/context_store
+  max_records_per_project: 200
+  candidate_limit: 20
+  load_limit: 8
+  content_char_budget: 100000
+  query_limit: 4
+  top_k_per_query: 5
+
+judge:
+  raw_response_max_chars: 4000
+
 environment:
   variables:
     DEEPSEEK_API_KEY:
@@ -54,9 +73,6 @@ environment:
       required: true
       secret: true
       description: verifier default LLM credential
-      legacy_aliases:
-        - name: LLM_API_KEY
-          remove_after: P5
     LLM_MODEL:
       bind: llm.model
       type: string
@@ -178,25 +194,24 @@ def test_dotenv_parser_supports_comments_quotes_and_literal_hash(tmp_path):
     }
 
 
-def test_legacy_alias_is_centralized_warned_and_conflict_safe(tmp_path):
+def test_removed_legacy_alias_is_rejected_in_dotenv_and_ignored_in_process_env(tmp_path):
     config_path = _write_config(tmp_path)
+    dotenv_path = tmp_path / ".env"
+    dotenv_path.write_text("LLM_API_KEY=legacy-secret\n", encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="unregistered dotenv variable: LLM_API_KEY"):
+        resolve_runtime_config(
+            config_path=config_path,
+            dotenv_path=dotenv_path,
+            environ={},
+        )
 
     resolved = resolve_runtime_config(
         config_path=config_path,
-        dotenv_path=tmp_path / ".env",
+        dotenv_path=tmp_path / "missing.env",
         environ={"LLM_API_KEY": "legacy-secret"},
     )
-
-    assert resolved.llm.api_key == "legacy-secret"
-    assert resolved.source_for("llm.api_key").kind == "legacy_process_env"
-    assert any("LLM_API_KEY" in warning for warning in resolved.warnings)
-
-    with pytest.raises(ConfigError, match="both canonical.*DEEPSEEK_API_KEY.*LLM_API_KEY"):
-        resolve_runtime_config(
-            config_path=config_path,
-            dotenv_path=tmp_path / ".env",
-            environ={"DEEPSEEK_API_KEY": "new", "LLM_API_KEY": "old"},
-        )
+    assert resolved.llm.api_key == ""
 
 
 def test_missing_required_secret_is_reported_without_blocking_non_llm_config(tmp_path):

@@ -6,11 +6,12 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .config import ROOT as REPOSITORY_ROOT, get_runtime_config
 from .schema.context import ContextRecord, ContextRecordSummary
 
-ROOT = Path(__file__).resolve().parents[1]
-STORE_DIR = ROOT / "data" / "context_store"
-MAX_PER_PROJECT = 200
+_configured_store_root = Path(get_runtime_config().context.store_root)
+STORE_DIR = _configured_store_root if _configured_store_root.is_absolute() else (REPOSITORY_ROOT / _configured_store_root).resolve()
+MAX_PER_PROJECT = get_runtime_config().context.max_records_per_project
 
 
 def _ensure_dir(path: Path) -> None:

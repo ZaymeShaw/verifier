@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 from typing import Any, Mapping, Optional
 
+from ..config import ROOT, get_runtime_config
 from .embedding import UnconfiguredEmbeddingProvider
 from .errors import ContextValidationError
 from .policy import ContextPolicyResolver
@@ -12,19 +13,19 @@ from .resolvers import CompositeContentResolver, FileContentResolver
 from .runtime import ContextRuntime
 from .vector_index import SQLiteContextVectorIndex
 
-_IMPL_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_CONTEXT_DATA_ROOT = _IMPL_ROOT / "data" / "context_runtime"
+_configured_data_root = Path(get_runtime_config().context.data_root)
+DEFAULT_CONTEXT_DATA_ROOT = _configured_data_root if _configured_data_root.is_absolute() else (ROOT / _configured_data_root).resolve()
 
 DEFAULT_PUBLIC_POLICY = {
     # Fail closed until the common layer explicitly defines role/operation boundaries.
     "default": {
         "enabled": False,
         "allowed_statuses": ["active"],
-        "candidate_limit": 20,
-        "load_limit": 8,
-        "content_char_budget": 100_000,
-        "query_limit": 4,
-        "top_k_per_query": 5,
+        "candidate_limit": get_runtime_config().context.candidate_limit,
+        "load_limit": get_runtime_config().context.load_limit,
+        "content_char_budget": get_runtime_config().context.content_char_budget,
+        "query_limit": get_runtime_config().context.query_limit,
+        "top_k_per_query": get_runtime_config().context.top_k_per_query,
     }
 }
 

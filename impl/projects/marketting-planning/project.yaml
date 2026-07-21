@@ -1,116 +1,124 @@
-project_id: marketting-planning
-name: 营销规划评估项目
-description: 评估多轮、阶段化、SSE 输出的营销规划智能体，适配器负责会话隔离、流式结果归一化、参考契约对齐和阶段化 judge/attribute 上下文。
-adapter: adapter.py
-source_project: /Users/xiaozijian/WorkSpace/package/marketing-planning
-capabilities: ["live_run", "judge", "attribute", "cluster", "check", "scenario", "multi_turn", "sse_summary"]
-common:
-  ready: []
-api:
-  base_url: http://127.0.0.1:9006
-  endpoint: /api/v1/marketing-planning/stream
-  method: POST
-  timeout: 120
-application:
-  mode: existing_service_optional
-  primary_path: /api/v1/marketing-planning/stream
-  external_repo: /Users/xiaozijian/WorkSpace/package/marketing-planning
-  modify_external_repo: false
-attribute_draft:
-  enabled: true
-  module: draft/attribute.py
-  reason: Batch attribution validation through the 8021 UAT frontend.
-documents:
-  application: application.md
-  mock: mock.md
-  evaluation: evaluation.md
-  judge_boundary: judge_boundary.md
-  attribution: attribution.md
-  checklist: checklist.md
-  source_demand: ../../../projects/marketting-planning/marketplan-demand.md
-  source_risks: issue/20260611-marketplan-integration-risks.md
-  implementation_standard: implementation_standard.md
-frontend_extensions:
-  scenarios: ["intent_recognition", "clarification", "multi_turn_field_accumulation", "execution_planning", "fallback_data_unavailable", "non_agent_intent", "streaming_protocol"]
-  stages: ["intent", "clarification", "planning", "non_agent", "fallback", "unknown"]
-  path_types: ["premium_growth", "customer_growth", "product_mix", "activity", "unknown"]
-  error_taxonomy: ["request_normalization", "intent_recognition", "field_clarification", "session_merge", "path_dispatch", "planning_function", "result_assembly", "sse_generation", "adapter_extraction", "external_dependency", "needs_human_review", "none"]
-  event_aliases: {"intent_detected": ["reasoning_start", "intent_start", "intent_detected"], "planning_started": ["reasoning_end", "planning_start", "planning_started", "card_start"], "card_delta": ["card_message_content", "card_delta", "card_content"], "done": ["card_end", "done", "complete", "completed"], "clarification_requested": ["clarification_requested", "clarification", "clarify"], "non_agent_rejected": ["non_agent_rejected", "non_agent", "reject"]}
-  terminal_events: ["done", "complete", "completed", "card_end"]
-  core_forbidden_markers: ["marketing_planning", "marketting-planning", "/api/v1/marketing-planning/stream"]
-  implementation_standard:
-    api:
-      shape: marketing-planning SSE planning POST request and compact stage/card/fallback output
-      source: source_demand, application.md, and adapter.py
-    application:
-      start_run: existing optional service at api.base_url; start from external_repo when available
-      boundary: shared marketing-planning service is in scope; external data unavailability may be boundary metadata
-    request_construction:
-      builder: Adapter.build_request and _live_request_body normalize turns, session, scenario, expected stage, path types, and reference
-      required_inputs: [query]
-    output_extraction:
-      extractor: Adapter.extract_output summarizes SSE events, cards, stage, session, fallback, and errors
-      normalized_output: stage, event_summary, card_summary, session_summary, fallback, errors
-    reference_handling:
-      source_priority: [input_reference, expected_stage, expected_path_types, expected_cards, judge_generated, missing]
-      alignment: reference contract is compared against compact stage/card/event output shape
-    judge_boundary:
-      document: judge_boundary.md
-      gate: application_boundary determines judge_scope and fallback allowance before fulfillment reconciliation
-    attribution_trace:
-      document: attribution.md
-      trace_nodes: [request_normalization, intent_recognition, field_clarification, session_merge, path_dispatch, planning_function, result_assembly, sse_generation, adapter_extraction]
-    frontend_view:
-      live: render stage, event summary, cards, fallback, Judge, Attribute, and project extension panels
-      summary: show scenario-aware compact case-pool rows with Output and Reference aligned by stage/card/event semantics
-    batch_persistence:
-      case_shape: id, selected, input, output, reference, metadata, scenario, source, status, error
-      transient_results: do not persist full SSE raw stream, trace, judge, attribute, or frontend_view as durable case-pool source data
-    check_evidence:
-      documents: [application.md, mock.md, evaluation.md, judge_boundary.md, attribution.md, checklist.md]
-      tests: [tests.test_demand_check_gap]
-  check_rules:
-    require_scenario: true
+schema_version: 1
 
-role_assets:
-  - asset_id: attribute_investigation
-    kind: investigation
+project:
+  id: marketting-planning
+  name: 营销规划评估项目
+  description: 评估多轮、阶段化、SSE 输出的营销规划智能体，适配器负责会话隔离、流式结果归一化、参考契约对齐和阶段化 judge/attribute 上下文。
+  capabilities: [live_run, judge, attribute, cluster, check, scenario, multi_turn, sse_summary]
+  resources:
+    source:
+      repository: ""
+    documents:
+      application: application.md
+      mock: mock.md
+      evaluation: evaluation.md
+      judge_boundary: judge_boundary.md
+      attribution: attribution.md
+      checklist: checklist.md
+      implementation_standard: implementation_standard.md
+      integration_risks: issue/20260611-marketplan-integration-risks.md
+
+runtime:
+  mode: existing_service_optional
+  interaction:
+    mode: multi_turn
+  ready: []
+  services:
+    primary:
+      base_url: http://127.0.0.1:9006
+      endpoint: /api/v1/marketing-planning/stream
+      method: POST
+      timeout_seconds: 120
+
+verifier:
+  attribution:
     enabled: true
-    roles: [attribute]
-    production_path: investigation/attribute
-    candidate_path: draft/investigation/attribute
-    replace: true
-  - asset_id: attribute_investigation_tools
-    kind: tool
-    enabled: true
-    roles: [attribute]
-    production_path: tools/investigation_tools.py
-    candidate_path: draft/tools/investigation_tools.py
-    replace: true
-  - asset_id: attribute_investigation_context_builder
-    kind: context_builder
-    enabled: true
-    roles: [attribute]
-    production_path: context_builders/attribute_investigation.py
-    candidate_path: draft/context_builders/attribute_investigation.py
-    replace: true
-  - asset_id: judge_evaluation
-    kind: context
-    enabled: true
-    roles: [judge]
-    production_path: evaluation.md
-  - asset_id: judge_boundary
-    kind: context
-    enabled: true
-    roles: [judge]
-    production_path: judge_boundary.md
-  - asset_id: mock_contract
-    kind: context
-    enabled: true
-    roles: [mock]
-    production_path: mock.md
-  - asset_id: mock_application
-    kind: context
-    enabled: true
-    roles: [mock]
-    production_path: application.md
+  roles:
+    attribute:
+      draft:
+        enabled: true
+        module: draft/attribute.py
+        reason: Batch attribution validation through the 8021 UAT frontend.
+  presentation:
+    scenarios: [intent_recognition, clarification, multi_turn_field_accumulation, execution_planning, fallback_data_unavailable, non_agent_intent, streaming_protocol]
+    stages: [intent, clarification, planning, non_agent, fallback, unknown]
+    path_types: [premium_growth, customer_growth, product_mix, activity, unknown]
+    error_taxonomy: [request_normalization, intent_recognition, field_clarification, session_merge, path_dispatch, planning_function, result_assembly, sse_generation, adapter_extraction, external_dependency, needs_human_review, none]
+    event_aliases:
+      intent_detected: [reasoning_start, intent_start, intent_detected]
+      planning_started: [reasoning_end, planning_start, planning_started, card_start]
+      card_delta: [card_message_content, card_delta, card_content]
+      done: [card_end, done, complete, completed]
+      clarification_requested: [clarification_requested, clarification, clarify]
+      non_agent_rejected: [non_agent_rejected, non_agent, reject]
+    terminal_events: [done, complete, completed, card_end]
+    core_forbidden_markers: [marketing_planning, marketting-planning, /api/v1/marketing-planning/stream]
+  extra:
+    check_rules:
+      description: 营销规划 case 必须携带场景标识
+      value_type: mapping
+      schema_version: 1
+      consumers: [impl.core.check]
+      value:
+        require_scenario: true
+  assets:
+    - asset_id: attribute_investigation
+      kind: investigation
+      enabled: true
+      roles: [attribute]
+      production_path: investigation/attribute
+      candidate_path: draft/investigation/attribute
+      replace: true
+    - asset_id: attribute_investigation_tools
+      kind: tool
+      enabled: true
+      roles: [attribute]
+      production_path: tools/investigation_tools.py
+      candidate_path: draft/tools/investigation_tools.py
+      replace: true
+    - asset_id: attribute_investigation_context_builder
+      kind: context_builder
+      enabled: true
+      roles: [attribute]
+      production_path: context_builders/attribute_investigation.py
+      candidate_path: draft/context_builders/attribute_investigation.py
+      replace: true
+    - asset_id: judge_evaluation
+      kind: context
+      enabled: true
+      roles: [judge]
+      production_path: evaluation.md
+    - asset_id: judge_boundary
+      kind: context
+      enabled: true
+      roles: [judge]
+      production_path: judge_boundary.md
+    - asset_id: mock_contract
+      kind: context
+      enabled: true
+      roles: [mock]
+      production_path: mock.md
+    - asset_id: mock_application
+      kind: context
+      enabled: true
+      roles: [mock]
+      production_path: application.md
+
+environment:
+  variables:
+    MARKETTING_PLANNING_REPO:
+      bind: project.resources.source.repository
+      type: path
+      required: false
+      secret: false
+      description: 营销规划业务源码挂载位置
+    MARKETTING_PLANNING_BASE_URL:
+      bind: runtime.services.primary.base_url
+      type: url
+      required: false
+      secret: false
+      description: 营销规划服务地址
+
+metadata:
+  initialized_from: ../../../projects/marketting-planning/project.yaml
+  source_revision: null

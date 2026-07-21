@@ -1,192 +1,212 @@
-project_id: client_search
-name: 客户搜索评估示例
-description: 将客户搜索项目作为通用评估系统的第一个项目适配实现。
-adapter: adapter.py
-source_project: /Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search
-capabilities: ["live_run", "judge", "attribute", "cluster", "check"]
-common:
+schema_version: 1
+
+project:
+  id: client_search
+  name: 客户搜索评估示例
+  description: 将客户搜索项目作为通用评估系统的第一个项目适配实现。
+  capabilities: [live_run, judge, attribute, cluster, check]
+  resources:
+    source:
+      repository: ""
+      paths:
+        field_definitions: src/main/python/config/field_definitions_args.yaml
+        field_enums: src/main/python/config/field_enums_args.yaml
+        value_mappings: src/main/python/config/value_mappings_args.yaml
+        enhanced_rules: src/main/python/config/enhanced_rules_args.yaml
+    documents:
+      application: application.md
+      mock: mock.md
+      evaluation: evaluation.md
+      judge_boundary: judge_boundary_protocals.md
+      judge_standard: judge.md
+      attribution: attribution.md
+      checklist: checklist.md
+      implementation_standard: implementation_standard.md
+
+runtime:
+  mode: existing_service_required
+  interaction:
+    mode: single_turn
   ready: []
-field_provider_module: field_provider.py
-field_provider_class: ClientSearchFieldDefinitionProvider
-api:
-  base_url: http://127.0.0.1:8000
-  endpoint: /api/v1/client_search_query_parse_no_encipher
-  method: POST
-  timeout: 60
-application:
-  mode: existing_service
-  api_base: http://127.0.0.1:8000
-  downstream_search:
-    base_url: http://localhost:8081
-    endpoint: /api/v1/search/customer
-    method: POST
-    timeout: 3
-    enabled: true
-attribute_draft:
-  enabled: true
-  module: draft/attribute.py
-  reason: Batch attribution validation through the 8021 UAT frontend.
-documents:
-  application: application.md
-  mock: mock.md
-  evaluation: evaluation.md
-  judge_boundary: judge_boundary_protocals.md
-  judge_standard: judge.md
-  attribution: attribution.md
-  checklist: checklist.md
-  source_readme: ../../../projects/client_search/readme.md
-  source_config: ../../../projects/client_search/config.md
-  source_field_definitions: /Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_definitions_args.yaml
-  source_field_enums: /Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/field_enums_args.yaml
-  source_value_mappings: /Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/value_mappings_args.yaml
-  source_enhanced_rules: /Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python/config/enhanced_rules_args.yaml
-  source_prompt: ../../../projects/client_search/prompt.md
-  source_judge_boundary: ../../../projects/client_search/judge_boundary-template.md
-  implementation_standard: implementation_standard.md
-frontend_extensions:
-  core_forbidden_markers: ["query_logic", "conditions", "matched_level", "intent_summary", "clientAge", "annPremSegNum", "clientSex"]
-  implementation_standard:
-    api:
-      shape: client search query parse POST request and normalized query/filter output
-      source: source_readme, source_config, source_prompt, and adapter.py
-    application:
-      start_run: existing parser service at api.base_url with optional downstream customer search probe
-      boundary: parser output is in scope; downstream result-set verification follows application.downstream_search availability
-    request_construction:
-      builder: Adapter.build_request converts query/user intent fields into parser request body
-      required_inputs: [query]
-    output_extraction:
-      extractor: Adapter.extract_output normalizes parser response into query logic, conditions, routing, and downstream evidence
-      normalized_output: search intent and executable customer-search condition semantics
-    reference_handling:
-      source_priority: [input_reference, expected_intent, judge_generated, missing]
-      alignment: reference conditions are compared by business/search semantics rather than raw field surface only
-    judge_boundary:
-      document: judge_boundary_protocals.md
-      gate: application_boundary determines parser/downstream judge_scope before fulfillment reconciliation
-    attribution_trace:
-      document: attribution.md
-      trace_nodes: [request_normalization, prompt_config_mapping, parser_call, adapter_extraction, downstream_search_probe, judge, attribution]
-    frontend_view:
-      live: render normalized parser output and raw project fields under protocol extension panels
-      summary: align Output and Reference as formatted JSON with equal-size table cells and compact drill-downs
-    batch_persistence:
-      case_shape: id, selected, input, output, reference, metadata, scenario, source, status, error
-      transient_results: do not persist full trace, judge, attribute, downstream payload, or frontend_view as durable case-pool source data
-    check_evidence:
-      documents: [application.md, mock.md, evaluation.md, judge_boundary_protocals.md, judge.md, attribution.md, checklist.md]
-      tests: [tests.test_demand_check_gap]
-  semantic_equivalence_rules:
-    equivalent_condition_forms: [{"field":"pCategorys","operator":"MATCH","value":"疾病保险","equivalent_operator":"CONTAINS","equivalent_value":["疾病保险"],"basis":"source_value_mappings/source_field_definitions define pCategorys as list-like product category semantics; this equivalence is project-output normalization, not a historical case patch."},{"field":"pCategorys","operator":"CONTAINS","value":["年金保险"],"equivalent_operator":"CONTAINS","equivalent_value":["年金保险"],"basis":"source_field_enums confirm pCategorys valid values include 年金保险."},{"field":"pCategorys","operator":"CONTAINS","value":["两全保险"],"equivalent_operator":"CONTAINS","equivalent_value":["两全保险"],"basis":"source_field_enums confirm pCategorys valid values include 两全保险."}]
-    operator_compatibility:
-      - field: "clientTemperature"
-        operator: "MATCH"
-        equivalent_operator: "CONTAINS"
-        condition: "same field and exactly one identical enum/list value"
-        basis: "enum field where single-value MATCH is equivalent to CONTAINS with one-element list"
-      - field: "education"
-        operator: "MATCH"
-        equivalent_operator: "CONTAINS"
-        condition: "same field and exactly one identical enum/list value"
-        basis: "enum field where single-value MATCH is equivalent to CONTAINS with one-element list"
-      - field: "jujiaClientGrade"
-        operator: "MATCH"
-        equivalent_operator: "CONTAINS"
-        condition: "same field and exactly one identical enum/list value"
-        basis: "enum field where single-value MATCH is equivalent to CONTAINS with one-element list"
-      - field: "kangyangClientGrade"
-        operator: "MATCH"
-        equivalent_operator: "CONTAINS"
-        condition: "same field and exactly one identical enum/list value"
-        basis: "enum field where single-value MATCH is equivalent to CONTAINS with one-element list"
-      - field: "pTypes"
-        operator: "MATCH"
-        equivalent_operator: "CONTAINS"
-        condition: "same field and exactly one identical enum/list value"
-        basis: "enum field where single-value MATCH is equivalent to CONTAINS with one-element list"
-      - field: "polNoInfo.plancodeinfo.abbrname"
-        operator: "MATCH"
-        equivalent_operator: "CONTAINS"
-        condition: "same field and exactly one identical enum/list value"
-        basis: "enum field where single-value MATCH is equivalent to CONTAINS with one-element list"
-      - field: "searchClientName"
-        operator: "MATCH"
-        equivalent_operator: "CONTAINS"
-        condition: "same field and exactly one identical enum/list value"
-        basis: "name field where single-value MATCH is equivalent to CONTAINS with one-element list"
-      - field: "zxjyEquityGrade"
-        operator: "MATCH"
-        equivalent_operator: "CONTAINS"
-        condition: "same field and exactly one identical enum/list value"
-        basis: "enum field where single-value MATCH is equivalent to CONTAINS with one-element list"
-    equivalent_fields: [{"field":"familyInfo.familyclientage","equivalent_field":"familyInfo.familyclientbirthday","condition":"birthday date range is equivalent to the family member age boundary under the current date","basis":"source_enhanced_rules/source_config describe age-to-birthday executable conversion; judge should compare semantic boundary rather than raw field spelling."}]
+  services:
+    primary:
+      base_url: http://127.0.0.1:8000
+      endpoint: /api/v1/client_search_query_parse_no_encipher
+      method: POST
+      timeout_seconds: 60
+    dependencies:
+      downstream_search:
+        enabled: true
+        base_url: http://127.0.0.1:8081
+        endpoint: /api/v1/search/customer
+        method: POST
+        timeout_seconds: 3
 
-# ---- API endpoint 自动发现（spec/apitool_discover.md） ----
-# 通用引擎扫描业务系统源码中的路由装饰器，自动构建为 VerifiableTool。
-# 不配置此字段则跳过扫描，完全兼容现有项目。
-endpoint_discovery:
-  source_roots:
-    - /Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search/src/main/python
-  framework: fastapi
-  route_prefix: /api/v1
-  scan_patterns: ["*.py"]
-  exclude_patterns:
-    - "*/test/*"
-    - "*/migrations/*"
-    - "*/venv/*"
-    - "*/__pycache__/*"
-    - "*/logs/*"
-    - "*/docs/*"
-    - "*/docs_BAK/*"
-  # 黑名单：命中则在发现阶段排除，不落盘、不暴露给 LLM
-  blacklist:
-    methods: ["PUT", "DELETE", "PATCH"]
-    route_keywords: ["reload", "reindex", "delete", "update", "create", "write"]
+verifier:
+  attribution:
+    enabled: true
+  field_provider:
+    module: field_provider.py
+    class: ClientSearchFieldDefinitionProvider
+  endpoint_discovery:
+    enabled: true
+    framework: fastapi
+    source_roots: [src/main/python]
+    route_prefix: /api/v1
+    scan_patterns: ["*.py"]
+    exclude_patterns: ["*/test/*", "*/migrations/*", "*/venv/*", "*/__pycache__/*", "*/logs/*", "*/docs/*", "*/docs_BAK/*"]
+    blacklist:
+      methods: [PUT, DELETE, PATCH]
+      route_keywords: [reload, reindex, delete, update, create, write]
+  roles:
+    attribute:
+      draft:
+        enabled: true
+        module: draft/attribute.py
+        reason: Batch attribution validation through the 8021 UAT frontend.
+  presentation:
+    core_forbidden_markers: [query_logic, conditions, matched_level, intent_summary, clientAge, annPremSegNum, clientSex]
+  extra:
+    semantic_equivalence_rules:
+      description: 客户搜索条件在 judge 中允许采用的业务语义等价规则
+      value_type: mapping
+      schema_version: 1
+      consumers: [impl.projects.client_search.judge, impl.projects.client_search.tools.search_condition_compare]
+      value:
+        equivalent_condition_forms:
+          - field: pCategorys
+            operator: MATCH
+            value: 疾病保险
+            equivalent_operator: CONTAINS
+            equivalent_value: [疾病保险]
+            basis: pCategorys 是列表型产品类别字段，单值 MATCH 与单元素 CONTAINS 等价
+          - field: pCategorys
+            operator: CONTAINS
+            value: [年金保险]
+            equivalent_operator: CONTAINS
+            equivalent_value: [年金保险]
+            basis: 字段枚举包含年金保险
+          - field: pCategorys
+            operator: CONTAINS
+            value: [两全保险]
+            equivalent_operator: CONTAINS
+            equivalent_value: [两全保险]
+            basis: 字段枚举包含两全保险
+        operator_compatibility:
+          - field: clientTemperature
+            operator: MATCH
+            equivalent_operator: CONTAINS
+            condition: same field and exactly one identical enum/list value
+            basis: enum single-value equivalence
+          - field: education
+            operator: MATCH
+            equivalent_operator: CONTAINS
+            condition: same field and exactly one identical enum/list value
+            basis: enum single-value equivalence
+          - field: jujiaClientGrade
+            operator: MATCH
+            equivalent_operator: CONTAINS
+            condition: same field and exactly one identical enum/list value
+            basis: enum single-value equivalence
+          - field: kangyangClientGrade
+            operator: MATCH
+            equivalent_operator: CONTAINS
+            condition: same field and exactly one identical enum/list value
+            basis: enum single-value equivalence
+          - field: pTypes
+            operator: MATCH
+            equivalent_operator: CONTAINS
+            condition: same field and exactly one identical enum/list value
+            basis: enum single-value equivalence
+          - field: polNoInfo.plancodeinfo.abbrname
+            operator: MATCH
+            equivalent_operator: CONTAINS
+            condition: same field and exactly one identical enum/list value
+            basis: enum single-value equivalence
+          - field: searchClientName
+            operator: MATCH
+            equivalent_operator: CONTAINS
+            condition: same field and exactly one identical enum/list value
+            basis: name single-value equivalence
+          - field: zxjyEquityGrade
+            operator: MATCH
+            equivalent_operator: CONTAINS
+            condition: same field and exactly one identical enum/list value
+            basis: enum single-value equivalence
+        equivalent_fields:
+          - field: familyInfo.familyclientage
+            equivalent_field: familyInfo.familyclientbirthday
+            condition: birthday date range is equivalent to the family member age boundary under the current date
+            basis: age-to-birthday executable conversion
+  assets:
+    - asset_id: attribute_investigation
+      kind: investigation
+      enabled: true
+      roles: [attribute]
+      production_path: investigation/attribute
+      candidate_path: draft/investigation/attribute
+      replace: true
+    - asset_id: attribute_investigation_tools
+      kind: tool
+      enabled: true
+      roles: [attribute]
+      production_path: tools/investigation_tools.py
+      candidate_path: draft/tools/investigation_tools.py
+      replace: true
+    - asset_id: attribute_investigation_context_builder
+      kind: context_builder
+      enabled: true
+      roles: [attribute]
+      production_path: context_builders/attribute_investigation.py
+      candidate_path: draft/context_builders/attribute_investigation.py
+      replace: true
+    - asset_id: judge_evaluation
+      kind: context
+      enabled: true
+      roles: [judge]
+      production_path: evaluation.md
+    - asset_id: judge_boundary
+      kind: context
+      enabled: true
+      roles: [judge]
+      production_path: judge_boundary_protocals.md
+    - asset_id: judge_standard
+      kind: context
+      enabled: true
+      roles: [judge]
+      production_path: judge.md
+    - asset_id: mock_contract
+      kind: context
+      enabled: true
+      roles: [mock]
+      production_path: mock.md
+    - asset_id: mock_application
+      kind: context
+      enabled: true
+      roles: [mock]
+      production_path: application.md
 
-role_assets:
-  - asset_id: attribute_investigation
-    kind: investigation
-    enabled: true
-    roles: [attribute]
-    production_path: investigation/attribute
-    candidate_path: draft/investigation/attribute
-    replace: true
-  - asset_id: attribute_investigation_tools
-    kind: tool
-    enabled: true
-    roles: [attribute]
-    production_path: tools/investigation_tools.py
-    candidate_path: draft/tools/investigation_tools.py
-    replace: true
-  - asset_id: attribute_investigation_context_builder
-    kind: context_builder
-    enabled: true
-    roles: [attribute]
-    production_path: context_builders/attribute_investigation.py
-    candidate_path: draft/context_builders/attribute_investigation.py
-    replace: true
-  - asset_id: judge_evaluation
-    kind: context
-    enabled: true
-    roles: [judge]
-    production_path: evaluation.md
-  - asset_id: judge_boundary
-    kind: context
-    enabled: true
-    roles: [judge]
-    production_path: judge_boundary_protocals.md
-  - asset_id: judge_standard
-    kind: context
-    enabled: true
-    roles: [judge]
-    production_path: judge.md
-  - asset_id: mock_contract
-    kind: context
-    enabled: true
-    roles: [mock]
-    production_path: mock.md
-  - asset_id: mock_application
-    kind: context
-    enabled: true
-    roles: [mock]
-    production_path: application.md
+environment:
+  variables:
+    CLIENT_SEARCH_REPO:
+      bind: project.resources.source.repository
+      type: path
+      required: false
+      secret: false
+      description: 客户搜索业务源码挂载位置
+    CLIENT_SEARCH_BASE_URL:
+      bind: runtime.services.primary.base_url
+      type: url
+      required: false
+      secret: false
+      description: 客户搜索解析服务地址
+    CLIENT_SEARCH_DOWNSTREAM_BASE_URL:
+      bind: runtime.services.dependencies.downstream_search.base_url
+      type: url
+      required: false
+      secret: false
+      description: 下游客户搜索服务地址
+
+metadata:
+  initialized_from: ../../../projects/client_search/project.yaml
+  source_revision: null

@@ -23,14 +23,14 @@ from impl.tools import ToolResult, VerifiableTool
 
 def build_investigation_field_capability_tool():
     spec = load_project("client_search")
-    return build_field_capability_tool(spec.documents["source_field_definitions"])
+    return build_field_capability_tool(spec.source_path("field_definitions"))
 
 
 def build_investigation_rule_verify_tool():
     spec = load_project("client_search")
     return build_rule_verify_tool(
-        spec.documents["source_value_mappings"],
-        spec.documents["source_enhanced_rules"],
+        spec.source_path("value_mappings"),
+        spec.source_path("enhanced_rules"),
     )
 
 

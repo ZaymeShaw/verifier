@@ -2,140 +2,13 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
-import json
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Dict, List, Optional
 
 from .adapter_v2 import ProjectAdapter
+from .project_config import PROJECTS_DIR, resolve_project_config
 from .schema import ProjectSpec, RoleAssetMapping
-
-ROOT = Path(__file__).resolve().parents[1]
-PROJECTS_DIR = ROOT / "projects"
-
-
-def _parse_scalar(value: str) -> Any:
-    value = value.strip()
-    if value in {"true", "True"}:
-        return True
-    if value in {"false", "False"}:
-        return False
-    if value in {"null", "None"}:
-        return None
-    if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
-        return value[1:-1]
-    return value
-
-
-def load_simple_yaml(path: Path) -> Dict[str, Any]:
-    data: Dict[str, Any] = {}
-    stack: List[tuple[int, Any]] = [(-1, data)]
-    lines = [
-        (len(raw_line) - len(raw_line.lstrip(" ")), raw_line.strip())
-        for raw_line in path.read_text(encoding="utf-8").splitlines()
-        if raw_line.strip() and not raw_line.lstrip().startswith("#")
-    ]
-
-    for idx, (indent, line) in enumerate(lines):
-        while stack and indent <= stack[-1][0]:
-            stack.pop()
-        parent = stack[-1][1]
-
-        if line.startswith("- "):
-            rest = line[2:]
-            # Check if this is a list item with nested dict (e.g., "- field: value")
-            if ":" in rest:
-                # This is a dict item in a list
-                item_dict = {}
-                if isinstance(parent, list):
-                    parent.append(item_dict)
-                    stack.append((indent, item_dict))
-                # Parse the first key-value pair
-                key, value = rest.split(":", 1)
-                item_dict[key.strip()] = _parse_scalar(value.strip())
-            else:
-                # Simple scalar list item
-                item = _parse_scalar(rest)
-                if isinstance(parent, list):
-                    parent.append(item)
-            continue
-
-        if ":" not in line:
-            continue
-
-        key, value = line.split(":", 1)
-        key = key.strip()
-        value = value.strip()
-
-        if value == "":
-            # Look ahead to determine if next line is list or dict
-            next_container: Any = {}
-            if idx + 1 < len(lines):
-                next_indent, next_line = lines[idx + 1]
-                if next_indent > indent and next_line.startswith("- "):
-                    next_container = []
-            if isinstance(parent, dict):
-                parent[key] = next_container
-            stack.append((indent, next_container))
-        else:
-            parsed = _parse_scalar(value)
-            if value == "[]":
-                parsed = []
-            elif value == "{}":
-                parsed = {}
-            elif value.startswith("[") and value.endswith("]"):
-                inner = value[1:-1].strip()
-                if not inner:
-                    parsed = []
-                else:
-                    # flow-style scalar list: [a, b, c] → ['a','b','c']；JSON 合法值优先
-                    try:
-                        parsed = json.loads(value)
-                    except json.JSONDecodeError:
-                        items = [item.strip() for item in inner.split(",") if item.strip()]
-                        parsed = [_parse_scalar(item) for item in items]
-            elif value.startswith("{") and value.endswith("}"):
-                try:
-                    parsed = json.loads(value)
-                except json.JSONDecodeError:
-                    pass
-            if isinstance(parent, dict):
-                parent[key] = parsed
-    return data
-
-
-def _merged_common(data: Dict[str, Any]) -> Dict[str, Any]:
-    common = dict(data.get("common") or {})
-
-    if data.get("api") and not common.get("api"):
-        common["api"] = dict(data.get("api") or {})
-
-    application = dict(data.get("application") or {})
-    source = dict(common.get("source") or {})
-    if not source.get("repo") and application.get("external_repo"):
-        source["repo"] = application.get("external_repo")
-    common["source"] = source
-
-    start = dict(common.get("start") or {})
-    if not start.get("command") and application.get("start"):
-        start["command"] = application.get("start")
-    common["start"] = start
-
-    return common
-
-
-def _default_documents(project_root: Path) -> Dict[str, str]:
-    candidates = {
-        "application": "application.md",
-        "mock": "mock.md",
-        "evaluation": "evaluation.md",
-        "judge_boundary": "judge_boundary.md",
-        "attribution": "attribution.md",
-        "checklist": "checklist.md",
-        "implementation_standard": "implementation_standard.md",
-    }
-    return {key: rel for key, rel in candidates.items() if (project_root / rel).exists()}
-
 
 def list_projects() -> List[str]:
     if not PROJECTS_DIR.exists():
@@ -143,66 +16,8 @@ def list_projects() -> List[str]:
     return sorted(path.name for path in PROJECTS_DIR.iterdir() if (path / "project.yaml").exists())
 
 
-def _resolve_source_project(data: Dict[str, Any], project_root: Path) -> str:
-    """解析用户侧项目目录为绝对路径。
-
-    impl 侧运行时不依赖用户侧 project.yaml，但 LLM 可据此查找需求材料。
-    """
-    rel = data.get("source_project")
-    if not rel:
-        return ""
-    path = Path(str(rel))
-    if not path.is_absolute():
-        path = (project_root / path).resolve()
-    return str(path) if path.exists() else ""
-
-
 def load_project(project_id: str) -> ProjectSpec:
-    project_root = PROJECTS_DIR / project_id
-    cfg_path = project_root / "project.yaml"
-    if not cfg_path.exists():
-        raise FileNotFoundError(f"project config not found: {cfg_path}")
-    data = load_simple_yaml(cfg_path)
-    common = _merged_common(data)
-    documents = _default_documents(project_root)
-    documents.update(dict(data.get("documents") or {}))
-    return ProjectSpec(
-        project_id=str(data.get("project_id") or project_id),
-        name=str(data.get("name") or project_id),
-        description=str(data.get("description") or ""),
-        adapter="adapter.py",
-        field_provider_module=str(data.get("field_provider_module") or ""),
-        field_provider_class=str(data.get("field_provider_class") or ""),
-        capabilities=list(data.get("capabilities") or []),
-        common=common,
-        extra=dict(data.get("extra") or {}),
-        documents=documents,
-        api=dict(common.get("api") or data.get("api") or {}),
-        application=dict(data.get("application") or {}),
-        frontend_extensions=dict(data.get("frontend_extensions") or {}),
-        endpoint_discovery=dict(data.get("endpoint_discovery") or {}),
-        attribute_draft=dict(data.get("attribute_draft") or {}),
-        judge_draft=dict(data.get("judge_draft") or {}),
-        mock_draft=dict(data.get("mock_draft") or {}),
-        live_draft=dict(data.get("live_draft") or {}),
-        role_assets=[_role_asset_mapping(item) for item in data.get("role_assets") or []],
-        root=str(project_root),
-        source_project=_resolve_source_project(data, project_root),
-    )
-
-
-def _role_asset_mapping(value: Any) -> RoleAssetMapping:
-    if not isinstance(value, dict):
-        raise TypeError("project.yaml role_assets items must be mappings")
-    return RoleAssetMapping(
-        asset_id=str(value.get("asset_id") or ""),
-        kind=str(value.get("kind") or ""),
-        enabled=value.get("enabled") is True,
-        roles=[str(role) for role in value.get("roles") or []],
-        production_path=str(value.get("production_path") or ""),
-        candidate_path=str(value.get("candidate_path") or ""),
-        replace=value.get("replace") is True,
-    )
+    return resolve_project_config(project_id)
 
 
 def resolve_role_assets(spec: ProjectSpec, role: str, use_candidate: bool) -> List[Dict[str, Any]]:

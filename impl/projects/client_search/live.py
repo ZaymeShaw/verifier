@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import json
 import threading
-import time
 import urllib.error
 from pathlib import Path
 from typing import Any, Dict
@@ -15,7 +13,6 @@ from impl.core.live_protocol import RealServiceLive, SingleTurnLive
 from impl.core.live_transport import LiveTransport
 from impl.core.schema import (
     ExecutionTraceEvent,
-    JudgeResult,
     LiveRequest,
     MultiTurnCase,
     ProjectSpec,
@@ -69,12 +66,12 @@ FIELD_PATTERNS = {
 
 
 def source_config_paths(spec: ProjectSpec) -> Dict[str, str]:
-    paths = {}
-    root = Path(spec.root)
-    for key, rel in (spec.documents or {}).items():
-        if key.startswith("source_") and "config/" in str(rel):
-            paths[key] = str((root / str(rel)).resolve())
-    return paths
+    return {
+        "source_field_definitions": spec.source_path("field_definitions"),
+        "source_field_enums": spec.source_path("field_enums"),
+        "source_value_mappings": spec.source_path("value_mappings"),
+        "source_enhanced_rules": spec.source_path("enhanced_rules"),
+    }
 
 
 def external_boundary_sources(spec: ProjectSpec) -> Dict[str, Any]:

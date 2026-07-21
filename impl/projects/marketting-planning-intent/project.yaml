@@ -1,123 +1,123 @@
-project_id: marketting-planning-intent
-name: 营销规划意图识别评估项目
-description: 单独评估营销规划业务服务的 intent-recognition 单轮接口，与 marketting-planning 共享业务服务但测评边界只覆盖意图识别。
-adapter: adapter.py
-source_project: /Users/xiaozijian/WorkSpace/package/marketing-planning
-capabilities: ["live_run", "judge", "attribute", "cluster", "check", "scenario", "single_turn", "intent_recognition"]
-common:
-  ready: [reference]
-api:
-  base_url: http://127.0.0.1:9006
-  endpoint: /api/v1/marketing-planning/intent-recognition
-  method: POST
-  timeout: 60
-application:
-  mode: existing_service_optional
-  primary_path: /api/v1/marketing-planning/intent-recognition
-  shared_service_project: marketting-planning
-  external_repo: /Users/xiaozijian/WorkSpace/package/marketing-planning
-  modify_external_repo: false
-attribute_draft:
-  enabled: true
-  module: draft/attribute.py
-  reason: Batch attribution validation through the 8021 UAT frontend.
-documents:
-  application: application.md
-  mock: mock.md
-  evaluation: evaluation.md
-  judge_boundary: judge_boundary.md
-  attribution: attribution.md
-  checklist: checklist.md
-  implementation_standard: implementation_standard.md
-  source_demand: ../../../projects/marketting-planning-intent/marketplan-demand.md
-  source_readme: ../../../projects/marketting-planning-intent/readme.md
-  source_start: ../../../projects/marketting-planning-intent/start.md
-frontend_extensions:
-  scenarios: ["intent_recognition", "non_agent_intent", "fallback_unknown"]
-  intent_labels: ["other", "customer_portrait", "nbev_planning", "nbev_planning_fallback", "achievement_measurement_adjustment", "team_portrait", "target_value_adjustment"]
-  intent_descriptions:
-    other: "其他意图 — 完全超出NBEV规划范畴的query，如闲聊、非保险问题"
-    customer_portrait: "客户画像分析 — 了解客户分布、画像、客温客价等信息"
-    nbev_planning: "NBEV达成路径规划分析 — 从队伍/客户/产品维度分析如何达成NBEV目标"
-    nbev_planning_fallback: "NBEV规划兜底 — 属于NBEV规划范畴但当前暂不支持的能力（修改测算数值、AI研判等）"
-    achievement_measurement_adjustment: "达成测算调整 — 已完成某些路径测算后重新测算新路径"
-    team_portrait: "队伍画像分析 — 了解队伍分布、结构、产能等信息"
-    target_value_adjustment: "NBEV目标值调整 — 修改或调整NBEV目标值"
-  error_taxonomy: ["request_normalization", "intent_recognition", "label_mapping", "confidence", "adapter_extraction", "external_dependency", "needs_human_review", "none"]
-  core_forbidden_markers: ["marketing_planning", "marketting-planning-intent", "/api/v1/marketing-planning/intent-recognition"]
-  implementation_standard:
-    api:
-      shape: single-turn marketing intent-recognition POST request and normalized intent label/confidence output
-      source: source_demand, source_start, application.md, and adapter.py
-    application:
-      start_run: existing optional shared marketing-planning service at api.base_url
-      boundary: only intent recognition is evaluated; multi-turn planning and SSE card generation are out of scope
-    request_construction:
-      builder: Adapter.build_request normalizes query/user_text, scenario, expected_intent, and reference
-      required_inputs: [query]
-    output_extraction:
-      extractor: Adapter.extract_output normalizes recognized intent, confidence, raw label, and errors
-      normalized_output: intent, confidence, raw_intent, errors
-    reference_handling:
-      source_priority: [input_reference, expected_intent, judge_generated, missing]
-      alignment: reference intent label is aligned to the normalized intent field
-    judge_boundary:
-      document: judge_boundary.md
-      gate: boundary limits fulfillment assessment to single-turn intent label correctness and excludes planning result generation
-    attribution_trace:
-      document: attribution.md
-      trace_nodes: [request_normalization, intent_api_call, adapter_extraction, label_mapping, judge, attribution]
-    frontend_view:
-      live: render query, normalized intent output, reference intent, Judge, Attribute, and compact raw response drill-down
-      summary: render intent case pool with Output and Reference as aligned label/confidence JSON
-    batch_persistence:
-      case_shape: id, selected, input, output, reference, metadata, scenario, source, status, error
-      transient_results: do not persist full trace, judge, attribute, raw response, or frontend_view as durable case-pool source data
-    check_evidence:
-      documents: [application.md, mock.md, evaluation.md, judge_boundary.md, attribution.md, checklist.md]
-      tests: [tests.test_demand_check_gap]
-  check_rules:
-    require_scenario: true
+schema_version: 1
 
-role_assets:
-  - asset_id: attribute_investigation
-    kind: investigation
+project:
+  id: marketting-planning-intent
+  name: 营销规划意图识别评估项目
+  description: 单独评估营销规划业务服务的 intent-recognition 单轮接口，与 marketting-planning 共享业务服务但测评边界只覆盖意图识别。
+  capabilities: [live_run, judge, attribute, cluster, check, scenario, single_turn, intent_recognition]
+  resources:
+    source:
+      repository: ""
+    documents:
+      application: application.md
+      mock: mock.md
+      evaluation: evaluation.md
+      judge_boundary: judge_boundary.md
+      attribution: attribution.md
+      checklist: checklist.md
+      implementation_standard: implementation_standard.md
+      intent: intent.md
+
+runtime:
+  mode: existing_service_optional
+  interaction:
+    mode: single_turn
+  ready: [reference]
+  services:
+    primary:
+      base_url: http://127.0.0.1:9006
+      endpoint: /api/v1/marketing-planning/intent-recognition
+      method: POST
+      timeout_seconds: 60
+
+verifier:
+  attribution:
     enabled: true
-    roles: [attribute]
-    production_path: investigation/attribute
-    candidate_path: draft/investigation/attribute
-    replace: true
-  - asset_id: attribute_investigation_tools
-    kind: tool
-    enabled: true
-    roles: [attribute]
-    production_path: tools/investigation_tools.py
-    candidate_path: draft/tools/investigation_tools.py
-    replace: true
-  - asset_id: attribute_investigation_context_builder
-    kind: context_builder
-    enabled: true
-    roles: [attribute]
-    production_path: context_builders/attribute_investigation.py
-    candidate_path: draft/context_builders/attribute_investigation.py
-    replace: true
-  - asset_id: judge_evaluation
-    kind: context
-    enabled: true
-    roles: [judge]
-    production_path: evaluation.md
-  - asset_id: judge_boundary
-    kind: context
-    enabled: true
-    roles: [judge]
-    production_path: judge_boundary.md
-  - asset_id: mock_contract
-    kind: context
-    enabled: true
-    roles: [mock]
-    production_path: mock.md
-  - asset_id: mock_application
-    kind: context
-    enabled: true
-    roles: [mock]
-    production_path: application.md
+  roles:
+    attribute:
+      draft:
+        enabled: true
+        module: draft/attribute.py
+        reason: Batch attribution validation through the 8021 UAT frontend.
+  presentation:
+    scenarios: [intent_recognition, non_agent_intent, fallback_unknown]
+    intent_labels: [other, customer_portrait, nbev_planning, nbev_planning_fallback, achievement_measurement_adjustment, team_portrait, target_value_adjustment]
+    intent_descriptions:
+      other: 其他意图 — 完全超出 NBEV 规划范畴
+      customer_portrait: 客户画像分析
+      nbev_planning: NBEV 达成路径规划分析
+      nbev_planning_fallback: NBEV 规划兜底
+      achievement_measurement_adjustment: 达成测算调整
+      team_portrait: 队伍画像分析
+      target_value_adjustment: NBEV 目标值调整
+    error_taxonomy: [request_normalization, intent_recognition, label_mapping, confidence, adapter_extraction, external_dependency, needs_human_review, none]
+    core_forbidden_markers: [marketing_planning, marketting-planning-intent, /api/v1/marketing-planning/intent-recognition]
+  extra:
+    check_rules:
+      description: 意图识别 case 必须携带场景标识
+      value_type: mapping
+      schema_version: 1
+      consumers: [impl.core.check]
+      value:
+        require_scenario: true
+  assets:
+    - asset_id: attribute_investigation
+      kind: investigation
+      enabled: true
+      roles: [attribute]
+      production_path: investigation/attribute
+      candidate_path: draft/investigation/attribute
+      replace: true
+    - asset_id: attribute_investigation_tools
+      kind: tool
+      enabled: true
+      roles: [attribute]
+      production_path: tools/investigation_tools.py
+      candidate_path: draft/tools/investigation_tools.py
+      replace: true
+    - asset_id: attribute_investigation_context_builder
+      kind: context_builder
+      enabled: true
+      roles: [attribute]
+      production_path: context_builders/attribute_investigation.py
+      candidate_path: draft/context_builders/attribute_investigation.py
+      replace: true
+    - asset_id: judge_evaluation
+      kind: context
+      enabled: true
+      roles: [judge]
+      production_path: evaluation.md
+    - asset_id: judge_boundary
+      kind: context
+      enabled: true
+      roles: [judge]
+      production_path: judge_boundary.md
+    - asset_id: mock_contract
+      kind: context
+      enabled: true
+      roles: [mock]
+      production_path: mock.md
+    - asset_id: mock_application
+      kind: context
+      enabled: true
+      roles: [mock]
+      production_path: application.md
+
+environment:
+  variables:
+    MARKETTING_PLANNING_INTENT_REPO:
+      bind: project.resources.source.repository
+      type: path
+      required: false
+      secret: false
+      description: 营销规划业务源码挂载位置（意图识别项目）
+    MARKETTING_PLANNING_INTENT_BASE_URL:
+      bind: runtime.services.primary.base_url
+      type: url
+      required: false
+      secret: false
+      description: 营销规划意图识别服务地址
+
+metadata:
+  initialized_from: ../../../projects/marketting-planning-intent/project.yaml
+  source_revision: null
