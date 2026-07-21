@@ -9,7 +9,7 @@ from selenium.webdriver.chrome.service import Service
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time, json, os, re, sys, shutil
 from datetime import datetime
-from impl.core.config import get_uat_base_url
+from impl.core.config import get_browser_config, get_uat_base_url
 
 # ============== CONFIGURATION MODULE ==============
 # Configure which projects to test and how many cases per project
@@ -53,7 +53,7 @@ TS = datetime.now().strftime("%Y%m%d-%H%M%S")
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SDIR = f'{ROOT}/tmp/{TS}'
 os.makedirs(SDIR, exist_ok=True)
-DRIVER = '/Users/xiaozijian/WorkSpace/package/chromedriver-mac-arm64/chromedriver'
+DRIVER = get_browser_config().driver_path
 
 # Use configuration
 PROJECTS = CONFIG["projects"]

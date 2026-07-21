@@ -10,15 +10,16 @@ from selenium.webdriver.chrome.service import Service
 import time, json, os, sys
 from datetime import datetime
 
+from impl.core.config import get_browser_config, get_server_base_url
+
 TS = datetime.now().strftime("%Y%m%d-%H%M%S")
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SDIR = f'{ROOT}/tmp/{TS}-repro-ref'
 os.makedirs(SDIR, exist_ok=True)
-DRIVER = '/Users/xiaozijian/WorkSpace/package/chromedriver-mac-arm64/chromedriver'
+DRIVER = get_browser_config().driver_path
 
 PROJECT = 'client_search'
-# config.yaml 的 get_uat_base_url 返回 8021,但实际服务跑在 8020
-BASE_URL = 'http://127.0.0.1:8020'
+BASE_URL = get_server_base_url()
 
 
 def main():

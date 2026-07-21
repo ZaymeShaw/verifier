@@ -16,13 +16,16 @@
 
 - Python 3.11+（推荐通过 conda agno 环境提供，见 `impl/config.yaml` 的 `python.executable`）
 - 可访问被测业务服务
-- DeepSeek API Key，通过环境变量提供：
+- 复制根目录 `.env.example` 为本机 `.env`，填写已登记的本机值：
 
 ```bash
-export DEEPSEEK_API_KEY="你的 key"
+cp .env.example .env
+# 编辑 .env：
+# DEEPSEEK_API_KEY=你的本机密钥
+# PYTHON_EXECUTABLE=/path/to/agno/python
 ```
 
-非敏感运行默认值统一放在 `impl/config.yaml`。也支持 `LLM_API_KEY`、`DEEPSEEK_BASE_URL`、`LLM_BASE_URL` 等环境变量覆盖。
+非敏感默认值和允许覆盖的环境变量统一登记在 `impl/config.yaml`。进程环境优先于 `.env`；未登记变量不能影响 verifier。`LLM_API_KEY` 和 `DEEPSEEK_BASE_URL` 只作为有退出期限的旧别名兼容，不应继续用于新部署。
 
 ### Python 解释器选择
 
@@ -37,10 +40,11 @@ bash run.sh uat               # 启动 UAT 服务（端口 8021）
 bash run.sh cli projects      # 跑 impl.cli
 bash run.sh check1            # 跑 checklist check1
 bash run.sh api-check         # 跑 api-check（自动启动/复用 UAT 服务）
+bash run.sh config-check      # 校验公共配置、.env 和消费者旁路
 bash run.sh python <args>     # 用正确解释器跑任意 python 命令
 ```
 
-环境变量 `PYTHON_EXECUTABLE` 可覆盖 config.yaml 的解释器（最高优先级）。
+环境变量 `PYTHON_EXECUTABLE` 可覆盖 config.yaml 的解释器；该覆盖仍由统一 resolver 解析。修改 YAML、`.env` 或进程环境后需要重启 verifier。
 
 ## 启动前端分析服务
 

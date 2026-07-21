@@ -1,5 +1,7 @@
+schema_version: 1
+
 python:
-  executable: /Users/xiaozijian/miniconda3/envs/agno/bin/python
+  executable: python
 
 server:
   host: 127.0.0.1
@@ -9,10 +11,127 @@ uat:
   host: 127.0.0.1
   port: 8021
 
+browser:
+  driver_path: chromedriver
+
 llm:
   provider: deepseek
   model: deepseek-v4-pro
   base_url: https://api.deepseek.com/v1/chat/completions
-  api_key_env:
-    - DEEPSEEK_API_KEY
-    - LLM_API_KEY
+  temperature: 0
+  reasoning_effort: max
+  max_attempts: 2
+  retry_delay_seconds: 2
+  role_policies:
+    live_stub:
+      model: deepseek-chat
+      reasoning_effort: low
+
+embedding:
+  provider: bailian
+  model: text-embedding-v4
+  dimensions: 1024
+  retrieval_top_k: 8
+  trust_env_proxy: false
+
+environment:
+  variables:
+    PYTHON_EXECUTABLE:
+      bind: python.executable
+      type: string
+      required: false
+      secret: false
+      description: verifier 使用的 Python 解释器或可执行命令
+
+    VERIFIER_HOST:
+      bind: server.host
+      type: string
+      required: false
+      secret: false
+      description: verifier server 监听地址
+
+    VERIFIER_PORT:
+      bind: server.port
+      type: integer
+      required: false
+      secret: false
+      description: verifier server 监听端口
+
+    VERIFIER_UAT_HOST:
+      bind: uat.host
+      type: string
+      required: false
+      secret: false
+      description: verifier UAT 服务监听地址
+
+    VERIFIER_UAT_PORT:
+      bind: uat.port
+      type: integer
+      required: false
+      secret: false
+      description: verifier UAT 服务监听端口
+
+    CHROMEDRIVER_PATH:
+      bind: browser.driver_path
+      type: path
+      required: false
+      secret: false
+      description: Selenium checklist 使用的 ChromeDriver 可执行文件或命令
+
+    LLM_PROVIDER:
+      bind: llm.provider
+      type: string
+      required: false
+      secret: false
+      description: 临时覆盖公共 LLM provider
+
+    LLM_MODEL:
+      bind: llm.model
+      type: string
+      required: false
+      secret: false
+      description: 临时覆盖公共 LLM model
+
+    LLM_BASE_URL:
+      bind: llm.base_url
+      type: url
+      required: false
+      secret: false
+      description: 临时覆盖公共 LLM base URL
+      legacy_aliases:
+        - name: DEEPSEEK_BASE_URL
+          remove_after: P5
+
+    DEEPSEEK_API_KEY:
+      bind: llm.api_key
+      type: string
+      required: true
+      secret: true
+      description: verifier 默认 DeepSeek API Key
+      legacy_aliases:
+        - name: LLM_API_KEY
+          remove_after: P5
+
+    BAILIAN_API_KEY:
+      bind: embedding.api_key
+      type: string
+      required: false
+      secret: true
+      description: verifier 默认百炼 embedding API Key
+      legacy_aliases:
+        - name: DASHSCOPE_API_KEY
+          remove_after: P5
+
+    BAILIAN_EMBEDDING_MODEL:
+      bind: embedding.model
+      type: string
+      required: false
+      secret: false
+      description: 临时覆盖百炼 embedding model
+
+    BAILIAN_EMBEDDING_TRUST_ENV_PROXY:
+      bind: embedding.trust_env_proxy
+      type: boolean
+      required: false
+      secret: false
+      description: embedding HTTP 会话是否继承系统代理

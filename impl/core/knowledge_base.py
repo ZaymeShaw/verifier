@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import logging
 import math
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -17,7 +16,7 @@ try:
 except ImportError:  # pragma: no cover - optional in test env
     dashscope = None
 import yaml
-from impl.core.config import load_bailian_env_md_key
+from impl.core.config import get_embedding_config
 try:
     from agno.knowledge.document import Document
     from agno.knowledge.embedder import Embedder
@@ -36,26 +35,20 @@ except ImportError:  # pragma: no cover - optional in local schema/test env
 
 ROOT = Path(__file__).resolve().parents[2]
 KNOWLEDGE_ROOT = ROOT / "impl" / ".disabled_knowledge"  # Disabled to prevent Agno auto-persistence
-BAILIAN_EMBEDDING_MODEL = "text-embedding-v4"
-BAILIAN_EMBEDDING_DIMENSIONS = 1024
-DEFAULT_RETRIEVAL_TOP_K = 8
-
-
 class BailianEmbedder(Embedder):
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = BAILIAN_EMBEDDING_MODEL,
+        model: Optional[str] = None,
         *,
         trust_env_proxy: Optional[bool] = None,
     ):
-        super().__init__(dimensions=BAILIAN_EMBEDDING_DIMENSIONS)
-        self.api_key = api_key or os.environ.get("BAILIAN_API_KEY") or os.environ.get("DASHSCOPE_API_KEY") or load_bailian_env_md_key()
-        self.id = model
+        embedding_config = get_embedding_config()
+        super().__init__(dimensions=embedding_config.dimensions)
+        self.api_key = embedding_config.api_key if api_key is None else api_key
+        self.id = model or embedding_config.model
         if trust_env_proxy is None:
-            trust_env_proxy = os.environ.get("BAILIAN_EMBEDDING_TRUST_ENV_PROXY", "").strip().lower() in {
-                "1", "true", "yes", "on",
-            }
+            trust_env_proxy = embedding_config.trust_env_proxy
         # requests also inherits macOS system proxies via urllib.getproxies().
         # Embeddings use an explicit session so an unrelated desktop proxy cannot
         # silently become part of the ContextUnit evidence path. Deployments that
@@ -109,10 +102,11 @@ class BailianEmbedder(Embedder):
 
 
 class SemanticVectorDb(VectorDb):
-    def __init__(self, embedder: Optional[Embedder] = None):
+    def __init__(self, embedder: Optional[Embedder] = None, retrieval_top_k: Optional[int] = None):
         self.documents: List[Document] = []
         self._created = False
         self.embedder = embedder or BailianEmbedder()
+        self.retrieval_top_k = retrieval_top_k or get_embedding_config().retrieval_top_k
 
     def create(self) -> None:
         self._created = True
@@ -163,7 +157,8 @@ class SemanticVectorDb(VectorDb):
     async def async_upsert(self, content_hash: str, documents: List[Document], filters: Optional[Dict[str, Any]] = None) -> None:
         self.upsert(content_hash, documents, filters)
 
-    def search(self, query: str, limit: int = DEFAULT_RETRIEVAL_TOP_K, filters: Optional[Dict[str, Any]] = None) -> List[Document]:
+    def search(self, query: str, limit: Optional[int] = None, filters: Optional[Dict[str, Any]] = None) -> List[Document]:
+        effective_limit = self.retrieval_top_k if limit is None else int(limit)
         query_embedding = self.embedder.get_embedding(query)
         if not query_embedding:
             return []
@@ -174,9 +169,9 @@ class SemanticVectorDb(VectorDb):
             if document.embedding:
                 scored.append((_cosine_similarity(query_embedding, document.embedding), document))
         scored.sort(key=lambda item: -item[0])
-        return [document for _, document in scored[:limit]]
+        return [document for _, document in scored[:effective_limit]]
 
-    async def async_search(self, query: str, limit: int = DEFAULT_RETRIEVAL_TOP_K, filters: Optional[Dict[str, Any]] = None) -> List[Document]:
+    async def async_search(self, query: str, limit: Optional[int] = None, filters: Optional[Dict[str, Any]] = None) -> List[Document]:
         return self.search(query, limit, filters)
 
     def drop(self) -> None:
@@ -291,8 +286,8 @@ class ProjectKnowledgeBase:
         self._built = False
         self.config_root = config_root
         self.storage_dir = KNOWLEDGE_ROOT / project_id
-        self.max_results = DEFAULT_RETRIEVAL_TOP_K
-        self.vector_db = SemanticVectorDb()
+        self.max_results = get_embedding_config().retrieval_top_k
+        self.vector_db = SemanticVectorDb(retrieval_top_k=self.max_results)
 
     def _path_exists(self, path: Path) -> bool:
         return path.exists()
@@ -384,7 +379,7 @@ class ProjectKnowledgeBase:
             logger.warning(f"[knowledge_base] build failed for {self.project_id} from {field_definitions_path}: {e} — retrieve() will return empty results")
 
     def retrieve(self, query: str, num_documents: Optional[int] = None, **_: Any) -> List[Dict[str, Any]]:
-        limit = int(num_documents or DEFAULT_RETRIEVAL_TOP_K)
+        limit = int(num_documents or self.max_results)
         documents = self.vector_db.search(query=query, limit=limit)
         return [
             {
@@ -395,10 +390,10 @@ class ProjectKnowledgeBase:
             for document in documents
         ]
 
-    def search(self, query: str, top_k: int = DEFAULT_RETRIEVAL_TOP_K) -> List[FieldKnowledgeEntry]:
+    def search(self, query: str, top_k: Optional[int] = None) -> List[FieldKnowledgeEntry]:
         if not self.entries:
             return []
-        documents = self.vector_db.search(query=query, limit=top_k)
+        documents = self.vector_db.search(query=query, limit=top_k or self.max_results)
         fields = [document.meta_data.get("field") for document in documents if document.meta_data.get("field")]
         matched = []
         seen = set()
@@ -410,7 +405,7 @@ class ProjectKnowledgeBase:
                     break
         return matched
 
-    def to_context(self, query: str, top_k: int = DEFAULT_RETRIEVAL_TOP_K) -> str:
+    def to_context(self, query: str, top_k: Optional[int] = None) -> str:
         entries = self.search(query, top_k)
         if not entries:
             return ""

@@ -1,49 +1,31 @@
 from __future__ import annotations
 
 import json
-import os
 import re
+import time
 import uuid
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import json_repair
-import time
 
-ROOT = Path(__file__).resolve().parents[2]
-MODEL_DEFAULT = "deepseek-v4-pro"
-BASE_URL_DEFAULT = "https://api.deepseek.com/v1/chat/completions"
+from .config import get_llm_config, initialize_runtime_config
+
+if TYPE_CHECKING:
+    from .structured_output import StructuredOutputSpec
 
 # Session start timestamp: ensures sessions from different runs don't share context
 SESSION_START_TIME = int(time.time())
-
-
-# REMOVED: _project_memory_path() - this function creates impl/knowledge directory
-# which triggers Agno's auto-persistence. We don't use it anymore.
-
-
-def load_env_md_key() -> str:
-    path = ROOT / "env.md"
-    if not path.exists():
-        return ""
-    for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
-        if line.lower().startswith("deepseek key") and "：" in line:
-            return line.split("：", 1)[1].strip()
-        if line.lower().startswith("deepseek key") and ":" in line:
-            return line.split(":", 1)[1].strip()
-    return ""
+_USE_CONFIG = object()
 
 
 # CRITICAL: Set OPENAI_API_KEY before importing Agno modules.
 # Agno's DeepSeek inherits from OpenAILike, which uses OpenAI SDK internally.
-# The OpenAI SDK may cache environment variables at import time, so we must
-# set OPENAI_API_KEY to DeepSeek key BEFORE any Agno imports.
-_deepseek_key = os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("LLM_API_KEY") or load_env_md_key()
-if _deepseek_key and not os.environ.get("OPENAI_API_KEY"):
-    os.environ["OPENAI_API_KEY"] = _deepseek_key
+# The unified bootstrap may populate dependency compatibility state, but this
+# module never reads configuration from process environment or Markdown.
+initialize_runtime_config()
 
-from agno.agent import Agent
-from agno.models.deepseek import DeepSeek
+from agno.agent import Agent  # noqa: E402
+from agno.models.deepseek import DeepSeek  # noqa: E402
 
 
 class JsonExtractionError(ValueError):
@@ -402,6 +384,7 @@ def project_llm_client(spec: Any, role: str, knowledge: Any = None, tools: list 
     # CRITICAL: Do NOT create JsonDb or MemoryManager
     # CRITICAL: Do NOT set user_id - it triggers Agno to auto-create impl/knowledge/{user_id}/ directory
     client = LlmClient(
+        role=role,
         memory_db=None,  # NO persistence
         memory_manager=None,  # NO memories
         knowledge=knowledge,  # Will be set to None by caller
@@ -423,7 +406,9 @@ class LlmClient:
         self,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
-        model: str = MODEL_DEFAULT,
+        model: Optional[str] = None,
+        role: str = "",
+        config: Any = None,
         memory_manager: Any = None,
         memory_db: Any = None,
         knowledge: Any = None,
@@ -435,9 +420,16 @@ class LlmClient:
         compress_tool_results: bool = False,
         max_tool_calls_from_history: Optional[int] = None,
     ):
-        self.api_key = api_key or os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("LLM_API_KEY") or load_env_md_key()
-        self.base_url = base_url or os.environ.get("DEEPSEEK_BASE_URL") or os.environ.get("LLM_BASE_URL") or BASE_URL_DEFAULT
-        self.model = model
+        llm_config = config or get_llm_config()
+        policy = llm_config.policy_for(role)
+        self.provider = policy.provider
+        self.api_key = llm_config.api_key if api_key is None else api_key
+        self.base_url = policy.base_url if base_url is None else base_url
+        self.model = policy.model if model is None else model
+        self.temperature = policy.temperature
+        self.reasoning_effort = policy.reasoning_effort
+        self.max_attempts = llm_config.max_attempts
+        self.retry_delay_seconds = llm_config.retry_delay_seconds
         self.memory_manager = memory_manager
         self.memory_db = memory_db
         self.knowledge = knowledge
@@ -451,7 +443,7 @@ class LlmClient:
 
     def complete_json(self, system: str, user: str, trace_id: Optional[str] = None,
                       model: Optional[str] = None,
-                      reasoning_effort: Optional[str] = "max",
+                      reasoning_effort: Any = _USE_CONFIG,
                       output_spec: "StructuredOutputSpec" = None) -> Dict[str, Any]:
         """
         Complete JSON request with isolated session per trace.
@@ -463,8 +455,8 @@ class LlmClient:
                      session for this specific case/trace, preventing cross-case contamination.
             model: Optional model override (e.g. "deepseek-chat" for lightweight output stub).
                    Defaults to self.model.
-            reasoning_effort: Reasoning effort level. Defaults to "max" (judge/attribute 需要).
-                              output 扮演等轻量场景可传 "low" 或 None 关闭深度思考。
+            reasoning_effort: Reasoning effort level. Omitted values inherit the selected
+                              role policy; explicit None disables deep reasoning.
             output_spec: spec/struct_output.md 结构化输出约束，**必填**。
                 所有 LLM 调用都必须过结构化输出协议。如果实在没有明确输出结构（如自由文本分析），
                 传 FREE_TEXT_OUTPUT（单字段 result: str）。
@@ -480,7 +472,9 @@ class LlmClient:
                 "如果确实没有明确输出结构（如自由文本分析），请传 structured_output.FREE_TEXT_OUTPUT。"
             )
         if not self.api_key:
-            return {"error": "missing_api_key", "raw_text": "No DeepSeek API key configured."}
+            from .config import ConfigError
+
+            raise ConfigError("missing required configuration for llm: llm.api_key")
 
         # spec/struct_output.md：注入约束文案 + 返回后强校验阻断
         enforce_spec = output_spec
@@ -497,10 +491,13 @@ class LlmClient:
                 "id": model or self.model,
                 "api_key": self.api_key,
                 "base_url": _normalize_base_url(self.base_url),
-                "temperature": 0,
+                "temperature": self.temperature,
             }
-            if reasoning_effort:
-                model_kwargs["reasoning_effort"] = reasoning_effort
+            effective_reasoning_effort = (
+                self.reasoning_effort if reasoning_effort is _USE_CONFIG else reasoning_effort
+            )
+            if effective_reasoning_effort:
+                model_kwargs["reasoning_effort"] = effective_reasoning_effort
             model = DeepSeek(**model_kwargs)
 
             # CRITICAL: Use trace-specific session ID to isolate different cases
@@ -512,11 +509,10 @@ class LlmClient:
             # Each trace gets unique session, prevents cross-case contamination
             effective_session_id = f"{trace_id}:{SESSION_START_TIME}"
 
-            # Retry once on transient LLM failure (network/timeout/rate-limit).
-            # Without this, a single hiccup yields verdict=uncertain for the case.
+            # Retry policy is owned by RuntimeConfig, not copied into this consumer.
             last_exc: Optional[Exception] = None
             result = None
-            for attempt in range(2):
+            for attempt in range(self.max_attempts):
                 try:
                     agent = Agent(
                         model=model,
@@ -539,8 +535,8 @@ class LlmClient:
                 except Exception as exc:
                     last_exc = exc
                     print(f"[LLM retry] attempt {attempt + 1} failed: {exc}")
-                    if attempt == 0:
-                        time.sleep(2)
+                    if attempt + 1 < self.max_attempts:
+                        time.sleep(self.retry_delay_seconds)
             if last_exc is not None:
                 raise last_exc
 

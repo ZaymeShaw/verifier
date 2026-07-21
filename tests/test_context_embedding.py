@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 from types import SimpleNamespace
 
@@ -102,8 +104,13 @@ def test_bailian_embedder_does_not_inherit_desktop_proxy_by_default(monkeypatch)
     assert captured["session"].trust_env is False
 
 
-def test_bailian_embedder_can_explicitly_use_environment_proxy(monkeypatch):
-    monkeypatch.setenv("BAILIAN_EMBEDDING_TRUST_ENV_PROXY", "1")
+def test_bailian_embedder_uses_runtime_config_for_environment_proxy(monkeypatch):
+    embedding_config = knowledge_base.get_embedding_config()
+    monkeypatch.setattr(
+        knowledge_base,
+        "get_embedding_config",
+        lambda: replace(embedding_config, trust_env_proxy=True),
+    )
 
     embedder = knowledge_base.BailianEmbedder(api_key="test-key")
 

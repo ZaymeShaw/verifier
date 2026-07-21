@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import subprocess
@@ -9,7 +8,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from ..core import case_pool, context_store, pipeline
-from ..core.config import CONFIG_PATH, get_runtime_config
+from ..core.config import get_runtime_config
 from ..core.project_loader import list_projects
 from ..core.schema import (
     BatchRunResult,
@@ -34,9 +33,7 @@ SERVER_STARTED_AT = time.time()
 
 
 def _config_hash() -> str:
-    if not CONFIG_PATH.exists():
-        return ""
-    return hashlib.sha256(CONFIG_PATH.read_bytes()).hexdigest()[:12]
+    return get_runtime_config().fingerprint()
 
 
 def _git_commit() -> str:

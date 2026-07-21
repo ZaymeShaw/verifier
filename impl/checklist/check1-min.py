@@ -7,13 +7,13 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 import time, json, os, re, sys
 from datetime import datetime
-from impl.core.config import get_uat_base_url
+from impl.core.config import get_browser_config, get_uat_base_url
 
 TS = datetime.now().strftime("%Y%m%d-%H%M%S")
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SDIR = f'{ROOT}/tmp/{TS}-min'
 os.makedirs(SDIR, exist_ok=True)
-DRIVER = '/Users/xiaozijian/WorkSpace/package/chromedriver-mac-arm64/chromedriver'
+DRIVER = get_browser_config().driver_path
 
 # Minimal test: just 2 cases from client_search
 PROJECT = 'client_search'

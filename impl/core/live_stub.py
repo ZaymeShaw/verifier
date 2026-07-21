@@ -95,7 +95,7 @@ def generate_live_output(
     llm: Optional[LlmClient] = None,
 ) -> Optional[Dict[str, Any]]:
     """LLM 扮演被测系统，按 EXTRACT_OUTPUT_SCHEMA 产出合理回答（可能不严谨）。
-    弱模型：model=deepseek-chat, reasoning_effort=low。
+    模型与 reasoning 策略来自 RuntimeConfig 的 live_stub role policy。
     输入信息量：固定一句话简介 + 10% 随机系统信息。
     """
     live_schema = load_live_schema(project_id)
@@ -130,7 +130,7 @@ def generate_live_output(
 
     if llm is None:
         from .llm_client import LlmClient
-        client = LlmClient()
+        client = LlmClient(role="live_stub")
     else:
         client = llm
     client._project_id = project_id
@@ -138,8 +138,6 @@ def generate_live_output(
     trace_id = f"live-stub-{project_id}-{random.randint(0, 999999)}"
     data = client.complete_json(
         system, user, trace_id=trace_id,
-        model="deepseek-chat",
-        reasoning_effort="low",
         output_spec=output_spec,
     )
     if data.get("error"):

@@ -3,7 +3,18 @@ from __future__ import annotations
 import sys
 import types
 
+import pytest
+
+from impl.core import config as runtime_config
 from impl.server.__main__ import main
+
+
+@pytest.fixture(autouse=True)
+def reset_config_between_server_starts(monkeypatch, tmp_path):
+    monkeypatch.setattr(runtime_config, "DOTENV_PATH", tmp_path / ".env")
+    runtime_config.reset_runtime_config_for_tests()
+    yield
+    runtime_config.reset_runtime_config_for_tests()
 
 
 def test_server_uses_config_defaults(monkeypatch):

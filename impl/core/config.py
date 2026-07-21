@@ -1,226 +1,233 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+import threading
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from types import MappingProxyType
+from typing import Any, Mapping, Optional
+
+from .config_bootstrap import bootstrap_dependency_environment, parse_dotenv
+from .config_schema import (
+    BrowserConfig,
+    ConfigError,
+    ConfigValueSource,
+    EmbeddingConfig,
+    EnvironmentVariableSpec,
+    LlmConfig,
+    PythonConfig,
+    ParsedRuntimeConfig,
+    RuntimeConfig,
+    ServerConfig,
+    UatConfig,
+    SUPPORTED_LLM_PROVIDERS,
+    convert_environment_value,
+    load_yaml_document,
+    parse_runtime_document,
+)
+
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = ROOT / "impl" / "config.yaml"
-ENV_MD_PATH = ROOT / "env.md"
+DOTENV_PATH = ROOT / ".env"
 
-DEFAULT_PYTHON_EXECUTABLE = "python"
-DEFAULT_SERVER_HOST = "127.0.0.1"
-DEFAULT_SERVER_PORT = 8020
-DEFAULT_UAT_HOST = "127.0.0.1"
-DEFAULT_UAT_PORT = 8021
-DEFAULT_LLM_PROVIDER = "deepseek"
-DEFAULT_LLM_MODEL = "deepseek-v4-pro"
-DEFAULT_LLM_BASE_URL = "https://api.deepseek.com/v1/chat/completions"
-DEFAULT_LLM_API_KEY_ENV = ["DEEPSEEK_API_KEY", "LLM_API_KEY"]
+_RUNTIME_CONFIG: Optional[RuntimeConfig] = None
+_RUNTIME_CONFIG_LOCK = threading.Lock()
 
 
-class ConfigError(ValueError):
-    """Raised when runtime configuration is malformed."""
+def resolve_runtime_config(
+    *,
+    config_path: Optional[Path] = None,
+    dotenv_path: Optional[Path] = None,
+    environ: Optional[Mapping[str, str]] = None,
+    cli_overrides: Optional[Mapping[str, Any]] = None,
+) -> RuntimeConfig:
+    """Resolve the public configuration through one deterministic precedence chain."""
+    config_path = CONFIG_PATH if config_path is None else config_path
+    dotenv_path = DOTENV_PATH if dotenv_path is None else dotenv_path
+    parsed = parse_runtime_document(load_yaml_document(config_path))
+    process_environment = dict(os.environ if environ is None else environ)
+    dotenv = parse_dotenv(dotenv_path)
+    accepted_names = parsed.environment.accepted_names()
+    unknown_dotenv = sorted(set(dotenv) - accepted_names)
+    if unknown_dotenv:
+        raise ConfigError(f"unregistered dotenv variable: {unknown_dotenv[0]}")
 
+    values = _base_values(parsed)
+    yaml_source = config_path.name
+    sources = {
+        field_path: ConfigValueSource(kind="yaml", name=f"{yaml_source}#{field_path}")
+        for field_path in values
+        if field_path not in {"llm.api_key", "embedding.api_key"}
+    }
+    for role, policy in parsed.llm.role_policies.items():
+        for field_name in ("provider", "model", "base_url", "temperature", "reasoning_effort"):
+            if getattr(policy, field_name) is not None:
+                field_path = f"llm.role_policies.{role}.{field_name}"
+                sources[field_path] = ConfigValueSource(kind="yaml", name=f"{yaml_source}#{field_path}")
+    compatibility_warnings: list[str] = []
 
-@dataclass(frozen=True)
-class PythonConfig:
-    executable: str = DEFAULT_PYTHON_EXECUTABLE
-
-
-@dataclass(frozen=True)
-class ServerConfig:
-    host: str = DEFAULT_SERVER_HOST
-    port: int = DEFAULT_SERVER_PORT
-
-
-@dataclass(frozen=True)
-class UatConfig:
-    host: str = DEFAULT_UAT_HOST
-    port: int = DEFAULT_UAT_PORT
-
-
-@dataclass(frozen=True)
-class LlmConfig:
-    provider: str = DEFAULT_LLM_PROVIDER
-    model: str = DEFAULT_LLM_MODEL
-    base_url: str = DEFAULT_LLM_BASE_URL
-    api_key_env: tuple[str, ...] = tuple(DEFAULT_LLM_API_KEY_ENV)
-    api_key: str = ""
-
-
-@dataclass(frozen=True)
-class RuntimeConfig:
-    python: PythonConfig
-    server: ServerConfig
-    uat: UatConfig
-    llm: LlmConfig
-
-
-def _load_yaml_config(path: Path = CONFIG_PATH) -> Dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        import yaml
-    except ImportError as exc:  # pragma: no cover - depends on local env
-        raise ConfigError("Runtime config requires PyYAML. Install pyyaml before loading impl/config.yaml.") from exc
-    try:
-        loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        raise ConfigError(f"Failed to parse {path}: {exc}") from exc
-    if loaded is None:
-        return {}
-    if not isinstance(loaded, dict):
-        raise ConfigError(f"Invalid {path}: expected a mapping at the top level.")
-    return loaded
-
-
-def _section(data: Dict[str, Any], name: str) -> Dict[str, Any]:
-    value = data.get(name) or {}
-    if not isinstance(value, dict):
-        raise ConfigError(f"Invalid config {name}: expected a mapping.")
-    return value
-
-
-def _string_value(value: Any, default: str, field: str) -> str:
-    if value is None:
-        return default
-    text = str(value).strip()
-    if not text:
-        raise ConfigError(f"Invalid config {field}: expected a non-empty string.")
-    return text
-
-
-def _env_string(name: str, current: str) -> str:
-    value = os.environ.get(name)
-    return current if value is None or value == "" else value
-
-
-def _port_value(value: Any, default: int, field: str) -> int:
-    if value is None:
-        return default
-    try:
-        port = int(value)
-    except (TypeError, ValueError) as exc:
-        raise ConfigError(f"Invalid config {field}: expected port between 1 and 65535.") from exc
-    if port < 1 or port > 65535:
-        raise ConfigError(f"Invalid config {field}: expected port between 1 and 65535.")
-    return port
-
-
-def _env_port(name: str, current: int, field: str) -> int:
-    value = os.environ.get(name)
-    return current if value is None or value == "" else _port_value(value, current, field)
-
-
-def _api_key_env(value: Any) -> List[str]:
-    if value is None:
-        return list(DEFAULT_LLM_API_KEY_ENV)
-    if not isinstance(value, list):
-        raise ConfigError("Invalid config llm.api_key_env: expected a list of non-empty strings.")
-    names = []
-    for item in value:
-        name = str(item).strip()
-        if not name:
-            raise ConfigError("Invalid config llm.api_key_env: expected a list of non-empty strings.")
-        names.append(name)
-    if not names:
-        raise ConfigError("Invalid config llm.api_key_env: expected a list of non-empty strings.")
-    return names
-
-
-def load_env_md_value(prefixes: Any, path: Optional[Path] = None) -> str:
-    if path is None:
-        path = ENV_MD_PATH
-    if not path.exists():
-        return ""
-    normalized = tuple(prefix.lower() for prefix in prefixes)
-    for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
-        lowered = line.lower()
-        if not lowered.startswith(normalized):
+    by_binding: dict[str, EnvironmentVariableSpec] = {}
+    for variable in parsed.environment.variables.values():
+        by_binding[variable.bind] = variable
+        selected = _select_environment_value(variable, process_environment, dotenv)
+        if selected is None:
             continue
-        if "：" in line:
-            return line.split("：", 1)[1].strip()
-        if ":" in line:
-            return line.split(":", 1)[1].strip()
-    return ""
+        raw_value, source_kind, source_name, warning = selected
+        values[variable.bind] = convert_environment_value(variable, raw_value)
+        sources[variable.bind] = ConfigValueSource(
+            kind=source_kind,
+            name=source_name,
+            secret=variable.secret,
+        )
+        if warning:
+            compatibility_warnings.append(warning)
+
+    for field_path, raw_value in (cli_overrides or {}).items():
+        variable = by_binding.get(field_path)
+        if variable is None:
+            raise ConfigError(f"CLI override is not registered for field {field_path}")
+        if variable.secret:
+            raise ConfigError(f"secret field {field_path} cannot be passed through CLI")
+        values[field_path] = convert_environment_value(variable, str(raw_value))
+        sources[field_path] = ConfigValueSource(kind="cli", name=field_path, secret=False)
+
+    for field_path in ("server.port", "uat.port"):
+        if int(values[field_path]) > 65535:
+            raise ConfigError(f"invalid resolved field {field_path}: expected port between 1 and 65535")
+    if values["llm.provider"] not in SUPPORTED_LLM_PROVIDERS:
+        raise ConfigError(
+            f"invalid resolved field llm.provider: unsupported value {values['llm.provider']!r}"
+        )
+
+    missing_required = tuple(
+        sorted(
+            variable.bind
+            for variable in parsed.environment.variables.values()
+            if variable.required and values.get(variable.bind) in {None, ""}
+        )
+    )
+    return RuntimeConfig(
+        schema_version=parsed.schema_version,
+        python=PythonConfig(executable=str(values["python.executable"])),
+        server=ServerConfig(host=str(values["server.host"]), port=int(values["server.port"])),
+        uat=UatConfig(host=str(values["uat.host"]), port=int(values["uat.port"])),
+        browser=BrowserConfig(driver_path=str(values["browser.driver_path"])),
+        llm=LlmConfig(
+            provider=str(values["llm.provider"]),
+            model=str(values["llm.model"]),
+            base_url=str(values["llm.base_url"]),
+            api_key=str(values["llm.api_key"]),
+            temperature=float(values["llm.temperature"]),
+            reasoning_effort=str(values["llm.reasoning_effort"]),
+            max_attempts=int(values["llm.max_attempts"]),
+            retry_delay_seconds=float(values["llm.retry_delay_seconds"]),
+            role_policies=parsed.llm.role_policies,
+        ),
+        embedding=EmbeddingConfig(
+            provider=str(values["embedding.provider"]),
+            model=str(values["embedding.model"]),
+            api_key=str(values["embedding.api_key"]),
+            dimensions=int(values["embedding.dimensions"]),
+            retrieval_top_k=int(values["embedding.retrieval_top_k"]),
+            trust_env_proxy=bool(values["embedding.trust_env_proxy"]),
+        ),
+        environment=parsed.environment,
+        sources=MappingProxyType(dict(sources)),
+        warnings=tuple(compatibility_warnings),
+        missing_required=missing_required,
+    )
 
 
-def load_env_md_key() -> str:
-    return load_env_md_value(("deepseek key",))
+def _base_values(parsed: ParsedRuntimeConfig) -> dict[str, Any]:
+    return {
+        "python.executable": parsed.python.executable,
+        "server.host": parsed.server.host,
+        "server.port": parsed.server.port,
+        "uat.host": parsed.uat.host,
+        "uat.port": parsed.uat.port,
+        "browser.driver_path": parsed.browser.driver_path,
+        "llm.provider": parsed.llm.provider,
+        "llm.model": parsed.llm.model,
+        "llm.base_url": parsed.llm.base_url,
+        "llm.api_key": "",
+        "llm.temperature": parsed.llm.temperature,
+        "llm.reasoning_effort": parsed.llm.reasoning_effort,
+        "llm.max_attempts": parsed.llm.max_attempts,
+        "llm.retry_delay_seconds": parsed.llm.retry_delay_seconds,
+        "embedding.provider": parsed.embedding.provider,
+        "embedding.model": parsed.embedding.model,
+        "embedding.api_key": "",
+        "embedding.dimensions": parsed.embedding.dimensions,
+        "embedding.retrieval_top_k": parsed.embedding.retrieval_top_k,
+        "embedding.trust_env_proxy": parsed.embedding.trust_env_proxy,
+    }
 
 
-def load_bailian_env_md_key() -> str:
-    return load_env_md_value(("百炼key",))
+def _select_environment_value(
+    variable: EnvironmentVariableSpec,
+    process_environment: Mapping[str, str],
+    dotenv: Mapping[str, str],
+) -> Optional[tuple[str, str, str, str]]:
+    canonical_present = variable.name in process_environment or variable.name in dotenv
+    present_aliases = [
+        alias
+        for alias in variable.legacy_aliases
+        if alias.name in process_environment or alias.name in dotenv
+    ]
+    if canonical_present and present_aliases:
+        aliases = ", ".join(alias.name for alias in present_aliases)
+        raise ConfigError(
+            f"both canonical environment variable {variable.name} and legacy alias {aliases} are set"
+        )
+    if len(present_aliases) > 1:
+        aliases = ", ".join(alias.name for alias in present_aliases)
+        raise ConfigError(f"multiple legacy aliases are set for {variable.name}: {aliases}")
+    if canonical_present:
+        if variable.name in process_environment:
+            return process_environment[variable.name], "process_env", variable.name, ""
+        return dotenv[variable.name], "dotenv", variable.name, ""
+    if not present_aliases:
+        return None
+    alias = present_aliases[0]
+    if alias.name in process_environment:
+        source_kind = "legacy_process_env"
+        raw_value = process_environment[alias.name]
+    else:
+        source_kind = "legacy_dotenv"
+        raw_value = dotenv[alias.name]
+    warning = (
+        f"legacy environment alias {alias.name} was used for {variable.name}; "
+        f"migrate before {alias.remove_after}"
+    )
+    return raw_value, source_kind, alias.name, warning
 
 
-def _resolve_api_key(names: List[str]) -> str:
-    for name in names:
-        value = os.environ.get(name)
-        if value:
-            return value
-    return load_env_md_key()
+def initialize_runtime_config(
+    *,
+    cli_overrides: Optional[Mapping[str, Any]] = None,
+    force: bool = False,
+) -> RuntimeConfig:
+    """Resolve and freeze process configuration before runtime consumers start."""
+    global _RUNTIME_CONFIG
+    with _RUNTIME_CONFIG_LOCK:
+        if _RUNTIME_CONFIG is not None and not force:
+            if cli_overrides:
+                raise ConfigError("runtime config is already initialized; CLI overrides must be applied at startup")
+            return _RUNTIME_CONFIG
+        resolved = resolve_runtime_config(cli_overrides=cli_overrides)
+        bootstrap_dependency_environment(resolved.llm.api_key, os.environ)
+        _RUNTIME_CONFIG = resolved
+        return resolved
 
 
 def get_runtime_config() -> RuntimeConfig:
-    data = _load_yaml_config()
+    return initialize_runtime_config()
 
-    python_data = _section(data, "python")
-    server_data = _section(data, "server")
-    uat_data = _section(data, "uat")
-    llm_data = _section(data, "llm")
 
-    python_executable = _env_string(
-        "PYTHON_EXECUTABLE",
-        _string_value(python_data.get("executable"), DEFAULT_PYTHON_EXECUTABLE, "python.executable"),
-    )
-
-    server_host = _env_string(
-        "VERIFIER_HOST",
-        _string_value(server_data.get("host"), DEFAULT_SERVER_HOST, "server.host"),
-    )
-    server_port = _env_port(
-        "VERIFIER_PORT",
-        _port_value(server_data.get("port"), DEFAULT_SERVER_PORT, "server.port"),
-        "server.port",
-    )
-
-    uat_host = _env_string(
-        "VERIFIER_UAT_HOST",
-        _string_value(uat_data.get("host"), DEFAULT_UAT_HOST, "uat.host"),
-    )
-    uat_port = _env_port(
-        "VERIFIER_UAT_PORT",
-        _port_value(uat_data.get("port"), DEFAULT_UAT_PORT, "uat.port"),
-        "uat.port",
-    )
-
-    api_key_env = _api_key_env(llm_data.get("api_key_env"))
-    llm_provider = _env_string(
-        "LLM_PROVIDER",
-        _string_value(llm_data.get("provider"), DEFAULT_LLM_PROVIDER, "llm.provider"),
-    )
-    llm_model = _env_string(
-        "LLM_MODEL",
-        _string_value(llm_data.get("model"), DEFAULT_LLM_MODEL, "llm.model"),
-    )
-    llm_base_url = _string_value(llm_data.get("base_url"), DEFAULT_LLM_BASE_URL, "llm.base_url")
-    llm_base_url = _env_string("LLM_BASE_URL", llm_base_url)
-    llm_base_url = _env_string("DEEPSEEK_BASE_URL", llm_base_url)
-
-    return RuntimeConfig(
-        python=PythonConfig(executable=python_executable),
-        server=ServerConfig(host=server_host, port=server_port),
-        uat=UatConfig(host=uat_host, port=uat_port),
-        llm=LlmConfig(
-            provider=llm_provider,
-            model=llm_model,
-            base_url=llm_base_url,
-            api_key_env=tuple(api_key_env),
-            api_key=_resolve_api_key(api_key_env),
-        ),
-    )
+def reset_runtime_config_for_tests() -> None:
+    global _RUNTIME_CONFIG
+    with _RUNTIME_CONFIG_LOCK:
+        _RUNTIME_CONFIG = None
 
 
 def get_python_config() -> PythonConfig:
@@ -235,10 +242,23 @@ def get_uat_config() -> UatConfig:
     return get_runtime_config().uat
 
 
+def get_browser_config() -> BrowserConfig:
+    return get_runtime_config().browser
+
+
 def get_llm_config() -> LlmConfig:
     return get_runtime_config().llm
 
 
+def get_embedding_config() -> EmbeddingConfig:
+    return get_runtime_config().embedding
+
+
 def get_uat_base_url(scheme: str = "http") -> str:
     config = get_uat_config()
+    return f"{scheme}://{config.host}:{config.port}"
+
+
+def get_server_base_url(scheme: str = "http") -> str:
+    config = get_server_config()
     return f"{scheme}://{config.host}:{config.port}"
