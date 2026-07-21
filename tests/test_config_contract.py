@@ -6,7 +6,7 @@ import pytest
 
 from impl.core.config import ConfigError, resolve_runtime_config
 from impl.core.config_bootstrap import parse_dotenv, render_env_example
-from impl.core.config_check import check_runtime_config_contract
+from impl.core.config_check import _scan_public_config_bypasses, check_runtime_config_contract
 
 
 BASE_CONFIG = """
@@ -27,9 +27,10 @@ browser:
   driver_path: chromedriver
 
 llm:
+  protocol: openai_compatible
   provider: deepseek
   model: deepseek-v4-pro
-  base_url: https://api.deepseek.com/v1/chat/completions
+  base_url: https://api.deepseek.com/v1
   temperature: 0
   reasoning_effort: max
   max_attempts: 2
@@ -161,6 +162,38 @@ def test_resolver_rejects_provider_values_without_a_consumer_implementation(tmp_
         )
 
 
+def test_resolver_requires_supported_llm_protocol(tmp_path):
+    config_path = _write_config(
+        tmp_path,
+        BASE_CONFIG.replace("protocol: openai_compatible", "protocol: provider_native", 1),
+    )
+
+    with pytest.raises(ConfigError, match="llm.protocol.*unsupported"):
+        resolve_runtime_config(
+            config_path=config_path,
+            dotenv_path=tmp_path / ".env",
+            environ={},
+        )
+
+
+def test_resolver_rejects_operation_path_as_llm_base_url(tmp_path):
+    config_path = _write_config(
+        tmp_path,
+        BASE_CONFIG.replace(
+            "https://api.deepseek.com/v1",
+            "https://api.deepseek.com/v1/chat/completions",
+            1,
+        ),
+    )
+
+    with pytest.raises(ConfigError, match="llm.base_url.*API root URL"):
+        resolve_runtime_config(
+            config_path=config_path,
+            dotenv_path=tmp_path / ".env",
+            environ={},
+        )
+
+
 @pytest.mark.parametrize(
     "line, message",
     [
@@ -252,6 +285,7 @@ def test_role_policy_is_explicit_and_inherits_public_defaults(tmp_path):
     )
 
     policy = resolved.llm.policy_for("live_stub")
+    assert policy.protocol == "openai_compatible"
     assert policy.model == "deepseek-chat"
     assert policy.reasoning_effort == "low"
     assert resolved.llm.policy_for("judge").model == "deepseek-v4-pro"
@@ -280,3 +314,19 @@ def test_repository_public_config_contract_has_no_consumer_bypass():
     report = check_runtime_config_contract(root=root, environ={})
 
     assert report.ok, report.to_dict()
+
+
+def test_config_check_rejects_provider_specific_and_constructor_bypasses(tmp_path):
+    core = tmp_path / "impl" / "core"
+    core.mkdir(parents=True)
+    (core / "provider_bypass.py").write_text(
+        "from agno.models.deepseek import DeepSeek\n"
+        "model = DeepSeek(id='hard-coded')\n"
+        "client = LlmClient(api_key='hard-coded')\n",
+        encoding="utf-8",
+    )
+
+    issues = _scan_public_config_bypasses(tmp_path, {"DEEPSEEK_API_KEY"})
+
+    assert any(issue.code == "public_config_fallback" for issue in issues)
+    assert any(issue.code == "llm_config_bypass" for issue in issues)

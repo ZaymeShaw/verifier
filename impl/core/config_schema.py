@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 ENV_NAME_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
 ROLE_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 SUPPORTED_LLM_PROVIDERS = frozenset({"deepseek"})
+SUPPORTED_LLM_PROTOCOLS = frozenset({"openai_compatible"})
 SUPPORTED_EMBEDDING_PROVIDERS = frozenset({"bailian"})
 
 
@@ -88,6 +89,20 @@ def _url(value: Any, field_path: str) -> str:
     return text
 
 
+def openai_compatible_base_url(value: Any, field_path: str) -> str:
+    """Validate and canonicalize an OpenAI-compatible API root URL."""
+    text = _url(value, field_path)
+    parsed = urlparse(text)
+    if parsed.query or parsed.fragment:
+        raise ConfigError(f"invalid field {field_path}: API base URL cannot contain query or fragment")
+    path = parsed.path.rstrip("/")
+    if path.endswith("/chat/completions") or path.endswith("/responses"):
+        raise ConfigError(
+            f"invalid field {field_path}: expected API root URL without operation path"
+        )
+    return text.rstrip("/")
+
+
 def _choice(value: Any, field_path: str, choices: frozenset[str]) -> str:
     text = _string(value, field_path)
     if text not in choices:
@@ -144,6 +159,7 @@ class BrowserConfig:
 
 @dataclass(frozen=True)
 class LlmRolePolicy:
+    protocol: str
     provider: str
     model: str
     base_url: str
@@ -162,6 +178,7 @@ class LlmRolePolicyOverride:
 
 @dataclass(frozen=True)
 class LlmConfig:
+    protocol: str
     provider: str
     model: str
     base_url: str
@@ -175,6 +192,7 @@ class LlmConfig:
     def policy_for(self, role: str) -> LlmRolePolicy:
         override = self.role_policies.get(str(role or ""), LlmRolePolicyOverride())
         return LlmRolePolicy(
+            protocol=self.protocol,
             provider=override.provider or self.provider,
             model=override.model or self.model,
             base_url=override.base_url or self.base_url,
@@ -269,6 +287,7 @@ class RuntimeConfig:
             "uat": {"host": self.uat.host, "port": self.uat.port},
             "browser": {"driver_path": self.browser.driver_path},
             "llm": {
+                "protocol": self.llm.protocol,
                 "provider": self.llm.provider,
                 "model": self.llm.model,
                 "base_url": self.llm.base_url,
@@ -407,6 +426,7 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
     _reject_unknown(
         llm_data,
         {
+            "protocol",
             "provider",
             "model",
             "base_url",
@@ -420,13 +440,21 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
     )
     role_policies = _parse_role_policies(llm_data.get("role_policies") or {})
     llm = LlmConfig(
+        protocol=_choice(
+            _required(llm_data, "protocol", "llm"),
+            "llm.protocol",
+            SUPPORTED_LLM_PROTOCOLS,
+        ),
         provider=_choice(
             _required(llm_data, "provider", "llm"),
             "llm.provider",
             SUPPORTED_LLM_PROVIDERS,
         ),
         model=_string(_required(llm_data, "model", "llm"), "llm.model"),
-        base_url=_url(_required(llm_data, "base_url", "llm"), "llm.base_url"),
+        base_url=openai_compatible_base_url(
+            _required(llm_data, "base_url", "llm"),
+            "llm.base_url",
+        ),
         api_key="",
         temperature=_number(_required(llm_data, "temperature", "llm"), "llm.temperature"),
         reasoning_effort=_string(_required(llm_data, "reasoning_effort", "llm"), "llm.reasoning_effort"),
@@ -537,7 +565,14 @@ def _parse_role_policies(value: Any) -> Dict[str, LlmRolePolicyOverride]:
                 else None
             ),
             model=_optional_string(policy.get("model"), f"llm.role_policies.{role}.model"),
-            base_url=_url(policy["base_url"], f"llm.role_policies.{role}.base_url") if "base_url" in policy else None,
+            base_url=(
+                openai_compatible_base_url(
+                    policy["base_url"],
+                    f"llm.role_policies.{role}.base_url",
+                )
+                if "base_url" in policy
+                else None
+            ),
             temperature=_number(policy["temperature"], f"llm.role_policies.{role}.temperature") if "temperature" in policy else None,
             reasoning_effort=_optional_string(
                 policy.get("reasoning_effort"),

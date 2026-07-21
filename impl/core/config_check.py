@@ -268,6 +268,15 @@ def _scan_public_config_bypasses(root: Path, registered_names: Iterable[str]) ->
                         line=line,
                     )
                 )
+            for line, field_name in visitor.llm_client_overrides:
+                issues.append(
+                    ConfigCheckIssue(
+                        code="llm_config_bypass",
+                        message=f"LlmClient {field_name} must come from resolved configuration",
+                        path=str(path),
+                        line=line,
+                    )
+                )
             for line, marker in _forbidden_markers(text):
                 issues.append(
                     ConfigCheckIssue(
@@ -293,12 +302,17 @@ class _EnvironmentReadVisitor(ast.NodeVisitor):
     def __init__(self, names: frozenset[str]):
         self.names = names
         self.reads: list[tuple[int, str]] = []
+        self.llm_client_overrides: list[tuple[int, str]] = []
 
     def visit_Call(self, node: ast.Call) -> None:
         if _is_os_getenv(node.func) or _is_os_environ_get(node.func):
             name = _literal_name(node.args[0]) if node.args else None
             if name in self.names:
                 self.reads.append((node.lineno, str(name)))
+        if _call_name(node.func) == "LlmClient":
+            for keyword in node.keywords:
+                if keyword.arg in {"api_key", "base_url", "model"}:
+                    self.llm_client_overrides.append((node.lineno, keyword.arg))
         self.generic_visit(node)
 
     def visit_Subscript(self, node: ast.Subscript) -> None:
@@ -335,8 +349,23 @@ def _literal_name(node: ast.AST) -> Optional[str]:
     return str(node.value) if isinstance(node, ast.Constant) and isinstance(node.value, str) else None
 
 
+def _call_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return ""
+
+
 def _forbidden_markers(text: str) -> list[tuple[int, str]]:
-    markers = ("load_env_md_key", "load_bailian_env_md_key", "MODEL_DEFAULT", "BASE_URL_DEFAULT")
+    markers = (
+        "load_env_md_key",
+        "load_bailian_env_md_key",
+        "MODEL_DEFAULT",
+        "BASE_URL_DEFAULT",
+        "from agno.models.deepseek import",
+        "DeepSeek(",
+    )
     found: list[tuple[int, str]] = []
     for line_number, line in enumerate(text.splitlines(), 1):
         for marker in markers:

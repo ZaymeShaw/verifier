@@ -7,8 +7,11 @@ import uuid
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import json_repair
+from agno.agent import Agent
+from agno.models.openai.like import OpenAILike
 
-from .config import get_llm_config, initialize_runtime_config
+from .config import get_llm_config
+from .config_schema import ConfigError, openai_compatible_base_url
 
 if TYPE_CHECKING:
     from .structured_output import StructuredOutputSpec
@@ -16,16 +19,6 @@ if TYPE_CHECKING:
 # Session start timestamp: ensures sessions from different runs don't share context
 SESSION_START_TIME = int(time.time())
 _USE_CONFIG = object()
-
-
-# CRITICAL: Set OPENAI_API_KEY before importing Agno modules.
-# Agno's DeepSeek inherits from OpenAILike, which uses OpenAI SDK internally.
-# The unified bootstrap may populate dependency compatibility state, but this
-# module never reads configuration from process environment or Markdown.
-initialize_runtime_config()
-
-from agno.agent import Agent  # noqa: E402
-from agno.models.deepseek import DeepSeek  # noqa: E402
 
 
 class JsonExtractionError(ValueError):
@@ -185,8 +178,10 @@ def _raw_response(result: Any) -> Any:
     return response
 
 
-def _normalize_base_url(base_url: str) -> str:
-    return base_url.rsplit("/v1/chat/completions", 1)[0] if base_url.endswith("/v1/chat/completions") else base_url
+def chat_completions_url(base_url: str) -> str:
+    """Build the raw Chat Completions endpoint from a validated API root."""
+    root = openai_compatible_base_url(base_url, "llm.base_url")
+    return f"{root}/chat/completions"
 
 
 def _extract_tool_call_log(result: Any) -> list:
@@ -404,9 +399,6 @@ def project_llm_client(spec: Any, role: str, knowledge: Any = None, tools: list 
 class LlmClient:
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
-        model: Optional[str] = None,
         role: str = "",
         config: Any = None,
         memory_manager: Any = None,
@@ -422,10 +414,11 @@ class LlmClient:
     ):
         llm_config = config or get_llm_config()
         policy = llm_config.policy_for(role)
+        self.protocol = policy.protocol
         self.provider = policy.provider
-        self.api_key = llm_config.api_key if api_key is None else api_key
-        self.base_url = policy.base_url if base_url is None else base_url
-        self.model = policy.model if model is None else model
+        self.api_key = llm_config.api_key
+        self.base_url = openai_compatible_base_url(policy.base_url, "llm.base_url")
+        self.model = policy.model
         self.temperature = policy.temperature
         self.reasoning_effort = policy.reasoning_effort
         self.max_attempts = llm_config.max_attempts
@@ -441,8 +434,33 @@ class LlmClient:
         self.compress_tool_results = compress_tool_results
         self.max_tool_calls_from_history = max_tool_calls_from_history
 
+    def build_model(
+        self,
+        *,
+        reasoning_effort: Any = _USE_CONFIG,
+    ) -> OpenAILike:
+        """Build the single supported OpenAI-compatible model adapter."""
+        if self.protocol != "openai_compatible":
+            raise ConfigError(f"unsupported LLM protocol: {self.protocol}")
+        if not self.api_key:
+            raise ConfigError("missing required configuration for llm: llm.api_key")
+        model_kwargs = {
+            "id": self.model,
+            "provider": self.provider,
+            "api_key": self.api_key,
+            "base_url": self.base_url,
+            "temperature": self.temperature,
+            "supports_native_structured_outputs": False,
+            "supports_json_schema_outputs": False,
+        }
+        effective_reasoning_effort = (
+            self.reasoning_effort if reasoning_effort is _USE_CONFIG else reasoning_effort
+        )
+        if effective_reasoning_effort:
+            model_kwargs["reasoning_effort"] = effective_reasoning_effort
+        return OpenAILike(**model_kwargs)
+
     def complete_json(self, system: str, user: str, trace_id: Optional[str] = None,
-                      model: Optional[str] = None,
                       reasoning_effort: Any = _USE_CONFIG,
                       output_spec: "StructuredOutputSpec" = None) -> Dict[str, Any]:
         """
@@ -453,8 +471,6 @@ class LlmClient:
             user: User prompt
             trace_id: Optional trace ID for session isolation. If provided, creates a unique
                      session for this specific case/trace, preventing cross-case contamination.
-            model: Optional model override (e.g. "deepseek-chat" for lightweight output stub).
-                   Defaults to self.model.
             reasoning_effort: Reasoning effort level. Omitted values inherit the selected
                               role policy; explicit None disables deep reasoning.
             output_spec: spec/struct_output.md 结构化输出约束，**必填**。
@@ -471,10 +487,7 @@ class LlmClient:
                 "spec/struct_output.md 要求所有 LLM 调用必须传结构化输出约束。"
                 "如果确实没有明确输出结构（如自由文本分析），请传 structured_output.FREE_TEXT_OUTPUT。"
             )
-        if not self.api_key:
-            from .config import ConfigError
-
-            raise ConfigError("missing required configuration for llm: llm.api_key")
+        model_client = self.build_model(reasoning_effort=reasoning_effort)
 
         # spec/struct_output.md：注入约束文案 + 返回后强校验阻断
         enforce_spec = output_spec
@@ -482,24 +495,7 @@ class LlmClient:
         system = system + "\n\n" + render_output_constraint(enforce_spec)
 
         start_ts = time.time()
-        # OPENAI_API_KEY is initialized once before Agno import above. Do not
-        # mutate process-global env per request: api-check runs LLM-heavy routes
-        # concurrently, and per-call restore can corrupt other in-flight calls.
-
         try:
-            model_kwargs = {
-                "id": model or self.model,
-                "api_key": self.api_key,
-                "base_url": _normalize_base_url(self.base_url),
-                "temperature": self.temperature,
-            }
-            effective_reasoning_effort = (
-                self.reasoning_effort if reasoning_effort is _USE_CONFIG else reasoning_effort
-            )
-            if effective_reasoning_effort:
-                model_kwargs["reasoning_effort"] = effective_reasoning_effort
-            model = DeepSeek(**model_kwargs)
-
             # CRITICAL: Use trace-specific session ID to isolate different cases
             # BUT: Prevent conversation history accumulation within same session
             if trace_id is None:
@@ -515,7 +511,7 @@ class LlmClient:
             for attempt in range(self.max_attempts):
                 try:
                     agent = Agent(
-                        model=model,
+                        model=model_client,
                         system_message=system,
                         use_json_mode=True,
                         tools=self.tools,

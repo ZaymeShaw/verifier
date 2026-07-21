@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
-import pytest
-
+from impl.core.config import get_llm_config
 from impl.core.llm_client import LlmClient, extract_json, _select_schema_matching_object
 from impl.core.judge import _build_judge_output_spec
 from impl.core.schema.judge import JudgeLLMOutput
@@ -76,10 +75,10 @@ def test_complete_json_classifies_agno_error_before_json_parsing(monkeypatch):
             return Result()
 
     monkeypatch.setattr("impl.core.llm_client.Agent", FakeAgent)
-    monkeypatch.setattr("impl.core.llm_client.DeepSeek", lambda **_kwargs: object())
+    monkeypatch.setattr("impl.core.llm_client.OpenAILike", lambda **_kwargs: object())
     monkeypatch.setattr("impl.core.llm_client._track_context", lambda *_args, **_kwargs: None)
 
-    client = LlmClient(api_key="test-key")
+    client = LlmClient(config=replace(get_llm_config(), api_key="test-key"))
     result = client.complete_json(
         "system",
         "user",

@@ -18,6 +18,7 @@ PUBLIC_ENV_NAMES = (
     "DEEPSEEK_BASE_URL",
     "DEEPSEEK_API_KEY",
     "LLM_API_KEY",
+    "OPENAI_API_KEY",
     "BAILIAN_API_KEY",
     "DASHSCOPE_API_KEY",
     "BAILIAN_EMBEDDING_MODEL",
@@ -45,9 +46,10 @@ def test_runtime_config_loads_yaml_defaults():
     assert loaded.uat.host == "127.0.0.1"
     assert loaded.uat.port == 8021
     assert loaded.browser.driver_path == "chromedriver"
+    assert loaded.llm.protocol == "openai_compatible"
     assert loaded.llm.provider == "deepseek"
     assert loaded.llm.model == "deepseek-v4-pro"
-    assert loaded.llm.base_url == "https://api.deepseek.com/v1/chat/completions"
+    assert loaded.llm.base_url == "https://api.deepseek.com/v1"
     assert loaded.llm.api_key == ""
     assert loaded.embedding.model == "text-embedding-v4"
 
@@ -105,3 +107,14 @@ def test_runtime_config_is_frozen_for_process_lifetime(monkeypatch):
 
     assert runtime_config.get_runtime_config() is first
     assert runtime_config.get_runtime_config().llm.model == "deepseek-v4-pro"
+
+
+def test_runtime_initialization_does_not_mutate_openai_api_key(monkeypatch):
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "deepseek-key")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    loaded = runtime_config.get_runtime_config()
+
+    assert loaded.llm.api_key == "deepseek-key"
+    assert loaded.llm.protocol == "openai_compatible"
+    assert "OPENAI_API_KEY" not in runtime_config.os.environ

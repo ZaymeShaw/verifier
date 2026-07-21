@@ -6,7 +6,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Mapping, Optional
 
-from .config_bootstrap import bootstrap_dependency_environment, parse_dotenv
+from .config_bootstrap import parse_dotenv
 from .config_schema import (
     BrowserConfig,
     ConfigError,
@@ -23,9 +23,11 @@ from .config_schema import (
     ServerConfig,
     UatConfig,
     SUPPORTED_LLM_PROVIDERS,
+    SUPPORTED_LLM_PROTOCOLS,
     convert_environment_value,
     load_yaml_document,
     parse_runtime_document,
+    openai_compatible_base_url,
 )
 
 
@@ -97,6 +99,14 @@ def resolve_runtime_config(
         raise ConfigError(
             f"invalid resolved field llm.provider: unsupported value {values['llm.provider']!r}"
         )
+    if values["llm.protocol"] not in SUPPORTED_LLM_PROTOCOLS:
+        raise ConfigError(
+            f"invalid resolved field llm.protocol: unsupported value {values['llm.protocol']!r}"
+        )
+    values["llm.base_url"] = openai_compatible_base_url(
+        values["llm.base_url"],
+        "llm.base_url",
+    )
 
     missing_required = tuple(
         sorted(
@@ -112,6 +122,7 @@ def resolve_runtime_config(
         uat=UatConfig(host=str(values["uat.host"]), port=int(values["uat.port"])),
         browser=BrowserConfig(driver_path=str(values["browser.driver_path"])),
         llm=LlmConfig(
+            protocol=str(values["llm.protocol"]),
             provider=str(values["llm.provider"]),
             model=str(values["llm.model"]),
             base_url=str(values["llm.base_url"]),
@@ -183,6 +194,7 @@ def _base_values(parsed: ParsedRuntimeConfig) -> dict[str, Any]:
         "uat.host": parsed.uat.host,
         "uat.port": parsed.uat.port,
         "browser.driver_path": parsed.browser.driver_path,
+        "llm.protocol": parsed.llm.protocol,
         "llm.provider": parsed.llm.provider,
         "llm.model": parsed.llm.model,
         "llm.base_url": parsed.llm.base_url,
@@ -238,7 +250,6 @@ def initialize_runtime_config(
                 raise ConfigError("runtime config is already initialized; CLI overrides must be applied at startup")
             return _RUNTIME_CONFIG
         resolved = resolve_runtime_config(cli_overrides=cli_overrides)
-        bootstrap_dependency_environment(resolved.llm.api_key, os.environ)
         _RUNTIME_CONFIG = resolved
         return resolved
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Direct diagnostic for the RuntimeConfig-selected DeepSeek endpoint."""
+"""Direct diagnostic for DeepSeek through the unified OpenAI-compatible adapter."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ sys.path.insert(0, str(project_root))
 
 def main() -> int:
     from impl.core.config import ConfigError, get_runtime_config
+    from impl.core.llm_client import LlmClient, chat_completions_url
 
     runtime_config = get_runtime_config()
     try:
@@ -37,7 +38,7 @@ def main() -> int:
     try:
         print("\n[Test 1] Raw HTTP request to configured DeepSeek API...")
         request = urllib.request.Request(
-            llm_config.base_url,
+            chat_completions_url(llm_config.base_url),
             data=json.dumps(data).encode("utf-8"),
             headers=headers,
         )
@@ -48,17 +49,11 @@ def main() -> int:
         print(f"  ❌ Failed: {exc}")
         return 1
 
-    print("\n[Test 2] Agno DeepSeek model...")
+    print("\n[Test 2] Unified OpenAI-compatible model...")
     from agno.agent import Agent
-    from agno.models.deepseek import DeepSeek
 
     try:
-        model = DeepSeek(
-            id=llm_config.model,
-            api_key=llm_config.api_key,
-            base_url=llm_config.base_url.rsplit("/chat/completions", 1)[0],
-            temperature=llm_config.temperature,
-        )
+        model = LlmClient(config=llm_config).build_model(reasoning_effort=None)
         agent = Agent(
             model=model,
             system_message="You are a helpful assistant.",

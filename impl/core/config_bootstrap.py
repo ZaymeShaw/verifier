@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Dict, MutableMapping
+from typing import Dict
 
 from .config_schema import ConfigError, EnvironmentRegistry
 
@@ -86,9 +86,3 @@ def render_env_example(environment: EnvironmentRegistry) -> str:
         lines.append(f"{variable.name}=")
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
-
-
-def bootstrap_dependency_environment(api_key: str, environ: MutableMapping[str, str]) -> None:
-    """Populate dependency compatibility state without creating an input config source."""
-    if api_key and not environ.get("OPENAI_API_KEY"):
-        environ["OPENAI_API_KEY"] = api_key
