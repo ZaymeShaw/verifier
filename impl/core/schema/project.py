@@ -4,6 +4,17 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 
+@dataclass(frozen=True)
+class RoleAssetMapping:
+    asset_id: str
+    kind: str
+    enabled: bool
+    roles: List[str]
+    production_path: str
+    candidate_path: str = ""
+    replace: bool = False
+
+
 @dataclass
 class ProjectSpec:
     # 项目配置入口：描述一个被测项目的 adapter、文档、API 和前端扩展。
@@ -29,6 +40,9 @@ class ProjectSpec:
     endpoint_discovery: Dict[str, Any] = field(default_factory=dict)
     attribute_draft: Dict[str, Any] = field(default_factory=dict)
     judge_draft: Dict[str, Any] = field(default_factory=dict)
+    mock_draft: Dict[str, Any] = field(default_factory=dict)
+    live_draft: Dict[str, Any] = field(default_factory=dict)
+    role_assets: List[RoleAssetMapping] = field(default_factory=list)
     root: str = ""
     source_project: str = ""  # 用户侧项目目录（绝对路径），LLM 可据此查找需求材料
 

@@ -47,13 +47,20 @@ class ProjectAdapter(ABC):
     def _get_or_load(self, key: str, loader_name: Optional[str] = None) -> Any:
         """懒加载并缓存专项模块实例"""
         if key not in self._cache:
-            loader_method = loader_name or f"_load_{key}"
-            loader = getattr(self, loader_method, None)
-            if loader is None:
-                raise NotImplementedError(
-                    f"{self.__class__.__name__} 未实现 {loader_method}() 方法"
-                )
-            instance = loader()
+            draft_config = getattr(self.spec, f"{key}_draft", {}) or {}
+            instance = None
+            if draft_config.get("enabled") is True and key in {"mock"}:
+                from .project_loader import load_project_role_instance
+
+                instance = load_project_role_instance(self.spec, key, self)
+            if instance is None:
+                loader_method = loader_name or f"_load_{key}"
+                loader = getattr(self, loader_method, None)
+                if loader is None:
+                    raise NotImplementedError(
+                        f"{self.__class__.__name__} 未实现 {loader_method}() 方法"
+                    )
+                instance = loader()
             # 前置条件注入：live/mock 实例需要 _adapter 引用才能访问 mock / spec，
             # trace_from_live / _resolve_intent / _mock_instance 都依赖此注入；
             # spec 同步注入，避免 trace 层再单独传 spec 参数。

@@ -4,7 +4,7 @@ from typing import Any
 
 from impl.core.attribute_protocol import ProjectAttribute
 from impl.core.runtime_query_tools import extract_runtime_values
-from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace, normalize_attribute_result, trace_execution_trace, trace_extracted_output
+from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace, normalize_attribute_result, to_dict, trace_execution_trace, trace_extracted_output
 from impl.core.summary import summary_from_attribution
 
 
@@ -69,11 +69,9 @@ def _build_project_attribute_context(spec: ProjectSpec, trace: RunTrace, judge_r
     actual = judge_result.actual or trace.extracted_output or {}
     local_probe = _qa_local_evidence_probe(trace, judge_result, request, reference, actual if isinstance(actual, dict) else {})
     return {
-        "tool_call_limit": 3,
         "system_prompt_override": """你是 QA 项目的 attribute agent。
 只基于当前 QA 样本的 question、provided contexts、reference answer、actual answer、qa_local_evidence_probe 和 semantic judge 结果归因；该项目没有外部 QA 服务调用，不能把失败归因到不存在的远端服务。
-当 judge 为 not_evaluable 或本地 probe 显示缺少 reference/actual 语义证据时，不要编造根因，evidence_strength 设为 none 或 weak，并在 root_cause_hypothesis 说明缺失证据。
-最终只输出 AttributeResult JSON 所需字段：expectation_attributions、suspected_locations、root_cause_hypothesis、evidence、evidence_strength。""",
+当 judge 为 not_evaluable 或本地 probe 显示缺少 reference/actual 语义证据时，不生成 finding，只在 unresolved_reason 说明阻塞。最终只输出 findings、unresolved_reason；证据必须引用 Finalization 重新加载的 ContextUnit。""",
         "user_prompt_extras": {
             "project_attribute_strategy": {
                 "project": spec.project_id,
@@ -113,52 +111,15 @@ def _runtime_checks(trace: RunTrace, judge_result: JudgeResult) -> dict[str, Any
     return {}
 
 
-def _patch_chinese_text_fields(attribute_result: AttributeResult) -> AttributeResult:
-    en_to_zh = {
-        "unsupported root-cause evidence": "根因证据不充分",
-        "current case evidence does not support suspected locations or patch direction": "当前 case 证据不足以支撑疑似位置或补丁方向",
-        "unsupported root-cause evidence:": "根因证据不充分：",
-        "current case evidence does not support": "当前 case 证据不足以支撑",
-        "suspected locations or patch direction": "疑似位置或补丁方向",
-        "no_issue": "无问题",
-        "needs_human_review": "需人工复核",
-        "implementation_bug": "实现缺陷",
-        "model_capability_gap": "模型能力缺陷",
-        "boundary_limitation": "边界限制",
-    }
-    val = attribute_result.root_cause_hypothesis
-    if val and isinstance(val, str):
-        for en, zh in en_to_zh.items():
-            val = val.replace(en, zh)
-        attribute_result.root_cause_hypothesis = val
-    for ea in (attribute_result.expectation_attributions or []):
-        if not isinstance(ea, dict):
-            continue
-        for field in ("root_cause_hypothesis",):
-            val = ea.get(field)
-            if val and isinstance(val, str):
-                for en, zh in en_to_zh.items():
-                    val = val.replace(en, zh)
-                ea[field] = val
-    return attribute_result
-
-
 def _blocked_attribute_result(trace: RunTrace, judge_result: JudgeResult, reason: str) -> AttributeResult:
     evidence = list(judge_result.evidence or [judge_result.reasoning_summary or reason])
     result = AttributeResult(
         trace_id=trace.trace_id,
         project_id=trace.project_id,
         case_id=str(trace.case_id or ""),
-        suspected_locations=[],
-        evidence=evidence,
-        evidence_strength="none",
-        root_cause_hypothesis="当前证据不足以定位 QA 业务根因，需要语义 judge 或人工复核补足证据。",
+        unresolved_reason="当前证据不足以定位 QA 业务根因，需要语义 judge 或人工复核补足证据。 " + reason,
     )
-    result.summary = summary_from_attribution({
-        "expectation_attributions": result.expectation_attributions,
-        "root_cause_hypothesis": result.root_cause_hypothesis,
-        "evidence_strength": result.evidence_strength,
-    })
+    result.summary = summary_from_attribution(to_dict(result))
     return result
 
 
@@ -172,10 +133,4 @@ class QAAttribute(ProjectAttribute):
         return context
 
     def normalize_result(self, trace: RunTrace, judge_result: JudgeResult, result: AttributeResult) -> AttributeResult:
-        result = normalize_attribute_result(result) or result
-        overall = judge_result.overall_fulfillment or {}
-        status = overall.get("status") or "not_evaluable"
-        if status == "not_evaluable":
-            reason = "QA judge 处于 not_evaluable 状态，缺少可用语义判定，不能产出正式失败归因。"
-            return _blocked_attribute_result(trace, judge_result, reason)
-        return _patch_chinese_text_fields(result)
+        return normalize_attribute_result(result) or result

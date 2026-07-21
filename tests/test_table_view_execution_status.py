@@ -1,4 +1,5 @@
 from impl.core.schema import BusinessExpectation, FulfillmentAssessment, JudgeResult, RunTrace
+from impl.server.service import case_event
 from impl.core.table_view import build_trace_table_row
 
 
@@ -69,3 +70,33 @@ def test_execution_error_is_used_as_fallback_only_when_judge_is_absent():
     assert row.judge_summary["reason"] == "live request failed"
     assert row.judge_summary["reason_source"] == "execution_error"
     assert row.execution_status == "error"
+
+
+def test_judge_terminal_failure_is_not_reported_as_fulfilled_in_case_event():
+    trace = RunTrace(
+        trace_id="trace-judge-failed",
+        project_id="client_search",
+        case_id="case-judge-failed",
+        input={"query": "儿子生日在本月的客户"},
+        normalized_request={"query": "儿子生日在本月的客户"},
+        status="ok",
+    )
+    judge = JudgeResult(
+        trace_id=trace.trace_id,
+        project_id=trace.project_id,
+        overall_fulfillment={"status": "not_evaluable"},
+        reasoning_summary="Judge LLM 调用失败，当前 case 无法评估。",
+        evidence=["llm_call_failed"],
+        summary={
+            "fulfillment_status": "not_evaluable",
+            "reason": "Judge LLM 调用失败，当前 case 无法评估。",
+            "reason_source": "judge_failure",
+        },
+    )
+
+    event = case_event(0, {"trace": trace, "judge": judge})
+
+    assert event["status"] == "not_evaluable"
+    assert event["reason"] == "Judge LLM 调用失败，当前 case 无法评估。"
+    assert event["judge_reason"] == event["reason"]
+    assert event["run"]["status"] == "not_evaluable"

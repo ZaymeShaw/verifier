@@ -8,7 +8,7 @@ from types import ModuleType
 from typing import Any, Dict, List, Optional
 
 from .adapter_v2 import ProjectAdapter
-from .schema import ProjectSpec
+from .schema import ProjectSpec, RoleAssetMapping
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECTS_DIR = ROOT / "projects"
@@ -183,9 +183,101 @@ def load_project(project_id: str) -> ProjectSpec:
         endpoint_discovery=dict(data.get("endpoint_discovery") or {}),
         attribute_draft=dict(data.get("attribute_draft") or {}),
         judge_draft=dict(data.get("judge_draft") or {}),
+        mock_draft=dict(data.get("mock_draft") or {}),
+        live_draft=dict(data.get("live_draft") or {}),
+        role_assets=[_role_asset_mapping(item) for item in data.get("role_assets") or []],
         root=str(project_root),
         source_project=_resolve_source_project(data, project_root),
     )
+
+
+def _role_asset_mapping(value: Any) -> RoleAssetMapping:
+    if not isinstance(value, dict):
+        raise TypeError("project.yaml role_assets items must be mappings")
+    return RoleAssetMapping(
+        asset_id=str(value.get("asset_id") or ""),
+        kind=str(value.get("kind") or ""),
+        enabled=value.get("enabled") is True,
+        roles=[str(role) for role in value.get("roles") or []],
+        production_path=str(value.get("production_path") or ""),
+        candidate_path=str(value.get("candidate_path") or ""),
+        replace=value.get("replace") is True,
+    )
+
+
+def resolve_role_assets(spec: ProjectSpec, role: str, use_candidate: bool) -> List[Dict[str, Any]]:
+    """Resolve one authoritative asset list for production, draft checks and promotion."""
+    normalized_role = str(role or "").strip()
+    if not normalized_role:
+        raise ValueError("role is required")
+    root = Path(spec.root).resolve()
+    seen_ids: set[str] = set()
+    production_targets: Dict[Path, str] = {}
+    resolved: List[Dict[str, Any]] = []
+    for mapping in spec.role_assets:
+        _validate_role_asset_mapping(mapping)
+        if mapping.asset_id in seen_ids:
+            raise ValueError(f"duplicate role asset_id: {mapping.asset_id}")
+        seen_ids.add(mapping.asset_id)
+        production_path = _resolve_project_asset_path(root, mapping.production_path, "production_path")
+        draft_root = (root / "draft").resolve()
+        if production_path.is_relative_to(draft_root):
+            raise ValueError(
+                f"RoleAssetMapping.production_path must stay outside draft/: {mapping.asset_id}"
+            )
+        prior = production_targets.get(production_path)
+        if prior is not None:
+            raise ValueError(
+                f"role assets {prior!r} and {mapping.asset_id!r} share production_path {mapping.production_path!r}"
+            )
+        production_targets[production_path] = mapping.asset_id
+        if not mapping.enabled or normalized_role not in mapping.roles:
+            continue
+
+        candidate_path = None
+        if mapping.candidate_path:
+            candidate_path = _resolve_project_asset_path(root, mapping.candidate_path, "candidate_path")
+            if not candidate_path.is_relative_to(draft_root):
+                raise ValueError(
+                    f"RoleAssetMapping.candidate_path must resolve under draft/: {mapping.asset_id}"
+                )
+        selected = candidate_path if use_candidate and candidate_path is not None else production_path
+        if use_candidate and candidate_path is not None and not candidate_path.exists():
+            raise FileNotFoundError(f"enabled candidate role asset not found: {candidate_path}")
+        resolved.append(
+            {
+                "mapping": mapping,
+                "path": selected,
+                "production_path": production_path,
+                "candidate_path": candidate_path,
+                "available": selected.exists(),
+                "source": "candidate" if use_candidate and candidate_path is not None else "production",
+            }
+        )
+    return resolved
+
+
+def _validate_role_asset_mapping(mapping: RoleAssetMapping) -> None:
+    if not mapping.asset_id.strip():
+        raise ValueError("RoleAssetMapping.asset_id is required")
+    if mapping.kind not in {"tool", "context", "context_builder", "investigation", "other"}:
+        raise ValueError(f"unsupported RoleAssetMapping.kind: {mapping.kind!r}")
+    if not mapping.roles or any(not role.strip() for role in mapping.roles):
+        raise ValueError(f"RoleAssetMapping.roles is required: {mapping.asset_id}")
+    if len(set(mapping.roles)) != len(mapping.roles):
+        raise ValueError(f"RoleAssetMapping.roles contains duplicates: {mapping.asset_id}")
+    if not mapping.production_path.strip():
+        raise ValueError(f"RoleAssetMapping.production_path is required: {mapping.asset_id}")
+
+
+def _resolve_project_asset_path(root: Path, value: str, field_name: str) -> Path:
+    relative = Path(str(value))
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError(f"RoleAssetMapping.{field_name} must stay under the project directory")
+    resolved = (root / relative).resolve()
+    if not resolved.is_relative_to(root):
+        raise ValueError(f"RoleAssetMapping.{field_name} escapes the project directory")
+    return resolved
 
 
 def _load_project_module(spec: ProjectSpec, filename: str, role: str) -> Optional[ModuleType]:
@@ -232,6 +324,13 @@ def load_project_judge(spec: ProjectSpec) -> Optional[ModuleType]:
     return _load_project_module(spec, "judge.py", "judge")
 
 
+def load_project_mock(spec: ProjectSpec) -> Optional[ModuleType]:
+    draft_filename = _safe_draft_role_filename(spec, "mock")
+    if draft_filename:
+        return _load_project_module(spec, draft_filename, "mock_draft")
+    return _load_project_module(spec, "mock.py", "mock")
+
+
 def load_project_attribute(spec: ProjectSpec) -> Optional[ModuleType]:
     draft_filename = _safe_draft_role_filename(spec, "attribute")
     if draft_filename:
@@ -266,6 +365,33 @@ def load_project_tools(spec: ProjectSpec) -> Any:
     return candidates[0](spec)
 
 
+def load_project_role_tools(spec: ProjectSpec, role: str) -> List[Any]:
+    """Load one Role's Tool set, preferring a validated investigation package.
+
+    Projects without an available investigation package retain the existing
+    ProjectTools baseline.  Once a package is available for the selected
+    Production/Draft mode, every implemented Tool must be enabled through the same
+    RoleAssetMapping used by Draft check and Promote; no legacy fallback is mixed in.
+    """
+    normalized_role = str(role or "").strip()
+    use_candidate = bool((getattr(spec, f"{normalized_role}_draft", {}) or {}).get("enabled"))
+    selected = resolve_role_assets(spec, normalized_role, use_candidate=use_candidate)
+    has_investigation = any(
+        item["mapping"].kind == "investigation" and item["available"]
+        for item in selected
+    )
+    if not has_investigation:
+        return list(load_project_tools(spec).verifiable_tools() or [])
+
+    from .investigation import load_role_investigation_tools
+
+    return load_role_investigation_tools(
+        spec,
+        role=normalized_role,
+        use_candidate=use_candidate,
+    )
+
+
 def load_project_role_instance(
     spec: ProjectSpec,
     role: str,
@@ -281,6 +407,11 @@ def load_project_role_instance(
 
         module = load_project_attribute(spec)
         protocol = ProjectAttribute
+    elif role == "mock":
+        from .mock_protocol import ProjectMock
+
+        module = load_project_mock(spec)
+        protocol = ProjectMock
     else:
         raise ValueError(f"unsupported project role: {role}")
     if module is None:

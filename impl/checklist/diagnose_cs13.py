@@ -69,7 +69,7 @@ def diagnose_cs13():
 
         print(f"  Causal category: {attr_result.causal_category}")
         print(f"  Failure category: {attr_result.failure_category}")
-        print(f"  Expectation attributions count: {len(attr_result.expectation_attributions)}")
+        print(f"  Attribution findings count: {len(attr_result.findings)}")
         print(f"  Incomplete reason: {attr_result.incomplete_reason}")
         print(f"  Quality flags: {attr_result.quality_flags}")
 
@@ -113,7 +113,7 @@ def diagnose_cs13():
         print("SUMMARY")
         print("="*60)
 
-        if len(attr_result.expectation_attributions) == 0:
+        if len(attr_result.findings) == 0:
             print("✗ BUG REPRODUCED: expectation_attributions is empty")
             print("  Possible causes:")
             print("  1. LLM returned JSON without expectation_attributions field")

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .core.pipeline import run_chain
 from .core.project_loader import list_projects
-from .core.schema import AttributeResult, JudgeResult, RunTrace, to_dict
+from .core.schema import AttributeResult, JudgeResult, RunTrace, normalize_attribute_result, to_dict
 from .core import pipeline
 
 
@@ -33,7 +33,10 @@ def judge_from_json(data) -> JudgeResult:
 
 
 def attribute_from_json(data) -> AttributeResult:
-    return AttributeResult(**data)
+    result = normalize_attribute_result(data)
+    if result is None:
+        raise ValueError("invalid AttributeResult JSON")
+    return result
 
 
 def main(argv=None):
@@ -98,6 +101,13 @@ def main(argv=None):
     p.add_argument("--user-intent")
     p.add_argument("--concurrency", type=int, default=4)
 
+    p = sub.add_parser("draft-promote")
+    p.add_argument("--project", required=True)
+    p.add_argument("--role", required=True, choices=("attribute", "judge", "mock"))
+    mode = p.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--check", action="store_true")
+    mode.add_argument("--apply", action="store_true")
+
     args = parser.parse_args(argv)
     if args.cmd == "projects":
         emit({"projects": list_projects()})
@@ -158,6 +168,12 @@ def main(argv=None):
             for item in inputs:
                 _cli_check_request(args.project, item)
         emit(pipeline.batch_run(args.project, inputs, user_intent=args.user_intent, concurrency=args.concurrency))
+    elif args.cmd == "draft-promote":
+        from .core.draft_promotion import apply_draft_promotion, plan_draft_promotion
+        from .core.project_loader import load_project
+
+        spec = load_project(args.project)
+        emit(apply_draft_promotion(spec, args.role) if args.apply else plan_draft_promotion(spec, args.role))
 
 
 def _cli_check_request(project_id: str, input_data: Any) -> None:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterable, List, Optional
 
 
 _FAILURE_DIMENSION_STATUSES = {"not_fulfilled"}
@@ -93,22 +93,46 @@ def summary_from_fulfillment(judge: dict) -> dict:
     }
 
 
-def summary_from_attribution(attribute: dict) -> dict:
-    """从 attribute 结果中提取前端展示用的摘要。
-
-    spec/info-volume.md：用 evidence_strength 和 root_cause_hypothesis 驱动。
-    """
+def summary_from_attribution(
+    attribute: dict,
+    failed_expectation_ids: Optional[Iterable[str]] = None,
+    *,
+    judge_status: str = "",
+) -> dict:
+    """Deterministically derive the display summary from reviewed findings."""
     if not attribute:
         return {}
-    attributions = attribute.get("expectation_attributions") or []
-    has_attribution = bool(attributions)
-    summary_text = attribute.get("root_cause_hypothesis") or ""
-    evidence_strength = attribute.get("evidence_strength") or ""
-    is_formal = has_attribution and evidence_strength in ("strong", "medium")
+    findings = list(attribute.get("findings") or [])
+    unresolved_reason = str(attribute.get("unresolved_reason") or "").strip()
+    failed_ids = list(dict.fromkeys(str(item) for item in (failed_expectation_ids or []) if str(item)))
+    covered_ids = list(dict.fromkeys(
+        str(expectation_id)
+        for finding in findings
+        for expectation_id in (finding.get("affected_expectation_ids") or [])
+        if str(expectation_id)
+    ))
+    unresolved_ids = [item for item in failed_ids if item not in set(covered_ids)]
+    if judge_status == "fulfilled" and not failed_ids:
+        status = "not_applicable"
+        summary_text = "Judge 未发现需要归因的 not_fulfilled business gap。"
+    elif findings and not unresolved_ids and not unresolved_reason:
+        status = "complete"
+        lines = [str(item.get("conclusion") or "").strip() for item in findings]
+        summary_text = "\n".join(item for item in lines if item)
+    elif findings:
+        status = "partial"
+        lines = [str(item.get("conclusion") or "").strip() for item in findings]
+        summary_text = "\n".join(item for item in [*lines, unresolved_reason] if item)
+    else:
+        status = "unresolved"
+        summary_text = unresolved_reason
+    is_formal = bool(findings)
     return {
-        "attribution_count": len(attributions),
-        "probe_count": 0,
         "summary_text": summary_text,
-        "is_complete": is_formal,
+        "finding_count": len(findings),
+        "covered_expectation_ids": covered_ids,
+        "unresolved_expectation_ids": unresolved_ids,
+        "attribution_status": status,
+        "is_complete": status == "complete",
         "is_formal_attribution": is_formal,
     }

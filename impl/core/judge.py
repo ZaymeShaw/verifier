@@ -299,10 +299,21 @@ def judge_trace(
     has_reference: bool = False,
 ) -> JudgeResult:
     """judge 判定入口。spec/info-volume.md 后只产 fulfillment + expected/actual + gaps，不再产 verdict。"""
-    evaluation = load_project_document(spec, "evaluation")
+    from .context.project import load_role_mandatory_context
+
+    mandatory_context = load_role_mandatory_context(
+        spec,
+        role="judge",
+        operation="judge",
+        trace_id=str(trace.trace_id or ""),
+        run_id="judge-main",
+        case_id=str(getattr(trace, "case_id", "") or ""),
+    )
+    migrated_context = mandatory_context is not None
+    evaluation = "" if migrated_context else load_project_document(spec, "evaluation")
     boundary_standard = load_judge_boundary_standard(spec)
-    judge_boundary = load_project_document(spec, "judge_boundary")
-    judge_standard = load_project_document(spec, "judge_standard")
+    judge_boundary = "" if migrated_context else load_project_document(spec, "judge_boundary")
+    judge_standard = "" if migrated_context else load_project_document(spec, "judge_standard")
 
     if not user_intent and project_judge_context:
         user_intent = project_judge_context.get("user_intent") or (
@@ -345,6 +356,11 @@ def judge_trace(
         f"## 评估边界\n{judge_boundary}\n\n"
         f"## 判断标准\n{judge_standard}\n\n"
     )
+    if mandatory_context is not None:
+        system += (
+            "## 项目 ContextUnit（按 Role policy 在运行前确定性装载）\n"
+            f"{mandatory_context['content']}\n\n"
+        )
 
     system_extras = []
     if project_judge_context:
@@ -412,6 +428,8 @@ def judge_trace(
         data = _reprompt_judge(client, system, user, {}, reprompt_inconsistencies, trace.trace_id, output_spec=output_spec)
         if data.get("error"):
             return _minimal_honest_judge_result(spec, trace, data)
+    if data.get("error"):
+        return _minimal_honest_judge_result(spec, trace, data)
 
     business_expectations = list(data.get("business_expectations") or [])
     inconsistencies = _judge_self_check(data, business_expectations)

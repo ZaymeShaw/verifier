@@ -73,11 +73,37 @@ class JudgeResult:
 
 
 @dataclass
+class JudgeBusinessExpectationOutput:
+    """LLM-owned expectation fields; runtime evidence bindings are intentionally absent."""
+    expectation_id: str
+    blocking: bool
+    downstream_consumer: str = ""
+    user_intent: str = ""
+    expected_outcome: str = ""
+    required_capabilities: List[str] = field(default_factory=list)
+    acceptance_criteria: List[Any] = field(default_factory=list)
+    boundary: Dict[str, Any] = field(default_factory=dict)
+    priority: str = "normal"
+
+
+@dataclass
+class JudgeFulfillmentAssessmentOutput:
+    """LLM-owned assessment fields; EvidenceRef is attached by verifier code."""
+    expectation_id: str
+    status: str
+    score: Optional[float] = None
+    expected_evidence: List[Any] = field(default_factory=list)
+    actual_evidence: List[Any] = field(default_factory=list)
+    downstream_impact: str = ""
+    confidence: Optional[float] = None
+
+
+@dataclass
 class JudgeLLMOutput:
     # spec/struct_output.md：judge 调用 LLM 时应产出的结构（不含代码派生字段）。
     # 作为 StructuredOutputSpec.from_dataclass 的 dataclass 来源，传给 complete_json。
-    business_expectations: List[BusinessExpectation] = field(default_factory=list)
-    fulfillment_assessments: List[FulfillmentAssessment] = field(default_factory=list)
+    business_expectations: List[JudgeBusinessExpectationOutput] = field(default_factory=list)
+    fulfillment_assessments: List[JudgeFulfillmentAssessmentOutput] = field(default_factory=list)
     expected: Any = None
     # actual 是 live 系统真实输出，由代码从 RunTrace 填充；LLM 不产 actual，避免把摘要/比较中间态污染主字段。
     missing: List[GapItem] = field(default_factory=list)
@@ -91,7 +117,7 @@ class JudgeLLMOutput:
 class JudgeReferenceOutput:
     # spec/struct_output.md / spec/reference.md：仅生成 reference（expected）模式。
     # 无 actual + 有意图时，judge 只产 expected 相关字段，不做 fulfillment 判定。
-    business_expectations: List[BusinessExpectation] = field(default_factory=list)
+    business_expectations: List[JudgeBusinessExpectationOutput] = field(default_factory=list)
     expected: Any = None
 
 

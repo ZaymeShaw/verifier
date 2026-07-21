@@ -54,11 +54,6 @@ def _json_error_summary(exc: json.JSONDecodeError) -> str:
     return f"{exc.msg} at line {exc.lineno} column {exc.colno} (char {exc.pos})"
 
 
-def _has_ambiguous_inline_quotes(text: str) -> bool:
-    """Reject repair that would guess whether prose quotes belong inside a JSON string."""
-    return bool(re.search(r'(?<=[\w\u4e00-\u9fff])"(?=[\w\u4e00-\u9fff])', text))
-
-
 def extract_json(text: str) -> Any:
     text = text.strip()
     if not text:
@@ -91,19 +86,60 @@ def extract_json(text: str) -> Any:
             return json.loads(text[start:])
         except json.JSONDecodeError as exc:
             parse_errors.append(f"bare JSON from first bracket: {_json_error_summary(exc)}")
-    if _has_ambiguous_inline_quotes(text):
-        parse_errors.append("json_repair skipped: ambiguous unescaped quote inside string content")
-    else:
-        try:
-            return json_repair.repair_json(text, return_objects=True)
-        except Exception as exc:
-            parse_errors.append(f"json_repair: {type(exc).__name__}: {exc}")
+    try:
+        return json_repair.repair_json(text, return_objects=True)
+    except Exception as exc:
+        parse_errors.append(f"json_repair: {type(exc).__name__}: {exc}")
     preview = text[:500]
     detail = "; ".join(parse_errors[-4:]) if parse_errors else "no JSON object or array found"
     raise JsonExtractionError(
         "LLM 输出不是合法 JSON，且标准 JSON repair 未能修复，无法进入结构化校验。"
         f"解析错误：{detail}\n原始输出预览：{preview}"
     )
+
+
+def _exact_json_objects(text: str) -> list[Dict[str, Any]]:
+    """Return verbatim JSON objects embedded in a mixed model response."""
+    decoder = json.JSONDecoder()
+    objects: list[Dict[str, Any]] = []
+    seen: set[tuple[int, int]] = set()
+    for start, char in enumerate(text):
+        if char != "{":
+            continue
+        try:
+            value, consumed = decoder.raw_decode(text[start:])
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(value, dict):
+            continue
+        span = (start, start + consumed)
+        if span in seen:
+            continue
+        seen.add(span)
+        objects.append(value)
+    return objects
+
+
+def _select_schema_matching_object(
+    text: str,
+    parsed: Any,
+    output_spec: "StructuredOutputSpec",
+) -> Any:
+    """Prefer an exact embedded object only when it already passes the spec.
+
+    This does not repair or mutate a candidate. It only prevents unrelated
+    leading prose/tool facts such as ``[10, 14]`` from becoming the top-level
+    value when the response also contains the requested valid JSON object.
+    """
+    from .schema_validator import SchemaValidator
+
+    validator = SchemaValidator(output_spec)
+    if validator.is_valid(parsed, strict=True, allow_extra=False):
+        return parsed
+    for candidate in _exact_json_objects(text):
+        if validator.is_valid(candidate, strict=True, allow_extra=False):
+            return candidate
+    return parsed
 
 
 def _response_content(result: Any) -> str:
@@ -113,6 +149,15 @@ def _response_content(result: Any) -> str:
     if isinstance(content, (dict, list)):
         return json.dumps(content, ensure_ascii=False)
     return str(content or "")
+
+
+def _run_status(result: Any) -> str:
+    status = getattr(result, "status", None)
+    return str(getattr(status, "value", status) or "").strip().upper()
+
+
+def _run_failed(result: Any) -> bool:
+    return _run_status(result) in {"ERROR", "CANCELLED"}
 
 
 def _raw_response(result: Any) -> Any:
@@ -130,6 +175,19 @@ def _raw_response(result: Any) -> Any:
                 elif isinstance(metrics, dict):
                     dump["metrics"] = metrics
             return dump
+        except Exception:
+            pass
+    if hasattr(result, "to_dict"):
+        try:
+            dump = result.to_dict()
+            if isinstance(dump, dict):
+                # RunOutput can contain the entire prompt/message history.  Only keep
+                # provider/run diagnostics here; ContextStore already records messages.
+                return {
+                    key: dump[key]
+                    for key in ("content", "status", "model", "model_provider", "model_provider_data", "events", "metrics")
+                    if key in dump and dump[key] not in (None, "", [], {})
+                }
         except Exception:
             pass
     if isinstance(result, dict):
@@ -296,6 +354,8 @@ def _track_context(self: "LlmClient", system: str, user: str, result: Any,
             response["content"] = content
         if token_metrics:
             response["metrics"] = token_metrics
+        if error and result is not None:
+            response["raw_response"] = _raw_response(result)
         prompt_size = sum(len(str(m.get("content") or "")) for m in messages)
         record = ContextRecord(
             record_id=str(uuid.uuid4()),
@@ -501,9 +561,33 @@ class LlmClient:
             _track_context(self, system, user, None, trace_id or "", {}, int((time.time() - start_ts) * 1000), str(exc))
             return {"error": "llm_request_failed", "raw_text": str(exc)}
 
+        content = _response_content(result)
+        status = _run_status(result)
+        if _run_failed(result) or not content.strip():
+            if _run_failed(result):
+                error_code = "llm_request_failed"
+                detail = content.strip() or f"Agno run ended with status {status} and no response content"
+            else:
+                error_code = "llm_empty_response"
+                detail = "LLM run completed without response content"
+            raw_response = _raw_response(result)
+            elapsed_ms = int((time.time() - start_ts) * 1000)
+            _track_context(self, system, user, result, trace_id or "", token_metrics, elapsed_ms, detail)
+            return {
+                "error": error_code,
+                "raw_text": detail,
+                "raw_model_response": raw_response,
+            }
+
         try:
-            content = _response_content(result)
-            parsed = extract_json(content)
+            try:
+                parsed = extract_json(content)
+            except JsonExtractionError:
+                parsed = None
+            parsed = _select_schema_matching_object(content, parsed, enforce_spec)
+            if parsed is None:
+                # Re-run to preserve the full user-facing parse diagnostics.
+                parsed = extract_json(content)
         except JsonExtractionError as exc:
             raw_response = _raw_response(result)
             elapsed_ms = int((time.time() - start_ts) * 1000)

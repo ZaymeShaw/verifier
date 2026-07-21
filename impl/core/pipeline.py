@@ -19,6 +19,7 @@ from .live_stub import LiveStubGenerationError, LiveStubSchemaError, generate_li
 from .project_loader import load_adapter, load_project, load_project_role_instance, list_projects
 from .trace import trace_from_live
 from .schema import AttributeResult, BatchRunResult, CheckReport, ClusterSummary, FallbackDecision, FrontendViewModel, JudgeResult, MockSpec, ProjectAnalysis, RunTrace, SingleTurnCase, TraceExecutionContext, normalize_attribute_result, normalize_check_report, normalize_cluster_summary, normalize_frontend_view, normalize_judge_result, normalize_mock_case, normalize_mock_dataset, normalize_mock_spec, normalize_run_trace, to_dict, trace_extracted_output, trace_input, trace_normalized_request, trace_output_source
+from .summary import summary_from_fulfillment
 
 logger = logging.getLogger(__name__)
 from .state_machine import TraceStateMachineRunner, flatten_gate_decisions, flatten_transition_decisions
@@ -108,6 +109,17 @@ def _normalize_judge_schema_payload(judge_result: JudgeResult) -> JudgeResult:
     return normalize_judge_result(judge_result) or judge_result
 
 
+def _mark_judge_not_evaluable(result: JudgeResult) -> JudgeResult:
+    result.overall_fulfillment = {
+        **(result.overall_fulfillment or {}),
+        "status": "not_evaluable",
+    }
+    # live-schema validation runs after the project Judge has finalized its
+    # deterministic summary. Keep the public status and frontend summary atomic.
+    result.summary = summary_from_fulfillment(to_dict(result))
+    return result
+
+
 def _enforce_judge_live_schema(project_id: str, trace: RunTrace, judge_result: JudgeResult) -> JudgeResult:
     result = _normalize_judge_schema_payload(judge_result)
     live_schema = load_live_schema(project_id)
@@ -117,14 +129,11 @@ def _enforce_judge_live_schema(project_id: str, trace: RunTrace, judge_result: J
     if result.actual is None:
         result.actual = trace_extracted_output(trace)
     if result.actual is not None and not checker.output(result.actual):
-        result.overall_fulfillment = {**(result.overall_fulfillment or {}), "status": "not_evaluable"}
-        return result
+        return _mark_judge_not_evaluable(result)
     if result.expected is None:
-        result.overall_fulfillment = {**(result.overall_fulfillment or {}), "status": "not_evaluable"}
-        return result
+        return _mark_judge_not_evaluable(result)
     if not checker.reference(result.expected):
-        result.overall_fulfillment = {**(result.overall_fulfillment or {}), "status": "not_evaluable"}
-        return result
+        return _mark_judge_not_evaluable(result)
     return result
 
 
@@ -161,11 +170,17 @@ def attribute(project_id: str, trace: RunTrace, judge_result: JudgeResult) -> At
         attr_inst = load_project_role_instance(spec, "attribute", adapter)
         if not isinstance(attr_inst, ProjectAttribute):
             raise TypeError("enabled attribute draft must provide a ProjectAttribute implementation")
+        if not _satisfied_fulfillment_status(judge_result):
+            from impl.core.attribute_environment import build_attribute_environment
+            attr_inst.configure_execution_environment(build_attribute_environment(spec, trace))
         result = attr_inst.attribute_failure(trace, judge_result)
         return _normalize_attribute_schema_payload(result)
     attr_inst = adapter.attribute()
     if not isinstance(attr_inst, ProjectAttribute):
         raise TypeError(f"{project_id} adapter.attribute() must return ProjectAttribute")
+    if not _satisfied_fulfillment_status(judge_result):
+        from impl.core.attribute_environment import build_attribute_environment
+        attr_inst.configure_execution_environment(build_attribute_environment(spec, trace))
     result = attr_inst.attribute_failure(trace, judge_result)
     return _normalize_attribute_schema_payload(result)
 
@@ -213,13 +228,13 @@ def incomplete_state_attribute_result(trace: RunTrace, judge_result: JudgeResult
         trace_id=trace.trace_id,
         project_id=trace.project_id,
         case_id=str(trace.case_id or ""),
-        root_cause_hypothesis="状态机未完成归因质量门，当前只能保留待复核失败归因。",
-        evidence=[reason],
-        evidence_strength="none",
+        unresolved_reason="状态机未完成归因质量门，当前只能保留待复核失败归因。 " + reason,
         summary={
-            "attribution_count": 0,
-            "probe_count": 0,
             "summary_text": reason,
+            "finding_count": 0,
+            "covered_expectation_ids": [],
+            "unresolved_expectation_ids": [],
+            "attribution_status": "unresolved",
             "is_complete": False,
             "is_formal_attribution": False,
         },
@@ -355,9 +370,7 @@ def _unsupported_interactive_run(project_id: str, case_id: str, source_case: Dic
         trace_id=trace.trace_id,
         project_id=project_id,
         case_id=case_id,
-        root_cause_hypothesis="当前项目未声明或实现 interactive_intent adapter hook。",
-        evidence=["MultiTurnInteractiveLive missing"],
-        evidence_strength="weak",
+        unresolved_reason="当前项目未声明或实现 interactive_intent adapter hook。",
     )
     run = _run_payload(trace, judge_result, attribute_result, case_id=case_id, execution_mode="interactive_intent", output_source="unsupported_interactive_intent", error=trace.error)
     return run
@@ -474,9 +487,7 @@ def _batch_case(index: int, case: Dict[str, Any], project_id: str, user_intent: 
         trace_id=trace.trace_id,
         project_id=project_id,
         case_id=case_id,
-        root_cause_hypothesis=error_text,
-        evidence=[error_text],
-        evidence_strength="none",
+        unresolved_reason=error_text,
     )
     run = _run_payload(trace, judge_result, attribute_result, case_id=case_id, execution_mode="error", output_source="batch_case_exception", error=error_text)
     return run
@@ -523,9 +534,7 @@ def _batch_error_run(index: int, case: Dict[str, Any], project_id: str, exc: Exc
         trace_id=trace.trace_id,
         project_id=project_id,
         case_id=case_id,
-        root_cause_hypothesis=str(exc),
-        evidence=[str(exc)],
-        evidence_strength="none",
+        unresolved_reason=str(exc),
     )
     run = _run_payload(trace, judge_result, attribute_result, case_id=case_id, execution_mode="error", output_source="batch_future_exception", error=str(exc))
     return run

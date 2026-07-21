@@ -10,6 +10,7 @@ from .adapters import (
 from .bootstrap import DEFAULT_CONTEXT_DATA_ROOT, build_context_runtime
 from .models import ContextUnit, ContextUnitRecord
 from .runtime import ContextRun, ContextRuntime
+from .project import load_role_mandatory_context, role_asset_context_records
 from .tools import (
     CONTEXT_CANDIDATE_SELECTION_INSTRUCTIONS,
     CONTEXT_QUERY_PLANNING_INSTRUCTIONS,
@@ -28,6 +29,8 @@ __all__ = [
     "DEFAULT_CONTEXT_DATA_ROOT",
     "GuardedContextTools",
     "build_context_runtime",
+    "load_role_mandatory_context",
+    "role_asset_context_records",
     "initialize_context_adapters",
     "load_configured_context_adapter",
     "load_project_context_adapter",

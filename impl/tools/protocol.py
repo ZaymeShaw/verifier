@@ -197,7 +197,7 @@ def build_agno_tools(verifiable_tools: Iterable[VerifiableTool]) -> list[Functio
     tools = []
     for tool in verifiable_tools:
         if tool.execute_fn is None:
-            continue
+            raise ValueError(f"VerifiableTool.execute_fn is required: {tool.tool_id}")
         parameters = _normalize_agno_parameters(tool.parameters)
         _validate_agno_tool_schema(tool, parameters)
         entrypoint = tool.execute_fn

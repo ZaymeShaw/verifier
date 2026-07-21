@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from impl.core import pipeline
-from impl.core.project_loader import load_project_attribute, load_project_judge, load_project_role_instance
+from impl.core.project_loader import load_project_attribute, load_project_judge, load_project_mock, load_project_role_instance
 from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace
 from impl.core.schema.attribute import AttributeResult as AttributeResultSchema
 from impl.core.schema.judge import JudgeResult as JudgeResultSchema
@@ -107,6 +107,35 @@ def test_project_loader_uses_draft_judge_protocol_when_enabled(tmp_path):
     assert isinstance(instance, ProjectJudge)
 
 
+def test_project_loader_uses_draft_mock_protocol_when_enabled(tmp_path):
+    draft_dir = tmp_path / "draft"
+    draft_dir.mkdir()
+    (draft_dir / "mock.py").write_text(
+        "from impl.core.mock_protocol import ProjectMock, SingleTurnMock\n"
+        "from impl.core.schema import MockIntentOutput\n"
+        "class DraftMock(SingleTurnMock, ProjectMock):\n"
+        "    def build_user_intent(self, scenario):\n"
+        "        return MockIntentOutput(user_intent='draft', query='draft')\n"
+        "    def build_initial_request(self, intent):\n"
+        "        return {'query': intent.query}\n",
+        encoding="utf-8",
+    )
+    spec = ProjectSpec(
+        project_id="demo",
+        name="demo",
+        root=str(tmp_path),
+        mock_draft={"enabled": True, "module": "draft/mock.py"},
+    )
+
+    module = load_project_mock(spec)
+    instance = load_project_role_instance(spec, "mock", SimpleNamespace())
+
+    from impl.core.mock_protocol import ProjectMock
+    assert module is not None
+    assert isinstance(instance, ProjectMock)
+    assert instance.build_user_intent("demo").user_intent == "draft"
+
+
 def test_project_loader_rejects_unsafe_draft_role_paths():
     attribute_spec = ProjectSpec(
         project_id="client_search",
@@ -155,12 +184,12 @@ def test_existing_attribute_drafts_preserve_production_gates_and_tools():
     qa_result = qa.normalize_result(
         qa_trace,
         qa_judge,
-        AttributeResult(trace_id="qa-draft", project_id="QA", evidence_strength="strong"),
+        AttributeResult(trace_id="qa-draft", project_id="QA", unresolved_reason="missing semantic evidence"),
     )
 
     assert "chain_nodes_to_check" in qa_context
     assert "runtime_checks" in qa_context
-    assert qa_result.evidence_strength == "none"
+    assert qa_result.findings == []
 
     client_spec = ProjectSpec(project_id="client_search", name="client_search", root="impl/projects/client_search")
     client = ClientSearchAttribute(client_spec, SimpleNamespace())
@@ -174,6 +203,16 @@ def test_existing_attribute_drafts_preserve_production_gates_and_tools():
     )
 
     assert isinstance(client_context["tools"], list)
+    strategy = client_context["user_prompt_extras"]["project_attribute_strategy"]
+    assert strategy["investigation_context"] == "client_search parser business flow"
+    candidate_prompt = client_context["system_prompt_override"]
+    assert "Operational index" in candidate_prompt
+    assert "matched_level=2" not in candidate_prompt
+    assert "case_route_replay" not in candidate_prompt
+    assert "L2" not in strategy["tool_selection_policy"]
+    assert "business_chain" not in strategy
+    assert "不得再读取整文件" in candidate_prompt
+    assert "不得把边界定位标成完整归因" in candidate_prompt
 
 
 def test_pipeline_prefers_enabled_draft_attribute_protocol(monkeypatch):
@@ -192,7 +231,6 @@ def test_pipeline_prefers_enabled_draft_attribute_protocol(monkeypatch):
             return {}
 
         def normalize_result(self, trace, judge_result, result):
-            result.evidence = ["draft_attribute"]
             return result
 
     draft = DraftAttribute(spec)
@@ -205,15 +243,15 @@ def test_pipeline_prefers_enabled_draft_attribute_protocol(monkeypatch):
         lambda trace, judge_result, context: AttributeResult(
             trace_id=trace.trace_id,
             project_id=trace.project_id,
-            evidence_strength="weak",
+            unresolved_reason="draft could not prove a finding [draft_attribute]",
         ),
     )
 
     trace = RunTrace(trace_id="trace-draft", project_id="demo")
-    judge = JudgeResult(trace_id="trace-draft", project_id="demo", overall_fulfillment={"status": "not_fulfilled"})
+    judge = JudgeResult(trace_id="trace-draft", project_id="demo", fulfillment_assessments=[{"expectation_id": "exp", "status": "not_fulfilled"}], overall_fulfillment={"status": "not_fulfilled"})
     result = pipeline.attribute("demo", trace, judge)
 
-    assert result.evidence == ["draft_attribute"]
+    assert result.unresolved_reason.endswith("[draft_attribute]")
 
 
 def test_pipeline_prefers_enabled_draft_judge_protocol(monkeypatch):
@@ -249,6 +287,31 @@ def test_pipeline_prefers_enabled_draft_judge_protocol(monkeypatch):
     result = pipeline.judge("demo", RunTrace(trace_id="trace-draft", project_id="demo"))
 
     assert result.evidence == ["draft_judge"]
+
+
+def test_live_schema_gate_keeps_overall_and_summary_status_in_sync(monkeypatch):
+    checker = SimpleNamespace(output=lambda _value: False, reference=lambda _value: True)
+    monkeypatch.setattr(pipeline, "load_live_schema", lambda _project_id: SimpleNamespace(check=checker))
+    trace = RunTrace(
+        trace_id="trace-invalid-live-output",
+        project_id="demo",
+        extracted_output={"unexpected": "shape"},
+    )
+    result = JudgeResult(
+        trace_id=trace.trace_id,
+        project_id=trace.project_id,
+        actual={"unexpected": "shape"},
+        expected={"expected": "shape"},
+        overall_fulfillment={"status": "not_fulfilled"},
+        reasoning_summary="Judge found a business gap before the live-schema gate.",
+        summary={"fulfillment_status": "not_fulfilled", "reason": "stale summary"},
+    )
+
+    enforced = pipeline._enforce_judge_live_schema("demo", trace, result)
+
+    assert enforced.overall_fulfillment["status"] == "not_evaluable"
+    assert enforced.summary["fulfillment_status"] == "not_evaluable"
+    assert enforced.summary["reason"].startswith("not_evaluable ·")
 
 
 
@@ -331,6 +394,21 @@ def test_marketting_planning_intent_attribute_module_injects_project_strategy(mo
     assert probe["fallback_observed"] is True
 
 
+def test_marketting_planning_intent_runtime_check_does_not_invent_mapping_cause_without_raw_intent():
+    result = mpi_attribute.get_runtime_checks(
+        {},
+        {
+            "actual": {"intent": "customer_portrait"},
+            "expected": {"intent": "team_portrait"},
+        },
+    )
+
+    assert result["status"] == "inconclusive"
+    assert result["root_cause"] is None
+    assert result["fix_suggestion"] == ""
+    assert "不能验证标签映射机制" in result["evidence"][0]
+
+
 def test_client_search_attribute_module_injects_project_strategy(monkeypatch):
     spec = ProjectSpec(project_id="client_search", name="client_search", root="impl/projects/client_search")
     trace = RunTrace(
@@ -354,7 +432,8 @@ def test_client_search_attribute_module_injects_project_strategy(monkeypatch):
         load_project_tools(spec).verifiable_tools(),
     ).build_context(trace, judge)
 
-    assert context["tool_call_limit"] == 6
+    assert context["tool_call_limit"] == 8
+    assert "最小对照重放" in context["system_prompt_override"]
     assert "client_search 项目的 attribute agent" in context["system_prompt_override"]
     strategy = context["user_prompt_extras"]["project_attribute_strategy"]
     assert strategy["project"] == "client_search"

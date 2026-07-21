@@ -1,0 +1,171 @@
+[
+    {
+      "case_key": "rule-conflict-team-vs-customer",
+      "trace": {
+        "trace_id": "marketting-planning-intent:draft-intent-rule-conflict:1784575480003",
+        "project_id": "marketting-planning-intent",
+        "case_id": "draft-intent-rule-conflict",
+        "input": {
+          "session_id": "draft_rule_conflict",
+          "trace_id": "draft_rule_conflict",
+          "org_id": "default_org",
+          "user_text": "我需要队伍分布，不是客户画像",
+          "extra_input_params": {
+            "agent_args": {
+              "conversation_id": "draft_rule_conflict",
+              "message": {"content": "我需要队伍分布，不是客户画像", "content_type": "text"}
+            },
+            "args": {"contexts": []}
+          }
+        },
+        "normalized_request": {
+          "user_text": "我需要队伍分布，不是客户画像",
+          "extra_input_params": {
+            "agent_args": {"message": {"content": "我需要队伍分布，不是客户画像"}},
+            "args": {"contexts": []}
+          }
+        },
+        "raw_response": [
+          {
+            "code": 0,
+            "msg": "success",
+            "data": {
+              "robot_text": "客户画像分析",
+              "end_flag": 1,
+              "extra_output_params": {
+                "intent": "1001",
+                "intent_name": "客户分布",
+                "card_result": {
+                  "extensions": {
+                    "nlu_info": {
+                      "subIntent": "客户画像分析",
+                      "intent": "customer_portrait",
+                      "confidence": 1.0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "extracted_output": {
+          "intent": "customer_portrait",
+          "confidence": 1.0,
+          "subIntent": "客户画像分析"
+        },
+        "execution_mode": "live",
+        "output_source": "live_service",
+        "scenario": "intent_recognition",
+        "reference_contract": {"intent": "team_portrait", "confidence": 0.95},
+        "application_boundary": {
+          "scope": "single_turn_intent_recognition",
+          "excludes": ["multi_turn_planning", "sse_card_generation"]
+        },
+        "execution_trace": [
+          {"stage": "request_normalization", "status": "succeeded", "evidence": {"user_text": "我需要队伍分布，不是客户画像"}},
+          {"stage": "intent_api_call", "status": "succeeded", "evidence": {"endpoint": "/api/v1/marketing-planning/intent-recognition", "raw_response_present": true}},
+          {"stage": "adapter_extraction", "status": "succeeded", "evidence": {"intent": "customer_portrait", "confidence": 1.0}},
+          {"stage": "label_mapping", "status": "succeeded", "evidence": {"intent": "customer_portrait"}}
+        ],
+        "status": "ok",
+        "completion_status": "completed",
+        "stop_reason": "single_turn_completed"
+      },
+      "judge_result": {
+        "trace_id": "marketting-planning-intent:draft-intent-rule-conflict:1784575480003",
+        "project_id": "marketting-planning-intent",
+        "business_expectations": [
+          {
+            "expectation_id": "single-turn-intent-label",
+            "user_intent": "查看队伍分布而非客户画像",
+            "expected_outcome": "intent is team_portrait",
+            "required_capabilities": ["intent_recognition"],
+            "acceptance_criteria": ["normalized intent equals team_portrait"],
+            "blocking": true,
+            "downstream_consumer": "intent router"
+          }
+        ],
+        "fulfillment_assessments": [
+          {
+            "expectation_id": "single-turn-intent-label",
+            "status": "not_fulfilled",
+            "expected_evidence": ["business evaluation dataset expects team_portrait"],
+            "actual_evidence": ["public API and adapter both return customer_portrait"],
+            "downstream_impact": "request is dispatched to customer portrait instead of team portrait",
+            "confidence": 1.0,
+            "evidence_refs": []
+          }
+        ],
+        "overall_fulfillment": {"status": "not_fulfilled", "blocking_expectations": ["single-turn-intent-label"]},
+        "expected": {"intent": "team_portrait", "confidence": 0.95},
+        "actual": {"intent": "customer_portrait", "confidence": 1.0, "subIntent": "客户画像分析"},
+        "reasoning_summary": "The same current query returns customer_portrait at the public API and adapter boundary while the business dataset expects team_portrait."
+      }
+    },
+    {
+      "case_key": "fulfilled-team-portrait-control",
+      "trace": {
+        "trace_id": "marketting-planning-intent:draft-control-team",
+        "project_id": "marketting-planning-intent",
+        "case_id": "draft-control-team",
+        "input": {"user_text": "帮我看一下本机构当前队伍画像"},
+        "normalized_request": {"user_text": "帮我看一下本机构当前队伍画像", "extra_input_params": {"args": {"contexts": []}}},
+        "raw_response": [{"code": 0, "data": {"robot_text": "队伍画像分析", "extra_output_params": {"card_result": {"extensions": {"nlu_info": {"intent": "team_portrait", "confidence": 1.0}}}}}}],
+        "extracted_output": {"intent": "team_portrait", "confidence": 1.0, "subIntent": "队伍画像分析"},
+        "execution_mode": "live",
+        "output_source": "live_service",
+        "scenario": "intent_recognition",
+        "reference_contract": {"intent": "team_portrait", "confidence": 0.95},
+        "application_boundary": {"scope": "single_turn_intent_recognition", "excludes": ["multi_turn_planning", "sse_card_generation"]},
+        "execution_trace": [
+          {"stage": "intent_api_call", "status": "succeeded", "evidence": {"raw_response_present": true}},
+          {"stage": "adapter_extraction", "status": "succeeded", "evidence": {"intent": "team_portrait", "confidence": 1.0}}
+        ],
+        "status": "ok",
+        "completion_status": "completed"
+      },
+      "judge_result": {
+        "trace_id": "marketting-planning-intent:draft-control-team",
+        "project_id": "marketting-planning-intent",
+        "business_expectations": [{"expectation_id": "single-turn-intent-label", "user_intent": "查看队伍画像", "expected_outcome": "intent is team_portrait", "required_capabilities": ["intent_recognition"], "acceptance_criteria": ["normalized intent equals team_portrait"], "blocking": true, "downstream_consumer": "intent router"}],
+        "fulfillment_assessments": [{"expectation_id": "single-turn-intent-label", "status": "fulfilled", "expected_evidence": ["team_portrait"], "actual_evidence": ["team_portrait"], "downstream_impact": "correct route", "confidence": 1.0, "evidence_refs": []}],
+        "overall_fulfillment": {"status": "fulfilled", "blocking_expectations": []},
+        "expected": {"intent": "team_portrait", "confidence": 0.95},
+        "actual": {"intent": "team_portrait", "confidence": 1.0, "subIntent": "队伍画像分析"},
+        "reasoning_summary": "The public API and adapter output satisfy the intent-label expectation."
+      }
+    },
+    {
+      "case_key": "neighbor-rule-conflict-team-structure",
+      "trace": {
+        "trace_id": "marketting-planning-intent:draft-neighbor-conflict",
+        "project_id": "marketting-planning-intent",
+        "case_id": "draft-neighbor-conflict",
+        "input": {"user_text": "我想看队伍结构，不是客户分布"},
+        "normalized_request": {"user_text": "我想看队伍结构，不是客户分布", "extra_input_params": {"args": {"contexts": []}}},
+        "raw_response": [{"code": 0, "data": {"robot_text": "客户画像分析", "extra_output_params": {"card_result": {"extensions": {"nlu_info": {"intent": "customer_portrait", "confidence": 1.0}}}}}}],
+        "extracted_output": {"intent": "customer_portrait", "confidence": 1.0, "subIntent": "客户画像分析"},
+        "execution_mode": "live",
+        "output_source": "live_service",
+        "scenario": "intent_recognition",
+        "reference_contract": {"intent": "team_portrait", "confidence": 0.95},
+        "application_boundary": {"scope": "single_turn_intent_recognition", "excludes": ["multi_turn_planning", "sse_card_generation"]},
+        "execution_trace": [
+          {"stage": "intent_api_call", "status": "succeeded", "evidence": {"raw_response_present": true}},
+          {"stage": "adapter_extraction", "status": "succeeded", "evidence": {"intent": "customer_portrait", "confidence": 1.0}}
+        ],
+        "status": "ok",
+        "completion_status": "completed"
+      },
+      "judge_result": {
+        "trace_id": "marketting-planning-intent:draft-neighbor-conflict",
+        "project_id": "marketting-planning-intent",
+        "business_expectations": [{"expectation_id": "single-turn-intent-label", "user_intent": "查看队伍结构而非客户分布", "expected_outcome": "intent is team_portrait", "required_capabilities": ["intent_recognition"], "acceptance_criteria": ["normalized intent equals team_portrait"], "blocking": true, "downstream_consumer": "intent router"}],
+        "fulfillment_assessments": [{"expectation_id": "single-turn-intent-label", "status": "not_fulfilled", "expected_evidence": ["query explicitly requests team structure"], "actual_evidence": ["public API and adapter both return customer_portrait"], "downstream_impact": "request is dispatched to customer portrait", "confidence": 1.0, "evidence_refs": []}],
+        "overall_fulfillment": {"status": "not_fulfilled", "blocking_expectations": ["single-turn-intent-label"]},
+        "expected": {"intent": "team_portrait", "confidence": 0.95},
+        "actual": {"intent": "customer_portrait", "confidence": 1.0, "subIntent": "客户画像分析"},
+        "reasoning_summary": "The public output follows the customer keyword in a negated phrase instead of the requested team-structure intent."
+      }
+    }
+]

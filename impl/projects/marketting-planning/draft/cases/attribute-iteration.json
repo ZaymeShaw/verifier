@@ -1,0 +1,88 @@
+[
+  {
+    "case_key": "target-unit-5yi",
+    "trace": {
+      "trace_id": "marketting-planning:draft-target-unit-5yi",
+      "project_id": "marketting-planning",
+      "case_id": "draft-target-unit-5yi",
+      "input": {"query": "NBEV目标值5亿，规划路径：队伍"},
+      "normalized_request": {"query": "NBEV目标值5亿，规划路径：队伍", "turns": [{"role": "user", "content": "NBEV目标值5亿，规划路径：队伍"}]},
+      "raw_response": {"http_status": 200, "events": ["reasoning_start", "reasoning_message_content", "reasoning_end", "card_start", "card_message_content", "card_end"], "reasoning_text": "正在分析您的NBEV目标5万元与当前经营数据"},
+      "extracted_output": {"stage": "planning", "target_value_wan": 5, "path_types": ["队伍"], "reasoning_text": "正在分析您的NBEV目标5万元与当前经营数据", "fallback": false, "errors": []},
+      "execution_mode": "live",
+      "output_source": "live_service",
+      "scenario": "execution_planning",
+      "reference_contract": {"stage": "planning", "target_value_wan": 50000, "path_types": ["队伍"]},
+      "application_boundary": {"scope": "marketing_planning_public_sse", "external_repo": "/Users/xiaozijian/WorkSpace/package/marketing-planning"},
+      "execution_trace": [
+        {"stage": "request_normalization", "status": "succeeded", "evidence": {"query": "NBEV目标值5亿，规划路径：队伍"}},
+        {"stage": "sse_generation", "status": "succeeded", "evidence": {"target_text": "NBEV目标5万元", "terminal_event": "card_end"}},
+        {"stage": "adapter_extraction", "status": "succeeded", "evidence": {"target_value_wan": 5}}
+      ],
+      "status": "ok",
+      "completion_status": "completed"
+    },
+    "judge_result": {
+      "trace_id": "marketting-planning:draft-target-unit-5yi",
+      "project_id": "marketting-planning",
+      "business_expectations": [{"expectation_id": "target-value-unit", "user_intent": "按5亿元NBEV目标规划队伍路径", "expected_outcome": "规划使用50000万元目标值", "required_capabilities": ["target_value_normalization", "planning"], "acceptance_criteria": ["public planning target equals 50000 wan"], "blocking": true, "downstream_consumer": "team planning"}],
+      "fulfillment_assessments": [{"expectation_id": "target-value-unit", "status": "not_fulfilled", "expected_evidence": ["5亿 equals 50000万"], "actual_evidence": ["public SSE describes NBEV目标5万元"], "downstream_impact": "planning functions receive a target ten thousand times smaller than requested", "confidence": 1.0, "evidence_refs": []}],
+      "overall_fulfillment": {"status": "not_fulfilled", "blocking_expectations": ["target-value-unit"]},
+      "expected": {"stage": "planning", "target_value_wan": 50000, "path_types": ["队伍"]},
+      "actual": {"stage": "planning", "target_value_wan": 5, "path_types": ["队伍"], "reasoning_text": "正在分析您的NBEV目标5万元与当前经营数据"},
+      "reasoning_summary": "The public business SSE completed planning but exposed a 5万元 target for the requested 5亿元 target."
+    }
+  },
+  {
+    "case_key": "target-unit-300wan-control",
+    "trace": {
+      "trace_id": "marketting-planning:draft-target-unit-300wan",
+      "project_id": "marketting-planning",
+      "case_id": "draft-target-unit-300wan",
+      "input": {"query": "NBEV目标值300万，规划路径：队伍"},
+      "normalized_request": {"query": "NBEV目标值300万，规划路径：队伍", "turns": [{"role": "user", "content": "NBEV目标值300万，规划路径：队伍"}]},
+      "raw_response": {"http_status": 200, "events": ["reasoning_start", "reasoning_message_content", "reasoning_end", "card_start", "card_message_content", "card_end"], "reasoning_text": "正在分析您的NBEV目标300万元与当前经营数据"},
+      "extracted_output": {"stage": "planning", "target_value_wan": 300, "path_types": ["队伍"], "reasoning_text": "正在分析您的NBEV目标300万元与当前经营数据", "fallback": false, "errors": []},
+      "execution_mode": "live", "output_source": "live_service", "scenario": "execution_planning",
+      "reference_contract": {"stage": "planning", "target_value_wan": 300, "path_types": ["队伍"]},
+      "application_boundary": {"scope": "marketing_planning_public_sse"},
+      "execution_trace": [{"stage": "sse_generation", "status": "succeeded", "evidence": {"target_text": "NBEV目标300万元", "terminal_event": "card_end"}}, {"stage": "adapter_extraction", "status": "succeeded", "evidence": {"target_value_wan": 300}}],
+      "status": "ok", "completion_status": "completed"
+    },
+    "judge_result": {
+      "trace_id": "marketting-planning:draft-target-unit-300wan", "project_id": "marketting-planning",
+      "business_expectations": [{"expectation_id": "target-value-unit", "user_intent": "按300万元NBEV目标规划队伍路径", "expected_outcome": "规划使用300万元目标值", "required_capabilities": ["target_value_normalization", "planning"], "acceptance_criteria": ["public planning target equals 300 wan"], "blocking": true, "downstream_consumer": "team planning"}],
+      "fulfillment_assessments": [{"expectation_id": "target-value-unit", "status": "fulfilled", "expected_evidence": ["300万"], "actual_evidence": ["public SSE describes NBEV目标300万元"], "downstream_impact": "correct target reaches planning", "confidence": 1.0, "evidence_refs": []}],
+      "overall_fulfillment": {"status": "fulfilled", "blocking_expectations": []},
+      "expected": {"stage": "planning", "target_value_wan": 300, "path_types": ["队伍"]},
+      "actual": {"stage": "planning", "target_value_wan": 300, "path_types": ["队伍"], "reasoning_text": "正在分析您的NBEV目标300万元与当前经营数据"},
+      "reasoning_summary": "The public business SSE used the requested 300万元 target."
+    }
+  },
+  {
+    "case_key": "target-unit-1.2yi-neighbor",
+    "trace": {
+      "trace_id": "marketting-planning:draft-target-unit-1.2yi",
+      "project_id": "marketting-planning",
+      "case_id": "draft-target-unit-1.2yi",
+      "input": {"query": "NBEV目标值1.2亿，规划路径：队伍"},
+      "normalized_request": {"query": "NBEV目标值1.2亿，规划路径：队伍", "turns": [{"role": "user", "content": "NBEV目标值1.2亿，规划路径：队伍"}]},
+      "raw_response": {"http_status": 200, "events": ["reasoning_start", "reasoning_message_content", "reasoning_end", "card_start", "card_message_content", "card_end"], "reasoning_text": "正在分析您的NBEV目标1.2万元与当前经营数据"},
+      "extracted_output": {"stage": "planning", "target_value_wan": 1.2, "path_types": ["队伍"], "reasoning_text": "正在分析您的NBEV目标1.2万元与当前经营数据", "fallback": false, "errors": []},
+      "execution_mode": "live", "output_source": "live_service", "scenario": "execution_planning",
+      "reference_contract": {"stage": "planning", "target_value_wan": 12000, "path_types": ["队伍"]},
+      "application_boundary": {"scope": "marketing_planning_public_sse"},
+      "execution_trace": [{"stage": "request_normalization", "status": "succeeded", "evidence": {"query": "NBEV目标值1.2亿，规划路径：队伍"}}, {"stage": "sse_generation", "status": "succeeded", "evidence": {"target_text": "NBEV目标1.2万元", "terminal_event": "card_end"}}, {"stage": "adapter_extraction", "status": "succeeded", "evidence": {"target_value_wan": 1.2}}],
+      "status": "ok", "completion_status": "completed"
+    },
+    "judge_result": {
+      "trace_id": "marketting-planning:draft-target-unit-1.2yi", "project_id": "marketting-planning",
+      "business_expectations": [{"expectation_id": "target-value-unit", "user_intent": "按1.2亿元NBEV目标规划队伍路径", "expected_outcome": "规划使用12000万元目标值", "required_capabilities": ["target_value_normalization", "planning"], "acceptance_criteria": ["public planning target equals 12000 wan"], "blocking": true, "downstream_consumer": "team planning"}],
+      "fulfillment_assessments": [{"expectation_id": "target-value-unit", "status": "not_fulfilled", "expected_evidence": ["1.2亿 equals 12000万"], "actual_evidence": ["public SSE describes NBEV目标1.2万元"], "downstream_impact": "planning functions receive a target ten thousand times smaller than requested", "confidence": 1.0, "evidence_refs": []}],
+      "overall_fulfillment": {"status": "not_fulfilled", "blocking_expectations": ["target-value-unit"]},
+      "expected": {"stage": "planning", "target_value_wan": 12000, "path_types": ["队伍"]},
+      "actual": {"stage": "planning", "target_value_wan": 1.2, "path_types": ["队伍"], "reasoning_text": "正在分析您的NBEV目标1.2万元与当前经营数据"},
+      "reasoning_summary": "The neighboring 亿 expression produces the same unit-loss mechanism in the public SSE."
+    }
+  }
+]

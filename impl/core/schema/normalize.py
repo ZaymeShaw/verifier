@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any, Dict, Iterable, List, Optional
 
-from .attribute import AttributeResult, ExpectationAttribution
+from .attribute import AttributeResult, AttributionFinding
 from .check import CheckReport
 from .cluster import ClusterSummary
 from .fallback import FallbackDecision
@@ -452,21 +452,21 @@ def normalize_gap_item(value: Any, kind: str = "") -> GapItem:
     return GapItem(kind=kind, raw=value)
 
 
-def normalize_expectation_attribution(value: Any) -> Optional[ExpectationAttribution]:
+def normalize_attribution_finding(value: Any) -> Optional[AttributionFinding]:
     if value is None:
         return None
-    if isinstance(value, ExpectationAttribution):
-        value.fulfillment_status = _normalize_fulfillment_status(value.fulfillment_status)
+    if isinstance(value, AttributionFinding):
+        value.affected_expectation_ids = list(dict.fromkeys(value.affected_expectation_ids or []))
+        value.evidence = normalize_evidence_refs(value.evidence)
         return value
     data = _as_dict(value)
     if not data:
         return None
-    return ExpectationAttribution(
-        expectation_id=str(data.get("expectation_id") or data.get("id") or ""),
-        fulfillment_status=_normalize_fulfillment_status(data.get("fulfillment_status") or data.get("status")),
-        suspected_locations=_as_list(data.get("suspected_locations")),
-        root_cause_hypothesis=str(data.get("root_cause_hypothesis") or ""),
-        evidence=_as_list(data.get("evidence")),
+    return AttributionFinding(
+        finding_id=str(data.get("finding_id") or ""),
+        affected_expectation_ids=list(dict.fromkeys(str(item) for item in _as_list(data.get("affected_expectation_ids")) if str(item))),
+        conclusion=str(data.get("conclusion") or ""),
+        evidence=normalize_evidence_refs(data.get("evidence")),
     )
 
 
@@ -650,19 +650,13 @@ def normalize_attribute_result(value: Any) -> Optional[AttributeResult]:
     if value is None:
         return None
     if isinstance(value, AttributeResult):
-        value.expectation_attributions = [item for item in (normalize_expectation_attribution(item) for item in _as_list(value.expectation_attributions)) if item is not None]
+        value.findings = [item for item in (normalize_attribution_finding(item) for item in _as_list(value.findings)) if item is not None]
         return value
     data = _as_dict(value)
     if not data:
         return None
     data = dict(data)
-    for legacy_key in ("causal_category", "chain_nodes", "earliest_divergence", "evidence_coverage",
-                       "analysis_quality", "incomplete_reason", "verification_steps", "patch_direction",
-                       "needs_human_review", "scenario", "quality_flags", "raw_model_output", "llm_output",
-                       "tool_call_log", "analysis_method", "probe_results", "gate_decisions",
-                       "transition_decisions", "fallbacks"):
-        data.pop(legacy_key, None)
-    data["expectation_attributions"] = [item for item in (normalize_expectation_attribution(item) for item in _as_list(data.get("expectation_attributions"))) if item is not None]
+    data["findings"] = [item for item in (normalize_attribution_finding(item) for item in _as_list(data.get("findings"))) if item is not None]
     if not data.get("summary"):
         data["summary"] = _as_dict(data.get("summary"))
     return AttributeResult(**data)

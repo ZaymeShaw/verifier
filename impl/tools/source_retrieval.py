@@ -18,11 +18,15 @@ from impl.tools.protocol import ToolResult, VerifiableTool
 
 MAX_SOURCE_FILE_BYTES = 64000
 MAX_SOURCE_FUNCTION_BYTES = 24_000
+MAX_SOURCE_FULL_FILE_BYTES = 24_000
 SOURCE_READABLE_SUFFIXES = {".py", ".yaml", ".yml", ".md", ".json", ".txt", ".cfg", ".toml", ".prompt"}
 DEFAULT_AGGREGATE_BYTE_BUDGET = 192_000
 # 原业务系统 repo walk 上限：避免大仓 catalog 失控
 MAX_CATALOG_ENTRIES = 80
 MAX_WALK_DEPTH = 6
+MAX_SEARCH_RESULTS = 40
+MAX_SEARCH_LINE_CHARS = 500
+MAX_SEARCH_CONTEXT_LINES = 20
 # 原业务系统 walk 排除目录
 EXCLUDE_DIRS = {"__pycache__", "node_modules", ".git", "venv", ".venv", "env", "dist", "build", "logs", "docs", "test", "tests", "migrations", ".claude", "docs_BAK", "archive", "backup", "fixtures", "data", "assets", "static", ".mypy_cache", ".pytest_cache", ".ruff_cache", "egg-info", ".eggs", "tmp", "temp", "output", "result", "checkpoint", "bin", "obj", "target", "vendor", "third_party", "thirdparty"}
 
@@ -141,6 +145,15 @@ class ProjectSourceFileProvider:
     def _build_catalog(self) -> List[Dict[str, Any]]:
         project_root = Path(self.spec.root) if self.spec.root else None
         entries: Dict[str, Dict[str, Any]] = {}
+        walked_business_roots: set[Path] = set()
+
+        def walk_business_root(path: Path, prefix: str) -> None:
+            """Expose one physical business root once, even when YAML aliases it."""
+            resolved = path.resolve()
+            if resolved in walked_business_roots:
+                return
+            walked_business_roots.add(resolved)
+            self._walk_business_repo(entries, resolved, prefix, priority=True)
 
         # 1. source_config_paths from adapter
         config_paths = self.project_attribute_context.get("source_config_paths") or {}
@@ -189,7 +202,13 @@ class ProjectSourceFileProvider:
         application = dict(getattr(self.spec, "application", None) or {})
         external_repo = application.get("external_repo")
         if external_repo and Path(external_repo).exists():
-            self._walk_business_repo(entries, Path(external_repo), "ext_repo", priority=True)
+            walk_business_root(Path(external_repo), "ext_repo")
+
+        # 4.1 evals 接入时声明的用户侧项目。这里是业务资料/源码的授权根，
+        # 不是 verifier 项目层的 adapter 目录。
+        source_project = str(getattr(self.spec, "source_project", "") or "")
+        if source_project and Path(source_project).exists():
+            walk_business_root(Path(source_project), "source_project")
 
         # 5. 原业务系统：endpoint_discovery.source_roots (如 client_search 的 llm_client_search_0513/...)
         endpoint_cfg = dict(getattr(self.spec, "endpoint_discovery", None) or {})
@@ -199,7 +218,7 @@ class ProjectSourceFileProvider:
             if not p.is_absolute() and project_root:
                 p = (project_root / p).resolve()
             if p.exists():
-                self._walk_business_repo(entries, p, "endpoint_src", priority=True)
+                walk_business_root(p, "endpoint_src")
 
         # Compute size_chars for each entry
         catalog = []
@@ -261,6 +280,7 @@ class ProjectSourceFileProvider:
                 continue
             if f.name.startswith("."):
                 continue
+            # prefix 已包含递归目录，不能只使用文件名，否则同名源码会静默覆盖。
             key = f"{prefix}:{f.name}"
             if key in entries:
                 continue
@@ -296,7 +316,15 @@ class ProjectSourceFileProvider:
             return None
 
         try:
-            content = Path(entry["path"]).read_text(encoding="utf-8", errors="ignore")
+            path = Path(entry["path"])
+            file_bytes = path.stat().st_size
+            if file_bytes > MAX_SOURCE_FULL_FILE_BYTES:
+                return (
+                    f"[full_file_too_large: '{file_key}' is {file_bytes} bytes, above the "
+                    f"{MAX_SOURCE_FULL_FILE_BYTES}-byte bounded evidence limit; use "
+                    "source.search_text with an exact query, small max_results and context_lines.]"
+                )
+            content = path.read_text(encoding="utf-8", errors="ignore")
             return self._cache_content(file_key, content, MAX_SOURCE_FILE_BYTES)
         except Exception:
             return None
@@ -337,6 +365,48 @@ class ProjectSourceFileProvider:
             return extract_python_symbols(content)
         except Exception:
             return []
+
+    def search_text(
+        self,
+        query: str,
+        *,
+        file_keys: Optional[List[str]] = None,
+        max_results: int = MAX_SEARCH_RESULTS,
+        context_lines: int = 0,
+    ) -> List[Dict[str, Any]]:
+        """Search authorized catalog files and return bounded, line-addressable matches."""
+        needle = str(query or "").strip()
+        if not needle:
+            return []
+        requested = set(str(item) for item in (file_keys or []) if str(item))
+        limit = max(1, min(int(max_results or MAX_SEARCH_RESULTS), MAX_SEARCH_RESULTS))
+        context = max(0, min(int(context_lines or 0), MAX_SEARCH_CONTEXT_LINES))
+        matches: List[Dict[str, Any]] = []
+        for entry in self.list_files():
+            if requested and entry["key"] not in requested:
+                continue
+            try:
+                path = Path(entry["path"])
+                content = path.read_text(encoding="utf-8", errors="ignore")[:MAX_SOURCE_FILE_BYTES]
+            except Exception:
+                continue
+            lines = content.splitlines()
+            for line_number, line in enumerate(lines, start=1):
+                if needle.casefold() not in line.casefold():
+                    continue
+                start_line = max(1, line_number - context)
+                end_line = min(len(lines), line_number + context)
+                excerpt = "\n".join(lines[start_line - 1:end_line])
+                matches.append({
+                    "file_key": entry["key"],
+                    "line": line_number,
+                    "start_line": start_line,
+                    "end_line": end_line,
+                    "text": excerpt[:MAX_SEARCH_LINE_CHARS * max(1, 1 + context * 2)],
+                })
+                if len(matches) >= limit:
+                    return matches
+        return matches
 
     def _catalog_entry(self, file_key: str) -> Optional[Dict[str, Any]]:
         catalog = self.list_files()
@@ -501,7 +571,7 @@ def create_source_retrieval_tools(provider: SourceFileProvider) -> List[Verifiab
         ),
         VerifiableTool(
             tool_id="source.read_functions",
-            description="读取指定源码文件的函数/方法片段，或在文件类型不支持函数抽取时读取整文件内容。输入 source_file_catalog 的 file_key、可选 function_names 或 full_file，输出源码/文档文本片段；该工具提供实现机制证据，不执行系统、不验证当前行为，也不替代 API、字段能力或规则类工具的证据。",
+            description=f"读取指定源码文件的函数/方法片段，或在文件类型不支持函数抽取时读取不超过 {MAX_SOURCE_FULL_FILE_BYTES} 字节的小文件。更大的配置、文档或历史 probe 必须使用 source.search_text 获取有界片段。输入 source_file_catalog 的 file_key、可选 function_names 或 full_file，输出源码/文档文本片段；该工具提供实现机制证据，不执行系统、不验证当前行为，也不替代 API、字段能力或规则类工具的证据。",
             applicable_scenario="attr",
             parameters={
                 "type": "object",
@@ -512,7 +582,7 @@ def create_source_retrieval_tools(provider: SourceFileProvider) -> List[Verifiab
                         "items": {"type": "string"},
                         "description": "要读取的函数/方法名列表，支持普通函数名或 qualified_name（如 ClassName.method_name）；名称必须来自已有符号信息、文件内容线索或当前任务证据，不要凭空猜测。",
                     },
-                    "full_file": {"type": "boolean", "description": "是否读取整文件内容。默认 false；用于非 Python 文档/配置，或 function_names 无法表达所需文本片段时。整文件输出可能较大，只能提供文本证据。"},
+                    "full_file": {"type": "boolean", "description": f"是否读取整文件内容。默认 false；仅用于不超过 {MAX_SOURCE_FULL_FILE_BYTES} 字节、且无法用函数或有界文本搜索表达的小文件。大文件会被拒绝。"},
                 },
                 "required": ["file_key"],
             },
@@ -520,3 +590,49 @@ def create_source_retrieval_tools(provider: SourceFileProvider) -> List[Verifiab
         ),
     ]
 
+
+def create_source_search_tools(provider: ProjectSourceFileProvider) -> List[VerifiableTool]:
+    """Attribute-only discovery tool layered on the shared authorized source provider."""
+
+    def search_source_text(**kwargs: Any) -> ToolResult:
+        query = str(kwargs.get("query") or "").strip()
+        file_keys = kwargs.get("file_keys") or []
+        if not query:
+            return ToolResult(
+                tool_id="source.search_text",
+                tool_type="source_retrieval",
+                status="failed",
+                error="query is required",
+            )
+        matches = provider.search_text(
+            query,
+            file_keys=[str(item) for item in file_keys],
+            max_results=int(kwargs.get("max_results") or MAX_SEARCH_RESULTS),
+            context_lines=int(kwargs.get("context_lines") or 0),
+        )
+        return ToolResult(
+            tool_id="source.search_text",
+            tool_type="source_retrieval",
+            status="succeeded" if matches else "inconclusive",
+            actual={"query": query, "matches": matches},
+            evidence=f"searched authorized source catalog for {query!r}; found {len(matches)} matches",
+            missing_evidence=[] if matches else ["no authorized catalog line contains the requested text"],
+        )
+
+    search_source_text.__name__ = "source_search_text"
+    return [VerifiableTool(
+        tool_id="source.search_text",
+        description="在 ProjectSpec 授权的业务源码、配置和文档 catalog 内搜索原始文本，返回 file_key、行号和可选的命中附近有界原文。配置/文档应优先用精确 query、较小 max_results 和 context_lines 获取最小充分片段，避免为了查看相邻字段而读取整文件。它用于发现未预先登记的技术位置；匹配内容只能证明文本存在，不能单独证明运行时根因。",
+        applicable_scenario="attr",
+        parameters={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "必填。要在授权文件中查找的精确原文、标识符、stage、字段或配置值；使用当前 case 证据中的具体词，不要用宽泛主题。"},
+                "file_keys": {"type": "array", "items": {"type": "string"}, "description": "可选。仅搜索 source_file_catalog 中这些精确 file_key；留空时搜索整个授权 catalog。"},
+                "max_results": {"type": "integer", "description": f"可选。最多返回的匹配行，公共上限为 {MAX_SEARCH_RESULTS}。"},
+                "context_lines": {"type": "integer", "description": f"可选。每个命中前后附带的原文行数，默认 0，上限 {MAX_SEARCH_CONTEXT_LINES}。读取配置块时应配合精确 query 和较小 max_results 使用。"},
+            },
+            "required": ["query"],
+        },
+        execute_fn=search_source_text,
+    )]

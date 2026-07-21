@@ -2,7 +2,7 @@ project_id: client_search
 name: 客户搜索评估示例
 description: 将客户搜索项目作为通用评估系统的第一个项目适配实现。
 adapter: adapter.py
-source_project: ../../../projects/client_search
+source_project: /Users/xiaozijian/WorkSpace/projects/claude_code/llm_client_search_0513/llm_client_search
 capabilities: ["live_run", "judge", "attribute", "cluster", "check"]
 common:
   ready: []
@@ -22,6 +22,10 @@ application:
     method: POST
     timeout: 3
     enabled: true
+attribute_draft:
+  enabled: true
+  module: draft/attribute.py
+  reason: Batch attribution validation through the 8021 UAT frontend.
 documents:
   application: application.md
   mock: mock.md
@@ -138,3 +142,51 @@ endpoint_discovery:
   blacklist:
     methods: ["PUT", "DELETE", "PATCH"]
     route_keywords: ["reload", "reindex", "delete", "update", "create", "write"]
+
+role_assets:
+  - asset_id: attribute_investigation
+    kind: investigation
+    enabled: true
+    roles: [attribute]
+    production_path: investigation/attribute
+    candidate_path: draft/investigation/attribute
+    replace: true
+  - asset_id: attribute_investigation_tools
+    kind: tool
+    enabled: true
+    roles: [attribute]
+    production_path: tools/investigation_tools.py
+    candidate_path: draft/tools/investigation_tools.py
+    replace: true
+  - asset_id: attribute_investigation_context_builder
+    kind: context_builder
+    enabled: true
+    roles: [attribute]
+    production_path: context_builders/attribute_investigation.py
+    candidate_path: draft/context_builders/attribute_investigation.py
+    replace: true
+  - asset_id: judge_evaluation
+    kind: context
+    enabled: true
+    roles: [judge]
+    production_path: evaluation.md
+  - asset_id: judge_boundary
+    kind: context
+    enabled: true
+    roles: [judge]
+    production_path: judge_boundary_protocals.md
+  - asset_id: judge_standard
+    kind: context
+    enabled: true
+    roles: [judge]
+    production_path: judge.md
+  - asset_id: mock_contract
+    kind: context
+    enabled: true
+    roles: [mock]
+    production_path: mock.md
+  - asset_id: mock_application
+    kind: context
+    enabled: true
+    roles: [mock]
+    production_path: application.md

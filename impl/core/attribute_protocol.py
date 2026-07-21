@@ -1,126 +1,153 @@
-"""Attribute 协议层和扩展点基类
-
-四层文件关系：
-- attribute_protocol.py: 协议层（_AttributeProtocol，主流程实现）+ 操作层（ProjectAttribute，扩展点）
-- attribute.py: 通用层（工具函数：attribute_failure 等）
-- projects/<project>/attribute.py: 项目层（实现扩展点）
-"""
+"""Attribute protocol: investigation, Finalization, independent review, public result."""
 from __future__ import annotations
-import logging
+
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any, List, Callable
+from typing import Any, Callable, Dict, List, Optional
 from typing import final as typing_final
-from impl.core.schema import RunTrace, JudgeResult, AttributeResult, ProjectSpec, to_dict
+
 from impl.core.protocol_base import check_forbidden_overrides
+from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace, normalize_attribute_result, to_dict
 from impl.core.summary import summary_from_attribution
 
-logger = logging.getLogger(__name__)
+
+def _failed_expectation_ids(judge: JudgeResult) -> list[str]:
+    from impl.core.attribute import failed_expectation_ids
+    return failed_expectation_ids(judge)
 
 
-def _has_evidence_payload(value: Any) -> bool:
-    """Return whether probe/runtime output contains usable current-run evidence."""
-    if isinstance(value, list):
-        return any(_has_evidence_payload(item) for item in value)
-    if not isinstance(value, dict) or not value:
-        return bool(value)
-    if value.get("probe_status") == "failed":
-        return False
-    evidence_items = {
-        key: item
-        for key, item in value.items()
-        if key not in {"probe_error", "probe_status"}
-    }
-    return any(item not in (None, "", [], {}) for item in evidence_items.values())
+def _judge_status(judge: JudgeResult) -> str:
+    from impl.core.attribute import judge_status
+    return judge_status(judge)
 
 
 class _AttributeProtocol(ABC):
-    """
-    协议层：Attribute 归因主流程的具体实现。
-
-    主流程（attribute_failure 模板方法）：
-    1. 构建上下文（扩展点 build_context）
-    2. 运行探针（内部方法 _run_probes）
-    3. 调用 LLM 归因（内部方法 _run_llm_attribute，调用通用层）
-    4. 校验输出（内部方法 _validate_attribute_output）
-    5. 后处理（扩展点 normalize_result）
-
-    需要工具时从通用层取，需要项目定制时调用扩展点。
-    项目不能修改流程的执行顺序。
-    """
-
     _FORBIDDEN_OVERRIDES = frozenset({
-        'attribute_failure',
-        '_run_llm_attribute',
-        '_validate_attribute_output',
-        '_run_probes',
+        "attribute_failure",
+        "_run_llm_attribute",
+        "_validate_attribute_output",
+        "_run_probes",
+        "_run_attribute_review",
     })
 
     def __init_subclass__(cls, **kwargs):
-        """检查子类是否覆盖了禁止的方法"""
         super().__init_subclass__(**kwargs)
         check_forbidden_overrides(cls, cls._FORBIDDEN_OVERRIDES)
 
     @typing_final
-    def attribute_failure(
-        self,
-        trace: RunTrace,
-        judge_result: JudgeResult
-    ) -> AttributeResult:
-        """
-        模板方法：Attribute 归因主流程的具体实现。
-
-        流程：
-        1. 构建上下文（扩展点）
-        2. 运行探针（内部方法）
-        3. 调用 LLM 归因（内部方法，调用通用层）
-        4. 校验输出（内部方法）
-        5. 后处理（扩展点）
-        """
-        # 1. 构建上下文（扩展点）
+    def attribute_failure(self, trace: RunTrace, judge_result: JudgeResult) -> AttributeResult:
         context = self.build_context(trace, judge_result)
+        if not isinstance(context, dict):
+            raise TypeError("ProjectAttribute.build_context() must return a dict")
+        environment = getattr(self, "_attribute_execution_environment", None)
+        if environment is not None:
+            context = environment.assemble(context)
+        context["probe_results"] = self._run_probes(trace, judge_result)
+        register_dynamic = context.get("_attribute_register_dynamic_materials")
+        if callable(register_dynamic):
+            context["dynamic_context_units"] = register_dynamic({
+                "runtime_checks": context.get("runtime_checks"),
+                "probe_results": context.get("probe_results"),
+            })
 
-        # 2. 运行探针（内部方法）
-        probe_results = self._run_probes(trace, judge_result)
-        context["probe_results"] = probe_results
+        failed_ids = _failed_expectation_ids(judge_result)
+        if _judge_status(judge_result) == "fulfilled":
+            result = AttributeResult(trace.trace_id, trace.project_id, str(trace.case_id or ""))
+            result.summary = summary_from_attribution(to_dict(result), failed_ids, judge_status="fulfilled")
+            return result
 
-        # 3. 调用 LLM 归因（内部方法，调用通用层）
-        raw_result = self._run_llm_attribute(trace, judge_result, context)
+        review_enabled = bool(context.get("_attribute_review_enabled"))
+        custom_main = self.__class__.run_attribute_round is not _AttributeProtocol.run_attribute_round
+        draft_enabled = bool((getattr(self.spec, "attribute_draft", {}) or {}).get("enabled"))
+        if custom_main and not draft_enabled:
+            raise TypeError("run_attribute_round may only be overridden by an enabled attribute draft")
 
-        # 4. 校验输出（内部方法）
-        validated_result = self._validate_attribute_output(raw_result, context, judge_result)
+        last_issues: list[dict[str, Any]] = []
+        for round_number in (1, 2):
+            context["_attribute_round"] = round_number
+            raw = self.run_attribute_round(trace, judge_result, context)
+            candidate = self._validate_attribute_output(raw, context, judge_result)
+            candidate_snapshot = normalize_attribute_result(to_dict(candidate))
+            if candidate_snapshot is None:
+                raise ValueError("failed to snapshot Attribute result before project normalization")
+            normalized = self.normalize_result(trace, judge_result, candidate)
+            self._assert_normalize_subset(candidate_snapshot, normalized)
+            candidate = self._validate_attribute_output(normalized, context, judge_result)
 
-        # 5. 后处理（扩展点）
-        final_result = self.normalize_result(trace, judge_result, validated_result)
-        # summary 是派生字段，必须反映校验/项目后处理后的最终证据强度。
-        final_result.summary = summary_from_attribution(to_dict(final_result))
+            if not candidate.findings or not review_enabled:
+                candidate.summary = summary_from_attribution(to_dict(candidate), failed_ids, judge_status=_judge_status(judge_result))
+                return candidate
+            review = self._run_attribute_review(trace, judge_result, candidate, context, round_number)
+            context.setdefault("_attribute_review_audit", []).append({
+                "round": round_number,
+                "finding_ids": [finding.finding_id for finding in candidate.findings],
+                "passed": review.get("passed") is True,
+                "issues": list(review.get("issues") or []),
+                "infrastructure_error": str(review.get("infrastructure_error") or ""),
+            })
+            infrastructure_error = str(review.get("infrastructure_error") or "").strip()
+            if infrastructure_error:
+                unresolved = AttributeResult(
+                    trace_id=trace.trace_id,
+                    project_id=trace.project_id,
+                    case_id=str(trace.case_id or ""),
+                    unresolved_reason=f"归因独立审查未完成，现有结论不能作为正式归因。{infrastructure_error}",
+                )
+                unresolved.summary = summary_from_attribution(
+                    to_dict(unresolved), failed_ids, judge_status=_judge_status(judge_result)
+                )
+                return unresolved
+            if review.get("passed") is True:
+                candidate.summary = summary_from_attribution(to_dict(candidate), failed_ids, judge_status=_judge_status(judge_result))
+                return candidate
+            last_issues = list(review.get("issues") or [])
+            if round_number == 1:
+                context["review_issues"] = last_issues
+                continue
 
-        return final_result
+        reason = "独立 Reviewer 两轮均未确认现有 evidence 足以证明归因结论。"
+        if last_issues:
+            problems = [str(item.get("problem") or "").strip() for item in last_issues if isinstance(item, dict)]
+            if any(problems):
+                reason += " " + "；".join(item for item in problems if item)
+        unresolved = AttributeResult(
+            trace_id=trace.trace_id,
+            project_id=trace.project_id,
+            case_id=str(trace.case_id or ""),
+            unresolved_reason=reason,
+        )
+        unresolved.summary = summary_from_attribution(to_dict(unresolved), failed_ids, judge_status=_judge_status(judge_result))
+        return unresolved
 
     def _run_probes(self, trace: RunTrace, judge_result: JudgeResult) -> List[Dict[str, Any]]:
-        """内部方法：运行探针。探针失败不中断归因流程。"""
         probe_fn = self.probes()
         if not probe_fn:
             return []
         try:
             results = probe_fn(trace, judge_result)
             return results if isinstance(results, list) else []
-        except Exception as e:
-            return [{"probe_error": str(e), "probe_status": "failed"}]
+        except Exception as exc:
+            return [{"probe_error": str(exc), "probe_status": "failed"}]
 
-    def _run_llm_attribute(
+    def _run_llm_attribute(self, trace: RunTrace, judge_result: JudgeResult, context: Dict[str, Any]) -> AttributeResult:
+        from impl.core.attribute import attribute_failure
+        return attribute_failure(self.spec, trace, judge_result, project_attribute_context=context)
+
+    def _run_attribute_review(
         self,
         trace: RunTrace,
         judge_result: JudgeResult,
-        context: Dict[str, Any]
-    ) -> AttributeResult:
-        """内部方法：调用 LLM 归因。委托给通用层 attribute.failure() 函数。"""
-        from impl.core import attribute as attribute_module
-
-        return attribute_module.attribute_failure(
+        result: AttributeResult,
+        context: Dict[str, Any],
+        round_number: int,
+    ) -> Dict[str, Any]:
+        from impl.core.attribute_reviewer import review_attribute_result
+        return review_attribute_result(
             spec=self.spec,
             trace=trace,
             judge=judge_result,
-            project_attribute_context=context
+            result=result,
+            project_context=context,
+            round_number=round_number,
         )
 
     def _validate_attribute_output(
@@ -129,88 +156,83 @@ class _AttributeProtocol(ABC):
         context: Optional[Dict[str, Any]] = None,
         judge_result: Optional[JudgeResult] = None,
     ) -> AttributeResult:
-        """内部方法：校验 LLM 输出格式与最低证据门槛。"""
+        result = normalize_attribute_result(result)
         if result is None:
-            raise ValueError("attribute 输出为 None")
-
-        if not isinstance(result.suspected_locations, list):
-            result.suspected_locations = []
-        if not isinstance(result.evidence, list):
-            result.evidence = []
-
-        allowed_strengths = {"none", "weak", "medium", "strong"}
-        if result.evidence_strength and result.evidence_strength not in allowed_strengths:
-            result.evidence_strength = "weak"
-
-        context = context or {}
-        probe_results = context.get("probe_results")
-        runtime_checks = context.get("runtime_checks")
-        judge_status = (judge_result.overall_fulfillment or {}).get("status") if judge_result else ""
-        # fulfilled 快速路径由确定性代码生成 strong；这里只约束失败归因中的模型自报强证据。
-        if (
-            result.evidence_strength == "strong"
-            and judge_status != "fulfilled"
-            and not _has_evidence_payload(probe_results)
-            and not _has_evidence_payload(runtime_checks)
-        ):
-            result.evidence_strength = "weak"
-
+            raise ValueError("attribute output is None or invalid")
+        allowed = set(_failed_expectation_ids(judge_result)) if judge_result else set()
+        seen_findings: set[str] = set()
+        for finding in result.findings:
+            if not finding.finding_id or finding.finding_id in seen_findings:
+                raise ValueError("finding_id must be non-empty and unique")
+            seen_findings.add(finding.finding_id)
+            if not finding.conclusion.strip() or not finding.affected_expectation_ids:
+                raise ValueError("finding conclusion and affected_expectation_ids are required")
+            if allowed and not set(finding.affected_expectation_ids).issubset(allowed):
+                raise ValueError("finding may only cover not_fulfilled expectations")
+            if not finding.evidence:
+                raise ValueError("every finding requires finalized evidence")
+            for evidence in finding.evidence:
+                metadata = evidence.metadata or {}
+                if evidence.source != "context_unit" or evidence.payload is not None:
+                    raise ValueError("Attribute evidence must reference ContextUnit with empty payload")
+                if not evidence.ref_id or not evidence.location or not evidence.summary.strip():
+                    raise ValueError("EvidenceRef identity, ContextUnit location and reason are required")
+                if not metadata.get("source_hash") or metadata.get("trace_id") != result.trace_id:
+                    raise ValueError("EvidenceRef source hash and trace boundary are required")
+                if str(metadata.get("case_id") or "") != str(result.case_id or ""):
+                    raise ValueError("EvidenceRef crosses case boundary")
+        covered = {item for finding in result.findings for item in finding.affected_expectation_ids}
+        if allowed - covered and result.findings and not result.unresolved_reason.strip():
+            raise ValueError("partial attribution requires unresolved_reason")
+        if not result.findings and _judge_status(judge_result) != "fulfilled" and not result.unresolved_reason.strip():
+            raise ValueError("unresolved attribution requires unresolved_reason")
         return result
 
-    # === 扩展点：项目可选覆盖 ===
+    @staticmethod
+    def _assert_normalize_subset(before: AttributeResult, after: AttributeResult) -> None:
+        """Project normalization cannot manufacture post-Finalization facts."""
+        if after is None:
+            raise ValueError("normalize_result returned None")
+        originals = {finding.finding_id: finding for finding in before.findings}
+        for finding in after.findings:
+            original = originals.get(finding.finding_id)
+            if original is None:
+                raise ValueError("normalize_result may not add findings")
+            if finding.conclusion != original.conclusion:
+                raise ValueError("normalize_result may not add or rewrite conclusions")
+            if not set(finding.affected_expectation_ids).issubset(original.affected_expectation_ids):
+                raise ValueError("normalize_result may not expand expectation coverage")
+            original_evidence = {item.ref_id: to_dict(item) for item in original.evidence}
+            for evidence in finding.evidence:
+                if original_evidence.get(evidence.ref_id) != to_dict(evidence):
+                    raise ValueError("normalize_result may not add or rewrite EvidenceRef")
+        if after.unresolved_reason != before.unresolved_reason:
+            raise ValueError("normalize_result may not add or rewrite unresolved_reason")
+
+    def run_attribute_round(self, trace: RunTrace, judge_result: JudgeResult, context: Dict[str, Any]) -> AttributeResult:
+        return self._run_llm_attribute(trace, judge_result, context)
 
     @abstractmethod
-    def build_context(
-        self,
-        trace: RunTrace,
-        judge_result: JudgeResult
-    ) -> Dict[str, Any]:
-        """扩展点：构建 Attribute 上下文。项目必须实现。
-
-        定位/目标：
-            构建 attribute LLM 的上下文，含 tool_call_limit、system_prompt_override、
-            user_prompt_extras、runtime_checks 等项目特有字段。
-            产出的 context 会被 attribute_failure 模板方法的 _run_llm_attribute
-            传给通用层 attribute_failure 函数，驱动 LLM 归因。
-
-        参数：
-            trace: RunTrace，含 normalized_request/extracted_output/execution_trace 等，
-                   提供归因所需的业务执行上下文。
-            judge_result: JudgeResult，判定结果，含 overall_fulfillment/fulfillment_assessments/
-                          expected/actual 等，归因以此为输入定位失败原因。
-        """
-        pass
+    def build_context(self, trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:
+        """Return project-specific tools, checks and concise case constraints."""
+        raise NotImplementedError
 
     def probes(self) -> Optional[Callable[[RunTrace, JudgeResult], List[Dict[str, Any]]]]:
-        """扩展点：返回探针函数。项目可选覆盖，默认返回 None。"""
         return None
 
-    def normalize_result(
-        self,
-        trace: RunTrace,
-        judge_result: JudgeResult,
-        result: AttributeResult
-    ) -> AttributeResult:
-        """扩展点：后处理结果。项目可选覆盖。"""
+    def normalize_result(self, trace: RunTrace, judge_result: JudgeResult, result: AttributeResult) -> AttributeResult:
+        """May only sort, deduplicate, delete or narrow the common result."""
         return result
 
 
 class ProjectAttribute(_AttributeProtocol):
-    """
-    操作层：告诉项目哪些地方可以定制。
-
-    必须实现：
-    - build_context: 构建 Attribute 上下文
-
-    可选覆盖：
-    - probes / normalize_result
-    """
-
     def __init__(self, spec: ProjectSpec):
-        """初始化 ProjectAttribute。"""
         self.spec = spec
-        # 集成 live_schema：协议层统一加载和使用
         self.live_schema = None
         if spec is not None:
             from impl.core.mock_agent import load_live_schema
             self.live_schema = load_live_schema(spec.project_id)
+        self._attribute_execution_environment = None
+
+    def configure_execution_environment(self, environment: Any) -> None:
+        self._attribute_execution_environment = environment

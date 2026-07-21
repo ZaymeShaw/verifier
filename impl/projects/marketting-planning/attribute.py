@@ -200,43 +200,17 @@ def get_runtime_checks(runtime_values: Dict[str, Any], context: Dict[str, Any] |
     return checks
 
 
-def apply_attribution_probes(trace: RunTrace, judge_result: JudgeResult, attribute_result: AttributeResult) -> AttributeResult:
-    target_probe = target_value_unit_probe(trace, judge_result)
-    if not target_probe:
-        return attribute_result
-    attribute_result.suspected_locations = [{
-        "location": "request_normalization",
-        "evidence": list(target_probe.get("evidence") or []),
-        "findings": target_probe,
-    }]
-    attribute_result.evidence = list(target_probe.get("evidence") or [])
-    attribute_result.evidence_strength = "strong"
-    attribute_result.root_cause_hypothesis = f"当前 query 含目标值 {target_probe.get('source_amount')}，按项目内部单位应为 {target_probe.get('expected_target_nbev_wan')} 万，实际链路使用 {target_probe.get('actual_target_nbev_wan')} 万，最早差异位于请求归一化/目标值单位转换。"
-    return attribute_result
-
-
-def normalize_attribute_result_for_project(trace: RunTrace, judge_result: JudgeResult, attribute_result: AttributeResult) -> AttributeResult:
-    overall = judge_result.overall_fulfillment or {}
-    if overall.get("status") == "fulfilled":
-        if not attribute_result.expectation_attributions:
-            expectation_id = "marketting-planning:planning_output_contract"
-            if judge_result.business_expectations:
-                first = judge_result.business_expectations[0]
-                expectation_id = first.get("expectation_id", expectation_id) if isinstance(first, dict) else getattr(first, "expectation_id", expectation_id)
-            evidence = list(judge_result.evidence or ["planning output contract fulfilled"])
-            attribute_result.expectation_attributions = [{"expectation_id": expectation_id, "fulfillment_status": "fulfilled", "suspected_locations": [], "root_cause_hypothesis": "当前 planning 输出满足业务预期，归因结论为 no_issue。", "evidence": evidence}]
-        attribute_result.suspected_locations = []
-        attribute_result.root_cause_hypothesis = "当前 planning 输出满足业务预期，归因结论为 no_issue。"
-        return attribute_result
-    return apply_attribution_probes(trace, judge_result, attribute_result)
-
-
 def attribution_probes(trace: RunTrace, judge_result: JudgeResult):
     target_probe = target_value_unit_probe(trace, judge_result)
     return [target_probe] if target_probe else []
 
 
 def target_value_unit_probe(trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:
+    """Describe an observed query/output value disagreement without assigning cause.
+
+    This compatibility probe cannot establish how the business application parsed
+    or propagated the value.  The draft investigation tools replay those stages.
+    """
     evidence_text = _target_value_error_evidence(judge_result)
     if not evidence_text:
         return {}
@@ -264,10 +238,15 @@ def target_value_unit_probe(trace: RunTrace, judge_result: JudgeResult) -> Dict[
     return {
         "method": "target_value_unit_probe",
         "source_amount": amount_match.group(0),
-        "expected_target_nbev_wan": expected,
+        "reference_target_nbev_wan": expected,
         "actual_target_nbev_wan": actual,
-        "result": "mismatch reproduced",
-        "evidence": [f"query contains {amount_match.group(0)}", f"expected {expected} 万", f"actual {actual} 万", evidence_text],
+        "result": "boundary mismatch observed",
+        "causal_status": "unverified",
+        "evidence": [f"query contains {amount_match.group(0)}", f"reference says {expected} 万", f"actual says {actual} 万", evidence_text],
+        "boundary_limits": [
+            "This comparison does not execute the business parser or planning workflow.",
+            "It cannot identify the stage or mechanism that caused the mismatch.",
+        ],
     }
 
 
@@ -312,15 +291,14 @@ def _build_project_attribute_context(spec: ProjectSpec, trace: RunTrace, judge_r
         "tool_call_limit": 4,
         "system_prompt_override": """你是 marketting-planning 项目的 attribute agent。
 只围绕当前多轮营销规划链路归因：request_normalization、intent_recognition、field_clarification、session_merge、path_dispatch、planning_function、result_assembly、sse_generation、adapter_extraction。
-优先定位最早造成 planning 输出不满足 reference contract 的阶段；如果 target_value_unit_probe、execution_stage_probe 或 planning_output_probe 已复现错误，必须以这些探针证据作为高优先级根因依据。
-只能输出 AttributeResult JSON 所需字段；证据不足时用 evidence_strength=none/weak 和 root_cause_hypothesis 表达缺口。
-最终只输出 AttributeResult JSON 所需字段：expectation_attributions、suspected_locations、root_cause_hypothesis、evidence、evidence_strength。""",
+优先定位最早造成 planning 输出不满足 reference contract 的阶段。target_value_unit_probe、execution_stage_probe 和 planning_output_probe 只描述边界观察与调查入口，不能单独证明根因；根因必须由当前业务链路的实际重放、原始 trace 或对应源码材料连接。
+只调查 not_fulfilled expectation，按真实缺陷合并 findings。证据不足时不输出 hypothesis，只写一个 unresolved_reason。最终只输出 findings、unresolved_reason，evidence 仅引用 Finalization 重载的 ContextUnit。""",
         "user_prompt_extras": {
             "project_attribute_strategy": {
                 "project": spec.project_id,
                 "business_chain": _STAGE_ORDER,
                 "root_cause_policy": "按 stage_order 读取 execution_stage_probe 和 planning_output_probe，查找当前 trace 中最早的失败、缺失阶段或 reference/actual 差异；不能把多轮上下文、shared_session 或外部仓库边界外问题混入当前可控链路。",
-                "probe_priority": "target_value_unit_probe、execution_stage_probe、planning_output_probe 优先于 LLM 猜测；探针证据为空时再用 judge gaps 和 execution_trace 定位。",
+                "probe_priority": "probe 只帮助选择调查分支，不具有自动根因优先级；必须用当前业务执行或源码材料验证活跃机制。",
                 "evidence_contract": ["normalized_request.turns", "reference_contract", "planning_summary", "execution_trace", "runtime_checks", "target_value_unit_probe", "execution_stage_probe", "planning_output_probe"],
             },
             "application_boundary": application_boundary,
@@ -358,7 +336,6 @@ class MarketingPlanningAttribute(ProjectAttribute):
         return attribution_probes
 
     def normalize_result(self, trace: RunTrace, judge_result: JudgeResult, result: AttributeResult) -> AttributeResult:
-        result = normalize_attribute_result_for_project(trace, judge_result, result)
         return normalize_attribute_result(result) or result
 
 

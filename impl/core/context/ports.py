@@ -30,6 +30,9 @@ class ContextRegistry(Protocol):
     def get_many(self, unit_ids: Sequence[str], *, transaction: Any = None) -> Mapping[str, Mapping[str, Any]]:
         ...
 
+    def list_entries(self, project_id: str) -> Sequence[Mapping[str, Any]]:
+        ...
+
     def upsert(
         self,
         record: ContextUnitRecord,

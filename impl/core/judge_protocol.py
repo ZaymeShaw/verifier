@@ -16,6 +16,20 @@ from impl.core.judge import judge_trace as core_judge_trace
 
 logger = logging.getLogger(__name__)
 
+_TERMINAL_JUDGE_FAILURE_EVIDENCE = frozenset({
+    "llm_call_failed",
+    "llm_output_validation_failed",
+})
+
+
+def _is_terminal_judge_failure(result: JudgeResult) -> bool:
+    evidence = {
+        str(item)
+        for item in (result.evidence or [])
+        if isinstance(item, str)
+    }
+    return bool(evidence & _TERMINAL_JUDGE_FAILURE_EVIDENCE)
+
 
 class _JudgeProtocol(ABC):
     """
@@ -82,10 +96,13 @@ class _JudgeProtocol(ABC):
                 evidence=["llm_output_validation_failed"],
             )
 
-        # 4. 归一化 + 协调结果（扩展点）
+        # 4. 归一化 + 协调结果（扩展点）。LLM 执行/输出失败是公共终态，
+        # 项目 reconcile 不得为失败结果补造 assessments 或升级为 fulfilled。
         normalized = self.normalize_result(trace, raw_result)
-        final_result = self.reconcile_result(trace, normalized)
         from impl.core.judge import finalize_judge_result
+        if _is_terminal_judge_failure(normalized):
+            return finalize_judge_result(normalized)
+        final_result = self.reconcile_result(trace, normalized)
         return finalize_judge_result(final_result)
 
     def _run_llm_judge(self, trace: RunTrace, context: Dict[str, Any],

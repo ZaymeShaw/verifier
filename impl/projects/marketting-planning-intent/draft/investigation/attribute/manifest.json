@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "project_id": "marketting-planning-intent",
+  "role": "attribute",
+  "source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335",
+  "evidence_refs": [
+    {
+      "ref_id": "intent-public-endpoint",
+      "source": "marketing-planning business repository",
+      "kind": "function",
+      "stage": "public-boundary",
+      "summary": "The public endpoint converts the request, invokes run_intent_only, attaches nlu_info, and returns one response frame.",
+      "location": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/api/router.py:intent_recognition",
+      "metadata": {
+        "source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335",
+        "sha256": "7a5928ea735533af0734dd96657175c761b2cef4c996e3f9d49c569c930c64f0",
+        "lines": "132-180"
+      }
+    },
+    {
+      "ref_id": "intent-request-normalization",
+      "source": "marketing-planning business repository",
+      "kind": "function",
+      "stage": "request-normalization",
+      "summary": "MarketingPlanningRequest.to_chat_request selects the agent message or user_text and passes contexts to the workflow.",
+      "location": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/schemas/request.py:MarketingPlanningRequest",
+      "metadata": {
+        "source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335",
+        "sha256": "23a5f8382e4994be7bf7a30d5b31e58a968a385433c2cd8047fb888eafadd583",
+        "lines": "60-94"
+      }
+    },
+    {
+      "ref_id": "intent-resolver",
+      "source": "marketing-planning business repository",
+      "kind": "function",
+      "stage": "branch-selection",
+      "summary": "The resolver selects rule output, LLM fallback, or LLM supplementation for incomplete NBEV fields.",
+      "location": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/nbev_workflow.py:_resolve_intent_result",
+      "metadata": {
+        "source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335",
+        "sha256": "729b5c853f99f75eeedd7ed1d998de093b645cf74f94838ccfa7578728f2a47d",
+        "lines": "37-86"
+      }
+    },
+    {
+      "ref_id": "intent-response-assembly",
+      "source": "marketing-planning business repository",
+      "kind": "function",
+      "stage": "response-assembly",
+      "summary": "run_intent_only maps the resolver result into nlu_code and nlu_info without executing planning.",
+      "location": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/nbev_workflow.py:run_intent_only",
+      "metadata": {
+        "source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335",
+        "sha256": "729b5c853f99f75eeedd7ed1d998de093b645cf74f94838ccfa7578728f2a47d",
+        "lines": "89-135"
+      }
+    },
+    {
+      "ref_id": "intent-rule-stage",
+      "source": "marketing-planning business repository",
+      "kind": "function",
+      "stage": "deterministic-recognition",
+      "summary": "The rule stage contains context-dependent adjustments, homepage rules, structured extraction, and the NBEV keyword heuristic; no-match falls through to the LLM.",
+      "location": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/steps/intent_recognition.py:try_rule_based_intent",
+      "metadata": {
+        "source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335",
+        "sha256": "d0769c14582f0381fdf6fb07a7d151fe90b252c7b30e392c123aa1178ea0a21f",
+        "lines": "67-135"
+      }
+    },
+    {
+      "ref_id": "intent-llm-stage",
+      "source": "marketing-planning business repository",
+      "kind": "function",
+      "stage": "llm-recognition",
+      "summary": "recognize_intent invokes the configured model with the business prompt and returns the structured IntentResult.",
+      "location": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/steps/intent_recognition.py:recognize_intent",
+      "metadata": {
+        "source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335",
+        "sha256": "d0769c14582f0381fdf6fb07a7d151fe90b252c7b30e392c123aa1178ea0a21f",
+        "lines": "214-258"
+      }
+    },
+    {
+      "ref_id": "intent-result-contract",
+      "source": "marketing-planning business repository",
+      "kind": "source",
+      "stage": "internal-contract",
+      "summary": "IntentResult defines the supported label, confidence, NBEV target value, and path type fields.",
+      "location": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/schemas/intent.py",
+      "metadata": {
+        "source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335",
+        "sha256": "6128da576a773b90498db97eb11010b157f272bb2fd31a37f977d5a0bbe7aab0",
+        "lines": "7-31"
+      }
+    },
+    {
+      "ref_id": "intent-llm-prompt",
+      "source": "marketing-planning business repository",
+      "kind": "source",
+      "stage": "llm-contract",
+      "summary": "The prompt defines the configured model's intent taxonomy and output instructions.",
+      "location": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/prompts/intent_prompt.py",
+      "metadata": {
+        "source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335",
+        "sha256": "51dcf9e68026d3c653c7c4a0631e954f1a001e1018d916094e9e68cbf71d03c7"
+      }
+    }
+  ],
+  "tool_requirements": [
+    {
+      "tool_id": "marketing_intent.rule_stage_replay",
+      "description": "Execute the checked-out business try_rule_based_intent for the current query and contexts, returning its actual result or an explicit no-match. A no-match means the business pipeline must use its LLM branch; it is not itself evidence of a defect.",
+      "applicable_scenario": "Attribute a marketing intent mismatch after the public RunTrace establishes the actual API result, when the reviewer needs to distinguish a deterministic rule branch from the LLM fallback branch.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Current business query to replay; it must come from the RunTrace being attributed."
+          },
+          "contexts": {
+            "type": "array",
+            "description": "Optional current conversation contexts using the business ContextItem shape.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "role": {"type": ["string", "null"]},
+                "query": {"type": ["string", "null"]},
+                "answer": {"type": ["string", "null"]}
+              }
+            }
+          }
+        },
+        "required": ["query"]
+      },
+      "evidence_refs": [],
+      "implementation": {
+        "tool_id": "marketing_intent.rule_stage_replay",
+        "module_path": "tools/investigation_tools.py",
+        "factory": "build_rule_stage_replay_tool"
+      },
+      "implementation_gap": ""
+    },
+    {
+      "tool_id": "marketing_intent.resolver_replay",
+      "description": "Execute the checked-out business _resolve_intent_result for the current query and contexts, including its rule selection and configured LLM fallback or supplementation, and return the actual internal IntentResult.",
+      "applicable_scenario": "Attribute a public intent mismatch when the rule-stage replay alone cannot determine whether the deviation is introduced by deterministic recognition, LLM fallback, or LLM supplementation.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Current business query to replay; it must come from the RunTrace being attributed."
+          },
+          "contexts": {
+            "type": "array",
+            "description": "Optional current conversation contexts using the business ContextItem shape.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "role": {"type": ["string", "null"]},
+                "query": {"type": ["string", "null"]},
+                "answer": {"type": ["string", "null"]}
+              }
+            }
+          }
+        },
+        "required": ["query"]
+      },
+      "evidence_refs": [],
+      "implementation": {
+        "tool_id": "marketing_intent.resolver_replay",
+        "module_path": "tools/investigation_tools.py",
+        "factory": "build_resolver_replay_tool"
+      },
+      "implementation_gap": ""
+    }
+  ],
+  "artifacts": {
+    "docs/traces/intent-recognition.mmd": "machine-readable intent-recognition execution topology",
+    "docs/traces/intent-recognition.md": "operational index and branch-specific attribution procedure"
+  },
+  "unresolved_reason": "Original case-level LLM internals are unavailable unless the deployed business system supplies correlated internal records; stochastic replay divergence cannot identify the original hidden cause."
+}

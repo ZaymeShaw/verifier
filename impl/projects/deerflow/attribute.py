@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from impl.projects.deerflow.live import _extract_reply_and_tool_calls, _stage_inference
+from impl.projects.deerflow.live import _extract_reply_and_tool_calls, _scripts_called, _stage_inference
 
 from impl.core.attribute_protocol import ProjectAttribute
 from impl.core.runtime_query_tools import extract_runtime_values
@@ -83,7 +83,7 @@ def _confirmed_code_locations(probes: List[Dict[str, Any]]) -> set[str]:
                 locations.add("reply_extraction")
             if probe.get("raw_vs_extracted_tool_calls_match") is False:
                 locations.add("tool_call_extraction")
-        if probe.get("stage_inference_match") is False:
+        if probe.get("raw_business_ai_message_present") and probe.get("stage_inference_match") is False:
             locations.add("stage_inference")
         if probe.get("controller_error"):
             locations.add("interaction_controller")
@@ -100,21 +100,6 @@ def _location_names(value: Any) -> set[str]:
         item = value.get(key)
         if isinstance(item, str) and item.strip():
             names.add(item.strip())
-    return names
-
-
-def _result_location_names(result: AttributeResult) -> set[str]:
-    names: set[str] = set()
-    for item in result.suspected_locations or []:
-        names.update(_location_names(item))
-    for attribution in result.expectation_attributions or []:
-        locations = (
-            attribution.get("suspected_locations")
-            if isinstance(attribution, dict)
-            else getattr(attribution, "suspected_locations", [])
-        )
-        for item in locations or []:
-            names.update(_location_names(item))
     return names
 
 
@@ -135,31 +120,50 @@ def _deerflow_integrity_probes(trace: RunTrace, judge_result: JudgeResult) -> Li
         if not isinstance(turn, dict):
             continue
         message_lists = _message_lists(turn.get("raw_response"))
+        raw_message_history_recorded = bool(message_lists)
         messages = message_lists[-1] if message_lists else []
+        raw_business_ai_message_present = (
+            _has_business_ai_message(messages) if raw_message_history_recorded else None
+        )
         raw_reply, raw_tool_calls = _extract_reply_and_tool_calls(messages)
         extracted = turn.get("extracted_output") if isinstance(turn.get("extracted_output"), dict) else {}
         extracted_reply = _as_text(extracted.get("reply_text"))
         extracted_tools = extracted.get("tool_calls") if isinstance(extracted.get("tool_calls"), list) else []
-        scripts = extracted.get("scripts_called") if isinstance(extracted.get("scripts_called"), list) else []
-        inferred_stage, stage_rule = _stage_inference(extracted_reply, extracted_tools, scripts)
+        # Replay stage inference from the latest raw business AI message.  Using
+        # stored extracted tools here would only confirm the adapter against its
+        # own possibly stale output and could hide the first extraction deviation.
+        raw_scripts = _scripts_called(raw_tool_calls)
+        inferred_stage, stage_rule = _stage_inference(raw_reply, raw_tool_calls, raw_scripts)
         raw_names = _tool_names(raw_tool_calls)
         extracted_names = _tool_names(extracted_tools)
         probes.append({
             "probe_id": f"deerflow_turn_{index}_message_integrity",
             "turn_index": index,
-            "raw_business_ai_message_present": _has_business_ai_message(messages),
+            # ``None`` means the projected RunTrace did not retain Gateway
+            # message history.  It is missing evidence, not proof that Gateway
+            # returned an empty history.
+            "raw_message_history_recorded": raw_message_history_recorded,
+            "raw_business_ai_message_present": raw_business_ai_message_present,
             "raw_reply_text": raw_reply,
             "raw_tool_names": raw_names,
             "extracted_reply_text": extracted_reply,
             "extracted_tool_names": extracted_names,
             # Live output may normalize surrounding whitespace. That is not an
             # extraction defect and must not become deterministic code evidence.
-            "raw_vs_extracted_reply_match": _as_text(raw_reply) == extracted_reply,
-            "raw_vs_extracted_tool_calls_match": raw_names == extracted_names,
+            "raw_vs_extracted_reply_match": (
+                _as_text(raw_reply) == extracted_reply if raw_business_ai_message_present else None
+            ),
+            "raw_vs_extracted_tool_calls_match": (
+                raw_names == extracted_names if raw_business_ai_message_present else None
+            ),
             "extracted_stage": str(extracted.get("stage") or "unknown"),
             "inferred_stage": inferred_stage,
             "stage_inference_rule": stage_rule,
-            "stage_inference_match": str(extracted.get("stage") or "unknown") == inferred_stage,
+            "stage_inference_match": (
+                str(extracted.get("stage") or "unknown") == inferred_stage
+                if raw_business_ai_message_present
+                else None
+            ),
             "call_status": str(turn.get("call_status") or ""),
         })
     if trace.interaction_controller_status != "not_run" or trace.interaction_controller_error:
@@ -225,8 +229,7 @@ def _build_project_attribute_context(spec: ProjectSpec, trace: RunTrace, judge_r
 该项目通过 HTTP 调 deer-flow Gateway 完成多轮营销规划对话，thread_id + checkpointer 续上下文。
 归因链：request_normalization → thread_creation → turn_delivery → message_history_read → reply_extraction → tool_call_extraction → stage_inference → multi_turn_accumulation → interaction_controller。
 必须区分“业务输出不符合预期”和“代码链路已定位”：raw 与 extracted reply/tool_calls 一致时，说明提取忠实，不得把原始业务内容错误归因给 reply_extraction/tool_call_extraction；stage_inference_match=true 时，不得把业务阶段问题归因给 stage_inference。只有 probe 明确复现差异且 suspected location 与该差异对应时才可 strong；否则只能作为未验证上游假设并设为 weak。
-当 judge 为 not_evaluable 或本地 probe 显示缺少 reply/tool_calls/semantic judge 证据时，不要编造根因，evidence_strength 设为 none 或 weak，并在 root_cause_hypothesis 说明缺失证据。
-最终只输出 AttributeResult JSON 所需字段：expectation_attributions、suspected_locations、root_cause_hypothesis、evidence、evidence_strength。""",
+当 judge 为 not_evaluable 或本地 probe 显示缺少 reply/tool_calls/semantic judge 证据时，不生成 finding，只在 unresolved_reason 说明阻塞。最终只输出 findings、unresolved_reason；证据必须引用 Finalization 重新加载的 ContextUnit。""",
         "user_prompt_extras": {
             "project_attribute_strategy": {
                 "project": spec.project_id,
@@ -279,14 +282,25 @@ def _runtime_checks(trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any
             if isinstance(item, dict) and item.get("call_status") == "succeeded"
         ),
         "raw_business_ai_message_turn_count": sum(bool(item.get("raw_business_ai_message_present")) for item in turn_probes),
+        "raw_message_history_unrecorded_turns": [
+            item.get("turn_index")
+            for item in turn_probes
+            if item.get("raw_message_history_recorded") is False
+        ],
         "reply_extraction_mismatch_turns": [
-            item.get("turn_index") for item in turn_probes if not item.get("raw_vs_extracted_reply_match")
+            item.get("turn_index")
+            for item in turn_probes
+            if item.get("raw_vs_extracted_reply_match") is False
         ],
         "tool_call_extraction_mismatch_turns": [
-            item.get("turn_index") for item in turn_probes if not item.get("raw_vs_extracted_tool_calls_match")
+            item.get("turn_index")
+            for item in turn_probes
+            if item.get("raw_vs_extracted_tool_calls_match") is False
         ],
         "stage_inference_mismatch_turns": [
-            item.get("turn_index") for item in turn_probes if not item.get("stage_inference_match")
+            item.get("turn_index")
+            for item in turn_probes
+            if item.get("stage_inference_match") is False
         ],
         "confirmed_code_locations": sorted(_confirmed_code_locations(probes)),
         "interaction_controller_status": str(trace.interaction_controller_status or "not_run"),
@@ -300,10 +314,7 @@ def _blocked_attribute_result(trace: RunTrace, judge_result: JudgeResult, reason
         trace_id=trace.trace_id,
         project_id=trace.project_id,
         case_id=str(trace.case_id or ""),
-        suspected_locations=[],
-        evidence=evidence,
-        evidence_strength="none",
-        root_cause_hypothesis="当前证据不足以定位 deerflow 业务根因，需要语义 judge 或人工复核补足证据。",
+        unresolved_reason="当前证据不足以定位 deerflow 业务根因，需要语义 judge 或人工复核补足证据。 " + reason,
     )
     return result
 
@@ -321,24 +332,4 @@ class DeerflowAttribute(ProjectAttribute):
         return _deerflow_integrity_probes
 
     def normalize_result(self, trace: RunTrace, judge_result: JudgeResult, result: AttributeResult) -> AttributeResult:
-        result = normalize_attribute_result(result) or result
-        overall = judge_result.overall_fulfillment or {}
-        status = overall.get("status") or "not_evaluable"
-        if status == "not_evaluable":
-            reason = "deerflow judge 处于 not_evaluable 状态，缺少可用语义判定，不能产出正式失败归因。"
-            return _blocked_attribute_result(trace, judge_result, reason)
-        if result.evidence_strength == "strong":
-            probes = _deerflow_integrity_probes(trace, judge_result)
-            confirmed_locations = _confirmed_code_locations(probes)
-            claimed_locations = _result_location_names(result)
-            location_supported = bool(claimed_locations) and all(
-                _location_is_supported(location, confirmed_locations)
-                for location in claimed_locations
-            )
-            if (
-                not _has_expected_and_actual(trace, judge_result)
-                or not confirmed_locations
-                or not location_supported
-            ):
-                result.evidence_strength = "weak"
-        return result
+        return normalize_attribute_result(result) or result

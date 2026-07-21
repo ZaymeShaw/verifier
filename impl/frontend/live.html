@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
   <title>Live 请求</title>
   <style>
     body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f6f8fb;color:#172033}header{background:#101828;color:white;padding:22px 30px}main{display:grid;grid-template-columns:420px 1fr;gap:16px;padding:18px}.panel,.card{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:16px}.cards{display:grid;gap:14px}.step{padding:0;overflow:hidden}.step>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;list-style:none;cursor:pointer;padding:16px 18px;background:#f8fafc}.step>summary::-webkit-details-marker{display:none}.step>summary h2{margin:0;font-size:17px}.step>summary:after{content:"展开";font-size:12px;color:#64748b}.step[open]>summary:after{content:"收起"}.step-body{padding:16px 18px;border-top:1px solid #e5e7eb}.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}.metric{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:10px}.metric b{display:block;font-size:13px;color:#64748b;margin-bottom:4px}.badge{display:inline-block;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:700;background:#e2e8f0;color:#334155}.badge.ok{background:#dcfce7;color:#166534}.badge.bad{background:#fee2e2;color:#991b1b}.badge.warn{background:#fef3c7;color:#92400e}label{display:block;font-weight:700;margin:12px 0 6px}input,textarea,select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:10px}textarea{min-height:128px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}button{background:#2563eb;color:white;border:0;border-radius:8px;padding:10px 13px;font-weight:700;cursor:pointer;margin-top:12px}button.secondary{background:#e2e8f0;color:#172033}pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px;max-height:260px;overflow:auto}.inline-details{border:1px solid #e2e8f0;border-radius:10px;margin:10px 0;background:#f8fafc}.inline-details summary{cursor:pointer;padding:10px 12px;font-weight:700;color:#334155}.inline-details pre{margin:0 10px 10px;max-height:180px}.row{display:flex;gap:8px;flex-wrap:wrap}.hint,.muted{color:#64748b;font-size:13px}.empty{color:#94a3b8}.kv{margin:6px 0}.kv b{color:#334155}.raw-title{margin:14px 0 6px;font-weight:700;color:#475569}@media(max-width:1000px){main{grid-template-columns:1fr}.summary{grid-template-columns:1fr}}
@@ -50,7 +51,7 @@
         <pre id="judgeRaw">{}</pre>
       </div>
     </details>
-    <details class="card step">
+    <details id="attributeStep" class="card step">
       <summary><h2>Attribute 归因</h2><span id="attributeBadgeInPanel" class="badge">未运行</span></summary>
       <div class="step-body">
         <div id="attributeHuman" class="empty">尚未请求 attribute agent。</div>
@@ -201,12 +202,12 @@ function renderFulfillment(judge){
     '<div class="kv"><b>Overall Fulfillment：</b>'+escapeHtml(JSON.stringify(judge.overall_fulfillment || {}))+'</div>'+
     '<table style="width:100%;border-collapse:collapse"><thead><tr><th>Expectation</th><th>Expected Outcome</th><th>Capabilities</th><th>Status</th><th>Blocking</th></tr></thead><tbody>'+(rows || '<tr><td colspan="5" class="muted">无 fulfillment assessments</td></tr>')+'</tbody></table></details>';
 }
-function renderAttributions(attribute){
-  const rows=(attribute.expectation_attributions || []).map(item=>'<tr><td>'+escapeHtml(item.expectation_id || '')+'</td><td>'+escapeHtml(item.fulfillment_status || '')+'</td><td>'+escapeHtml(item.root_cause_hypothesis || '')+'</td><td>'+escapeHtml(shortAttributionEvidence(item))+'</td></tr>').join('');
-  return '<details class="inline-details" open><summary>Expectation Attribution（'+(attribute.expectation_attributions || []).length+'项）</summary>'+
-    '<table style="width:100%;border-collapse:collapse"><thead><tr><th>Expectation</th><th>Fulfillment</th><th>Root Cause</th><th>Evidence</th></tr></thead><tbody>'+(rows || '<tr><td colspan="4" class="muted">无 expectation attribution</td></tr>')+'</tbody></table></details>';
+function renderAttributionFindings(attribute){
+  const findings=attribute.findings || [];
+  const rows=findings.map(item=>'<tr><td>'+escapeHtml(item.finding_id || '')+'</td><td>'+escapeHtml((item.affected_expectation_ids || []).join(', '))+'</td><td>'+escapeHtml(item.conclusion || '')+'</td><td>'+escapeHtml((item.evidence || []).length)+'</td></tr>').join('');
+  return '<details class="inline-details" open><summary>已确认归因（'+findings.length+'项）</summary>'+
+    '<table style="width:100%;border-collapse:collapse"><thead><tr><th>Finding</th><th>影响的 Expectations</th><th>结论</th><th>证据数</th></tr></thead><tbody>'+(rows || '<tr><td colspan="4" class="muted">尚无通过证据审查的 finding</td></tr>')+'</tbody></table></details>';
 }
-function shortAttributionEvidence(item){return JSON.stringify({suspected_locations:item.suspected_locations || [], evidence:item.evidence || []}).slice(0,260);}
 function fulfillmentStatusFromJudge(judge){const fulfillment=fulfillmentPanel();return fulfillment.overall_fulfillment?.status || judge?.display_status || judge?.overall_fulfillment?.status || '';}
 function fulfillmentBadgeState(status){return status==='fulfilled'?'ok':(status==='not_fulfilled'?'bad':(status==='not_evaluable'?'warn':''));}
 function renderJudge(judge){
@@ -224,16 +225,19 @@ function renderJudge(judge){
     '<div class="kv"><b>证据：</b>'+list(panel.evidence)+'</div>'+collapsedJson('缺失/错误/多余', panel.wrong_missing_extra || {missing:panel.missing || [], wrong:panel.wrong || [], extra:panel.extra || []});
 }
 function attributeBadgeState(attribute){
-  return attribute.evidence_strength==='strong' || attribute.evidence_strength==='medium' ? 'bad' : 'warn';
+  return (attribute.findings || []).length ? 'bad' : 'warn';
 }
 function renderAttribute(attribute){
   const panel=attributePanel();
   showRaw('attributeRaw', panel);
   if(!panel || !Object.keys(panel).length){setStepBadge('attribute','未运行','');return;}
-  setStepBadge('attribute', panel.evidence_strength || 'unknown', attributeBadgeState(panel));
+  const status=panel.summary?.attribution_status || ((panel.findings || []).length ? 'attributed' : 'unresolved');
+  const findings=expectationAttributionPanel().findings || panel.findings || [];
+  const summaryText=panel.display_summary || panel.summary?.summary_text || panel.unresolved_reason || '';
+  document.getElementById('attributeStep').open=true;
+  setStepBadge('attribute', status, attributeBadgeState(panel));
   document.getElementById('attributeHuman').innerHTML =
-    renderAttributions({...panel, expectation_attributions: expectationAttributionPanel().attributions || panel.expectation_attributions || []})+renderStateMachine(currentTrace, judgePanel(), panel)+
-    '<div class="kv"><b>根因假设：</b>'+escapeHtml(panel.display_root_cause || panel.root_cause_hypothesis || '')+'</div>';
+    '<div class="kv"><b>归因总结：</b>'+escapeHtml(summaryText || '暂无归因总结')+'</div>'+renderAttributionFindings({...panel, findings})+renderStateMachine(currentTrace, judgePanel(), panel);
 }
 function renderAll(){renderTrace(currentTrace);renderJudge(currentJudge);renderAttribute(currentAttribute)}
 async function liveRun(){

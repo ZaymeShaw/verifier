@@ -152,6 +152,14 @@ class SQLiteContextRegistry:
             ).fetchall()
         return {str(row["id"]): self._row_to_entry(row) for row in rows}
 
+    def list_entries(self, project_id: str) -> Sequence[Mapping[str, Any]]:
+        with self.database.reader() as connection:
+            rows = connection.execute(
+                "SELECT * FROM context_units WHERE project_id = ? ORDER BY id",
+                (str(project_id),),
+            ).fetchall()
+        return [self._row_to_entry(row) for row in rows]
+
     def upsert(
         self,
         record: ContextUnitRecord,

@@ -1,0 +1,1040 @@
+{
+  "project_id": "deerflow",
+  "role": "attribute",
+  "case_count": 3,
+  "frozen_cases_sha256": "aff70c1ae8af339f8dcbcb678401f818553036306bc425e7602abca53f603fe7",
+  "current": {
+    "draft_enabled": false,
+    "assets": [
+      {
+        "asset_id": "attribute_investigation",
+        "kind": "investigation",
+        "source": "production",
+        "path": "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/deerflow/investigation/attribute",
+        "available": false
+      },
+      {
+        "asset_id": "attribute_investigation_tools",
+        "kind": "tool",
+        "source": "production",
+        "path": "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/deerflow/tools/investigation_tools.py",
+        "available": false
+      },
+      {
+        "asset_id": "attribute_investigation_context_builder",
+        "kind": "context_builder",
+        "source": "production",
+        "path": "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/deerflow/context_builders/attribute_investigation.py",
+        "available": false
+      }
+    ]
+  },
+  "draft": {
+    "draft_enabled": true,
+    "assets": [
+      {
+        "asset_id": "attribute_investigation",
+        "kind": "investigation",
+        "source": "candidate",
+        "path": "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/deerflow/draft/investigation/attribute",
+        "available": true
+      },
+      {
+        "asset_id": "attribute_investigation_tools",
+        "kind": "tool",
+        "source": "candidate",
+        "path": "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/deerflow/draft/tools/investigation_tools.py",
+        "available": true
+      },
+      {
+        "asset_id": "attribute_investigation_context_builder",
+        "kind": "context_builder",
+        "source": "candidate",
+        "path": "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/deerflow/draft/context_builders/attribute_investigation.py",
+        "available": true
+      }
+    ]
+  },
+  "rows": [
+    {
+      "case_key": "stale-clarification-tool-primary",
+      "current": {
+        "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784371052799",
+        "project_id": "deerflow",
+        "case_id": "mock-agent-deerflow-fd77d173",
+        "findings": [
+          {
+            "finding_id": "attr-001",
+            "affected_expectation_ids": [
+              "最终阶段应为planning",
+              "最终工具调用不包含未解决的澄清问题"
+            ],
+            "conclusion": "tool_call_extraction 在第2轮提取了一个不存在的 ask_clarification 工具调用（原始响应中无任何工具调用），导致最终提取的 tool_calls 包含该虚假调用，stage_inference 据此错误地将阶段推断为 clarification 而非 planning。",
+            "evidence": [
+              {
+                "ref_id": "attribute-evidence-cd6af047d6119e57",
+                "source": "context_unit",
+                "kind": "probe_results",
+                "stage": "attribute-round-1-finalization",
+                "summary": "turn2 的完整性探针结果显示 raw_tool_names=[]，extracted_tool_names=[\"ask_clarification\"]，raw_vs_extracted_tool_calls_match=false，且 extracted_stage=\"clarification\" 而按规则应为 planning，stage_inference_match=false。",
+                "location": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1",
+                "payload": null,
+                "metadata": {
+                  "context_source_type": "runtime_result",
+                  "source_hash": "c94cf2e58769bbb1fba137faf2169ce6834642f2cbace584e23ad5323516f8be",
+                  "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784371052799",
+                  "case_id": "mock-agent-deerflow-fd77d173",
+                  "attribute_session_id": "attribute-session-deerflow:mock-agent-deerflow-fd77d173:1784371052799",
+                  "executor_run_id": "attribute-main-round-1",
+                  "reason_source": "attribute"
+                }
+              },
+              {
+                "ref_id": "attribute-evidence-24298d4deab1c65e",
+                "source": "context_unit",
+                "kind": "runtime_checks",
+                "stage": "attribute-round-1-finalization",
+                "summary": "运行检查确认 tool_call_extraction_mismatch_turns=[2] 且 stage_inference_mismatch_turns=[1,2]，确认代码位置包含 tool_call_extraction 和 stage_inference。",
+                "location": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4e0b8b45ffb6b83",
+                "payload": null,
+                "metadata": {
+                  "context_source_type": "runtime_result",
+                  "source_hash": "c4e0b8b45ffb6b837ee6b61a48f520d920624772a74b384a13aae83a359bbd96",
+                  "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784371052799",
+                  "case_id": "mock-agent-deerflow-fd77d173",
+                  "attribute_session_id": "attribute-session-deerflow:mock-agent-deerflow-fd77d173:1784371052799",
+                  "executor_run_id": "attribute-main-round-1",
+                  "reason_source": "attribute"
+                }
+              }
+            ]
+          }
+        ],
+        "unresolved_reason": "",
+        "summary": {
+          "summary_text": "tool_call_extraction 在第2轮提取了一个不存在的 ask_clarification 工具调用（原始响应中无任何工具调用），导致最终提取的 tool_calls 包含该虚假调用，stage_inference 据此错误地将阶段推断为 clarification 而非 planning。",
+          "finding_count": 1,
+          "covered_expectation_ids": [
+            "最终阶段应为planning",
+            "最终工具调用不包含未解决的澄清问题"
+          ],
+          "unresolved_expectation_ids": [],
+          "attribution_status": "complete",
+          "is_complete": true,
+          "is_formal_attribution": true
+        }
+      },
+      "current_runtime": {
+        "context": {
+          "context_debug": {
+            "policy": {
+              "project_id": "deerflow",
+              "role": "attribute",
+              "operation": "attribute",
+              "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784371052799",
+              "run_id": "attribute-main",
+              "case_id": "mock-agent-deerflow-fd77d173",
+              "enabled": true,
+              "allowed_scopes": null,
+              "forbidden_scopes": [],
+              "allowed_unit_types": null,
+              "forbidden_unit_types": [],
+              "allowed_source_types": null,
+              "forbidden_source_types": [],
+              "allowed_statuses": [
+                "active"
+              ],
+              "candidate_limit": 20,
+              "load_limit": 8,
+              "content_char_budget": 100000,
+              "query_limit": 4,
+              "top_k_per_query": 5
+            },
+            "mandatory_ids": [],
+            "search_queries": [
+              "tool_call_extraction deerflow",
+              "stage_inference deerflow",
+              "extract tool_calls from message"
+            ],
+            "query_candidate_coverage": {
+              "tool_call_extraction deerflow": [
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_search_text-3dc67ea03cdaa5e5",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_read_functions-a4d2789e4de16de7",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_list_symbols-19e0bb7226b4143d",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4e0b8b45ffb6b83"
+              ],
+              "stage_inference deerflow": [
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_search_text-3dc67ea03cdaa5e5",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_read_functions-a4d2789e4de16de7",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_list_symbols-19e0bb7226b4143d",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4e0b8b45ffb6b83"
+              ],
+              "extract tool_calls from message": [
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_search_text-3dc67ea03cdaa5e5",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_read_functions-a4d2789e4de16de7",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_list_symbols-19e0bb7226b4143d",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4e0b8b45ffb6b83"
+              ]
+            },
+            "candidate_ids": [
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_search_text-3dc67ea03cdaa5e5",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_read_functions-a4d2789e4de16de7",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_list_symbols-19e0bb7226b4143d",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4e0b8b45ffb6b83"
+            ],
+            "candidate_refs": {
+              "C1": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_search_text-3dc67ea03cdaa5e5",
+              "C2": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_read_functions-a4d2789e4de16de7",
+              "C3": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_list_symbols-19e0bb7226b4143d",
+              "C4": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1",
+              "C5": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4e0b8b45ffb6b83"
+            },
+            "loaded_ids": [
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4e0b8b45ffb6b83",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_read_functions-a4d2789e4de16de7"
+            ],
+            "content_chars": {
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4e0b8b45ffb6b83": 364,
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1": 3335,
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_read_functions-a4d2789e4de16de7": 1248
+            },
+            "content_hashes": {
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4e0b8b45ffb6b83": "c4e0b8b45ffb6b837ee6b61a48f520d920624772a74b384a13aae83a359bbd96",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1": "c94cf2e58769bbb1fba137faf2169ce6834642f2cbace584e23ad5323516f8be",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_read_functions-a4d2789e4de16de7": "a4d2789e4de16de7c02391210213d109ac6c21c6a58435c33c1138f573796f06"
+            },
+            "errors": []
+          }
+        },
+        "tool_calls": [
+          {
+            "tool_name": "load_context_units",
+            "tool_call_id": "call_00_L8lTzVT4Rnk55an8dRrB8842",
+            "arguments": {
+              "unit_ids": [
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4e0b8b45ffb6b83",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1"
+              ]
+            },
+            "result": "[{'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4e0b8b45ffb6b83', 'name': 'Attribute runtime_checks', 'description': '当前 case 的 runtime_checks 原始执行材料；只证明该检查或探针实际返回的内容。', 'content': '{\"confirmed_code_locations\": [\"stage_inference\", \"tool_call_extraction\"], \"interaction_controller_error\": \"\", \"interaction_controller_status\": \"not_run\", \"raw_business_ai_message_turn_count\": 2, \"reply_extraction_mismatch_turns\": [], \"stage_inference_mismatch_turns\": [1, 2], \"successful_turn_count\": 2, \"tool_call_extraction_mismatch_turns\": [2], \"turn_count\": 2}'}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1', 'name': 'Attribute probe_results', 'description': '当前 case 的 probe_results 原始执行材料；只证明该检查或探针实际返回的内容。', 'content': '[{\"call_status\": \"succeeded\", \"extracted_reply_text\": \"\", \"extracted_stage\": \"unknown\", \"extracted_tool_names\": [\"ask_clarification\"], \"inferred_stage\": \"clarification\", \"probe_id\": \"deerflow_turn_1_message_integrity\", \"raw_business_ai_message_present\": true, \"raw_reply_text\": \"\", \"raw_tool_names\": [\"ask_clarification\"], \"raw_vs_extracted_reply_match\": true, \"raw_vs_extracted_tool_calls_match\": true, \"stage_inference_match\": false, \"stage_inference_rule\": \"current_message_ask_clarification\", \"turn_index\": 1}, {\"call_status\": \"succeeded\", \"extracted_reply_text\": \"好的，我来帮您规划这份新会员促销活动方案。\\\\n\\\\n---\\\\n\\\\n## 🎯 下周新会员订阅套餐促销活动规划\\\\n\\\\n### 📋 基本信息\\\\n\\\\n| 项目 | 内容 |\\\\n|------|------|\\\\n| **活动主题** | \\\\\"首单特惠·7天解锁会员\\\\\" |\\\\n| **活动时间** | 2026年7月20日（周一）至 7月26日（周日），共7天 |\\\\n| **目标用户** | 注册7天内未首次付费的新用户 |\\\\n| **产品** | 月度视频会员订阅 |\\\\n| **预算** | 50,000元 |\\\\n\\\\n---\\\\n\\\\n### 🎁 活动内容设计\\\\n\\\\n**核心促销机制：**\\\\n- **限时首单5折** — 新用户首次购买月度会员享5折优惠（原价30元→15元）\\\\n- **邀请返利** — 老用户邀请新用户成功付费，双方各得5元奖励\\\\n- **满赠福利** — 活动期间购买会员赠送3天会员时长\\\\n\\\\n**裂变机制：**\\\\n- 分享活动海报到朋友圈可再获3天会员（需新用户通过链接注册）\\\\n\\\\n---\\\\n\\\\n### 📢 推广渠道与预算分配\\\\n\\\\n| 渠道 | 预算占比 | 金额 | 投放策略 |\\\\n|------|----------|------|----------|\\\\n| **APP弹窗/首页横幅** | 40% | 20,000元 | 全站精准触达目标用户 |\\\\n| **短信/消息推送** | 25% | 12,500元 | 针对注册3-7天未付费用户定向推送 |\\\\n| **社交媒体（微信/抖音）** | 20% | 10,000元 | 投放广告+KOL合作 |\\\\n| **优惠券发放** | 15% | 7,500元 | 满减券/折扣券叠加使用 |\\\\n\\\\n---\\\\n\\\\n### 📊 预期效果\\\\n\\\\n| 指标 | 预估目标 |\\\\n|------|----------|\\\\n| 活动曝光量 | 50,000+ 人次 |\\\\n| 付费转化率 | 8%-12% |\\\\n| 预计新增付费会员 | 4,000-6,000 人 |\\\\n| 预计销售额 | 60,000-90,000 元 |\\\\n| 投入产出比(ROI) | 1.2-1.8 |\\\\n\\\\n---\\\\n\\\\n### ⏰ 执行安排\\\\n\\\\n| 时间 | 事项 |\\\\n|------|------|\\\\n| **7月19日（周日）** | 物料准备、渠道配置、后台测试 |\\\\n| **7月20日（周一）** | 活动正式上线，全渠道推广启动 |\\\\n| **7月22日（周三）** | 中期数据复盘，优化投放策略 |\\\\n| **7月26日（周日）** | 活动结束，结算复盘 |\\\\n\\\\n---\\\\n\\\\n需要我帮您补充其他细节吗？比如具体的文案、促销海报设计，或者将方案保存为文件？\", \"extracted_stage\": \"clarification\", \"extracted_tool_names\": [\"ask_clarification\"], \"inferred_stage\": \"planning\", \"probe_id\": \"deerflow_turn_2_message_integrity\", \"raw_business_ai_message_present\": true, \"raw_reply_text\": \"好的，我来帮您规划这份新会员促销活动方案。\\\\n\\\\n---\\\\n\\\\n## 🎯 下周新会员订阅套餐促销活动规划\\\\n\\\\n### 📋 基本信息\\\\n\\\\n| 项目 | 内容 |\\\\n|------|------|\\\\n| **活动主题** | \\\\\"首单特惠·7天解锁会员\\\\\" |\\\\n| **活动时间** | 2026年7月20日（周一）至 7月26日（周日），共7天 |\\\\n| **目标用户** | 注册7天内未首次付费的新用户 |\\\\n| **产品** | 月度视频会员订阅 |\\\\n| **预算** | 50,000元 |\\\\n\\\\n---\\\\n\\\\n### 🎁 活动内容设计\\\\n\\\\n**核心促销机制：**\\\\n- **限时首单5折** — 新用户首次购买月度会员享5折优惠（原价30元→15元）\\\\n- **邀请返利** — 老用户邀请新用户成功付费，双方各得5元奖励\\\\n- **满赠福利** — 活动期间购买会员赠送3天会员时长\\\\n\\\\n**裂变机制：**\\\\n- 分享活动海报到朋友圈可再获3天会员（需新用户通过链接注册）\\\\n\\\\n---\\\\n\\\\n### 📢 推广渠道与预算分配\\\\n\\\\n| 渠道 | 预算占比 | 金额 | 投放策略 |\\\\n|------|----------|------|----------|\\\\n| **APP弹窗/首页横幅** | 40% | 20,000元 | 全站精准触达目标用户 |\\\\n| **短信/消息推送** | 25% | 12,500元 | 针对注册3-7天未付费用户定向推送 |\\\\n| **社交媒体（微信/抖音）** | 20% | 10,000元 | 投放广告+KOL合作 |\\\\n| **优惠券发放** | 15% | 7,500元 | 满减券/折扣券叠加使用 |\\\\n\\\\n---\\\\n\\\\n### 📊 预期效果\\\\n\\\\n| 指标 | 预估目标 |\\\\n|------|----------|\\\\n| 活动曝光量 | 50,000+ 人次 |\\\\n| 付费转化率 | 8%-12% |\\\\n| 预计新增付费会员 | 4,000-6,000 人 |\\\\n| 预计销售额 | 60,000-90,000 元 |\\\\n| 投入产出比(ROI) | 1.2-1.8 |\\\\n\\\\n---\\\\n\\\\n### ⏰ 执行安排\\\\n\\\\n| 时间 | 事项 |\\\\n|------|------|\\\\n| **7月19日（周日）** | 物料准备、渠道配置、后台测试 |\\\\n| **7月20日（周一）** | 活动正式上线，全渠道推广启动 |\\\\n| **7月22日（周三）** | 中期数据复盘，优化投放策略 |\\\\n| **7月26日（周日）** | 活动结束，结算复盘 |\\\\n\\\\n---\\\\n\\\\n需要我帮您补充其他细节吗？比如具体的文案、促销海报设计，或者将方案保存为文件？\", \"raw_tool_names\": [], \"raw_vs_extracted_reply_match\": true, \"raw_vs_extracted_tool_calls_match\": false, \"stage_inference_match\": false, \"stage_inference_rule\": \"structured_planning_reply\", \"turn_index\": 2}]'}]"
+          },
+          {
+            "tool_name": "source_read_functions",
+            "tool_call_id": "call_00_wjhsTrp0vG7aVSidSoRb3075",
+            "arguments": {
+              "file_key": "project_adapter:adapter.py",
+              "full_file": true
+            },
+            "result": "ToolResult(tool_id='source.read_functions', tool_type='source_retrieval', status='succeeded', actual={'file_key': 'project_adapter:adapter.py', 'content': '\"\"\"deerflow 项目的 Adapter（scaffold 生成，待填充）。\\n\\n继承 ProjectAdapter（来自 impl.core.adapter_v2），只做加载和暴露，不承载业务逻辑。\\n合规检查要求：adapter 只允许 _load_* 方法，禁止业务方法（build_*/normalize_* 等）。\\n\"\"\"\\nfrom __future__ import annotations\\n\\nfrom impl.core.adapter_v2 import ProjectAdapter\\n\\n\\nclass Adapter(ProjectAdapter):\\n    \"\"\"deerflow 项目 Adapter（scaffold 待填充）。\"\"\"\\n\\n    metadata_fields = set()\\n\\n    def _load_attribute(self):\\n        from impl.projects.deerflow.attribute import DeerflowAttribute\\n        return DeerflowAttribute(self.spec)\\n\\n    def _load_judge(self):\\n        from impl.projects.deerflow.judge import DeerflowJudge\\n        return DeerflowJudge(self.spec)\\n\\n    def _load_live(self):\\n        from impl.projects.deerflow.live import DeerflowLive\\n        return DeerflowLive(self.spec, self)\\n\\n    def _load_mock(self):\\n        from impl.projects.deerflow.mock import DeerflowMock\\n        return DeerflowMock(self.spec)\\n', 'context_unit_id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_read_functions-a4d2789e4de16de7'}, evidence='retrieved source snippets from project_adapter:adapter.py', outputs={'context_unit_id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_read_functions-a4d2789e4de16de7'}, missing_evidence=[], boundary_limits=[], error='')"
+          },
+          {
+            "tool_name": "search_context_units",
+            "tool_call_id": "call_00_7wKtewIDlGysjO7KElNq0200",
+            "arguments": {
+              "queries": [
+                "tool_call_extraction deerflow",
+                "stage_inference deerflow",
+                "extract tool_calls from message"
+              ]
+            },
+            "result": "[{'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_search_text-3dc67ea03cdaa5e5', 'name': 'Attribute main_tool_source_search_text', 'description': '当前 case 的 main_tool_source_search_text 原始执行材料；只证明该检查或探针实际返回的内容。', 'matched_queries': ['tool_call_extraction deerflow', 'stage_inference deerflow', 'extract tool_calls from message'], 'selection_ref': 'C1'}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_read_functions-a4d2789e4de16de7', 'name': 'Attribute main_tool_source_read_functions', 'description': '当前 case 的 main_tool_source_read_functions 原始执行材料；只证明该检查或探针实际返回的内容。', 'matched_queries': ['tool_call_extraction deerflow', 'stage_inference deerflow', 'extract tool_calls from message'], 'selection_ref': 'C2'}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_list_symbols-19e0bb7226b4143d', 'name': 'Attribute main_tool_source_list_symbols', 'description': '当前 case 的 main_tool_source_list_symbols 原始执行材料；只证明该检查或探针实际返回的内容。', 'matched_queries': ['tool_call_extraction deerflow', 'stage_inference deerflow', 'extract tool_calls from message'], 'selection_ref': 'C3'}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1', 'name': 'Attribute probe_results', 'description': '当前 case 的 probe_results 原始执行材料；只证明该检查或探针实际返回的内容。', 'matched_queries': ['tool_call_extraction deerflow', 'stage_inference deerflow', 'extract tool_calls from message'], 'selection_ref': 'C4'}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4e0b8b45ffb6b83', 'name': 'Attribute runtime_checks', 'description': '当前 case 的 runtime_checks 原始执行材料；只证明该检查或探针实际返回的内容。', 'matched_queries': ['tool_call_extraction deerflow', 'stage_inference deerflow', 'extract tool_calls from message'], 'selection_ref': 'C5'}]"
+          },
+          {
+            "tool_name": "load_context_units",
+            "tool_call_id": "call_00_wOEH4ruI0rfX8Iaxbvvz3415",
+            "arguments": {
+              "unit_ids": [
+                "C1",
+                "C2",
+                "C3"
+              ]
+            },
+            "result": "Tool call limit reached. Tool call load_context_units not executed. Don't try to execute it again."
+          }
+        ],
+        "review_calls": [
+          {
+            "round": 1,
+            "finding_ids": [
+              "attr-001"
+            ],
+            "passed": true,
+            "issues": [],
+            "infrastructure_error": ""
+          }
+        ],
+        "dynamic_context_units": [
+          {
+            "id": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4e0b8b45ffb6b83",
+            "name": "Attribute runtime_checks",
+            "description": "当前 case 的 runtime_checks 原始执行材料；只证明该检查或探针实际返回的内容。"
+          },
+          {
+            "id": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1",
+            "name": "Attribute probe_results",
+            "description": "当前 case 的 probe_results 原始执行材料；只证明该检查或探针实际返回的内容。"
+          }
+        ],
+        "evidence_registration_errors": []
+      },
+      "current_metrics": {
+        "elapsed_seconds": 190.704094
+      },
+      "draft": {
+        "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784371052799",
+        "project_id": "deerflow",
+        "case_id": "mock-agent-deerflow-fd77d173",
+        "findings": [
+          {
+            "finding_id": "F1",
+            "affected_expectation_ids": [
+              "最终阶段应为planning",
+              "最终工具调用不包含未解决的澄清问题"
+            ],
+            "conclusion": "Verifier的tool_call_extraction在turn 2错误地将turn 1的ask_clarification注入extracted_tool_calls，导致final_output.tool_calls包含过时澄清问题，并连锁导致stage被错误推导为clarification。此为verifier边界机制缺陷，非业务Gateway或NBEV技能选择问题。",
+            "evidence": [
+              {
+                "ref_id": "attribute-evidence-fb66188503fae047",
+                "source": "context_unit",
+                "kind": "probe_results",
+                "stage": "attribute-round-1-finalization",
+                "summary": "turn2的probe结果显示raw_tool_names为空，extracted_tool_names为[\"ask_clarification\"]，raw_vs_extracted_tool_calls_match为false，直接证实工具提取不一致。",
+                "location": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1",
+                "payload": null,
+                "metadata": {
+                  "context_source_type": "runtime_result",
+                  "source_hash": "c94cf2e58769bbb1fba137faf2169ce6834642f2cbace584e23ad5323516f8be",
+                  "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784371052799",
+                  "case_id": "mock-agent-deerflow-fd77d173",
+                  "attribute_session_id": "attribute-session-deerflow:mock-agent-deerflow-fd77d173:1784371052799",
+                  "executor_run_id": "attribute-main-round-1",
+                  "reason_source": "attribute"
+                }
+              },
+              {
+                "ref_id": "attribute-evidence-5af3818c3800776f",
+                "source": "context_unit",
+                "kind": "runtime_checks",
+                "stage": "attribute-round-1-finalization",
+                "summary": "decisive_extraction_deltas中turn2条目记录raw_tool_names=[], extracted_tool_names=[\"ask_clarification\"]，且stored_stage为clarification而raw_replay_stage为planning，确认tool提取错误是stage错误的传播根因。",
+                "location": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4196870b209080b",
+                "payload": null,
+                "metadata": {
+                  "context_source_type": "runtime_result",
+                  "source_hash": "c4196870b209080b0ae648fd30808fa3fcc89281f845b565067bf46c7bc7dffb",
+                  "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784371052799",
+                  "case_id": "mock-agent-deerflow-fd77d173",
+                  "attribute_session_id": "attribute-session-deerflow:mock-agent-deerflow-fd77d173:1784371052799",
+                  "executor_run_id": "attribute-main-round-1",
+                  "reason_source": "attribute"
+                }
+              }
+            ]
+          }
+        ],
+        "unresolved_reason": "",
+        "summary": {
+          "summary_text": "Verifier的tool_call_extraction在turn 2错误地将turn 1的ask_clarification注入extracted_tool_calls，导致final_output.tool_calls包含过时澄清问题，并连锁导致stage被错误推导为clarification。此为verifier边界机制缺陷，非业务Gateway或NBEV技能选择问题。",
+          "finding_count": 1,
+          "covered_expectation_ids": [
+            "最终阶段应为planning",
+            "最终工具调用不包含未解决的澄清问题"
+          ],
+          "unresolved_expectation_ids": [],
+          "attribution_status": "complete",
+          "is_complete": true,
+          "is_formal_attribution": true
+        }
+      },
+      "draft_runtime": {
+        "context": {
+          "context_debug": {
+            "policy": {
+              "project_id": "deerflow",
+              "role": "attribute",
+              "operation": "attribute",
+              "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784371052799",
+              "run_id": "attribute-main",
+              "case_id": "mock-agent-deerflow-fd77d173",
+              "enabled": true,
+              "allowed_scopes": null,
+              "forbidden_scopes": [],
+              "allowed_unit_types": null,
+              "forbidden_unit_types": [],
+              "allowed_source_types": null,
+              "forbidden_source_types": [],
+              "allowed_statuses": [
+                "active"
+              ],
+              "candidate_limit": 20,
+              "load_limit": 8,
+              "content_char_budget": 100000,
+              "query_limit": 4,
+              "top_k_per_query": 5
+            },
+            "mandatory_ids": [],
+            "search_queries": [
+              "deerflow gateway message flow",
+              "decisive_extraction_deltas raw_tool_names extracted_tool_names"
+            ],
+            "query_candidate_coverage": {
+              "deerflow gateway message flow": [
+                "project.deerflow.attribute.investigation.flow",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_search_text-3dc67ea03cdaa5e5",
+                "project.deerflow.attribute.investigation.overview",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1",
+                "project.deerflow.attribute.investigation.graph"
+              ],
+              "decisive_extraction_deltas raw_tool_names extracted_tool_names": [
+                "project.deerflow.attribute.investigation.flow",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_list_symbols-19e0bb7226b4143d",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_search_text-3dc67ea03cdaa5e5",
+                "project.deerflow.attribute.investigation.overview",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1"
+              ]
+            },
+            "candidate_ids": [
+              "project.deerflow.attribute.investigation.flow",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_list_symbols-19e0bb7226b4143d",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_search_text-3dc67ea03cdaa5e5",
+              "project.deerflow.attribute.investigation.overview",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1",
+              "project.deerflow.attribute.investigation.graph"
+            ],
+            "candidate_refs": {
+              "C1": "project.deerflow.attribute.investigation.flow",
+              "C2": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_list_symbols-19e0bb7226b4143d",
+              "C3": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_search_text-3dc67ea03cdaa5e5",
+              "C4": "project.deerflow.attribute.investigation.overview",
+              "C5": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1",
+              "C6": "project.deerflow.attribute.investigation.graph"
+            },
+            "loaded_ids": [
+              "project.deerflow.attribute.investigation.flow",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4196870b209080b",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1"
+            ],
+            "content_chars": {
+              "project.deerflow.attribute.investigation.flow": 7583,
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4196870b209080b": 630,
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1": 3335
+            },
+            "content_hashes": {
+              "project.deerflow.attribute.investigation.flow": "77a18f1d3ff33e71b2ba4d79539947f74d52122149565139108aff7779e1987b",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4196870b209080b": "c4196870b209080b0ae648fd30808fa3fcc89281f845b565067bf46c7bc7dffb",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1": "c94cf2e58769bbb1fba137faf2169ce6834642f2cbace584e23ad5323516f8be"
+            },
+            "errors": []
+          }
+        },
+        "tool_calls": [
+          {
+            "tool_name": "search_context_units",
+            "tool_call_id": "call_00_yTHdf2UZ9PhdRE5ZSJlw8177",
+            "arguments": {
+              "queries": [
+                "deerflow gateway message flow",
+                "decisive_extraction_deltas raw_tool_names extracted_tool_names"
+              ]
+            },
+            "result": "[{'id': 'project.deerflow.attribute.investigation.flow', 'name': 'deerflow gateway message flow', 'description': 'Operational index from Gateway message history through verifier extraction and the separate NBEV skill branch.', 'matched_queries': ['deerflow gateway message flow', 'decisive_extraction_deltas raw_tool_names extracted_tool_names'], 'selection_ref': 'C1'}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_list_symbols-19e0bb7226b4143d', 'name': 'Attribute main_tool_source_list_symbols', 'description': '当前 case 的 main_tool_source_list_symbols 原始执行材料；只证明该检查或探针实际返回的内容。', 'matched_queries': ['decisive_extraction_deltas raw_tool_names extracted_tool_names'], 'selection_ref': 'C2'}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-main_tool_source_search_text-3dc67ea03cdaa5e5', 'name': 'Attribute main_tool_source_search_text', 'description': '当前 case 的 main_tool_source_search_text 原始执行材料；只证明该检查或探针实际返回的内容。', 'matched_queries': ['deerflow gateway message flow', 'decisive_extraction_deltas raw_tool_names extracted_tool_names'], 'selection_ref': 'C3'}, {'id': 'project.deerflow.attribute.investigation.overview', 'name': 'deerflow investigation boundary', 'description': 'Scope and revision boundaries for separating business output from verifier-derived fields.', 'matched_queries': ['deerflow gateway message flow', 'decisive_extraction_deltas raw_tool_names extracted_tool_names'], 'selection_ref': 'C4'}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1', 'name': 'Attribute probe_results', 'description': '当前 case 的 probe_results 原始执行材料；只证明该检查或探针实际返回的内容。', 'matched_queries': ['deerflow gateway message flow', 'decisive_extraction_deltas raw_tool_names extracted_tool_names'], 'selection_ref': 'C5'}, {'id': 'project.deerflow.attribute.investigation.graph', 'name': 'deerflow gateway Mermaid topology', 'description': 'Optional machine-readable topology; use the text operational index for verification actions.', 'matched_queries': ['deerflow gateway message flow'], 'selection_ref': 'C6'}]"
+          },
+          {
+            "tool_name": "load_context_units",
+            "tool_call_id": "call_00_EiYPEEpHxIPbc8fqyqyW5560",
+            "arguments": {
+              "unit_ids": [
+                "C1",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4196870b209080b",
+                "C5"
+              ]
+            },
+            "result": "[{'id': 'project.deerflow.attribute.investigation.flow', 'name': 'deerflow gateway message flow', 'description': 'Operational index from Gateway message history through verifier extraction and the separate NBEV skill branch.', 'content': \"# Deerflow Gateway message and business-skill flow\\n\\n## How to use this trace map\\n\\nStart with one not-fulfilled expectation and the exact current turn records. First decide whether the disputed field is supplied by the business Gateway or derived by verifier. `stage` is derived locally by verifier; the Gateway message API does not return that contract field. Therefore a wrong stored stage is not evidence of a business routing failure until the latest raw business AI message has been selected and replayed.\\n\\nFor reply, tool, script, or stage gaps, compare each turn's latest non-middleware AI message with its stored `extracted_output`. If they differ, follow only the extraction branch and stop before blaming business skill selection. If they match but a required NBEV action is absent from the same current message, follow the skill branch using the deployed-revision boundary. A historical message trace can reproduce a verifier regression, but cannot prove which source revision or hidden model branch produced the original business message.\\n\\n## Operational index\\n\\n| Node | Current-case input/output | Decisive check | Supported conclusion and boundary |\\n|---|---|---|---|\\n| `REQUEST` | current user turn, session and expected business outcome | Compare the exact submitted turn with `normalized_request` | Establishes verifier intent to send, not Gateway receipt |\\n| `THREAD_CREATE` | thread creation request and returned thread id | Inspect transport status only when the thread is absent or wrong | Establishes thread boundary, not agent reasoning |\\n| `RUN_WAIT` | one new user message and run response | Check HTTP/result status and run id | Establishes run completion; does not identify the final display message |\\n| `MESSAGE_HISTORY` | thread-wide displayable message array | Use the exact array stored in the current turn's raw response | Establishes all visible messages, including older runs |\\n| `LATEST_BUSINESS_AI` | one latest non-middleware AI message | Run `deerflow.message_history_replay` or inspect the identical selection rule | Establishes the only message eligible for current reply/tools |\\n| `REPLY_EXTRACTION` | selected AI content to `reply_text` | Compare raw selected content and stored extracted reply | A mismatch locates a verifier extraction defect |\\n| `TOOL_EXTRACTION` | selected AI tool calls to normalized tools | Compare names/args from the same message | A stale or cross-message tool mismatch locates verifier extraction |\\n| `SCRIPT_DETECTION` | normalized current-message bash calls | Check recognized script paths/names after tool extraction agrees | Establishes verifier observation of scripts, not hidden execution |\\n| `STAGE_DERIVATION` | current reply, tools and scripts to local stage | Replay `_stage_inference` on raw-selected values | Establishes verifier-derived metadata only; Gateway has no stage field |\\n| `BUSINESS_SKILL_SELECTION` | raw business AI message and tool calls | Inspect current-revision agent/skill evidence only after extraction agrees | May narrow business routing; hidden model decisions remain unresolved without a trace |\\n| `NBEV_SKILL` | checked-out `skills/custom/nbev_planning_v2/SKILL.md` | Align request, deployment revision and selected skill | Establishes declared business procedure, not that it ran |\\n| `NBEV_SCRIPT` | current-message bash/script call or business execution receipt | Verify a concrete script invocation/result | Establishes observed script use; absence in extracted stale tools is not decisive |\\n| `JUDGE_GAP` | not-fulfilled expectations and actual output | Separate business-output gaps from verifier-derived field gaps | Defines investigation scope, not cause |\\n\\n## Investigation procedure\\n\\n1. At `JUDGE_GAP`, keep only not-fulfilled expectations and group them only when one observed defect affects them together.\\n2. Classify every disputed field: raw business content/tool calls come from `LATEST_BUSINESS_AI`; `stage`, `scripts_called`, and compact final output are verifier derivations.\\n3. For derived-field gaps, walk `MESSAGE_HISTORY` → `LATEST_BUSINESS_AI` → extraction nodes and replay the exact message array. The first raw/stored mismatch is the relevant defect; downstream stage mismatch is propagation, not a second root cause.\\n4. If reply and tools agree with raw, then and only then investigate `BUSINESS_SKILL_SELECTION` → `NBEV_SKILL` → `NBEV_SCRIPT` for a genuine business behavior gap.\\n5. Align the business repository revision, deployment and current request. If only a historical trace or checked-out document is available, state the precise boundary in `unresolved_reason`.\\n6. During finalization, retain only ContextUnits that connect the current expectation to the selected branch and decisive replay.\\n\\n## Node: `REQUEST`\\n\\nThe current user turn, session and reference define the requested behavior. They cannot show which agent branch ran.\\n\\n## Node: `THREAD_CREATE`\\n\\nThe verifier creates or resumes a Gateway thread. Thread transport failures are boundary failures, not evidence about planning logic.\\n\\n## Node: `RUN_WAIT`\\n\\n`wait_run` sends the current user message and waits for the run. Completion does not itself select the display message later used by verifier.\\n\\n## Node: `MESSAGE_HISTORY`\\n\\n`list_thread_messages` returns displayable messages across the thread. Because the array is thread-wide, current-turn extraction must not combine a new reply with an older tool call.\\n\\n## Node: `LATEST_BUSINESS_AI`\\n\\nThe current verifier selects the latest non-middleware AI message and extracts both reply and tools from that one object. This is the key boundary for stale-message regressions.\\n\\n## Node: `REPLY_EXTRACTION`\\n\\nRaw selected content is normalized into `reply_text`. Whitespace-only normalization is not a material defect.\\n\\n## Node: `TOOL_EXTRACTION`\\n\\nOnly tool calls attached to the selected current AI message are eligible. A historical trace where stored tools come from an older message is deterministic evidence of the old verifier defect.\\n\\n## Node: `SCRIPT_DETECTION`\\n\\nThe verifier recognizes configured NBEV script names from current-message tool arguments. It cannot prove hidden execution that the Gateway did not expose.\\n\\n## Node: `STAGE_DERIVATION`\\n\\nThe verifier infers a stage from current reply/tools/scripts. It is presentation/evaluation metadata, not a Gateway-provided business state contract.\\n\\n## Node: `BUSINESS_SKILL_SELECTION`\\n\\nWhen extraction is faithful and business behavior still misses the expectation, investigate the actual agent and skill path. Do not infer this path merely from a missing compact field.\\n\\n## Node: `NBEV_SKILL`\\n\\nThe checked-out NBEV skill documents the expected planning workflow. Source presence is background until revision and runtime selection are aligned.\\n\\n## Node: `NBEV_SCRIPT`\\n\\nA concrete current-message call or execution receipt can establish script use. A reference answer that invents a different tool name cannot.\\n\\n## Node: `JUDGE_GAP`\\n\\nThe Judge gap initiates the investigation. Expectations about locally derived `stage` must not be misdescribed as proof that the business system failed to route.\\n\\n## Known evidence boundary\\n\\nThe Gateway service was unavailable during this investigation, so no new deployment-aligned run was captured. Repository reports from 2026-07-18 preserve real message histories and reproduce the verifier extraction defect, but their deployed business revision is not exposed. The checked-out business source proves current source structure only. Hidden model/skill selection remains unresolved unless a current trace or equivalent execution receipt is obtained.\\n\"}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4196870b209080b', 'name': 'Attribute runtime_checks', 'description': '当前 case 的 runtime_checks 原始执行材料；只证明该检查或探针实际返回的内容。', 'content': '{\"confirmed_code_locations\": [\"stage_inference\", \"tool_call_extraction\"], \"decisive_extraction_deltas\": [{\"extracted_tool_names\": [\"ask_clarification\"], \"raw_replay_stage\": \"planning\", \"raw_replay_stage_rule\": \"structured_planning_reply\", \"raw_reply_matches\": true, \"raw_tool_names\": [], \"stored_stage\": \"clarification\", \"turn_index\": 2}], \"interaction_controller_error\": \"\", \"interaction_controller_status\": \"not_run\", \"raw_business_ai_message_turn_count\": 2, \"reply_extraction_mismatch_turns\": [], \"stage_inference_mismatch_turns\": [1, 2], \"successful_turn_count\": 2, \"tool_call_extraction_mismatch_turns\": [2], \"turn_count\": 2}'}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1', 'name': 'Attribute probe_results', 'description': '当前 case 的 probe_results 原始执行材料；只证明该检查或探针实际返回的内容。', 'content': '[{\"call_status\": \"succeeded\", \"extracted_reply_text\": \"\", \"extracted_stage\": \"unknown\", \"extracted_tool_names\": [\"ask_clarification\"], \"inferred_stage\": \"clarification\", \"probe_id\": \"deerflow_turn_1_message_integrity\", \"raw_business_ai_message_present\": true, \"raw_reply_text\": \"\", \"raw_tool_names\": [\"ask_clarification\"], \"raw_vs_extracted_reply_match\": true, \"raw_vs_extracted_tool_calls_match\": true, \"stage_inference_match\": false, \"stage_inference_rule\": \"current_message_ask_clarification\", \"turn_index\": 1}, {\"call_status\": \"succeeded\", \"extracted_reply_text\": \"好的，我来帮您规划这份新会员促销活动方案。\\\\n\\\\n---\\\\n\\\\n## 🎯 下周新会员订阅套餐促销活动规划\\\\n\\\\n### 📋 基本信息\\\\n\\\\n| 项目 | 内容 |\\\\n|------|------|\\\\n| **活动主题** | \\\\\"首单特惠·7天解锁会员\\\\\" |\\\\n| **活动时间** | 2026年7月20日（周一）至 7月26日（周日），共7天 |\\\\n| **目标用户** | 注册7天内未首次付费的新用户 |\\\\n| **产品** | 月度视频会员订阅 |\\\\n| **预算** | 50,000元 |\\\\n\\\\n---\\\\n\\\\n### 🎁 活动内容设计\\\\n\\\\n**核心促销机制：**\\\\n- **限时首单5折** — 新用户首次购买月度会员享5折优惠（原价30元→15元）\\\\n- **邀请返利** — 老用户邀请新用户成功付费，双方各得5元奖励\\\\n- **满赠福利** — 活动期间购买会员赠送3天会员时长\\\\n\\\\n**裂变机制：**\\\\n- 分享活动海报到朋友圈可再获3天会员（需新用户通过链接注册）\\\\n\\\\n---\\\\n\\\\n### 📢 推广渠道与预算分配\\\\n\\\\n| 渠道 | 预算占比 | 金额 | 投放策略 |\\\\n|------|----------|------|----------|\\\\n| **APP弹窗/首页横幅** | 40% | 20,000元 | 全站精准触达目标用户 |\\\\n| **短信/消息推送** | 25% | 12,500元 | 针对注册3-7天未付费用户定向推送 |\\\\n| **社交媒体（微信/抖音）** | 20% | 10,000元 | 投放广告+KOL合作 |\\\\n| **优惠券发放** | 15% | 7,500元 | 满减券/折扣券叠加使用 |\\\\n\\\\n---\\\\n\\\\n### 📊 预期效果\\\\n\\\\n| 指标 | 预估目标 |\\\\n|------|----------|\\\\n| 活动曝光量 | 50,000+ 人次 |\\\\n| 付费转化率 | 8%-12% |\\\\n| 预计新增付费会员 | 4,000-6,000 人 |\\\\n| 预计销售额 | 60,000-90,000 元 |\\\\n| 投入产出比(ROI) | 1.2-1.8 |\\\\n\\\\n---\\\\n\\\\n### ⏰ 执行安排\\\\n\\\\n| 时间 | 事项 |\\\\n|------|------|\\\\n| **7月19日（周日）** | 物料准备、渠道配置、后台测试 |\\\\n| **7月20日（周一）** | 活动正式上线，全渠道推广启动 |\\\\n| **7月22日（周三）** | 中期数据复盘，优化投放策略 |\\\\n| **7月26日（周日）** | 活动结束，结算复盘 |\\\\n\\\\n---\\\\n\\\\n需要我帮您补充其他细节吗？比如具体的文案、促销海报设计，或者将方案保存为文件？\", \"extracted_stage\": \"clarification\", \"extracted_tool_names\": [\"ask_clarification\"], \"inferred_stage\": \"planning\", \"probe_id\": \"deerflow_turn_2_message_integrity\", \"raw_business_ai_message_present\": true, \"raw_reply_text\": \"好的，我来帮您规划这份新会员促销活动方案。\\\\n\\\\n---\\\\n\\\\n## 🎯 下周新会员订阅套餐促销活动规划\\\\n\\\\n### 📋 基本信息\\\\n\\\\n| 项目 | 内容 |\\\\n|------|------|\\\\n| **活动主题** | \\\\\"首单特惠·7天解锁会员\\\\\" |\\\\n| **活动时间** | 2026年7月20日（周一）至 7月26日（周日），共7天 |\\\\n| **目标用户** | 注册7天内未首次付费的新用户 |\\\\n| **产品** | 月度视频会员订阅 |\\\\n| **预算** | 50,000元 |\\\\n\\\\n---\\\\n\\\\n### 🎁 活动内容设计\\\\n\\\\n**核心促销机制：**\\\\n- **限时首单5折** — 新用户首次购买月度会员享5折优惠（原价30元→15元）\\\\n- **邀请返利** — 老用户邀请新用户成功付费，双方各得5元奖励\\\\n- **满赠福利** — 活动期间购买会员赠送3天会员时长\\\\n\\\\n**裂变机制：**\\\\n- 分享活动海报到朋友圈可再获3天会员（需新用户通过链接注册）\\\\n\\\\n---\\\\n\\\\n### 📢 推广渠道与预算分配\\\\n\\\\n| 渠道 | 预算占比 | 金额 | 投放策略 |\\\\n|------|----------|------|----------|\\\\n| **APP弹窗/首页横幅** | 40% | 20,000元 | 全站精准触达目标用户 |\\\\n| **短信/消息推送** | 25% | 12,500元 | 针对注册3-7天未付费用户定向推送 |\\\\n| **社交媒体（微信/抖音）** | 20% | 10,000元 | 投放广告+KOL合作 |\\\\n| **优惠券发放** | 15% | 7,500元 | 满减券/折扣券叠加使用 |\\\\n\\\\n---\\\\n\\\\n### 📊 预期效果\\\\n\\\\n| 指标 | 预估目标 |\\\\n|------|----------|\\\\n| 活动曝光量 | 50,000+ 人次 |\\\\n| 付费转化率 | 8%-12% |\\\\n| 预计新增付费会员 | 4,000-6,000 人 |\\\\n| 预计销售额 | 60,000-90,000 元 |\\\\n| 投入产出比(ROI) | 1.2-1.8 |\\\\n\\\\n---\\\\n\\\\n### ⏰ 执行安排\\\\n\\\\n| 时间 | 事项 |\\\\n|------|------|\\\\n| **7月19日（周日）** | 物料准备、渠道配置、后台测试 |\\\\n| **7月20日（周一）** | 活动正式上线，全渠道推广启动 |\\\\n| **7月22日（周三）** | 中期数据复盘，优化投放策略 |\\\\n| **7月26日（周日）** | 活动结束，结算复盘 |\\\\n\\\\n---\\\\n\\\\n需要我帮您补充其他细节吗？比如具体的文案、促销海报设计，或者将方案保存为文件？\", \"raw_tool_names\": [], \"raw_vs_extracted_reply_match\": true, \"raw_vs_extracted_tool_calls_match\": false, \"stage_inference_match\": false, \"stage_inference_rule\": \"structured_planning_reply\", \"turn_index\": 2}]'}]"
+          }
+        ],
+        "review_calls": [
+          {
+            "round": 1,
+            "finding_ids": [
+              "F1"
+            ],
+            "passed": true,
+            "issues": [],
+            "infrastructure_error": ""
+          }
+        ],
+        "dynamic_context_units": [
+          {
+            "id": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-runtime_checks-c4196870b209080b",
+            "name": "Attribute runtime_checks",
+            "description": "当前 case 的 runtime_checks 原始执行材料；只证明该检查或探针实际返回的内容。"
+          },
+          {
+            "id": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784371052799-probe_results-c94cf2e58769bbb1",
+            "name": "Attribute probe_results",
+            "description": "当前 case 的 probe_results 原始执行材料；只证明该检查或探针实际返回的内容。"
+          }
+        ],
+        "evidence_registration_errors": []
+      },
+      "draft_metrics": {
+        "elapsed_seconds": 199.704876
+      }
+    },
+    {
+      "case_key": "fulfilled-business-control",
+      "current": {
+        "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784372958926",
+        "project_id": "deerflow",
+        "case_id": "mock-agent-deerflow-fd77d173",
+        "findings": [],
+        "unresolved_reason": "",
+        "summary": {
+          "summary_text": "Judge 未发现需要归因的 not_fulfilled business gap。",
+          "finding_count": 0,
+          "covered_expectation_ids": [],
+          "unresolved_expectation_ids": [],
+          "attribution_status": "not_applicable",
+          "is_complete": false,
+          "is_formal_attribution": false
+        }
+      },
+      "current_runtime": {
+        "context": {
+          "context_debug": {
+            "policy": {
+              "project_id": "deerflow",
+              "role": "attribute",
+              "operation": "attribute",
+              "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784372958926",
+              "run_id": "attribute-main",
+              "case_id": "mock-agent-deerflow-fd77d173",
+              "enabled": true,
+              "allowed_scopes": null,
+              "forbidden_scopes": [],
+              "allowed_unit_types": null,
+              "forbidden_unit_types": [],
+              "allowed_source_types": null,
+              "forbidden_source_types": [],
+              "allowed_statuses": [
+                "active"
+              ],
+              "candidate_limit": 20,
+              "load_limit": 8,
+              "content_char_budget": 100000,
+              "query_limit": 4,
+              "top_k_per_query": 5
+            },
+            "mandatory_ids": [],
+            "search_queries": [],
+            "query_candidate_coverage": {},
+            "candidate_ids": [],
+            "candidate_refs": {},
+            "loaded_ids": [],
+            "content_chars": {},
+            "content_hashes": {},
+            "errors": []
+          }
+        },
+        "tool_calls": [],
+        "review_calls": [],
+        "dynamic_context_units": [
+          {
+            "id": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784372958926-runtime_checks-55141376a69b1e4d",
+            "name": "Attribute runtime_checks",
+            "description": "当前 case 的 runtime_checks 原始执行材料；只证明该检查或探针实际返回的内容。"
+          },
+          {
+            "id": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784372958926-probe_results-d333c7a1cab887a0",
+            "name": "Attribute probe_results",
+            "description": "当前 case 的 probe_results 原始执行材料；只证明该检查或探针实际返回的内容。"
+          }
+        ],
+        "evidence_registration_errors": []
+      },
+      "current_metrics": {
+        "elapsed_seconds": 0.005113
+      },
+      "draft": {
+        "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784372958926",
+        "project_id": "deerflow",
+        "case_id": "mock-agent-deerflow-fd77d173",
+        "findings": [],
+        "unresolved_reason": "",
+        "summary": {
+          "summary_text": "Judge 未发现需要归因的 not_fulfilled business gap。",
+          "finding_count": 0,
+          "covered_expectation_ids": [],
+          "unresolved_expectation_ids": [],
+          "attribution_status": "not_applicable",
+          "is_complete": false,
+          "is_formal_attribution": false
+        }
+      },
+      "draft_runtime": {
+        "context": {
+          "context_debug": {
+            "policy": {
+              "project_id": "deerflow",
+              "role": "attribute",
+              "operation": "attribute",
+              "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784372958926",
+              "run_id": "attribute-main",
+              "case_id": "mock-agent-deerflow-fd77d173",
+              "enabled": true,
+              "allowed_scopes": null,
+              "forbidden_scopes": [],
+              "allowed_unit_types": null,
+              "forbidden_unit_types": [],
+              "allowed_source_types": null,
+              "forbidden_source_types": [],
+              "allowed_statuses": [
+                "active"
+              ],
+              "candidate_limit": 20,
+              "load_limit": 8,
+              "content_char_budget": 100000,
+              "query_limit": 4,
+              "top_k_per_query": 5
+            },
+            "mandatory_ids": [],
+            "search_queries": [],
+            "query_candidate_coverage": {},
+            "candidate_ids": [],
+            "candidate_refs": {},
+            "loaded_ids": [],
+            "content_chars": {},
+            "content_hashes": {},
+            "errors": []
+          }
+        },
+        "tool_calls": [],
+        "review_calls": [],
+        "dynamic_context_units": [
+          {
+            "id": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784372958926-runtime_checks-a93411be50c8ec0b",
+            "name": "Attribute runtime_checks",
+            "description": "当前 case 的 runtime_checks 原始执行材料；只证明该检查或探针实际返回的内容。"
+          },
+          {
+            "id": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784372958926-probe_results-d333c7a1cab887a0",
+            "name": "Attribute probe_results",
+            "description": "当前 case 的 probe_results 原始执行材料；只证明该检查或探针实际返回的内容。"
+          }
+        ],
+        "evidence_registration_errors": []
+      },
+      "draft_metrics": {
+        "elapsed_seconds": 75.355226
+      }
+    },
+    {
+      "case_key": "stale-present-files-and-script-neighbor",
+      "current": {
+        "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784370885253",
+        "project_id": "deerflow",
+        "case_id": "mock-agent-deerflow-fd77d173",
+        "findings": [],
+        "unresolved_reason": "当前 finalized_context_units 仅包含两次源代码文本搜索的结果，均未找到与 'is_nbev_script' 或 'structured_planning_reply' 相关的代码行，因此无法定位 stage_inference 分类规则的具体实现及 NBEV 脚本调用缺失的根因。虽然 execution trace 和 judge 结果显示 stage_inference 未将已输出完整规划方案的回复识别为 planning 阶段，且 nbev_tool_count 为 0，但由于缺少代码级证据，无法生成经过验证的缺陷结论，这两个期望（阶段路由正确、调用NBEV脚本处理规划数据）的归因仍处于未解决状态。",
+        "summary": {
+          "summary_text": "当前 finalized_context_units 仅包含两次源代码文本搜索的结果，均未找到与 'is_nbev_script' 或 'structured_planning_reply' 相关的代码行，因此无法定位 stage_inference 分类规则的具体实现及 NBEV 脚本调用缺失的根因。虽然 execution trace 和 judge 结果显示 stage_inference 未将已输出完整规划方案的回复识别为 planning 阶段，且 nbev_tool_count 为 0，但由于缺少代码级证据，无法生成经过验证的缺陷结论，这两个期望（阶段路由正确、调用NBEV脚本处理规划数据）的归因仍处于未解决状态。",
+          "finding_count": 0,
+          "covered_expectation_ids": [],
+          "unresolved_expectation_ids": [
+            "阶段路由正确",
+            "调用NBEV脚本处理规划数据"
+          ],
+          "attribution_status": "unresolved",
+          "is_complete": false,
+          "is_formal_attribution": false
+        }
+      },
+      "current_runtime": {
+        "context": {
+          "context_debug": {
+            "policy": {
+              "project_id": "deerflow",
+              "role": "attribute",
+              "operation": "attribute",
+              "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784370885253",
+              "run_id": "attribute-main",
+              "case_id": "mock-agent-deerflow-fd77d173",
+              "enabled": true,
+              "allowed_scopes": null,
+              "forbidden_scopes": [],
+              "allowed_unit_types": null,
+              "forbidden_unit_types": [],
+              "allowed_source_types": null,
+              "forbidden_source_types": [],
+              "allowed_statuses": [
+                "active"
+              ],
+              "candidate_limit": 20,
+              "load_limit": 8,
+              "content_char_budget": 100000,
+              "query_limit": 4,
+              "top_k_per_query": 5
+            },
+            "mandatory_ids": [],
+            "search_queries": [
+              "stage_inference stage classification planning clarification rule",
+              "NBEV script is_nbev_script tool call extraction",
+              "interaction_controller planning stage trigger",
+              "stage_inference structured_planning_reply rule"
+            ],
+            "query_candidate_coverage": {
+              "stage_inference stage classification planning clarification rule": [
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-49509a64df80dd94",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-e6d203e45d6a3007",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee"
+              ],
+              "NBEV script is_nbev_script tool call extraction": [
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-49509a64df80dd94",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-e6d203e45d6a3007",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee"
+              ],
+              "interaction_controller planning stage trigger": [
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-49509a64df80dd94",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-e6d203e45d6a3007",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee"
+              ],
+              "stage_inference structured_planning_reply rule": [
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-49509a64df80dd94",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-e6d203e45d6a3007",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee"
+              ]
+            },
+            "candidate_ids": [
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-49509a64df80dd94",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-e6d203e45d6a3007",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee"
+            ],
+            "candidate_refs": {
+              "C1": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59",
+              "C2": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-49509a64df80dd94",
+              "C3": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-e6d203e45d6a3007",
+              "C4": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee"
+            },
+            "loaded_ids": [
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-e6d203e45d6a3007",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-0faf7a58c86f5738"
+            ],
+            "content_chars": {
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-e6d203e45d6a3007": 387,
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-0faf7a58c86f5738": 365
+            },
+            "content_hashes": {
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-e6d203e45d6a3007": "e6d203e45d6a300703ac95fa2f65a524d76aef2a4fd7e1717157948fd241a00a",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-0faf7a58c86f5738": "0faf7a58c86f5738b290a3aa49017c09319ea9fbedfafe0c87fdfc9a75b012b2"
+            },
+            "errors": []
+          }
+        },
+        "tool_calls": [
+          {
+            "tool_name": "search_context_units",
+            "tool_call_id": "call_00_6uZHxln3vX9AZd3mAN8o9283",
+            "arguments": {
+              "queries": [
+                "stage_inference stage classification planning clarification rule",
+                "NBEV script is_nbev_script tool call extraction",
+                "interaction_controller planning stage trigger",
+                "stage_inference structured_planning_reply rule"
+              ]
+            },
+            "result": "[{'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59', 'name': 'Attribute runtime_checks', 'description': '当前 case 的 runtime_checks 原始执行材料；只证明该检查或探针实际返回的内容。', 'matched_queries': ['stage_inference stage classification planning clarification rule', 'NBEV script is_nbev_script tool call extraction', 'interaction_controller planning stage trigger', 'stage_inference structured_planning_reply rule'], 'selection_ref': 'C1'}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-49509a64df80dd94', 'name': 'Attribute main_tool_source_search_text', 'description': '当前 case 的 main_tool_source_search_text 原始执行材料；只证明该检查或探针实际返回的内容。', 'matched_queries': ['stage_inference stage classification planning clarification rule', 'NBEV script is_nbev_script tool call extraction', 'interaction_controller planning stage trigger', 'stage_inference structured_planning_reply rule'], 'selection_ref': 'C2'}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-e6d203e45d6a3007', 'name': 'Attribute main_tool_source_search_text', 'description': '当前 case 的 main_tool_source_search_text 原始执行材料；只证明该检查或探针实际返回的内容。', 'matched_queries': ['stage_inference stage classification planning clarification rule', 'NBEV script is_nbev_script tool call extraction', 'interaction_controller planning stage trigger', 'stage_inference structured_planning_reply rule'], 'selection_ref': 'C3'}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee', 'name': 'Attribute probe_results', 'description': '当前 case 的 probe_results 原始执行材料；只证明该检查或探针实际返回的内容。', 'matched_queries': ['stage_inference stage classification planning clarification rule', 'NBEV script is_nbev_script tool call extraction', 'interaction_controller planning stage trigger', 'stage_inference structured_planning_reply rule'], 'selection_ref': 'C4'}]"
+          },
+          {
+            "tool_name": "source_search_text",
+            "tool_call_id": "call_01_aXcTj9ak2ULC0buSAkOF2369",
+            "arguments": {
+              "query": "structured_planning_reply"
+            },
+            "result": "ToolResult(tool_id='source.search_text', tool_type='source_retrieval', status='inconclusive', actual={'query': 'structured_planning_reply', 'matches': [], 'context_unit_id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-e6d203e45d6a3007'}, evidence=\"searched authorized source catalog for 'structured_planning_reply'; found 0 matches\", outputs={'context_unit_id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-e6d203e45d6a3007'}, missing_evidence=['no authorized catalog line contains the requested text'], boundary_limits=[], error='')"
+          },
+          {
+            "tool_name": "source_search_text",
+            "tool_call_id": "call_02_dSELMrKSDR4y3mSdJbcT9618",
+            "arguments": {
+              "query": "is_nbev_script"
+            },
+            "result": "ToolResult(tool_id='source.search_text', tool_type='source_retrieval', status='inconclusive', actual={'query': 'is_nbev_script', 'matches': [], 'context_unit_id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-0faf7a58c86f5738'}, evidence=\"searched authorized source catalog for 'is_nbev_script'; found 0 matches\", outputs={'context_unit_id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-0faf7a58c86f5738'}, missing_evidence=['no authorized catalog line contains the requested text'], boundary_limits=[], error='')"
+          },
+          {
+            "tool_name": "load_context_units",
+            "tool_call_id": "call_00_FrEV9FXWp5XsfeMk33Wz5489",
+            "arguments": {
+              "unit_ids": [
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee"
+              ]
+            },
+            "result": "Tool call limit reached. Tool call load_context_units not executed. Don't try to execute it again."
+          },
+          {
+            "tool_name": "source_search_text",
+            "tool_call_id": "call_01_pzCPf7FuvXciFbjH0RFg0011",
+            "arguments": {
+              "query": "stage_inference",
+              "file_keys": [
+                "ext_repo/backend:CLAUDE.md",
+                "ext_repo/backend/app/gateway:app.py",
+                "ext_repo/backend/app/gateway:services.py"
+              ]
+            },
+            "result": "Tool call limit reached. Tool call source_search_text not executed. Don't try to execute it again."
+          },
+          {
+            "tool_name": "source_search_text",
+            "tool_call_id": "call_02_4zLQUOz85FaZ0f5hWBkg0177",
+            "arguments": {
+              "query": "planning",
+              "file_keys": [
+                "ext_repo/backend:CLAUDE.md"
+              ]
+            },
+            "result": "Tool call limit reached. Tool call source_search_text not executed. Don't try to execute it again."
+          },
+          {
+            "tool_name": "context_debug",
+            "tool_call_id": "call_00_etZihvup9113czrcjJgI7921",
+            "arguments": {},
+            "result": "Tool call limit reached. Tool call context_debug not executed. Don't try to execute it again."
+          }
+        ],
+        "review_calls": [],
+        "dynamic_context_units": [
+          {
+            "id": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59",
+            "name": "Attribute runtime_checks",
+            "description": "当前 case 的 runtime_checks 原始执行材料；只证明该检查或探针实际返回的内容。"
+          },
+          {
+            "id": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee",
+            "name": "Attribute probe_results",
+            "description": "当前 case 的 probe_results 原始执行材料；只证明该检查或探针实际返回的内容。"
+          }
+        ],
+        "evidence_registration_errors": []
+      },
+      "current_metrics": {
+        "elapsed_seconds": 213.676756
+      },
+      "draft": {
+        "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784370885253",
+        "project_id": "deerflow",
+        "case_id": "mock-agent-deerflow-fd77d173",
+        "findings": [
+          {
+            "finding_id": "verifier_tool_extraction_defect",
+            "affected_expectation_ids": [
+              "阶段路由正确"
+            ],
+            "conclusion": "Verifier 工具提取边界机制缺陷：对 latest business AI message（turn 3）错误提取了 present_files 工具调用，而原始消息无任何工具调用。该虚假调用导致后续 stage_inference 将应识别为 planning 的阶段误判为 clarification，从而使阶段路由出错。此缺陷直接解释了“阶段路由正确”期望的未满足。",
+            "evidence": [
+              {
+                "ref_id": "attribute-evidence-8422afa80da8eac9",
+                "source": "context_unit",
+                "kind": "runtime_checks",
+                "stage": "attribute-round-1-finalization",
+                "summary": "decisive_extraction_deltas 显示 turn 3 的 raw_tool_names 为空、extracted_tool_names 为 [\"present_files\"]，raw_replay_stage 为 \"planning\" 而 stored_stage 为 \"clarification\"。这证明 verifier 从无工具调用的原始消息中错误提取了 present_files，且阶段差异由该虚假工具调用引发。",
+                "location": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-b7be909b1a69e032",
+                "payload": null,
+                "metadata": {
+                  "context_source_type": "runtime_result",
+                  "source_hash": "b7be909b1a69e03223956a12eb0bbfd185f1b780b6270cb5826f46a386154932",
+                  "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784370885253",
+                  "case_id": "mock-agent-deerflow-fd77d173",
+                  "attribute_session_id": "attribute-session-deerflow:mock-agent-deerflow-fd77d173:1784370885253",
+                  "executor_run_id": "attribute-main-round-1",
+                  "reason_source": "attribute"
+                }
+              },
+              {
+                "ref_id": "attribute-evidence-579c2c8b3420f838",
+                "source": "context_unit",
+                "kind": "business_trace",
+                "stage": "attribute-round-1-finalization",
+                "summary": "TOOL_EXTRACTION 节点明确只应提取当前选定 AI 消息自带的工具调用，任何非原始调用均构成 verifier 边界缺陷；STAGE_DERIVATION 节点说明 stage 是 verifier 局部派生元数据，其准确性依赖于上游提取，从而确认本缺陷为阶段错误的根因。",
+                "location": "project.deerflow.attribute.investigation.flow",
+                "payload": null,
+                "metadata": {
+                  "context_source_type": "investigation_context_builder",
+                  "source_hash": "77a18f1d3ff33e71b2ba4d79539947f74d52122149565139108aff7779e1987b",
+                  "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784370885253",
+                  "case_id": "mock-agent-deerflow-fd77d173",
+                  "attribute_session_id": "attribute-session-deerflow:mock-agent-deerflow-fd77d173:1784370885253",
+                  "executor_run_id": "attribute-main-round-1",
+                  "reason_source": "attribute"
+                }
+              }
+            ]
+          }
+        ],
+        "unresolved_reason": "调用NBEV脚本处理规划数据：raw 消息本身无任何工具调用，业务 AI 未显式生成 NBEV 脚本调用；但由于 verifier 工具提取不一致，按调查分支约束不得沿 BUSINESS_SKILL_SELECTION → NBEV_SKILL → NBEV_SCRIPT 路径调查业务侧行为。当前 trace 未揭示部署 revision、技能选择及模型执行的实际路径，无法区分 NBEV 脚本缺失是业务系统预期设计还是未被触发的缺陷。该 expectation 仍未闭合。",
+        "summary": {
+          "summary_text": "Verifier 工具提取边界机制缺陷：对 latest business AI message（turn 3）错误提取了 present_files 工具调用，而原始消息无任何工具调用。该虚假调用导致后续 stage_inference 将应识别为 planning 的阶段误判为 clarification，从而使阶段路由出错。此缺陷直接解释了“阶段路由正确”期望的未满足。\n调用NBEV脚本处理规划数据：raw 消息本身无任何工具调用，业务 AI 未显式生成 NBEV 脚本调用；但由于 verifier 工具提取不一致，按调查分支约束不得沿 BUSINESS_SKILL_SELECTION → NBEV_SKILL → NBEV_SCRIPT 路径调查业务侧行为。当前 trace 未揭示部署 revision、技能选择及模型执行的实际路径，无法区分 NBEV 脚本缺失是业务系统预期设计还是未被触发的缺陷。该 expectation 仍未闭合。",
+          "finding_count": 1,
+          "covered_expectation_ids": [
+            "阶段路由正确"
+          ],
+          "unresolved_expectation_ids": [
+            "调用NBEV脚本处理规划数据"
+          ],
+          "attribution_status": "partial",
+          "is_complete": false,
+          "is_formal_attribution": true
+        }
+      },
+      "draft_runtime": {
+        "context": {
+          "context_debug": {
+            "policy": {
+              "project_id": "deerflow",
+              "role": "attribute",
+              "operation": "attribute",
+              "trace_id": "deerflow:mock-agent-deerflow-fd77d173:1784370885253",
+              "run_id": "attribute-main",
+              "case_id": "mock-agent-deerflow-fd77d173",
+              "enabled": true,
+              "allowed_scopes": null,
+              "forbidden_scopes": [],
+              "allowed_unit_types": null,
+              "forbidden_unit_types": [],
+              "allowed_source_types": null,
+              "forbidden_source_types": [],
+              "allowed_statuses": [
+                "active"
+              ],
+              "candidate_limit": 20,
+              "load_limit": 8,
+              "content_char_budget": 100000,
+              "query_limit": 4,
+              "top_k_per_query": 5
+            },
+            "mandatory_ids": [],
+            "search_queries": [
+              "deerflow gateway message flow",
+              "decisive_extraction_deltas raw_tool_names extracted_tool_names"
+            ],
+            "query_candidate_coverage": {
+              "deerflow gateway message flow": [
+                "project.deerflow.attribute.investigation.flow",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-ce154ca1fff5f1f5",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee",
+                "project.deerflow.attribute.investigation.overview",
+                "project.deerflow.attribute.investigation.graph"
+              ],
+              "decisive_extraction_deltas raw_tool_names extracted_tool_names": [
+                "project.deerflow.attribute.investigation.flow",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-ce154ca1fff5f1f5",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee",
+                "project.deerflow.attribute.investigation.overview",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59"
+              ]
+            },
+            "candidate_ids": [
+              "project.deerflow.attribute.investigation.flow",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-ce154ca1fff5f1f5",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee",
+              "project.deerflow.attribute.investigation.overview",
+              "project.deerflow.attribute.investigation.graph",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59"
+            ],
+            "candidate_refs": {
+              "C1": "project.deerflow.attribute.investigation.flow",
+              "C2": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-ce154ca1fff5f1f5",
+              "C3": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee",
+              "C4": "project.deerflow.attribute.investigation.overview",
+              "C5": "project.deerflow.attribute.investigation.graph",
+              "C6": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59"
+            },
+            "loaded_ids": [
+              "project.deerflow.attribute.investigation.flow",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-b7be909b1a69e032"
+            ],
+            "content_chars": {
+              "project.deerflow.attribute.investigation.flow": 7583,
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-b7be909b1a69e032": 623
+            },
+            "content_hashes": {
+              "project.deerflow.attribute.investigation.flow": "77a18f1d3ff33e71b2ba4d79539947f74d52122149565139108aff7779e1987b",
+              "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-b7be909b1a69e032": "b7be909b1a69e03223956a12eb0bbfd185f1b780b6270cb5826f46a386154932"
+            },
+            "errors": []
+          }
+        },
+        "tool_calls": [
+          {
+            "tool_name": "search_context_units",
+            "tool_call_id": "call_00_OUwRNZcakGilgUWripAy2724",
+            "arguments": {
+              "queries": [
+                "deerflow gateway message flow",
+                "decisive_extraction_deltas raw_tool_names extracted_tool_names"
+              ]
+            },
+            "result": "[{'id': 'project.deerflow.attribute.investigation.flow', 'name': 'deerflow gateway message flow', 'description': 'Operational index from Gateway message history through verifier extraction and the separate NBEV skill branch.', 'matched_queries': ['deerflow gateway message flow', 'decisive_extraction_deltas raw_tool_names extracted_tool_names'], 'selection_ref': 'C1'}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-ce154ca1fff5f1f5', 'name': 'Attribute main_tool_source_search_text', 'description': '当前 case 的 main_tool_source_search_text 原始执行材料；只证明该检查或探针实际返回的内容。', 'matched_queries': ['deerflow gateway message flow', 'decisive_extraction_deltas raw_tool_names extracted_tool_names'], 'selection_ref': 'C2'}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee', 'name': 'Attribute probe_results', 'description': '当前 case 的 probe_results 原始执行材料；只证明该检查或探针实际返回的内容。', 'matched_queries': ['deerflow gateway message flow', 'decisive_extraction_deltas raw_tool_names extracted_tool_names'], 'selection_ref': 'C3'}, {'id': 'project.deerflow.attribute.investigation.overview', 'name': 'deerflow investigation boundary', 'description': 'Scope and revision boundaries for separating business output from verifier-derived fields.', 'matched_queries': ['deerflow gateway message flow', 'decisive_extraction_deltas raw_tool_names extracted_tool_names'], 'selection_ref': 'C4'}, {'id': 'project.deerflow.attribute.investigation.graph', 'name': 'deerflow gateway Mermaid topology', 'description': 'Optional machine-readable topology; use the text operational index for verification actions.', 'matched_queries': ['deerflow gateway message flow'], 'selection_ref': 'C5'}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59', 'name': 'Attribute runtime_checks', 'description': '当前 case 的 runtime_checks 原始执行材料；只证明该检查或探针实际返回的内容。', 'matched_queries': ['decisive_extraction_deltas raw_tool_names extracted_tool_names'], 'selection_ref': 'C6'}]"
+          },
+          {
+            "tool_name": "load_context_units",
+            "tool_call_id": "call_00_PW4GpG3UbmaN4UJ4uduO3873",
+            "arguments": {
+              "unit_ids": [
+                "C1",
+                "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-b7be909b1a69e032"
+              ]
+            },
+            "result": "[{'id': 'project.deerflow.attribute.investigation.flow', 'name': 'deerflow gateway message flow', 'description': 'Operational index from Gateway message history through verifier extraction and the separate NBEV skill branch.', 'content': \"# Deerflow Gateway message and business-skill flow\\n\\n## How to use this trace map\\n\\nStart with one not-fulfilled expectation and the exact current turn records. First decide whether the disputed field is supplied by the business Gateway or derived by verifier. `stage` is derived locally by verifier; the Gateway message API does not return that contract field. Therefore a wrong stored stage is not evidence of a business routing failure until the latest raw business AI message has been selected and replayed.\\n\\nFor reply, tool, script, or stage gaps, compare each turn's latest non-middleware AI message with its stored `extracted_output`. If they differ, follow only the extraction branch and stop before blaming business skill selection. If they match but a required NBEV action is absent from the same current message, follow the skill branch using the deployed-revision boundary. A historical message trace can reproduce a verifier regression, but cannot prove which source revision or hidden model branch produced the original business message.\\n\\n## Operational index\\n\\n| Node | Current-case input/output | Decisive check | Supported conclusion and boundary |\\n|---|---|---|---|\\n| `REQUEST` | current user turn, session and expected business outcome | Compare the exact submitted turn with `normalized_request` | Establishes verifier intent to send, not Gateway receipt |\\n| `THREAD_CREATE` | thread creation request and returned thread id | Inspect transport status only when the thread is absent or wrong | Establishes thread boundary, not agent reasoning |\\n| `RUN_WAIT` | one new user message and run response | Check HTTP/result status and run id | Establishes run completion; does not identify the final display message |\\n| `MESSAGE_HISTORY` | thread-wide displayable message array | Use the exact array stored in the current turn's raw response | Establishes all visible messages, including older runs |\\n| `LATEST_BUSINESS_AI` | one latest non-middleware AI message | Run `deerflow.message_history_replay` or inspect the identical selection rule | Establishes the only message eligible for current reply/tools |\\n| `REPLY_EXTRACTION` | selected AI content to `reply_text` | Compare raw selected content and stored extracted reply | A mismatch locates a verifier extraction defect |\\n| `TOOL_EXTRACTION` | selected AI tool calls to normalized tools | Compare names/args from the same message | A stale or cross-message tool mismatch locates verifier extraction |\\n| `SCRIPT_DETECTION` | normalized current-message bash calls | Check recognized script paths/names after tool extraction agrees | Establishes verifier observation of scripts, not hidden execution |\\n| `STAGE_DERIVATION` | current reply, tools and scripts to local stage | Replay `_stage_inference` on raw-selected values | Establishes verifier-derived metadata only; Gateway has no stage field |\\n| `BUSINESS_SKILL_SELECTION` | raw business AI message and tool calls | Inspect current-revision agent/skill evidence only after extraction agrees | May narrow business routing; hidden model decisions remain unresolved without a trace |\\n| `NBEV_SKILL` | checked-out `skills/custom/nbev_planning_v2/SKILL.md` | Align request, deployment revision and selected skill | Establishes declared business procedure, not that it ran |\\n| `NBEV_SCRIPT` | current-message bash/script call or business execution receipt | Verify a concrete script invocation/result | Establishes observed script use; absence in extracted stale tools is not decisive |\\n| `JUDGE_GAP` | not-fulfilled expectations and actual output | Separate business-output gaps from verifier-derived field gaps | Defines investigation scope, not cause |\\n\\n## Investigation procedure\\n\\n1. At `JUDGE_GAP`, keep only not-fulfilled expectations and group them only when one observed defect affects them together.\\n2. Classify every disputed field: raw business content/tool calls come from `LATEST_BUSINESS_AI`; `stage`, `scripts_called`, and compact final output are verifier derivations.\\n3. For derived-field gaps, walk `MESSAGE_HISTORY` → `LATEST_BUSINESS_AI` → extraction nodes and replay the exact message array. The first raw/stored mismatch is the relevant defect; downstream stage mismatch is propagation, not a second root cause.\\n4. If reply and tools agree with raw, then and only then investigate `BUSINESS_SKILL_SELECTION` → `NBEV_SKILL` → `NBEV_SCRIPT` for a genuine business behavior gap.\\n5. Align the business repository revision, deployment and current request. If only a historical trace or checked-out document is available, state the precise boundary in `unresolved_reason`.\\n6. During finalization, retain only ContextUnits that connect the current expectation to the selected branch and decisive replay.\\n\\n## Node: `REQUEST`\\n\\nThe current user turn, session and reference define the requested behavior. They cannot show which agent branch ran.\\n\\n## Node: `THREAD_CREATE`\\n\\nThe verifier creates or resumes a Gateway thread. Thread transport failures are boundary failures, not evidence about planning logic.\\n\\n## Node: `RUN_WAIT`\\n\\n`wait_run` sends the current user message and waits for the run. Completion does not itself select the display message later used by verifier.\\n\\n## Node: `MESSAGE_HISTORY`\\n\\n`list_thread_messages` returns displayable messages across the thread. Because the array is thread-wide, current-turn extraction must not combine a new reply with an older tool call.\\n\\n## Node: `LATEST_BUSINESS_AI`\\n\\nThe current verifier selects the latest non-middleware AI message and extracts both reply and tools from that one object. This is the key boundary for stale-message regressions.\\n\\n## Node: `REPLY_EXTRACTION`\\n\\nRaw selected content is normalized into `reply_text`. Whitespace-only normalization is not a material defect.\\n\\n## Node: `TOOL_EXTRACTION`\\n\\nOnly tool calls attached to the selected current AI message are eligible. A historical trace where stored tools come from an older message is deterministic evidence of the old verifier defect.\\n\\n## Node: `SCRIPT_DETECTION`\\n\\nThe verifier recognizes configured NBEV script names from current-message tool arguments. It cannot prove hidden execution that the Gateway did not expose.\\n\\n## Node: `STAGE_DERIVATION`\\n\\nThe verifier infers a stage from current reply/tools/scripts. It is presentation/evaluation metadata, not a Gateway-provided business state contract.\\n\\n## Node: `BUSINESS_SKILL_SELECTION`\\n\\nWhen extraction is faithful and business behavior still misses the expectation, investigate the actual agent and skill path. Do not infer this path merely from a missing compact field.\\n\\n## Node: `NBEV_SKILL`\\n\\nThe checked-out NBEV skill documents the expected planning workflow. Source presence is background until revision and runtime selection are aligned.\\n\\n## Node: `NBEV_SCRIPT`\\n\\nA concrete current-message call or execution receipt can establish script use. A reference answer that invents a different tool name cannot.\\n\\n## Node: `JUDGE_GAP`\\n\\nThe Judge gap initiates the investigation. Expectations about locally derived `stage` must not be misdescribed as proof that the business system failed to route.\\n\\n## Known evidence boundary\\n\\nThe Gateway service was unavailable during this investigation, so no new deployment-aligned run was captured. Repository reports from 2026-07-18 preserve real message histories and reproduce the verifier extraction defect, but their deployed business revision is not exposed. The checked-out business source proves current source structure only. Hidden model/skill selection remains unresolved unless a current trace or equivalent execution receipt is obtained.\\n\"}, {'id': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-b7be909b1a69e032', 'name': 'Attribute runtime_checks', 'description': '当前 case 的 runtime_checks 原始执行材料；只证明该检查或探针实际返回的内容。', 'content': '{\"confirmed_code_locations\": [\"stage_inference\", \"tool_call_extraction\"], \"decisive_extraction_deltas\": [{\"extracted_tool_names\": [\"present_files\"], \"raw_replay_stage\": \"planning\", \"raw_replay_stage_rule\": \"structured_planning_reply\", \"raw_reply_matches\": true, \"raw_tool_names\": [], \"stored_stage\": \"clarification\", \"turn_index\": 3}], \"interaction_controller_error\": \"\", \"interaction_controller_status\": \"not_run\", \"raw_business_ai_message_turn_count\": 3, \"reply_extraction_mismatch_turns\": [], \"stage_inference_mismatch_turns\": [3], \"successful_turn_count\": 3, \"tool_call_extraction_mismatch_turns\": [3], \"turn_count\": 3}'}]"
+          },
+          {
+            "tool_name": "context_debug",
+            "tool_call_id": "call_00_u7MWrFM3UFBFvrYQ6jsR5343",
+            "arguments": {},
+            "result": "{'context_debug': {'policy': {'project_id': 'deerflow', 'role': 'attribute', 'operation': 'attribute', 'trace_id': 'deerflow:mock-agent-deerflow-fd77d173:1784370885253', 'run_id': 'attribute-main', 'case_id': 'mock-agent-deerflow-fd77d173', 'enabled': True, 'allowed_scopes': None, 'forbidden_scopes': [], 'allowed_unit_types': None, 'forbidden_unit_types': [], 'allowed_source_types': None, 'forbidden_source_types': [], 'allowed_statuses': ['active'], 'candidate_limit': 20, 'load_limit': 8, 'content_char_budget': 100000, 'query_limit': 4, 'top_k_per_query': 5}, 'mandatory_ids': [], 'search_queries': ['deerflow gateway message flow', 'decisive_extraction_deltas raw_tool_names extracted_tool_names'], 'query_candidate_coverage': {'deerflow gateway message flow': ['project.deerflow.attribute.investigation.flow', 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-ce154ca1fff5f1f5', 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee', 'project.deerflow.attribute.investigation.overview', 'project.deerflow.attribute.investigation.graph'], 'decisive_extraction_deltas raw_tool_names extracted_tool_names': ['project.deerflow.attribute.investigation.flow', 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-ce154ca1fff5f1f5', 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee', 'project.deerflow.attribute.investigation.overview', 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59']}, 'candidate_ids': ['project.deerflow.attribute.investigation.flow', 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-ce154ca1fff5f1f5', 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee', 'project.deerflow.attribute.investigation.overview', 'project.deerflow.attribute.investigation.graph', 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59'], 'candidate_refs': {'C1': 'project.deerflow.attribute.investigation.flow', 'C2': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-main_tool_source_search_text-ce154ca1fff5f1f5', 'C3': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee', 'C4': 'project.deerflow.attribute.investigation.overview', 'C5': 'project.deerflow.attribute.investigation.graph', 'C6': 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-39a1ac7197fa8d59'}, 'loaded_ids': ['project.deerflow.attribute.investigation.flow', 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-b7be909b1a69e032'], 'content_chars': {'project.deerflow.attribute.investigation.flow': 7583, 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-b7be909b1a69e032': 623}, 'content_hashes': {'project.deerflow.attribute.investigation.flow': '77a18f1d3ff33e71b2ba4d79539947f74d52122149565139108aff7779e1987b', 'attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-b7be909b1a69e032': 'b7be909b1a69e03223956a12eb0bbfd185f1b780b6270cb5826f46a386154932'}, 'errors': []}}"
+          }
+        ],
+        "review_calls": [
+          {
+            "round": 1,
+            "finding_ids": [
+              "verifier_tool_extraction_defect"
+            ],
+            "passed": true,
+            "issues": [],
+            "infrastructure_error": ""
+          }
+        ],
+        "dynamic_context_units": [
+          {
+            "id": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-runtime_checks-b7be909b1a69e032",
+            "name": "Attribute runtime_checks",
+            "description": "当前 case 的 runtime_checks 原始执行材料；只证明该检查或探针实际返回的内容。"
+          },
+          {
+            "id": "attribute-deerflow:mock-agent-deerflow-fd77d173:1784370885253-probe_results-3120ad192a7e41ee",
+            "name": "Attribute probe_results",
+            "description": "当前 case 的 probe_results 原始执行材料；只证明该检查或探针实际返回的内容。"
+          }
+        ],
+        "evidence_registration_errors": []
+      },
+      "draft_metrics": {
+        "elapsed_seconds": 427.849785
+      }
+    }
+  ],
+  "decision": null,
+  "note": "Protocol facts only. Draft Skill must decide improvement against frozen Current, objective, config.review and real experiments; equality or missing evidence is not success.",
+  "run_status": "completed"
+}

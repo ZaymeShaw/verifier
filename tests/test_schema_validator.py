@@ -169,49 +169,38 @@ def test_non_nullable_primitive_rejects_json_null():
     assert "字段类型不匹配：required_id" in errors[0]
 
 
-def test_attribute_llm_schema_expands_expectation_attribution_items():
-    spec = StructuredOutputSpec.from_dataclass(
-        AttributeLLMOutput,
-        required_nonempty=["expectation_attributions", "root_cause_hypothesis"],
-    )
+def test_attribute_llm_schema_expands_finding_and_evidence_items():
+    spec = StructuredOutputSpec.from_dataclass(AttributeLLMOutput)
 
     schema = spec.json_schema()
 
-    expectation_schema = schema["$defs"]["ExpectationAttribution"]
-    assert expectation_schema["type"] == "object"
-    assert set(expectation_schema["properties"]) == {
-        "expectation_id",
-        "fulfillment_status",
-        "suspected_locations",
-        "root_cause_hypothesis",
-        "evidence",
-    }
-    assert set(expectation_schema["required"]) == {"expectation_id", "fulfillment_status"}
+    finding_schema = schema["$defs"]["AttributeFindingOutput"]
+    assert finding_schema["type"] == "object"
+    assert set(finding_schema["properties"]) == {"finding_id", "affected_expectation_ids", "conclusion", "evidence"}
+    assert set(finding_schema["required"]) == {"finding_id"}
+    evidence_schema = schema["$defs"]["AttributeEvidenceSelection"]
+    assert set(evidence_schema["properties"]) == {"context_unit_id", "reason"}
 
 
 def test_structured_output_rejects_extra_fields():
-    spec = StructuredOutputSpec.from_dataclass(
-        AttributeLLMOutput,
-        required_nonempty=["expectation_attributions", "root_cause_hypothesis"],
-    )
+    spec = StructuredOutputSpec.from_dataclass(AttributeLLMOutput)
 
     try:
         enforce_output(
             {
-                "expectation_attributions": [
-                    {
-                        "expectation_id": "子女性别为男性",
-                        "fulfillment_status": "not_fulfilled",
-                        "attributed_to": "client_search_parse",
-                    }
-                ],
-                "root_cause_hypothesis": "缺失 familyInfo.familyclientsex=男",
+            "findings": [
+                {
+                    "finding_id": "finding-1",
+                    "attributed_to": "client_search_parse",
+                }
+            ],
+            "unresolved_reason": "",
             },
             spec,
             caller="attribute",
         )
     except ValueError as exc:
-        assert "expectation_attributions.[0].额外字段不允许：attributed_to" in str(exc)
+        assert "findings.[0].额外字段不允许：attributed_to" in str(exc)
     else:
         raise AssertionError("extra attribute fields should be rejected")
 
@@ -220,9 +209,11 @@ def test_judge_schema_defs_are_not_self_embedded():
     schema = _build_judge_output_spec(True, project_id="client_search", has_reference=False).json_schema()
 
     defs = schema["$defs"]
-    assert "$defs" not in defs["BusinessExpectation"]
-    assert "$defs" not in defs["FulfillmentAssessment"]
+    assert "$defs" not in defs["JudgeBusinessExpectationOutput"]
+    assert "$defs" not in defs["JudgeFulfillmentAssessmentOutput"]
     assert "$defs" not in defs["GapItem"]
-    assert defs["BusinessExpectation"]["type"] == "object"
-    assert defs["FulfillmentAssessment"]["type"] == "object"
+    assert defs["JudgeBusinessExpectationOutput"]["type"] == "object"
+    assert defs["JudgeFulfillmentAssessmentOutput"]["type"] == "object"
     assert defs["GapItem"]["type"] == "object"
+    assert "evidence_refs" not in defs["JudgeBusinessExpectationOutput"]["properties"]
+    assert "evidence_refs" not in defs["JudgeFulfillmentAssessmentOutput"]["properties"]

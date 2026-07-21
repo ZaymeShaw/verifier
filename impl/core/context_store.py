@@ -17,10 +17,11 @@ def _ensure_dir(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
 
 
-def _record_path(project_id: str, trace_id: str, caller: str, created_at: str) -> Path:
+def _record_path(project_id: str, trace_id: str, caller: str, created_at: str, record_id: str = "") -> Path:
     ts = created_at or time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     safe_caller = caller.replace("/", "_").replace(":", "_")
-    return STORE_DIR / project_id / trace_id / f"{safe_caller}-{ts}.json"
+    suffix = str(record_id or uuid.uuid4()).replace("/", "_").replace(":", "_")[:12]
+    return STORE_DIR / project_id / trace_id / f"{safe_caller}-{ts}-{suffix}.json"
 
 
 def _record_paths_for_trace(project_id: str, trace_id: str) -> List[Path]:
@@ -71,7 +72,13 @@ def _record_to_dict(record: ContextRecord) -> Dict[str, Any]:
 
 def save_context(record: ContextRecord) -> str:
     _ensure_dir(STORE_DIR)
-    path = _record_path(record.project_id, record.trace_id, record.caller, record.created_at)
+    path = _record_path(
+        record.project_id,
+        record.trace_id,
+        record.caller,
+        record.created_at,
+        record.record_id,
+    )
     _ensure_dir(path.parent)
     path.write_text(json.dumps(_record_to_dict(record), ensure_ascii=False, indent=2), encoding="utf-8")
     _prune_project(record.project_id)

@@ -47,9 +47,7 @@ def test_check_reports_attribute_case_id_mismatch():
         trace_id=trace.trace_id,
         project_id=trace.project_id,
         case_id="",
-        root_cause_hypothesis="no issue",
-        evidence=["judge fulfilled"],
-        evidence_strength="strong",
+        unresolved_reason="case identity test",
     )
 
     report = check_chain(ProjectSpec(project_id="demo", name="demo", adapter="adapter.py"), trace, judge, attribute)

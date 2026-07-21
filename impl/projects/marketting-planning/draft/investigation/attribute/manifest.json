@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "project_id": "marketting-planning",
+  "role": "attribute",
+  "source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335",
+  "evidence_refs": [
+    {
+      "ref_id": "planning-public-sse-observation",
+      "source": "live marketing-planning public service",
+      "kind": "api_observation",
+      "stage": "public-boundary",
+      "summary": "For the exact query NBEV目标值5亿，规划路径：队伍, the public SSE completed with reasoning text that repeatedly described NBEV目标5万元.",
+      "location": "http://127.0.0.1:9006/api/v1/marketing-planning/stream trace_id=draft-planning-unit-facts-1",
+      "payload": {
+        "query": "NBEV目标值5亿，规划路径：队伍",
+        "http_status": 200,
+        "terminal_event": "card_end",
+        "observed_text": "正在分析您的NBEV目标5万元与当前经营数据"
+      },
+      "metadata": {
+        "captured_at": "2026-07-21",
+        "content_hash": "974c617efef2013da18d5bdbbf5e2568562cbc6abab3422c62adfdb73d65c66a",
+        "source_revision_alignment": "service revision not exposed by public API"
+      }
+    },
+    {
+      "ref_id": "planning-request-conversion",
+      "source": "marketing-planning business repository",
+      "kind": "function",
+      "stage": "request-normalization",
+      "summary": "MarketingPlanningRequest.to_chat_request selects the agent message or user_text and carries contexts into the workflow.",
+      "location": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/schemas/request.py:MarketingPlanningRequest.to_chat_request",
+      "metadata": {"source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335", "sha256": "23a5f8382e4994be7bf7a30d5b31e58a968a385433c2cd8047fb888eafadd583", "lines": "60-94"}
+    },
+    {
+      "ref_id": "planning-target-extractor",
+      "source": "marketing-planning business repository",
+      "kind": "function",
+      "stage": "field-extraction",
+      "summary": "extract_target_value_from_text returns a numeric string from the current message; its checked-out patterns recognize an optional 万 suffix and do not normalize 亿.",
+      "location": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/path_types.py:extract_target_value_from_text",
+      "metadata": {"source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335", "sha256": "c542ce901468016ccdde6176abe94f4ee4439350677c63e5c9d8b1a6cfe8342e", "lines": "39-51"}
+    },
+    {
+      "ref_id": "planning-field-clarification",
+      "source": "marketing-planning business repository",
+      "kind": "function",
+      "stage": "field-clarification",
+      "summary": "process_clarification combines current regex/agent fields with session state and returns the target and normalized paths.",
+      "location": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/steps/field_clarification.py:process_clarification",
+      "metadata": {"source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335", "sha256": "c600a15e993b56ea0ea35d0906709cb80768764c9c4f72d4785215768410f156", "lines": "163-222"}
+    },
+    {
+      "ref_id": "planning-workflow-handoff",
+      "source": "marketing-planning business repository",
+      "kind": "function",
+      "stage": "planning-handoff",
+      "summary": "stream_nbev_workflow converts the clarified target to float, emits PlanningStartedEvent, and passes the same value into streaming path planning.",
+      "location": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/nbev_workflow.py:stream_nbev_workflow",
+      "metadata": {"source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335", "sha256": "729b5c853f99f75eeedd7ed1d998de093b645cf74f94838ccfa7578728f2a47d", "lines": "286-405"}
+    },
+    {
+      "ref_id": "planning-path-dispatch",
+      "source": "marketing-planning business repository",
+      "kind": "function",
+      "stage": "path-dispatch",
+      "summary": "execute_streaming_planning selects one current planning function per normalized path and forwards the handoff target unchanged.",
+      "location": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/workflow/steps/path_planning.py:execute_streaming_planning",
+      "metadata": {"source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335", "sha256": "6ff20d17402808d9e45a8eded3fda744ed69068e6cbda6115a8f63b5bbb35425", "lines": "68-122"}
+    },
+    {
+      "ref_id": "planning-sse-template",
+      "source": "marketing-planning business repository",
+      "kind": "function",
+      "stage": "sse-generation",
+      "summary": "The SSE generator receives PlanningStartedEvent.target_value and uses it to build the public reasoning template before path cards are emitted.",
+      "location": "/Users/xiaozijian/WorkSpace/package/marketing-planning/app/api/router.py:_stream_from_generator",
+      "metadata": {"source_revision": "222c3d88c05d0c55735cab3709485d1d633c6335", "sha256": "7a5928ea735533af0734dd96657175c761b2cef4c996e3f9d49c569c930c64f0", "lines": "328-520"}
+    }
+  ],
+  "tool_requirements": [
+    {
+      "tool_id": "marketing_planning.field_extraction_replay",
+      "description": "Execute the checked-out business extract_target_value_from_text and extract_path_types_from_text on the exact current query, returning their actual values together with the executed function source and hash.",
+      "applicable_scenario": "A planning gap may originate before path dispatch because target value or path types appear wrong, missing, or inconsistent with the public response.",
+      "parameters": {"type": "object", "properties": {"query": {"type": "string", "description": "The exact current-case user query from RunTrace."}, "contexts": {"type": "array", "description": "Optional current conversation contexts in the business ContextItem shape.", "items": {"type": "object"}}}, "required": ["query"]},
+      "evidence_refs": [],
+      "implementation": {"tool_id": "marketing_planning.field_extraction_replay", "module_path": "tools/investigation_tools.py", "factory": "build_field_extraction_replay_tool"},
+      "implementation_gap": ""
+    },
+    {
+      "tool_id": "marketing_planning.workflow_handoff_replay",
+      "description": "Execute the checked-out business stream_nbev_workflow only through its first PlanningStartedEvent, then return the actual target value and path types handed to planning without running the planning functions.",
+      "applicable_scenario": "Field extraction alone cannot show whether session merge or workflow conversion changed the value before planning dispatch.",
+      "parameters": {"type": "object", "properties": {"query": {"type": "string", "description": "The exact current-case user query from RunTrace."}, "contexts": {"type": "array", "description": "Optional current conversation contexts in the business ContextItem shape.", "items": {"type": "object"}}}, "required": ["query"]},
+      "evidence_refs": [],
+      "implementation": {"tool_id": "marketing_planning.workflow_handoff_replay", "module_path": "tools/investigation_tools.py", "factory": "build_workflow_handoff_replay_tool"},
+      "implementation_gap": ""
+    }
+  ],
+  "artifacts": {
+    "docs/traces/planning-execution.mmd": "machine-readable planning execution topology",
+    "docs/traces/planning-execution.md": "operational index and branch-specific attribution procedure"
+  },
+  "unresolved_reason": "The public service does not expose its deployed source revision or correlated internal spans; a checked-out replay must remain unresolved when its revision, request, session state, or stochastic branch cannot be aligned with the original trace."
+}

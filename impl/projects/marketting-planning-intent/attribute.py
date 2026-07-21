@@ -224,30 +224,6 @@ def build_default_fulfillment_assessment(trace: RunTrace, judge_result: JudgeRes
     }
 
 
-def normalize_attribute_result(trace: RunTrace, judge_result: JudgeResult, attribute_result: AttributeResult) -> AttributeResult:
-    overall = judge_result.overall_fulfillment or {}
-    if overall.get("status") == "fulfilled":
-        if not attribute_result.expectation_attributions:
-            expectation_id = "marketting-planning-intent:intent_contract"
-            if judge_result.business_expectations:
-                first = judge_result.business_expectations[0]
-                expectation_id = first.get("expectation_id", expectation_id) if isinstance(first, dict) else getattr(first, "expectation_id", expectation_id)
-            evidence = list(judge_result.evidence or ["intent contract fulfilled"])
-            attribute_result.expectation_attributions = [{"expectation_id": expectation_id, "fulfillment_status": "fulfilled", "suspected_locations": [], "root_cause_hypothesis": "当前 intent-recognition 输出满足业务预期，归因结论为 no_issue。", "evidence": evidence}]
-        attribute_result.suspected_locations = []
-        attribute_result.root_cause_hypothesis = "当前 intent-recognition 输出满足业务预期，归因结论为 no_issue。"
-        return attribute_result
-    first_failed = next((node for node in trace.execution_trace or [] if isinstance(node, dict) and node.get("status") in {"failed", "suspicious"}), {})
-    expected = judge_result.expected or trace.reference_contract or {}
-    actual = judge_result.actual or trace.extracted_output or {}
-    stage = first_failed.get("stage") or "intent_contract_gate"
-    attribute_result.suspected_locations = [{"location": stage, "evidence": [first_failed.get("evidence") or judge_result.missing or judge_result.wrong]}]
-    attribute_result.evidence = [first_failed.get("evidence") or judge_result.missing or judge_result.wrong]
-    attribute_result.evidence_strength = "medium"
-    attribute_result.root_cause_hypothesis = f"当前 case 期望 intent/slots 为 {expected}，实际 normalized intent evidence 为 {actual}，最早差异位于 {stage}。"
-    return attribute_result
-
-
 def get_runtime_checks(runtime_values: Dict[str, Any], context: Dict[str, Any] | None = None) -> Dict[str, Any]:
     context = context or {}
     raw_intent = runtime_values.get("raw_intent") or runtime_values.get("raw_output")
@@ -260,11 +236,29 @@ def get_runtime_checks(runtime_values: Dict[str, Any], context: Dict[str, Any] |
     if not raw_intent and not actual_intent and not expected_intent:
         return {"tool_type": "runtime_check", "check_type": "intent_mapping", "status": "not_applicable", "evidence": ["当前 trace 未提供 intent 映射检查所需的 raw_intent/intent/reference。"]}
 
+    if raw_intent is None:
+        return {
+            "tool_type": "runtime_check",
+            "check_type": "intent_mapping",
+            "status": "inconclusive",
+            "raw_intent": None,
+            "actual_intent": actual_intent,
+            "expected_intent": expected_intent,
+            "evidence": [
+                "当前 trace 未提供业务系统映射前的 raw_intent，不能验证标签映射机制。",
+                f"actual_intent={actual_intent}",
+                f"expected_intent={expected_intent}",
+            ],
+            "root_cause": None,
+            "fix_suggestion": "",
+            "confidence": "low",
+        }
+
     mapping, enum_values, source = _load_intent_mapping_source()
-    actual_mapping = mapping.get(str(raw_intent)) if raw_intent is not None else actual_intent
+    actual_mapping = mapping.get(str(raw_intent))
     if actual_mapping is None:
         actual_mapping = actual_intent or "other"
-    is_in_mapping = str(raw_intent) in mapping if raw_intent is not None else False
+    is_in_mapping = str(raw_intent) in mapping
     is_expected_mapping = bool(expected_intent) and actual_mapping == expected_intent
     status = "passed" if (not expected_intent or is_expected_mapping) else "failed"
     evidence = [
@@ -330,8 +324,7 @@ def _build_project_attribute_context(spec: ProjectSpec, trace: RunTrace, judge_r
         "system_prompt_override": """你是 marketting-planning-intent 项目的 attribute agent。
 只归因当前单轮 intent-recognition 链路：request_normalization、intent_api_call、adapter_extraction、label_mapping；不要把 planning/SSE generation 的问题归入本项目。
 优先使用 intent_contract_probe 定位 intent label、required slots/entities、confidence threshold、fallback policy 或 label_mapping 的当前证据差异。
-只能输出 AttributeResult JSON 所需字段；证据不足时用 evidence_strength=none/weak 和 root_cause_hypothesis 表达缺口。
-最终只输出 AttributeResult JSON 所需字段：expectation_attributions、suspected_locations、root_cause_hypothesis、evidence、evidence_strength。""",
+只调查 not_fulfilled expectation，按真实缺陷合并 findings。证据不足时不输出 hypothesis，只写一个 unresolved_reason。最终只输出 findings、unresolved_reason，evidence 仅引用 Finalization 重载的 ContextUnit。""",
         "user_prompt_extras": {
             "project_attribute_strategy": {
                 "project": spec.project_id,
@@ -379,4 +372,4 @@ class MarketingIntentAttribute(ProjectAttribute):
         return None
 
     def normalize_result(self, trace: RunTrace, judge_result: JudgeResult, result: AttributeResult) -> AttributeResult:
-        return normalize_core_attribute_result(normalize_attribute_result(trace, judge_result, result)) or result
+        return normalize_core_attribute_result(result) or result

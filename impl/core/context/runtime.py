@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence
 from .errors import (
     ContextAuthorizationError,
     ContextBudgetError,
+    ContextConfigurationError,
     ContextNotFoundError,
     ContextRegistrationConflictError,
     ContextResolutionError,
@@ -18,6 +19,7 @@ from .errors import (
 from .models import ContextUnit, ContextUnitRecord
 from .policy import ContextPolicyResolver, _RunContextPolicy
 from .ports import ContentResolver, ContextRegistry, ContextVectorIndex, EmbeddingProvider
+from .embedding import validate_embedding_vector
 
 
 def _sha256(value: str) -> str:
@@ -146,7 +148,7 @@ class ContextRuntime:
                 embedded = self.embedding_provider.embed([_record_search_text(record)])
                 if len(embedded) != 1 or not embedded[0]:
                     raise ContextValidationError("embedding provider returned an invalid vector batch")
-                vector = tuple(float(value) for value in embedded[0])
+                vector = tuple(validate_embedding_vector(embedded[0]))
 
             if existing is None:
                 action = "created"
@@ -450,15 +452,55 @@ class ContextRun:
             "loaded_ids": [],
             "content_chars": {},
             "content_hashes": {},
+            "errors": [],
         }
+
+    @staticmethod
+    def _is_infrastructure_error(exc: Exception) -> bool:
+        """Separate dependency failures from model/request mistakes.
+
+        Invalid IDs, authorization, budgets and malformed requests are useful
+        Role-behaviour facts. Provider/network/configuration/content-resolution
+        failures make a formal Current/Draft comparison non-comparable.
+        """
+        request_errors = (
+            ContextAuthorizationError,
+            ContextBudgetError,
+            ContextNotFoundError,
+            ContextValidationError,
+        )
+        return isinstance(exc, (ContextConfigurationError, ContextResolutionError)) or not isinstance(
+            exc, request_errors
+        )
+
+    def _record_error(self, operation: str, exc: Exception) -> None:
+        self._debug["errors"].append({
+            "operation": str(operation),
+            "type": type(exc).__name__,
+            "message": str(exc),
+            "infrastructure": self._is_infrastructure_error(exc),
+        })
+
+    def context_unit_catalog(self) -> List[Mapping[str, str]]:
+        """Return authorized metadata only; content remains behind explicit Load."""
+        entries = self._runtime.registry.list_entries(self._policy.project_id)
+        return [
+            {"context_unit_id": entry["record"].id, "name": entry["record"].name, "description": entry["record"].description}
+            for entry in entries
+            if self._policy.permits(entry["record"])
+        ]
 
     def search_context_units(
         self, queries: Sequence[str], top_k_per_query: Optional[int] = None
     ) -> List[Mapping[str, Any]]:
         normalized_queries = _normalize_queries(queries)
-        items = self._runtime._search(
-            normalized_queries, self._policy, top_k_per_query=top_k_per_query
-        )
+        try:
+            items = self._runtime._search(
+                normalized_queries, self._policy, top_k_per_query=top_k_per_query
+            )
+        except Exception as exc:
+            self._record_error("search_context_units", exc)
+            raise
         self._debug["search_queries"].extend(normalized_queries)
         coverage = self._debug["query_candidate_coverage"]
         for query in normalized_queries:
@@ -496,7 +538,11 @@ class ContextRun:
             for unit_id in unit_ids
             if str(unit_id).strip()
         ]
-        units = self._runtime._load(resolved_ids, self._policy)
+        try:
+            units = self._runtime._load(resolved_ids, self._policy)
+        except Exception as exc:
+            self._record_error("load_context_units", exc)
+            raise
         for unit in units:
             if unit.id not in self._debug["loaded_ids"]:
                 self._debug["loaded_ids"].append(unit.id)
@@ -522,5 +568,6 @@ class ContextRun:
                 "loaded_ids": list(self._debug["loaded_ids"]),
                 "content_chars": dict(self._debug["content_chars"]),
                 "content_hashes": dict(self._debug["content_hashes"]),
+                "errors": [dict(item) for item in self._debug["errors"]],
             }
         }

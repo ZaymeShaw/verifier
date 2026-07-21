@@ -1,5 +1,7 @@
 Draft Skill 完整解决方案
 
+> 本文保留 Draft 的原始设计思想。阶段命令、调查包 schema、Role 契约、Context/Tool 固化、current/draft 判优和确定性 Promote 的现行长期协议，以 `spec/alg/investigate.md` 为准。现行主链固定为 `Investigate → Solidify → Draft Loop → Promote`；Investigate/Solidify 由 Harness AI 执行，Loop 中的正式运行与 Promote 由 verifier 协议代码执行。
+
 核心定位
 
 draft skill 的目标不是"跑一次对比"或"让 LLM 重写一段 context"，而是积累项目优化能力：先自主探索最优路径，再把路径里的关键能力固化到 agno

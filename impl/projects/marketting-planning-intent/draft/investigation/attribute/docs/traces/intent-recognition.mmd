@@ -1,0 +1,28 @@
+flowchart LR
+    REQUEST["REQUEST: public payload and current query"]
+    ENDPOINT["ENDPOINT: intent_recognition"]
+    CHAT_REQUEST["CHAT_REQUEST: to_chat_request normalization"]
+    RESOLVER["RESOLVER: _resolve_intent_result"]
+    HOME_RULE["HOME_RULE: homepage deterministic rules"]
+    CONTEXT_RULE["CONTEXT_RULE: completed-planning adjustments"]
+    STRUCTURED_RULE["STRUCTURED_RULE: values, paths, NBEV heuristic"]
+    LLM["LLM: fallback or field supplementation"]
+    INTENT_RESULT["INTENT_RESULT: label, confidence and NBEV fields"]
+    RESPONSE_ENVELOPE["RESPONSE_ENVELOPE: intent_code and nlu_info"]
+    ADAPTER["ADAPTER: verifier output extraction"]
+    JUDGE_GAP["JUDGE_GAP: expected versus actual business gap"]
+    REQUEST --> ENDPOINT
+    ENDPOINT --> CHAT_REQUEST
+    CHAT_REQUEST --> RESOLVER
+    RESOLVER --> HOME_RULE
+    RESOLVER --> CONTEXT_RULE
+    RESOLVER --> STRUCTURED_RULE
+    HOME_RULE --> INTENT_RESULT
+    CONTEXT_RULE --> INTENT_RESULT
+    STRUCTURED_RULE --> INTENT_RESULT
+    RESOLVER --> LLM
+    STRUCTURED_RULE --> LLM
+    LLM --> INTENT_RESULT
+    INTENT_RESULT --> RESPONSE_ENVELOPE
+    RESPONSE_ENVELOPE --> ADAPTER
+    ADAPTER --> JUDGE_GAP

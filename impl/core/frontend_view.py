@@ -122,8 +122,8 @@ def _attribute_panel(attribute: Optional[AttributeResult]) -> dict:
     panel = to_dict(attribute)
     panel.update(
         {
-            "display_root_cause": attribute.root_cause_hypothesis,
-            "attribution_count": len(attribute.expectation_attributions or []),
+            "display_summary": (attribute.summary or {}).get("summary_text") or attribute.unresolved_reason,
+            "finding_count": len(attribute.findings or []),
         }
     )
     return panel
@@ -132,9 +132,9 @@ def _attribute_panel(attribute: Optional[AttributeResult]) -> dict:
 def _expectation_attribution_panel(attribute: Optional[AttributeResult]) -> dict:
     if not attribute:
         return {}
-    attributions = list(attribute.expectation_attributions or [])
+    findings = list(attribute.findings or [])
     return {
-        "attributions": to_dict(attributions),
+        "findings": to_dict(findings),
     }
 
 

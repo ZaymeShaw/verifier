@@ -358,16 +358,18 @@ def evaluate_gate(gate_id: str, context: TraceExecutionContext, result: Dict[str
     if gate_id == "attribute_targets_expectation_gap":
         required = _attribute_required(context)
         attribute = context.get("attribute_result")
-        targets = list(getattr(attribute, "expectation_attributions", []) or []) if attribute else []
-        passed = bool(not required or targets or not attribute)
-        return GateDecision(gate_id=gate_id, gate_type="attribute_targets_expectation_gap", passed=passed, checked_inputs={"fulfillment_requires_attribute": required, "target_count": len(targets)}, missing_evidence=[] if passed else ["expectation_attributions"], recoverable=False, recommended_transition="finalize", reason="attribute targets fulfillment gaps" if required else "attribute not required by fulfillment")
+        targets = list(getattr(attribute, "findings", []) or []) if attribute else []
+        unresolved = str(getattr(attribute, "unresolved_reason", "") or "") if attribute else ""
+        passed = bool(not required or targets or unresolved or not attribute)
+        return GateDecision(gate_id=gate_id, gate_type="attribute_targets_expectation_gap", passed=passed, checked_inputs={"fulfillment_requires_attribute": required, "finding_count": len(targets)}, missing_evidence=[] if passed else ["findings_or_unresolved_reason"], recoverable=False, recommended_transition="finalize", reason="attribute addressed fulfillment gaps" if required else "attribute not required by fulfillment")
     if gate_id == "expectation_attribution_evidence":
         attribute = context.get("attribute_result")
         if not attribute and not _attribute_required(context):
             return GateDecision(gate_id=gate_id, gate_type="required_evidence", passed=True, reason="attribute not required")
-        attributions = list(getattr(attribute, "expectation_attributions", []) or []) if attribute else []
-        passed = bool(attributions or (attribute and getattr(attribute, "root_cause_hypothesis", "")))
-        return GateDecision(gate_id=gate_id, gate_type="expectation_attribution_evidence", passed=passed, checked_inputs={"attribution_count": len(attributions)}, missing_evidence=[] if passed else ["expectation_attributions"], recoverable=not passed, recommended_transition="run_attribution_probes", reason="expectation attribution evidence available" if passed else "expectation attribution evidence missing")
+        findings = list(getattr(attribute, "findings", []) or []) if attribute else []
+        unresolved = str(getattr(attribute, "unresolved_reason", "") or "") if attribute else ""
+        passed = bool(findings or unresolved)
+        return GateDecision(gate_id=gate_id, gate_type="expectation_attribution_evidence", passed=passed, checked_inputs={"finding_count": len(findings)}, missing_evidence=[] if passed else ["findings_or_unresolved_reason"], recoverable=not passed, recommended_transition="run_attribution_probes", reason="reviewed findings or explicit unresolved boundary available" if passed else "attribute result is empty")
     if gate_id == "finalization_ready":
         passed = bool(context.get("trace") and context.get("judge_result"))
         return GateDecision(gate_id=gate_id, gate_type="finalization_ready", passed=passed, checked_inputs={"has_trace": bool(context.get("trace")), "has_judge_result": bool(context.get("judge_result"))}, missing_evidence=[] if passed else ["trace", "judge_result"], recoverable=False, reason="finalization ready" if passed else "finalization missing trace or judge")

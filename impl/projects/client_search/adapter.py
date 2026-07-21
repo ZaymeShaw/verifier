@@ -21,7 +21,6 @@ class Adapter(ProjectAdapter):
         return ClientSearchJudge(self.spec)
 
     def _load_attribute(self):
-        from impl.core.project_loader import load_project_tools
         from impl.projects.client_search.attribute import ClientSearchAttribute
 
-        return ClientSearchAttribute(self.spec, load_project_tools(self.spec).verifiable_tools())
+        return ClientSearchAttribute(self.spec, self)

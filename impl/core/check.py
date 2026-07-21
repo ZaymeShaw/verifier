@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 from typing import Any, Iterable, Optional
 
-from .schema import AttributeResult, CheckReport, ClusterSummary, FallbackDecision, JudgeResult, ProjectSpec, RunTrace, judge_expected_actual_gaps, judge_primary_signal, trace_application_boundary, trace_execution_trace, trace_extracted_output, trace_input, trace_normalized_request, trace_raw_response
+from .schema import AttributeResult, CheckReport, ClusterSummary, FallbackDecision, JudgeResult, ProjectSpec, RunTrace, judge_expected_actual_gaps, judge_primary_signal, to_dict, trace_application_boundary, trace_execution_trace, trace_extracted_output, trace_input, trace_normalized_request, trace_raw_response
 
 DEFAULT_PROJECT_FIELD_MARKERS = []
 
@@ -324,9 +324,7 @@ def _judge_fields(trace: Optional[RunTrace], judge: Optional[JudgeResult]) -> se
 
 def _attribute_claimed_fields(attribute: AttributeResult) -> set[str]:
     fields = set()
-    fields.update(_field_values(attribute.suspected_locations))
-    fields.update(_field_values(attribute.root_cause_hypothesis))
-    fields.update(_field_values(attribute.evidence))
+    fields.update(_field_values(to_dict(attribute.findings)))
     return fields
 
 
@@ -336,12 +334,11 @@ def _attribute_consistency_gaps(trace: Optional[RunTrace], judge: Optional[Judge
     gaps = []
     fulfillment_status = (judge.overall_fulfillment or {}).get("status") if isinstance(judge.overall_fulfillment, dict) else ""
     if fulfillment_status == "fulfilled":
-        attributions = list(attribute.expectation_attributions or [])
-        if not attributions:
-            gaps.append("AttributeResult lacks expectation_attributions for fulfilled JudgeResult.")
+        if attribute.findings:
+            gaps.append("Fulfilled JudgeResult must not produce Attribute findings.")
         return gaps
-    if not attribute.root_cause_hypothesis and not attribute.suspected_locations:
-        gaps.append("Failure attribution missing root_cause_hypothesis or suspected_locations.")
+    if not attribute.findings and not attribute.unresolved_reason:
+        gaps.append("Failure attribution requires reviewed findings or unresolved_reason.")
     return gaps
 
 
@@ -476,8 +473,8 @@ def _value_contained_in(needle: Any, haystack: Any) -> bool:
 
 def _unsupported_root_cause_claims(unsupported_claims: list[Any], trace: Optional[RunTrace], judge: Optional[JudgeResult], attribute: AttributeResult) -> list[str]:
     current_text = _as_text(trace_input(trace) if trace else {}) + " " + _as_text(trace_extracted_output(trace) if trace else {}) + " " + _as_text(judge.expected if judge else {}) + " " + _as_text(judge.actual if judge else {}) + " " + _as_text(judge.wrong if judge else {})
-    verification_text = _as_text(attribute.evidence) + " "
-    root_cause_text = _as_text(attribute.suspected_locations) + " " + _as_text(attribute.root_cause_hypothesis) + " "
+    verification_text = _as_text([evidence for finding in attribute.findings for evidence in finding.evidence]) + " "
+    root_cause_text = _as_text([finding.conclusion for finding in attribute.findings]) + " "
     ungrounded = []
     for claim in unsupported_claims:
         claim_text = str(claim)
@@ -554,25 +551,24 @@ def build_check_category_report(
 
     if attribute:
         current_text = _as_text(trace.input if trace else {}) + " " + _as_text(judge.expected if judge else {}) + " " + _as_text(judge.actual if judge else {})
-        attr_text = _as_text(attribute.suspected_locations) + " " + _as_text(attribute.root_cause_hypothesis) + " " + _as_text(attribute.evidence)
+        attr_text = _as_text(to_dict(attribute.findings))
         unsupported_claims: list[Any] = []
         stale_markers = [str(marker) for marker in unsupported_claims if marker and str(marker) in attr_text and str(marker) not in current_text]
         if stale_markers:
             _add_category(categories, "overfit_rule", "attribution mentions fields from a historical case but not the current case: " + ", ".join(stale_markers))
             _add_category(categories, "stale_artifact", "attribution appears to carry stale historical-case fields")
-            evidence_locations.append("AttributeResult.root_cause_hypothesis")
+            evidence_locations.append("AttributeResult.findings")
             root_causes.append("Attribution reused a historical rule/case pattern without grounding it in the current expected-vs-actual gap.")
             fixes.append("Reconstruct the current case gap first, then ground field/config/enum claims in current trace, judge, project docs, or local verification.")
         ungrounded_unsupported = _unsupported_root_cause_claims([], trace, judge, attribute)
-        has_location_evidence = bool(attribute.evidence_strength in ("strong", "medium"))
-        if ungrounded_unsupported or (attribute.suspected_locations and not has_location_evidence):
+        if ungrounded_unsupported:
             issue = "attribution has unsupported root-cause/location claims"
             if ungrounded_unsupported:
                 issue += ": " + ", ".join(str(item) for item in ungrounded_unsupported)
             _add_category(categories, "ungrounded_attribution", issue)
-            evidence_locations.append("AttributeResult.evidence")
-            root_causes.append("Attribute quality passed even though root-cause or suspected-location claims lack current-case evidence.")
-            fixes.append("Downgrade to insufficient_evidence or next_verification_step until current-case chain evidence supports the root cause.")
+            evidence_locations.append("AttributeResult.findings[].evidence")
+            root_causes.append("A reviewed finding still contains a claim not grounded in current-case material.")
+            fixes.append("Remove the finding or acquire and Finalize ContextUnit evidence that supports the claim.")
 
     confirmation_items = [str(item) for item in list(check_rules.get("confirmation_required_changes") or [])]
     requires_user_confirmation = bool(confirmation_items)
@@ -708,13 +704,9 @@ def check_chain(
             consistency_gaps.append("AttributeResult trace_id does not match RunTrace.")
         if trace and attribute.case_id != trace.case_id:
             consistency_gaps.append("AttributeResult case_id does not match RunTrace.")
-        if not attribute.root_cause_hypothesis:
-            protocol_gaps.append("AttributeResult missing root_cause_hypothesis.")
-        if not attribute.suspected_locations and not attribute.root_cause_hypothesis:
-            protocol_gaps.append("Failure attribution missing suspected_locations or root_cause_hypothesis.")
         if judge and (judge.overall_fulfillment or {}).get("status") in {"not_fulfilled", "not_evaluable"}:
-            if not attribute.expectation_attributions:
-                protocol_gaps.append("Failure attribution missing expectation_attributions for non-fulfilled JudgeResult.")
+            if not attribute.findings and not attribute.unresolved_reason:
+                protocol_gaps.append("Failure attribution requires reviewed findings or unresolved_reason.")
         consistency_gaps.extend(_attribute_consistency_gaps(trace, judge, attribute))
     elif judge and (judge.overall_fulfillment or {}).get("status") in {"not_fulfilled", "not_evaluable"}:
         protocol_gaps.append("JudgeResult requires attribution, but AttributeResult is missing.")

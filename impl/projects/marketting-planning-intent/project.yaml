@@ -2,7 +2,7 @@ project_id: marketting-planning-intent
 name: 营销规划意图识别评估项目
 description: 单独评估营销规划业务服务的 intent-recognition 单轮接口，与 marketting-planning 共享业务服务但测评边界只覆盖意图识别。
 adapter: adapter.py
-source_project: ../../../projects/marketting-planning-intent
+source_project: /Users/xiaozijian/WorkSpace/package/marketing-planning
 capabilities: ["live_run", "judge", "attribute", "cluster", "check", "scenario", "single_turn", "intent_recognition"]
 common:
   ready: [reference]
@@ -17,6 +17,10 @@ application:
   shared_service_project: marketting-planning
   external_repo: /Users/xiaozijian/WorkSpace/package/marketing-planning
   modify_external_repo: false
+attribute_draft:
+  enabled: true
+  module: draft/attribute.py
+  reason: Batch attribution validation through the 8021 UAT frontend.
 documents:
   application: application.md
   mock: mock.md
@@ -74,3 +78,46 @@ frontend_extensions:
       tests: [tests.test_demand_check_gap]
   check_rules:
     require_scenario: true
+
+role_assets:
+  - asset_id: attribute_investigation
+    kind: investigation
+    enabled: true
+    roles: [attribute]
+    production_path: investigation/attribute
+    candidate_path: draft/investigation/attribute
+    replace: true
+  - asset_id: attribute_investigation_tools
+    kind: tool
+    enabled: true
+    roles: [attribute]
+    production_path: tools/investigation_tools.py
+    candidate_path: draft/tools/investigation_tools.py
+    replace: true
+  - asset_id: attribute_investigation_context_builder
+    kind: context_builder
+    enabled: true
+    roles: [attribute]
+    production_path: context_builders/attribute_investigation.py
+    candidate_path: draft/context_builders/attribute_investigation.py
+    replace: true
+  - asset_id: judge_evaluation
+    kind: context
+    enabled: true
+    roles: [judge]
+    production_path: evaluation.md
+  - asset_id: judge_boundary
+    kind: context
+    enabled: true
+    roles: [judge]
+    production_path: judge_boundary.md
+  - asset_id: mock_contract
+    kind: context
+    enabled: true
+    roles: [mock]
+    production_path: mock.md
+  - asset_id: mock_application
+    kind: context
+    enabled: true
+    roles: [mock]
+    production_path: application.md

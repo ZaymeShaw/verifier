@@ -123,7 +123,7 @@ def case_event(index: int, run: Dict[str, Any], identity: Dict[str, Any] | None 
         "status": table_row.get("fulfillment_status") or table_row.get("status") or compact.get("status") or "",
         "error": compact.get("error") or (compact.get("trace") or {}).get("error") or "",
         "reason": reason,
-        "reason_source": attribution_summary.get("causal_category") or judge_summary.get("reason_source") or "",
+        "reason_source": attribution_summary.get("attribution_status") or judge_summary.get("reason_source") or "",
         "reason_stage": table_row.get("divergence_stage") or judge_summary.get("reason_stage") or "",
         "is_formal_attribution": bool(attribution_summary.get("is_formal_attribution", False)),
         "judge_reason": judge_summary.get("reason") or "",

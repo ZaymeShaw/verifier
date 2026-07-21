@@ -13,6 +13,7 @@ from impl.core.context.errors import (
     ContextAuthorizationError,
     ContextBudgetError,
     ContextConfigurationError,
+    ContextNotFoundError,
     ContextResolutionError,
     ContextValidationError,
 )
@@ -167,6 +168,44 @@ def test_registration_reuses_embedding_when_only_content_or_governance_changes(t
     assert provider.calls == 2
 
 
+def test_run_tag_hides_dynamic_materials_from_previous_execution(tmp_path):
+    runtime = build_runtime(tmp_path)
+    runtime.register_context_units([
+        make_record(
+            "static-project-doc",
+            roles=("attribute",),
+            tags={},
+        ),
+        make_record(
+            "old-runtime-result",
+            roles=("attribute",),
+            scope="case",
+            source_type="runtime_result",
+            tags={"trace_id": "trace-1", "case_id": "case-1", "run_id": "old-run"},
+        ),
+        make_record(
+            "current-runtime-result",
+            roles=("attribute",),
+            scope="case",
+            source_type="runtime_result",
+            tags={"trace_id": "trace-1", "case_id": "case-1", "run_id": "current-run"},
+        ),
+    ])
+
+    current = runtime.start_run(
+        role="attribute",
+        operation="attribute",
+        trace_id="trace-1",
+        case_id="case-1",
+        run_id="current-run",
+    )
+    visible = {item["context_unit_id"] for item in current.context_unit_catalog()}
+
+    assert "static-project-doc" in visible
+    assert "current-runtime-result" in visible
+    assert "old-runtime-result" not in visible
+
+
 def test_multi_query_search_preserves_diversity_and_never_returns_content(tmp_path):
     runtime = build_runtime(tmp_path)
     runtime.register_context_units(
@@ -213,6 +252,37 @@ def test_search_treats_one_string_as_one_query(tmp_path, monkeypatch):
 
     assert [item["id"] for item in candidates] == ["single"]
     assert run.debug_snapshot()["context_debug"]["search_queries"] == ["single need"]
+
+
+def test_context_run_records_infrastructure_and_request_failures_separately(tmp_path, monkeypatch):
+    runtime = build_runtime(tmp_path)
+    runtime.register_context_unit(make_record("single"))
+    run = runtime.start_run(role="judge", operation="evaluate")
+
+    def fail_embedding(_texts):
+        raise ConnectionResetError("provider connection reset")
+
+    monkeypatch.setattr(runtime.embedding_provider, "embed", fail_embedding)
+    with pytest.raises(ConnectionResetError, match="provider connection reset"):
+        run.search_context_units(["single need"])
+    with pytest.raises(ContextNotFoundError, match="not found"):
+        run.load_context_units(["missing"])
+
+    errors = run.debug_snapshot()["context_debug"]["errors"]
+    assert errors == [
+        {
+            "operation": "search_context_units",
+            "type": "ConnectionResetError",
+            "message": "provider connection reset",
+            "infrastructure": True,
+        },
+        {
+            "operation": "load_context_units",
+            "type": "ContextNotFoundError",
+            "message": "context units not found: ['missing']",
+            "infrastructure": False,
+        },
+    ]
 
 
 def test_search_assigns_stable_run_refs_and_load_accepts_them(tmp_path, monkeypatch):

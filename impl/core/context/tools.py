@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Mapping, Optional, Sequence
+from typing import Annotated, Mapping, Optional, Sequence
+
+from pydantic import Field
 
 from .runtime import ContextRun
 
@@ -79,11 +81,13 @@ class GuardedContextTools:
         self._context_run = context_run
 
     def search_context_units(
-        self, queries: Sequence[str], top_k_per_query: Optional[int] = None
+        self,
+        queries: Annotated[list[str], Field(min_length=1, max_length=4)],
+        top_k_per_query: Optional[int] = None,
     ):
         """Search once for a planned list of atomic, self-contained information needs.
 
-        Query text may contain discovery hypotheses but is not evidence. Search returns only
+        Submit 1-4 query strings directly as a JSON array. Query text may contain discovery hypotheses but is not evidence. Search returns only
         candidate refs, IDs and descriptions; load by selection_ref before using full content.
         """
 
@@ -91,8 +95,10 @@ class GuardedContextTools:
             self._context_run, queries, top_k_per_query=top_k_per_query
         )
 
-    def load_context_units(self, unit_ids: Sequence[str]):
-        """Load full content using exact selection_ref values returned by Search."""
+    def load_context_units(
+        self, unit_ids: Annotated[list[str], Field(min_length=1, max_length=8)]
+    ):
+        """Load 1-8 exact ContextUnit IDs/selection_refs as a JSON array."""
 
         return load_context_units_tool(self._context_run, unit_ids)
 

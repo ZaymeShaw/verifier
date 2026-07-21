@@ -542,15 +542,15 @@ def check_occam_runtime_invariants(cfg: Dict[str, Any]) -> List[Issue]:
             )
 
     attribute = load_fixture("impl.core.schema.attribute.AttributeResult")
-    if attribute.expectation_attributions and not attribute.root_cause_hypothesis:
+    if attribute.findings and not str((attribute.summary or {}).get("summary_text") or "").strip():
         issues.append(
             Issue(
-                kind="attribute_missing_root_cause_summary",
+                kind="attribute_missing_summary_text",
                 severity="error",
                 file="impl/core/schema/attribute.py",
-                symbol="AttributeResult.root_cause_hypothesis",
-                message="Canonical attribution fixtures with expectation attributions must retain a root-cause summary.",
-                detected_format="missing root_cause_hypothesis",
+                symbol="AttributeResult.summary",
+                message="Canonical attribution fixtures with findings must provide frontend-ready summary.summary_text.",
+                detected_format="missing summary_text",
             )
         )
     return issues

@@ -1,0 +1,40 @@
+flowchart LR
+    REQUEST["REQUEST<br/>out: request.parse_api_request"]
+    ENDPOINT["ENDPOINT<br/>out: endpoint.user_query, endpoint.trace_id"]
+    ROUTER["ROUTER<br/>out: router.raw_query"]
+    NORMALIZE["NORMALIZE<br/>out: router.normalized_query"]
+    L1["L1<br/>out: l1.conditions"]
+    L2_PATTERN["L2_PATTERN<br/>out: l2.matched_rule, l2.matched_pattern, l2.matched_text"]
+    L2_CAPTURE["L2_CAPTURE<br/>out: l2.capture_groups"]
+    L2_CONDITION["L2_CONDITION<br/>out: l2.confirmed_conditions"]
+    OVERRIDE["OVERRIDE<br/>out: router.deterministic_merged_conditions"]
+    L4_PROMPT["L4_PROMPT<br/>out: l4.rag_prompt, l4.has_intents"]
+    L4_MODEL["L4_MODEL<br/>out: l4.raw_response, l4.finish_reason"]
+    L4_CONVERT["L4_CONVERT<br/>out: l4.converted_conditions, l4.query_logic"]
+    L4_MERGE["L4_MERGE<br/>out: l4.l2_merge_candidates, router.l4_merged_conditions"]
+    PRE_VALIDATE["PRE_VALIDATE<br/>out: router.pre_validation_conditions"]
+    VALIDATE["VALIDATE<br/>out: router.validated_conditions, router.summary_normalized_conditions, router.matched_level, router.matched_patterns, router.rewritten_query"]
+    FORMAT["FORMAT<br/>out: endpoint.debug_pattern_text, endpoint.date_normalized_conditions, endpoint.intent_summary, endpoint.filtered_conditions, endpoint.age_converted_conditions"]
+    RESPONSE["RESPONSE<br/>out: response.parse_api_response"]
+
+    REQUEST -->|request.parse_api_request| ENDPOINT
+    ENDPOINT -->|endpoint.user_query, endpoint.trace_id| ROUTER
+    ROUTER -->|router.raw_query| NORMALIZE
+    NORMALIZE -->|router.normalized_query| L1
+    NORMALIZE -->|router.normalized_query| L2_PATTERN
+    NORMALIZE -->|router.normalized_query| OVERRIDE
+    L2_PATTERN -->|l2.matched_rule, l2.matched_pattern, l2.matched_text| L2_CAPTURE
+    L2_CAPTURE -->|l2.capture_groups| L2_CONDITION
+    L1 -->|l1.conditions| OVERRIDE
+    L2_CONDITION -->|l2.confirmed_conditions| OVERRIDE
+    OVERRIDE -->|router.deterministic_merged_conditions; confirmed conditions exist| PRE_VALIDATE
+    OVERRIDE -->|router.normalized_query; no deterministic conditions and L4 enabled| L4_PROMPT
+    L4_PROMPT -->|l4.rag_prompt| L4_MODEL
+    L4_MODEL -->|l4.raw_response| L4_CONVERT
+    L4_CONVERT -->|l4.converted_conditions| L4_MERGE
+    OVERRIDE -->|router.normalized_query; post-conversion candidate recall| L4_MERGE
+    L4_MERGE -->|router.l4_merged_conditions| PRE_VALIDATE
+    PRE_VALIDATE -->|router.pre_validation_conditions| VALIDATE
+    VALIDATE -->|router.summary_normalized_conditions, router.matched_level, router.matched_patterns, router.rewritten_query| FORMAT
+    L4_PROMPT -->|l4.rag_prompt; matched_level is 4| FORMAT
+    FORMAT -->|endpoint.age_converted_conditions, endpoint.intent_summary, endpoint.debug_pattern_text, router.matched_level, router.rewritten_query| RESPONSE

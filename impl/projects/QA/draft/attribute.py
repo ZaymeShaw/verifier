@@ -66,8 +66,7 @@ def _build_project_attribute_context(spec: ProjectSpec, adapter, trace: RunTrace
         "tool_call_limit": 3,
         "system_prompt_override": """你是 QA 项目的 draft attribute agent。
 只基于当前 RunTrace、JudgeResult、qa_draft_probe 和 grounding_gap_tool 归因；不要复用历史 case，不要把其他项目字段带入 QA。
-如果 grounding_gap_tool 缺少 reference/actual，evidence_strength 必须为 none 或 weak；只有当前 case probe 明确显示 unsupported_exact_claims 时才允许 strong/medium。
-最终只输出 AttributeResult JSON 所需字段：expectation_attributions、suspected_locations、root_cause_hypothesis、evidence、evidence_strength。""",
+如果 grounding_gap_tool 缺少 reference/actual，不生成 finding，只在 unresolved_reason 说明阻塞。最终只输出 findings、unresolved_reason，证据必须引用 Finalization 重载的 ContextUnit。""",
         "user_prompt_extras": {
             "project_attribute_strategy": {
                 "project": spec.project_id,
@@ -94,11 +93,4 @@ class QAAttribute(ProjectAttribute):
         return context
 
     def normalize_result(self, trace: RunTrace, judge_result: JudgeResult, result: AttributeResult) -> AttributeResult:
-        result = normalize_attribute_result(result) or result
-        if (judge_result.overall_fulfillment or {}).get("status") == "not_evaluable":
-            return _blocked_attribute_result(
-                trace,
-                judge_result,
-                "QA judge 处于 not_evaluable 状态，缺少可用语义判定，不能产出正式失败归因。",
-            )
-        return result
+        return normalize_attribute_result(result) or result

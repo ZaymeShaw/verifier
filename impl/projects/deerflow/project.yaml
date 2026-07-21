@@ -2,7 +2,7 @@ project_id: deerflow
 name: 基于 deerflow 的营销规划
 description: 评估基于 deer-flow Gateway 的多轮营销规划智能体，verifier 通过 HTTP 调用 Gateway 续接 thread 上下文，逐轮投递用户消息并回看历史获取 AI 回复与 tool_calls。
 adapter: adapter.py
-source_project: ../../../projects/deep-flow
+source_project: /Users/xiaozijian/WorkSpace/package/deer-flow/deer-flow
 capabilities: ["live_run", "judge", "attribute", "cluster", "check", "scenario", "multi_turn"]
 common:
   ready: []
@@ -17,6 +17,10 @@ application:
   external_repo: /Users/xiaozijian/WorkSpace/package/deer-flow/deer-flow
   modify_external_repo: false
   startup_command: bash /Users/xiaozijian/WorkSpace/package/deer-flow/deer-flow/report/deploy.sh
+attribute_draft:
+  enabled: true
+  module: draft/attribute.py
+  reason: Batch attribution validation through the 8021 UAT frontend.
 documents:
   application: application.md
   mock: mock.md
@@ -25,6 +29,7 @@ documents:
   attribution: attribution.md
   checklist: checklist.md
   implementation_standard: implementation_standard.md
+  source_lead_agent_prompt: /Users/xiaozijian/WorkSpace/package/deer-flow/deer-flow/backend/packages/harness/deerflow/agents/lead_agent/prompt.py
 frontend_extensions:
   scenarios: ["single_turn_planning", "multi_turn_dimension_accumulation", "clarification", "non_agent_intent", "service_unavailable"]
   stages: ["intent", "clarification", "planning", "non_agent", "fallback", "unknown"]
@@ -64,3 +69,26 @@ frontend_extensions:
       tests: []
   check_rules:
     require_scenario: true
+
+role_assets:
+  - asset_id: attribute_investigation
+    kind: investigation
+    enabled: true
+    roles: [attribute]
+    production_path: investigation/attribute
+    candidate_path: draft/investigation/attribute
+    replace: true
+  - asset_id: attribute_investigation_tools
+    kind: tool
+    enabled: true
+    roles: [attribute]
+    production_path: tools/investigation_tools.py
+    candidate_path: draft/tools/investigation_tools.py
+    replace: true
+  - asset_id: attribute_investigation_context_builder
+    kind: context_builder
+    enabled: true
+    roles: [attribute]
+    production_path: context_builders/attribute_investigation.py
+    candidate_path: draft/context_builders/attribute_investigation.py
+    replace: true

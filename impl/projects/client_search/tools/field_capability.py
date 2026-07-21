@@ -19,12 +19,11 @@ from impl.tools import ToolResult, VerifiableTool
 
 
 def _load_field_definitions(yaml_path: str) -> dict:
-    try:
-        with open(yaml_path, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-        return data if isinstance(data, dict) else {}
-    except Exception:
-        return {}
+    with open(yaml_path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    if not isinstance(data, dict):
+        raise ValueError(f"field definitions root must be an object: {yaml_path}")
+    return data
 
 
 def build_field_capability_tool(field_definitions_path: str) -> VerifiableTool:
@@ -41,7 +40,14 @@ def build_field_capability_tool(field_definitions_path: str) -> VerifiableTool:
                 status="inconclusive",
                 evidence="no field name provided",
             )
-        data = _load_field_definitions(field_definitions_path)
+        try:
+            data = _load_field_definitions(field_definitions_path)
+        except Exception as exc:
+            return ToolResult(
+                tool_id=tool_id,
+                status="failed",
+                error=f"failed to load field definitions: {type(exc).__name__}: {exc}",
+            )
         intents = data.get("intents") or []
         entries = [item for item in intents if isinstance(item, dict) and item.get("field") == field_name]
         if not entries:

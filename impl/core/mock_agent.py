@@ -58,6 +58,8 @@ class MockAgent:
             self.llm = project_llm_client(spec, role="mock_agent")
         else:
             self.llm = llm
+        self._mandatory_context_loaded = False
+        self._mandatory_context_cache = None
 
     # --- 顶层入口：两步串行 ---
 
@@ -306,16 +308,34 @@ class MockAgent:
         parts: list[str] = []
         if self.spec.description:
             parts.append(f"项目说明：{self.spec.description}")
-        for key in ("mock", "application", "evaluation"):
-            doc = load_project_document(self.spec, key).strip()
-            if doc:
-                parts.append(f"{key} 文档摘录：{doc[:1200]}")
+        mandatory_context = self._mandatory_context()
+        if mandatory_context is not None:
+            parts.append(f"项目 ContextUnit：{mandatory_context['content']}")
+        else:
+            for key in ("mock", "application", "evaluation"):
+                doc = load_project_document(self.spec, key).strip()
+                if doc:
+                    parts.append(f"{key} 文档摘录：{doc[:1200]}")
         live_schema = load_live_schema(project_id)
         manifest = getattr(live_schema, "CAPABILITY_MANIFEST", None) if live_schema else None
         if isinstance(manifest, dict) and manifest:
             fields = ", ".join(str(item) for item in list(manifest.keys())[:8])
             parts.append(f"可参考能力/字段：{fields}。")
         return "".join(parts)
+
+    def _mandatory_context(self):
+        if self._mandatory_context_loaded:
+            return self._mandatory_context_cache
+        from .context.project import load_role_mandatory_context
+
+        self._mandatory_context_cache = load_role_mandatory_context(
+            self.spec,
+            role="mock",
+            operation="mock",
+            run_id="mock-agent",
+        )
+        self._mandatory_context_loaded = True
+        return self._mandatory_context_cache
 
     def _extract_output_shape(self, project_id: str) -> Dict[str, Any]:
         """从 live_schema.EXTRACT_OUTPUT_SCHEMA dataclass 生成 JSON Schema，供 prompt 注入。"""
@@ -336,8 +356,15 @@ class MockAgent:
 
     def _intent_system_prompt(self, spec: MockBuildSpec) -> str:
         required_hint = f"input 必须包含字段：{', '.join(spec.required_input_fields)}。" if spec.required_input_fields else ""
-        mock_doc = load_project_document(self.spec, "mock").strip()
-        user_visible_context = f"业务产品标识：{spec.project_id}。{self.spec.description or ''}{mock_doc[:800]}"
+        mandatory_context = self._mandatory_context()
+        if mandatory_context is not None:
+            user_visible_context = (
+                f"业务产品标识：{spec.project_id}。{self.spec.description or ''}"
+                f"{mandatory_context['content']}"
+            )
+        else:
+            mock_doc = load_project_document(self.spec, "mock").strip()
+            user_visible_context = f"业务产品标识：{spec.project_id}。{self.spec.description or ''}{mock_doc[:800]}"
         base = (
             "你扮演真实终端用户，针对给定业务场景，用自然语言表达你想做的事。"
             f"场景：{spec.scenario}。{required_hint}"

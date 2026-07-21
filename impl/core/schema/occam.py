@@ -34,8 +34,7 @@ SCHEMA_FIELD_ROLES = {
         "summary": ["summary"],
     },
     "AttributeResult": {
-        "canonical": ["trace_id", "project_id", "case_id", "expectation_attributions",
-                      "suspected_locations", "root_cause_hypothesis", "evidence", "evidence_strength"],
+        "canonical": ["trace_id", "project_id", "case_id", "findings", "unresolved_reason"],
         "summary": ["summary"],
     },
     "FrontendViewModel": {
@@ -99,8 +98,7 @@ PUBLIC_SCHEMA_FIELDS.update({
     "FulfillmentAssessment": ["expectation_id", "status", "score", "expected_evidence", "actual_evidence",
                               "downstream_impact", "confidence", "evidence_refs"],
     "GapItem": ["kind", "error_type", "expected", "actual", "evidence_ref", "raw", "incomplete"],
-    "ExpectationAttribution": ["expectation_id", "fulfillment_status", "suspected_locations",
-                               "root_cause_hypothesis", "evidence"],
+    "AttributionFinding": ["finding_id", "affected_expectation_ids", "conclusion", "evidence"],
     "ProbeResult": ["probe_id", "status", "summary", "evidence"],
     "ClusterSummary": None,
     "CheckReport": None,
@@ -123,9 +121,7 @@ PUBLIC_SCHEMA_FIELDS.update({
         "summary",
     ],
     "AttributeResult": [
-        "trace_id", "project_id", "case_id",
-        "expectation_attributions", "suspected_locations", "root_cause_hypothesis",
-        "evidence", "evidence_strength", "summary",
+        "trace_id", "project_id", "case_id", "findings", "unresolved_reason", "summary",
     ],
 })
 PUBLIC_DROP_KEYS = {

@@ -3,7 +3,8 @@ from __future__ import annotations
 import pytest
 
 from impl.core.judge import _reprompt_judge, finalize_judge_result
-from impl.core.schema import BusinessExpectation, FulfillmentAssessment, JudgeResult
+from impl.core.judge_protocol import ProjectJudge
+from impl.core.schema import BusinessExpectation, FulfillmentAssessment, JudgeResult, ProjectSpec, RunTrace
 from impl.core.schema.normalize import normalize_fulfillment_assessment
 
 
@@ -87,3 +88,42 @@ def test_reprompt_contains_previous_complete_output() -> None:
     assert "上次完整输出" in captured["user"]
     assert '"expectation_id": "core-goal"' in captured["user"]
     assert "保留未报错字段" in captured["user"]
+
+
+@pytest.mark.parametrize("failure_marker", ["llm_call_failed", "llm_output_validation_failed"])
+def test_llm_failure_is_terminal_and_cannot_be_upgraded_by_project_reconcile(monkeypatch, failure_marker) -> None:
+    class RecordingJudge(ProjectJudge):
+        def __init__(self, spec):
+            super().__init__(spec)
+            self.reconcile_called = False
+
+        def build_context(self, trace):
+            return {}
+
+        def reconcile_result(self, trace, result):
+            self.reconcile_called = True
+            result.business_expectations = [
+                BusinessExpectation(expectation_id="fabricated", blocking=True)
+            ]
+            result.fulfillment_assessments = [
+                FulfillmentAssessment(expectation_id="fabricated", status="fulfilled")
+            ]
+            return result
+
+    failure = JudgeResult(
+        trace_id="trace-failed",
+        project_id="fixture-project",
+        overall_fulfillment={"status": "not_evaluable"},
+        reasoning_summary="provider failed",
+        evidence=[failure_marker],
+    )
+    monkeypatch.setattr("impl.core.judge.judge_trace", lambda **_kwargs: failure)
+    judge = RecordingJudge(ProjectSpec(project_id="fixture-project", name="Fixture Project"))
+
+    result = judge.judge_trace(RunTrace(trace_id="trace-failed", project_id="fixture-project"))
+
+    assert judge.reconcile_called is False
+    assert result.business_expectations == []
+    assert result.fulfillment_assessments == []
+    assert result.overall_fulfillment["status"] == "not_evaluable"
+    assert result.summary["fulfillment_status"] == "not_evaluable"

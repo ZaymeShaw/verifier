@@ -1,0 +1,421 @@
+{
+  "graph_id": "client-search-parse",
+  "scope": "The client_search public parse request from ParseApiRequest through QueryRouter and endpoint formatting to ParseApiResponse. Downstream customer-search execution is outside this graph.",
+  "nodes": [
+    {
+      "node_id": "REQUEST",
+      "responsibility": "Represent the exact public business parse request accepted by the endpoint.",
+      "input_data_ids": [],
+      "outputs": [
+        {
+          "data_id": "request.parse_api_request",
+          "description": "The public ParseApiRequest containing the user's query and request identity.",
+          "schema_ref": "src.main.python.models.schemas.ParseApiRequest",
+          "evidence_ref_ids": ["parse-endpoint"],
+          "tool_requirement_ids": ["client_search.search_api"],
+          "observation_gap": ""
+        }
+      ],
+      "evidence_ref_ids": ["parse-endpoint"]
+    },
+    {
+      "node_id": "ENDPOINT",
+      "responsibility": "Extract the query and trace identity before delegating parsing to QueryRouter.",
+      "input_data_ids": ["request.parse_api_request"],
+      "outputs": [
+        {
+          "data_id": "endpoint.user_query",
+          "description": "The user query passed from the public endpoint to QueryRouter.",
+          "schema_ref": "str",
+          "evidence_ref_ids": ["parse-endpoint"],
+          "tool_requirement_ids": ["client_search.search_api"],
+          "observation_gap": "The public request shows the intended query, but current tracing does not independently snapshot the value at the router call boundary."
+        },
+        {
+          "data_id": "endpoint.trace_id",
+          "description": "The correlation identity retained for router execution and response tracing.",
+          "schema_ref": "str",
+          "evidence_ref_ids": ["parse-endpoint"],
+          "tool_requirement_ids": ["client_search.search_api"],
+          "observation_gap": ""
+        }
+      ],
+      "evidence_ref_ids": ["parse-endpoint"]
+    },
+    {
+      "node_id": "ROUTER",
+      "responsibility": "Orchestrate deterministic parsing, fallback selection, validation and the result returned to the endpoint.",
+      "input_data_ids": ["endpoint.user_query", "endpoint.trace_id"],
+      "outputs": [
+        {
+          "data_id": "router.raw_query",
+          "description": "The query value received by QueryRouter before normalization.",
+          "schema_ref": "str",
+          "evidence_ref_ids": ["router-pipeline"],
+          "tool_requirement_ids": [],
+          "observation_gap": "No current Tool snapshots the QueryRouter entry value independently from the endpoint request."
+        }
+      ],
+      "evidence_ref_ids": ["router-pipeline"]
+    },
+    {
+      "node_id": "NORMALIZE",
+      "responsibility": "Normalize punctuation, spacing and field vocabulary before every parsing branch.",
+      "input_data_ids": ["router.raw_query"],
+      "outputs": [
+        {
+          "data_id": "router.normalized_query",
+          "description": "The normalized business query consumed by deterministic matching and L4 fallback.",
+          "schema_ref": "str",
+          "evidence_ref_ids": ["router-pipeline"],
+          "tool_requirement_ids": ["client_search.case_route_replay"],
+          "observation_gap": "The existing replay exposes this value only for the L2 replay boundary, not for every deployed route."
+        }
+      ],
+      "evidence_ref_ids": ["router-pipeline"]
+    },
+    {
+      "node_id": "L1",
+      "responsibility": "Extract deterministic Level 1 business conditions from the normalized query.",
+      "input_data_ids": ["router.normalized_query"],
+      "outputs": [
+        {
+          "data_id": "l1.conditions",
+          "description": "Conditions produced by the Level 1 deterministic engine before L2 override.",
+          "schema_ref": "list[Condition]",
+          "evidence_ref_ids": ["router-pipeline"],
+          "tool_requirement_ids": [],
+          "observation_gap": "No current verifier Tool or business trace exposes the per-case L1 output."
+        }
+      ],
+      "evidence_ref_ids": ["router-pipeline"]
+    },
+    {
+      "node_id": "L2_PATTERN",
+      "responsibility": "Expand configured Level 2 patterns, full-match the query and select the actual rule and matched text.",
+      "input_data_ids": ["router.normalized_query"],
+      "outputs": [
+        {
+          "data_id": "l2.matched_rule",
+          "description": "The selected Level 2 rule identity for this query.",
+          "schema_ref": "str",
+          "evidence_ref_ids": ["l2-match-execution"],
+          "tool_requirement_ids": ["client_search.case_route_replay", "client_search.rule_verify"],
+          "observation_gap": ""
+        },
+        {
+          "data_id": "l2.matched_pattern",
+          "description": "The expanded regular-expression pattern that full-matched the normalized query.",
+          "schema_ref": "str",
+          "evidence_ref_ids": ["l2-match-execution"],
+          "tool_requirement_ids": ["client_search.case_route_replay"],
+          "observation_gap": ""
+        },
+        {
+          "data_id": "l2.matched_text",
+          "description": "The exact normalized text consumed by the selected Level 2 match.",
+          "schema_ref": "str",
+          "evidence_ref_ids": ["l2-match-execution"],
+          "tool_requirement_ids": ["client_search.case_route_replay"],
+          "observation_gap": ""
+        }
+      ],
+      "evidence_ref_ids": ["l2-match-execution"]
+    },
+    {
+      "node_id": "L2_CAPTURE",
+      "responsibility": "Extract configured capture groups from the selected Level 2 pattern match.",
+      "input_data_ids": ["l2.matched_rule", "l2.matched_pattern", "l2.matched_text"],
+      "outputs": [
+        {
+          "data_id": "l2.capture_groups",
+          "description": "The named or positional substrings extracted from the actual Level 2 match.",
+          "schema_ref": "dict[str, str]",
+          "evidence_ref_ids": ["l2-capture-extraction"],
+          "tool_requirement_ids": ["client_search.case_route_replay"],
+          "observation_gap": ""
+        }
+      ],
+      "evidence_ref_ids": ["l2-capture-extraction"]
+    },
+    {
+      "node_id": "L2_CONDITION",
+      "responsibility": "Build confirmed business conditions from the selected Level 2 configuration and captured values.",
+      "input_data_ids": ["l2.capture_groups"],
+      "outputs": [
+        {
+          "data_id": "l2.confirmed_conditions",
+          "description": "Confirmed Level 2 field/operator/value conditions returned by the real matcher.",
+          "schema_ref": "list[Condition]",
+          "evidence_ref_ids": ["l2-match-execution", "l2-capture-extraction"],
+          "tool_requirement_ids": ["client_search.case_route_replay", "client_search.field_capability"],
+          "observation_gap": ""
+        }
+      ],
+      "evidence_ref_ids": ["l2-match-execution", "l2-capture-extraction"]
+    },
+    {
+      "node_id": "OVERRIDE",
+      "responsibility": "Apply the router's L2-over-L1 replacement rule and select deterministic conditions or the L4 fallback branch.",
+      "input_data_ids": ["router.normalized_query", "l1.conditions", "l2.confirmed_conditions"],
+      "outputs": [
+        {
+          "data_id": "router.deterministic_merged_conditions",
+          "description": "The deterministic conditions immediately after the L2-over-L1 replacement rule.",
+          "schema_ref": "list[Condition]",
+          "evidence_ref_ids": ["router-pipeline"],
+          "tool_requirement_ids": [],
+          "observation_gap": "No current stage probe observes the L1 input, L2 input and merged output together for a case."
+        }
+      ],
+      "evidence_ref_ids": ["router-pipeline"]
+    },
+    {
+      "node_id": "L4_PROMPT",
+      "responsibility": "Build the retrieval-augmented prompt and determine whether intent context is available for Level 4 parsing.",
+      "input_data_ids": ["router.normalized_query"],
+      "outputs": [
+        {
+          "data_id": "l4.rag_prompt",
+          "description": "The exact prompt content submitted to the Level 4 model, including retrieved field definitions and examples.",
+          "schema_ref": "str",
+          "evidence_ref_ids": ["l4-parser-source"],
+          "tool_requirement_ids": ["client_search.l4_route_replay"],
+          "observation_gap": "The public response may contain prompt-like debug text, but it does not prove the exact deployed prompt, system message, model configuration and request identity."
+        },
+        {
+          "data_id": "l4.has_intents",
+          "description": "Whether retrieved business intents were available when the Level 4 prompt was built.",
+          "schema_ref": "bool",
+          "evidence_ref_ids": ["l4-parser-source"],
+          "tool_requirement_ids": ["client_search.l4_route_replay"],
+          "observation_gap": "The required L4 replay is not implemented."
+        }
+      ],
+      "evidence_ref_ids": ["l4-parser-source"]
+    },
+    {
+      "node_id": "L4_MODEL",
+      "responsibility": "Invoke the configured Level 4 model and retain its unparsed response and finish reason.",
+      "input_data_ids": ["l4.rag_prompt"],
+      "outputs": [
+        {
+          "data_id": "l4.raw_response",
+          "description": "The raw model response before JSON extraction or condition conversion.",
+          "schema_ref": "str",
+          "evidence_ref_ids": ["l4-parser-source"],
+          "tool_requirement_ids": ["client_search.l4_route_replay"],
+          "observation_gap": "The required L4 replay is not implemented."
+        },
+        {
+          "data_id": "l4.finish_reason",
+          "description": "The model finish reason associated with the raw Level 4 response.",
+          "schema_ref": "str",
+          "evidence_ref_ids": ["l4-parser-source"],
+          "tool_requirement_ids": ["client_search.l4_route_replay"],
+          "observation_gap": "The required L4 replay is not implemented."
+        }
+      ],
+      "evidence_ref_ids": ["l4-parser-source"]
+    },
+    {
+      "node_id": "L4_CONVERT",
+      "responsibility": "Extract JSON from the raw model response and convert returned condition objects into business Condition values.",
+      "input_data_ids": ["l4.raw_response"],
+      "outputs": [
+        {
+          "data_id": "l4.converted_conditions",
+          "description": "Conditions after Level4LLMParser JSON extraction and conversion, before router merge and validation.",
+          "schema_ref": "list[Condition]",
+          "evidence_ref_ids": ["l4-parser-source"],
+          "tool_requirement_ids": ["client_search.l4_route_replay"],
+          "observation_gap": "The required L4 replay is not implemented."
+        },
+        {
+          "data_id": "l4.query_logic",
+          "description": "The query logic parsed from the Level 4 model result.",
+          "schema_ref": "str",
+          "evidence_ref_ids": ["l4-parser-source"],
+          "tool_requirement_ids": ["client_search.l4_route_replay"],
+          "observation_gap": "The required L4 replay is not implemented."
+        }
+      ],
+      "evidence_ref_ids": ["l4-parser-source"]
+    },
+    {
+      "node_id": "L4_MERGE",
+      "responsibility": "After L4 conversion, recall merge-eligible Level 2 candidates and combine them with the model conditions according to runtime strategy.",
+      "input_data_ids": ["l4.converted_conditions", "router.normalized_query"],
+      "outputs": [
+        {
+          "data_id": "l4.l2_merge_candidates",
+          "description": "Level 2 candidate conditions recalled again with merge_to_llm_only enabled for the L4 branch.",
+          "schema_ref": "list[Condition]",
+          "evidence_ref_ids": ["router-pipeline"],
+          "tool_requirement_ids": ["client_search.l4_route_replay"],
+          "observation_gap": "The required L4 replay is not implemented."
+        },
+        {
+          "data_id": "router.l4_merged_conditions",
+          "description": "The L4 branch conditions immediately after optional Level 2 candidate merge.",
+          "schema_ref": "list[Condition]",
+          "evidence_ref_ids": ["router-pipeline"],
+          "tool_requirement_ids": ["client_search.l4_route_replay"],
+          "observation_gap": "The required L4 replay is not implemented."
+        }
+      ],
+      "evidence_ref_ids": ["router-pipeline"]
+    },
+    {
+      "node_id": "PRE_VALIDATE",
+      "responsibility": "Apply explicit full-name enforcement and materialize retained name candidates before common condition validation.",
+      "input_data_ids": ["router.deterministic_merged_conditions", "router.l4_merged_conditions"],
+      "outputs": [
+        {
+          "data_id": "router.pre_validation_conditions",
+          "description": "The selected deterministic or L4 conditions after name-specific transformations and immediately before _validate_conditions.",
+          "schema_ref": "list[Condition]",
+          "evidence_ref_ids": ["router-pipeline"],
+          "tool_requirement_ids": ["client_search.l4_route_replay"],
+          "observation_gap": "No current Tool records the selected branch immediately before common validation."
+        }
+      ],
+      "evidence_ref_ids": ["router-pipeline"]
+    },
+    {
+      "node_id": "VALIDATE",
+      "responsibility": "Validate condition fields and values, normalize conditions for summary and attach route metadata.",
+      "input_data_ids": ["router.pre_validation_conditions"],
+      "outputs": [
+        {
+          "data_id": "router.validated_conditions",
+          "description": "Conditions remaining after router field/value validation.",
+          "schema_ref": "list[Condition]",
+          "evidence_ref_ids": ["router-condition-finalization"],
+          "tool_requirement_ids": ["client_search.field_capability", "client_search.l4_route_replay"],
+          "observation_gap": "Field configuration is inspectable, but the pre/post validation case snapshots are unavailable outside the unimplemented L4 replay."
+        },
+        {
+          "data_id": "router.summary_normalized_conditions",
+          "description": "Validated conditions after normalization for intent-summary construction.",
+          "schema_ref": "list[Condition]",
+          "evidence_ref_ids": ["router-condition-finalization"],
+          "tool_requirement_ids": ["client_search.l4_route_replay"],
+          "observation_gap": "The required stage-level replay is not implemented."
+        },
+        {
+          "data_id": "router.matched_level",
+          "description": "The parsing level selected by QueryRouter for the returned result.",
+          "schema_ref": "int",
+          "evidence_ref_ids": ["router-pipeline"],
+          "tool_requirement_ids": ["client_search.search_api"],
+          "observation_gap": ""
+        },
+        {
+          "data_id": "router.matched_patterns",
+          "description": "The route-specific match and diagnostic metadata returned by QueryRouter.",
+          "schema_ref": "list[object]",
+          "evidence_ref_ids": ["router-pipeline"],
+          "tool_requirement_ids": ["client_search.search_api"],
+          "observation_gap": "Diagnostic fields are route-dependent and must not be assumed to contain identical semantics across L2 and L4."
+        },
+        {
+          "data_id": "router.rewritten_query",
+          "description": "The rewritten query returned by QueryRouter for endpoint serialization.",
+          "schema_ref": "str",
+          "evidence_ref_ids": ["router-pipeline"],
+          "tool_requirement_ids": ["client_search.search_api"],
+          "observation_gap": ""
+        }
+      ],
+      "evidence_ref_ids": ["router-pipeline", "router-condition-finalization"]
+    },
+    {
+      "node_id": "FORMAT",
+      "responsibility": "Normalize date values, build intent summary, remove unsupported conditions and convert age conditions to birthday conditions.",
+      "input_data_ids": ["router.summary_normalized_conditions", "router.matched_level", "router.matched_patterns", "router.rewritten_query", "l4.rag_prompt"],
+      "outputs": [
+        {
+          "data_id": "endpoint.debug_pattern_text",
+          "description": "The endpoint debug field: the retained RAG prompt for L4, otherwise the first matched pattern string.",
+          "schema_ref": "str | None",
+          "evidence_ref_ids": ["parse-endpoint"],
+          "tool_requirement_ids": ["client_search.search_api"],
+          "observation_gap": "For L4 this exposes prompt content but not the model/system/runtime identity required for a faithful generation claim."
+        },
+        {
+          "data_id": "endpoint.date_normalized_conditions",
+          "description": "Conditions after endpoint date-format normalization.",
+          "schema_ref": "list[Condition]",
+          "evidence_ref_ids": ["parse-endpoint"],
+          "tool_requirement_ids": ["client_search.l4_route_replay"],
+          "observation_gap": "No current Tool records the condition list immediately after date normalization."
+        },
+        {
+          "data_id": "endpoint.intent_summary",
+          "description": "Human-readable intent summary built from the normalized condition set.",
+          "schema_ref": "str",
+          "evidence_ref_ids": ["response-postprocessing"],
+          "tool_requirement_ids": ["client_search.search_api"],
+          "observation_gap": "The public API exposes the final summary, not the precise condition snapshot supplied to its builder."
+        },
+        {
+          "data_id": "endpoint.filtered_conditions",
+          "description": "Conditions remaining after the endpoint removes unsupported public fields and operators.",
+          "schema_ref": "list[Condition]",
+          "evidence_ref_ids": ["supported-condition-filter"],
+          "tool_requirement_ids": ["client_search.l4_route_replay"],
+          "observation_gap": "No current Tool records the condition list immediately before and after supported-condition filtering."
+        },
+        {
+          "data_id": "endpoint.age_converted_conditions",
+          "description": "Final public condition list after age-to-birthday conversion.",
+          "schema_ref": "list[Condition]",
+          "evidence_ref_ids": ["parse-endpoint"],
+          "tool_requirement_ids": ["client_search.search_api"],
+          "observation_gap": "The final value is observable, but the immediately preceding condition snapshot is not."
+        }
+      ],
+      "evidence_ref_ids": ["parse-endpoint", "response-postprocessing", "supported-condition-filter"]
+    },
+    {
+      "node_id": "RESPONSE",
+      "responsibility": "Serialize the final conditions, route metadata and intent summary as the public ParseApiResponse.",
+      "input_data_ids": ["endpoint.age_converted_conditions", "endpoint.intent_summary", "endpoint.debug_pattern_text", "router.matched_level", "router.rewritten_query"],
+      "outputs": [
+        {
+          "data_id": "response.parse_api_response",
+          "description": "The Judge-visible public parse response; downstream customer-search results are not included.",
+          "schema_ref": "src.main.python.models.schemas.ParseApiResponse",
+          "evidence_ref_ids": ["parse-endpoint"],
+          "tool_requirement_ids": ["client_search.search_api"],
+          "observation_gap": ""
+        }
+      ],
+      "evidence_ref_ids": ["parse-endpoint"]
+    }
+  ],
+  "edges": [
+    {"source_node_id": "REQUEST", "target_node_id": "ENDPOINT", "transferred_data_ids": ["request.parse_api_request"], "condition": "public parse request accepted", "evidence_ref_ids": ["parse-endpoint"]},
+    {"source_node_id": "ENDPOINT", "target_node_id": "ROUTER", "transferred_data_ids": ["endpoint.user_query", "endpoint.trace_id"], "condition": "endpoint delegates parsing", "evidence_ref_ids": ["parse-endpoint"]},
+    {"source_node_id": "ROUTER", "target_node_id": "NORMALIZE", "transferred_data_ids": ["router.raw_query"], "condition": "route execution starts", "evidence_ref_ids": ["router-pipeline"]},
+    {"source_node_id": "NORMALIZE", "target_node_id": "L1", "transferred_data_ids": ["router.normalized_query"], "condition": "Level 1 enabled", "evidence_ref_ids": ["router-pipeline"]},
+    {"source_node_id": "NORMALIZE", "target_node_id": "L2_PATTERN", "transferred_data_ids": ["router.normalized_query"], "condition": "Level 2 enabled", "evidence_ref_ids": ["router-pipeline", "l2-match-execution"]},
+    {"source_node_id": "NORMALIZE", "target_node_id": "OVERRIDE", "transferred_data_ids": ["router.normalized_query"], "condition": "router retains query for fallback", "evidence_ref_ids": ["router-pipeline"]},
+    {"source_node_id": "L2_PATTERN", "target_node_id": "L2_CAPTURE", "transferred_data_ids": ["l2.matched_rule", "l2.matched_pattern", "l2.matched_text"], "condition": "a Level 2 rule full-matches", "evidence_ref_ids": ["l2-match-execution", "l2-capture-extraction"]},
+    {"source_node_id": "L2_CAPTURE", "target_node_id": "L2_CONDITION", "transferred_data_ids": ["l2.capture_groups"], "condition": "selected rule builds a condition", "evidence_ref_ids": ["l2-capture-extraction"]},
+    {"source_node_id": "L1", "target_node_id": "OVERRIDE", "transferred_data_ids": ["l1.conditions"], "condition": "Level 1 execution completed", "evidence_ref_ids": ["router-pipeline"]},
+    {"source_node_id": "L2_CONDITION", "target_node_id": "OVERRIDE", "transferred_data_ids": ["l2.confirmed_conditions"], "condition": "Level 2 execution completed", "evidence_ref_ids": ["l2-match-execution", "router-pipeline"]},
+    {"source_node_id": "OVERRIDE", "target_node_id": "PRE_VALIDATE", "transferred_data_ids": ["router.deterministic_merged_conditions"], "condition": "confirmed deterministic conditions remain", "evidence_ref_ids": ["router-pipeline"]},
+    {"source_node_id": "OVERRIDE", "target_node_id": "L4_PROMPT", "transferred_data_ids": ["router.normalized_query"], "condition": "no confirmed deterministic conditions and L4 fallback enabled", "evidence_ref_ids": ["router-pipeline", "l4-parser-source"]},
+    {"source_node_id": "L4_PROMPT", "target_node_id": "L4_MODEL", "transferred_data_ids": ["l4.rag_prompt"], "condition": "retrieval-augmented prompt built", "evidence_ref_ids": ["l4-parser-source"]},
+    {"source_node_id": "L4_MODEL", "target_node_id": "L4_CONVERT", "transferred_data_ids": ["l4.raw_response"], "condition": "model response returned", "evidence_ref_ids": ["l4-parser-source"]},
+    {"source_node_id": "L4_CONVERT", "target_node_id": "L4_MERGE", "transferred_data_ids": ["l4.converted_conditions"], "condition": "JSON extraction and condition conversion succeeded", "evidence_ref_ids": ["l4-parser-source", "router-pipeline"]},
+    {"source_node_id": "OVERRIDE", "target_node_id": "L4_MERGE", "transferred_data_ids": ["router.normalized_query"], "condition": "L4 branch reaches post-conversion candidate recall", "evidence_ref_ids": ["router-pipeline"]},
+    {"source_node_id": "L4_MERGE", "target_node_id": "PRE_VALIDATE", "transferred_data_ids": ["router.l4_merged_conditions"], "condition": "L4 branch produced conditions", "evidence_ref_ids": ["router-pipeline"]},
+    {"source_node_id": "PRE_VALIDATE", "target_node_id": "VALIDATE", "transferred_data_ids": ["router.pre_validation_conditions"], "condition": "name-specific transformations completed", "evidence_ref_ids": ["router-pipeline", "router-condition-finalization"]},
+    {"source_node_id": "VALIDATE", "target_node_id": "FORMAT", "transferred_data_ids": ["router.summary_normalized_conditions", "router.matched_level", "router.matched_patterns", "router.rewritten_query"], "condition": "router result returned to endpoint", "evidence_ref_ids": ["router-pipeline", "router-condition-finalization", "parse-endpoint"]},
+    {"source_node_id": "L4_PROMPT", "target_node_id": "FORMAT", "transferred_data_ids": ["l4.rag_prompt"], "condition": "matched_level is 4 and endpoint builds its debug field", "evidence_ref_ids": ["l4-parser-source", "parse-endpoint"]},
+    {"source_node_id": "FORMAT", "target_node_id": "RESPONSE", "transferred_data_ids": ["endpoint.age_converted_conditions", "endpoint.intent_summary", "endpoint.debug_pattern_text", "router.matched_level", "router.rewritten_query"], "condition": "endpoint post-processing completed", "evidence_ref_ids": ["parse-endpoint", "response-postprocessing", "supported-condition-filter"]}
+  ]
+}

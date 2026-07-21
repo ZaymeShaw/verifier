@@ -10,6 +10,8 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import requests
+
 try:
     import dashscope
 except ImportError:  # pragma: no cover - optional in test env
@@ -40,27 +42,70 @@ DEFAULT_RETRIEVAL_TOP_K = 8
 
 
 class BailianEmbedder(Embedder):
-    def __init__(self, api_key: Optional[str] = None, model: str = BAILIAN_EMBEDDING_MODEL):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = BAILIAN_EMBEDDING_MODEL,
+        *,
+        trust_env_proxy: Optional[bool] = None,
+    ):
         super().__init__(dimensions=BAILIAN_EMBEDDING_DIMENSIONS)
         self.api_key = api_key or os.environ.get("BAILIAN_API_KEY") or os.environ.get("DASHSCOPE_API_KEY") or load_bailian_env_md_key()
         self.id = model
+        if trust_env_proxy is None:
+            trust_env_proxy = os.environ.get("BAILIAN_EMBEDDING_TRUST_ENV_PROXY", "").strip().lower() in {
+                "1", "true", "yes", "on",
+            }
+        # requests also inherits macOS system proxies via urllib.getproxies().
+        # Embeddings use an explicit session so an unrelated desktop proxy cannot
+        # silently become part of the ContextUnit evidence path. Deployments that
+        # require such a proxy can opt in with BAILIAN_EMBEDDING_TRUST_ENV_PROXY=1.
+        self._session = requests.Session()
+        self._session.trust_env = bool(trust_env_proxy)
 
     def get_embedding(self, text: str) -> List[float]:
         embedding, _ = self.get_embedding_and_usage(text)
         return embedding
 
     def get_embedding_and_usage(self, text: str) -> tuple[List[float], Optional[Dict[str, Any]]]:
+        embeddings, usage = self.get_embeddings_and_usage([text])
+        return (embeddings[0] if embeddings else []), usage
+
+    def get_embeddings_and_usage(
+        self,
+        texts: List[str],
+    ) -> tuple[List[List[float]], Optional[Dict[str, Any]]]:
         if not self.api_key:
             return [], {"error": "missing_bailian_api_key"}
         if dashscope is None:
             return [], {"error": "missing_dashscope_dependency"}
-        response = dashscope.TextEmbedding.call(model=self.id, input=text, api_key=self.api_key)
+        normalized = [str(text) for text in texts]
+        if not normalized:
+            return [], {"error": "empty_embedding_input"}
+        response = dashscope.TextEmbedding.call(
+            model=self.id,
+            input=normalized,
+            api_key=self.api_key,
+            session=self._session,
+        )
         if response.status_code != 200:
             return [], {"error": getattr(response, "code", "embedding_failed"), "message": getattr(response, "message", "")}
         embeddings = response.output.get("embeddings") or []
         if not embeddings:
             return [], {"error": "empty_embedding"}
-        return embeddings[0].get("embedding") or [], getattr(response, "usage", None)
+        ordered: List[Optional[List[float]]] = [None] * len(normalized)
+        for position, item in enumerate(embeddings):
+            index = item.get("text_index", position)
+            try:
+                index = int(index)
+            except (TypeError, ValueError):
+                return [], {"error": "invalid_embedding_text_index"}
+            if index < 0 or index >= len(ordered) or ordered[index] is not None:
+                return [], {"error": "invalid_embedding_text_index"}
+            ordered[index] = item.get("embedding") or []
+        if any(item is None for item in ordered):
+            return [], {"error": "mismatched_embedding_batch"}
+        return [list(item or []) for item in ordered], getattr(response, "usage", None)
 
 
 class SemanticVectorDb(VectorDb):

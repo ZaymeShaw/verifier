@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from impl.core.schema.attribute import AttributeResult, ExpectationAttribution
+from impl.core.schema.attribute import AttributeResult, AttributionFinding
 from impl.core.schema.evidence import EvidenceRef, ExecutionTraceEvent, ProbeResult
 from impl.core.schema.fallback import FallbackDecision
 from impl.core.schema.judge import BusinessExpectation, FulfillmentAssessment, GapItem, JudgeResult
@@ -98,30 +98,21 @@ def incorrect_judge_result() -> JudgeResult:
     return result
 
 
-def expectation_attribution() -> ExpectationAttribution:
-    return ExpectationAttribution(
-        expectation_id="exp-conditions-covered",
-        fulfillment_status="not_fulfilled",
-        suspected_locations=["impl/projects/client_search/adapter.py:extract_output"],
-        root_cause_hypothesis="extract_output 丢弃了 asset_level 条件。",
-        evidence=["raw_response contains asset_level but extracted_output drops it"],
+def attribution_finding() -> AttributionFinding:
+    return AttributionFinding(
+        finding_id="finding-extract-output",
+        affected_expectation_ids=["exp-conditions-covered"],
+        conclusion="extract_output 丢弃了 asset_level 条件。",
+        evidence=[EvidenceRef(
+            ref_id="ev-extract-output",
+            source="context_unit",
+            kind="source_file",
+            stage="attribute-round-1-finalization",
+            summary="raw_response contains asset_level but extracted_output drops it",
+            location="cu-extract-output",
+            metadata={"source_hash": "sha256:fixture", "trace_id": TRACE_ID, "case_id": CASE_ID},
+        )],
     )
-
-
-def no_issue_expectation_attribution() -> ExpectationAttribution:
-    return ExpectationAttribution(
-        expectation_id="exp-conditions-covered",
-        fulfillment_status="fulfilled",
-        root_cause_hypothesis="业务预期已达成，无根因。",
-        evidence=["judge 评估为 fulfilled"],
-    )
-
-
-def boundary_expectation_attribution() -> ExpectationAttribution:
-    item = expectation_attribution()
-    item.suspected_locations = []
-    item.root_cause_hypothesis = "required signal is outside evaluable scope"
-    return item
 
 
 def attribute_result() -> AttributeResult:
@@ -129,11 +120,12 @@ def attribute_result() -> AttributeResult:
         trace_id=TRACE_ID,
         project_id=PROJECT_ID,
         case_id=CASE_ID,
-        expectation_attributions=[expectation_attribution()],
-        suspected_locations=["impl/projects/client_search/adapter.py:extract_output"],
-        root_cause_hypothesis="extract_output 丢弃了 asset_level 条件。",
-        evidence=["raw_response contains asset_level but extracted_output drops it"],
-        evidence_strength="medium",
+        findings=[attribution_finding()],
+        summary={
+            "summary_text": "已确认 extract_output 丢弃 asset_level 条件，影响 exp-conditions-covered。",
+            "finding_count": 1,
+            "attribution_status": "attributed",
+        },
     )
 
 
@@ -193,8 +185,8 @@ register_fixture(LiveExchange, "default", live_exchange)
 register_fixture(JudgeResult, "default", judge_result)
 register_fixture(JudgeResult, "incorrect", incorrect_judge_result)
 register_fixture(AttributeResult, "default", attribute_result)
-register_fixture(AttributeResult, "no_issue", lambda: AttributeResult(trace_id=TRACE_ID, project_id=PROJECT_ID, case_id=CASE_ID, expectation_attributions=[no_issue_expectation_attribution()]))
-register_fixture(AttributeResult, "boundary", lambda: AttributeResult(trace_id=TRACE_ID, project_id=PROJECT_ID, case_id=CASE_ID, expectation_attributions=[boundary_expectation_attribution()]))
+register_fixture(AttributeResult, "no_issue", lambda: AttributeResult(trace_id=TRACE_ID, project_id=PROJECT_ID, case_id=CASE_ID))
+register_fixture(AttributeResult, "boundary", lambda: AttributeResult(trace_id=TRACE_ID, project_id=PROJECT_ID, case_id=CASE_ID, unresolved_reason="required signal is outside evaluable scope"))
 register_fixture(ClusterSummary, "default", lambda: ClusterSummary(project_id=PROJECT_ID, clusters=[]))
 register_fixture(CheckReport, "default", lambda: CheckReport(passed=True, verification_results=["fixture verified"]))
 register_fixture(FrontendViewModel, "default", lambda: FrontendViewModel(project_info={"project_id": PROJECT_ID}))

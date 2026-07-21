@@ -168,7 +168,10 @@ def _status(trace: RunTrace, judge: Optional[JudgeResult], judge_summary: Dict[s
 def _root_cause(attribute: Optional[AttributeResult]) -> str:
     if not attribute:
         return ""
-    return str(attribute.root_cause_hypothesis or "")
+    if attribute.summary:
+        return str(attribute.summary.get("summary_text") or "")
+    conclusions = [finding.conclusion for finding in attribute.findings if finding.conclusion]
+    return "\n".join([*conclusions, attribute.unresolved_reason] if attribute.unresolved_reason else conclusions)
 
 
 def _judge_summary(trace: RunTrace, judge: Optional[JudgeResult], case_context: Dict[str, Any]) -> Dict[str, Any]:

@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "project_id": "deerflow",
+  "role": "attribute",
+  "objective": "Accurately distinguish deer-flow business behavior from verifier message extraction and derived stage, locate the first evidenced defect for historical gaps, and remain unresolved for unobservable hidden skill selection.",
+  "review": "Compare Current and Draft on first-deviation correctness, current-case evidence linkage, separation of Gateway facts from verifier-derived fields, reviewer acceptance, honest revision boundaries, fulfilled-control behavior, and avoidance of static-source or reference-answer overclaiming.",
+  "max_iterations": 3,
+  "cases_sha256": "aff70c1ae8af339f8dcbcb678401f818553036306bc425e7602abca53f603fe7",
+  "frozen_current_sha256": "20bfb6587711ff4d996d084d0232fedbfb8a428c7b26a9e9834ec405d1b8aac3",
+  "source_revision": "9993f435315d90dba8b3bf65f23d695c8455ac8a",
+  "status": "ready_for_promotion_checks",
+  "iterations": [
+    {
+      "iteration": 1,
+      "run_report": "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/deerflow/draft/.state/attribute/iterations/001-run.json",
+      "draft_fingerprint": "95514117615e9b88e3b50424837d80143333795ea6591b95169ac71f702ccbb2",
+      "decision": "insufficient_evidence",
+      "route": "solidify",
+      "reason": "Draft correctly separated verifier-derived stage from Gateway behavior on the neighbor case and passed review after narrowing coverage, but the primary case remained unresolved because finalization did not load the existing probe_results that contained the exact raw/stored tool delta. The candidate repeatedly explored source/context store instead of consuming the compact decisive mismatch. Solidify should expose candidate-only compact extraction deltas in runtime_checks and require one flow+delta Search/Load; no new schema or business hypothesis is needed.",
+      "evidence": [
+        "iterations/001-run.json#rows/0/draft",
+        "iterations/001-run.json#rows/1",
+        "iterations/001-run.json#rows/2/draft",
+        "iterations/001-run.json#rows/2/draft_runtime/review_calls"
+      ]
+    },
+    {
+      "iteration": 2,
+      "run_report": "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/deerflow/draft/.state/attribute/iterations/002-run.json",
+      "draft_fingerprint": "c951551ddbd551fcd9881e3d28c4b8f3849b6bec050b329f968ea2fbccd7a1b6",
+      "decision": "insufficient_evidence",
+      "route": "solidify",
+      "reason": "Draft is materially better on the neighbor case and uses the intended compact evidence path on the primary case, while semantic control behavior is unchanged. However, the formal report still includes a 75-second fulfilled-control cost caused by the loop runner assembling candidate Context before the same not-applicable early return used by production, and the primary conclusion overstates that the absent current tool was definitely injected from turn 1. The runner now matches production fulfilled handling and the candidate now forbids unsupported cross-turn provenance claims; one final frozen run is needed to verify no visible regression.",
+      "evidence": [
+        "iterations/002-run.json#rows/0",
+        "iterations/002-run.json#rows/1",
+        "iterations/002-run.json#rows/2",
+        "../../../../../../tests/test_draft_loop.py"
+      ]
+    },
+    {
+      "iteration": 3,
+      "run_report": "/Users/xiaozijian/WorkSpace/projects/claude_code/verifier-branch/verifier/impl/projects/deerflow/draft/.state/attribute/iterations/003-run.json",
+      "draft_fingerprint": "32e09bacfd4e2e27349e24aeba3a6d6df44f417b6f47bbc7911f0abddb5648f5",
+      "decision": "improved",
+      "route": "promotion_checks",
+      "reason": "On the final frozen run, Draft converted the primary case from Current unresolved to a reviewer-passed complete finding using only the operational flow and compact raw/stored delta. It converted the neighbor from Current unresolved to a reviewer-passed partial result that locates the verifier-derived stage defect while keeping the unobserved NBEV skill-selection path unresolved. The fulfilled control remained not_applicable on both sides at equivalent sub-second latency after the loop runner was aligned with production early-return behavior. No Context, evidence-registration, or reviewer infrastructure failures occurred. The reported historical cross-turn pollution is observationally grounded in the identical stale tool call and must not be generalized beyond these traces.",
+      "evidence": [
+        "iterations/003-run.json#rows/0",
+        "iterations/003-run.json#rows/1",
+        "iterations/003-run.json#rows/2"
+      ]
+    }
+  ]
+}

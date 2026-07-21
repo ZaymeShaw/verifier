@@ -406,11 +406,12 @@ function renderAttributionSummary(item){
   const compact=row.attribution_summary || null;
   const attribute=attributePanel(item);
   if(compact || row.root_cause_summary){
-    const text=(row.root_cause_summary || compact?.summary_text || attribute.root_cause_hypothesis || '')?'<div>'+escapeHtml(shortText(row.root_cause_summary || compact?.summary_text || attribute.root_cause_hypothesis || '',900))+'</div>':'';
-    return renderFulfillmentSummary(item)+'<div class="muted">expectation attributions='+escapeHtml(compact?.attribution_count ?? (attribute.expectation_attributions || []).length)+' · issues='+escapeHtml(row.issue_count ?? 0)+' · fallbacks='+escapeHtml(row.fallback_count ?? 0)+'</div>'+text;
+    const summaryText=row.root_cause_summary || compact?.summary_text || attribute.display_summary || attribute.unresolved_reason || '';
+    const text=summaryText?'<div>'+escapeHtml(shortText(summaryText,900))+'</div>':'';
+    return renderFulfillmentSummary(item)+'<div class="muted">findings='+escapeHtml(compact?.finding_count ?? (attribute.findings || []).length)+' · status='+escapeHtml(compact?.attribution_status || '-')+' · issues='+escapeHtml(row.issue_count ?? 0)+' · fallbacks='+escapeHtml(row.fallback_count ?? 0)+'</div>'+text;
   }
-  const attributions=attribute.expectation_attributions || [];
-  return renderFulfillmentSummary(item)+'<div class="muted">expectation attributions='+escapeHtml(attributions.length)+'</div><div>'+escapeHtml(shortText(attribute.root_cause_hypothesis || '',220))+'</div>';
+  const findings=attribute.findings || [];
+  return renderFulfillmentSummary(item)+'<div class="muted">findings='+escapeHtml(findings.length)+'</div><div>'+escapeHtml(shortText(attribute.unresolved_reason || '',220))+'</div>';
 }
 function updateStats(){
   document.getElementById('stat-total').textContent=casePool.length;
@@ -573,11 +574,11 @@ function renderFulfillmentMatrix(panel, fulfillment){
   const overall=fulfillment.overall_fulfillment || panel.overall_fulfillment || {};
   return '<details class="accordion" open><summary>业务预期达成矩阵</summary><div class="accordion-body"><div><b>Overall：</b>'+escapeHtml(JSON.stringify(overall || {}))+'</div><table style="width:100%;border-collapse:collapse"><thead><tr><th>Expectation</th><th>Expected</th><th>Capabilities</th><th>Status</th><th>Blocking</th></tr></thead><tbody>'+(rows || '<tr><td colspan="5" class="muted">无 fulfillment assessments</td></tr>')+'</tbody></table></div></details>';
 }
-function renderExpectationAttributions(panel, attributionPanel){
+function renderAttributionFindings(panel, attributionPanel){
   attributionPanel=attributionPanel || {};
-  const attributions=attributionPanel.attributions || panel.expectation_attributions || [];
-  const rows=attributions.map(item=>'<tr><td>'+escapeHtml(item.expectation_id || '')+'</td><td>'+escapeHtml(item.fulfillment_status || '')+'</td><td>'+escapeHtml(shortText(item.root_cause_hypothesis || '',220))+'</td></tr>').join('');
-  return '<details class="accordion" open><summary>Expectation Attribution</summary><div class="accordion-body"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Expectation</th><th>Fulfillment</th><th>Root Cause</th></tr></thead><tbody>'+(rows || '<tr><td colspan="3" class="muted">无 expectation attribution</td></tr>')+'</tbody></table></div></details>';
+  const findings=attributionPanel.findings || panel.findings || [];
+  const rows=findings.map(item=>'<tr><td>'+escapeHtml(item.finding_id || '')+'</td><td>'+escapeHtml((item.affected_expectation_ids || []).join(', '))+'</td><td>'+escapeHtml(shortText(item.conclusion || '',300))+'</td><td>'+escapeHtml((item.evidence || []).length)+'</td></tr>').join('');
+  return '<details class="accordion" open><summary>已确认归因</summary><div class="accordion-body"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Finding</th><th>影响的 Expectations</th><th>结论</th><th>证据数</th></tr></thead><tbody>'+(rows || '<tr><td colspan="4" class="muted">尚无通过证据审查的 finding</td></tr>')+'</tbody></table></div></details>';
 }
 function renderJudgeCard(panel, fulfillment){
   if(!panel || !Object.keys(panel).length){return '<div class="muted">尚未评估。</div>';}
@@ -589,7 +590,8 @@ function renderJudgeCard(panel, fulfillment){
 }
 function renderAttributeCard(panel, attributionPanel){
   if(!panel || !Object.keys(panel).length){return '<div class="muted">尚未归因。</div>';}
-  return '<div><b>根因假设：</b>'+escapeHtml(panel.display_root_cause || panel.root_cause_hypothesis || '')+'</div>'+renderExpectationAttributions(panel, attributionPanel)+
+  const summaryText=panel.display_summary || panel.summary?.summary_text || panel.unresolved_reason || '';
+  return '<div><b>归因总结：</b>'+escapeHtml(summaryText || '暂无归因总结')+'</div>'+renderAttributionFindings(panel, attributionPanel)+
     '<details class="accordion"><summary>Raw AttributeResult</summary><div class="accordion-body"><pre>'+escapeHtml(JSON.stringify(panel,null,2))+'</pre></div></details>';
 }
 function renderChain(data,options={}){
@@ -601,7 +603,7 @@ function renderChain(data,options={}){
     showCompact('trace',{stale_empty_query:true,current_input:currentInput,result:chainOutput(data)});showCompact('reference',{});document.getElementById('judge').innerHTML='<div class="muted">旧 empty_query 结果已被阻止展示，请重新运行单链路。</div>';document.getElementById('attribute').innerHTML='<div class="muted">旧 empty_query 结果已被阻止展示，请重新运行单链路。</div>';showCompact('cluster',{});showCompact('check',{});showCompact('view',{});showCompact('batch',{});setStatus('旧 empty_query 结果已被阻止展示，请重新运行单链路。');return;
   }
   const trace=data.trace||{},judge=data.judge||{},attribute=data.attribute||{},cluster=data.cluster||{},check=data.check||{},view=data.frontend_view||{};
-  showCompact('trace',trace);showCompact('reference',view.reference_panel || {reference:judge.expected,source:judge.expected?'judge_generated':'missing',actual:judge.actual});document.getElementById('judge').innerHTML=renderJudgeCard(view.judge_panel || judge, view.fulfillment_panel || {});document.getElementById('attribute').innerHTML=renderAttributeCard(view.attribute_panel || attribute, view.expectation_attribution_panel || {})+renderStateMachineCard(trace,view.judge_panel || judge,view.attribute_panel || attribute);showCompact('cluster',cluster);showCompact('check',check);showCompact('view',view);showCompact('batch',{last_chain_summary:{case_id:data.case_id,trace_id:trace.trace_id,status:trace.status,stop_reason:trace.stop_reason,state_count:(trace.state_history||[]).length,failed_gate_count:(trace.gate_decisions||[]).filter(g=>!g.passed).length,root_cause:(view.attribute_panel || attribute).display_root_cause || attribute.root_cause_hypothesis}});
+  showCompact('trace',trace);showCompact('reference',view.reference_panel || {reference:judge.expected,source:judge.expected?'judge_generated':'missing',actual:judge.actual});document.getElementById('judge').innerHTML=renderJudgeCard(view.judge_panel || judge, view.fulfillment_panel || {});document.getElementById('attribute').innerHTML=renderAttributeCard(view.attribute_panel || attribute, view.expectation_attribution_panel || {})+renderStateMachineCard(trace,view.judge_panel || judge,view.attribute_panel || attribute);showCompact('cluster',cluster);showCompact('check',check);showCompact('view',view);showCompact('batch',{last_chain_summary:{case_id:data.case_id,trace_id:trace.trace_id,status:trace.status,stop_reason:trace.stop_reason,state_count:(trace.state_history||[]).length,failed_gate_count:(trace.gate_decisions||[]).filter(g=>!g.passed).length,attribution_summary:(view.attribute_panel || attribute).display_summary || attribute.summary?.summary_text || attribute.unresolved_reason || ''}});
   if(cluster.clusters && !options.preserveBatchCluster){latestCluster=cluster;renderClusterSummary(cluster);updateStats();}
 }
 initProjects();

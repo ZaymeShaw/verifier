@@ -122,11 +122,9 @@ QA attribution should use structured error types. Initial taxonomy:
 
 Each failed or risky sample should have:
 
-- `expectation_attributions`
-- `suspected_locations`
-- `root_cause_hypothesis`
-- `evidence`
-- `evidence_strength`
+- findings grouped by verified real defect
+- ContextUnit-backed EvidenceRef entries for every finding
+- one `unresolved_reason` when proof is insufficient
 - actionable quality reason grounded in current QA evidence
 
 ## Cluster and summary requirements

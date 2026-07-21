@@ -2,10 +2,27 @@ from pathlib import Path
 
 
 SUMMARY_HTML = Path(__file__).resolve().parents[1] / "impl" / "frontend" / "summary.html"
+LIVE_HTML = Path(__file__).resolve().parents[1] / "impl" / "frontend" / "live.html"
 
 
 def _summary_source() -> str:
     return SUMMARY_HTML.read_text(encoding="utf-8")
+
+
+def test_attribute_frontends_lead_with_summary_text_and_use_findings():
+    summary = _summary_source()
+    live = LIVE_HTML.read_text(encoding="utf-8")
+
+    for source in (summary, live):
+        assert "归因总结" in source
+        assert "已确认归因" in source
+        assert "root_cause_hypothesis" not in source
+        assert "expectation_attributions" not in source
+        assert "display_root_cause" not in source
+        assert "根因假设" not in source
+    assert "summary?.summary_text" in summary
+    assert "summary?.summary_text" in live
+    assert "document.getElementById('attributeStep').open=true" in live
 
 
 def test_case_pool_keeps_output_reference_adjacent_and_puts_trace_last():
