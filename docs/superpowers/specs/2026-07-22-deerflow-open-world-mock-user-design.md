@@ -20,6 +20,10 @@ Only a few hard boundaries are stable:
 
 Everything else may vary naturally, including role, seniority, business familiarity, product familiarity, wording, patience, urgency, information completeness, current work stage, prior use, uncertainty, corrections, and willingness to continue. These are illustrative variation dimensions, not a finite taxonomy or a required combination matrix.
 
+Open population coverage must not produce generic or context-free utterances. Each generated case should instantiate one coherent, concrete moment for one plausible user: what they are working on, why they need it now, what they already know, what result or decision they need, and which details or constraints matter in that moment. Concrete time periods, targets, business objects, comparisons, partial progress, preferences, and wording may vary substantially when the caller has not fixed them. The generated details must fit together as one believable situation rather than being independently randomized fields.
+
+Generality is evaluated across the population; specificity is evaluated within each individual case. High variation should come from meaningfully different situations and needs, not merely synonyms, random numbers, or swapping one fixed entity name for another.
+
 The investigation ContextUnit describes this population, the tool's user-visible purpose, and the hard knowledge boundary. It must not prescribe a preferred voice or exhaustive list of intents.
 
 The product-support boundary is semantic, not a phrase blacklist. It does not restrict the breadth of business requests, terminology, user roles, language habits, completeness, or multi-turn behavior. A caller may still explicitly request the `service_unavailable` evaluation scenario; that directed boundary case is separate from the open-world business-user pool.
@@ -36,11 +40,15 @@ user_context → user_intent → query
 
 A locally generated diversity seed is included only to prevent identical prompts from producing identical results at temperature zero. The seed has no business meaning, is never copied into the utterance, and cannot become a fact source. The model remains free to choose any plausible user need within the broad user-visible product boundary.
 
+In this open mode, the model may introduce concrete facts needed to make its sampled situation realistic because there is no caller-supplied fact contract. It should vary those facts naturally and avoid repeatedly falling back to the same month, amount, organizational role, task stage, business object, or sentence structure. It need not mention every possible detail: omission, uncertainty, shorthand, and contextual references are also realistic forms of specificity.
+
 Existing scenario labels may be retained as optional evaluation constraints when a caller explicitly asks for one. They are not the source vocabulary for open-world generation and do not define the total space of possible user questions.
 
 ### Constrained generation
 
 When a caller supplies a concrete intent or explicit evaluation scenario, Draft preserves it. It may vary user context and natural expression only where doing so does not invent, remove, narrow, or contradict facts. This keeps targeted regression cases usable without turning them into the general generation algorithm.
+
+This fact-preservation rule applies to constrained generation only. It must not be misapplied to open generation in a way that forces all open cases to remain vague.
 
 ### Multi-turn continuation
 
@@ -81,6 +89,7 @@ Compare Production and Draft on:
 - schema legality and constrained-intent fidelity;
 - exact and near-duplicate rate across repeated open-world generations;
 - breadth of user situations and speech styles without treating category count as the goal;
+- within-case concreteness and coherence, while avoiding repeated default facts across cases;
 - absence of implementation language and invented privileged knowledge;
 - multi-turn coherence and non-repetition;
 - LLM call count and token cost.
