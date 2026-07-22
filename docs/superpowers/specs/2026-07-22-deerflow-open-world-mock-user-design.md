@@ -13,6 +13,7 @@ The candidate models a distribution of possible users, not one canonical persona
 Only a few hard boundaries are stable:
 
 - the speaker could plausibly use the DeerFlow business tool;
+- an open-world case expresses work the business assistant can meaningfully help with, rather than a pure product-support incident such as reporting that the page is spinning, cannot open, or failed to submit;
 - the speaker talks from user-visible knowledge and does not claim repository, prompt, API, trace, identifier, or implementation access;
 - the resulting request obeys the DeerFlow request schema;
 - an explicitly supplied user goal remains the fact contract and is not enriched with invented details.
@@ -20,6 +21,8 @@ Only a few hard boundaries are stable:
 Everything else may vary naturally, including role, seniority, business familiarity, product familiarity, wording, patience, urgency, information completeness, current work stage, prior use, uncertainty, corrections, and willingness to continue. These are illustrative variation dimensions, not a finite taxonomy or a required combination matrix.
 
 The investigation ContextUnit describes this population, the tool's user-visible purpose, and the hard knowledge boundary. It must not prescribe a preferred voice or exhaustive list of intents.
+
+The product-support boundary is semantic, not a phrase blacklist. It does not restrict the breadth of business requests, terminology, user roles, language habits, completeness, or multi-turn behavior. A caller may still explicitly request the `service_unavailable` evaluation scenario; that directed boundary case is separate from the open-world business-user pool.
 
 ## Generation modes
 
@@ -67,6 +70,8 @@ The validator enforces only hard properties:
 
 It must not require fixed words such as `NBEV`, `规划`, `队伍`, `客户`, or `产品` for every positive sample. It must not enumerate known bad phrases or judge one style as the preferred user voice. Semantic breadth and naturalness remain Draft Loop review concerns rather than regex truth.
 
+Pure product-support incidents are excluded through the open-generation responsibility description, not by adding strings such as `转圈`, `打不开`, or `提交失败` to Validator rules. This avoids rejecting legitimate business requests that happen to use similar words in another context and avoids a second classifier/repair LLM call.
+
 ## Draft Loop evaluation
 
 Freeze Production, objective, review criteria, and iteration inputs before comparison. Do not expose promotion-only unseen cases to the optimization executor.
@@ -87,5 +92,6 @@ Draft is better only if it materially reduces repetition and produces a broader 
 - No exhaustive intent, persona, task, or wording enumeration.
 - No static-fixture preference for dynamic DeerFlow generation.
 - No public protocol or frontend redesign.
+- No product-support keyword blacklist or closed business-intent allowlist.
 - No automatic promotion.
 - No claim that a finite generated batch represents literally every possible utterance.
