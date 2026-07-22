@@ -22,6 +22,8 @@ Everything else may vary naturally, including role, seniority, business familiar
 
 Open population coverage must not produce generic or context-free utterances. Each generated case should instantiate one coherent, concrete moment for one plausible user: what they are working on, why they need it now, what they already know, what result or decision they need, and which details or constraints matter in that moment. Concrete time periods, targets, business objects, comparisons, partial progress, preferences, and wording may vary substantially when the caller has not fixed them. The generated details must fit together as one believable situation rather than being independently randomized fields.
 
+Because open-world mode has no caller-owned fact contract, that coherent situation may contain synthetic but realistic specifics such as a planning period, target amount, current progress, comparison group, selected business perspective, previous-plan state, or decision deadline. Generated specifics must not use real institution names, real people, identifiable customer data, or imply access to facts outside the sampled user's own visible work situation.
+
 Generality is evaluated across the population; specificity is evaluated within each individual case. High variation should come from meaningfully different situations and needs, not merely synonyms, random numbers, or swapping one fixed entity name for another.
 
 The investigation ContextUnit describes this population, the tool's user-visible purpose, and the hard knowledge boundary. It must not prescribe a preferred voice or exhaustive list of intents.
@@ -48,7 +50,7 @@ Existing scenario labels may be retained as optional evaluation constraints when
 
 When a caller supplies a concrete intent or explicit evaluation scenario, Draft preserves it. It may vary user context and natural expression only where doing so does not invent, remove, narrow, or contradict facts. This keeps targeted regression cases usable without turning them into the general generation algorithm.
 
-This fact-preservation rule applies to constrained generation only. It must not be misapplied to open generation in a way that forces all open cases to remain vague.
+This fact-preservation rule applies to constrained generation only: it must not add a month, amount, organization, product type, relationship, prior action, or other fact that the caller did not supply. It also must not be misapplied to open generation in a way that forces all open cases to remain vague.
 
 ### Multi-turn continuation
 
@@ -89,6 +91,7 @@ Compare Production and Draft on:
 - schema legality and constrained-intent fidelity;
 - exact and near-duplicate rate across repeated open-world generations;
 - breadth of user situations and speech styles without treating category count as the goal;
+- realism and situational specificity without rewarding mandatory slot filling or longer text;
 - within-case concreteness and coherence, while avoiding repeated default facts across cases;
 - absence of implementation language and invented privileged knowledge;
 - multi-turn coherence and non-repetition;
