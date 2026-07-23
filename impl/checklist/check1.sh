@@ -9,6 +9,9 @@ UAT_PORT=$("$PYTHON_BIN" -c "from impl.core.config import get_uat_config; print(
 
 kill -9 $(lsof -ti:"$UAT_PORT") 2>/dev/null || true
 
+# 与 run.sh server/uat 使用同一运行时能力门禁，防止 legacy 入口绕过 Agno 依赖检查。
+"$PYTHON_BIN" -m impl.core.runtime_preflight
+
 # 预检：固化 mock 数据是否符合 live_schema/ready 协议；失败直接退出，避免 E2E 跑到一半才发现。
 "$PYTHON_BIN" -m impl.cli mock-check
 

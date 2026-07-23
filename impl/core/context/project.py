@@ -5,12 +5,17 @@ import importlib.util
 from pathlib import Path
 from typing import Any, Dict, Iterable, Mapping, Optional
 
-from ..project_loader import resolve_role_assets
+from ..project_loader import (
+    resolve_project_package_root,
+    resolve_project_source_root,
+    resolve_role_assets,
+)
 from .adapters import initialize_context_adapters, load_configured_context_adapter, load_project_context_adapter
 from .bootstrap import build_context_runtime
-from .embedding import BailianEmbeddingProvider
+from .embedding import DeterministicHashEmbeddingProvider
 from .models import ContextUnitRecord
 from .resolvers import CompositeContentResolver, FileContentResolver
+from ..config import get_runtime_config
 
 
 _MANDATORY_ROLES = {"judge", "mock"}
@@ -63,7 +68,7 @@ def load_role_mandatory_context(
     normalized_role = str(role or "").strip()
     if normalized_role not in _MANDATORY_ROLES:
         raise ValueError(f"mandatory ContextUnit injection is not defined for role={normalized_role!r}")
-    draft_enabled = bool((getattr(spec, f"{normalized_role}_draft", {}) or {}).get("enabled"))
+    draft_enabled = spec.role_draft(normalized_role).get("enabled") is True
     selected_assets = [
         item
         for item in resolve_role_assets(spec, normalized_role, use_candidate=draft_enabled)
@@ -71,6 +76,16 @@ def load_role_mandatory_context(
     ]
     configured_adapter = load_configured_context_adapter(spec)
     project_adapter = load_project_context_adapter(spec)
+    if (
+        not draft_enabled
+        and selected_assets
+        and not any(item["available"] for item in selected_assets)
+        and all(item["candidate_path"] is not None for item in selected_assets)
+    ):
+        # A newly solidified Role may declare only candidate implementations.
+        # Current records those production selections as unavailable and keeps
+        # its existing empty Context baseline until promotion.
+        selected_assets = []
     if not selected_assets and configured_adapter is None and project_adapter is None:
         return None
 
@@ -87,18 +102,19 @@ def load_role_mandatory_context(
     if not mandatory_ids and configured_adapter is None and project_adapter is None:
         raise ValueError(f"role={normalized_role} has Context assets but no loadable mandatory ContextUnit")
 
-    context_config = dict((getattr(spec, "extra", {}) or {}).get("context") or {})
+    context_config = dict(spec.verifier_extra_value("context", {}) or {})
     project_policy = context_config.get("policy") if isinstance(context_config.get("policy"), Mapping) else None
+    configured_context = get_runtime_config().context
     public_policy = {
         "default": {
             "enabled": True,
             "allowed_roles": [normalized_role],
             "allowed_statuses": ["active"],
-            "candidate_limit": 20,
-            "load_limit": max(8, len(mandatory_ids) or 1),
-            "content_char_budget": 100_000,
-            "query_limit": 1,
-            "top_k_per_query": 1,
+            "candidate_limit": configured_context.candidate_limit,
+            "load_limit": max(configured_context.load_limit, len(mandatory_ids) or 1),
+            "content_char_budget": configured_context.content_char_budget,
+            "query_limit": configured_context.query_limit,
+            "top_k_per_query": configured_context.top_k_per_query,
         },
         "roles": {
             normalized_role: {
@@ -108,8 +124,12 @@ def load_role_mandatory_context(
     }
     runtime = build_context_runtime(
         project_id=spec.project_id,
-        project_root=Path(spec.root),
-        embedding_provider=embedding_provider or BailianEmbeddingProvider(),
+        project_root=resolve_project_package_root(spec, must_exist=False),
+        # Judge/Mock mandatory loading is ID-based and never performs semantic
+        # Search. Use a stable local registration vector by default so this path
+        # does not acquire Attribute's external embedding dependency.
+        embedding_provider=embedding_provider
+        or DeterministicHashEmbeddingProvider(model_id="mandatory-context-v1"),
         content_resolver=resolver,
         public_policy=public_policy,
         project_policy=project_policy,
@@ -157,6 +177,7 @@ def _asset_records(
     *,
     require_available: bool,
 ) -> Iterable[ContextUnitRecord]:
+    project_root = resolve_project_package_root(spec, must_exist=False)
     for selected in selected_assets:
         mapping = selected["mapping"]
         path = Path(selected["path"])
@@ -181,7 +202,8 @@ def _asset_records(
                 name=f"{mapping.asset_id}: {file_path.name}",
                 description=(
                     f"Project {mapping.kind} asset {mapping.asset_id} for roles "
-                    f"{', '.join(mapping.roles)}; source={file_path.relative_to(Path(spec.root))}"
+                    f"{', '.join(mapping.roles)}; "
+                    f"source={file_path.resolve().relative_to(project_root)}"
                 ),
                 content=None,
                 content_ref=file_path.resolve().as_uri(),
@@ -269,13 +291,11 @@ def _load_context_builder_records(
 
 def _content_roots(spec: Any) -> list[Path]:
     roots = []
-    for raw in (
-        getattr(spec, "root", ""),
-        getattr(spec, "source_project", ""),
-        (getattr(spec, "application", {}) or {}).get("external_repo"),
-    ):
-        if raw:
-            path = Path(str(raw)).resolve()
-            if path.exists() and path not in roots:
-                roots.append(path)
+    project_root = resolve_project_package_root(spec, must_exist=False)
+    if project_root.exists():
+        roots.append(project_root)
+    if spec.has_business_source:
+        source_root = resolve_project_source_root(spec)
+        if source_root not in roots:
+            roots.append(source_root)
     return roots

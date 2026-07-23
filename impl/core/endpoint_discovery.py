@@ -11,11 +11,15 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import logging
 from pathlib import Path
 from typing import Any, Dict, List
 
+from impl.core.config_schema import ConfigError
+from impl.core.path_contract import LogicalPathRef, PathScope
+from impl.core.portable_artifact import write_active_artifact
 from impl.tools import ToolResult, VerifiableTool
 
 logger = logging.getLogger(__name__)
@@ -27,15 +31,6 @@ API_DISCOVER_DIRNAME = "tools/api_discover"
 
 # 落盘的清单文件名
 DISCOVER_MANIFEST = "_manifest.json"
-
-# 默认黑名单：HTTP 方法
-DEFAULT_BLACKLIST_METHODS = ["PUT", "DELETE", "PATCH"]
-
-# 默认黑名单：路由关键词
-DEFAULT_BLACKLIST_KEYWORDS = ["reload", "reindex", "delete", "update", "create", "write"]
-
-# 默认排除路径
-DEFAULT_EXCLUDE_PATTERNS = ["*/test/*", "*/migrations/*", "*/venv/*", "*/__pycache__/*", "*/node_modules/*"]
 
 # 框架装饰器映射
 FRAMEWORK_DECORATORS: Dict[str, List[str]] = {
@@ -114,7 +109,7 @@ class EndpointInfo:
         self.has_request_body: bool = False
         self.docstring: str = ""      # 函数文档字符串
 
-    def to_manifest_entry(self, project_id: str) -> Dict[str, Any]:
+    def to_manifest_entry(self, project_id: str, source_root: Path | None = None) -> Dict[str, Any]:
         """序列化为 manifest 一条记录（不含 execute_fn）。"""
         tool_id = f"{project_id}.api.{self.function_name}"
         params_properties: Dict[str, Any] = {}
@@ -122,6 +117,17 @@ class EndpointInfo:
             params_properties[p] = {"type": "string", "description": _parameter_description(self.method, self.route, p)}
         if self.has_request_body:
             params_properties["body"] = {"type": "object", "description": _body_description(self.method, self.route)}
+        source_ref = None
+        if self.path:
+            source_file = Path(self.path).resolve()
+            if source_root is None or not source_file.is_relative_to(source_root.resolve()):
+                raise ValueError(f"discovered endpoint source is outside business_source: {source_file}")
+            source_ref = dict(LogicalPathRef(
+                PathScope.BUSINESS_SOURCE,
+                source_file.relative_to(source_root.resolve()).as_posix(),
+                symbol=self.function_name,
+                sha256=hashlib.sha256(source_file.read_bytes()).hexdigest(),
+            ).to_mapping())
         return {
             "tool_id": tool_id,
             "description": _tool_description(self.method, self.route, self.function_name, self.docstring),
@@ -129,7 +135,7 @@ class EndpointInfo:
             "method": self.method,
             "route": self.route,
             "function_name": self.function_name,
-            "source_path": self.path,
+            "source": source_ref,
             "line": self.line,
             "params": self.params,
             "has_request_body": self.has_request_body,
@@ -156,40 +162,30 @@ class EndpointDiscovery:
     @property
     def config(self) -> Dict[str, Any]:
         if not self._config:
-            raw = getattr(self.spec, "endpoint_discovery", None) or {}
+            raw = self.spec.endpoint_discovery_config
             self._config = raw if isinstance(raw, dict) else {}
         return self._config
 
     @property
     def enabled(self) -> bool:
-        config = self.config
-        return bool(config.get("source_roots") and config.get("framework"))
+        return self.config.get("enabled") is True
 
     def _resolve_source_roots(self) -> List[Path]:
-        roots: List[Path] = []
-        source_path = getattr(self.spec, "source_path", None)
-        configured_source = source_path() if callable(source_path) else str(getattr(self.spec, "source_project", "") or "")
-        source_root = Path(configured_source) if configured_source else None
-        spec_root = Path(self.spec.root) if self.spec.root else None
-        for rel in self.config.get("source_roots") or []:
-            p = Path(str(rel))
-            if not p.is_absolute():
-                base = source_root or spec_root
-                if base is None:
-                    continue
-                p = (base / p).resolve()
-            if p.exists():
-                roots.append(p)
-        return roots
+        if self.enabled and hasattr(self.spec, "require"):
+            self.spec.require("project.resources.source.repository")
+        resolver = getattr(self.spec, "endpoint_source_paths", None)
+        if not callable(resolver):
+            raise ConfigError("endpoint discovery requires ProjectSpec.endpoint_source_paths")
+        return list(resolver())
 
     def _scan_patterns(self) -> List[str]:
-        return self.config.get("scan_patterns") or ["*.py"]
+        return list(self.config["scan_patterns"])
 
     def _exclude_patterns(self) -> List[str]:
-        return (self.config.get("exclude_patterns") or DEFAULT_EXCLUDE_PATTERNS)
+        return list(self.config["exclude_patterns"])
 
     def _framework(self) -> str:
-        return str(self.config.get("framework") or "fastapi")
+        return str(self.config["framework"])
 
     def _route_prefix(self) -> str:
         """路由前缀（如 /api/v1）。
@@ -198,7 +194,7 @@ class EndpointDiscovery:
         AST 扫描只能看到 @router.post("/foo")，看不到 prefix。
         项目在 endpoint_discovery.route_prefix 声明，加载时拼到 route 前面。
         """
-        return str(self.config.get("route_prefix") or "")
+        return str(self.config["route_prefix"])
 
     def _blacklist_methods(self) -> List[str]:
         """HTTP 方法黑名单（默认 PUT/DELETE/PATCH）。
@@ -206,13 +202,7 @@ class EndpointDiscovery:
         项目可在 endpoint_discovery.blacklist.methods 覆盖。
         命中的 endpoint 在发现阶段直接排除，不落盘、不暴露给 LLM。
         """
-        blacklist = self.config.get("blacklist") or {}
-        if not isinstance(blacklist, dict):
-            return DEFAULT_BLACKLIST_METHODS
-        methods = blacklist.get("methods")
-        if methods is None:
-            return DEFAULT_BLACKLIST_METHODS
-        return [str(m).upper() for m in methods]
+        return [str(m).upper() for m in self.config["blacklist"]["methods"]]
 
     def _blacklist_keywords(self) -> List[str]:
         """路由关键词黑名单（默认 reload/reindex/delete/update/create/write）。
@@ -220,13 +210,7 @@ class EndpointDiscovery:
         命中 route 或 function_name 任一关键词即排除。
         项目可在 endpoint_discovery.blacklist.route_keywords 覆盖。
         """
-        blacklist = self.config.get("blacklist") or {}
-        if not isinstance(blacklist, dict):
-            return DEFAULT_BLACKLIST_KEYWORDS
-        keywords = blacklist.get("route_keywords")
-        if keywords is None:
-            return DEFAULT_BLACKLIST_KEYWORDS
-        return [str(k).lower() for k in keywords]
+        return [str(k).lower() for k in self.config["blacklist"]["route_keywords"]]
 
     def _is_blacklisted(self, endpoint: EndpointInfo) -> bool:
         """判断 endpoint 是否命中黑名单。命中则发现阶段排除。"""
@@ -406,6 +390,10 @@ class EndpointDiscovery:
             return []
         all_endpoints: List[EndpointInfo] = []
         files = self._walk_source_files()
+        if not self._resolve_source_roots():
+            raise ConfigError(
+                f"enabled endpoint discovery has no readable source roots: {self.spec.project_id}"
+            )
         for file_path in files:
             all_endpoints.extend(self._extract_endpoints_from_file(file_path))
         blacklisted = 0
@@ -441,8 +429,17 @@ def write_discovered_tools(spec: Any) -> Path:
         return Path()
 
     endpoints = discovery.discover_raw()
-    project_root = Path(spec.root) if spec.root else Path()
-    out_dir = project_root / API_DISCOVER_DIRNAME
+    package_accessor = getattr(spec, "project_package_path", None)
+    source_accessor = getattr(spec, "source_root_path", None)
+    verifier_accessor = getattr(spec, "verifier_root_path", None)
+    if not all(callable(item) for item in (package_accessor, source_accessor, verifier_accessor)):
+        raise ConfigError("endpoint discovery requires resolver-backed ProjectSpec path accessors")
+    out_dir = package_accessor(
+        API_DISCOVER_DIRNAME,
+        field_path="endpoint_discovery.output_directory",
+        expected_type="any",
+        must_exist=False,
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # 清空目录下旧的自动生成文件（保留 __init__.py）
@@ -454,20 +451,20 @@ def write_discovered_tools(spec: Any) -> Path:
         except OSError:
             pass
 
-    manifest_entries = [ep.to_manifest_entry(spec.project_id) for ep in endpoints]
+    business_root = source_accessor()
+    manifest_entries = [ep.to_manifest_entry(spec.project_id, business_root) for ep in endpoints]
     manifest_path = out_dir / DISCOVER_MANIFEST
-    manifest_path.write_text(
-        json.dumps(
-            {
-                "project_id": spec.project_id,
-                "framework": discovery._framework(),
-                "endpoint_count": len(manifest_entries),
-                "endpoints": manifest_entries,
-            },
-            ensure_ascii=False,
-            indent=2,
-        ),
-        encoding="utf-8",
+    write_active_artifact(
+        "endpoint_discovery_manifest",
+        manifest_path,
+        {
+            "schema_version": 2,
+            "project_id": spec.project_id,
+            "framework": discovery._framework(),
+            "endpoint_count": len(manifest_entries),
+            "endpoints": manifest_entries,
+        },
+        repository_root=verifier_accessor(),
     )
     logger.info(
         f"[endpoint_discovery] wrote {len(manifest_entries)} endpoints to {manifest_path}"
@@ -481,9 +478,13 @@ def load_discovered_tools(spec: Any) -> List[VerifiableTool]:
     若 manifest 不存在，先触发一次 write_discovered_tools 落盘。
     execute_fn 为 None 的 tool 由 call_api 通用 tool 间接调用，不直接暴露给 agno。
     """
-    project_root = Path(spec.root) if spec.root else Path()
-    api_base = spec.api.get("base_url") if spec.api else ""
-    manifest_path = project_root / API_DISCOVER_DIRNAME / DISCOVER_MANIFEST
+    service = spec.require_service("primary")
+    api_base = str(service["base_url"])
+    request_timeout_seconds = float(service["timeout_seconds"])
+    manifest_accessor = getattr(spec, "endpoint_manifest_path", None)
+    if not callable(manifest_accessor):
+        raise ConfigError("endpoint discovery requires ProjectSpec.endpoint_manifest_path")
+    manifest_path = manifest_accessor(must_exist=False)
     if not manifest_path.exists():
         written = write_discovered_tools(spec)
         if not written:
@@ -499,8 +500,11 @@ def load_discovered_tools(spec: Any) -> List[VerifiableTool]:
 
     tools: List[VerifiableTool] = []
     for entry in data.get("endpoints") or []:
-        method = entry.get("method", "POST")
-        route = entry.get("route", "")
+        missing = [key for key in ("method", "route", "tool_id", "parameters") if key not in entry]
+        if missing:
+            raise ConfigError(f"endpoint discovery manifest entry is missing: {', '.join(missing)}")
+        method = entry["method"]
+        route = entry["route"]
         tool_id = entry["tool_id"]
         params_properties = entry.get("parameters", {}).get("properties", {})
         for param_name, param_schema in params_properties.items():
@@ -515,7 +519,7 @@ def load_discovered_tools(spec: Any) -> List[VerifiableTool]:
         normalized_required = [item for item in raw_required if item in params_properties]
 
         # 为每个 api-discovered tool 生成远程调用 execute_fn
-        def _make_execute_fn(m: str, r: str, tid: str, base: str) -> Any:
+        def _make_execute_fn(m: str, r: str, tid: str, base: str, timeout_seconds: float) -> Any:
             import urllib.request as _urllib_req
             import urllib.error as _urllib_err
             import json as _json
@@ -536,7 +540,7 @@ def load_discovered_tools(spec: Any) -> List[VerifiableTool]:
                     body = _json.dumps(payload, ensure_ascii=False).encode("utf-8")
                     req = _urllib_req.Request(url, data=body, headers={"Content-Type": "application/json"}, method=m.upper())
                 try:
-                    with _urllib_req.urlopen(req, timeout=10.0) as resp:
+                    with _urllib_req.urlopen(req, timeout=timeout_seconds) as resp:
                         text = resp.read().decode("utf-8")
                     try:
                         result = _json.loads(text)
@@ -549,7 +553,7 @@ def load_discovered_tools(spec: Any) -> List[VerifiableTool]:
             _execute.__doc__ = entry.get("description", f"API endpoint: {m} {r}")
             return _execute
 
-        execute_fn = _make_execute_fn(method, route, tool_id, api_base) if api_base else None
+        execute_fn = _make_execute_fn(method, route, tool_id, api_base, request_timeout_seconds)
 
         tools.append(
             VerifiableTool(

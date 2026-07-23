@@ -9,6 +9,8 @@ from types import MappingProxyType
 from typing import Any, Dict, Mapping, Optional
 from urllib.parse import urlparse
 
+from .path_contract import PathContractError, PathScope, canonical_prefixed_path
+
 
 ENV_NAME_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
 ROLE_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -49,6 +51,17 @@ def _string(value: Any, field_path: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ConfigError(f"invalid field {field_path}: expected non-empty string")
     return value.strip()
+
+
+def _runtime_config_path(value: Any, field_path: str) -> str:
+    try:
+        return canonical_prefixed_path(
+            value,
+            field_path=field_path,
+            allowed_scopes={PathScope.VERIFIER_REPO},
+        )
+    except PathContractError as exc:
+        raise ConfigError(str(exc)) from exc
 
 
 def _optional_string(value: Any, field_path: str) -> Optional[str]:
@@ -118,6 +131,12 @@ class ConfigValueSource:
 
 
 @dataclass(frozen=True)
+class EnvironmentRequirement:
+    field: str
+    equals: Any
+
+
+@dataclass(frozen=True)
 class EnvironmentVariableSpec:
     name: str
     bind: str
@@ -125,6 +144,7 @@ class EnvironmentVariableSpec:
     required: bool
     secret: bool
     description: str
+    required_when: Optional[EnvironmentRequirement] = None
 
 
 @dataclass(frozen=True)
@@ -177,6 +197,13 @@ class LlmRolePolicyOverride:
 
 
 @dataclass(frozen=True)
+class LlmCapabilities:
+    json_mode: bool
+    tool_calls: bool
+    context_window_tokens: int
+
+
+@dataclass(frozen=True)
 class LlmConfig:
     protocol: str
     provider: str
@@ -185,8 +212,10 @@ class LlmConfig:
     api_key: str
     temperature: float
     reasoning_effort: str
+    request_timeout_seconds: float
     max_attempts: int
     retry_delay_seconds: float
+    capabilities: LlmCapabilities
     role_policies: Mapping[str, LlmRolePolicyOverride] = field(default_factory=dict)
 
     def policy_for(self, role: str) -> LlmRolePolicy:
@@ -203,6 +232,7 @@ class LlmConfig:
 
 @dataclass(frozen=True)
 class EmbeddingConfig:
+    enabled: bool
     provider: str
     model: str
     api_key: str
@@ -237,6 +267,31 @@ class JudgeConfig:
 
 
 @dataclass(frozen=True)
+class AttributeCompactionConfig:
+    list_item_limit: int
+    attribute_result_chars: int
+    project_context_chars: int
+    trace_input_chars: int
+    trace_normalized_request_chars: int
+    trace_output_chars: int
+    trace_execution_chars: int
+    trace_error_chars: int
+    judge_business_expectations_chars: int
+    judge_fulfillment_assessments_chars: int
+    judge_gap_chars: int
+    judge_reasoning_chars: int
+
+
+@dataclass(frozen=True)
+class AttributeConfig:
+    tool_call_limit: int
+    investigation_error_chars: int
+    finalization_prompt_char_budget: int
+    review_prompt_char_budget: int
+    compaction: AttributeCompactionConfig
+
+
+@dataclass(frozen=True)
 class RuntimeConfig:
     schema_version: int
     python: PythonConfig
@@ -248,6 +303,7 @@ class RuntimeConfig:
     execution: ExecutionConfig
     context: ContextConfig
     judge: JudgeConfig
+    attribute: AttributeConfig
     environment: EnvironmentRegistry
     sources: Mapping[str, ConfigValueSource]
     warnings: tuple[str, ...] = ()
@@ -294,11 +350,18 @@ class RuntimeConfig:
                 "api_key": "***" if self.llm.api_key else "",
                 "temperature": self.llm.temperature,
                 "reasoning_effort": self.llm.reasoning_effort,
+                "request_timeout_seconds": self.llm.request_timeout_seconds,
                 "max_attempts": self.llm.max_attempts,
                 "retry_delay_seconds": self.llm.retry_delay_seconds,
+                "capabilities": {
+                    "json_mode": self.llm.capabilities.json_mode,
+                    "tool_calls": self.llm.capabilities.tool_calls,
+                    "context_window_tokens": self.llm.capabilities.context_window_tokens,
+                },
                 "role_policies": role_policies,
             },
             "embedding": {
+                "enabled": self.embedding.enabled,
                 "provider": self.embedding.provider,
                 "model": self.embedding.model,
                 "api_key": "***" if self.embedding.api_key else "",
@@ -323,6 +386,26 @@ class RuntimeConfig:
                 "top_k_per_query": self.context.top_k_per_query,
             },
             "judge": {"raw_response_max_chars": self.judge.raw_response_max_chars},
+            "attribute": {
+                "tool_call_limit": self.attribute.tool_call_limit,
+                "investigation_error_chars": self.attribute.investigation_error_chars,
+                "finalization_prompt_char_budget": self.attribute.finalization_prompt_char_budget,
+                "review_prompt_char_budget": self.attribute.review_prompt_char_budget,
+                "compaction": {
+                    "list_item_limit": self.attribute.compaction.list_item_limit,
+                    "attribute_result_chars": self.attribute.compaction.attribute_result_chars,
+                    "project_context_chars": self.attribute.compaction.project_context_chars,
+                    "trace_input_chars": self.attribute.compaction.trace_input_chars,
+                    "trace_normalized_request_chars": self.attribute.compaction.trace_normalized_request_chars,
+                    "trace_output_chars": self.attribute.compaction.trace_output_chars,
+                    "trace_execution_chars": self.attribute.compaction.trace_execution_chars,
+                    "trace_error_chars": self.attribute.compaction.trace_error_chars,
+                    "judge_business_expectations_chars": self.attribute.compaction.judge_business_expectations_chars,
+                    "judge_fulfillment_assessments_chars": self.attribute.compaction.judge_fulfillment_assessments_chars,
+                    "judge_gap_chars": self.attribute.compaction.judge_gap_chars,
+                    "judge_reasoning_chars": self.attribute.compaction.judge_reasoning_chars,
+                },
+            },
             "sources": {
                 path: {"kind": source.kind, "name": source.name, "secret": source.secret}
                 for path, source in sorted(self.sources.items())
@@ -348,6 +431,7 @@ class ParsedRuntimeConfig:
     execution: ExecutionConfig
     context: ContextConfig
     judge: JudgeConfig
+    attribute: AttributeConfig
     environment: EnvironmentRegistry
 
 
@@ -390,7 +474,7 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
     root = _mapping(data, "config")
     _reject_unknown(
         root,
-        {"schema_version", "python", "server", "uat", "browser", "llm", "embedding", "execution", "context", "judge", "environment"},
+        {"schema_version", "python", "server", "uat", "browser", "llm", "embedding", "execution", "context", "judge", "attribute", "environment"},
         "",
     )
     schema_version = _integer(_required(root, "schema_version", ""), "schema_version", minimum=1, maximum=1)
@@ -432,13 +516,17 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
             "base_url",
             "temperature",
             "reasoning_effort",
+            "request_timeout_seconds",
             "max_attempts",
             "retry_delay_seconds",
+            "capabilities",
             "role_policies",
         },
         "llm",
     )
     role_policies = _parse_role_policies(llm_data.get("role_policies") or {})
+    capability_data = _mapping(_required(llm_data, "capabilities", "llm"), "llm.capabilities")
+    _reject_unknown(capability_data, {"json_mode", "tool_calls", "context_window_tokens"}, "llm.capabilities")
     llm = LlmConfig(
         protocol=_choice(
             _required(llm_data, "protocol", "llm"),
@@ -458,10 +546,24 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
         api_key="",
         temperature=_number(_required(llm_data, "temperature", "llm"), "llm.temperature"),
         reasoning_effort=_string(_required(llm_data, "reasoning_effort", "llm"), "llm.reasoning_effort"),
+        request_timeout_seconds=_number(
+            _required(llm_data, "request_timeout_seconds", "llm"),
+            "llm.request_timeout_seconds",
+            minimum=0.001,
+        ),
         max_attempts=_integer(_required(llm_data, "max_attempts", "llm"), "llm.max_attempts", minimum=1),
         retry_delay_seconds=_number(
             _required(llm_data, "retry_delay_seconds", "llm"),
             "llm.retry_delay_seconds",
+        ),
+        capabilities=LlmCapabilities(
+            json_mode=_boolean(_required(capability_data, "json_mode", "llm.capabilities"), "llm.capabilities.json_mode"),
+            tool_calls=_boolean(_required(capability_data, "tool_calls", "llm.capabilities"), "llm.capabilities.tool_calls"),
+            context_window_tokens=_integer(
+                _required(capability_data, "context_window_tokens", "llm.capabilities"),
+                "llm.capabilities.context_window_tokens",
+                minimum=1,
+            ),
         ),
         role_policies=MappingProxyType(role_policies),
     )
@@ -469,10 +571,14 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
     embedding_data = _mapping(_required(root, "embedding", ""), "embedding")
     _reject_unknown(
         embedding_data,
-        {"provider", "model", "dimensions", "retrieval_top_k", "trust_env_proxy"},
+        {"enabled", "provider", "model", "dimensions", "retrieval_top_k", "trust_env_proxy"},
         "embedding",
     )
     embedding = EmbeddingConfig(
+        enabled=_boolean(
+            _required(embedding_data, "enabled", "embedding"),
+            "embedding.enabled",
+        ),
         provider=_choice(
             _required(embedding_data, "provider", "embedding"),
             "embedding.provider",
@@ -510,8 +616,8 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
     context_data = _mapping(_required(root, "context", ""), "context")
     _reject_unknown(context_data, {"data_root", "store_root", "max_records_per_project", "candidate_limit", "load_limit", "content_char_budget", "query_limit", "top_k_per_query"}, "context")
     context = ContextConfig(
-        data_root=_string(_required(context_data, "data_root", "context"), "context.data_root"),
-        store_root=_string(_required(context_data, "store_root", "context"), "context.store_root"),
+        data_root=_runtime_config_path(_required(context_data, "data_root", "context"), "context.data_root"),
+        store_root=_runtime_config_path(_required(context_data, "store_root", "context"), "context.store_root"),
         max_records_per_project=_integer(_required(context_data, "max_records_per_project", "context"), "context.max_records_per_project", minimum=1),
         candidate_limit=_integer(_required(context_data, "candidate_limit", "context"), "context.candidate_limit", minimum=1),
         load_limit=_integer(_required(context_data, "load_limit", "context"), "context.load_limit", minimum=1),
@@ -524,6 +630,55 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
     _reject_unknown(judge_data, {"raw_response_max_chars"}, "judge")
     judge = JudgeConfig(
         raw_response_max_chars=_integer(_required(judge_data, "raw_response_max_chars", "judge"), "judge.raw_response_max_chars", minimum=1)
+    )
+
+    attribute_data = _mapping(_required(root, "attribute", ""), "attribute")
+    _reject_unknown(attribute_data, {"tool_call_limit", "investigation_error_chars", "finalization_prompt_char_budget", "review_prompt_char_budget", "compaction"}, "attribute")
+    compaction_data = _mapping(_required(attribute_data, "compaction", "attribute"), "attribute.compaction")
+    compaction_fields = {
+        "list_item_limit",
+        "attribute_result_chars",
+        "project_context_chars",
+        "trace_input_chars",
+        "trace_normalized_request_chars",
+        "trace_output_chars",
+        "trace_execution_chars",
+        "trace_error_chars",
+        "judge_business_expectations_chars",
+        "judge_fulfillment_assessments_chars",
+        "judge_gap_chars",
+        "judge_reasoning_chars",
+    }
+    _reject_unknown(compaction_data, compaction_fields, "attribute.compaction")
+    attribute = AttributeConfig(
+        tool_call_limit=_integer(
+            _required(attribute_data, "tool_call_limit", "attribute"),
+            "attribute.tool_call_limit",
+            minimum=1,
+        ),
+        investigation_error_chars=_integer(
+            _required(attribute_data, "investigation_error_chars", "attribute"),
+            "attribute.investigation_error_chars",
+            minimum=1,
+        ),
+        finalization_prompt_char_budget=_integer(
+            _required(attribute_data, "finalization_prompt_char_budget", "attribute"),
+            "attribute.finalization_prompt_char_budget",
+            minimum=1,
+        ),
+        review_prompt_char_budget=_integer(
+            _required(attribute_data, "review_prompt_char_budget", "attribute"),
+            "attribute.review_prompt_char_budget",
+            minimum=1,
+        ),
+        compaction=AttributeCompactionConfig(**{
+            name: _integer(
+                _required(compaction_data, name, "attribute.compaction"),
+                f"attribute.compaction.{name}",
+                minimum=1,
+            )
+            for name in sorted(compaction_fields)
+        }),
     )
 
     environment = _parse_environment(_required(root, "environment", ""))
@@ -539,6 +694,7 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
         execution=execution,
         context=context,
         judge=judge,
+        attribute=attribute,
         environment=environment,
     )
 
@@ -594,9 +750,21 @@ def _parse_environment(value: Any) -> EnvironmentRegistry:
         variable_data = _mapping(raw_variable, f"environment.variables.{name}")
         _reject_unknown(
             variable_data,
-            {"bind", "type", "required", "secret", "description"},
+            {"bind", "type", "required", "required_when", "secret", "description"},
             f"environment.variables.{name}",
         )
+        required_when = None
+        if "required_when" in variable_data:
+            condition_path = f"environment.variables.{name}.required_when"
+            condition = _mapping(variable_data["required_when"], condition_path)
+            _reject_unknown(condition, {"field", "equals"}, condition_path)
+            equals = _required(condition, "equals", condition_path)
+            if isinstance(equals, (dict, list)) or equals is None:
+                raise ConfigError(f"invalid field {condition_path}.equals: expected scalar")
+            required_when = EnvironmentRequirement(
+                field=_string(_required(condition, "field", condition_path), f"{condition_path}.field"),
+                equals=equals,
+            )
         variable = EnvironmentVariableSpec(
             name=name,
             bind=_string(_required(variable_data, "bind", f"environment.variables.{name}"), f"environment.variables.{name}.bind"),
@@ -607,6 +775,7 @@ def _parse_environment(value: Any) -> EnvironmentRegistry:
                 _required(variable_data, "description", f"environment.variables.{name}"),
                 f"environment.variables.{name}.description",
             ),
+            required_when=required_when,
         )
         if name in accepted_names:
             raise ConfigError(f"duplicate environment variable {name}")
@@ -633,7 +802,9 @@ def _validate_bindings(environment: EnvironmentRegistry) -> None:
         "llm.reasoning_effort",
         "llm.max_attempts",
         "llm.retry_delay_seconds",
+        "llm.role_policies.live_stub.model",
         "embedding.provider",
+        "embedding.enabled",
         "embedding.model",
         "embedding.api_key",
         "embedding.dimensions",
@@ -647,6 +818,10 @@ def _validate_bindings(environment: EnvironmentRegistry) -> None:
     for variable in environment.variables.values():
         if variable.bind not in allowed_bindings:
             raise ConfigError(f"invalid bind target for {variable.name}: {variable.bind}")
+        if variable.required_when and variable.required_when.field not in allowed_bindings:
+            raise ConfigError(
+                f"invalid required_when field for {variable.name}: {variable.required_when.field}"
+            )
         if variable.bind in seen_bindings:
             raise ConfigError(f"multiple environment variables bind the same field: {variable.bind}")
         seen_bindings.add(variable.bind)

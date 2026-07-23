@@ -1,3 +1,17 @@
+---
+doc_type: requirements
+schema_version: 1
+---
+
+# QA 测评需求
+
+- 业务目标：对给定输入、实际输出、参考答案和上下文进行样本级质量判断与多维评分。
+- 范围：上传输出评估、单轮 QA、scenario 区分、judge、可选手动归因和聚类。
+- 非目标：不调用或替代被测 QA 生产系统，不把 client_search 等项目特例写入公共协议。
+- 核心场景：golden answer 正确性、context 忠实性、弱参考质量三类场景。
+
+## 原始业务说明
+
 关于QA场景分析
 你参考projects/QA/material/qa-evaluation-system-design.md的需求
 这个场景我希望能直接给输入、输出和参考的golden answer。常见情况是我提供形如projects/QA/material/qa-evaluation-system-design.md中的数据集，你解析出用户输入，输出（对应api输出），然后模型通过参考输出和用户意图，判断实际数据对不对，给一个评分之类的东西，最好是多维度评分

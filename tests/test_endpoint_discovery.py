@@ -1,10 +1,14 @@
 from pathlib import Path
-from types import SimpleNamespace
 
 from impl.core.endpoint_discovery import EndpointDiscovery, load_discovered_tools, write_discovered_tools
+from impl.core.path_contract import PathResolver, PathRoots
+from impl.core.schema import ProjectSpec
 
 
-def _spec(tmp_path: Path) -> SimpleNamespace:
+def _spec(tmp_path: Path) -> ProjectSpec:
+    repository_root = tmp_path / "verifier"
+    project_root = repository_root / "impl" / "projects" / "demo"
+    project_root.mkdir(parents=True)
     source_root = tmp_path / "app"
     source_root.mkdir()
     (source_root / "main.py").write_text(
@@ -21,12 +25,38 @@ def _spec(tmp_path: Path) -> SimpleNamespace:
         "    return {}\n",
         encoding="utf-8",
     )
-    return SimpleNamespace(
-        project_id="demo",
-        root=str(tmp_path),
-        api={"base_url": "http://127.0.0.1:9"},
-        endpoint_discovery={"source_roots": ["app"], "framework": "fastapi", "route_prefix": "/api/v1"},
+    service = {
+        "base_url": "http://127.0.0.1:9",
+        "endpoint": "/api/v1/parse",
+        "method": "POST",
+        "timeout_seconds": 17,
+    }
+    roots = PathRoots(
+        verifier_repo=repository_root.resolve(),
+        business_source=source_root.resolve(),
+        project_package=project_root.resolve(),
+        knowledge_route=(tmp_path / "route").resolve(),
+        artifact_package=(tmp_path / "artifacts").resolve(),
     )
+    spec = ProjectSpec(
+        project_id="demo",
+        name="demo",
+        verifier={
+            "endpoint_discovery": {
+                "enabled": True,
+                "framework": "fastapi",
+                "route_prefix": "/api/v1",
+                "scan_patterns": ["*.py"],
+                "exclude_patterns": [],
+                "blacklist": {"methods": [], "route_keywords": []},
+                "source_roots": ["business://."],
+            }
+        },
+        path_roots=roots,
+        path_resolver=PathResolver(roots),
+    )
+    spec.require_service = lambda _service_id="primary": dict(service)
+    return spec
 
 
 def test_endpoint_discovery_hides_framework_request_param(tmp_path):
@@ -55,3 +85,31 @@ def test_endpoint_discovery_preserves_business_route_params(tmp_path):
 
     assert get_item.params == ["item_id"]
     assert get_item.has_request_body is False
+
+
+def test_discovered_tool_uses_project_service_timeout(tmp_path, monkeypatch):
+    captured = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self):
+            return b'{"ok": true}'
+
+    def fake_urlopen(_request, timeout):
+        captured["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    spec = _spec(tmp_path)
+    write_discovered_tools(spec)
+    parse_tool = next(tool for tool in load_discovered_tools(spec) if tool.tool_id == "demo.api.parse")
+
+    result = parse_tool.execute_fn(body={"query": "x"})
+
+    assert result.status == "succeeded"
+    assert captured["timeout"] == 17

@@ -50,6 +50,6 @@ def test_check_reports_attribute_case_id_mismatch():
         unresolved_reason="case identity test",
     )
 
-    report = check_chain(ProjectSpec(project_id="demo", name="demo", adapter="adapter.py"), trace, judge, attribute)
+    report = check_chain(ProjectSpec(project_id="demo", name="demo"), trace, judge, attribute)
 
     assert "AttributeResult case_id does not match RunTrace." in report.consistency_gaps

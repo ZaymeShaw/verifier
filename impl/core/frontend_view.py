@@ -35,14 +35,11 @@ def _reference_panel(trace: Optional[RunTrace], judge: Optional[JudgeResult]) ->
 
 
 def _frontend_standard(spec: ProjectSpec) -> dict:
-    standard = spec.frontend_extensions.get("implementation_standard") if spec.frontend_extensions else None
-    if not isinstance(standard, dict):
-        return {}
     result = {}
-    for key in ("frontend_view", "batch_persistence"):
-        value = standard.get(key)
-        if value:
-            result[key] = value
+    if spec.frontend_view_contract:
+        result["frontend_view"] = spec.frontend_view_contract
+    if spec.batch_persistence_contract:
+        result["batch_persistence"] = spec.batch_persistence_contract
     return result
 
 
@@ -156,7 +153,31 @@ def _verifiable_tool_panel(spec: ProjectSpec) -> dict:
 
 
 def project_frontend_extensions(spec: ProjectSpec, trace: RunTrace) -> Dict[str, Any]:
-    configured = dict(spec.frontend_extensions or {})
+    configured = spec.presentation
+    configured["scenarios"] = spec.scenarios
+    if spec.interactive_scenarios:
+        configured["interactive_scenarios"] = spec.interactive_scenarios
+    if spec.intent_labels:
+        configured["intent_labels"] = spec.intent_labels
+        configured["intent_descriptions"] = spec.intent_descriptions
+    if spec.judge_score_dimensions:
+        configured["score_dimensions"] = spec.judge_score_dimensions
+    if spec.judge_error_taxonomy:
+        configured["error_taxonomy"] = spec.judge_error_taxonomy
+    if "core_forbidden_markers" in spec.check_rules:
+        configured["core_forbidden_markers"] = spec.core_forbidden_markers
+    if spec.stream_event_aliases:
+        configured["event_aliases"] = spec.stream_event_aliases
+    if spec.stream_terminal_events:
+        configured["terminal_events"] = spec.stream_terminal_events
+    configured.update(spec.verifier_extra_values())
+    display_check_rules = {
+        key: value
+        for key, value in spec.check_rules.items()
+        if key != "core_forbidden_markers"
+    }
+    if display_check_rules:
+        configured["check_rules"] = display_check_rules
     configured.pop("implementation_standard", None)
     return {
         "schema_protocol_extensions": trace.project_fields,

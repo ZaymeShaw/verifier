@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
@@ -24,6 +23,7 @@ from impl.core.context.tools import (
     CONTEXT_QUERY_PLANNING_INSTRUCTIONS,
     GuardedContextTools,
 )
+from impl.core.schema import ProjectSpec
 
 
 PUBLIC_POLICY = {
@@ -311,6 +311,89 @@ def test_search_assigns_stable_run_refs_and_load_accepts_them(tmp_path, monkeypa
     assert debug["loaded_ids"] == ["second", "first"]
 
 
+def test_guarded_search_hides_physical_ids_but_internal_search_keeps_them(
+    tmp_path, monkeypatch
+):
+    runtime = build_runtime(tmp_path)
+    runtime.register_context_unit(make_record("physical-context-unit-id"))
+    install_scripted_search(
+        runtime, monkeypatch, {"need": ["physical-context-unit-id"]}
+    )
+    run = runtime.start_run(role="judge", operation="evaluate")
+
+    internal = run.search_context_units(["need"])
+    visible = GuardedContextTools(run).search_context_units(["need"])
+
+    assert internal[0]["id"] == "physical-context-unit-id"
+    assert visible == [{
+        "selection_ref": "C1",
+        "name": "physical-context-unit-id",
+        "description": "knowledge about physical-context-unit-id",
+        "matched_queries": ["need"],
+    }]
+
+
+def test_guarded_load_hides_physical_id_and_reuses_search_ref(tmp_path, monkeypatch):
+    runtime = build_runtime(tmp_path)
+    runtime.register_context_unit(make_record("physical-context-unit-id"))
+    install_scripted_search(
+        runtime, monkeypatch, {"need": ["physical-context-unit-id"]}
+    )
+    tools = GuardedContextTools(
+        runtime.start_run(role="judge", operation="evaluate")
+    )
+
+    candidate = tools.search_context_units(["need"])[0]
+    loaded = tools.load_context_units([candidate["selection_ref"]])
+
+    assert loaded == [{
+        "selection_ref": candidate["selection_ref"],
+        "name": "physical-context-unit-id",
+        "description": "knowledge about physical-context-unit-id",
+        "content": "full content for physical-context-unit-id",
+    }]
+    assert "id" not in loaded[0]
+
+
+@pytest.mark.parametrize("abbreviated_id", ["attribute-trace...probe", "attribute-trace…probe"])
+def test_load_rejects_abbreviated_context_unit_ids(
+    tmp_path, abbreviated_id
+):
+    run = build_runtime(tmp_path).start_run(role="judge", operation="evaluate")
+
+    with pytest.raises(ContextValidationError, match="abbreviated ContextUnit IDs"):
+        run.load_context_units([abbreviated_id])
+
+    error = run.debug_snapshot()["context_debug"]["errors"][-1]
+    assert error["type"] == "ContextValidationError"
+    assert error["infrastructure"] is False
+
+
+@pytest.mark.parametrize("exact_id", ["registered...unit", "registered…unit"])
+def test_load_accepts_registered_exact_id_containing_ellipsis(tmp_path, exact_id):
+    runtime = build_runtime(tmp_path)
+    runtime.register_context_unit(make_record(exact_id))
+    run = runtime.start_run(role="judge", operation="evaluate")
+
+    assert run.load_context_units([exact_id])[0].id == exact_id
+
+
+def test_loaded_dynamic_unit_gets_reused_ref_without_shadowing_stable_id(tmp_path):
+    runtime = build_runtime(tmp_path)
+    runtime.register_context_units([make_record("C1"), make_record("dynamic-material")])
+    run = runtime.start_run(role="judge", operation="evaluate")
+
+    run.load_context_units(["dynamic-material"])
+    first_ref = run.selection_ref_for_loaded_context_unit("dynamic-material")
+    second_ref = run.selection_ref_for_loaded_context_unit("dynamic-material")
+
+    assert first_ref == second_ref == "C2"
+    assert run.load_context_units([first_ref])[0].id == "dynamic-material"
+    assert run.debug_snapshot()["context_debug"]["candidate_refs"] == {
+        "C2": "dynamic-material"
+    }
+
+
 def test_selection_refs_do_not_shadow_exact_stable_ids(tmp_path, monkeypatch):
     runtime = build_runtime(tmp_path)
     runtime.register_context_units([make_record("C1"), make_record("other")])
@@ -550,23 +633,28 @@ def test_mandatory_units_use_the_same_guarded_load_path(tmp_path):
 
 
 def test_configured_adapter_requires_explicit_stable_fields_and_forces_project_boundary(tmp_path):
-    spec = SimpleNamespace(
+    spec = ProjectSpec(
         project_id="demo",
-        root=str(tmp_path),
-        extra={
-            "context": {
-                "units": [
-                    {
-                        "id": "configured",
-                        "name": "Configured guide",
-                        "description": "explicit stable project guidance",
-                        "content": "guide body",
-                        "scope": "project",
-                        "roles": ["judge"],
-                        "unit_type": "document",
-                        "source_type": "config",
-                    }
-                ]
+        name="demo",
+        verifier={
+            "extra": {
+                "context": {
+                    "type": "mapping",
+                    "value": {
+                        "units": [
+                            {
+                                "id": "configured",
+                                "name": "Configured guide",
+                                "description": "explicit stable project guidance",
+                                "content": "guide body",
+                                "scope": "project",
+                                "roles": ["judge"],
+                                "unit_type": "document",
+                                "source_type": "config",
+                            }
+                        ]
+                    },
+                }
             }
         },
     )

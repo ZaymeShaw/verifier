@@ -11,7 +11,6 @@ import hashlib
 import json
 import uuid
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Iterable, Mapping, Optional
 
 from impl.tools.protocol import VerifiableTool, build_agno_tools
@@ -33,24 +32,26 @@ from .context.resolvers import CompositeContentResolver, FileContentResolver
 from .context.tools import GuardedContextTools
 from .context.models import ContextUnitRecord
 from .context.project import role_asset_context_records
+from .config import get_runtime_config
+from .config_schema import ConfigError
+from .project_loader import resolve_project_package_root, resolve_project_source_root
 from .schema import AttributionFinding, EvidenceRef, to_dict
 
 
-_ATTRIBUTE_CONTEXT_POLICY = {
-    "default": {
-        "enabled": True,
-        "allowed_roles": ["attribute"],
-        "allowed_statuses": ["active"],
-        "candidate_limit": 20,
-        "load_limit": 8,
-        "content_char_budget": 100_000,
-        "query_limit": 4,
-        "top_k_per_query": 5,
+def _attribute_context_policy() -> dict[str, Any]:
+    config = get_runtime_config().context
+    return {
+        "default": {
+            "enabled": True,
+            "allowed_roles": ["attribute"],
+            "allowed_statuses": ["active"],
+            "candidate_limit": config.candidate_limit,
+            "load_limit": config.load_limit,
+            "content_char_budget": config.content_char_budget,
+            "query_limit": config.query_limit,
+            "top_k_per_query": config.top_k_per_query,
+        }
     }
-}
-
-ATTRIBUTE_FINALIZATION_PROMPT_CHAR_BUDGET = 160_000
-ATTRIBUTE_REVIEW_PROMPT_CHAR_BUDGET = 180_000
 
 
 def normalize_attribute_tools(tools: Iterable[Any]) -> list[Any]:
@@ -96,19 +97,18 @@ def _deduplicate_tools(tools: Iterable[Any]) -> list[Any]:
 
 
 def _configured_context(spec: Any) -> bool:
-    extra = getattr(spec, "extra", {}) or {}
-    context_config = extra.get("context") if isinstance(extra, Mapping) else None
+    context_config = spec.verifier_extra_value("context")
     if isinstance(context_config, Mapping) and context_config:
         return True
     if any(
         mapping.enabled
         and "attribute" in mapping.roles
         and mapping.kind in {"context", "investigation"}
-        for mapping in (getattr(spec, "role_assets", None) or [])
+        for mapping in spec.asset_mappings()
     ):
         return True
-    root_text = str(getattr(spec, "root", "") or "")
-    if root_text and (Path(root_text) / "context_adapter.py").is_file():
+    project_root = resolve_project_package_root(spec, must_exist=False)
+    if (project_root / "context_adapter.py").is_file():
         return True
     database = DEFAULT_CONTEXT_DATA_ROOT / str(getattr(spec, "project_id", "") or "") / "context.sqlite3"
     return database.is_file()
@@ -116,15 +116,13 @@ def _configured_context(spec: Any) -> bool:
 
 def _content_resolver(spec: Any) -> CompositeContentResolver:
     roots = []
-    for candidate in (
-        getattr(spec, "root", ""),
-        getattr(spec, "source_project", ""),
-        (getattr(spec, "application", {}) or {}).get("external_repo"),
-    ):
-        if candidate:
-            path = Path(str(candidate)).resolve()
-            if path.exists() and path not in roots:
-                roots.append(path)
+    project_root = resolve_project_package_root(spec, must_exist=False)
+    if project_root.exists():
+        roots.append(project_root)
+    if spec.has_business_source:
+        source_root = resolve_project_source_root(spec)
+        if source_root not in roots:
+            roots.append(source_root)
     return CompositeContentResolver([FileContentResolver(roots)] if roots else [])
 
 
@@ -133,9 +131,15 @@ def _build_context_tools(
     trace: Any,
     embedding_provider: Any = None,
 ) -> tuple[list[Any], list[Any], dict[str, Any], Any, Any]:
-    context_config = dict((getattr(spec, "extra", {}) or {}).get("context") or {})
+    runtime_config = get_runtime_config()
+    if not runtime_config.embedding.enabled:
+        raise ConfigError(
+            "project attribution requires embedding.enabled=true before ContextUnit initialization"
+        )
+    runtime_config.require("embedding")
+    context_config = dict(spec.verifier_extra_value("context", {}) or {})
     project_policy = context_config.get("policy") if isinstance(context_config.get("policy"), Mapping) else None
-    draft_enabled = bool((getattr(spec, "attribute_draft", {}) or {}).get("enabled"))
+    draft_enabled = spec.role_draft("attribute").get("enabled") is True
     # Candidate investigation ContextUnits must never remain searchable by Current
     # after a Draft run.  Keep mode databases isolated while retaining stable IDs.
     context_data_root = DEFAULT_CONTEXT_DATA_ROOT / (
@@ -144,10 +148,10 @@ def _build_context_tools(
     runtime = build_context_runtime(
         project_id=spec.project_id,
         data_root=context_data_root,
-        project_root=Path(spec.root) if getattr(spec, "root", "") else None,
+        project_root=resolve_project_package_root(spec, must_exist=False),
         embedding_provider=embedding_provider or BailianEmbeddingProvider(),
         content_resolver=_content_resolver(spec),
-        public_policy=_ATTRIBUTE_CONTEXT_POLICY,
+        public_policy=_attribute_context_policy(),
         project_policy=project_policy,
     )
     adapters = [
@@ -193,8 +197,8 @@ def _build_context_tools(
         "execution_run_id": execution_run_id,
     }
     return (
-        [main_tools.search_context_units, main_tools.load_context_units, main_tools.context_debug],
-        [review_tools.search_context_units, review_tools.load_context_units, review_tools.context_debug],
+        [main_tools.search_context_units, main_tools.load_context_units],
+        [review_tools.search_context_units, review_tools.load_context_units],
         metadata,
         main_run,
         runtime,
@@ -399,17 +403,31 @@ class AttributeExecutionEnvironment:
 
             def execute_and_register(_execute=execute, _tool=tool, **kwargs: Any):
                 result = _execute(**kwargs)
+                runtime_metadata = getattr(result, "runtime_metadata", None)
+                if not isinstance(runtime_metadata, dict):
+                    raise TypeError("ToolResult.runtime_metadata must be an object")
+                if "attribute_context_evidence" in runtime_metadata:
+                    raise ValueError(
+                        "ToolResult.runtime_metadata.attribute_context_evidence "
+                        "is reserved for the Attribute runtime"
+                    )
                 catalog = self._register_dynamic_materials({
                     f"{actor}_tool_{_tool.tool_id.replace('.', '_')}": to_dict(result),
                 })
                 if catalog:
                     context_unit_id = catalog[0]["id"]
+                    evidence_selection_ref = ""
                     # The tool result itself has just exposed the complete registered
                     # material to the actor. Record it as investigated so Finalization
                     # can independently reload it without requiring a duplicate Load.
                     if actor == "main" and self.main_context_run is not None:
                         try:
                             self.main_context_run.load_context_units([context_unit_id])
+                            evidence_selection_ref = (
+                                self.main_context_run.selection_ref_for_loaded_context_unit(
+                                    context_unit_id
+                                )
+                            )
                             self._clear_resolved_registration_errors(
                                 f"{actor}_tool_{_tool.tool_id.replace('.', '_')}",
                                 "context_unit_investigation_load",
@@ -422,16 +440,19 @@ class AttributeExecutionEnvironment:
                                 "reason": str(exc),
                                 "attempts": "1",
                             })
-                    outputs = getattr(result, "outputs", None)
-                    if isinstance(outputs, dict):
-                        outputs["context_unit_id"] = context_unit_id
-                    actual = getattr(result, "actual", None)
-                    if isinstance(actual, dict):
-                        actual.setdefault("context_unit_id", context_unit_id)
+                    runtime_metadata["attribute_context_evidence"] = {
+                        "registered": True,
+                        **(
+                            {"selection_ref": evidence_selection_ref}
+                            if evidence_selection_ref
+                            else {}
+                        ),
+                    }
                 else:
-                    outputs = getattr(result, "outputs", None)
-                    if isinstance(outputs, dict):
-                        outputs["evidence_registration_error"] = dict(self.registration_errors[-1])
+                    runtime_metadata["attribute_context_evidence"] = {
+                        "registered": False,
+                        "error": dict(self.registration_errors[-1]),
+                    }
                 return result
 
             wrapped.append(VerifiableTool(
@@ -456,7 +477,8 @@ class AttributeExecutionEnvironment:
                 raise ValueError("Finalization requires at least one investigated ContextUnit")
             load_limit = int((before.get("policy") or {}).get("load_limit") or len(requested))
             content_char_budget = int(
-                (before.get("policy") or {}).get("content_char_budget") or 100_000
+                (before.get("policy") or {}).get("content_char_budget")
+                or get_runtime_config().context.content_char_budget
             )
             units = []
             for offset in range(0, len(requested), load_limit):
@@ -568,8 +590,6 @@ class AttributeExecutionEnvironment:
 
     def assemble(self, project_context: Optional[dict[str, Any]]) -> dict[str, Any]:
         context = dict(project_context or {})
-        context.setdefault("finalization_prompt_char_budget", ATTRIBUTE_FINALIZATION_PROMPT_CHAR_BUDGET)
-        context.setdefault("review_prompt_char_budget", ATTRIBUTE_REVIEW_PROMPT_CHAR_BUDGET)
         state = {
             "context": context,
             "session_id": self.execution_run_id,

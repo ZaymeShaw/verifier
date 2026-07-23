@@ -121,8 +121,7 @@ def _jsonable_value(value: Any) -> Any:
 
 
 def _semantic_equivalence_config(spec: ProjectSpec) -> Dict[str, Any]:
-    extensions = spec.frontend_extensions or {}
-    config = extensions.get("semantic_equivalence_rules")
+    config = spec.verifier_extra_value("semantic_equivalence_rules")
     return config if isinstance(config, dict) else {}
 
 

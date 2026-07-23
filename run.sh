@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 #
 # 用法：
 #   bash run.sh server [--port PORT]     启动 verifier 服务（默认端口 8020）
-#   bash run.sh uat [--port PORT]        启动 UAT 服务（默认端口 8021）
+#   bash run.sh uat [--port PORT]        启动 UAT 服务（默认读取 impl/config.yaml）
 #   bash run.sh check1                   跑 checklist check1（自动启动 UAT 服务）
 #   bash run.sh api-check                跑 api-check（自动启动/复用 UAT 服务）
 #   bash run.sh config-check             校验三层配置、.env 和消费者旁路
@@ -28,12 +28,14 @@ shift || true
 
 case "$CMD" in
     server)
+        "$PYTHON_BIN" -m impl.core.runtime_preflight
         exec "$PYTHON_BIN" -m impl.server "$@"
         ;;
     uat)
+        "$PYTHON_BIN" -m impl.core.runtime_preflight
         PORT="${1:-}"
         if [ -n "$PORT" ]; then shift; fi
-        UAT_PORT=$("$PYTHON_BIN" -c "from impl.core.config import get_uat_config; print(get_uat_config().port)" 2>/dev/null || echo "8021")
+        UAT_PORT=$("$PYTHON_BIN" -c "from impl.core.config import get_uat_config; print(get_uat_config().port)")
         PORT="${PORT:-$UAT_PORT}"
         exec "$PYTHON_BIN" -m impl.server --port "$PORT"
         ;;

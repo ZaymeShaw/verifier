@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .core.pipeline import run_chain
 from .core.project_loader import list_projects
-from .core.schema import AttributeResult, JudgeResult, RunTrace, normalize_attribute_result, to_dict
+from .core.schema import AttributeResult, JudgeResult, RunTrace, SingleTurnCase, normalize_attribute_result, to_dict
 from .core import pipeline
 
 
@@ -99,7 +99,7 @@ def main(argv=None):
     p.add_argument("--project", required=True)
     p.add_argument("--inputs", required=True)
     p.add_argument("--user-intent")
-    p.add_argument("--concurrency", type=int, default=4)
+    p.add_argument("--concurrency", type=int, default=None, help="并发数；默认读取 impl/config.yaml")
 
     p = sub.add_parser("draft-promote")
     p.add_argument("--project", required=True)
@@ -114,14 +114,23 @@ def main(argv=None):
     elif args.cmd == "analysis":
         emit(pipeline.analysis(args.project))
     elif args.cmd == "live-run":
-        _cli_check_request(args.project, load_json_arg(args.input))
-        emit(pipeline.live_run(args.project, load_json_arg(args.input)))
+        live_input = load_json_arg(args.input)
+        _cli_check_request(args.project, live_input)
+        emit(pipeline.live_run(args.project, SingleTurnCase(id="", input=dict(live_input or {}))))
     elif args.cmd == "mock-cases":
-        cases = pipeline.mock_cases(args.project, count=args.count)
+        cases = pipeline.mock_cases(
+            args.project,
+            count=args.count,
+            cases_per_scenario=args.cases_per_scenario,
+        )
         save_result = _maybe_save_mock_cases(args, cases)
         emit({"project_id": args.project, "cases": cases, **save_result})
     elif args.cmd == "mock-datasets":
-        datasets = pipeline.mock_datasets(args.project, count=args.count, cases_per_scenario=args.cases_per_scenario)
+        datasets = pipeline.mock_datasets(
+            args.project,
+            count=args.count,
+            cases_per_scenario=args.cases_per_scenario,
+        )
         cases_flat = [c for d in datasets for c in (d.get("cases") or [])]
         save_result = _maybe_save_mock_cases(args, cases_flat)
         emit({"project_id": args.project, "datasets": datasets, **save_result})
@@ -160,8 +169,13 @@ def main(argv=None):
             )
         )
     elif args.cmd == "run-chain":
-        _cli_check_request(args.project, load_json_arg(args.input))
-        emit(run_chain(args.project, load_json_arg(args.input), user_intent=args.user_intent))
+        chain_input = load_json_arg(args.input)
+        _cli_check_request(args.project, chain_input)
+        emit(run_chain(
+            args.project,
+            SingleTurnCase(id="", input=dict(chain_input or {}), user_intent=str(args.user_intent or "")),
+            user_intent=args.user_intent,
+        ))
     elif args.cmd == "batch-run":
         inputs = load_json_arg(args.inputs)
         if isinstance(inputs, list):

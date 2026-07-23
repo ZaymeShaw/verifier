@@ -490,6 +490,34 @@ class ContextRun:
             if self._policy.permits(entry["record"])
         ]
 
+    def _selection_ref_for_id(self, unit_id: str) -> str:
+        selection_ref = self._candidate_refs_by_id.get(unit_id)
+        if selection_ref is not None:
+            return selection_ref
+        while True:
+            selection_ref = f"C{self._next_candidate_ref}"
+            self._next_candidate_ref += 1
+            if (
+                selection_ref not in self._candidate_ids_by_ref
+                and self._runtime.registry.get(selection_ref) is None
+            ):
+                break
+        self._candidate_refs_by_id[unit_id] = selection_ref
+        self._candidate_ids_by_ref[selection_ref] = unit_id
+        self._debug["candidate_refs"][selection_ref] = unit_id
+        return selection_ref
+
+    def selection_ref_for_loaded_context_unit(self, unit_id: str) -> str:
+        """Return a run-scoped ref only for an exact ContextUnit already loaded."""
+        exact_id = str(unit_id or "").strip()
+        if exact_id not in self._debug["loaded_ids"]:
+            raise ContextValidationError(
+                f"selection_ref requires an already loaded exact ContextUnit ID: {exact_id!r}"
+            )
+        if self._runtime.registry.get(exact_id) is None:
+            raise ContextNotFoundError(f"context unit not found after load: {exact_id!r}")
+        return self._selection_ref_for_id(exact_id)
+
     def search_context_units(
         self, queries: Sequence[str], top_k_per_query: Optional[int] = None
     ) -> List[Mapping[str, Any]]:
@@ -508,19 +536,7 @@ class ContextRun:
         referenced_items = []
         for item in items:
             unit_id = str(item["id"])
-            selection_ref = self._candidate_refs_by_id.get(unit_id)
-            if selection_ref is None:
-                while True:
-                    selection_ref = f"C{self._next_candidate_ref}"
-                    self._next_candidate_ref += 1
-                    if (
-                        selection_ref not in self._candidate_ids_by_ref
-                        and self._runtime.registry.get(selection_ref) is None
-                    ):
-                        break
-                self._candidate_refs_by_id[unit_id] = selection_ref
-                self._candidate_ids_by_ref[selection_ref] = unit_id
-                self._debug["candidate_refs"][selection_ref] = unit_id
+            selection_ref = self._selection_ref_for_id(unit_id)
             referenced_item = dict(item)
             referenced_item["selection_ref"] = selection_ref
             referenced_items.append(referenced_item)
@@ -533,10 +549,28 @@ class ContextRun:
         return referenced_items
 
     def load_context_units(self, unit_ids: Sequence[str]) -> List[ContextUnit]:
-        resolved_ids = [
-            self._candidate_ids_by_ref.get(str(unit_id).strip(), str(unit_id).strip())
+        requested_ids = [
+            str(unit_id).strip()
             for unit_id in unit_ids
             if str(unit_id).strip()
+        ]
+        abbreviated_ids = [
+            unit_id
+            for unit_id in requested_ids
+            if unit_id not in self._candidate_ids_by_ref
+            and self._runtime.registry.get(unit_id) is None
+            and ("..." in unit_id or "…" in unit_id)
+        ]
+        if abbreviated_ids:
+            exc = ContextValidationError(
+                "abbreviated ContextUnit IDs are not accepted; use the exact ID or "
+                f"the original run-scoped selection_ref: {abbreviated_ids}"
+            )
+            self._record_error("load_context_units", exc)
+            raise exc
+        resolved_ids = [
+            self._candidate_ids_by_ref.get(unit_id, unit_id)
+            for unit_id in requested_ids
         ]
         try:
             units = self._runtime._load(resolved_ids, self._policy)

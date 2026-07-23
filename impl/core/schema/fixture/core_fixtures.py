@@ -18,6 +18,7 @@ from impl.core.schema.mock import MockCase, MockIntentOutput, SingleTurnCase
 from impl.core.schema.project import ProjectAnalysis, ProjectSpec
 from impl.core.schema.trace import RunTrace
 from impl.core.schema.live import LiveExchange
+from impl.core.show_schema import ShowSchema, register_show_schema
 from .fixture import register_fixture
 
 TRACE_ID = "trace-fixture-001"
@@ -177,7 +178,11 @@ def mock_case() -> MockCase:
 
 
 def project_spec() -> ProjectSpec:
-    return ProjectSpec(project_id=PROJECT_ID, name="Fixture Project", common={"ready": ["output", "reference"]})
+    return ProjectSpec(
+        project_id=PROJECT_ID,
+        name="Fixture Project",
+        runtime={"ready": ["output", "reference"]},
+    )
 
 
 register_fixture(RunTrace, "default", run_trace)
@@ -194,3 +199,7 @@ register_fixture(ProjectSpec, "default", project_spec)
 register_fixture(ProjectAnalysis, "default", lambda: ProjectAnalysis(project_id=PROJECT_ID))
 register_fixture(SingleTurnCase, "default", single_turn_case)
 register_fixture(MockCase, "default", mock_case)
+register_show_schema(
+    PROJECT_ID,
+    ShowSchema(input_fields=["query"], output_fields=["query_logic", "conditions"]),
+)

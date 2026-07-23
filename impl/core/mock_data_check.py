@@ -27,14 +27,13 @@ from typing import Any, Dict, List, Optional
 from pathlib import Path
 
 from impl.core.mock_agent import load_live_schema
+from impl.core.project_loader import list_projects, load_project
 from impl.core.schema.normalize import normalize_mock_case
 from impl.core.schema import MockCase, MockIntentOutput, SingleTurnCase
 from impl.core.schema.occam import PUBLIC_SCHEMA_FIELDS, SCHEMA_FIELD_ROLES, PUBLIC_DROP_KEYS
 from impl.core.mock import single_turn_to_mock_case, mock_case_to_single_turn
 
 IMPL_ROOT = Path(__file__).resolve().parents[1] if "__file__" in dir() else Path.cwd() / "impl"
-
-PROJECTS = ["client_search", "deerflow", "marketting-planning", "marketting-planning-intent", "QA"]
 
 # ── 全局 schema 类名 → dataclass 映射（用于 Occam 同步检查） ──
 _SCHEMA_MODULES = [
@@ -173,12 +172,11 @@ def check_fixture_normalize_roundtrip(project_id: str) -> CheckItem:
 
 
 def check_fixture_scenario_coverage(project_id: str) -> CheckItem:
-    """检查 fixture 场景覆盖是否与 SCENARIO_ENUM 对齐。"""
+    """检查 fixture 场景覆盖是否与 ProjectSpec 场景目录对齐。"""
     path = IMPL_ROOT / "data" / project_id / "mock_cases.json"
     with open(path) as f:
         cases = json.load(f)
-    ls = load_live_schema(project_id)
-    defined = set(getattr(ls, "SCENARIO_ENUM", []) or [])
+    defined = set(load_project(project_id).scenarios)
     actual = set(c.get("scenario", "") for c in cases)
     uncovered = defined - actual
     unknown = actual - defined
@@ -320,8 +318,7 @@ def check_mockcase_ready_protocol(project_id: str) -> CheckItem:
     path = IMPL_ROOT / "data" / project_id / "mock_cases.json"
     with open(path) as f:
         cases = json.load(f)
-    ls = load_live_schema(project_id)
-    ready = set(getattr(ls, "READY", []) or [])
+    ready = set(load_project(project_id).ready)
     issues = []
     for c in cases:
         if "output" in ready:
@@ -420,9 +417,10 @@ def check_public_drop_keys_validity(project_id: str = "") -> CheckItem:
 
 def check_fixture_id_uniqueness(project_id: str = "") -> CheckItem:
     """所有项目的 MockCase ID 是否全局唯一（无跨项目重复）。"""
+    project_ids = list_projects()
     seen: Dict[str, str] = {}
     duplicates: List[str] = []
-    for pid in PROJECTS:
+    for pid in project_ids:
         path = IMPL_ROOT / "data" / pid / "mock_cases.json"
         if not path.exists():
             continue
@@ -437,7 +435,7 @@ def check_fixture_id_uniqueness(project_id: str = "") -> CheckItem:
             seen[cid] = pid
     if duplicates:
         return CheckItem("fixture_id_uniqueness", False, f"{len(duplicates)} duplicates", duplicates)
-    return CheckItem("fixture_id_uniqueness", True, f"{len(seen)} IDs across {len(PROJECTS)} projects, all unique")
+    return CheckItem("fixture_id_uniqueness", True, f"{len(seen)} IDs across {len(project_ids)} projects, all unique")
 
 
 # ── 5. 必需字段完整性检查（按项目） ──
@@ -516,7 +514,7 @@ def check_project(project_id: str) -> CheckReport:
 
 def check_all() -> Dict[str, CheckReport]:
     """对所有项目运行检查（含全局一致性检查）。"""
-    reports = {pid: check_project(pid) for pid in PROJECTS}
+    reports = {pid: check_project(pid) for pid in list_projects()}
     # 全局检查（不依赖具体项目）
     global_report = CheckReport(project_id="*global*")
     for fn in _GLOBAL_CHECK_FUNCTIONS:

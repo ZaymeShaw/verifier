@@ -17,6 +17,7 @@ except ImportError:  # pragma: no cover - optional in test env
     dashscope = None
 import yaml
 from impl.core.config import get_embedding_config
+from impl.core.config_schema import ConfigError
 try:
     from agno.knowledge.document import Document
     from agno.knowledge.embedder import Embedder
@@ -44,6 +45,8 @@ class BailianEmbedder(Embedder):
         trust_env_proxy: Optional[bool] = None,
     ):
         embedding_config = get_embedding_config()
+        if not embedding_config.enabled:
+            raise ConfigError("Bailian embedding is disabled by RuntimeConfig")
         super().__init__(dimensions=embedding_config.dimensions)
         self.api_key = embedding_config.api_key if api_key is None else api_key
         self.id = model or embedding_config.model
@@ -295,11 +298,14 @@ class ProjectKnowledgeBase:
     def _read_text(self, path: Path) -> str:
         return path.read_text(encoding="utf-8", errors="ignore")
 
-    def _resolve_project_path(self, spec: Any, path_value: str) -> Path:
-        path = Path(path_value)
-        if path.is_absolute():
-            return path
-        return Path(getattr(spec, "root", "") or ".") / path
+    def _resolve_project_path(self, spec: Any, document_id: str) -> Path:
+        accessor = getattr(spec, "project_document_path", None)
+        if not callable(accessor):
+            raise RuntimeError("project knowledge requires ProjectSpec.project_document_path")
+        path = accessor(document_id, must_exist=False)
+        if path is None:
+            raise KeyError(f"project document is not configured: {document_id}")
+        return path
 
     def _field_documents(self, field_definitions_path: Path) -> List[Document]:
         if not self._path_exists(field_definitions_path):
@@ -319,8 +325,8 @@ class ProjectKnowledgeBase:
 
     def _project_documents(self, spec: Any) -> List[Document]:
         documents = []
-        for key, path_value in (getattr(spec, "documents", None) or {}).items():
-            path = self._resolve_project_path(spec, str(path_value))
+        for key in spec.document_paths:
+            path = self._resolve_project_path(spec, str(key))
             if not self._path_exists(path):
                 continue
             content = self._read_text(path).strip()
@@ -342,9 +348,10 @@ class ProjectKnowledgeBase:
         try:
             self.storage_dir.mkdir(parents=True, exist_ok=True)
             documents = self._project_documents(spec)
-            field_path = (getattr(spec, "documents", None) or {}).get("source_field_definitions")
-            if field_path:
-                documents.extend(self._field_documents(self._resolve_project_path(spec, str(field_path))))
+            if "source_field_definitions" in spec.document_paths:
+                documents.extend(self._field_documents(
+                    self._resolve_project_path(spec, "source_field_definitions")
+                ))
             self.vector_db.create()
             if documents:
                 self.vector_db.upsert(f"{self.project_id}:project_knowledge", documents)

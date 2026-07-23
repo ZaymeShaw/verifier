@@ -22,12 +22,12 @@ def initialize_project_context(
     public_adapters: Sequence[Any] = (),
 ) -> Mapping[str, Any]:
     spec = load_project(project_id)
-    context_config = dict((getattr(spec, "extra", {}) or {}).get("context") or {})
+    context_config = dict(spec.verifier_extra_value("context", {}) or {})
     project_policy = context_config.get("policy") if isinstance(context_config.get("policy"), Mapping) else None
     runtime = build_context_runtime(
         project_id=spec.project_id,
         data_root=data_root,
-        project_root=Path(spec.root),
+        project_root=spec.project_package_path(),
         embedding_provider=embedding_provider,
         project_policy=project_policy,
     )

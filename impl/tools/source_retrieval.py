@@ -68,7 +68,7 @@ class SourceFileProvider(Protocol):
     协议：源码文件提供者。
 
     每个项目可以实现自己的 provider，提供文件清单和按需读取。
-    默认实现 ProjectSourceFileProvider 已经覆盖 spec.documents + source_config_paths + adapter。
+    默认实现 ProjectSourceFileProvider 已经覆盖规范 documents + source_config_paths + adapter。
     """
 
     def list_files(self) -> List[Dict[str, Any]]:
@@ -123,13 +123,13 @@ class SourceFileProvider(Protocol):
 
 class ProjectSourceFileProvider:
     """
-    默认 provider：基于 ProjectSpec.documents + adapter + source_config_paths + 原业务系统路径。
+    默认 provider：基于 ProjectSpec 规范资源访问器、adapter 和项目 source_config_paths。
 
     与 attribute._load_source_code_evidence() 逻辑对齐，但延迟读取。
-    新增原业务系统路径来源（project.yaml 中定位）：
-    - application.external_repo     → 原业务系统仓库根目录
-    - endpoint_discovery.source_roots → 原业务系统源码入口根列表
-    - 绝对路径形式的 source_* 文档    → 直读（如 source_field_definitions 等）
+    业务源码来源由 project.yaml 的规范字段及逻辑路径确定：
+    - project.resources.source.repository → 原业务系统仓库根目录
+    - verifier.endpoint_discovery.source_roots → 原业务系统源码入口根列表
+    - project.resources.documents → project:// 范围内的项目文档
     """
 
     def __init__(self, spec, project_attribute_context: Optional[dict] = None,
@@ -143,7 +143,17 @@ class ProjectSourceFileProvider:
         self._walk_count = 0  # 计数 walk 纳入的文件，防 catalog 溢出
 
     def _build_catalog(self) -> List[Dict[str, Any]]:
-        project_root = Path(self.spec.root) if self.spec.root else None
+        package_accessor = getattr(self.spec, "project_package_path", None)
+        source_accessor = getattr(self.spec, "source_root_path", None)
+        endpoint_accessor = getattr(self.spec, "endpoint_source_paths", None)
+        document_accessor = getattr(self.spec, "project_document_path", None)
+        if not all(callable(item) for item in (
+            package_accessor,
+            source_accessor,
+            endpoint_accessor,
+            document_accessor,
+        )):
+            raise RuntimeError("source retrieval requires resolver-backed ProjectSpec accessors")
         entries: Dict[str, Dict[str, Any]] = {}
         walked_business_roots: set[Path] = set()
 
@@ -160,8 +170,13 @@ class ProjectSourceFileProvider:
         if isinstance(config_paths, dict):
             for key, path_str in config_paths.items():
                 p = Path(path_str)
-                if not p.exists() and project_root:
-                    p = project_root / path_str
+                if not p.is_absolute():
+                    p = package_accessor(
+                        str(path_str),
+                        field_path=f"attribute.source_config_paths.{key}",
+                        expected_type="any",
+                        must_exist=False,
+                    )
                 if p.exists() and p.suffix in SOURCE_READABLE_SUFFIXES:
                     entries[f"config:{key}"] = {
                         "key": f"config:{key}",
@@ -170,16 +185,12 @@ class ProjectSourceFileProvider:
                     }
 
         # 2. project documents (source_* prefixed)
-        for doc_key, doc_rel in (self.spec.documents or {}).items():
+        for doc_key in self.spec.document_paths:
             if not doc_key.startswith("source_"):
                 continue
-            doc_path = Path(str(doc_rel))
-            if doc_path.is_absolute():
-                p = doc_path
-            elif project_root:
-                p = project_root / str(doc_rel)
-            else:
-                p = doc_path
+            p = document_accessor(doc_key, must_exist=False)
+            if p is None:
+                continue
             if not p.exists() or p.suffix not in SOURCE_READABLE_SUFFIXES:
                 continue
             entries[f"project_doc:{doc_key}"] = {
@@ -189,28 +200,28 @@ class ProjectSourceFileProvider:
             }
 
         # 3. adapter.py itself
-        if self.spec.adapter and project_root:
-            adapter_path = project_root / self.spec.adapter
-            if adapter_path.exists():
-                entries[f"project_adapter:{self.spec.adapter}"] = {
-                    "key": f"project_adapter:{self.spec.adapter}",
-                    "path": str(adapter_path),
-                    "description": "project adapter implementation (测评侧归一化层，非原业务系统根因落点)",
-                }
+        adapter_path = package_accessor(
+            "adapter.py",
+            field_path="verifier.adapter",
+            expected_type="file",
+            must_exist=False,
+        )
+        if adapter_path.exists():
+            entries["project_adapter:adapter.py"] = {
+                "key": "project_adapter:adapter.py",
+                "path": str(adapter_path),
+                "description": "project adapter implementation (测评侧归一化层，非原业务系统根因落点)",
+            }
 
         # 4. 业务源码的唯一运行时入口来自 ProjectSpec 的 canonical source。
-        source_path = getattr(self.spec, "source_path", None)
-        source_project = source_path() if callable(source_path) else str(getattr(self.spec, "source_project", "") or "")
-        if source_project and Path(source_project).exists():
-            walk_business_root(Path(source_project), "source_project")
+        source_project = None
+        if getattr(self.spec, "has_business_source", False):
+            source_project = source_accessor()
+            if source_project.exists():
+                walk_business_root(source_project, "source_project")
 
         # 5. 原业务系统：endpoint_discovery.source_roots (如 client_search 的 llm_client_search_0513/...)
-        endpoint_cfg = dict(getattr(self.spec, "endpoint_discovery", None) or {})
-        source_roots = endpoint_cfg.get("source_roots") or []
-        for rel in source_roots:
-            p = Path(str(rel))
-            if not p.is_absolute() and source_project:
-                p = (Path(source_project) / p).resolve()
+        for p in endpoint_accessor():
             if p.exists():
                 walk_business_root(p, "endpoint_src")
 

@@ -12,7 +12,10 @@
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import time
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
@@ -24,10 +27,59 @@ from .schema import (
     normalize_mock_case,
     normalize_run_trace,
 )
+from .config import get_runtime_config
 
 if TYPE_CHECKING:
     from .interaction_protocol import NormalizedCaseInteraction
     from .live_protocol import ProjectLive
+
+
+def attach_config_provenance(trace: RunTrace, spec: Any) -> RunTrace:
+    """Attach reproducible, secret-free public/project configuration provenance."""
+    public = get_runtime_config()
+    project_payload = deepcopy({
+        "schema_version": spec.schema_version,
+        "project": spec.project,
+        "runtime": spec.runtime,
+        "verifier": spec.verifier,
+        "metadata": spec.metadata,
+    })
+    for field_path, source in spec.config_sources.items():
+        if source.secret:
+            _redact_config_path(project_payload, field_path)
+    project_json = json.dumps(project_payload, ensure_ascii=False, sort_keys=True, default=str)
+    project_fingerprint = hashlib.sha256(project_json.encode("utf-8")).hexdigest()[:12]
+    trace.config_fingerprint = hashlib.sha256(
+        f"{public.fingerprint()}:{project_fingerprint}".encode("utf-8")
+    ).hexdigest()[:12]
+    trace.config_sources = {
+        "public": {
+            "fingerprint": public.fingerprint(),
+            "fields": {
+                path: {"kind": source.kind, "name": source.name, "secret": source.secret}
+                for path, source in sorted(public.sources.items())
+            },
+        },
+        "project": {
+            "fingerprint": project_fingerprint,
+            "fields": {
+                path: {"kind": source.kind, "name": source.name, "secret": source.secret}
+                for path, source in sorted(spec.config_sources.items())
+            },
+        },
+    }
+    return trace
+
+
+def _redact_config_path(payload: Dict[str, Any], field_path: str) -> None:
+    current: Any = payload
+    parts = field_path.split(".")
+    for part in parts[:-1]:
+        if not isinstance(current, dict) or part not in current:
+            return
+        current = current[part]
+    if isinstance(current, dict) and parts[-1] in current:
+        current[parts[-1]] = "***"
 
 
 @dataclass
@@ -378,4 +430,4 @@ def trace_from_live(
         interaction_controller_status=ctx.interaction_controller_status,
         interaction_controller_error=ctx.interaction_controller_error,
     )
-    return normalize_run_trace(trace)
+    return normalize_run_trace(attach_config_provenance(trace, spec))

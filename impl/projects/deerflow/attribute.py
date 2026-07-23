@@ -223,7 +223,6 @@ def _build_project_attribute_context(spec: ProjectSpec, trace: RunTrace, judge_r
     actual = judge_result.actual or trace.extracted_output or {}
     local_probe = _deerflow_local_evidence_probe(trace, judge_result, request, reference, actual if isinstance(actual, dict) else {})
     return {
-        "tool_call_limit": 3,
         "system_prompt_override": """你是 deerflow 项目的 attribute agent。
 只基于当前 deerflow 样本的 query、turns、reply_text、tool_calls、nbev scripts、local evidence probe、逐轮 integrity probe 和 semantic judge 结果归因。
 该项目通过 HTTP 调 deer-flow Gateway 完成多轮营销规划对话，thread_id + checkpointer 续上下文。

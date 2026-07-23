@@ -21,7 +21,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from impl.core.pipeline import live_run, judge, attribute
-from impl.core.schema import to_dict
+from impl.core.schema import SingleTurnCase, to_dict
 
 
 def diagnose_cs13():
@@ -40,7 +40,7 @@ def diagnose_cs13():
         print("\n[Step 1] Running trace...")
         trace = live_run(
             project_id="client_search",
-            input_data=input_data,
+            case=SingleTurnCase(id="cs13-diagnostic", input=input_data, user_intent=user_intent),
         )
 
         output = trace.extracted_output or {}

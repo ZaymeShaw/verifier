@@ -48,7 +48,7 @@ _CACHE_LOCK = RLock()
 _PROGRESS_LOCK = RLock()
 _PROGRESS_DONE = 0
 _SHOW_FLOW_PROGRESS = False
-API_CALL_TIMEOUT_SECONDS = 600.0
+API_CALL_TIMEOUT_SECONDS = 1200.0
 _RUNTIME_CONFIG = get_runtime_config()
 API_BASE_URL = os.environ.get(
     "API_CHECK_BASE_URL",
@@ -157,13 +157,13 @@ API_FIXTURE_CHECKS = [
     ApiCase(
         "live_run",
         "/api/live_run",
-        lambda project_id: {"project": project_id, "input": real_project_case(project_id)},
+        lambda project_id: {"project": project_id, "case": real_project_case(project_id)},
         "impl.core.schema.trace.RunTrace",
     ),
     ApiCase(
         "run_chain",
         "/api/run_chain",
-        lambda project_id: {"project": project_id, "input": real_project_case(project_id)},
+        lambda project_id: {"project": project_id, "case": real_project_case(project_id)},
         "impl.core.schema.api.RunChainResponse",
     ),
     ApiCase(
@@ -306,7 +306,7 @@ def project_flow(project_id: str) -> Dict[str, Any]:
     with lock:
         if project_id not in _PROJECT_FLOW_CACHE:
             flow_progress(f"[project-flow-start] {project_id} /api/run_chain")
-            request = {"project": project_id, "input": real_project_case(project_id)}
+            request = {"project": project_id, "case": real_project_case(project_id)}
             status_code, response = call_api_raw("/api/run_chain", request)
             if status_code != 200:
                 raise AssertionError(f"/api/run_chain failed for {project_id}: {response}")

@@ -23,6 +23,12 @@ class MockIntentOutput:
 
 
 @dataclass
+class MockIntentFidelityOutput:
+    """A fact-preserving edit of one generated user utterance."""
+    query: str
+
+
+@dataclass
 class MockNextTurnOutput:
     """mock_agent 下一轮生成输出（next_turn 结构化约束）。"""
     query: str
@@ -122,6 +128,7 @@ class MockBuildSpec:
     # Mock 层：mock agent 构建单条 case 的约束（输入）。与 live API 形状无关，只承载项目语义层字段。
     project_id: str
     scenario: str
+    requested_intent: str = ""                                      # 调用方给出的具体意图；若存在则是事实来源，不是候选标签
     intent_labels: List[str] = field(default_factory=list)            # 可用意图标签
     required_input_fields: List[str] = field(default_factory=list)    # input 必须包含的字段（query/turns 等）
     ready: List[str] = field(default_factory=list)                    # 已就绪字段（NOT mock agent 的产出），仅用于外部 ready 契约校验

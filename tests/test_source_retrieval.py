@@ -1,6 +1,7 @@
 import pytest
-from types import SimpleNamespace
 
+from impl.core.path_contract import PathResolver, PathRoots
+from impl.core.schema import ProjectSpec
 from impl.tools import ToolResult, VerifiableTool, build_agno_tools
 from impl.tools.source_retrieval import (
     MAX_SOURCE_FULL_FILE_BYTES,
@@ -9,10 +10,37 @@ from impl.tools.source_retrieval import (
 )
 
 
+def _spec(project_root, *, business_root=None, documents=None):
+    business = business_root or project_root
+    roots = PathRoots(
+        verifier_repo=project_root.resolve(),
+        business_source=business.resolve(),
+        project_package=project_root.resolve(),
+        knowledge_route=project_root.resolve(),
+        artifact_package=project_root.resolve(),
+    )
+    document_values = dict(documents or {})
+    return ProjectSpec(
+        project_id="demo",
+        name="demo",
+        project={
+            "resources": {
+                "source": {"repository": "business://.", "paths": {}},
+                "documents": {
+                    key: f"project://{value}" for key, value in document_values.items()
+                },
+            }
+        },
+        verifier={"endpoint_discovery": {"source_roots": []}},
+        path_roots=roots,
+        path_resolver=PathResolver(roots),
+    )
+
+
 def _provider(tmp_path):
     source = tmp_path / "sample.py"
     source.write_text("def wanted():\n    return 'ok'\n\ndef other():\n    return 'large'\n", encoding="utf-8")
-    spec = SimpleNamespace(root=str(tmp_path), documents={"source_sample": "sample.py"}, adapter=None, application={}, endpoint_discovery={})
+    spec = _spec(tmp_path, documents={"source_sample": "sample.py"})
     return ProjectSourceFileProvider(spec)
 
 
@@ -43,13 +71,9 @@ def test_source_read_functions_returns_selected_python_functions(tmp_path):
 def test_source_read_full_file_rejects_oversized_material_and_points_to_bounded_search(tmp_path):
     source = tmp_path / "large-report.json"
     source.write_text("x" * (MAX_SOURCE_FULL_FILE_BYTES + 1), encoding="utf-8")
-    spec = SimpleNamespace(
-        root=str(tmp_path),
-        source_project=str(tmp_path),
+    spec = _spec(
+        tmp_path,
         documents={"large_report": "large-report.json"},
-        adapter=None,
-        application={},
-        endpoint_discovery={},
     )
     provider = ProjectSourceFileProvider(spec)
     read_tool = create_source_retrieval_tools(provider)[1].execute_fn
@@ -99,14 +123,7 @@ def test_source_catalog_deduplicates_same_business_root_declared_twice(tmp_path)
     business_root = tmp_path / "business"
     business_root.mkdir()
     (business_root / "intent.py").write_text("def route():\n    return 'team'\n", encoding="utf-8")
-    spec = SimpleNamespace(
-        root=str(tmp_path),
-        source_project=str(business_root),
-        documents={},
-        adapter=None,
-        application={"external_repo": str(business_root)},
-        endpoint_discovery={},
-    )
+    spec = _spec(tmp_path, business_root=business_root)
 
     catalog = ProjectSourceFileProvider(spec).list_files()
 

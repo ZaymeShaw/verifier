@@ -37,14 +37,30 @@ def _deerflow_spec() -> ProjectSpec:
     return ProjectSpec(
         project_id="deerflow",
         name="deerflow",
-        root=".",
-        api={"base_url": "http://deerflow.test", "timeout": 10},
-        common={"ready": []},
+        runtime={
+            "ready": [],
+            "services": {
+                "primary": {
+                    "base_url": "http://deerflow.test",
+                    "endpoint": "/api/threads",
+                    "method": "POST",
+                    "timeout_seconds": 10,
+                    "healthcheck": {"endpoint": "/health", "request_timeout_seconds": 5},
+                }
+            }
+        },
     )
 
 
-def _ai_messages(text: str = "真实回答") -> list[dict[str, Any]]:
-    return [{"content": {"type": "ai", "content": text, "tool_calls": []}}]
+def _ai_messages(
+    text: str = "真实回答",
+    *,
+    thread_id: str = "",
+) -> list[dict[str, Any]]:
+    message = {"content": {"type": "ai", "content": text, "tool_calls": []}}
+    if thread_id:
+        message["thread_id"] = thread_id
+    return [message]
 
 
 def test_live_transport_generates_immutable_exchange_and_raw_response(monkeypatch):
@@ -116,9 +132,27 @@ def test_client_search_succeeds_when_optional_downstream_is_unavailable(monkeypa
 
     monkeypatch.setattr("impl.core.live_transport.urllib.request.urlopen", fake_urlopen)
     spec = ProjectSpec(
-        project_id="client_search", name="client_search", root=".", common={"ready": []},
-        api={"base_url": "http://client.test", "endpoint": "/api/v1/client_search_query_parse_no_encipher", "method": "POST"},
-        application={"downstream_search": {"enabled": True, "base_url": "http://downstream.test", "endpoint": "/search", "method": "POST"}},
+        project_id="client_search", name="client_search",
+        runtime={
+            "ready": [],
+            "services": {
+                "primary": {
+                    "base_url": "http://client.test",
+                    "endpoint": "/api/v1/client_search_query_parse_no_encipher",
+                    "method": "POST",
+                    "timeout_seconds": 60,
+                },
+                "dependencies": {
+                    "downstream_search": {
+                        "enabled": True,
+                        "base_url": "http://downstream.test",
+                        "endpoint": "/search",
+                        "method": "POST",
+                        "timeout_seconds": 3,
+                    }
+                },
+            }
+        },
     )
     live = ClientSearchLive(spec)
     request = {"user_text": "大于50岁的客户", "user_id": "u", "trace_id": "t", "session_id": "s", "source": "test"}
@@ -212,11 +246,42 @@ def test_deerflow_new_thread_records_every_exchange_and_sends_exact_request(monk
     assert output["session_summary"]["thread_id"] == "thread-1"
 
 
+def test_deerflow_consumes_configured_thread_and_health_endpoints(monkeypatch):
+    responses = iter([
+        _Response({"status": "ok"}),
+        _Response({"thread_id": "thread-1"}),
+        _Response({"run_id": "run-1"}),
+        _Response(_ai_messages()),
+    ])
+    captured_urls = []
+
+    def fake_urlopen(request, timeout=0):
+        captured_urls.append(request.full_url)
+        return next(responses)
+
+    spec = _deerflow_spec()
+    spec.runtime["services"]["primary"]["endpoint"] = "/gateway/conversations"
+    spec.runtime["services"]["primary"]["healthcheck"]["endpoint"] = "/gateway/ready"
+    monkeypatch.setattr("impl.core.live_transport.urllib.request.urlopen", fake_urlopen)
+
+    DeerflowLive(spec).deliver_turn({
+        "input": {"messages": [{"role": "user", "content": "真实问题"}]},
+        "config": {"configurable": {}},
+    })
+
+    assert captured_urls == [
+        "http://deerflow.test/gateway/ready",
+        "http://deerflow.test/gateway/conversations",
+        "http://deerflow.test/gateway/conversations/thread-1/runs/wait",
+        "http://deerflow.test/gateway/conversations/thread-1/messages",
+    ]
+
+
 def test_deerflow_reuses_existing_thread_without_creating_one(monkeypatch):
     responses = iter([
         _Response({"status": "ok"}),
         _Response({"run_id": "run-1"}),
-        _Response(_ai_messages("已有会话回答")),
+        _Response(_ai_messages("已有会话回答", thread_id="existing-thread")),
     ])
     monkeypatch.setattr(
         "impl.core.live_transport.urllib.request.urlopen",
@@ -236,6 +301,39 @@ def test_deerflow_reuses_existing_thread_without_creating_one(monkeypatch):
     assert exchanges[1].url.endswith("/api/threads/existing-thread/runs/wait")
     assert exchanges[1].request == request
     assert output["reply_text"] == "已有会话回答"
+    assert output["session_summary"]["thread_id"] == "existing-thread"
+    assert output["errors"] == []
+
+
+def test_deerflow_extracts_reused_thread_id_from_message_evidence():
+    output = DeerflowLive(_deerflow_spec()).extract_output(
+        _ai_messages("复用会话回答", thread_id="existing-thread")
+    )
+
+    assert output["session_summary"]["thread_id"] == "existing-thread"
+    assert output["errors"] == []
+
+
+def test_deerflow_reports_conflicting_thread_id_evidence():
+    output = DeerflowLive(_deerflow_spec()).extract_output([
+        {"thread_id": "created-thread"},
+        _ai_messages("冲突回答", thread_id="different-thread"),
+    ])
+
+    assert output["session_summary"]["thread_id"] == ""
+    assert output["errors"] == [
+        "deerflow response contains conflicting thread_id evidence: "
+        "created-thread, different-thread"
+    ]
+
+
+def test_deerflow_keeps_thread_id_empty_when_response_has_no_thread_evidence():
+    output = DeerflowLive(_deerflow_spec()).extract_output(
+        _ai_messages("缺少会话证据")
+    )
+
+    assert output["session_summary"]["thread_id"] == ""
+    assert output["errors"] == []
 
 
 def test_deerflow_reports_stale_thread_instead_of_gateway_unavailable(monkeypatch):

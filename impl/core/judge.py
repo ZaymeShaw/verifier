@@ -128,10 +128,11 @@ _judge_run_trace_view = build_judge_evidence_view
 
 
 def load_judge_boundary_standard(spec: ProjectSpec) -> Dict[str, Any]:
-    implementation_standard = spec.frontend_extensions.get("implementation_standard") if spec.frontend_extensions else None
-    boundary = implementation_standard.get("judge_boundary") if isinstance(implementation_standard, dict) else None
+    boundary = spec.judge_boundary_contract
     if not isinstance(boundary, dict) or not boundary:
-        raise ValueError(f"project {spec.id} missing implementation_standard.judge_boundary structured field")
+        raise ValueError(
+            f"project {spec.project_id} missing verifier.judge.boundary structured field"
+        )
     return dict(boundary)
 
 
@@ -285,7 +286,7 @@ def _has_input_reference(trace: RunTrace) -> bool:
 def _source_documents(spec: ProjectSpec) -> Dict[str, str]:
     return {
         key: load_project_document(spec, key)
-        for key in sorted(spec.documents)
+        for key in sorted(spec.document_paths)
         if key.startswith("source_") and key != "source_field_definitions"
     }
 

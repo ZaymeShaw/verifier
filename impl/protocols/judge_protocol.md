@@ -34,7 +34,7 @@ Fields:
 - `reference_generation_basis`: how judge generated or aligned `expected`, including current query/reference/project-doc sources
 - `verdict_derivation`: explicit derivation from assessments, boundary decision, and unresolved evidence gaps. The final `verdict` itself is computed by the verifier; this field records the LLM's reasoning, blocking gaps, and any project deterministic evidence that fed into the assessments.
 - `boundary_decision`: whether unmet requirements are within evaluable scope or uncontrollable limits; when the application/project adapter provides an `application_boundary`, judge must consume that boundary instead of independently re-litigating external service availability in every verdict. Boundary metadata belongs here rather than in repeated user-facing evidence unless the boundary itself is the evaluated output.
-- `evaluation_boundary`: the final evaluation standard used to decide the verdict. It is loaded from the project judge boundary document and `project.yaml.frontend_extensions.implementation_standard.judge_boundary`.
+- `evaluation_boundary`: the final evaluation standard used to decide the verdict. It is loaded from the project judge boundary document and `project.yaml.verifier.judge.boundary`.
 - `primary_assessment`: assessment under `evaluation_boundary` (legacy compatibility view; new code prefers `fulfillment_assessments` + `overall_fulfillment`)
 - `contrast_assessments`: optional explanatory assessments under non-primary standards
 - `missing`, `wrong`, `extra`: optional per-item diff lists when the project produces structured per-item comparisons (e.g. client_search). Not required when fulfillment assessments already capture the gap.

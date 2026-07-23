@@ -55,17 +55,27 @@ def search_context_units_tool(
     queries: Sequence[str],
     top_k_per_query: Optional[int] = None,
 ):
-    """Search summaries with transient selection refs, without loading content."""
-
-    return context_run.search_context_units(queries, top_k_per_query=top_k_per_query)
-
-
-def load_context_units_tool(context_run: ContextRun, unit_ids: Sequence[str]):
-    """Load complete authorized ContextUnits by Search selection_ref or exact ID."""
+    """Search model-safe summaries with transient refs, without physical IDs."""
 
     return [
         {
-            "id": unit.id,
+            "selection_ref": item["selection_ref"],
+            "name": item["name"],
+            "description": item["description"],
+            "matched_queries": list(item["matched_queries"]),
+        }
+        for item in context_run.search_context_units(
+            queries, top_k_per_query=top_k_per_query
+        )
+    ]
+
+
+def load_context_units_tool(context_run: ContextRun, unit_ids: Sequence[str]):
+    """Load complete authorized ContextUnits without exposing physical IDs."""
+
+    return [
+        {
+            "selection_ref": context_run.selection_ref_for_loaded_context_unit(unit.id),
             "name": unit.name,
             "description": unit.description,
             "content": unit.content,
@@ -88,7 +98,7 @@ class GuardedContextTools:
         """Search once for a planned list of atomic, self-contained information needs.
 
         Submit 1-4 query strings directly as a JSON array. Query text may contain discovery hypotheses but is not evidence. Search returns only
-        candidate refs, IDs and descriptions; load by selection_ref before using full content.
+        candidate refs, names, descriptions and matched queries; load by selection_ref before using full content.
         """
 
         return search_context_units_tool(
@@ -98,7 +108,7 @@ class GuardedContextTools:
     def load_context_units(
         self, unit_ids: Annotated[list[str], Field(min_length=1, max_length=8)]
     ):
-        """Load 1-8 exact ContextUnit IDs/selection_refs as a JSON array."""
+        """Load 1-8 exact ContextUnit IDs/selection_refs; results expose only short refs."""
 
         return load_context_units_tool(self._context_run, unit_ids)
 

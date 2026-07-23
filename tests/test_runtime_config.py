@@ -20,6 +20,7 @@ PUBLIC_ENV_NAMES = (
     "LLM_API_KEY",
     "OPENAI_API_KEY",
     "BAILIAN_API_KEY",
+    "EMBEDDING_ENABLED",
     "DASHSCOPE_API_KEY",
     "BAILIAN_EMBEDDING_MODEL",
     "BAILIAN_EMBEDDING_TRUST_ENV_PROXY",
@@ -51,7 +52,27 @@ def test_runtime_config_loads_yaml_defaults():
     assert loaded.llm.model == "deepseek-v4-pro"
     assert loaded.llm.base_url == "https://api.deepseek.com/v1"
     assert loaded.llm.api_key == ""
+    assert loaded.llm.request_timeout_seconds == 120
+    assert loaded.llm.capabilities.json_mode is True
+    assert loaded.llm.capabilities.tool_calls is True
+    assert loaded.attribute.finalization_prompt_char_budget == 160000
+    assert loaded.attribute.review_prompt_char_budget == 180000
+    assert loaded.attribute.tool_call_limit == 8
+    assert loaded.attribute.investigation_error_chars == 2000
+    assert loaded.attribute.compaction.trace_output_chars == 10000
+    assert loaded.attribute.compaction.list_item_limit == 20
     assert loaded.embedding.model == "text-embedding-v4"
+    assert loaded.embedding.enabled is True
+    assert "embedding.api_key" in loaded.missing_required
+
+
+def test_embedding_secret_is_conditionally_required(monkeypatch):
+    monkeypatch.setenv("EMBEDDING_ENABLED", "false")
+
+    loaded = runtime_config.get_runtime_config()
+
+    assert loaded.embedding.enabled is False
+    assert "embedding.api_key" not in loaded.missing_required
 
 
 def test_runtime_config_registered_env_overrides(monkeypatch):
@@ -94,6 +115,17 @@ def test_runtime_config_rejects_unimplemented_provider_override(monkeypatch):
         runtime_config.get_runtime_config()
 
 
+def test_runtime_config_overrides_live_stub_model_via_env(monkeypatch):
+    monkeypatch.setenv("LLM_LIVE_STUB_MODEL", "cheap-stub-model")
+
+    loaded = runtime_config.get_runtime_config()
+
+    policy = loaded.llm.policy_for("live_stub")
+    assert policy.model == "cheap-stub-model"
+    assert policy.reasoning_effort == "low"
+    assert loaded.llm.policy_for("judge").model == "deepseek-v4-pro"
+
+
 def test_uat_base_url_uses_uat_config(monkeypatch):
     monkeypatch.setenv("VERIFIER_UAT_HOST", "localhost")
     monkeypatch.setenv("VERIFIER_UAT_PORT", "19090")
@@ -118,3 +150,11 @@ def test_runtime_initialization_does_not_mutate_openai_api_key(monkeypatch):
     assert loaded.llm.api_key == "deepseek-key"
     assert loaded.llm.protocol == "openai_compatible"
     assert "OPENAI_API_KEY" not in runtime_config.os.environ
+
+
+def test_batch_concurrency_uses_configured_default_and_max(monkeypatch):
+    configured = runtime_config.get_runtime_config()
+
+    assert runtime_config.resolve_batch_concurrency() == configured.execution.batch_concurrency_default
+    assert runtime_config.resolve_batch_concurrency(1000) == configured.execution.batch_concurrency_max
+    assert runtime_config.resolve_batch_concurrency(0) == 1

@@ -16,6 +16,7 @@ from .schema.investigation_trace import (
     trace_graph_basename,
     validate_trace_graph,
 )
+from .path_contract import LogicalPathRef, PathContractError, PathResolver, PathRoots
 
 
 _MERMAID_HEADER = re.compile(r"^(?:flowchart|graph)\s+(?:TB|TD|BT|RL|LR)\b")
@@ -85,8 +86,20 @@ def validate_investigation_package(
     artifact_by_relative: Dict[str, Path] = {}
     mermaid_nodes: Dict[str, list[str]] = {}
     trace_artifacts: list[tuple[str, Path]] = []
-    for relative, _purpose in manifest.artifacts.items():
-        artifact = _resolve_relative(package, relative, project, "artifact")
+    for relative_ref, _purpose in _manifest_artifacts(manifest):
+        if isinstance(relative_ref, LogicalPathRef):
+            artifact = _resolve_logical_ref(
+                relative_ref,
+                package=package,
+                project=project,
+                source=source,
+                field_path="InvestigationArtifactRef.location",
+                expected_type="file",
+            )
+            relative = relative_ref.location
+        else:
+            relative = relative_ref
+            artifact = _resolve_relative(package, relative, project, "artifact")
         if not artifact.is_file():
             raise FileNotFoundError(f"investigation artifact not found: {artifact}")
         artifact_paths.append(str(artifact))
@@ -193,8 +206,7 @@ def validate_investigation_package(
         if not any(str(evidence.metadata.get(key) or "").strip() for key in _REVISION_KEYS):
             raise ValueError(f"EvidenceRef lacks source revision/hash metadata: {evidence.ref_id}")
         located = _resolve_evidence_location(
-            evidence.kind,
-            evidence.location,
+            evidence,
             package,
             project,
             source_root=source,
@@ -237,7 +249,7 @@ def validate_investigation_package(
             continue
         implementation = requirement.implementation
         module_path = _resolve_module_path(
-            implementation.module_path,
+            implementation.module_ref or implementation.module_path,
             package,
             project,
             overrides=tool_module_overrides,
@@ -332,7 +344,11 @@ def load_role_investigation_tools(
     Draft, RoleAssetMapping redirects that logical path to the candidate bytes, so
     Promote can move files without rewriting the investigation manifest.
     """
-    from .project_loader import resolve_role_assets
+    from .project_loader import (
+        resolve_project_package_root,
+        resolve_project_source_root,
+        resolve_role_assets,
+    )
 
     if use_candidate:
         from .investigation_validation import require_investigation_validation_receipt
@@ -356,22 +372,27 @@ def load_role_investigation_tools(
         manifest = load_investigation_manifest(package / "manifest.json")
         validate_investigation_package(
             package,
-            project_root=Path(spec.root),
+            project_root=resolve_project_package_root(spec),
             expected_project_id=spec.project_id,
             expected_role=role,
             tool_module_overrides=tool_aliases,
-            source_root=Path(spec.source_project) if getattr(spec, "source_project", "") else None,
+            source_root=(resolve_project_source_root(spec) if spec.has_business_source else None),
         )
         for requirement in manifest.tool_requirements:
             implementation = requirement.implementation
             if implementation is None:
                 continue
-            if implementation.module_path not in tool_aliases:
+            module_key = (
+                str(implementation.module_ref.prefixed_path)
+                if implementation.module_ref is not None
+                else implementation.module_path
+            )
+            if module_key not in tool_aliases:
                 raise ValueError(
                     "implemented ToolRequirement is not enabled by role_assets: "
-                    f"{implementation.module_path}"
+                    f"{module_key}"
                 )
-            tool = _load_tool(tool_aliases[implementation.module_path], implementation.factory)
+            tool = _load_tool(tool_aliases[module_key], implementation.factory)
             if tool.tool_id in seen:
                 raise ValueError(f"duplicate investigation Tool ID for role={role}: {tool.tool_id}")
             seen.add(tool.tool_id)
@@ -526,13 +547,23 @@ def _markdown_section(text: str, heading: str) -> str:
 
 
 def _resolve_evidence_location(
-    kind: str,
-    location: str,
+    evidence: Any,
     package: Path,
     project: Path,
     *,
     source_root: Optional[Path],
 ) -> Optional[Path]:
+    kind = str(evidence.kind)
+    location = str(evidence.location or "")
+    if evidence.location_ref is not None:
+        return _resolve_logical_ref(
+            evidence.location_ref,
+            package=package,
+            project=project,
+            source=source_root,
+            field_path=f"EvidenceRef.{evidence.ref_id}.location",
+            expected_type="file",
+        )
     if not location or kind not in _PATH_LIKE_KINDS:
         return None
     file_part = location.split(":", 1)[0] if kind == "function" else location
@@ -593,8 +624,14 @@ def _validate_evidence_integrity(evidence: Any, path: Path) -> None:
                 f"EvidenceRef content hash changed: {evidence.ref_id}; "
                 f"expected={expected_hash}, actual={actual_hash}"
             )
-    if evidence.kind == "function" and ":" in evidence.location:
-        symbol = evidence.location.split(":", 1)[1].strip()
+    symbol = (
+        evidence.location_ref.symbol
+        if evidence.location_ref is not None
+        else evidence.location.split(":", 1)[1].strip()
+        if evidence.kind == "function" and ":" in evidence.location
+        else ""
+    )
+    if evidence.kind == "function" and symbol:
         leaf = symbol.rsplit(".", 1)[-1]
         if not leaf or not re.search(
             rf"(?m)^\s*(?:async\s+def|def|class)\s+{re.escape(leaf)}\b",
@@ -604,12 +641,28 @@ def _validate_evidence_integrity(evidence: Any, path: Path) -> None:
 
 
 def _resolve_module_path(
-    value: str,
+    value: str | LogicalPathRef,
     package: Path,
     project: Path,
     *,
     overrides: Optional[Mapping[str, Path]] = None,
 ) -> Path:
+    if isinstance(value, LogicalPathRef):
+        for key in (value.location, str(value.prefixed_path)):
+            if overrides and key in overrides:
+                resolved = Path(overrides[key]).resolve()
+                _assert_under(resolved, project, "ToolImplementationRef.module_ref")
+                if not resolved.is_file():
+                    raise FileNotFoundError(f"Tool module override not found: {resolved}")
+                return resolved
+        return _resolve_logical_ref(
+            value,
+            package=package,
+            project=project,
+            source=None,
+            field_path="ToolImplementationRef.module_ref",
+            expected_type="file",
+        )
     if overrides and value in overrides:
         resolved = Path(overrides[value]).resolve()
         _assert_under(resolved, project, "ToolImplementationRef.module_path")
@@ -631,6 +684,39 @@ def _resolve_module_path(
     if len(unique) > 1:
         raise ValueError(f"ambiguous ToolImplementationRef.module_path base: {value}")
     return unique[0]
+
+
+def _manifest_artifacts(manifest: Any):
+    for relative, purpose in manifest.artifacts.items():
+        yield relative, purpose
+    for artifact in manifest.artifact_refs:
+        yield artifact.location, artifact.purpose
+
+
+def _resolve_logical_ref(
+    reference: LogicalPathRef,
+    *,
+    package: Path,
+    project: Path,
+    source: Optional[Path],
+    field_path: str,
+    expected_type: str,
+) -> Path:
+    verifier_repo = project.parents[2] if len(project.parents) >= 3 else project
+    roots = PathRoots(
+        verifier_repo=verifier_repo,
+        business_source=source,
+        project_package=project,
+        artifact_package=package,
+    )
+    try:
+        return reference.resolve(
+            PathResolver(roots),
+            field_path=field_path,
+            expected_type=expected_type,
+        ).physical
+    except PathContractError as exc:
+        raise ValueError(str(exc)) from exc
 
 
 def _load_tool(module_path: Path, factory_name: str) -> VerifiableTool:

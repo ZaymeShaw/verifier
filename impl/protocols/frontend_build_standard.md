@@ -6,8 +6,8 @@ The build agent owns shared frontend behavior for verifier live pages and summar
 
 Frontend rendering consumes these shared inputs:
 
-- `project.yaml.frontend_extensions.implementation_standard.frontend_view`
-- `project.yaml.frontend_extensions.implementation_standard.batch_persistence`
+- `project.yaml.verifier.presentation.frontend_view`
+- `project.yaml.runtime.batch_persistence`
 - `RunTrace.extracted_output`
 - `JudgeResult.expected` and `JudgeResult.actual`
 - `frontend_view.reference_panel`

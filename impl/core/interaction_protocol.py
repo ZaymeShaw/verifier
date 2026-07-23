@@ -13,7 +13,7 @@ READY_REFERENCE = "reference" # case/trace 携带 reference，judge 直接采信
 
 @dataclass
 class ReadyDecision:
-    # 协议层 ready 判定结果：output/reference 是否就绪，真值只来自 common.ready 一处配置。
+    # 协议层 ready 判定结果：output/reference 是否就绪，真值只来自 runtime.ready。
     output: bool = False
     reference: bool = False
 
@@ -23,10 +23,10 @@ class ReadyDecision:
 
 
 def resolve_ready(spec: ProjectSpec | None, case: SingleTurnCase | MultiTurnCase | Dict[str, Any] | None) -> ReadyDecision:
-    # ready 的唯一解析入口：adapter/pipeline/judge 都调此函数，禁止各自再内联 "output" in spec.common.get("ready")。
+    # ready 的唯一解析入口：adapter/pipeline/judge 都调此函数。
     # output ready = 声明 output 就绪且 case 实际携带 output（声明但未携带时回落 live）。
     # reference ready = 声明 reference 就绪（采信与否由 judge 侧再核对 case 是否真带 reference）。
-    ready: List[str] = list((spec.common.get("ready") if spec and isinstance(spec.common, dict) else {}) or [])
+    ready: List[str] = spec.ready if spec is not None else []
     output_value = _case_output(case)
     return ReadyDecision(
         output=READY_OUTPUT in ready and bool(output_value),
@@ -36,9 +36,7 @@ def resolve_ready(spec: ProjectSpec | None, case: SingleTurnCase | MultiTurnCase
 
 def ready_from_spec(spec: ProjectSpec | None) -> List[str]:
     # 供 pipeline 在构造 trace 时把 ready 快照注入 trace.ready，单一数据源。
-    if not spec or not isinstance(spec.common, dict):
-        return []
-    return list(spec.common.get("ready") or [])
+    return spec.ready if spec is not None else []
 
 
 def _case_output(case: SingleTurnCase | MultiTurnCase | Dict[str, Any] | None) -> Any:
@@ -79,6 +77,7 @@ def normalize_case_interaction(project_id: str, case: Dict[str, Any] | SingleTur
     schema_case = normalize_mock_case(case)
     raw_case = _case_to_dict(schema_case) if schema_case is not None else (case if isinstance(case, dict) else {})
     case_id = str(raw_case.get("id") or raw_case.get("case_id") or f"case-{index + 1}")
+    scenario = str(raw_case.get("scenario") or "")
     interaction = raw_case.get("interaction") if isinstance(raw_case.get("interaction"), dict) else None
     if interaction:
         mode = str(interaction.get("mode") or "single_run")
@@ -86,6 +85,9 @@ def normalize_case_interaction(project_id: str, case: Dict[str, Any] | SingleTur
     elif isinstance(raw_case.get("turns"), list):
         mode = "static_turns"
         normalized_interaction = {"mode": mode, "turns": list(raw_case.get("turns") or [])}
+    elif _project_interactive_scenario(project_id, scenario):
+        mode = "interactive_intent"
+        normalized_interaction = {"mode": mode}
     else:
         mode = "single_run"
         normalized_interaction = {"mode": mode}
@@ -97,7 +99,6 @@ def normalize_case_interaction(project_id: str, case: Dict[str, Any] | SingleTur
         if key not in {"id", "case_id", "selected", "source", "status", "user_intent"}
     }
     # 显式提取 live 层需要的字段，live 层不再深入 source_case
-    scenario = str(raw_case.get("scenario") or "")
     reference = dict(raw_case.get("reference") or {}) if isinstance(raw_case.get("reference"), dict) else {}
     output = dict(raw_case.get("output") or {}) if isinstance(raw_case.get("output"), dict) else {}
     return NormalizedCaseInteraction(
@@ -112,6 +113,16 @@ def normalize_case_interaction(project_id: str, case: Dict[str, Any] | SingleTur
         adapter_payload=adapter_payload,
         policy=dict((normalized_interaction.get("policy") or {}) if isinstance(normalized_interaction.get("policy"), dict) else {}),
     )
+
+
+def _project_interactive_scenario(project_id: str, scenario: str) -> bool:
+    """Resolve a project's existing multi-turn scenario without changing MockCase shape."""
+    if not project_id or not scenario:
+        return False
+    from .project_loader import load_project
+
+    spec = load_project(project_id)
+    return scenario in spec.interactive_scenarios
 
 
 def _case_to_dict(case: SingleTurnCase | MultiTurnCase | None) -> Dict[str, Any]:

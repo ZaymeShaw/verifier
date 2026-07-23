@@ -294,7 +294,7 @@ def _extract_stage(data: Any, events: list[dict[str, Any]], cards: list[dict[str
 
 
 def _canonical_event_names(names: list[str], spec: ProjectSpec) -> list[str]:
-    aliases = spec.frontend_extensions.get("event_aliases") or {}
+    aliases = spec.stream_event_aliases
     alias_to_canonical = {}
     for canonical_name, raw_names in aliases.items():
         for raw_name in _list(raw_names):
@@ -320,7 +320,7 @@ def _event_summary(events: list[dict[str, Any]], spec: ProjectSpec, business_com
     canonical_counts = {name: canonical_names.count(name) for name in sorted(set(canonical_names))}
     final = names[-1] if names else ""
     canonical_final = canonical_names[-1] if canonical_names else ""
-    terminal_events = set(spec.frontend_extensions.get("terminal_events") or ["done", "complete", "completed", "card_end"])
+    terminal_events = set(spec.stream_terminal_events)
     protocol_completed = False
     for index, (raw_name, canonical_name) in enumerate(zip(names, canonical_names)):
         if raw_name not in terminal_events and canonical_name not in terminal_events:
@@ -582,11 +582,12 @@ class MarketingPlanningLive(RealServiceLive, MultiTurnInteractiveLive):
 
     def deliver_real(self, request: Any, transport: LiveTransport) -> LiveTransport:
         try:
-            url = str(self.spec.api.get("base_url") or "").rstrip("/") + "/" + str(self.spec.api.get("endpoint") or "").lstrip("/")
+            service = self.spec.require_service("primary")
+            url = str(service["base_url"]).rstrip("/") + "/" + str(service["endpoint"]).lstrip("/")
             transport.request(
-                str(self.spec.api.get("method") or "POST"), url,
+                str(service["method"]), url,
                 json_body=request,
-                timeout=float(self.spec.api.get("timeout") or 120),
+                timeout=float(service["timeout_seconds"]),
                 carries_live_request=True,
                 contributes_raw_response=True,
             )

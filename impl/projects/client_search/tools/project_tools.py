@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from impl.core.tools_protocol import ProjectTools
+from impl.core.config_schema import ConfigError
 from impl.tools import ToolRegistry, VerifiableTool
 from impl.projects.client_search.tools import (
     ClientSearchConditionCompareTool,
@@ -22,15 +23,19 @@ class ClientSearchTools(ProjectTools):
     def verifiable_tools(self) -> List[Any]:
         """返回可验证工具列表"""
         config_paths = self._source_config_paths()
-        api_spec = self.spec.api or {}
-        tools: list[VerifiableTool] = [
-            build_search_api_tool(
-                api_base=str(api_spec.get("base_url") or "http://localhost:8000"),
-                endpoint=str(api_spec.get("endpoint") or "/api/v1/client_search_query_parse_no_encipher"),
-                method=str(api_spec.get("method") or "POST"),
-                timeout=float(api_spec.get("timeout") or 10.0),
-            ),
-        ]
+        api_spec = self.spec.service("primary")
+        required = ("base_url", "endpoint", "method", "timeout_seconds")
+        missing = [field for field in required if api_spec.get(field) in (None, "")]
+        if api_spec and missing:
+            raise ConfigError(f"client_search runtime.services.primary missing: {', '.join(missing)}")
+        tools: list[VerifiableTool] = []
+        if api_spec:
+            tools.append(build_search_api_tool(
+                api_base=str(api_spec["base_url"]),
+                endpoint=str(api_spec["endpoint"]),
+                method=str(api_spec["method"]),
+                timeout=float(api_spec["timeout_seconds"]),
+            ))
         field_def_path = config_paths.get("source_field_definitions")
         if field_def_path:
             tools.append(build_field_capability_tool(field_def_path))

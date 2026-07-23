@@ -11,6 +11,7 @@ import re
 import time
 import urllib.error
 from typing import Any, Dict, List, Optional
+from urllib.parse import urljoin
 
 from impl.core.live_protocol import LiveServiceUnavailableError, MultiTurnInteractiveLive, RealServiceLive
 from impl.core.live_transport import LiveTransport
@@ -22,6 +23,7 @@ from impl.core.schema import (
     ProjectSpec,
     SingleTurnCase,
 )
+from impl.core.config_schema import ConfigError
 
 
 NBEV_MARKERS = (
@@ -196,13 +198,18 @@ def _looks_like_planning_reply(reply: str) -> bool:
         marker in text
         for marker in ("执行计划", "营销规划", "行动方案", "实施方案", "推进计划", "时间表", "里程碑")
     )
+    nbev_result = (
+        "nbev" in text.lower()
+        and any(marker in text for marker in ("贡献", "达成率", "预测", "拆分", "路径", "方案"))
+        and sum(marker in text for marker in ("产品", "队伍", "客户", "目标", "达成")) >= 2
+    )
     dimensions = sum(
         marker in text
         for marker in ("目标", "策略", "步骤", "阶段", "执行", "时间", "预算", "指标", "风险", "负责人")
     )
     structured = bool(re.search(r"(?:^|\n)\s*(?:#{1,6}\s*|[-*]\s+|\d+[.、])", text))
     # “为了制定执行计划，请补充……”只是请求信息，不是已经交付规划产物。
-    return structured and (artifact_marker or dimensions >= 3)
+    return structured and (artifact_marker or nbev_result or dimensions >= 3)
 
 
 def _looks_like_clarification_reply(reply: str) -> bool:
@@ -273,11 +280,41 @@ def _errors_from_call(call_status: str, call_error: Optional[str]) -> list[str]:
     return []
 
 
+def _extract_thread_id(
+    responses: list[Any],
+    messages: list[dict[str, Any]],
+) -> tuple[str, list[str]]:
+    """Resolve the thread id from Deerflow-owned response evidence.
+
+    A create-thread response only exists on the first turn. Reused turns still
+    expose the same id on every message returned by the Gateway, so those
+    message records are the canonical fallback. Conflicting response evidence
+    is surfaced instead of silently selecting one id.
+    """
+    create_ids = {
+        str(item.get("thread_id"))
+        for item in responses
+        if isinstance(item, dict) and item.get("thread_id")
+    }
+    message_ids = {
+        str(item.get("thread_id"))
+        for item in messages
+        if isinstance(item, dict) and item.get("thread_id")
+    }
+    evidence_ids = create_ids | message_ids
+    if len(evidence_ids) > 1:
+        return "", [
+            "deerflow response contains conflicting thread_id evidence: "
+            + ", ".join(sorted(evidence_ids))
+        ]
+    return (next(iter(evidence_ids), ""), [])
+
+
 def extract_output(raw_response: Any) -> dict[str, Any]:
     """只从公共层生成的真实响应列表提取本轮输出。"""
     responses = list(raw_response) if isinstance(raw_response, list) else [raw_response]
     messages = next((item for item in reversed(responses) if isinstance(item, list)), [])
-    create_response = next((item for item in responses if isinstance(item, dict) and item.get("thread_id")), {})
+    thread_id, thread_errors = _extract_thread_id(responses, messages)
     reply, tool_calls_raw = _extract_reply_and_tool_calls(messages)
     tool_calls = [
         {
@@ -297,7 +334,7 @@ def extract_output(raw_response: Any) -> dict[str, Any]:
         "nbev_tool_count": nbev_count,
         "scripts_called": scripts,
         "session_summary": {
-            "thread_id": str(create_response.get("thread_id") or ""),
+            "thread_id": thread_id,
             "expected_dimensions": [],
             "accumulated_dimensions": [],
             "missing_dimensions": [],
@@ -305,7 +342,7 @@ def extract_output(raw_response: Any) -> dict[str, Any]:
             "evidence_status": "declared" if messages else "missing",
         },
         "fallback": _fallback_summary("succeeded", None),
-        "errors": [],
+        "errors": thread_errors,
     }
     return output
 
@@ -387,16 +424,33 @@ class DeerflowLive(RealServiceLive, MultiTurnInteractiveLive):
         return provided_output_raw(None, request)
 
     def deliver_real(self, request: Any, transport: LiveTransport) -> LiveTransport:
+        configurable: dict[str, Any] = {}
+        thread_collection_url = ""
+        thread_id = ""
         try:
             normalized_request = request if isinstance(request, dict) else {}
-            base_url = str(self.spec.api.get("base_url") or "http://localhost:8001").rstrip("/")
-            timeout = float(self.spec.api.get("timeout") or 600)
-            transport.get(f"{base_url}/health", timeout=min(timeout, 5.0))
+            service = self.spec.require_service("primary")
+            base_url = str(service["base_url"]).rstrip("/")
+            timeout = float(service["timeout_seconds"])
+            healthcheck = service.get("healthcheck") or {}
+            health_endpoint = healthcheck.get("endpoint")
+            health_timeout = healthcheck.get("request_timeout_seconds")
+            if health_endpoint in (None, "") or health_timeout in (None, ""):
+                raise ConfigError(
+                    "deerflow runtime.services.primary.healthcheck.endpoint and "
+                    "request_timeout_seconds are required"
+                )
+            thread_collection_url = urljoin(
+                f"{base_url}/",
+                str(service["endpoint"]).lstrip("/"),
+            ).rstrip("/")
+            health_url = urljoin(f"{base_url}/", str(health_endpoint).lstrip("/"))
+            transport.get(health_url, timeout=float(health_timeout))
             configurable = ((normalized_request.get("config") or {}).get("configurable") or {}) if isinstance(normalized_request, dict) else {}
             thread_id = str(configurable.get("thread_id") or "")
             if not thread_id:
                 created = transport.post(
-                    f"{base_url}/api/threads", json_body={}, timeout=timeout,
+                    thread_collection_url, json_body={}, timeout=timeout,
                     contributes_raw_response=True,
                 )
                 created_payload = created.response if isinstance(created.response, dict) else {}
@@ -404,13 +458,13 @@ class DeerflowLive(RealServiceLive, MultiTurnInteractiveLive):
                 if not thread_id:
                     raise RuntimeError(f"create thread failed: {created.response}")
             transport.post(
-                f"{base_url}/api/threads/{thread_id}/runs/wait",
+                f"{thread_collection_url}/{thread_id}/runs/wait",
                 json_body=normalized_request,
                 timeout=timeout,
                 carries_live_request=True,
             )
             transport.get(
-                f"{base_url}/api/threads/{thread_id}/messages",
+                f"{thread_collection_url}/{thread_id}/messages",
                 timeout=timeout,
                 contributes_raw_response=True,
             )
@@ -419,7 +473,8 @@ class DeerflowLive(RealServiceLive, MultiTurnInteractiveLive):
             if (
                 failed is not None
                 and failed.status_code == 404
-                and "/api/threads/" in failed.url
+                and bool(thread_id)
+                and failed.url.startswith(f"{thread_collection_url}/{thread_id}/")
             ):
                 stale_thread_id = str(configurable.get("thread_id") or thread_id or "")
                 raise RuntimeError(

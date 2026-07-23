@@ -20,8 +20,8 @@ def _build_judge_context(spec: ProjectSpec, trace: RunTrace) -> dict:
         "project_type": "provided_output_qa_evaluation",
         "current_case_only": True,
         "reference_contract": trace.reference_contract if isinstance(trace.reference_contract, dict) else {},
-        "score_dimensions": spec.frontend_extensions.get("score_dimensions") or [],
-        "error_taxonomy": spec.frontend_extensions.get("error_taxonomy") or [],
+        "score_dimensions": spec.judge_score_dimensions,
+        "error_taxonomy": spec.judge_error_taxonomy,
         "application_boundary": {"scope": "qa_semantic_answer_evaluation", "external_service_required": False},
     }
 

@@ -4,7 +4,7 @@ import threading
 import uuid
 from typing import Any, Dict, Iterable
 
-from ..core.config import get_runtime_config
+from ..core.config import get_runtime_config, resolve_batch_concurrency
 from ..core import pipeline
 from ..core.schema import to_dict
 from .service import case_event, compact_batch_result, project_from
@@ -39,11 +39,7 @@ def start_batch(data: Dict[str, Any]) -> Dict[str, Any]:
     from ..core.mock import parse_mock_case
 
     project = project_from(data)
-    execution = get_runtime_config().execution
-    concurrency = max(
-        1,
-        min(int(data.get("concurrency") or execution.batch_concurrency_default), execution.batch_concurrency_max),
-    )
+    concurrency = resolve_batch_concurrency(data.get("concurrency"))
     raw_cases = data.get("cases") or []
     cases = [to_dict(parse_mock_case(case, project_id=project)) for case in raw_cases]
     job_id = uuid.uuid4().hex

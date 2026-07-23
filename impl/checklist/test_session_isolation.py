@@ -9,6 +9,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from impl.core.pipeline import run_chain
+from impl.core.schema import SingleTurnCase
 
 # Test two different cases from client_search
 test_cases = [
@@ -23,7 +24,7 @@ print("=" * 60)
 for i, case in enumerate(test_cases, 1):
     print(f"\n[Case {i}] {case['query']}")
     try:
-        result = run_chain("client_search", case)
+        result = run_chain("client_search", SingleTurnCase(id=f"session-{i}", input=case))
         trace = result.get("trace")
         judge = result.get("judge")
 

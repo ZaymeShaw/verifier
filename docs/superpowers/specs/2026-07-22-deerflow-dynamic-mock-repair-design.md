@@ -6,7 +6,7 @@ Improve DeerFlow's dynamic multi-turn Mock behavior without changing the Mock pr
 
 ## Confirmed problems
 
-1. `DeerflowMockBase.build_next_request` reads `extract_output`, while runtime turn records expose `extracted_output`. Consequently the next-turn generator loses the prior business reply, stage, missing fields, and session summary.
+1. The in-flight multi-turn accumulator historically exposes `extract_output`, while persisted Trace turn records expose `extracted_output`. Direct replay of a Trace-shaped turn therefore loses prior business feedback unless the DeerFlow project boundary accepts both names. The in-flight path itself is not broken and must remain compatible.
 2. The generic next-turn prompt asks the model to advance the goal but does not distinguish user-visible business concepts from internal skill, script, file, API, or evaluation concepts. A real Draft run therefore emitted `nbev_planning_v2` as user speech.
 3. A successful NBEV planning answer can be classified as `non_agent` merely because its natural-language reply contains refusal-like words such as “无法”. This confuses inability to satisfy one planning dimension with an out-of-domain response.
 4. Intent remains optional by contract. A supplied intent is evidence; absent intent may be inferred from the initial request. This repair must not introduce a requirement that single-turn callers provide intent or a duplicated top-level query.
@@ -15,7 +15,7 @@ Improve DeerFlow's dynamic multi-turn Mock behavior without changing the Mock pr
 
 ### Runtime feedback repair
 
-Read the canonical `extracted_output` field from a prior turn. Accept legacy `extract_output` only as an explicit compatibility fallback. Pass the recovered stage, missing fields, extracted business output, and thread identity to the existing next-turn flow. No schema or protocol field is added.
+At the DeerFlow project boundary, read persisted `extracted_output` first and accept in-flight `extract_output` as an explicit compatibility fallback. Pass the recovered stage, missing fields, extracted business output, and thread identity to the existing next-turn flow. Do not rename the shared in-flight accumulator or add a schema/protocol field.
 
 ### Draft-only user-language policy
 

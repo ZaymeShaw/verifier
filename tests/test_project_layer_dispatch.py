@@ -6,13 +6,45 @@ from types import SimpleNamespace
 import pytest
 
 from impl.core import pipeline
+from impl.core.path_contract import PathResolver, PathRoots
 from impl.core.project_loader import load_project_attribute, load_project_judge, load_project_mock, load_project_role_instance
-from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace
+from impl.core.schema import AttributeResult, JudgeResult, ProjectSpec as ProjectSpecModel, RunTrace
 from impl.core.schema.attribute import AttributeResult as AttributeResultSchema
 from impl.core.schema.judge import JudgeResult as JudgeResultSchema
 from impl.projects.client_search import attribute as client_search_attribute
 import importlib.util
 from pathlib import Path
+
+
+def ProjectSpec(*args, **kwargs):
+    project_id = str(kwargs.get("project_id") or (args[0] if args else ""))
+    project_root = Path(
+        kwargs.pop("root", "") or f"impl/projects/{project_id}"
+    ).resolve()
+    verifier = dict(kwargs.pop("verifier", {}) or {})
+    roles = dict(verifier.get("roles") or {})
+    for role in ("attribute", "judge", "mock", "live"):
+        draft = kwargs.pop(f"{role}_draft", None)
+        if draft is None:
+            continue
+        canonical = dict(draft)
+        module = str(canonical.get("module") or "")
+        if module and not module.startswith("project://"):
+            canonical["module"] = f"project://{module}"
+        roles[role] = {**dict(roles.get(role) or {}), "draft": canonical}
+    if roles:
+        verifier["roles"] = roles
+    kwargs["verifier"] = verifier
+    spec = ProjectSpecModel(*args, **kwargs)
+    roots = PathRoots(
+        verifier_repo=Path(__file__).resolve().parents[1],
+        project_package=project_root,
+        knowledge_route=project_root,
+        artifact_package=project_root,
+    )
+    spec.path_roots = roots
+    spec.path_resolver = PathResolver(roots)
+    return spec
 
 _MPI_ATTRIBUTE_PATH = Path(__file__).resolve().parents[1] / "impl" / "projects" / "marketting-planning-intent" / "attribute.py"
 _MPI_ATTRIBUTE_SPEC = importlib.util.spec_from_file_location("test_marketting_planning_intent_attribute", _MPI_ATTRIBUTE_PATH)
@@ -238,6 +270,10 @@ def test_pipeline_prefers_enabled_draft_attribute_protocol(monkeypatch):
     monkeypatch.setattr(pipeline, "load_adapter", lambda spec_arg: adapter)
     monkeypatch.setattr(pipeline, "load_project_role_instance", lambda spec_arg, role, adapter_arg: draft)
     monkeypatch.setattr(
+        "impl.core.attribute_environment.build_attribute_environment",
+        lambda spec_arg, trace_arg: SimpleNamespace(assemble=lambda context: context),
+    )
+    monkeypatch.setattr(
         draft,
         "_run_llm_attribute",
         lambda trace, judge_result, context: AttributeResult(
@@ -328,7 +364,7 @@ def test_project_loader_rejects_draft_symlink_outside_project(tmp_path):
         judge_draft={"enabled": True, "module": "draft/judge.py"},
     )
 
-    with pytest.raises(ValueError, match="must resolve under"):
+    with pytest.raises(ValueError, match="PATH_SYMLINK_ESCAPE"):
         load_project_judge(spec)
 
 
@@ -381,7 +417,7 @@ def test_marketting_planning_intent_attribute_module_injects_project_strategy(mo
     )
     context = mpi_attribute.MarketingIntentAttribute(spec).build_context(trace, judge)
 
-    assert context["tool_call_limit"] == 4
+    assert "tool_call_limit" not in context
     assert "marketting-planning-intent 项目的 attribute agent" in context["system_prompt_override"]
     strategy = context["user_prompt_extras"]["project_attribute_strategy"]
     assert strategy["project"] == "marketting-planning-intent"
@@ -432,7 +468,7 @@ def test_client_search_attribute_module_injects_project_strategy(monkeypatch):
         load_project_tools(spec).verifiable_tools(),
     ).build_context(trace, judge)
 
-    assert context["tool_call_limit"] == 8
+    assert "tool_call_limit" not in context
     assert "最小对照重放" in context["system_prompt_override"]
     assert "client_search 项目的 attribute agent" in context["system_prompt_override"]
     strategy = context["user_prompt_extras"]["project_attribute_strategy"]

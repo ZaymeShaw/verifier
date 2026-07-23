@@ -57,7 +57,7 @@ class _AttributeProtocol(ABC):
 
         review_enabled = bool(context.get("_attribute_review_enabled"))
         custom_main = self.__class__.run_attribute_round is not _AttributeProtocol.run_attribute_round
-        draft_enabled = bool((getattr(self.spec, "attribute_draft", {}) or {}).get("enabled"))
+        draft_enabled = self.spec.role_draft("attribute").get("enabled") is True
         if custom_main and not draft_enabled:
             raise TypeError("run_attribute_round may only be overridden by an enabled attribute draft")
 

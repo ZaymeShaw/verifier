@@ -30,7 +30,7 @@ class BaseContextAdapter(ABC):
 
 
 class ConfiguredContextAdapter(BaseContextAdapter):
-    """Adapt explicit stable units from extra.context.units without inventing IDs or descriptions."""
+    """Adapt explicit stable units from verifier.extra.context without inventing content."""
 
     def __init__(self, project_spec: Any, units: Sequence[Mapping[str, Any]]):
         super().__init__(project_spec)
@@ -41,13 +41,13 @@ class ConfiguredContextAdapter(BaseContextAdapter):
         for index, unit in enumerate(self._units):
             if "project_id" in unit and str(unit["project_id"]) != project_id:
                 raise ContextConfigurationError(
-                    f"extra.context.units[{index}] cannot target another project"
+                    f"verifier.extra.context.value.units[{index}] cannot target another project"
                 )
             try:
                 configured_roles = unit["roles"]
                 if isinstance(configured_roles, (str, bytes)):
                     raise ContextConfigurationError(
-                        f"extra.context.units[{index}].roles must be a list of roles"
+                        f"verifier.extra.context.value.units[{index}].roles must be a list of roles"
                     )
                 yield ContextUnitRecord(
                     id=unit["id"],
@@ -65,28 +65,40 @@ class ConfiguredContextAdapter(BaseContextAdapter):
                 )
             except KeyError as exc:
                 raise ContextConfigurationError(
-                    f"extra.context.units[{index}] is missing required field {exc.args[0]!r}"
+                    "verifier.extra.context.value.units"
+                    f"[{index}] is missing required field {exc.args[0]!r}"
                 ) from exc
 
 
 def load_configured_context_adapter(project_spec: Any) -> Optional[ConfiguredContextAdapter]:
-    extra = getattr(project_spec, "extra", {}) or {}
-    context_config = extra.get("context") if isinstance(extra, Mapping) else None
+    context_config = project_spec.verifier_extra_value("context", {})
     units = context_config.get("units") if isinstance(context_config, Mapping) else None
     if units is None:
         return None
     if isinstance(units, (str, bytes)) or not isinstance(units, Sequence):
-        raise ContextConfigurationError("extra.context.units must be a list of explicit unit mappings")
+        raise ContextConfigurationError(
+            "verifier.extra.context.value.units must be a list of explicit unit mappings"
+        )
     if not units:
         return None
     if not all(isinstance(unit, Mapping) for unit in units):
-        raise ContextConfigurationError("every extra.context.units item must be a mapping")
+        raise ContextConfigurationError(
+            "every verifier.extra.context.value.units item must be a mapping"
+        )
     return ConfiguredContextAdapter(project_spec, units)
 
 
 def load_project_context_adapter(project_spec: Any) -> Optional[BaseContextAdapter]:
-    project_root = Path(str(getattr(project_spec, "root", "") or ""))
-    module_path = project_root / "context_adapter.py"
+    accessor = getattr(project_spec, "project_package_path", None)
+    if not callable(accessor):
+        raise ContextConfigurationError("project context adapter requires ProjectSpec.project_package_path")
+    project_root = accessor(must_exist=False)
+    module_path = accessor(
+        "context_adapter.py",
+        field_path="context.adapter.module",
+        expected_type="any",
+        must_exist=False,
+    )
     if not module_path.is_file():
         return None
     project_id = str(getattr(project_spec, "project_id", project_root.name) or project_root.name)
@@ -114,7 +126,7 @@ def initialize_context_adapters(
 ) -> Mapping[str, Any]:
     context = {
         "project_id": runtime.project_id,
-        "project_root": str(getattr(project_spec, "root", "") or ""),
+        "project_root": str(project_spec.project_package_path(must_exist=False)),
         "project_spec": project_spec,
     }
     adapters = list(public_adapters) + list(project_adapters)

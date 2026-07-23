@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 import threading
 import time
 from copy import deepcopy
@@ -12,14 +13,16 @@ from typing import Any, Callable, Dict, Iterable, Mapping, Optional
 from .analysis import analyze_project
 from .check import check_chain
 from .cluster import cluster_attributes
+from .config import get_runtime_config, resolve_batch_concurrency
 from .frontend_view import build_frontend_view, project_frontend_extensions
 from .table_view import build_case_pool_table, build_case_pool_table_from_runs, build_trace_table_row, build_trace_table_row_from_run, display_input_for_project
 from .interaction_protocol import normalize_case_interaction, resolve_ready, ready_from_spec
 from .judge import generate_reference
-from .mock_agent import MockAgent, build_spec_from_project, load_live_schema
+from .mock_agent import load_live_schema
 from .live_stub import LiveStubGenerationError, LiveStubSchemaError, generate_live_output_with_check
 from .project_loader import load_adapter, load_project, load_project_role_instance, list_projects
-from .trace import trace_from_live
+from .portable_artifact import write_active_artifact, write_portable_export
+from .trace import attach_config_provenance, trace_from_live
 from .schema import AttributeResult, BatchRunResult, CheckReport, ClusterSummary, FallbackDecision, FrontendViewModel, JudgeResult, MockSpec, ProjectAnalysis, RunTrace, SingleTurnCase, TraceExecutionContext, normalize_attribute_result, normalize_check_report, normalize_cluster_summary, normalize_frontend_view, normalize_judge_result, normalize_mock_case, normalize_mock_dataset, normalize_mock_spec, normalize_run_trace, to_dict, trace_extracted_output, trace_input, trace_normalized_request, trace_output_source
 from .summary import summary_from_fulfillment
 
@@ -91,7 +94,7 @@ def _case_from_input(project_id: str, case: SingleTurnCase) -> SingleTurnCase:
     )
 
 
-def live_run(project_id: str, case: SingleTurnCase | Dict[str, Any]) -> RunTrace:
+def live_run(project_id: str, case: SingleTurnCase) -> RunTrace:
     """主流程入口：case → trace_from_live → RunTrace
 
     流程（spec/adapter/trace.md 第 8 节）：
@@ -100,6 +103,8 @@ def live_run(project_id: str, case: SingleTurnCase | Dict[str, Any]) -> RunTrace
 
     trace 和 live 串联方向单向依赖：trace 依赖 live，live 不依赖 trace。
     """
+    if not isinstance(case, SingleTurnCase):
+        raise TypeError("live_run requires a runtime SingleTurnCase; convert transport input at the boundary")
     spec = load_project(project_id)
     if spec.local_deployment_enabled:
         from .local_service import ensure_project_service
@@ -156,7 +161,7 @@ def judge(project_id: str, trace: RunTrace, user_intent: Optional[str] = None) -
         trace.ready = ready_from_spec(spec)
     from impl.core.judge_protocol import ProjectJudge
     # 显式启用项目级 draft 时加载其协议实现，和 production 使用同一模板方法入口。
-    if (spec.judge_draft or {}).get("enabled") is True:
+    if spec.role_draft("judge").get("enabled") is True:
         judge_inst = load_project_role_instance(spec, "judge", adapter)
         if not isinstance(judge_inst, ProjectJudge):
             raise TypeError("enabled judge draft must provide a ProjectJudge implementation")
@@ -176,9 +181,10 @@ def attribute(
     *,
     manual_override: bool = True,
 ) -> AttributeResult:
+    started_at = time.monotonic()
     spec = load_project(project_id)
     if not spec.attribution_enabled and not manual_override:
-        return AttributeResult(
+        result = AttributeResult(
             trace_id=trace.trace_id,
             project_id=trace.project_id,
             case_id=str(trace.case_id or ""),
@@ -190,16 +196,31 @@ def attribute(
                 "is_formal_attribution": False,
             },
         )
+        return _record_attribute_execution(
+            trace,
+            result,
+            source="project_default",
+            status="skipped",
+            manual_override=False,
+            started_at=started_at,
+        )
     cache_key = (project_id, trace.trace_id)
     if manual_override:
         with _manual_attribute_lock:
             cached = _manual_attribute_cache.get(cache_key)
         if cached is not None:
-            return deepcopy(cached)
+            return _record_attribute_execution(
+                trace,
+                deepcopy(cached),
+                source="manual_override",
+                status="reused",
+                manual_override=True,
+                started_at=started_at,
+            )
     adapter = load_adapter(spec)
     from impl.core.attribute_protocol import ProjectAttribute
     # 显式启用项目级 draft 时加载其协议实现，和 production 使用同一模板方法入口。
-    if (spec.attribute_draft or {}).get("enabled") is True:
+    if spec.role_draft("attribute").get("enabled") is True:
         attr_inst = load_project_role_instance(spec, "attribute", adapter)
         if not isinstance(attr_inst, ProjectAttribute):
             raise TypeError("enabled attribute draft must provide a ProjectAttribute implementation")
@@ -208,7 +229,9 @@ def attribute(
             attr_inst.configure_execution_environment(build_attribute_environment(spec, trace))
         result = attr_inst.attribute_failure(trace, judge_result)
         normalized = _normalize_attribute_schema_payload(result)
-        return _record_manual_attribute(cache_key, normalized) if manual_override else normalized
+        return _record_manual_attribute(cache_key, trace, normalized, started_at) if manual_override else _record_attribute_execution(
+            trace, normalized, source="automatic", status="completed", manual_override=False, started_at=started_at
+        )
     attr_inst = adapter.attribute()
     if not isinstance(attr_inst, ProjectAttribute):
         raise TypeError(f"{project_id} adapter.attribute() must return ProjectAttribute")
@@ -217,17 +240,55 @@ def attribute(
         attr_inst.configure_execution_environment(build_attribute_environment(spec, trace))
     result = attr_inst.attribute_failure(trace, judge_result)
     normalized = _normalize_attribute_schema_payload(result)
-    return _record_manual_attribute(cache_key, normalized) if manual_override else normalized
+    return _record_manual_attribute(cache_key, trace, normalized, started_at) if manual_override else _record_attribute_execution(
+        trace, normalized, source="automatic", status="completed", manual_override=False, started_at=started_at
+    )
 
 
-def _record_manual_attribute(key: tuple[str, str], result: AttributeResult) -> AttributeResult:
-    result.summary = {
-        **dict(result.summary or {}),
-        "execution_source": "manual_override",
-        "manual_override": True,
-    }
+def _record_manual_attribute(
+    key: tuple[str, str],
+    trace: RunTrace,
+    result: AttributeResult,
+    started_at: float,
+) -> AttributeResult:
+    result = _record_attribute_execution(
+        trace,
+        result,
+        source="manual_override",
+        status="completed",
+        manual_override=True,
+        started_at=started_at,
+    )
     with _manual_attribute_lock:
         _manual_attribute_cache[key] = deepcopy(result)
+    return result
+
+
+def _record_attribute_execution(
+    trace: RunTrace,
+    result: AttributeResult,
+    *,
+    source: str,
+    status: str,
+    manual_override: bool,
+    started_at: float,
+) -> AttributeResult:
+    duration_ms = max(0, int((time.monotonic() - started_at) * 1000))
+    summary = dict(result.summary or {})
+    summary.setdefault("attribution_status", "skipped" if status == "skipped" else "completed")
+    summary.update({
+        "execution_source": source,
+        "execution_status": status,
+        "duration_ms": duration_ms,
+        "manual_override": manual_override,
+    })
+    result.summary = summary
+    trace.attribution_runs.append({
+        "execution_source": source,
+        "status": status,
+        "duration_ms": duration_ms,
+        "result": to_dict(result),
+    })
     return result
 
 
@@ -337,6 +398,8 @@ def _generate_reference_for_case(spec, case, project_id):
 
 
 def _run_payload(trace, judge_result, attribute_result, case_id="", execution_mode="", output_source="", error=""):
+    if not trace.config_fingerprint:
+        attach_config_provenance(trace, load_project(trace.project_id))
     run = {
         "trace": trace,
         "judge": judge_result,
@@ -464,7 +527,7 @@ def _run_interactive_case(project_id: str, normalized: Any) -> Dict[str, Any]:
 def _batch_case(index: int, case: Dict[str, Any], project_id: str, user_intent: Optional[str]) -> Dict[str, Any]:
     from impl.core.mock import mock_case_to_single_turn, parse_mock_case
     stored_case = parse_mock_case(case, project_id=project_id)
-    runtime_case = to_dict(mock_case_to_single_turn(stored_case))
+    runtime_case = mock_case_to_single_turn(stored_case)
     normalized = normalize_case_interaction(project_id, runtime_case, index)
     if normalized and normalized.mode == "interactive_intent":
         # _run_interactive_case 内部已处理 isinstance 不支持的兜底；
@@ -482,7 +545,7 @@ def _batch_case(index: int, case: Dict[str, Any], project_id: str, user_intent: 
     last_exc = None
     for attempt in range(max_attempts):
         try:
-            # 传完整 case（含 scenario/user_intent/metadata），run_chain 内部用 normalize_mock_case 恢复
+            # 直接传运行时 Case，避免转回 dict 后把 Case 外壳与项目裸请求混为一谈。
             run = run_chain(project_id, runtime_case, user_intent=case_expected or user_intent)
             trace = _run_trace(run)
             if trace:
@@ -592,7 +655,7 @@ def batch_run(
     project_id: str,
     cases: Iterable[Dict[str, Any]],
     user_intent: Optional[str] = None,
-    concurrency: int = 4,
+    concurrency: Optional[int] = None,
     on_case_done: Optional[Callable[[int, Dict[str, Any]], None]] = None,
 ) -> BatchRunResult:
     case_list = list(cases)
@@ -601,7 +664,7 @@ def batch_run(
         check_report = check(project_id, None, None, None, cluster_summary)
         table = build_case_pool_table_from_runs(project_id, [])
         return BatchRunResult(project_id=project_id, total=0, runs=[], cluster=cluster_summary, check=check_report, table=table)
-    max_workers = max(1, min(int(concurrency or 1), len(case_list)))
+    max_workers = min(resolve_batch_concurrency(concurrency), len(case_list))
     runs_by_index: Dict[int, Dict[str, Any]] = {}
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(_batch_case, index, case, project_id, user_intent): index for index, case in enumerate(case_list)}
@@ -650,11 +713,12 @@ def _run_chain_replay(project_id: str, trace: RunTrace, context: TraceExecutionC
     return runner.run(context)
 
 
-def run_chain(project_id: str, case_input: Dict[str, Any], user_intent: Optional[str] = None) -> Dict[str, Any]:
-    # case_input 可能是完整 case dict（含 scenario/user_intent/metadata）或仅 input dict；
-    # normalize_mock_case 能从两种形状恢复完整 SingleTurnCase
-    trace = live_run(project_id, case_input)
-    judge_result = judge(project_id, trace, user_intent=user_intent)
+def run_chain(project_id: str, case: SingleTurnCase, user_intent: Optional[str] = None) -> Dict[str, Any]:
+    if not isinstance(case, SingleTurnCase):
+        raise TypeError("run_chain requires a runtime SingleTurnCase; convert transport input at the boundary")
+    trace = live_run(project_id, case)
+    effective_intent = user_intent if user_intent is not None else (case.user_intent or None)
+    judge_result = judge(project_id, trace, user_intent=effective_intent)
     attribute_result = attribute(project_id, trace, judge_result, manual_override=False)
     cluster_summary = cluster(project_id, [attribute_result])
     check_report = check(project_id, trace, judge_result, attribute_result, cluster_summary)
@@ -691,6 +755,7 @@ def _fixture_mock_cases(project_id: str) -> list[Dict[str, Any]]:
 def mock_build_intent(
     project_id: str,
     scenario: str = "",
+    requested_intent: str = "",
     intent_labels: Optional[list[str]] = None,
     template: Optional[Dict[str, Any]] = None,
     required_input_fields: Optional[list[str]] = None,
@@ -700,16 +765,45 @@ def mock_build_intent(
     MockCase 三层结构：标识 — intent — live_request。
     """
     spec = load_project(project_id)
-    build_spec = build_spec_from_project(spec, scenario=scenario)
-    if intent_labels:
-        build_spec.intent_labels = list(intent_labels or [])
-    if required_input_fields:
-        build_spec.required_input_fields = list(required_input_fields or [])
-    if template:
-        build_spec.template = dict(template or {})
-    from impl.core.mock import build_mock_case
-    result = MockAgent(spec).build(build_spec)
-    mc = build_mock_case(spec, {"_result": result, "scenario": scenario})
+    live_schema = load_live_schema(project_id)
+    seeds = getattr(live_schema, "MOCK_CASE_SEEDS", {}) if live_schema else {}
+    seed = seeds.get(scenario, {}) if isinstance(seeds, dict) else {}
+    seed_intents = seed.get("requested_intents") if isinstance(seed, dict) else []
+    seeded_intent = (
+        random.choice(seed_intents)
+        if isinstance(seed_intents, list) and seed_intents
+        else (seed.get("requested_intent") if isinstance(seed, dict) else "")
+    )
+    project_mock = load_project_role_instance(spec, "mock", load_adapter(spec))
+    normalized = project_mock.generate_mock_case(
+        scenario=scenario,
+        intent=str(requested_intent or seeded_intent or "").strip(),
+        intent_labels=list(intent_labels or []) or None,
+        required_input_fields=list(required_input_fields or []),
+        template=dict(template or {}) if template else None,
+    )
+    intent_data = (
+        normalized.metadata.get("mock_intent", {})
+        if isinstance(normalized.metadata, dict)
+        else {}
+    )
+    from impl.core.schema import MockCase, MockIntentOutput
+
+    mc = MockCase(
+        id=normalized.id,
+        project_id=spec.project_id,
+        scenario=normalized.scenario or scenario,
+        intent=MockIntentOutput(
+            user_intent=str(intent_data.get("user_intent") or normalized.user_intent or ""),
+            query=str(intent_data.get("query") or ""),
+            user_context=dict(intent_data.get("user_context") or {}),
+            system_understanding=str(intent_data.get("system_understanding") or ""),
+            scenario=str(intent_data.get("scenario") or normalized.scenario or scenario),
+        ),
+        live_request=dict(normalized.input or {}),
+        output=normalized.output,
+        reference=normalized.reference,
+    )
     # 直接返回 MockCase dataclass，让 to_public_dict 按 PUBLIC_SCHEMA_FIELDS['MockCase'] 序列化
     # output/reference 即使为 None 也保留（ready 协议控制存在性）
     return mc
@@ -748,45 +842,109 @@ def _pick_fixtures_with_multiturn(fixtures: list[Dict[str, Any]], count: int) ->
     return picked
 
 
-def mock_cases(project_id: str, count: int = 3, cases_per_scenario: int = 0) -> list[Dict[str, Any]]:
-    """生成 mock cases。优先用固化的 fixture；否则用 mock_agent LLM 动态生成。
+def generate_mock_cases(
+    project_id: str,
+    count: int = 1,
+    cases_per_scenario: int = 0,
+) -> list[Dict[str, Any]]:
+    """显式调用 MockAgent 生成用例，不读取已固化 fixture。"""
+    spec = load_project(project_id)
+    live_schema = load_live_schema(project_id)
+    checker = getattr(live_schema, "check", None) if live_schema else None
+    project_mock = load_project_role_instance(spec, "mock", load_adapter(spec))
+    role_scenarios = list(project_mock.scenarios() or []) if project_mock is not None else []
+    all_scenarios = spec.scenarios or role_scenarios or [""]
+    default_scenarios = role_scenarios or spec.mock_scenarios or all_scenarios
+    cases: list[Dict[str, Any]] = []
+    selected = (
+        all_scenarios
+        if cases_per_scenario > 0
+        else random.sample(
+            default_scenarios,
+            k=min(max(count, 0), len(default_scenarios)),
+        )
+    )
+    repeats = cases_per_scenario if cases_per_scenario > 0 else 1
+    for scenario in selected:
+        for _ in range(repeats):
+            built = mock_build_intent(project_id, scenario=scenario)
+            payload = to_dict(built) if built is not None else None
+            intent = payload.get("intent") if isinstance(payload, dict) else None
+            live_request = payload.get("live_request") if isinstance(payload, dict) else None
+            intent_text = str((intent or {}).get("user_intent") or "").strip()
+            request_ok = bool(
+                isinstance(live_request, dict)
+                and (checker is None or checker.request(live_request))
+            )
+            if not intent_text or not request_ok:
+                raise RuntimeError(
+                    "MockAgent 生成了空意图或不符合 REQUEST_SCHEMA 的请求，"
+                    f"拒绝返回/固化：project={project_id}, scenario={scenario}"
+                )
+            cases.append(payload)
+    return cases
+
+
+def mock_cases(
+    project_id: str,
+    count: int = 1,
+    cases_per_scenario: int = 0,
+) -> list[Dict[str, Any]]:
+    """按项目配置加载固化用例或调用 MockAgent 动态生成。
 
     cases_per_scenario > 0 时按场景遍历生成（每场景 N 条），覆盖 count。
 
     fixture 切片策略：默认 count 条里若存在 interaction.mode=interactive_intent
     的多轮 fixture，至少带 1 条进入返回（否则多轮路径无法被下游 batch_run/验收覆盖）。
     """
-    fixtures = _fixture_mock_cases(project_id)
+    spec = load_project(project_id)
+    mock_config = spec.mock_cases
+    dynamic = isinstance(mock_config, dict) and mock_config.get("source") == "dynamic"
+    fixtures = [] if dynamic else _fixture_mock_cases(project_id)
     if fixtures:
         picked = _pick_fixtures_with_multiturn(fixtures, count)
         return picked
-    spec = load_project(project_id)
-    live_schema = load_live_schema(project_id)
-    scenarios = list(getattr(live_schema, "SCENARIO_ENUM", []) or []) or [""]
-    cases: list[Dict[str, Any]] = []
-    if cases_per_scenario and cases_per_scenario > 0:
-        for scenario in scenarios:
-            for _ in range(cases_per_scenario):
-                built = mock_build_intent(project_id, scenario=scenario)
-                payload = to_dict(built) if built is not None else None
-                if payload and isinstance(payload.get("live_request"), dict):
-                    cases.append(payload)
-    else:
-        for scenario in scenarios[:count]:
-            built = mock_build_intent(project_id, scenario=scenario)
-            payload = to_dict(built) if built is not None else None
-            if payload and isinstance(payload.get("live_request"), dict):
-                cases.append(payload)
-    _ = spec  # 保留 spec 引用以备扩展
-    return cases
+    return generate_mock_cases(
+        project_id,
+        count=count,
+        cases_per_scenario=cases_per_scenario,
+    )
 
 
 def mock_datasets(
     project_id: str,
-    count: int = 3,
+    count: int = 1,
     cases_per_scenario: int = 0,
 ) -> list[Dict[str, Any]]:
-    cases = mock_cases(project_id, count=count, cases_per_scenario=cases_per_scenario)
+    """Build grouped datasets from the project's configured MockCase source."""
+    cases = mock_cases(
+        project_id,
+        count=count,
+        cases_per_scenario=cases_per_scenario,
+    )
+    return _group_mock_datasets(project_id, cases)
+
+
+def persisted_mock_datasets(
+    project_id: str,
+    count: int = 1,
+) -> list[Dict[str, Any]]:
+    """Load and group persisted fixtures without invoking MockAgent.
+
+    This is the read-only source for UI/API dataset loading. Dynamic generation
+    remains available through ``mock_cases``/``mock_datasets`` for build flows.
+    """
+    cases = _pick_fixtures_with_multiturn(
+        _fixture_mock_cases(project_id),
+        count,
+    )
+    return _group_mock_datasets(project_id, cases)
+
+
+def _group_mock_datasets(
+    project_id: str,
+    cases: list[Dict[str, Any]],
+) -> list[Dict[str, Any]]:
     if not cases:
         return []
     by_scenario: dict[str, list[Dict[str, Any]]] = {}
@@ -815,38 +973,54 @@ def save_mock_cases(
     """把 cases 写入 JSON 文件，使用 MockCase 存储格式。
 
     MockCase 三层结构：标识 — 意图层（intent）— API 请求层（live_request）。
-    case.input 校验通过后，转成 MockCase 格式再写盘。
+    规范 MockCase 严格解析后保真写盘；旧式 case.input 只在此边界迁移为 MockCase。
 
     output_path:
         None 或 "default" → impl/data/<project>/mock_cases.json
         其他路径 → 按指定路径写
 
     skip_invalid:
-        False（默认）— 如果有 case.input 不符合 REQUEST_SCHEMA，抛 ValueError 阻断固化
+        False（默认）— 如果有 case 无法解析或不符合 live schema，抛 ValueError 阻断固化
         True — 跳过不符合 schema 的 case，只固化有效的
 
     返回 {"saved": ..., "save_path": ..., "save_count": ..., "invalid_count": ..., "invalid_cases": ...}。
     """
-    # 校验：所有 case.input 必须符合 REQUEST_SCHEMA（基于 SingleTurnCase 形状校验）
+    from impl.core.mock import parse_mock_case, single_turn_to_mock_case
+    from impl.core.schema import MockCase
+    from impl.core.schema.normalize import normalize_mock_case
+
     live_schema = load_live_schema(project_id)
     checker = getattr(live_schema, "check", None) if live_schema else None
-    valid_cases = []
-    invalid_cases = []
+    mock_case_dicts: list[Dict[str, Any]] = []
+    invalid_cases: list[Dict[str, Any]] = []
 
-    if checker:
-        for case in cases:
-            case_input = case.get("input") if isinstance(case, dict) else None
-            if not isinstance(case_input, dict):
-                invalid_cases.append({"case_id": str(case.get("id") or ""), "error": "input 不是 dict"})
+    for case in cases:
+        case_id = str(
+            getattr(case, "id", "")
+            or (case.get("id") or case.get("case_id") if isinstance(case, dict) else "")
+        )
+        try:
+            if isinstance(case, MockCase) or (
+                isinstance(case, dict) and "live_request" in case
+            ):
+                stored_case = parse_mock_case(case, project_id=project_id)
+            else:
+                runtime_case = normalize_mock_case(case)
+                if runtime_case is None:
+                    raise ValueError("case 无法解析为 SingleTurnCase")
+                stored_case = single_turn_to_mock_case(runtime_case, project_id)
+            stored_payload = to_dict(stored_case)
+            errors = (
+                checker.case_errors(stored_payload)
+                if checker is not None and hasattr(checker, "case_errors")
+                else []
+            )
+            if errors:
+                invalid_cases.append({"case_id": case_id, "errors": errors})
                 continue
-            if not checker.request(case_input):
-                # 具体错误
-                errors = checker.case_errors(case) if hasattr(checker, "case_errors") else ["input 不符合 REQUEST_SCHEMA"]
-                invalid_cases.append({"case_id": str(case.get("id") or ""), "errors": errors})
-                continue
-            valid_cases.append(case)
-    else:
-        valid_cases = list(cases)
+            mock_case_dicts.append(stored_payload)
+        except (TypeError, ValueError) as exc:
+            invalid_cases.append({"case_id": case_id, "error": str(exc)})
 
     if invalid_cases and not skip_invalid:
         raise ValueError(
@@ -855,37 +1029,19 @@ def save_mock_cases(
             f"设置 skip_invalid=True 可跳过无效 case。"
         )
 
-    # 转 MockCase 存储格式：三层分离（标识 / intent / live_request）
-    from impl.core.schema.normalize import normalize_mock_case
-    from impl.core.mock import single_turn_to_mock_case
-    mock_case_dicts = []
-    for case in valid_cases:
-        stc = normalize_mock_case(case)
-        if stc is None:
-            continue
-        mc = single_turn_to_mock_case(stc, project_id)
-        intent = mc.intent
-        mock_case_dicts.append({
-            "id": mc.id,
-            "project_id": mc.project_id,
-            "scenario": mc.scenario,
-            "intent": None if intent is None else {
-                "user_intent": intent.user_intent,
-                "query": intent.query,
-                "user_context": intent.user_context,
-                "system_understanding": intent.system_understanding,
-                "scenario": intent.scenario,
-            },
-            "live_request": mc.live_request,
-            "output": mc.output,
-            "reference": mc.reference,
-        })
-
     target = IMPL_ROOT / "data" / project_id / "mock_cases.json"
     if output_path and output_path != "default":
         target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(mock_case_dicts, ensure_ascii=False, indent=2), encoding="utf-8")
+    if output_path and output_path != "default":
+        write_portable_export(target, mock_case_dicts)
+    else:
+        write_active_artifact(
+            "project_mock_cases",
+            target,
+            mock_case_dicts,
+            repository_root=IMPL_ROOT.parent,
+        )
     return {
         "saved": True,
         "save_path": str(target),
@@ -897,7 +1053,11 @@ def save_mock_cases(
 
 def check_mock_data(project_id: str, data_path: Optional[str] = None, cases: Optional[list[Dict[str, Any]]] = None) -> Dict[str, Any]:
     items = []
-    source_cases = cases if cases is not None else mock_cases(project_id)
+    spec = load_project(project_id)
+    # mock-check 校验冻结材料，不能因为项目运行时选择动态生成而触发外部 LLM。
+    source_cases = cases if cases is not None else _fixture_mock_cases(project_id)
+    if not source_cases and cases is None:
+        source_cases = mock_cases(project_id)
     live_schema = load_live_schema(project_id)
     checker = getattr(live_schema, "check", None) if live_schema else None
     for index, case in enumerate(source_cases or []):

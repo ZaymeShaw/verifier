@@ -93,7 +93,7 @@ def map_trace_node_to_source(node_name: str, project_type: str) -> Dict[str, Any
     """返回通用节点源码映射占位。
 
     Core 不维护项目节点到源码/配置的静态映射。调用方应优先使用项目 adapter
-    暴露的 source_config_paths、ProjectSpec.documents / application / endpoint_discovery，
+    暴露的 source_config_paths，以及 ProjectSpec 的规范资源与路径访问器，
     或 trace.project_fields 中的 schema_protocol_extensions。
     """
     return {

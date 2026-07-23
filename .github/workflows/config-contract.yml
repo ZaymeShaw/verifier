@@ -9,9 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install PyYAML pytest
-      - run: python -m impl.core.config_check
+      - run: python -m pip install -r requirements-config-check.txt
+      - if: github.event_name == 'pull_request'
+        run: python -m impl.core.config_check --full --changed-from "origin/${{ github.base_ref }}"
+      - if: github.event_name != 'pull_request'
+        run: python -m impl.core.config_check --full
       - run: python -m pytest tests/test_config_contract.py -q

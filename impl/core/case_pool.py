@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from .mock import parse_mock_case
+from .portable_artifact import write_active_artifact
 from .schema import to_dict
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,7 +21,12 @@ def _read_store() -> Dict[str, List[Dict[str, Any]]]:
 
 def _write_store(data: Dict[str, List[Dict[str, Any]]]) -> None:
     STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    STORE_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_active_artifact(
+        "case_pool_store",
+        STORE_PATH,
+        data,
+        repository_root=ROOT.parent,
+    )
 
 
 def _sanitize_store(data: Dict[str, List[Dict[str, Any]]]) -> Dict[str, List[Dict[str, Any]]]:

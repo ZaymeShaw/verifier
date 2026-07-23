@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import re
 import uuid
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from .interaction_protocol import ready_from_spec
 from .project_loader import load_project_document
-from .schema import MockBuildResult, MockBuildSpec, MockContinueDecision, MockIntentOutput, MockNextTurnOutput, ProjectSpec
+from .schema import MockBuildResult, MockBuildSpec, MockContinueDecision, MockIntentFidelityOutput, MockIntentOutput, MockNextTurnOutput, ProjectSpec
 from .structured_output import StructuredOutputSpec, FREE_TEXT_OUTPUT, FREE_DICT_OUTPUT, dataclass_to_json_schema
 
 if TYPE_CHECKING:
@@ -31,6 +32,11 @@ _MOCK_INTENT_SPEC = StructuredOutputSpec.from_dataclass(
     MockIntentOutput,
     required_nonempty=["query", "user_intent"],
     description="mock_agent 意图生成",
+)
+_MOCK_INTENT_FIDELITY_SPEC = StructuredOutputSpec.from_dataclass(
+    MockIntentFidelityOutput,
+    required_nonempty=["query"],
+    description="mock_agent fixed-intent fidelity edit",
 )
 _MOCK_NEXT_TURN_SPEC = StructuredOutputSpec.from_dataclass(
     MockNextTurnOutput,
@@ -65,6 +71,8 @@ class MockAgent:
 
     def build(self, build_spec: MockBuildSpec) -> MockBuildResult:
         intent_result = self.build_intent(build_spec)
+        if intent_result.metadata.get("error"):
+            return intent_result
         live_request = self.build_initial_request(intent_result, build_spec)
         return live_request
 
@@ -76,6 +84,7 @@ class MockAgent:
         user = json.dumps({
             "project_id": spec.project_id,
             "scenario": spec.scenario,
+            "requested_intent": spec.requested_intent,
             "intent_labels": spec.intent_labels,
             "required_input_fields": spec.required_input_fields,
             "template": spec.template,
@@ -83,6 +92,32 @@ class MockAgent:
         data = self.llm.complete_json(system, user, trace_id=trace_id, reasoning_effort="low", output_spec=_MOCK_INTENT_SPEC)
         if data.get("error"):
             return self._empty_result(spec, reason=f"llm_error:{data.get('error')}")
+        single_pass = bool(
+            isinstance(spec.template, dict)
+            and spec.template.get("single_pass") is True
+        )
+        if spec.requested_intent and not single_pass:
+            fidelity = self.llm.complete_json(
+                (
+                    "你是用户原话的语义保真编辑器，不是业务专家。比较固定事实合同与候选用户原话："
+                    "允许自然语气、同义改写和不造成歧义的省略；保留原有不确定性；"
+                    "只移除或改正合同没有支持的新增事实、对象缩窄、已选状态或关系，不能补充新事实。"
+                    "输出 JSON，只包含 query。"
+                ),
+                json.dumps(
+                    {
+                        "固定事实合同": spec.requested_intent,
+                        "候选用户原话": str(data.get("query") or ""),
+                    },
+                    ensure_ascii=False,
+                ),
+                trace_id=f"{trace_id}-fidelity",
+                reasoning_effort="low",
+                output_spec=_MOCK_INTENT_FIDELITY_SPEC,
+            )
+            if fidelity.get("error"):
+                return self._empty_result(spec, reason=f"fidelity_error:{fidelity.get('error')}")
+            data = {**data, "query": str(fidelity.get("query") or "").strip()}
         return self._map_intent_result(spec, data)
 
     @staticmethod
@@ -147,12 +182,13 @@ class MockAgent:
             else:
                 filter_keys = {"output", "reference", "raw_model_response", "metrics"}
             input_data = {k: v for k, v in data.items() if k not in filter_keys}
+            input_data = self._preserve_chat_user_query(input_data, intent_result.query)
             checker = getattr(live_schema, "check", None) if live_schema is not None else None
             if checker is not None and hasattr(checker, "request"):
                 try:
                     if checker.request(input_data):
                         # 校验通过，接受这次产出
-                        return self._map_live_request_result(intent_result, build_spec, data)
+                        return self._map_live_request_result(intent_result, build_spec, input_data)
                     # 校验失败：第一次重试，第二次直接降级
                     if attempt == 0:
                         continue
@@ -167,10 +203,30 @@ class MockAgent:
                     return self._mock_live_request_error(intent_result, build_spec, f"schema_check_exception: {exc}")
             else:
                 # 无 checker，按原逻辑直接产出
-                return self._map_live_request_result(intent_result, build_spec, data)
+                return self._map_live_request_result(intent_result, build_spec, input_data)
 
         # 重试用尽，返回错误
         return self._mock_live_request_error(intent_result, build_spec, "build_live_request: retries exhausted")
+
+    @staticmethod
+    def _preserve_chat_user_query(data: Dict[str, Any], query: str) -> Dict[str, Any]:
+        """Keep step 2 as a shape mapping when the request uses chat messages."""
+        preserved = dict(data)
+        request_input = preserved.get("input")
+        if not isinstance(request_input, dict):
+            return preserved
+        messages = request_input.get("messages")
+        if not isinstance(messages, list) or not query.strip():
+            return preserved
+        normalized_messages = [dict(item) if isinstance(item, dict) else item for item in messages]
+        for item in reversed(normalized_messages):
+            if isinstance(item, dict) and str(item.get("role") or "user") == "user":
+                item["content"] = query.strip()
+                break
+        normalized_input = dict(request_input)
+        normalized_input["messages"] = normalized_messages
+        preserved["input"] = normalized_input
+        return preserved
 
     def _mock_live_request_error(self, intent_result: MockBuildResult, build_spec: MockBuildSpec, error: Any) -> MockBuildResult:
         return MockBuildResult(
@@ -199,10 +255,11 @@ class MockAgent:
         - 意图层（user_intent）由项目层 build_next_request 单独传，next_turn 只看 user_context + live_feedback
         """
         trace_id = f"mock-agent-next-turn-{uuid.uuid4()}"
-        system = self._next_turn_system_prompt(case.get("scenario", ""))
         # case 含 input / scenario / metadata / user_intent 字段（由项目层 build_next_request 组装）
         case_metadata = case.get("metadata") if isinstance(case.get("metadata"), dict) else {}
         user_context = case_metadata.get("user_context") if isinstance(case_metadata.get("user_context"), dict) else {}
+        policy = str(case_metadata.get("next_turn_policy") or "").strip()
+        system = self._next_turn_system_prompt(case.get("scenario", ""), policy)
         user_intent = str(case.get("user_intent") or "")
         user = json.dumps({
             "case": {k: v for k, v in case.items() if k in ("input", "scenario", "expected_stage", "expected_path_types")},
@@ -215,15 +272,46 @@ class MockAgent:
         if data.get("error"):
             return {"error": str(data.get("error")), "turn_index": len(previous_turns) + 1}
         query = str(data.get("query") or "")
+        if policy and self._contains_internal_user_language(query):
+            repair = self.llm.complete_json(
+                (
+                    "只改写下面这句用户原话，保持业务目标和当前对话进度不变。"
+                    "改成普通业务用户会说的自然中文，只保留用户目标、已有对话和可见业务结果。"
+                    "只能输出 JSON：{\"query\": str}。"
+                ),
+                json.dumps({"query": query, "previous_turns": previous_turns[-2:]}, ensure_ascii=False),
+                trace_id=f"{trace_id}-user-language-repair",
+                reasoning_effort="low",
+                output_spec=_MOCK_NEXT_TURN_SPEC,
+            )
+            if repair.get("error"):
+                return {"error": str(repair.get("error")), "turn_index": len(previous_turns) + 1}
+            query = str(repair.get("query") or "")
+            if self._contains_internal_user_language(query):
+                return {
+                    "error": "Draft Mock next_turn contains internal implementation language after repair",
+                    "turn_index": len(previous_turns) + 1,
+                }
         return {"query": query, "turn_index": len(previous_turns) + 1}
+
+    @staticmethod
+    def _contains_internal_user_language(query: str) -> bool:
+        text = str(query or "")
+        return bool(
+            re.search(
+                r"(?:/|\\)[\w./\\-]+|\b[a-z][a-z0-9]*(?:_[a-z0-9]+){2,}\b|"
+                r"\b(?:api|json|http|prompt|skill|script|thread_id|trace_id|org_id|user_id)\b",
+                text,
+                re.IGNORECASE,
+            )
+        )
 
     def infer_user_intent(self, initial_request: Dict[str, Any], *, scenario: str = "") -> MockIntentOutput:
         """从已校验的项目 Request 反推有限用户模型。"""
         trace_id = f"mock-agent-infer-intent-{uuid.uuid4()}"
         system = (
             "你扮演正在使用当前业务系统的真实用户建模器。仅根据首轮请求中用户可见的内容，"
-            "反推用户表达、用户意图和其对该业务系统的有限认知。不得使用或猜测 verifier、Judge、"
-            "Evaluation、鉴权、session、内部 config 等信息；没有证据的 user_context 保持空对象，"
+            "反推用户表达、用户意图和其对该业务系统的有限认知。没有证据的 user_context 保持空对象，"
             "没有证据的 system_understanding 保持空字符串。输出必须简短。"
         )
         data = self.llm.complete_json(
@@ -356,8 +444,12 @@ class MockAgent:
 
     def _intent_system_prompt(self, spec: MockBuildSpec) -> str:
         required_hint = f"input 必须包含字段：{', '.join(spec.required_input_fields)}。" if spec.required_input_fields else ""
-        mandatory_context = self._mandatory_context()
-        if mandatory_context is not None:
+        if spec.requested_intent:
+            # A concrete caller intent is already the complete fact source for
+            # this generation. Neither candidate Context nor a broad project
+            # description may narrow a generic fixed fact such as "方案".
+            user_visible_context = f"业务产品标识：{spec.project_id}。"
+        elif (mandatory_context := self._mandatory_context()) is not None:
             user_visible_context = (
                 f"业务产品标识：{spec.project_id}。{self.spec.description or ''}"
                 f"{mandatory_context['content']}"
@@ -370,18 +462,53 @@ class MockAgent:
             f"场景：{spec.scenario}。{required_hint}"
             f"{user_visible_context}"
             "要求："
-            "1. query：口语化的用户原话，不要出现系统术语或 JSON 字段名；"
+            "1. query：用普通业务口语表达用户原话；"
             "2. user_intent：一句话说明你想干什么，用业务术语准确概括；"
             "3. user_context：描述用户的背景信息、画像和当前目标（可选）；"
-            "4. system_understanding：只描述该用户对 project_id 对应业务产品的有限主观认知，"
-            "不能写 verifier、Judge、Evaluation、内部能力答案；没有用户可见证据时保持空字符串。"
+            "4. system_understanding：只描述该用户对当前业务产品的有限主观认知；"
+            "没有用户可见证据时保持空字符串。"
         )
+        if spec.requested_intent:
+            base += (
+                "requested_intent 是调用方已经确定的具体用户目标，也是本次生成的事实来源。"
+                "user_intent 必须与它语义等价，query 只能把它改写为自然用户原话；"
+                "允许自然的同义改写和省略，但必须保留原意中的不确定性；"
+                "不得把列举的待选项写成已经选择的对象，也不得把泛指对象缩窄成某种具体类型或关系；"
+                "不得新增、替换或猜测 requested_intent 没有表达的具体事实。"
+            )
+        if isinstance(spec.template, dict) and spec.template.get("diversity_seed"):
+            base += (
+                "template.diversity_seed 仅用于让多次生成选择不同但合理的用户处境和表达，"
+                "它不是业务事实，不得出现在 query、user_intent 或 user_context 中。"
+            )
+        if (
+            isinstance(spec.template, dict)
+            and spec.template.get("generation_mode") == "open_world_user_population"
+        ):
+            base += (
+                "不要把 scenario、示例或 template.population_sample 当成封闭意图枚举。"
+                "population_sample 只粗略提示本次说话者的熟悉度、表达状态和使用阶段，"
+                "不限定身份，不是业务分类，也不得原样输出标签。"
+                "先形成一个连贯的真实当下处境：用户正在做什么、为什么现在需要、已知与未知信息、"
+                "以及结果将支持的决定或交付，再选择这个用户自然会透露的部分形成 user_context、user_intent 和 query。"
+                "可以创造彼此一致的合成月份、目标、进度、比较对象、业务视角或时间压力来增强真实感，"
+                "但不使用真实机构名、真实人员或可识别客户数据；不要把所有细节变成每条必填槽位。"
+                "总体变化应来自处境和需求的变化，不是机械替换数字或套用固定句式。"
+                "开放生成只模拟业务助手能实际帮助完成的工作；除非调用方显式指定故障测试，"
+                "不要把纯产品支持问题或界面故障报障作为用户主要目标。"
+            )
         base += f'输出 JSON，只包含必填字段：query，user_intent。'
         return base
 
     def _live_request_system_prompt(self, live_shape: Dict[str, Any], build_spec: MockBuildSpec) -> str:
         """按 live_schema.REQUEST_SCHEMA 生成的 JSON Schema 构造 prompt。"""
-        capability = self._capability_context(build_spec.project_id, build_spec.scenario)
+        capability = (
+            f"项目说明：{self.spec.description}"
+            if build_spec.requested_intent and self.spec.description
+            else ""
+        )
+        if not build_spec.requested_intent:
+            capability = self._capability_context(build_spec.project_id, build_spec.scenario)
         # 显式列出必填字段，避免 LLM 漏掉不熟悉的字段（如 reference/metadata）
         required_fields = live_shape.get("required", []) if isinstance(live_shape, dict) else []
         required_hint = ""
@@ -398,12 +525,12 @@ class MockAgent:
             f"场景：{build_spec.scenario}。{capability}"
             f"{required_hint}"
             "要求：按 schema 填充所有必填字段；用户原话必须写入 schema 中表达用户输入的字段，贴合系统业务场景；"
-            "session_id/trace_id/user_id 用合理默认值；不要编造输出内容。"
+            "只填充用户可见请求所需的信息，不要编造输出内容。"
             "输出 JSON，包含完整的请求体字段。"
         )
 
-    def _next_turn_system_prompt(self, scenario: str) -> str:
-        return (
+    def _next_turn_system_prompt(self, scenario: str, policy: str = "") -> str:
+        prompt = (
             "你扮演真实用户，根据上一轮系统的回复，生成下一轮要说的话。"
             f"场景：{scenario}。"
             "要求："
@@ -412,13 +539,23 @@ class MockAgent:
             "3. 基于上轮 live 反馈里缺失的字段或系统的澄清提示，自然地补充；不要重复已说内容。"
             '输出 JSON，字段：{"query": str}。'
         )
+        return f"{prompt}{policy}" if policy else prompt
 
     # --- 结果映射 ---
 
     def _map_intent_result(self, spec: MockBuildSpec, data: Dict[str, Any]) -> MockBuildResult:
-        user_intent = str(data.get("user_intent") or "").strip()
-        user_context: Dict[str, Any] = data.get("user_context") or {}
-        system_understanding = str(data.get("system_understanding") or "").strip()
+        user_intent = spec.requested_intent or str(data.get("user_intent") or "").strip()
+        # A caller-owned intent is the complete fact contract. Optional model
+        # fields cannot add a role, history or product interpretation that the
+        # caller did not supply; the natural-language query is the only edit.
+        user_context: Dict[str, Any] = (
+            {} if spec.requested_intent else (data.get("user_context") or {})
+        )
+        system_understanding = (
+            ""
+            if spec.requested_intent
+            else str(data.get("system_understanding") or "").strip()
+        )
         query = str(data.get("query") or "").strip()
         input_data: Dict[str, Any] = {"query": query, "user_intent": user_intent}
         for field in spec.required_input_fields:
@@ -503,9 +640,17 @@ def load_live_schema(project_id: str) -> Optional[Any]:
     import importlib
     module_path = f"impl.projects.{project_id}.live_schema"
     try:
-        return importlib.import_module(module_path)
+        module = importlib.import_module(module_path)
     except ModuleNotFoundError:
         return None
+    request_schema = getattr(module, "REQUEST_SCHEMA", None)
+    output_schema = getattr(module, "EXTRACT_OUTPUT_SCHEMA", None)
+    if request_schema is not None and output_schema is not None:
+        from .live_schema_check import LiveSchemaCheck
+        from .project_loader import load_project
+
+        module.check = LiveSchemaCheck(request_schema, output_schema, load_project(project_id).ready)
+    return module
 
 
 def load_project_schema(project_id: str) -> Optional[Any]:
@@ -551,8 +696,8 @@ def get_extract_output_shape(project_id: str) -> Dict[str, Any]:
 
 def build_spec_from_project(spec: ProjectSpec, scenario: str = "") -> MockBuildSpec:
     live_schema = load_live_schema(spec.project_id)
-    scenarios = getattr(live_schema, "SCENARIO_ENUM", []) if live_schema else []
-    intent_labels = list(getattr(live_schema, "INTENT_LABELS", []) or []) if live_schema else []
+    scenarios = spec.mock_scenarios
+    intent_labels = spec.intent_labels
     required = list(getattr(live_schema, "REQUIRED_INPUT_FIELDS", []) or ["query"]) if live_schema else ["query"]
     chosen_scenario = scenario or (scenarios[0] if scenarios else "")
     return MockBuildSpec(

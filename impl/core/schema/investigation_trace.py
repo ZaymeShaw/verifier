@@ -6,6 +6,11 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from .base import to_dict
+from ..portable_artifact import (
+    project_artifact_repository_root,
+    write_active_artifact,
+    write_portable_export,
+)
 
 
 TRACE_GRAPH_SUFFIX = ".trace.json"
@@ -111,10 +116,16 @@ def load_trace_graph(path: Path) -> TraceGraph:
 
 
 def dump_trace_graph(graph: TraceGraph, path: Path) -> None:
-    Path(path).write_text(
-        json.dumps(graph.as_dict(), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    repository_root = project_artifact_repository_root(Path(path))
+    if repository_root is not None:
+        write_active_artifact(
+            "investigation_trace_graph",
+            Path(path),
+            graph.as_dict(),
+            repository_root=repository_root,
+        )
+    else:
+        write_portable_export(Path(path), graph.as_dict())
 
 
 def trace_graph_basename(path: Path) -> str:

@@ -123,7 +123,7 @@ class LiveSchemaCheck:
     调用方：
         load_live_schema(pid).check.output(data)  → True/False
 
-    ready 来源：live_schema 模块定义 READY 常量，或运行时从 project.yaml 读。
+    ready 必须由统一 live-schema loader 从当前 ProjectSpec 注入；项目模块不得自行声明。
     """
 
     def __init__(self, request_schema: Any, output_schema: Any, ready: Optional[list] = None):

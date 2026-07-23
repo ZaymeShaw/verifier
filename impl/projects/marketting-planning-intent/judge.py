@@ -2,8 +2,18 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from impl.core.schema import JudgeResult, ProjectSpec, RunTrace, to_dict
+from impl.core.schema import (
+    FulfillmentAssessment,
+    JudgeResult,
+    ProjectSpec,
+    RunTrace,
+    to_dict,
+)
 from impl.core.judge import ensure_business_expectation
+
+
+_INTENT_CONTRACT_EXPECTATION_ID = "intent_contract"
+_INTENT_CONTRACT_GAP_SOURCE = "marketting_planning_intent_contract"
 
 
 def application_boundary_from_trace(trace: RunTrace) -> dict[str, Any]:
@@ -67,6 +77,48 @@ def reference_output(reference: Dict[str, Any], trace: RunTrace) -> Dict[str, An
     }
 
 
+def _contract_gap(
+    *,
+    kind: str,
+    requirement: str,
+    expected: Any,
+    actual: Any,
+) -> dict[str, Any]:
+    return {
+        "kind": kind,
+        "error_type": kind,
+        "expected": expected,
+        "actual": actual,
+        "raw": {
+            "source": _INTENT_CONTRACT_GAP_SOURCE,
+            "requirement": requirement,
+        },
+    }
+
+
+def _is_project_contract_gap(item: Any) -> bool:
+    raw = item.get("raw") if isinstance(item, dict) else getattr(item, "raw", None)
+    return isinstance(raw, dict) and raw.get("source") == _INTENT_CONTRACT_GAP_SOURCE
+
+
+def _contract_gap_requirement(item: Any) -> str:
+    raw = item.get("raw") if isinstance(item, dict) else getattr(item, "raw", None)
+    return str(raw.get("requirement") or "") if isinstance(raw, dict) else ""
+
+
+def _upsert_intent_contract_assessment(
+    judge_result: JudgeResult,
+    assessment: FulfillmentAssessment,
+) -> None:
+    retained = [
+        item
+        for item in (judge_result.fulfillment_assessments or [])
+        if str(item.get("expectation_id") if isinstance(item, dict) else getattr(item, "expectation_id", ""))
+        != _INTENT_CONTRACT_EXPECTATION_ID
+    ]
+    judge_result.fulfillment_assessments = [*retained, assessment]
+
+
 def intent_contract_reasoning_summary(trace: RunTrace, reference: Dict[str, Any], output: Dict[str, Any], missing: list[Any], wrong: list[Any], verdict: str) -> str:
     query = trace.input.get("query") or (trace.input.get("input") or {}).get("query") if isinstance(trace.input, dict) else ""
     expected_intent = reference.get("intent")
@@ -75,10 +127,12 @@ def intent_contract_reasoning_summary(trace: RunTrace, reference: Dict[str, Any]
     min_confidence = reference.get("min_confidence")
     if verdict == "correct":
         return f"当前单轮意图识别满足 reference contract：intent={actual_intent}，confidence={confidence} 达到最低要求 {min_confidence}。"
-    failed = []
-    for item in list(missing or []) + list(wrong or []):
-        if isinstance(item, dict):
-            failed.append(str(item.get("requirement") or item.get("status") or item))
+    failed = [
+        requirement
+        for item in list(missing or []) + list(wrong or [])
+        for requirement in [_contract_gap_requirement(item)]
+        if requirement
+    ]
     return f"当前单轮意图识别未满足 reference contract：query={query}，user_intent={expected_intent}，actual_intent={actual_intent}，confidence={confidence}，min_confidence={min_confidence}，失败项={failed}，整体判定为 incorrect。"
 
 
@@ -92,12 +146,21 @@ def normalize_judge_result(trace: RunTrace, judge_result: JudgeResult) -> JudgeR
             judge_result.expected = reference_output(reference, trace)
         elif output:
             judge_result.expected = output
-    missing = list(judge_result.missing or [])
-    wrong = list(judge_result.wrong or [])
+    # LLM gaps 只用于展示和归因。项目硬门仅由下面重新计算的确定性
+    # contract gaps 驱动；先移除旧的项目 gaps，保证重复 normalize 幂等。
+    llm_missing = [item for item in (judge_result.missing or []) if not _is_project_contract_gap(item)]
+    llm_wrong = [item for item in (judge_result.wrong or []) if not _is_project_contract_gap(item)]
+    contract_missing: list[dict[str, Any]] = []
+    contract_wrong: list[dict[str, Any]] = []
     expected_intent = reference.get("intent") or (trace.normalized_request or {}).get("user_intent")
     actual_intent = output.get("intent")
     if expected_intent and actual_intent != expected_intent:
-        wrong.append({"requirement": "intent", "expected_fragment": expected_intent, "actual_fragment": actual_intent, "status": "wrong", "evidence": ["normalized intent differs from reference intent"]})
+        contract_wrong.append(_contract_gap(
+            kind="wrong",
+            requirement="intent",
+            expected=expected_intent,
+            actual=actual_intent,
+        ))
     slots = (trace.project_fields or {}).get("intent_evidence", {}).get("slots") if isinstance(trace.project_fields, dict) else {}
     if not isinstance(slots, dict):
         slots = {}
@@ -107,50 +170,133 @@ def normalize_judge_result(trace: RunTrace, judge_result: JudgeResult) -> JudgeR
     required_slots = list(reference.get("required_slots") or reference.get("required_entities") or [])
     absent_slots = [slot for slot in required_slots if slot not in slots and slot not in {entity.get("type") for entity in entities if isinstance(entity, dict)}]
     if absent_slots:
-        missing.append({"requirement": "required_slots", "expected_fragment": absent_slots, "actual_fragment": slots, "status": "missing", "evidence": ["required slot/entity absent from normalized intent evidence"]})
+        contract_missing.append(_contract_gap(
+            kind="missing",
+            requirement="required_slots",
+            expected=absent_slots,
+            actual={
+                "slots": slots,
+                "entity_types": [
+                    entity.get("type")
+                    for entity in entities
+                    if isinstance(entity, dict) and entity.get("type")
+                ],
+            },
+        ))
     evidence = (trace.project_fields or {}).get("intent_evidence", {}) if isinstance(trace.project_fields, dict) else {}
     allow_fallback = bool(reference.get("allow_fallback"))
     if not allow_fallback and (evidence.get("fallback") or evidence.get("ambiguous") or str(actual_intent or "").lower() in {"unknown", "fallback"}):
-        wrong.append({"requirement": "allow_fallback", "expected_fragment": False, "actual_fragment": {"fallback": evidence.get("fallback"), "ambiguous": evidence.get("ambiguous"), "intent": actual_intent}, "status": "wrong", "evidence": ["fallback/unknown/ambiguous intent is not allowed by reference"]})
+        contract_wrong.append(_contract_gap(
+            kind="wrong",
+            requirement="allow_fallback",
+            expected=False,
+            actual={
+                "fallback": evidence.get("fallback"),
+                "ambiguous": evidence.get("ambiguous"),
+                "intent": actual_intent,
+            },
+        ))
     min_confidence = reference.get("min_confidence")
     confidence = output.get("confidence")
-    if min_confidence is not None and confidence is not None and float(confidence) < float(min_confidence):
-        wrong.append({"requirement": "min_confidence", "expected_fragment": min_confidence, "actual_fragment": confidence, "status": "wrong", "evidence": ["intent confidence is below reference threshold"]})
-    judge_result.missing = missing
-    judge_result.wrong = wrong
+    if min_confidence is not None:
+        if confidence is None:
+            contract_missing.append(_contract_gap(
+                kind="missing",
+                requirement="confidence",
+                expected=min_confidence,
+                actual=None,
+            ))
+        elif float(confidence) < float(min_confidence):
+            contract_wrong.append(_contract_gap(
+                kind="wrong",
+                requirement="min_confidence",
+                expected=min_confidence,
+                actual=confidence,
+            ))
+    judge_result.missing = [*llm_missing, *contract_missing]
+    judge_result.wrong = [*llm_wrong, *contract_wrong]
     judge_result.actual = output
     judge_result.expected = reference_output(reference, trace) if reference else judge_result.expected
-    blocking_wrong = [item for item in wrong if isinstance(item, dict) and item.get("requirement") in {"intent", "allow_fallback", "min_confidence"}]
-    gate_failed = bool(missing or blocking_wrong)
+    gate_failed = bool(contract_missing or contract_wrong)
     ensure_business_expectation(
         judge_result,
-        "intent_contract",
+        _INTENT_CONTRACT_EXPECTATION_ID,
         blocking=True,
         expected_outcome="识别符合项目契约的意图、必需槽位、fallback 边界和最低置信度",
         acceptance_criteria=["intent 匹配", "必需槽位齐全", "fallback 合法", "confidence 达标"],
         downstream_consumer="营销规划意图路由",
     )
     if gate_failed:
-        evidence_summary = {
-            "missing": [item.get("requirement") for item in missing if isinstance(item, dict)],
-            "blocking_wrong": [item.get("requirement") for item in blocking_wrong if isinstance(item, dict)],
-        }
-        evidence_str = f"missing={evidence_summary.get('missing')}; blocking_wrong={evidence_summary.get('blocking_wrong')}"
-        judge_result.fulfillment_assessments.append({
-            "expectation_id": "intent_contract",
-            "status": "not_fulfilled",
-            "evidence": evidence_str,
-            "downstream_impact": intent_contract_reasoning_summary(trace, reference, output, missing, wrong, "incorrect"),
-        })
-        judge_result.reasoning_summary = intent_contract_reasoning_summary(trace, reference, output, missing, wrong, "incorrect")
+        reasoning = intent_contract_reasoning_summary(
+            trace,
+            reference,
+            output,
+            contract_missing,
+            contract_wrong,
+            "incorrect",
+        )
+        _upsert_intent_contract_assessment(
+            judge_result,
+            FulfillmentAssessment(
+                expectation_id=_INTENT_CONTRACT_EXPECTATION_ID,
+                status="not_fulfilled",
+                expected_evidence=[
+                    {
+                        "intent": expected_intent,
+                        "required_slots": required_slots,
+                        "allow_fallback": allow_fallback,
+                        "min_confidence": min_confidence,
+                    }
+                ],
+                actual_evidence=[
+                    {
+                        "intent": actual_intent,
+                        "slots": slots,
+                        "entities": entities,
+                        "fallback": evidence.get("fallback"),
+                        "ambiguous": evidence.get("ambiguous"),
+                        "confidence": confidence,
+                        "contract_missing": [
+                            _contract_gap_requirement(item) for item in contract_missing
+                        ],
+                        "contract_wrong": [
+                            _contract_gap_requirement(item) for item in contract_wrong
+                        ],
+                    }
+                ],
+                downstream_impact=reasoning,
+            ),
+        )
+        judge_result.reasoning_summary = reasoning
         return judge_result
-    judge_result.fulfillment_assessments.append({
-        "expectation_id": "intent_contract",
-        "status": "fulfilled",
-        "evidence": f"intent={actual_intent}; confidence={confidence}; min_confidence={min_confidence}",
-        "downstream_impact": intent_contract_reasoning_summary(trace, reference, output, [], [], "correct"),
-    })
-    judge_result.reasoning_summary = judge_result.reasoning_summary or intent_contract_reasoning_summary(trace, reference, output, [], [], "correct")
+    reasoning = intent_contract_reasoning_summary(trace, reference, output, [], [], "correct")
+    _upsert_intent_contract_assessment(
+        judge_result,
+        FulfillmentAssessment(
+            expectation_id=_INTENT_CONTRACT_EXPECTATION_ID,
+            status="fulfilled",
+            expected_evidence=[
+                {
+                    "intent": expected_intent,
+                    "required_slots": required_slots,
+                    "allow_fallback": allow_fallback,
+                    "min_confidence": min_confidence,
+                }
+            ],
+            actual_evidence=[
+                {
+                    "intent": actual_intent,
+                    "slots": slots,
+                    "entities": entities,
+                    "fallback": evidence.get("fallback"),
+                    "ambiguous": evidence.get("ambiguous"),
+                    "confidence": confidence,
+                }
+            ],
+            downstream_impact=reasoning,
+        ),
+    )
+    judge_result.reasoning_summary = judge_result.reasoning_summary or reasoning
     return judge_result
 
 

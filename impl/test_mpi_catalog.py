@@ -14,7 +14,8 @@ from impl.tools.source_retrieval import ProjectSourceFileProvider
 # Load MPI project
 spec = load_project('marketting-planning-intent')
 print(f"Project: {spec.project_id}")
-print(f"External repo: {spec.application.get('external_repo')}")
+source = ((spec.project.get("resources") or {}).get("source") or {})
+print(f"External repo: {source.get('repository')}")
 print()
 
 # Simulate build_attribute_context

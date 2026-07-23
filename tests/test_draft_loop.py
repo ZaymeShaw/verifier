@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from impl.core.path_contract import PathResolver, PathRoots
 from impl.core.schema import JudgeResult, ProjectSpec, RunTrace
 
 
@@ -29,11 +30,24 @@ _UNSEEN_SPEC.loader.exec_module(run_unseen)
 
 
 def _project(tmp_path: Path) -> ProjectSpec:
-    (tmp_path / "draft").mkdir()
-    (tmp_path / "attribute.py").write_text("production", encoding="utf-8")
-    (tmp_path / "draft" / "attribute.py").write_text("candidate-1", encoding="utf-8")
-    (tmp_path / "project.yaml").write_text("project_id: demo\n", encoding="utf-8")
-    return ProjectSpec(project_id="demo", name="demo", root=str(tmp_path))
+    verifier_root = tmp_path / "repo"
+    project_root = verifier_root / "impl" / "projects" / "demo"
+    (project_root / "draft").mkdir(parents=True)
+    (project_root / "attribute.py").write_text("production", encoding="utf-8")
+    (project_root / "draft" / "attribute.py").write_text("candidate-1", encoding="utf-8")
+    (project_root / "project.yaml").write_text("project_id: demo\n", encoding="utf-8")
+    roots = PathRoots(
+        verifier_repo=verifier_root.resolve(),
+        project_package=project_root.resolve(),
+        knowledge_route=project_root.resolve(),
+        artifact_package=project_root.resolve(),
+    )
+    return ProjectSpec(
+        project_id="demo",
+        name="demo",
+        path_roots=roots,
+        path_resolver=PathResolver(roots),
+    )
 
 
 def test_draft_loop_freezes_current_and_requires_review_between_iterations(tmp_path: Path, monkeypatch):
@@ -73,10 +87,13 @@ def test_draft_loop_freezes_current_and_requires_review_between_iterations(tmp_p
         evidence=["iterations/001-run.json#rows[0]"],
     )
     assert reviewed.status == "active"
-    (tmp_path / "draft" / "attribute.py").write_text("candidate-2", encoding="utf-8")
+    (spec.project_package_path() / "draft" / "attribute.py").write_text("candidate-2", encoding="utf-8")
     draft_loop.run_iteration("demo", "mock")
 
-    (tmp_path / "attribute.py").write_text("production changed", encoding="utf-8")
+    (spec.project_package_path() / "attribute.py").write_text(
+        "production changed",
+        encoding="utf-8",
+    )
     draft_loop.record_review(
         "demo",
         "mock",
@@ -238,7 +255,7 @@ def test_draft_loop_validates_all_cases_before_writing_state(tmp_path: Path, mon
             max_iterations=2,
         )
 
-    assert not (tmp_path / "draft" / ".state" / "mock" / "loop.json").exists()
+    assert not (spec.project_package_path() / "draft" / ".state" / "mock" / "loop.json").exists()
 
 
 def test_draft_loop_preserves_failed_iteration_and_requires_real_evidence(tmp_path: Path, monkeypatch):
@@ -268,9 +285,28 @@ def test_draft_loop_preserves_failed_iteration_and_requires_real_evidence(tmp_pa
     with pytest.raises(RuntimeError, match="partial facts preserved"):
         draft_loop.run_iteration("demo", "mock")
 
-    state = draft_loop._read_state(tmp_path / "draft" / ".state" / "mock" / "loop.json")
+    state = draft_loop._read_state(
+        spec.project_package_path() / "draft" / ".state" / "mock" / "loop.json"
+    )
     assert len(state.iterations) == 1
-    report_path = Path(state.iterations[0].run_report)
+    report_path = draft_loop._resolve_reference(
+        spec, state.iterations[0].run_report, "test.run_report"
+    )
+    raw_state = __import__("json").loads(
+        (
+            spec.project_package_path()
+            / "draft"
+            / ".state"
+            / "mock"
+            / "loop.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert raw_state["schema_version"] == 2
+    assert raw_state["iterations"][0]["run_report"]["location"] == (
+        "draft/.state/mock/iterations/001-run.json"
+    )
+    assert raw_state["iterations"][0]["run_report"]["location_scope"] == "project_package"
+    assert len(raw_state["iterations"][0]["run_report"]["sha256"]) == 64
     report = __import__("json").loads(report_path.read_text(encoding="utf-8"))
     assert report["run_status"] == "failed"
     assert report["partial_row"]["current"]["status"] == "done"
@@ -299,7 +335,7 @@ def test_draft_loop_preserves_failed_iteration_and_requires_real_evidence(tmp_pa
 def test_draft_loop_does_not_expose_stale_report_from_restarted_loop(tmp_path: Path, monkeypatch):
     spec = _project(tmp_path)
     monkeypatch.setattr(draft_loop, "load_project", lambda project_id: spec)
-    state_dir = tmp_path / "draft" / ".state" / "mock"
+    state_dir = spec.project_package_path() / "draft" / ".state" / "mock"
     report_path = state_dir / "iterations" / "001-run.json"
     report_path.parent.mkdir(parents=True)
     report_path.write_text('{"run_status":"completed","stale":true}\n', encoding="utf-8")

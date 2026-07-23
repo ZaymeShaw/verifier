@@ -205,7 +205,7 @@ def _run_chain_with_patched_steps() -> object:
         patch.object(pipeline, "cluster", return_value=_cluster()), \
         patch.object(pipeline, "check", return_value=_check()), \
         patch.object(pipeline, "frontend_view", return_value=_view()):
-        return pipeline.run_chain("fixture_project", load_fixture(SingleTurnCase).input)
+        return pipeline.run_chain("fixture_project", load_fixture(SingleTurnCase))
 
 
 FIXTURE_CHECKS = [

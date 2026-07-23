@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
+from .path_contract import LogicalPathRef, PathScope
+from .portable_artifact import write_active_artifact
 
-VALIDATION_RECEIPT_VERSION = 1
+
+VALIDATION_RECEIPT_VERSION = 2
 
 
 @dataclass(frozen=True)
@@ -17,13 +20,16 @@ class InvestigationValidationReceipt:
     role: str
     manifest_sha256: str
     source_revision: str
-    source_root: str
+    source: Mapping[str, str] | None
     tool_inputs_sha256: str
     tools: tuple[Mapping[str, Any], ...]
 
 
 def validation_receipt_path(spec: Any, role: str) -> Path:
-    return Path(spec.root) / "draft" / ".state" / str(role) / "investigation-validation.json"
+    accessor = getattr(spec, "investigation_validation_receipt_path", None)
+    if not callable(accessor):
+        raise RuntimeError("Investigation validation requires a resolver-backed receipt accessor")
+    return accessor(role, must_exist=False)
 
 
 def write_investigation_validation_receipt(
@@ -34,7 +40,10 @@ def write_investigation_validation_receipt(
 ) -> Path:
     if validation_result.get("ok") is not True or validation_result.get("tool_execution_requested") is not True:
         raise ValueError("Investigation validation receipt requires a successful --execute-tools result")
-    tools = tuple(dict(item) for item in validation_result.get("tools") or [])
+    tools = tuple(
+        _portable_tool_result(spec, item)
+        for item in validation_result.get("tools") or []
+    )
     if any(item.get("execution") != "succeeded" or int(item.get("execution_count") or 0) < 1 for item in tools):
         raise ValueError("Investigation validation receipt requires every implemented Tool to execute")
     source_revision = str(validation_result.get("source_revision") or "")
@@ -44,22 +53,45 @@ def write_investigation_validation_receipt(
         role=str(role),
         manifest_sha256=str(validation_result.get("manifest_sha256") or ""),
         source_revision=source_revision,
-        source_root=str(validation_result.get("source_root") or ""),
+        source=(
+            LogicalPathRef(PathScope.BUSINESS_SOURCE, ".").to_mapping()
+            if validation_result.get("source_root")
+            else None
+        ),
         tool_inputs_sha256=_stable_hash(tool_inputs),
         tools=tools,
     )
     if not receipt.manifest_sha256 or not receipt.tool_inputs_sha256:
         raise ValueError("Investigation validation receipt is missing immutable validation hashes")
     path = validation_receipt_path(spec, role)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(asdict(receipt), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return path
+    verifier_accessor = getattr(spec, "verifier_root_path", None)
+    if not callable(verifier_accessor):
+        raise RuntimeError("Investigation validation requires a resolver-backed verifier root")
+    return write_active_artifact(
+        "investigation_validation_receipt",
+        path,
+        {
+            "schema_version": receipt.schema_version,
+            "project_id": receipt.project_id,
+            "role": receipt.role,
+            "manifest_sha256": receipt.manifest_sha256,
+            "source_revision": receipt.source_revision,
+            "source": receipt.source,
+            "tool_inputs_sha256": receipt.tool_inputs_sha256,
+            "tools": receipt.tools,
+        },
+        repository_root=verifier_accessor(),
+    )
 
 
 def require_investigation_validation_receipt(spec: Any, role: str) -> Mapping[str, Any]:
     """Fail closed unless the candidate investigation package and Tool bytes were executed."""
     from .investigation import validate_investigation_package
-    from .project_loader import resolve_role_assets
+    from .project_loader import (
+        resolve_project_package_root,
+        resolve_project_source_root,
+        resolve_role_assets,
+    )
 
     path = validation_receipt_path(spec, role)
     if not path.is_file():
@@ -86,20 +118,23 @@ def require_investigation_validation_receipt(spec: Any, role: str) -> Mapping[st
         for item in selected
         if item["mapping"].kind == "tool" and item["available"]
     }
+    project_root = resolve_project_package_root(spec)
+    source_root = resolve_project_source_root(spec) if spec.has_business_source else None
     current = validate_investigation_package(
         packages[0],
-        project_root=Path(spec.root),
+        project_root=project_root,
         expected_project_id=spec.project_id,
         expected_role=role,
         tool_module_overrides=tool_aliases,
-        source_root=Path(spec.source_project) if getattr(spec, "source_project", "") else None,
+        source_root=source_root,
     )
     if raw.get("manifest_sha256") != current.get("manifest_sha256"):
         raise ValueError("Investigation validation receipt is stale: manifest changed")
     if raw.get("source_revision") != current.get("source_revision"):
         raise ValueError("Investigation validation receipt is stale: business source revision changed")
-    if str(raw.get("source_root") or "") != str(current.get("source_root") or ""):
-        raise ValueError("Investigation validation receipt is stale: business source repository changed")
+    source_ref = raw.get("source")
+    if current.get("source_root") and not isinstance(source_ref, Mapping):
+        raise ValueError("Investigation validation receipt lacks a portable business source reference")
 
     recorded_tools = {
         str(item.get("tool_id")): item
@@ -121,3 +156,21 @@ def require_investigation_validation_receipt(spec: Any, role: str) -> Mapping[st
 def _stable_hash(value: Any) -> str:
     payload = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _portable_tool_result(spec: Any, value: Mapping[str, Any]) -> Mapping[str, Any]:
+    from .project_loader import resolve_project_package_root
+
+    result = dict(value)
+    raw_path = str(result.pop("module_path", "") or "")
+    if raw_path:
+        project_root = resolve_project_package_root(spec)
+        module = Path(raw_path).resolve()
+        if not module.is_relative_to(project_root):
+            raise ValueError(f"validated Tool module is outside the project package: {module}")
+        result["module"] = LogicalPathRef(
+            PathScope.PROJECT_PACKAGE,
+            module.relative_to(project_root).as_posix(),
+            sha256=str(result.get("module_sha256") or ""),
+        ).to_mapping()
+    return result

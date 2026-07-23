@@ -118,7 +118,6 @@ class DeerflowDraftAttribute(_ProductionAttribute):
         context["runtime_checks"] = runtime_checks
         context.update({
             "tools": list(load_project_role_tools(self.spec, "attribute") or []),
-            "tool_call_limit": 5,
             "system_prompt_override": """你是 deerflow 项目的 Draft Attribute 主执行者。
 先读当前 not_fulfilled expectations、逐轮输出和 runtime_checks，再选择一条与当前 business gap 匹配的调查分支；不得因为某个静态 Investigation ContextUnit 存在就默认它是当前根因。第一次 Search 只查询当前分支需要的材料，然后 Load 对应文字 flow 和 runtime_checks；不要为了凑证据加载无关 ContextUnit。
 

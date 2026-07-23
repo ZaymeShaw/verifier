@@ -51,7 +51,6 @@ def _build_project_attribute_context(spec: ProjectSpec, tools: list[Any], trace:
     comparison = condition_comparison(spec, trace)
     return {
         "tools": _project_tools(tools),
-        "tool_call_limit": 8,
         "system_prompt_override": """你是 client_search 项目的 attribute agent。
 只围绕当前 query 到下游客户搜索条件的链路做归因：request_normalization、client_search_parse、routing_pattern_match、downstream_result_set（仅当 application_boundary.judge_scope 允许）。
 根因必须落在当前 RunTrace/JudgeResult/project docs/config/runtime tool 证据能支撑的位置；不能复用历史 case 字段，不能输出 AttributeResult JSON 之外的项目私有字段。

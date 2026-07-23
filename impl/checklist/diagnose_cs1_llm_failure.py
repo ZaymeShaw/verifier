@@ -11,6 +11,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from impl.core.pipeline import run_chain
+from impl.core.schema import SingleTurnCase
 
 
 def diagnose_cs1():
@@ -29,7 +30,7 @@ def diagnose_cs1():
     # Run full chain
     print(f"\n[Step 2] Running full chain...")
     try:
-        result = run_chain("client_search", test_input)
+        result = run_chain("client_search", SingleTurnCase(id="cs1-diagnostic", input=test_input))
         trace = result.get("trace")
         judge_result = result.get("judge")
 

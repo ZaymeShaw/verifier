@@ -15,6 +15,7 @@ from impl.core.investigation_validation import (
     require_investigation_validation_receipt,
     write_investigation_validation_receipt,
 )
+from impl.core.path_contract import LogicalPathRef, PathResolver, PathRoots, PathScope
 from impl.core.context.embedding import DeterministicHashEmbeddingProvider
 from impl.core.context.project import load_role_mandatory_context, role_asset_context_records
 from impl.core import draft_promotion
@@ -32,6 +33,60 @@ from impl.core.schema import (
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _project_spec(
+    project_root: Path,
+    *,
+    verifier_root: Path | None = None,
+    business_root: Path | None = None,
+    **kwargs,
+) -> ProjectSpec:
+    roots = PathRoots(
+        verifier_repo=(verifier_root or project_root).resolve(),
+        business_source=business_root.resolve() if business_root else None,
+        project_package=project_root.resolve(),
+        knowledge_route=project_root.resolve(),
+        artifact_package=project_root.resolve(),
+    )
+    verifier = dict(kwargs.pop("verifier", {}) or {})
+    roles = dict(verifier.get("roles") or {})
+    for role in ("attribute", "judge", "mock", "live"):
+        draft = kwargs.pop(f"{role}_draft", None)
+        if draft is None:
+            continue
+        canonical_draft = dict(draft)
+        module = str(canonical_draft.get("module") or "")
+        if module and not module.startswith("project://"):
+            canonical_draft["module"] = f"project://{module}"
+        roles[role] = {**dict(roles.get(role) or {}), "draft": canonical_draft}
+    if roles:
+        verifier["roles"] = roles
+    assets = []
+    for mapping in kwargs.pop("role_assets", []):
+        production = mapping.logical_production_path or f"project://{mapping.production_path}"
+        candidate = mapping.logical_candidate_path or (
+            f"project://{mapping.candidate_path}" if mapping.candidate_path else ""
+        )
+        assets.append({
+            "asset_id": mapping.asset_id,
+            "kind": mapping.kind,
+            "enabled": mapping.enabled,
+            "roles": list(mapping.roles),
+            "production_path": production,
+            "candidate_path": candidate,
+            "replace": mapping.replace,
+        })
+    if assets:
+        verifier["assets"] = assets
+    return ProjectSpec(
+        project_id=str(kwargs.pop("project_id", "demo")),
+        name=str(kwargs.pop("name", "demo")),
+        path_roots=roots,
+        path_resolver=PathResolver(roots),
+        verifier=verifier,
+        **kwargs,
+    )
 
 
 def _manifest() -> InvestigationManifest:
@@ -74,6 +129,23 @@ def test_investigation_manifest_json_round_trip(tmp_path: Path):
     validate_investigation_manifest(loaded)
 
     assert loaded == original
+
+
+def test_legacy_manifest_writer_cannot_target_registered_active_package(tmp_path: Path):
+    path = (
+        tmp_path
+        / "impl"
+        / "projects"
+        / "demo"
+        / "draft"
+        / "investigation"
+        / "attribute"
+        / "manifest.json"
+    )
+    path.parent.mkdir(parents=True)
+
+    with pytest.raises(ValueError, match="schema v1 cannot be written"):
+        dump_investigation_manifest(_manifest(), path)
 
 
 def test_investigation_manifest_rejects_untraceable_or_large_evidence():
@@ -205,10 +277,8 @@ def test_role_asset_resolution_uses_same_permissions_and_candidate_switch(tmp_pa
     (tmp_path / "draft" / "tools").mkdir(parents=True)
     (tmp_path / "tools" / "verify.py").write_text("production", encoding="utf-8")
     (tmp_path / "draft" / "tools" / "verify.py").write_text("candidate", encoding="utf-8")
-    spec = ProjectSpec(
-        project_id="demo",
-        name="demo",
-        root=str(tmp_path),
+    spec = _project_spec(
+        tmp_path,
         role_assets=[
             RoleAssetMapping(
                 asset_id="verify",
@@ -232,10 +302,8 @@ def test_role_asset_resolution_uses_same_permissions_and_candidate_switch(tmp_pa
 
 
 def test_role_asset_resolution_fails_closed_for_missing_or_unsafe_candidate(tmp_path: Path):
-    spec = ProjectSpec(
-        project_id="demo",
-        name="demo",
-        root=str(tmp_path),
+    spec = _project_spec(
+        tmp_path,
         role_assets=[
             RoleAssetMapping(
                 asset_id="missing",
@@ -250,35 +318,37 @@ def test_role_asset_resolution_fails_closed_for_missing_or_unsafe_candidate(tmp_
     with pytest.raises(FileNotFoundError, match="candidate role asset"):
         resolve_role_assets(spec, "attribute", use_candidate=True)
 
-    spec.role_assets[0] = RoleAssetMapping(
-        asset_id="unsafe",
-        kind="context",
-        enabled=True,
-        roles=["attribute"],
-        production_path="../outside",
-    )
-    with pytest.raises(ValueError, match="must stay under"):
+    spec.verifier["assets"][0] = {
+        "asset_id": "unsafe",
+        "kind": "context",
+        "enabled": True,
+        "roles": ["attribute"],
+        "production_path": "project://../outside",
+        "candidate_path": "",
+        "replace": False,
+    }
+    with pytest.raises(ValueError, match="PATH_TRAVERSAL"):
         resolve_role_assets(spec, "attribute", use_candidate=False)
 
-    spec.role_assets[0] = RoleAssetMapping(
-        asset_id="wrong-layer",
-        kind="context",
-        enabled=True,
-        roles=["attribute"],
-        production_path="draft/context.md",
-    )
+    spec.verifier["assets"][0] = {
+        "asset_id": "wrong-layer",
+        "kind": "context",
+        "enabled": True,
+        "roles": ["attribute"],
+        "production_path": "project://draft/context.md",
+        "candidate_path": "",
+        "replace": False,
+    }
     with pytest.raises(ValueError, match="outside draft"):
         resolve_role_assets(spec, "attribute", use_candidate=False)
 
 
-def test_candidate_only_investigation_becomes_context_only_in_draft(tmp_path: Path):
+def test_unpromoted_investigation_becomes_context_only_in_draft(tmp_path: Path):
     package = tmp_path / "draft" / "investigation" / "attribute"
     package.mkdir(parents=True)
     (package / "overview.md").write_text("business flow", encoding="utf-8")
-    spec = ProjectSpec(
-        project_id="demo",
-        name="demo",
-        root=str(tmp_path),
+    spec = _project_spec(
+        tmp_path,
         role_assets=[
             RoleAssetMapping(
                 asset_id="attribute_investigation",
@@ -438,9 +508,14 @@ def test_client_search_draft_blocks_tools_without_successful_execution_receipt(
         lambda spec, role: tmp_path / role / "missing-receipt.json",
     )
     current = load_project("client_search")
+    roles = dict(current.verifier.get("roles") or {})
+    roles["attribute"] = {
+        **dict(roles.get("attribute") or {}),
+        "draft": {"enabled": True, "module": "project://draft/attribute.py"},
+    }
     draft = replace(
         current,
-        attribute_draft={"enabled": True, "module": "draft/attribute.py"},
+        verifier={**current.verifier, "roles": roles},
     )
 
     with pytest.raises(FileNotFoundError, match="no successful Tool validation receipt"):
@@ -465,8 +540,10 @@ def test_client_search_draft_blocks_tools_without_successful_execution_receipt(
 
 
 def test_candidate_tool_receipt_is_required_and_invalidated_by_code_change(tmp_path: Path):
-    package = tmp_path / "draft" / "investigation" / "attribute"
-    tools = tmp_path / "draft" / "tools"
+    verifier_root = tmp_path / "verifier"
+    project_root = verifier_root / "impl" / "projects" / "demo"
+    package = project_root / "draft" / "investigation" / "attribute"
+    tools = project_root / "draft" / "tools"
     package.mkdir(parents=True)
     tools.mkdir(parents=True)
     (package / "overview.md").write_text("# overview", encoding="utf-8")
@@ -481,7 +558,7 @@ def test_candidate_tool_receipt_is_required_and_invalidated_by_code_change(tmp_p
     )
     dump_investigation_manifest(
         InvestigationManifest(
-            schema_version=1,
+            schema_version=2,
             project_id="demo",
             role="attribute",
             source_revision="revision-1",
@@ -490,19 +567,22 @@ def test_candidate_tool_receipt_is_required_and_invalidated_by_code_change(tmp_p
                 description="replay",
                 applicable_scenario="attribute",
                 parameters={"type": "object", "properties": {}},
-                implementation=ToolImplementationRef(
-                    tool_id="demo.replay",
-                    module_path="tools/replay.py",
-                    factory="build_tool",
-                ),
+                    implementation=ToolImplementationRef(
+                        tool_id="demo.replay",
+                        module_path="tools/replay.py",
+                        factory="build_tool",
+                        module_ref=LogicalPathRef(
+                            PathScope.PROJECT_PACKAGE,
+                            "draft/tools/replay.py",
+                        ),
+                    ),
             )],
         ),
         package / "manifest.json",
     )
-    spec = ProjectSpec(
-        project_id="demo",
-        name="demo",
-        root=str(tmp_path),
+    spec = _project_spec(
+        project_root,
+        verifier_root=verifier_root,
         attribute_draft={"enabled": True, "module": "draft/attribute.py"},
         role_assets=[
             RoleAssetMapping(
@@ -525,7 +605,7 @@ def test_candidate_tool_receipt_is_required_and_invalidated_by_code_change(tmp_p
     )
     result = validate_investigation_package(
         package,
-        project_root=tmp_path,
+        project_root=project_root,
         expected_project_id="demo",
         expected_role="attribute",
         execute_tools=True,
@@ -743,10 +823,8 @@ def test_check_draft_promotion_requires_nonempty_successful_unseen_cases():
 def test_judge_and_mock_load_only_their_mandatory_role_assets(tmp_path: Path):
     (tmp_path / "evaluation.md").write_text("judge contract", encoding="utf-8")
     (tmp_path / "mock.md").write_text("mock input rules", encoding="utf-8")
-    spec = ProjectSpec(
-        project_id="demo",
-        name="demo",
-        root=str(tmp_path),
+    spec = _project_spec(
+        tmp_path,
         role_assets=[
             RoleAssetMapping(
                 asset_id="judge_contract",
@@ -788,10 +866,8 @@ def test_judge_and_mock_load_only_their_mandatory_role_assets(tmp_path: Path):
 
 
 def test_mandatory_context_fails_when_enabled_asset_is_missing(tmp_path: Path):
-    spec = ProjectSpec(
-        project_id="demo",
-        name="demo",
-        root=str(tmp_path),
+    spec = _project_spec(
+        tmp_path,
         role_assets=[
             RoleAssetMapping(
                 asset_id="judge_contract",
@@ -812,6 +888,90 @@ def test_mandatory_context_fails_when_enabled_asset_is_missing(tmp_path: Path):
         )
 
 
+def test_unavailable_production_mandatory_context_does_not_change_current(tmp_path: Path):
+    candidate = tmp_path / "draft" / "investigation" / "mock"
+    candidate.mkdir(parents=True)
+    (candidate / "contract.md").write_text("candidate-only contract", encoding="utf-8")
+    spec = _project_spec(
+        tmp_path,
+        mock_draft={"enabled": False, "module": "draft/mock.py"},
+        role_assets=[
+            RoleAssetMapping(
+                asset_id="mock_contract",
+                kind="investigation",
+                enabled=True,
+                roles=["mock"],
+                production_path="investigation/mock",
+                candidate_path="draft/investigation/mock",
+                replace=True,
+            )
+        ],
+    )
+
+    assert load_role_mandatory_context(
+        spec,
+        role="mock",
+        operation="mock",
+        embedding_provider=DeterministicHashEmbeddingProvider(),
+    ) is None
+
+
+def test_missing_selected_candidate_mandatory_context_fails_closed(tmp_path: Path):
+    spec = _project_spec(
+        tmp_path,
+        mock_draft={"enabled": True, "module": "draft/mock.py"},
+        role_assets=[
+            RoleAssetMapping(
+                asset_id="mock_contract",
+                kind="investigation",
+                enabled=True,
+                roles=["mock"],
+                production_path="investigation/mock",
+                candidate_path="draft/investigation/mock",
+                replace=True,
+            )
+        ],
+    )
+
+    with pytest.raises(FileNotFoundError, match="enabled candidate role asset"):
+        load_role_mandatory_context(
+            spec,
+            role="mock",
+            operation="mock",
+            embedding_provider=DeterministicHashEmbeddingProvider(),
+        )
+
+
+def test_mandatory_context_accepts_a_symlinked_project_root(tmp_path: Path):
+    actual_root = tmp_path / "actual"
+    actual_root.mkdir()
+    linked_root = tmp_path / "linked"
+    linked_root.symlink_to(actual_root, target_is_directory=True)
+    (actual_root / "mock.md").write_text("symlink-safe contract", encoding="utf-8")
+    spec = _project_spec(
+        linked_root,
+        role_assets=[
+            RoleAssetMapping(
+                asset_id="mock_contract",
+                kind="context",
+                enabled=True,
+                roles=["mock"],
+                production_path="mock.md",
+            )
+        ],
+    )
+
+    result = load_role_mandatory_context(
+        spec,
+        role="mock",
+        operation="mock",
+        embedding_provider=DeterministicHashEmbeddingProvider(),
+    )
+
+    assert result is not None
+    assert "symlink-safe contract" in result["content"]
+
+
 def _promotion_spec(tmp_path: Path, *, shared: bool = False) -> ProjectSpec:
     (tmp_path / "draft" / "tools").mkdir(parents=True)
     (tmp_path / "draft" / "attribute.py").write_text("candidate role", encoding="utf-8")
@@ -819,28 +979,32 @@ def _promotion_spec(tmp_path: Path, *, shared: bool = False) -> ProjectSpec:
     (tmp_path / "draft" / "tools" / "verify.py").write_text("candidate tool", encoding="utf-8")
     (tmp_path / "tools").mkdir()
     (tmp_path / "project.yaml").write_text(
-        "project_id: demo\n"
-        "name: demo\n"
-        "attribute_draft:\n"
-        "  enabled: true\n"
-        "  module: draft/attribute.py\n"
-        "judge_draft:\n"
-        f"  enabled: {'true' if shared else 'false'}\n"
-        "  module: draft/judge.py\n"
-        "role_assets:\n"
-        "  - asset_id: verify\n"
-        "    kind: tool\n"
-        "    enabled: true\n"
-        "    roles: [attribute]\n"
-        "    production_path: tools/verify.py\n"
-        "    candidate_path: draft/tools/verify.py\n"
-        "    replace: true\n",
+        "schema_version: 1\n"
+        "project:\n"
+        "  id: demo\n"
+        "  name: demo\n"
+        "verifier:\n"
+        "  roles:\n"
+        "    attribute:\n"
+        "      draft:\n"
+        "        enabled: true\n"
+        "        module: project://draft/attribute.py\n"
+        "    judge:\n"
+        "      draft:\n"
+        f"        enabled: {'true' if shared else 'false'}\n"
+        "        module: project://draft/judge.py\n"
+        "  assets:\n"
+        "    - asset_id: verify\n"
+        "      kind: tool\n"
+        "      enabled: true\n"
+        "      roles: [attribute]\n"
+        "      production_path: project://tools/verify.py\n"
+        "      candidate_path: project://draft/tools/verify.py\n"
+        "      replace: true\n",
         encoding="utf-8",
     )
-    return ProjectSpec(
-        project_id="demo",
-        name="demo",
-        root=str(tmp_path),
+    return _project_spec(
+        tmp_path,
         attribute_draft={"enabled": True, "module": "draft/attribute.py"},
         judge_draft={"enabled": shared, "module": "draft/judge.py"},
         role_assets=[
@@ -870,9 +1034,11 @@ def test_draft_promotion_check_is_zero_write(tmp_path: Path):
 
 def test_draft_promotion_apply_moves_exclusive_assets_and_disables_switch(tmp_path: Path, monkeypatch):
     spec = _promotion_spec(tmp_path)
-    monkeypatch.setattr(draft_promotion, "load_project", lambda project_id: ProjectSpec(
-        project_id="demo", name="demo", root=str(tmp_path)
-    ))
+    monkeypatch.setattr(
+        draft_promotion,
+        "load_project",
+        lambda project_id: _project_spec(tmp_path),
+    )
     monkeypatch.setattr(draft_promotion, "load_adapter", lambda loaded: object())
     monkeypatch.setattr(draft_promotion, "load_project_role_instance", lambda loaded, role, adapter: object())
 
@@ -885,6 +1051,48 @@ def test_draft_promotion_apply_moves_exclusive_assets_and_disables_switch(tmp_pa
     assert not (tmp_path / "draft" / "tools" / "verify.py").exists()
     assert "enabled: false" in (tmp_path / "project.yaml").read_text(encoding="utf-8")
     assert 'candidate_path: ""' in (tmp_path / "project.yaml").read_text(encoding="utf-8")
+
+
+def test_draft_promotion_rejects_legacy_top_level_role_switch() -> None:
+    legacy = (
+        "schema_version: 1\n"
+        "attribute_draft:\n"
+        "  enabled: true\n"
+        "  module: draft/attribute.py\n"
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"verifier\.roles\.attribute\.draft",
+    ):
+        draft_promotion._disable_role_draft(legacy, "attribute")
+
+
+def test_unavailable_production_role_asset_is_reported_to_current(tmp_path: Path):
+    candidate = tmp_path / "draft" / "mock.md"
+    candidate.parent.mkdir()
+    candidate.write_text("candidate", encoding="utf-8")
+    spec = _project_spec(
+        tmp_path,
+        role_assets=[
+            RoleAssetMapping(
+                asset_id="mock_contract",
+                kind="context",
+                enabled=True,
+                roles=["mock"],
+                production_path="mock.md",
+                candidate_path="draft/mock.md",
+            )
+        ],
+    )
+
+    current = resolve_role_assets(spec, "mock", use_candidate=False)
+    draft = resolve_role_assets(spec, "mock", use_candidate=True)
+
+    assert current[0]["available"] is False
+    assert current[0]["source"] == "production"
+    assert draft[0]["available"] is True
+    assert draft[0]["source"] == "candidate"
 
 
 def test_draft_promotion_copies_asset_still_used_by_another_draft_role(tmp_path: Path):

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
+from ..path_contract import LogicalPathRef
+
 
 @dataclass
 class ExecutionTraceEvent:
@@ -24,6 +26,7 @@ class EvidenceRef:
     stage: str = ""
     summary: str = ""
     location: str = ""
+    location_ref: LogicalPathRef | None = None
     payload: Any = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 

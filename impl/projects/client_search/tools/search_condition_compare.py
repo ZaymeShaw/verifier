@@ -47,7 +47,11 @@ class ClientSearchConditionCompareTool:
             "query_logic": (trace.extracted_output or {}).get("logic") or "AND",
             "conditions": (trace.extracted_output or {}).get("structured_output") or [],
         }
-        equivalence_rules = (context.spec.frontend_extensions or {}).get("semantic_equivalence_rules") if context.spec else {}
+        equivalence_rules = (
+            context.spec.verifier_extra_value("semantic_equivalence_rules", {})
+            if context.spec
+            else {}
+        )
         # Include operator_compatibility from project.yaml via semantic_equivalence_rules
         wrong, missing, extra = self._compare(expected, actual, equivalence_rules) if expected_conditions else ([], [], [])
         boundary_limits = []

@@ -7,6 +7,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 
 _SEGMENT = re.compile(r"^(?P<name>[A-Za-z_][A-Za-z0-9_]*)(?:\[(?P<index>-?\d+)\])?$")
+_REGISTERED_SHOW_SCHEMAS: dict[str, "ShowSchema"] = {}
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,16 @@ class ShowSchema:
                 raise ValueError(f"ShowSchema.{name} 不允许重复路径")
             for path in values:
                 parse_path(path)
+
+
+def register_show_schema(project_id: str, schema: ShowSchema) -> None:
+    """Register non-project-package schemas such as protocol test fixtures."""
+    normalized_id = str(project_id or "").strip()
+    if not normalized_id:
+        raise ValueError("ShowSchema project_id 不能为空")
+    if not isinstance(schema, ShowSchema):
+        raise TypeError("registered schema 必须是 ShowSchema")
+    _REGISTERED_SHOW_SCHEMAS[normalized_id] = schema
 
 
 def parse_path(path: str) -> list[tuple[str, Optional[int]]]:
@@ -56,8 +67,9 @@ def select_path(value: Any, path: str) -> tuple[bool, Any]:
 
 
 def load_show_schema(project_id: str) -> Optional[ShowSchema]:
-    if project_id == "fixture-project":
-        return ShowSchema(input_fields=["query"], output_fields=["query_logic", "conditions"])
+    registered = _REGISTERED_SHOW_SCHEMAS.get(project_id)
+    if registered is not None:
+        return registered
     try:
         module = importlib.import_module(f"impl.projects.{project_id}.show_schema")
     except ModuleNotFoundError as exc:

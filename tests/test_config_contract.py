@@ -1,12 +1,22 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 
 from impl.core.config import ConfigError, resolve_runtime_config
 from impl.core.config_bootstrap import parse_dotenv, render_env_example
-from impl.core.config_check import _scan_public_config_bypasses, check_runtime_config_contract
+from impl.core.config_check import (
+    ConfigCheckReport,
+    _check_extra_consumers,
+    _probe_llm_capabilities,
+    _run_full_gates,
+    _scan_legacy_projectspec_consumers,
+    _scan_public_config_bypasses,
+    _scan_repository_secrets,
+    check_runtime_config_contract,
+)
 
 
 BASE_CONFIG = """
@@ -33,14 +43,20 @@ llm:
   base_url: https://api.deepseek.com/v1
   temperature: 0
   reasoning_effort: max
+  request_timeout_seconds: 120
   max_attempts: 2
   retry_delay_seconds: 2
+  capabilities:
+    json_mode: true
+    tool_calls: true
+    context_window_tokens: 131072
   role_policies:
     live_stub:
       model: deepseek-chat
       reasoning_effort: low
 
 embedding:
+  enabled: true
   provider: bailian
   model: text-embedding-v4
   dimensions: 1024
@@ -54,8 +70,8 @@ execution:
   batch_event_history_limit: 200
 
 context:
-  data_root: impl/data/context_runtime
-  store_root: impl/data/context_store
+  data_root: verifier://impl/data/context_runtime
+  store_root: verifier://impl/data/context_store
   max_records_per_project: 200
   candidate_limit: 20
   load_limit: 8
@@ -66,6 +82,25 @@ context:
 judge:
   raw_response_max_chars: 4000
 
+attribute:
+  tool_call_limit: 8
+  investigation_error_chars: 2000
+  finalization_prompt_char_budget: 160000
+  review_prompt_char_budget: 180000
+  compaction:
+    list_item_limit: 20
+    attribute_result_chars: 12000
+    project_context_chars: 4000
+    trace_input_chars: 1200
+    trace_normalized_request_chars: 1200
+    trace_output_chars: 10000
+    trace_execution_chars: 2500
+    trace_error_chars: 1200
+    judge_business_expectations_chars: 3000
+    judge_fulfillment_assessments_chars: 4000
+    judge_gap_chars: 1500
+    judge_reasoning_chars: 2000
+
 environment:
   variables:
     DEEPSEEK_API_KEY:
@@ -74,6 +109,21 @@ environment:
       required: true
       secret: true
       description: verifier default LLM credential
+    BAILIAN_API_KEY:
+      bind: embedding.api_key
+      type: string
+      required: false
+      required_when:
+        field: embedding.enabled
+        equals: true
+      secret: true
+      description: conditional embedding credential
+    EMBEDDING_ENABLED:
+      bind: embedding.enabled
+      type: boolean
+      required: false
+      secret: false
+      description: embedding capability switch
     LLM_MODEL:
       bind: llm.model
       type: string
@@ -258,7 +308,7 @@ def test_missing_required_secret_is_reported_without_blocking_non_llm_config(tmp
 
     assert resolved.server.port == 8020
     assert resolved.llm.api_key == ""
-    assert resolved.missing_required == ("llm.api_key",)
+    assert resolved.missing_required == ("embedding.api_key", "llm.api_key")
     with pytest.raises(ConfigError, match="llm.api_key"):
         resolved.require("llm")
 
@@ -292,6 +342,87 @@ def test_role_policy_is_explicit_and_inherits_public_defaults(tmp_path):
     assert resolved.llm.policy_for("judge").reasoning_effort == "max"
 
 
+def test_llm_capability_probe_checks_json_and_tools_without_exposing_key(tmp_path, monkeypatch):
+    config_path = _write_config(tmp_path)
+    resolved = resolve_runtime_config(
+        config_path=config_path,
+        dotenv_path=tmp_path / ".env",
+        environ={"DEEPSEEK_API_KEY": "probe-secret"},
+    )
+    responses = [
+        {"choices": [{"message": {"content": '{"ok": true}'}}]},
+        {"choices": [{"message": {"tool_calls": [{"id": "call-1"}]}}]},
+        {"choices": [{"message": {"content": '{"ok": true}'}}]},
+    ]
+    requests = []
+
+    class Response:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            import json
+
+            return json.dumps(self.payload).encode("utf-8")
+
+    def fake_urlopen(request, **_kwargs):
+        import json
+
+        requests.append(json.loads(request.data.decode("utf-8")))
+        return Response(responses.pop(0))
+
+    monkeypatch.setattr("impl.core.config_check.urllib.request.urlopen", fake_urlopen)
+
+    issues = _probe_llm_capabilities(resolved)
+
+    assert issues == []
+    assert requests[-1]["reasoning_effort"] == "max"
+
+
+def test_full_config_gate_reports_failed_subcheck(monkeypatch, tmp_path):
+    completed = type("Completed", (), {"returncode": 1, "stdout": "line one\nfailed evidence\n"})()
+    monkeypatch.setattr("impl.core.config_check.subprocess.run", lambda *_args, **_kwargs: completed)
+
+    issues = _run_full_gates(tmp_path)
+
+    assert len(issues) == 4
+    assert all(issue.code == "full_gate_failed" for issue in issues)
+    assert all("failed evidence" in issue.message for issue in issues)
+
+
+def test_full_config_gate_passes_one_frozen_environment_to_every_subprocess(monkeypatch, tmp_path):
+    (tmp_path / ".env").write_text(
+        "DOTENV_ONLY=dotenv-value\nOVERRIDDEN=dotenv-value\n",
+        encoding="utf-8",
+    )
+    captured = []
+
+    def completed(*_args, **kwargs):
+        captured.append(kwargs["env"])
+        return type("Completed", (), {"returncode": 0, "stdout": "ok\n"})()
+
+    monkeypatch.setattr("impl.core.config_check.subprocess.run", completed)
+
+    issues = _run_full_gates(
+        tmp_path,
+        environ={"PROCESS_ONLY": "process-value", "OVERRIDDEN": "process-value"},
+    )
+
+    assert issues == []
+    assert len(captured) == 4
+    assert captured == [{
+        "DOTENV_ONLY": "dotenv-value",
+        "PROCESS_ONLY": "process-value",
+        "OVERRIDDEN": "process-value",
+    }] * 4
+
+
 def test_env_example_is_derived_and_keeps_secrets_empty(tmp_path):
     config_path = _write_config(tmp_path)
     resolved = resolve_runtime_config(
@@ -313,7 +444,19 @@ def test_repository_public_config_contract_has_no_consumer_bypass():
 
     report = check_runtime_config_contract(root=root, environ={})
 
-    assert report.ok, report.to_dict()
+    bypass_codes = {
+        "public_env_bypass",
+        "unregistered_env_bypass",
+        "llm_config_bypass",
+        "deployment_config_fallback",
+        "PATH_CONSTRUCTION_BYPASS",
+        "PATH_WRITER_BYPASS",
+        "PATH_SCHEMA_BYPASS",
+    }
+    assert not [
+        issue for issue in report.issues if issue.code in bypass_codes
+    ], report.to_dict()
+    assert not report.issues, report.to_dict()
 
 
 def test_config_check_rejects_provider_specific_and_constructor_bypasses(tmp_path):
@@ -330,3 +473,153 @@ def test_config_check_rejects_provider_specific_and_constructor_bypasses(tmp_pat
 
     assert any(issue.code == "public_config_fallback" for issue in issues)
     assert any(issue.code == "llm_config_bypass" for issue in issues)
+
+
+def test_config_check_scans_cli_and_project_modules_for_registered_env_bypass(tmp_path):
+    cli = tmp_path / "impl" / "cli.py"
+    cli.parent.mkdir(parents=True)
+    cli.write_text("import os\nvalue = os.getenv('LLM_MODEL')\n", encoding="utf-8")
+
+    issues = _scan_public_config_bypasses(tmp_path, {"LLM_MODEL"})
+
+    assert any(issue.code == "public_env_bypass" and issue.path == str(cli) for issue in issues)
+
+
+def test_config_check_rejects_unregistered_environment_reads(tmp_path):
+    consumer = tmp_path / "impl" / "projects" / "demo" / "live.py"
+    consumer.parent.mkdir(parents=True)
+    consumer.write_text("import os\nvalue = os.getenv('NEW_PRODUCT_SETTING')\n", encoding="utf-8")
+
+    issues = _scan_public_config_bypasses(tmp_path, set())
+
+    assert any(issue.code == "unregistered_env_bypass" and issue.path == str(consumer) for issue in issues)
+
+
+def test_config_check_rejects_project_config_constants_in_live_schema(tmp_path):
+    live_schema = tmp_path / "impl" / "projects" / "demo" / "live_schema.py"
+    live_schema.parent.mkdir(parents=True)
+    live_schema.write_text(
+        "READY = ['output']\n"
+        "SCENARIO_ENUM = ['happy_path']\n"
+        "API_ENDPOINT = '/api/demo'\n"
+        "IS_PROVIDED_OUTPUT = True\n",
+        encoding="utf-8",
+    )
+
+    issues = _scan_public_config_bypasses(tmp_path, set())
+
+    assert [issue.code for issue in issues].count("live_schema_config_bypass") == 4
+
+
+def test_config_check_rejects_numeric_endpoint_discovery_timeout(tmp_path):
+    consumer = tmp_path / "impl" / "core" / "endpoint_discovery.py"
+    consumer.parent.mkdir(parents=True)
+    consumer.write_text("response = urlopen(request, timeout=10.0)\n", encoding="utf-8")
+
+    issues = _scan_public_config_bypasses(tmp_path, set())
+
+    assert any(issue.code == "deployment_config_fallback" for issue in issues)
+
+
+def test_config_check_rejects_deployment_field_fallbacks(tmp_path):
+    consumer = tmp_path / "impl" / "projects" / "demo" / "live.py"
+    consumer.parent.mkdir(parents=True)
+    consumer.write_text(
+        "method = spec.api.get('method') or 'POST'\n"
+        "timeout = spec.api.get('timeout', 30)\n",
+        encoding="utf-8",
+    )
+
+    issues = _scan_public_config_bypasses(tmp_path, set())
+
+    assert [issue.code for issue in issues].count("deployment_config_fallback") == 2
+
+
+def test_config_check_rejects_removed_projectspec_compatibility_views(tmp_path):
+    consumer = tmp_path / "impl" / "projects" / "demo" / "live.py"
+    consumer.parent.mkdir(parents=True)
+    consumer.write_text(
+        "ready = spec.common.get('ready')\n"
+        "service = self.spec.api\n"
+        "draft = getattr(project_spec, 'mock_draft', {})\n"
+        "def read(config: ProjectSpec):\n"
+        "    alias = config\n"
+        "    return alias.documents\n"
+        "context = getattr(spec, 'extra', {}).get('context')\n",
+        encoding="utf-8",
+    )
+
+    issues = _scan_legacy_projectspec_consumers(tmp_path)
+
+    assert [(issue.code, issue.line) for issue in issues] == [
+        ("PROJECTSPEC_COMPAT_BYPASS", 1),
+        ("PROJECTSPEC_COMPAT_BYPASS", 2),
+        ("PROJECTSPEC_COMPAT_BYPASS", 3),
+        ("PROJECTSPEC_COMPAT_BYPASS", 6),
+        ("PROJECTSPEC_COMPAT_BYPASS", 7),
+    ]
+
+
+def test_config_check_accepts_canonical_projectspec_sections(tmp_path):
+    consumer = tmp_path / "impl" / "projects" / "demo" / "live.py"
+    consumer.parent.mkdir(parents=True)
+    consumer.write_text(
+        "ready = spec.runtime.get('ready')\n"
+        "service = self.spec.service('primary')\n"
+        "draft = project_spec.role_draft('mock')\n",
+        encoding="utf-8",
+    )
+
+    assert _scan_legacy_projectspec_consumers(tmp_path) == []
+
+
+def test_config_check_rejects_secret_literals_in_yaml_and_source(tmp_path):
+    config = tmp_path / "impl" / "projects" / "demo" / "project.yaml"
+    config.parent.mkdir(parents=True)
+    sensitive_field = "api_" + "key"
+    sensitive_value = "committed-" + "secret"
+    config.write_text(f"service:\n  {sensitive_field}: {sensitive_value}\n", encoding="utf-8")
+    source = tmp_path / "impl" / "consumer.py"
+    source.write_text(("pass" + "word") + f' = "{sensitive_value}-value"\n', encoding="utf-8")
+
+    issues = _scan_repository_secrets(tmp_path, [config])
+
+    assert {issue.code for issue in issues} == {"secret_in_config", "secret_in_source"}
+
+
+def test_config_check_scans_secret_literals_in_json_artifacts(tmp_path):
+    artifact = tmp_path / "report" / "trace.json"
+    artifact.parent.mkdir(parents=True)
+    sensitive_field = "api_" + "key"
+    sensitive_value = "sk-live-" + "1234567890abcdef"
+    artifact.write_text(json.dumps({sensitive_field: sensitive_value}) + "\n", encoding="utf-8")
+
+    issues = _scan_repository_secrets(tmp_path, [])
+
+    assert any(issue.code == "secret_in_source" and issue.path == str(artifact) for issue in issues)
+
+
+def test_config_check_requires_declared_extra_consumer_to_exist_and_read_field(tmp_path):
+    consumer = tmp_path / "impl" / "projects" / "demo" / "consumer.py"
+    consumer.parent.mkdir(parents=True)
+    consumer.write_text("VALUE = 1\n", encoding="utf-8")
+    document = {
+        "project": {},
+        "runtime": {
+            "extra": {
+                "session_reuse": {
+                    "description": "demo",
+                    "value_type": "boolean",
+                    "schema_version": 1,
+                    "consumers": ["impl.projects.demo.consumer"],
+                    "value": True,
+                }
+            }
+        },
+        "verifier": {},
+    }
+    report = ConfigCheckReport()
+
+    _check_extra_consumers(report, tmp_path, "demo", tmp_path / "project.yaml", document, {})
+
+    assert [issue.code for issue in report.issues] == ["extra_consumer_unwired"]

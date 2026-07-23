@@ -5,6 +5,7 @@ from impl.projects.client_search.tools.rule_verify import build_rule_verify_tool
 from impl.projects.client_search.tools.field_capability import build_field_capability_tool
 from impl.projects.client_search.attribute import _build_project_attribute_context
 from impl.core.schema import JudgeResult, ProjectSpec, RunTrace
+from impl.core.path_contract import PathResolver, PathRoots
 
 
 def test_rule_verify_returns_only_matching_nested_rules(tmp_path):
@@ -86,7 +87,7 @@ def test_client_search_attribute_requires_counterfactual_replay_for_causal_claim
     trace = RunTrace(trace_id="trace-1", project_id="client_search", extracted_output={})
     context = _build_project_attribute_context(spec, [], trace, JudgeResult("trace-1", "client_search"))
 
-    assert context["tool_call_limit"] == 8
+    assert "tool_call_limit" not in context
     assert "最小对照重放" in context["system_prompt_override"]
     assert "静态配置存在或缺失本身不能证明" in context["user_prompt_extras"]["project_attribute_strategy"]["tool_selection_policy"]
 
@@ -112,10 +113,17 @@ def test_case_route_replay_retains_real_match_and_capture_shape(tmp_path, monkey
                 value=query.removeprefix("姓名是"),
             )]
 
+    roots = PathRoots(business_source=tmp_path)
+    source_spec = ProjectSpec(
+        project_id="client_search",
+        name="client_search",
+        path_roots=roots,
+        path_resolver=PathResolver(roots),
+    )
     monkeypatch.setattr(
         investigation_tools,
         "load_project",
-        lambda project_id: SimpleNamespace(source_project=str(tmp_path)),
+        lambda project_id: source_spec,
     )
     monkeypatch.setattr(
         investigation_tools.importlib,

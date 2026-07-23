@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 import re
 from typing import Any, Iterable, Optional
@@ -134,25 +135,33 @@ def audit_required_protocol_markers(protocols_root: Path) -> list[str]:
 
 def audit_project_implementation_standard(spec: ProjectSpec) -> list[str]:
     gaps = []
-    docs = spec.documents or {}
-    extensions = spec.frontend_extensions or {}
+    docs = spec.document_paths
     app_doc = docs.get("application")
-    project_root = Path(spec.root) if spec.root else Path("impl") / "projects" / spec.project_id
-    app_text = _normalized_text(project_root / str(app_doc)) if app_doc else ""
+    app_path = spec.project_document_path("application", must_exist=False) if app_doc else None
+    app_text = _normalized_text(app_path) if app_path else ""
     if "frontend" in app_text and ("start" in app_text or "startup" in app_text):
         gaps.append(f"{spec.project_id} application document contains frontend startup owned by build agent")
-    standard = extensions.get("implementation_standard") if isinstance(extensions.get("implementation_standard"), dict) else {}
+    adapter_contract = spec.adapter_contract
+    source = ((spec.project.get("resources") or {}).get("source") or {})
+    application = {
+        "mode": spec.runtime_mode,
+        "external_repo": source.get("repository") or "",
+        "contract": spec.application_contract,
+    }
+    application.update(
+        dict(((spec.runtime.get("services") or {}).get("dependencies") or {}))
+    )
     sources = {
-        "api": spec.api,
-        "application": spec.application or docs.get("application"),
-        "request_construction": standard.get("request_construction") or extensions.get("request_construction"),
-        "output_extraction": standard.get("output_extraction") or extensions.get("output_extraction"),
-        "reference_handling": standard.get("reference_handling") or extensions.get("reference_handling"),
-        "judge_boundary": standard.get("judge_boundary") or docs.get("judge_boundary") or docs.get("evaluation"),
-        "attribution_trace": standard.get("attribution_trace") or docs.get("attribution"),
-        "frontend_view": standard.get("frontend_view") or extensions.get("frontend_view") or docs.get("frontend"),
-        "batch_persistence": standard.get("batch_persistence") or extensions.get("batch_persistence"),
-        "check_evidence": standard.get("check_evidence") or docs.get("checklist"),
+        "api": (spec.application_contract.get("interface") or spec.service("primary") or {"mode": spec.runtime_mode}),
+        "application": application or docs.get("application"),
+        "request_construction": adapter_contract.get("request_construction"),
+        "output_extraction": adapter_contract.get("output_extraction"),
+        "reference_handling": adapter_contract.get("reference_handling"),
+        "judge_boundary": spec.judge_boundary_contract,
+        "attribution_trace": spec.attribution_trace_contract,
+        "frontend_view": spec.frontend_view_contract,
+        "batch_persistence": spec.batch_persistence_contract,
+        "check_evidence": spec.check_evidence_contract,
     }
     for field in REQUIRED_PROJECT_STANDARD_FIELDS:
         if not sources.get(field):
@@ -168,7 +177,12 @@ def _load_project_specs_from_root(root: Path) -> list[ProjectSpec]:
     if not projects_root.exists():
         return specs
     for cfg_path in sorted(projects_root.glob("*/project.yaml")):
-        specs.append(resolve_project_config(cfg_path.parent.name, projects_dir=projects_root, dotenv_path=root / ".env"))
+        specs.append(resolve_project_config(
+            cfg_path.parent.name,
+            projects_dir=projects_root,
+            dotenv_path=root / ".env",
+            verifier_root=root,
+        ))
     return specs
 
 
@@ -217,10 +231,12 @@ def reconstruct_current_intent(root: Path, specs: Optional[Iterable[ProjectSpec]
     project_terms = {}
     for spec in specs or _load_project_specs_from_root(root):
         texts = []
-        project_root = Path(spec.root) if spec.root else root / "impl" / "projects" / spec.project_id
-        for rel in (spec.documents or {}).values():
-            texts.append(_read_optional_text(project_root / str(rel)))
-        texts.append(str(spec.frontend_extensions or {}))
+        for key in spec.document_paths:
+            path = spec.project_document_path(key, must_exist=False)
+            if path is not None:
+                texts.append(_read_optional_text(path))
+        texts.append(str(spec.verifier_extra_values()))
+        texts.append(str(spec.check_rules))
         project_terms[spec.project_id] = _extract_terms(
             "\n".join(texts),
             REQUIRED_PROJECT_STANDARD_FIELDS + ["frontend_view", "batch_persistence", "attribution_trace"],
@@ -244,24 +260,19 @@ def audit_demand_alignment(root: Path) -> list[str]:
         gaps.append("missing protocol: impl/project_implementation_standard-template.md")
     gaps.extend(audit_required_protocol_markers(root / "impl" / "protocols"))
     for spec in _load_project_specs_from_root(root):
-        standard_docs = ["implementation_standard", "checklist"]
-        if not any((Path(spec.root) / str((spec.documents or {}).get(key))).exists() for key in standard_docs if (spec.documents or {}).get(key)):
-            gaps.append(f"{spec.project_id} missing project implementation standard document")
         gaps.extend(audit_project_implementation_standard(spec))
     return gaps
 
 
 
 def _check_rules(spec: ProjectSpec) -> dict[str, Any]:
-    rules = spec.frontend_extensions.get("check_rules") if spec.frontend_extensions else None
-    return rules if isinstance(rules, dict) else {}
+    return spec.check_rules
 
 
 def _project_document_gaps(spec: ProjectSpec) -> list[str]:
     gaps = []
-    root = Path(spec.root)
-    for key, rel in sorted((spec.documents or {}).items()):
-        path = root / str(rel)
+    for key, rel in sorted(spec.document_paths.items()):
+        path = spec.project_document_path(key, must_exist=False)
         if key.startswith("source_") and not path.exists():
             gaps.append(f"{spec.project_id} source document is missing: {key} -> {rel}")
     return gaps
@@ -348,8 +359,7 @@ def _reallive_exchange_gaps(trace: RunTrace) -> list[str]:
 
 def _semantic_rule_gaps(spec: ProjectSpec) -> list[str]:
     gaps = []
-    extensions = spec.frontend_extensions or {}
-    config = extensions.get("semantic_equivalence_rules")
+    config = spec.verifier_extra_value("semantic_equivalence_rules")
     if not isinstance(config, dict):
         return gaps
     for group_name, rules in config.items():
@@ -369,17 +379,112 @@ def _semantic_rule_gaps(spec: ProjectSpec) -> list[str]:
     return gaps
 
 
+def _string_contains_marker(value: str, marker: str) -> bool:
+    """Match a marker on identifier boundaries, not as an arbitrary substring."""
+    if not marker:
+        return False
+    return re.search(
+        rf"(?<![A-Za-z0-9_]){re.escape(marker)}(?![A-Za-z0-9_])",
+        value,
+    ) is not None
+
+
+class _CoreBoundaryVisitor(ast.NodeVisitor):
+    def __init__(self, markers: Iterable[str]) -> None:
+        self.markers = set(markers)
+        self.hits: set[tuple[str, int, str]] = set()
+
+    def _record_identifier(self, value: str, lineno: int, evidence: str) -> None:
+        if value in self.markers:
+            self.hits.add((value, lineno, evidence))
+
+    def _record_string(self, value: str, lineno: int, evidence: str) -> None:
+        for marker in self.markers:
+            if _string_contains_marker(value, marker):
+                self.hits.add((marker, lineno, evidence))
+
+    def visit_Name(self, node: ast.Name) -> None:
+        self._record_identifier(node.id, node.lineno, "identifier")
+
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        self._record_identifier(node.attr, node.lineno, "attribute")
+        self.generic_visit(node)
+
+    def visit_Import(self, node: ast.Import) -> None:
+        for alias in node.names:
+            self._record_string(alias.name, node.lineno, "import")
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        self._record_string(node.module or "", node.lineno, "import")
+        for alias in node.names:
+            self._record_string(alias.name, node.lineno, "import")
+
+    def visit_Constant(self, node: ast.Constant) -> None:
+        if isinstance(node.value, str):
+            self._record_string(node.value, node.lineno, "string")
+
+    def _visit_body_without_docstring(self, node: ast.AST) -> None:
+        body = list(getattr(node, "body", []) or [])
+        if (
+            body
+            and isinstance(body[0], ast.Expr)
+            and isinstance(body[0].value, ast.Constant)
+            and isinstance(body[0].value.value, str)
+        ):
+            body = body[1:]
+        for item in body:
+            self.visit(item)
+
+    def visit_Module(self, node: ast.Module) -> None:
+        self._visit_body_without_docstring(node)
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        for decorator in node.decorator_list:
+            self.visit(decorator)
+        for base in node.bases:
+            self.visit(base)
+        for keyword in node.keywords:
+            self.visit(keyword)
+        self._visit_body_without_docstring(node)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        for decorator in node.decorator_list:
+            self.visit(decorator)
+        self.visit(node.args)
+        if node.returns is not None:
+            self.visit(node.returns)
+        self._visit_body_without_docstring(node)
+
+    visit_AsyncFunctionDef = visit_FunctionDef
+
+
 def scan_core_boundary(root: Path, markers: Optional[Iterable[str]] = None) -> list[str]:
-    markers = list(markers or DEFAULT_PROJECT_FIELD_MARKERS)
-    violations = []
-    if not markers:
-        return violations
+    normalized_markers = {
+        str(marker).strip()
+        for marker in (markers or DEFAULT_PROJECT_FIELD_MARKERS)
+        if str(marker).strip()
+    }
+    if not normalized_markers:
+        return []
+    violations: list[str] = []
     core = root / "core"
-    for path in core.rglob("*.py"):
-        text = path.read_text(encoding="utf-8", errors="ignore")
-        for marker in markers:
-            if marker in text:
-                violations.append(f"generic core contains project-specific marker {marker}: {path}")
+    for path in sorted(core.rglob("*.py")):
+        source = path.read_text(encoding="utf-8", errors="ignore")
+        try:
+            tree = ast.parse(source, filename=str(path))
+        except SyntaxError as exc:
+            violations.append(f"generic core boundary scan could not parse {path}:{exc.lineno}")
+            continue
+        visitor = _CoreBoundaryVisitor(normalized_markers)
+        visitor.visit(tree)
+        for marker, lineno, evidence in sorted(
+            visitor.hits,
+            key=lambda item: (item[1], item[0], item[2]),
+        ):
+            violations.append(
+                "generic core contains project-specific marker "
+                f"{marker}: {path}:{lineno} ({evidence})"
+            )
     return violations
 
 
@@ -493,8 +598,6 @@ def build_check_category_report(
     root_causes = []
     fixes = []
     verification_results = []
-    frontend_extensions = spec.frontend_extensions or {}
-    implementation_standard = frontend_extensions.get("implementation_standard") if isinstance(frontend_extensions.get("implementation_standard"), dict) else {}
     check_rules = _check_rules(spec)
 
     if demand_intent and not demand_intent.get("demand_terms"):
@@ -514,14 +617,14 @@ def build_check_category_report(
             _add_category(categories, "split_brain_flow", "RunTrace and JudgeResult use different project_id values")
 
     if trace:
-        declared_frontend = implementation_standard.get("frontend_view") if isinstance(implementation_standard.get("frontend_view"), dict) else {}
+        declared_frontend = spec.frontend_view_contract
         runtime_frontend = trace_extracted_output(trace).get("frontend_view") if isinstance(trace_extracted_output(trace), dict) else None
         if isinstance(runtime_frontend, dict) and declared_frontend:
             declared_output = declared_frontend.get("output_source")
             runtime_output = runtime_frontend.get("output_source")
             if declared_output and runtime_output and declared_output != runtime_output:
                 _add_category(categories, "frontend_api_inconsistency", f"frontend output source {runtime_output} differs from project standard {declared_output}")
-                evidence_locations.extend(["project implementation_standard.frontend_view", "RunTrace.extracted_output.frontend_view"])
+                evidence_locations.extend(["verifier.presentation.frontend_view", "RunTrace.extracted_output.frontend_view"])
                 fixes.append("Render live and summary pages from the normalized frontend view contract instead of a project-private source branch.")
         persisted_keys = trace_extracted_output(trace).get("case_pool_persisted_keys") if isinstance(trace_extracted_output(trace), dict) else None
         forbidden_persisted = {"trace", "judge", "attribute", "frontend_view", "raw_response", "raw_sections", "raw_model_output"}
@@ -626,7 +729,6 @@ def check_chain(
     data_only_patch_risks = []
     verification_results = []
     recommended_fixes = []
-    frontend_extensions = spec.frontend_extensions or {}
     fallbacks: list[FallbackDecision] = []
     if trace:
         fallbacks.extend(trace.fallbacks or [])
@@ -637,16 +739,11 @@ def check_chain(
             consistency_gaps.append("Fallback decisions require human review before treating the chain as fully verified.")
 
     if impl_root:
-        markers = []
-        if isinstance(frontend_extensions.get("core_forbidden_markers"), list):
-            markers = frontend_extensions["core_forbidden_markers"]
-        boundary_violations.extend(scan_core_boundary(impl_root, markers))
+        boundary_violations.extend(scan_core_boundary(impl_root, spec.core_forbidden_markers))
         protocol_gaps.extend(scan_protocol_alignment(impl_root))
     protocol_gaps.extend(_project_document_gaps(spec))
     overfit_risks.extend(_semantic_rule_gaps(spec))
 
-    if not spec.adapter:
-        protocol_gaps.append("ProjectSpec missing adapter.")
     if trace:
         if trace.project_id != spec.project_id:
             consistency_gaps.append("RunTrace project_id does not match ProjectSpec.")

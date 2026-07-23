@@ -30,7 +30,6 @@ class MarketingIntentDraftAttribute(_ProductionMarketingIntentAttribute):
         context = dict(super().build_context(trace, judge_result) or {})
         context.update({
             "tools": list(load_project_role_tools(self.spec, "attribute") or []),
-            "tool_call_limit": 7,
             "system_prompt_override": """你是 marketting-planning-intent 项目的 Draft Attribute 主执行者。
 只 Search 一次 `marketing intent business flow`，并只 Load 同名的文字 ContextUnit；Mermaid graph 和 overview 只是目录辅助，不要同时加载。使用 Operational index 把当前 RunTrace 的真实 API 输出、adapter 提取结果和 Judge gap 对齐，再沿一个有证据的分支向下验证。Judge 的 not_fulfilled 只是调查入口，不是业务缺陷已经成立的证据。当前 trace 已提供 raw response 与 adapter output，不要为重复读取它们调用 context_store。
 先比较 raw response 与 adapter output：二者不一致才定位 adapter。若二者一致，再以同一个 query 和原始 contexts 调用 rule_stage_replay。若 replay 返回 `active_branch=homepage_rule`、具体 `homepage_match`，并且结果与公共输出相同，该结果已经区分了确定性 homepage rule 与 LLM/adapter；不要再调用 resolver_replay，也不要遍历无关源码。只有 replay no-match、non_homepage_rule 或与公共输出不一致时，才调用 resolver_replay 或最小源码读取。rule no-match 只说明进入 LLM fallback，禁止据此宣称规则覆盖不足。

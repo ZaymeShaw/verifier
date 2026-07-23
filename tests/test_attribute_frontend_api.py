@@ -1,6 +1,17 @@
-from fastapi.testclient import TestClient
+import asyncio
+
+import httpx
 
 from impl.server.app import create_app
+
+
+def _post(path: str, payload: dict):
+    async def request():
+        transport = httpx.ASGITransport(app=create_app())
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            return await client.post(path, json=payload)
+
+    return asyncio.run(request())
 
 
 def _attribute_payload(*, findings=True, unresolved_reason=""):
@@ -33,8 +44,7 @@ def _attribute_payload(*, findings=True, unresolved_reason=""):
 
 
 def test_frontend_view_api_preserves_summary_findings_and_evidence():
-    client = TestClient(create_app())
-    response = client.post("/api/frontend_view", json={"project": "QA", "attribute": _attribute_payload()})
+    response = _post("/api/frontend_view", {"project": "QA", "attribute": _attribute_payload()})
 
     assert response.status_code == 200
     body = response.json()
@@ -45,9 +55,8 @@ def test_frontend_view_api_preserves_summary_findings_and_evidence():
 
 
 def test_frontend_view_api_preserves_unresolved_summary_without_finding():
-    client = TestClient(create_app())
     reason = "embedding 服务两次返回非法向量，材料未能注册为 ContextUnit。"
-    response = client.post("/api/frontend_view", json={
+    response = _post("/api/frontend_view", {
         "project": "QA",
         "attribute": _attribute_payload(findings=False, unresolved_reason=reason),
     })

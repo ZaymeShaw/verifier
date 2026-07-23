@@ -401,7 +401,7 @@ search_context_units(
 5. 先按 query 顺序为每个有结果的信息需求保留一个候选，再按跨查询相关性补足剩余候选；
 6. 同一 ContextUnit 可覆盖多个 query，只占一个候选位并保留全部 `matched_queries`；
 7. 若顺序覆盖因候选预算不足而失败，Runtime 应在已召回候选中做有界的共享候选覆盖恢复；只有确实不存在预算内覆盖组合时才明确失败，不得静默丢弃部分信息需求；
-8. Tool JSON 返回 `selection_ref/id/name/description/matched_queries`，不返回完整 content；`selection_ref` 是本 Run 内的短暂引用，不是新的公共 schema 或持久 ID；
+8. 模型可见的 Tool JSON 只返回 `selection_ref/name/description/matched_queries`，不返回稳定 `id` 或完整 content；内部 Runtime 结果可保留稳定 ID，`selection_ref` 是本 Run 内的短暂引用，不是新的公共 schema 或持久 ID；
 9. 模型按 `matched_queries` 检查每个原子需求是否有直接回答，严格区分主体与关联对象等字段归属差异，并逐字复制 `selection_ref` 交给 Load，不得缩写或重新生成长 ID；
 10. `candidate_limit` 限制可供模型比较的摘要候选池，`load_limit` 限制最终加载的完整内容，两者是不同阶段的预算。不得仅因完整内容最多加载 8 条，就把多 query 的摘要候选池也截为 8 条；
 11. 模型可从候选中选择多条，也可一条都不选。
@@ -422,9 +422,16 @@ load_context_units(unit_refs_or_ids: list[str]) -> list[ContextUnit]
 - 并行解析可独立的 `content_ref`；
 - 任一单元越权、失效或无法解析时整批失败，不返回半批内容；
 - 成功后一次返回多条完整 ContextUnit；
+- 模型可见结果以本 Run 的 `selection_ref` 标识已加载单元，不回显稳定物理 ID；Runtime、Finalization 和正式 EvidenceRef 内部继续使用精确稳定 ID；
+- 若请求文本含省略号但 Registry 中存在完全同名的精确稳定 ID，仍按精确 ID 处理；仅对不存在的疑似截断 ID 明确报错，禁止模糊匹配；
 - 超大内容通过预先拆分的子单元处理，不静默截断。
 
 模型可以在同一 Agno Run 中交替调用 Context Search/Load 和项目业务 Tools。即时 Tool Result 可直接用于当前推理；持久复用时再走注册链。
+
+Attribute Runtime 将 Tool Result 注册为动态 ContextUnit 时，只能把注册状态
+写入 `ToolResult.runtime_metadata.attribute_context_evidence`；不得删除或改写
+业务 Tool 的 `actual`/`outputs`。该 runtime metadata 名称由公共运行时保留，
+项目 Tool 不得自行写入；发生冲突必须明确报错。
 
 ### 7.4 角色算法中的接入时点
 

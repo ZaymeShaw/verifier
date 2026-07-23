@@ -1,4 +1,5 @@
 from impl.core.schema import LiveExchange, MockIntentOutput, RunTrace
+from impl.core.schema.fixture import available_fixtures
 from impl.core.show_schema import ShowSchema, build_show_projection, load_show_schema, parse_path, select_path, validate_schema_paths
 
 
@@ -70,6 +71,7 @@ def test_all_current_projects_have_schema_valid_show_schema():
 
 
 def test_core_fixture_has_registered_show_schema():
+    available_fixtures()
     show = load_show_schema("fixture-project")
     assert show is not None
     assert show.input_fields == ["query"]

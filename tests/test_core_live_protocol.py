@@ -7,7 +7,7 @@ import pytest
 from impl.core.live_protocol import MultiTurnInteractiveLive, RealServiceLive, SingleTurnLive
 from impl.core.live_transport import LiveTransport
 from impl.core.mock_agent import MockAgent
-from impl.core.schema import MockContinueDecision, MockIntentOutput, ProjectSpec, SingleTurnCase
+from impl.core.schema import MockBuildSpec, MockContinueDecision, MockIntentOutput, ProjectSpec, SingleTurnCase
 from impl.core.trace import TraceContext, trace_from_live
 
 
@@ -113,7 +113,7 @@ def _fake_live_http(monkeypatch):
 
 
 def _spec() -> ProjectSpec:
-    return ProjectSpec(project_id="demo", name="demo", common={"ready": []}, root="/missing")
+    return ProjectSpec(project_id="demo", name="demo", runtime={"ready": []})
 
 
 def _live(instance_type: type, mock: Any, *, request_ok: bool = True, output_ok: bool = True):
@@ -389,3 +389,67 @@ def test_invalid_next_request_is_recorded_as_controller_error():
     assert ctx.completion_status == "incomplete"
     assert ctx.interaction_controller_status == "error"
     assert "empty or invalid request" in ctx.interaction_controller_error
+
+
+def test_chat_request_shape_mapping_preserves_the_generated_user_query():
+    mapped = MockAgent._preserve_chat_user_query(
+        {
+            "input": {
+                "messages": [
+                    {"role": "system", "content": "runtime context"},
+                    {"role": "user", "content": "invented rewrite"},
+                ]
+            },
+            "config": {"configurable": {}},
+        },
+        "the user-authored request",
+    )
+
+    assert mapped["input"]["messages"][-1]["content"] == "the user-authored request"
+
+
+def test_business_context_is_used_only_for_open_ended_intent_generation(monkeypatch):
+    spec = ProjectSpec(project_id="demo", name="demo", description="demo product")
+    agent = MockAgent(spec, llm=object())
+    monkeypatch.setattr(agent, "_mandatory_context", lambda: {"content": "DOMAIN CONTRACT"})
+
+    open_prompt = agent._intent_system_prompt(MockBuildSpec(project_id="demo", scenario="planning"))
+    fixed_prompt = agent._intent_system_prompt(
+        MockBuildSpec(
+            project_id="demo",
+            scenario="planning",
+            requested_intent="the caller's fixed goal",
+        )
+    )
+
+    assert "DOMAIN CONTRACT" in open_prompt
+    assert "DOMAIN CONTRACT" not in fixed_prompt
+    assert "requested_intent 是调用方已经确定的具体用户目标" in fixed_prompt
+
+
+def test_fixed_intent_fidelity_failure_does_not_release_unreviewed_query():
+    class FidelityFailureLlm:
+        calls = 0
+
+        def complete_json(self, system, _user, **_kwargs):
+            self.calls += 1
+            if "语义保真编辑器" in system:
+                return {"error": "review unavailable"}
+            return {"query": "an unsupported specific query", "user_intent": "changed intent"}
+
+    llm = FidelityFailureLlm()
+    agent = MockAgent(
+        ProjectSpec(project_id="demo", name="demo", description="demo product"),
+        llm=llm,
+    )
+    result = agent.build(
+        MockBuildSpec(
+            project_id="demo",
+            scenario="planning",
+            requested_intent="the caller's fixed goal",
+        )
+    )
+
+    assert result.query == ""
+    assert result.metadata["error"] == "fidelity_error:review unavailable"
+    assert llm.calls == 2

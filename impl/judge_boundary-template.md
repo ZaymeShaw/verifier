@@ -26,7 +26,7 @@
 
 ## 运行时结构
 
-impl 会把项目填写的边界文档和 `project.yaml.frontend_extensions.implementation_standard.judge_boundary` 合并为结构化边界：
+impl 会把项目填写的边界文档和 `project.yaml.verifier.judge.boundary` 合并为结构化边界：
 
 - `document`：项目边界文档来源。
 - `gate`：边界门禁何时应用，默认在最终 verdict reconciliation 前应用。

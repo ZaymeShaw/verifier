@@ -6,6 +6,8 @@ from types import SimpleNamespace
 from impl.core.context.embedding import BailianEmbeddingProvider
 from impl.core.context.errors import ContextConfigurationError, ContextValidationError
 from impl.core import knowledge_base
+from impl.core import attribute_environment
+from impl.core.config_schema import ConfigError
 
 
 class _SequenceEmbedder:
@@ -115,3 +117,26 @@ def test_bailian_embedder_uses_runtime_config_for_environment_proxy(monkeypatch)
     embedder = knowledge_base.BailianEmbedder(api_key="test-key")
 
     assert embedder._session.trust_env is True
+
+
+def test_bailian_embedder_refuses_disabled_runtime(monkeypatch):
+    embedding_config = knowledge_base.get_embedding_config()
+    monkeypatch.setattr(
+        knowledge_base,
+        "get_embedding_config",
+        lambda: replace(embedding_config, enabled=False),
+    )
+
+    with pytest.raises(ConfigError, match="disabled by RuntimeConfig"):
+        knowledge_base.BailianEmbedder(api_key="test-key")
+
+
+def test_attribute_context_refuses_disabled_embedding_before_initialization(monkeypatch):
+    runtime = SimpleNamespace(
+        embedding=SimpleNamespace(enabled=False),
+        require=lambda _component: None,
+    )
+    monkeypatch.setattr(attribute_environment, "get_runtime_config", lambda: runtime)
+
+    with pytest.raises(ConfigError, match="embedding.enabled=true"):
+        attribute_environment._build_context_tools(object(), object())

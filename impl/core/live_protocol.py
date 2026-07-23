@@ -443,12 +443,12 @@ class _LiveProtocol(ABC):
 
         条件：
         1. 当前 Live 实例是 ProvidedOutputLive 子类（具备 deliver_provided 能力）
-        2. spec.common.ready 声明了 output ready
+        2. spec.runtime.ready 声明了 output ready
         """
         from impl.core.live_protocol import ProvidedOutputLive
         if not isinstance(self, ProvidedOutputLive):
             return False
-        ready = self.spec.common.get("ready", []) if self.spec and isinstance(self.spec.common, dict) else []
+        ready = self.spec.ready if self.spec is not None else []
         return "output" in ready
 
     def _run_provided(
@@ -598,6 +598,8 @@ class _LiveProtocol(ABC):
             or case_input.get("content")
             or ""
         )
+        if not query and case_user_intent and hasattr(mock, "extract_mock_message"):
+            query = str(mock.extract_mock_message(case_input) or "")
         if (stored_intent and stored_intent.get("user_intent") and stored_intent.get("query")) or (case_user_intent and query):
             return MockIntentOutput(
                 user_intent=str(stored_intent.get("user_intent") or case_user_intent or query),

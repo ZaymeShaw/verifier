@@ -9,107 +9,140 @@ project:
     source:
       repository: ""
     documents:
-      application: application.md
-      mock: mock.md
-      evaluation: evaluation.md
-      judge_boundary: judge_boundary.md
-      attribution: attribution.md
-      checklist: checklist.md
-      implementation_standard: implementation_standard.md
-      integration_risks: issue/20260611-marketplan-integration-risks.md
+      application: project://application.md
+      mock: project://mock.md
+      evaluation: project://evaluation.md
+      judge_boundary: project://judge_boundary.md
+      attribution: project://attribution.md
+      checklist: project://checklist.md
+      implementation_standard: project://implementation_standard.md
+      integration_risks: project://issue/20260611-marketplan-integration-risks.md
 
 runtime:
   mode: existing_service_optional
+  application:
+    interface:
+      shape: marketing-planning SSE planning POST request and compact stage/card/fallback output
+      source: source_demand, application.md, and adapter.py
+    start_run: existing optional service at api.base_url; start from external_repo when available
+    boundary: shared marketing-planning service is in scope; external data unavailability may be boundary metadata
   interaction:
     mode: multi_turn
   ready: []
+  adapter:
+    request_construction:
+      builder: Adapter.build_request and _live_request_body normalize turns, session, scenario, expected stage, path types, and reference
+      required_inputs: [query]
+    output_extraction:
+      extractor: Adapter.extract_output summarizes SSE events, cards, stage, session, fallback, and errors
+      normalized_output: stage, event_summary, card_summary, session_summary, fallback, errors
+    reference_handling:
+      source_priority: [input_reference, expected_stage, expected_path_types, expected_cards, judge_generated, missing]
+      alignment: reference contract is compared against compact stage/card/event output shape
+  batch_persistence:
+    case_shape: id, selected, input, output, reference, metadata, scenario, source, status, error
+    transient_results: do not persist full SSE raw stream, trace, judge, attribute, or frontend_view as durable case-pool source data
+  mock_cases:
+    source: fixture
+    default_scenarios: [intent_recognition, clarification, multi_turn_field_accumulation, execution_planning, fallback_data_unavailable, non_agent_intent, streaming_protocol]
   services:
     primary:
       base_url: http://127.0.0.1:9006
       endpoint: /api/v1/marketing-planning/stream
       method: POST
       timeout_seconds: 120
+      stream:
+        event_aliases:
+          intent_detected: [reasoning_start, intent_start, intent_detected]
+          planning_started: [reasoning_end, planning_start, planning_started, card_start]
+          card_delta: [card_message_content, card_delta, card_content]
+          done: [card_end, done, complete, completed]
+          clarification_requested: [clarification_requested, clarification, clarify]
+          non_agent_rejected: [non_agent_rejected, non_agent, reject]
+        terminal_events: [done, complete, completed, card_end]
 
 verifier:
   attribution:
     enabled: true
+    trace:
+      document: attribution.md
+      trace_nodes: [request_normalization, intent_recognition, field_clarification, session_merge, path_dispatch, planning_function, result_assembly, sse_generation, adapter_extraction]
+  scenarios:
+    allowed: [intent_recognition, clarification, multi_turn_field_accumulation, execution_planning, fallback_data_unavailable, non_agent_intent, streaming_protocol]
+  judge:
+    boundary:
+      document: judge_boundary.md
+      gate: application_boundary determines judge_scope and fallback allowance before fulfillment reconciliation
   roles:
     attribute:
+      tool_call_limit: 4
       draft:
         enabled: true
-        module: draft/attribute.py
+        module: project://draft/attribute.py
+        tool_call_limit: 7
         reason: Batch attribution validation through the 8021 UAT frontend.
   presentation:
-    scenarios: [intent_recognition, clarification, multi_turn_field_accumulation, execution_planning, fallback_data_unavailable, non_agent_intent, streaming_protocol]
     stages: [intent, clarification, planning, non_agent, fallback, unknown]
     path_types: [premium_growth, customer_growth, product_mix, activity, unknown]
     error_taxonomy: [request_normalization, intent_recognition, field_clarification, session_merge, path_dispatch, planning_function, result_assembly, sse_generation, adapter_extraction, external_dependency, needs_human_review, none]
-    event_aliases:
-      intent_detected: [reasoning_start, intent_start, intent_detected]
-      planning_started: [reasoning_end, planning_start, planning_started, card_start]
-      card_delta: [card_message_content, card_delta, card_content]
-      done: [card_end, done, complete, completed]
-      clarification_requested: [clarification_requested, clarification, clarify]
-      non_agent_rejected: [non_agent_rejected, non_agent, reject]
-    terminal_events: [done, complete, completed, card_end]
+    frontend_view:
+      live: render stage, event summary, cards, fallback, Judge, Attribute, and project extension panels
+      summary: show scenario-aware compact case-pool rows with Output and Reference aligned by stage/card/event semantics
+  check_rules:
+    require_scenario: true
     core_forbidden_markers: [marketing_planning, marketting-planning, /api/v1/marketing-planning/stream]
-  extra:
-    check_rules:
-      description: 营销规划 case 必须携带场景标识
-      value_type: mapping
-      schema_version: 1
-      consumers: [impl.core.check]
-      value:
-        require_scenario: true
+    evidence:
+      documents: [application.md, mock.md, evaluation.md, judge_boundary.md, attribution.md, checklist.md]
+      tests: [tests.test_demand_check_gap]
   assets:
     - asset_id: attribute_investigation
       kind: investigation
       enabled: true
       roles: [attribute]
-      production_path: investigation/attribute
-      candidate_path: draft/investigation/attribute
+      production_path: project://investigation/attribute
+      candidate_path: project://draft/investigation/attribute
       replace: true
     - asset_id: attribute_investigation_tools
       kind: tool
       enabled: true
       roles: [attribute]
-      production_path: tools/investigation_tools.py
-      candidate_path: draft/tools/investigation_tools.py
+      production_path: project://tools/investigation_tools.py
+      candidate_path: project://draft/tools/investigation_tools.py
       replace: true
     - asset_id: attribute_investigation_context_builder
       kind: context_builder
       enabled: true
       roles: [attribute]
-      production_path: context_builders/attribute_investigation.py
-      candidate_path: draft/context_builders/attribute_investigation.py
+      production_path: project://context_builders/attribute_investigation.py
+      candidate_path: project://draft/context_builders/attribute_investigation.py
       replace: true
     - asset_id: judge_evaluation
       kind: context
       enabled: true
       roles: [judge]
-      production_path: evaluation.md
+      production_path: project://evaluation.md
     - asset_id: judge_boundary
       kind: context
       enabled: true
       roles: [judge]
-      production_path: judge_boundary.md
+      production_path: project://judge_boundary.md
     - asset_id: mock_contract
       kind: context
       enabled: true
       roles: [mock]
-      production_path: mock.md
+      production_path: project://mock.md
     - asset_id: mock_application
       kind: context
       enabled: true
       roles: [mock]
-      production_path: application.md
+      production_path: project://application.md
 
 environment:
   variables:
     MARKETTING_PLANNING_REPO:
       bind: project.resources.source.repository
       type: path
-      required: false
+      required: true
       secret: false
       description: 营销规划业务源码挂载位置
     MARKETTING_PLANNING_BASE_URL:
@@ -120,5 +153,5 @@ environment:
       description: 营销规划服务地址
 
 metadata:
-  initialized_from: ../../../projects/marketting-planning/project.yaml
+  initialized_from: route://project.yaml
   source_revision: null

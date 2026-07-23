@@ -158,19 +158,18 @@ def select_ext_repo_files_by_stage(ext_path: Path, trace: RunTrace) -> List[Path
 
 def build_attribute_context(spec: ProjectSpec, trace: RunTrace, judge_result: JudgeResult) -> Dict[str, Any]:
     source_config_paths = {}
-    ext_repo = spec.application.get("external_repo") if isinstance(spec.application, dict) else None
-    if ext_repo:
-        ext_path = Path(ext_repo)
+    if spec.has_business_source:
+        ext_path = spec.source_root_path()
         if ext_path.exists():
             for py_file in select_ext_repo_files_by_stage(ext_path, trace):
                 try:
                     source_config_paths[f"ext_repo:{py_file.relative_to(ext_path)}"] = str(py_file)
                 except Exception:
                     pass
-    for doc_key, doc_rel in (spec.documents or {}).items():
+    for doc_key in spec.document_paths:
         if doc_key.startswith("source_"):
-            path = Path(spec.root) / str(doc_rel)
-            if path.exists():
+            path = spec.project_document_path(doc_key, must_exist=False)
+            if path is not None and path.exists():
                 source_config_paths[f"project_doc:{doc_key}"] = str(path)
     return {
         "chain_nodes_to_check": list(trace.execution_trace or []),
@@ -320,7 +319,6 @@ def _build_project_attribute_context(spec: ProjectSpec, trace: RunTrace, judge_r
     actual_payload = actual if isinstance(actual, dict) else {}
     intent_probe = _intent_contract_probe(reference, actual_payload, intent_evidence if isinstance(intent_evidence, dict) else {})
     return {
-        "tool_call_limit": 4,
         "system_prompt_override": """你是 marketting-planning-intent 项目的 attribute agent。
 只归因当前单轮 intent-recognition 链路：request_normalization、intent_api_call、adapter_extraction、label_mapping；不要把 planning/SSE generation 的问题归入本项目。
 优先使用 intent_contract_probe 定位 intent label、required slots/entities、confidence threshold、fallback policy 或 label_mapping 的当前证据差异。

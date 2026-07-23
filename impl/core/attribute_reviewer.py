@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, List
 
 from .attribute import _compact_judge, _compact_trace, _compact_value
+from .config import get_runtime_config
 from .llm_client import project_llm_client
 from .schema import AttributeResult, JudgeResult, ProjectSpec, RunTrace, to_dict
 from .structured_output import StructuredOutputSpec
@@ -94,22 +95,27 @@ def review_attribute_result(
         for key, value in project_context.items()
         if key not in {"tools", "system_prompt_override"} and not str(key).startswith("_attribute_")
     }
+    compaction = get_runtime_config().attribute.compaction
     user = json.dumps(
         to_dict({
             "run_trace": _compact_trace(trace),
             "judge_result": _compact_judge(judge),
-            "attribute_result_under_review": _compact_value(to_dict(result), 12_000),
+            "attribute_result_under_review": _compact_value(
+                to_dict(result), compaction.attribute_result_chars, compaction.list_item_limit
+            ),
             # The bundle is already policy-authorized: cited units contain the
             # exact evidence under review, while the remaining lists are
             # metadata-only catalogs.  Generic compaction silently kept only
             # the first 20 list entries, hiding possible counter-evidence and
             # supplementation options from the reviewer.
             "evidence_review_bundle": review_bundle,
-            "project_attribute_context": _compact_value(visible_context, 4_000),
+            "project_attribute_context": _compact_value(
+                visible_context, compaction.project_context_chars, compaction.list_item_limit
+            ),
         }),
         ensure_ascii=False,
     )
-    prompt_char_budget = int(project_context.get("review_prompt_char_budget") or 180_000)
+    prompt_char_budget = get_runtime_config().attribute.review_prompt_char_budget
     prompt_chars = len(_REVIEW_SYSTEM_PROMPT) + len(user)
     if prompt_chars > prompt_char_budget:
         return {

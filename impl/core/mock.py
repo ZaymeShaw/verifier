@@ -23,12 +23,16 @@ def build_mock_spec(
     委托给 mock_agent.build_spec_from_project。
     """
     build_spec = build_spec_from_project(spec, scenario=scenario)
-    # 合并 intent_labels：优先使用调用者传入的，否则用 build_spec 默认值
+    # 意图标签描述可选类别；调用方给出的具体 intent 由 requested_intent
+    # 单独承载，不能混成一个可被模型自由选择或扩写的标签。
     final_intent_labels = list(intent_labels) if intent_labels else list(build_spec.intent_labels or [])
-    # 如果传入 intent 且不在列表中，插入头部
-    if intent and intent not in final_intent_labels:
-        final_intent_labels = [intent] + final_intent_labels
+    build_spec.requested_intent = str(intent or "").strip()
     build_spec.intent_labels = final_intent_labels
+    if kwargs.get("required_input_fields"):
+        build_spec.required_input_fields = list(kwargs.get("required_input_fields") or [])
+    if kwargs.get("template"):
+        template = kwargs.get("template")
+        build_spec.template = dict(template or {}) if isinstance(template, dict) else None
 
     return {
         "project_id": spec.project_id,
@@ -84,11 +88,21 @@ def build_case_from_spec(
         }
         if result.user_context:
             metadata["user_context"] = result.user_context
+        metadata["mock_intent"] = {
+            "user_intent": result.user_intent or "",
+            "query": result.query or "",
+            "user_context": dict(result.user_context or {}),
+            "system_understanding": str(
+                (result.metadata or {}).get("system_understanding") or ""
+            ),
+            "scenario": result.scenario or case_data.get("scenario", ""),
+        }
         return SingleTurnCase(
-            id=f"mock-{spec.project_id}-{case_data.get('scenario', 'default')}",
+            id=result.case_id or f"mock-{spec.project_id}-{case_data.get('scenario', 'default')}",
             input=dict(result.input or {}),
             output=result.output,
             reference=result.reference,
+            scenario=result.scenario or case_data.get("scenario", ""),
             user_intent=result.user_intent or "",
             metadata=metadata,
         )

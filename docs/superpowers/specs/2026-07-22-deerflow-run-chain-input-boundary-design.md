@@ -1,54 +1,66 @@
-# DeerFlow run_chain 输入边界修复设计
+# Live/RunChain MockCase 与业务请求边界设计
 
 ## 目标
 
-修复 Summary 前端单链路运行 DeerFlow 裸请求时，顶层 `input/config` 被通用 MockCase 归一化误拆的问题，同时保持“加载 Mock 数据集 → 批量归因”现有行为不变。
+消除 `/api/live_run` 和 `/api/run_chain` 中同一 `input` 字段同时表示“项目业务请求”和“完整 MockCase”的协议歧义。修复 DeerFlow 顶层 `input/config` 被误拆，同时保留 QA provided-output 的 `output/reference` 以及 MockCase 的可选 intent。
 
 ## 问题边界
 
-`/api/run_chain` 的 `input` 字段承载项目原生请求。DeerFlow 原生请求本身包含顶层 `input`，不能再次被解释为 `SingleTurnCase.input` 外壳。
+2026-07-09 的实现将 `run_chain` 字典包装为裸请求，适合 DeerFlow，但不能携带 MockCase 的 `output/reference/intent`。2026-07-17 为保留 VNext MockCase 信息，改成由 `normalize_mock_case` 同时兼容完整 case 和裸请求，从而与 DeerFlow REQUEST_SCHEMA 自身的顶层 `input` 字段发生结构碰撞。
 
-批量入口承载的则是标准 `MockCase`。它通过 `MockCase.live_request → SingleTurnCase.input` 显式转换，目前工作正常，不属于本次故障范围。
+稳定边界不能再根据 `input`/`output`/`intent` 等业务字段猜测输入类型。
 
 ## 方案比较
 
-1. **在 `/api/run_chain` 服务入口显式包装（采用）**
-   - 将 API 的裸项目请求构造成 `SingleTurnCase(id="", input=request)` 后传入 pipeline。
-   - 优点：输入语义由入口决定，不依赖字段名猜测；改动小；恢复历史行为；不影响批量路径。
-   - 代价：需要让 `pipeline.run_chain` 的类型声明明确接受 `SingleTurnCase`。
+1. **分离 transport 字段，在 service 转换一次（采用）**
+   - `input` 始终表示项目 REQUEST_SCHEMA 业务请求。
+   - `case` 始终表示标准 MockCase transport 对象。
+   - service 要求两者恰好出现一个，并转换为 `SingleTurnCase`。
+   - `pipeline.live_run/run_chain` 只接受运行时 `SingleTurnCase`。
+   - 前端继续使用 `input`，不需要修改；API check 等 MockCase 调用者改用 `case`。
 
-2. 在 `normalize_mock_case` 中根据字段猜测是否为 DeerFlow 裸请求
-   - 优点：表面上只改一个函数。
-   - 缺点：通用层需要理解项目协议；`input` 字段仍有歧义；可能破坏目前正常的批量转换。
+2. 根据项目 Schema 或特征字段自动猜测
+   - 优点：旧调用者暂时不改。
+   - 缺点：对合法业务字段存在长期误判风险，且违反 VNext “MockCase 只在指定边界转换一次”的原则。
 
-3. 重构单链路和批量链路为两个新协议
+3. 拆分为两组新 endpoint
    - 优点：长期边界最清楚。
    - 缺点：范围过大，不符合当前只修明确 Bug 的要求。
 
 ## 数据流
 
-单链路：
+HTTP 裸请求：
 
-`Summary 裸 live request → service.run_chain → SingleTurnCase(input=完整请求) → pipeline.run_chain → live_run`
+`{project, input: REQUEST_SCHEMA} → service → SingleTurnCase(input=完整请求) → pipeline`
 
-批量：
+HTTP MockCase：
 
-`MockCase → parse_mock_case → mock_case_to_single_turn → 现有 batch pipeline`
+`{project, case: MockCase} → parse_mock_case → mock_case_to_single_turn → pipeline`
 
-两条路径不再依赖裸字典的 `input` 字段来猜测数据类型。
+批量保持：
+
+`MockCase[] → 逐个 parse/convert → typed SingleTurnCase → batch pipeline`
+
+`MockCase.intent` 始终可选：存在时保留，不存在时单轮直接执行，多轮仍可在首轮后调用 `infer_user_intent`。`run_chain` 未显式传入 `user_intent` 时，才使用 runtime case 中的可选 intent。
 
 ## 错误处理
 
-本修复不改变 DeerFlow Live Schema 校验和异常策略。请求确实缺少 `input/config` 时仍应由现有 Schema 校验拒绝；只避免合法请求在校验前被错误改写。
+- `input` 与 `case` 缺失或同时出现：边界立即拒绝。
+- `case` 不符合 MockCase 协议或 `project_id` 不匹配：立即拒绝。
+- `input` 不是对象：立即拒绝。
+- 业务请求字段缺失：继续由项目 Live Schema 校验。
 
 ## 验证
 
 新增回归测试覆盖：
 
-1. `/api/run_chain` 收到合法 DeerFlow 裸请求时，进入 pipeline 的对象是 `SingleTurnCase`，其 `input` 完整保留顶层 `input/config`。
-2. `pipeline.run_chain` 接收该对象后，`live_run` 看到的仍是完整请求。
-3. 标准 DeerFlow `MockCase.live_request` 经批量转换后仍完整保留请求，防止单链路修复造成批量退化。
-4. 运行相关定向测试及现有 live/batch 协议测试。
+1. DeerFlow `input` 完整保留顶层 `input/config`。
+2. QA `case` 完整保留 `output/reference`，provided-output 语义不退化。
+3. MockCase intent 为 null 时仍可转换并执行；存在时保留。
+4. pipeline 拒绝未转换字典，service 拒绝模糊输入。
+5. CLI 裸请求显式构造 runtime case。
+6. API check 将 `/api/mock_cases` 返回值放入 `case` 而非 `input`。
+7. 运行定向 live/batch/cross-project 测试及全量回归。
 
 ## 非目标
 
@@ -56,3 +68,4 @@
 - 不修改 DeerFlow 多轮 Mock Agent。
 - 不修改 `normalize_mock_case` 的通用兼容逻辑。
 - 不改变前端 Mock 数据集和批量归因协议。
+- 暂不修改前端对 `intent: null` 的校验行为。

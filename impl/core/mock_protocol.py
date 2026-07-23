@@ -9,7 +9,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, List
 from typing import final as typing_final
-from impl.core.schema import MockContinueDecision, MockIntentOutput, ProjectSpec, SingleTurnCase, MultiTurnCase
+from impl.core.schema import MockBuildResult, MockContinueDecision, MockIntentOutput, ProjectSpec, SingleTurnCase, MultiTurnCase
 from impl.core.protocol_base import check_forbidden_overrides
 
 
@@ -143,26 +143,58 @@ class _MockProtocol(ABC):
         """
         from impl.core import mock as mock_module
 
+        options = dict(kwargs)
+        requested_labels = options.pop("intent_labels", None)
         return mock_module.build_mock_spec(
             spec=self.spec,
             scenario=scenario,
             intent=intent,
-            intent_labels=self.intent_labels(),
-            **kwargs
+            intent_labels=(
+                list(requested_labels)
+                if requested_labels
+                else self.intent_labels()
+            ),
+            **options
         )
 
     def _apply_mock_strategy(self, mock_spec: Dict[str, Any]) -> Dict[str, Any]:
         """
         内部方法：应用 Mock 策略。
 
-        使用通用逻辑应用 Mock 生成策略。
+        通过项目扩展点生成用户意图和首轮请求。默认扩展点仍委托
+        MockAgent，因此 Production 行为保持等价；Draft 可以在不覆盖模板
+        方法的前提下实现自己的 Context/生成消费策略。
         """
-        from impl.core import mock as mock_module
+        import uuid
 
-        return mock_module.apply_mock_strategy(
-            spec=self.spec,
-            mock_spec=mock_spec
+        scenario = str(mock_spec.get("scenario") or "")
+        requested_intent = str(mock_spec.get("intent") or "").strip()
+        template = mock_spec.get("template")
+        intent = self.build_user_intent_for_case(
+            scenario,
+            requested_intent=requested_intent,
+            template=dict(template) if isinstance(template, dict) else None,
         )
+        request = self.build_initial_request(intent)
+        result = MockBuildResult(
+            case_id=f"mock-agent-{self.spec.project_id}-{uuid.uuid4().hex[:8]}",
+            input=dict(request or {}),
+            user_intent=requested_intent or intent.user_intent,
+            query=intent.query,
+            user_context=dict(intent.user_context or {}),
+            scenario=scenario or intent.scenario,
+            metadata={
+                "source": "mock_agent_llm",
+                "project_id": self.spec.project_id,
+                "system_understanding": intent.system_understanding,
+            },
+        )
+        return {
+            "input": dict(result.input or {}),
+            "user_intent": result.user_intent,
+            "scenario": scenario,
+            "_result": result,
+        }
 
     def _build_case_from_spec(self, case_data: Dict[str, Any]) -> SingleTurnCase | MultiTurnCase:
         """
@@ -178,18 +210,18 @@ class _MockProtocol(ABC):
         )
 
     def scenarios(self) -> List[str]:
-        """扩展点：返回场景列表。项目可选覆盖。
+        """返回项目运行配置声明的 mock 场景列表。
 
         定位/目标：
             返回该项目支持的所有 mock 场景名称列表。
-            场景名需与 live_schema.SCENARIO_ENUM 对齐，用于 mock_agent 按场景生成用例。
+            场景名来自 ProjectSpec，用于 mock_agent 按场景生成用例。
 
         参数：
             无。
         """
-        if self.live_schema is not None and hasattr(self.live_schema, 'SCENARIO_ENUM'):
-            return list(self.live_schema.SCENARIO_ENUM or [])
-        return []
+        if self.spec is None:
+            return []
+        return self.spec.mock_scenarios
 
     @abstractmethod
     def build_user_intent(self, scenario: str) -> MockIntentOutput:
@@ -229,9 +261,33 @@ class _MockProtocol(ABC):
         参数：
             无。
         """
-        if self.live_schema is not None and hasattr(self.live_schema, 'INTENT_LABELS'):
-            return list(self.live_schema.INTENT_LABELS or [])
-        return []
+        if self.spec is None:
+            return []
+        return self.spec.intent_labels
+
+    def build_user_intent_for_case(
+        self,
+        scenario: str,
+        *,
+        requested_intent: str = "",
+        template: Optional[Dict[str, Any]] = None,
+    ) -> MockIntentOutput:
+        """Resolve one case's intent through the existing project extension.
+
+        Open-ended Production calls retain ``build_user_intent`` exactly. A
+        concrete caller intent uses the generic MockAgent fact-preserving path.
+        Draft roles may override this additive seam to consume candidate Context
+        without overriding the final generation template method.
+        """
+        if not requested_intent and not template:
+            return self.build_user_intent(scenario)
+
+        from impl.core.mock_agent import MockAgent, build_spec_from_project
+
+        build_spec = build_spec_from_project(self.spec, scenario=scenario)
+        build_spec.requested_intent = requested_intent
+        build_spec.template = dict(template or {}) or None
+        return MockAgent.intent_output(MockAgent(self.spec).build_intent(build_spec))
 
     def normalize_case(
         self,
@@ -258,8 +314,8 @@ class ProjectMock(_MockProtocol):
       项目实现通常转调 MockAgent.build_intent，直接返回它的产出。
 
     可选覆盖：
-    - scenarios: 返回场景列表（默认从 live_schema.SCENARIO_ENUM 取）
-    - intent_labels: 返回意图标签（默认从 live_schema.INTENT_LABELS 取）
+    - scenarios: 返回场景列表（默认从 ProjectSpec 取）
+    - intent_labels: 返回意图标签（默认从 ProjectSpec 取）
     - normalize_case: 归一化 Case（可补充项目特有字段）
 
     多轮交互：通过继承 MultiTurnInteractiveMock mixin 声明并实现 build_next_request。

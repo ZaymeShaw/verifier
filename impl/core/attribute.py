@@ -6,13 +6,13 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Optional
 
+from .config import get_runtime_config
 from .llm_client import LlmClient, project_llm_client
 from .schema import AttributeLLMOutput, AttributeResult, JudgeResult, ProjectSpec, RunTrace, judge_expected_actual_gaps, judge_primary_signal, to_dict, trace_execution_trace, trace_extracted_output, trace_normalized_request
 from .structured_output import StructuredOutputSpec
 
 logger = logging.getLogger(__name__)
 
-ATTRIBUTE_TOOL_CALL_LIMIT = 8
 _ATTRIBUTE_OUTPUT_SPEC = StructuredOutputSpec.from_dataclass(
     AttributeLLMOutput,
     description="Finalization 后的 Attribute 已验证结论或整体 unresolved 原因",
@@ -30,43 +30,45 @@ _ATTRIBUTE_INVESTIGATION_SPEC = StructuredOutputSpec.from_dataclass(
 )
 
 
-def _compact_value(obj: Any, max_chars: int) -> Any:
+def _compact_value(obj: Any, max_chars: int, list_item_limit: int) -> Any:
     if isinstance(obj, str):
         return obj[:max_chars] + f"...[truncated {len(obj) - max_chars:,} chars]" if len(obj) > max_chars else obj
     if isinstance(obj, dict):
-        return {key: _compact_value(value, max_chars) for key, value in obj.items()}
+        return {key: _compact_value(value, max_chars, list_item_limit) for key, value in obj.items()}
     if isinstance(obj, list):
-        return [_compact_value(value, max_chars) for value in obj[:20]]
+        return [_compact_value(value, max_chars, list_item_limit) for value in obj[:list_item_limit]]
     return obj
 
 
 def _compact_trace(trace: RunTrace) -> dict:
+    config = get_runtime_config().attribute.compaction
     return {
         "trace_id": trace.trace_id,
         "project_id": trace.project_id,
         "case_id": str(trace.case_id or ""),
-        "input": _compact_value(trace.input, 1200),
-        "normalized_request": _compact_value(trace_normalized_request(trace), 1200),
-        "extracted_output": _compact_value(trace_extracted_output(trace), 10000),
-        "execution_trace": _compact_value(trace_execution_trace(trace), 2500),
+        "input": _compact_value(trace.input, config.trace_input_chars, config.list_item_limit),
+        "normalized_request": _compact_value(trace_normalized_request(trace), config.trace_normalized_request_chars, config.list_item_limit),
+        "extracted_output": _compact_value(trace_extracted_output(trace), config.trace_output_chars, config.list_item_limit),
+        "execution_trace": _compact_value(trace_execution_trace(trace), config.trace_execution_chars, config.list_item_limit),
         "status": trace.status,
-        "error": _compact_value(trace.error, 1200),
+        "error": _compact_value(trace.error, config.trace_error_chars, config.list_item_limit),
     }
 
 
 def _compact_judge(judge: JudgeResult) -> dict:
+    config = get_runtime_config().attribute.compaction
     primary = judge_primary_signal(judge)
     gaps = judge_expected_actual_gaps(judge)
     return {
         "trace_id": judge.trace_id,
         "project_id": judge.project_id,
-        "business_expectations": _compact_value(primary.get("business_expectations"), 3000),
-        "fulfillment_assessments": _compact_value(primary.get("fulfillment_assessments"), 4000),
+        "business_expectations": _compact_value(primary.get("business_expectations"), config.judge_business_expectations_chars, config.list_item_limit),
+        "fulfillment_assessments": _compact_value(primary.get("fulfillment_assessments"), config.judge_fulfillment_assessments_chars, config.list_item_limit),
         "overall_fulfillment": primary.get("overall_fulfillment"),
-        "missing": _compact_value(gaps.get("missing"), 1500),
-        "wrong": _compact_value(gaps.get("wrong"), 1500),
-        "extra": _compact_value(gaps.get("extra"), 1500),
-        "reasoning_summary": _compact_value(getattr(judge, "reasoning_summary", None), 2000),
+        "missing": _compact_value(gaps.get("missing"), config.judge_gap_chars, config.list_item_limit),
+        "wrong": _compact_value(gaps.get("wrong"), config.judge_gap_chars, config.list_item_limit),
+        "extra": _compact_value(gaps.get("extra"), config.judge_gap_chars, config.list_item_limit),
+        "reasoning_summary": _compact_value(getattr(judge, "reasoning_summary", None), config.judge_reasoning_chars, config.list_item_limit),
     }
 
 
@@ -92,7 +94,7 @@ def _default_system_prompt(tool_call_limit: int) -> str:
 
 当前调用只负责 Investigation。若 ContextUnit 目录提供业务调查链路、trace map 或 operational index，先 Search 并 Load 该材料，用当前 trace/Judge gap 选择最小决定性验证路径，再调用路径指向的业务 Tool；若没有此类材料，才直接从可用 Tool 选择。Search 的候选摘要不是证据；必须 Load 完整材料。Tool 返回的完整结果会自动注册并记为已调查，无需重复 Load。源码、配置、运行检查、probe、replay或模拟结果只有实际连接当前 gap 与结论时才有用。不要因为一个文件缺陷多就归因到它。
 
-严格区分两种标识：source_file_catalog 中的 key 只能传给 source_list_symbols、source_read_functions 或 source_search_text，绝不是 ContextUnit ID，禁止传给 load_context_units/finalize_attribution。source Tool 返回成功后会产生新的 context_unit_id；只有这个 ID，或 search_context_units 返回的 selection_ref，才可用于 load_context_units，加载成功后才可交给 finalize_attribution。queries 和 unit_ids 参数必须直接传 JSON 数组，不要包成对象或自造字段名；一次 search 最多 4 条 query，一次 load 最多 8 个 ID。
+严格区分两种标识：source_file_catalog 中的 key 只能传给 source_list_symbols、source_read_functions 或 source_search_text，绝不是 ContextUnit ID 或引用，禁止传给 load_context_units。Search 和 Load 只向你返回本轮短 selection_ref；调用 Load 时必须逐字使用该 ref，禁止复制、缩写、猜测或重建物理 ID。source/业务 Tool 的完整结果会自动注册并记为已调查，其 runtime_metadata.attribute_context_evidence 会返回 registered 和可选的短 selection_ref，无需再次 Load，也不会暴露物理 ContextUnit ID。queries 和 unit_ids 参数必须直接传 JSON 数组，不要包成对象或自造字段名；一次 search 最多 4 条 query，一次 load 最多 8 个 ID。
 
 调查工具预算最多 {tool_call_limit} 次。调查完成后只输出 investigation_summary；运行时会独立进入 Finalization。禁止输出 markdown。"""
 
@@ -152,7 +154,8 @@ def attribute_failure(
         return unresolved_attribute_result(trace, "Judge 未提供可归因的 not_fulfilled expectation。")
 
     context = project_attribute_context or {}
-    tool_call_limit = int(context.get("tool_call_limit") or ATTRIBUTE_TOOL_CALL_LIMIT)
+    attribute_config = get_runtime_config().attribute
+    tool_call_limit = spec.role_tool_call_limit("attribute") or attribute_config.tool_call_limit
     investigation_system = _default_system_prompt(tool_call_limit)
     if context.get("system_prompt_override"):
         investigation_system += "\n\n项目补充约束：\n" + str(context["system_prompt_override"])
@@ -160,8 +163,7 @@ def attribute_failure(
     visible_context = {
         key: value for key, value in context.items()
         if key not in {
-            "system_prompt_override", "tools", "tool_call_limit", "targets_override",
-            "finalization_prompt_char_budget", "review_prompt_char_budget",
+            "system_prompt_override", "tools", "targets_override",
         }
         and not str(key).startswith("_attribute_")
     }
@@ -224,7 +226,9 @@ def attribute_failure(
         "finalized_context_units": finalized_units,
     }
     if investigation_output_error:
-        finalization_user["investigation_output_error"] = investigation_output_error[:2_000]
+        finalization_user["investigation_output_error"] = investigation_output_error[
+            :attribute_config.investigation_error_chars
+        ]
     if context.get("review_issues"):
         finalization_user["review_issues"] = context["review_issues"]
     finalization_client = llm or project_llm_client(spec, role="attribute-finalization", knowledge=None, tools=[])
@@ -233,7 +237,7 @@ def attribute_failure(
         if context.get("system_prompt_override"):
             finalization_system += "\n\n项目补充约束：\n" + str(context["system_prompt_override"])
         serialized_finalization_user = json.dumps(to_dict(finalization_user), ensure_ascii=False)
-        prompt_char_budget = int(context.get("finalization_prompt_char_budget") or 160_000)
+        prompt_char_budget = attribute_config.finalization_prompt_char_budget
         prompt_chars = len(finalization_system) + len(serialized_finalization_user)
         if prompt_chars > prompt_char_budget:
             return unresolved_attribute_result(

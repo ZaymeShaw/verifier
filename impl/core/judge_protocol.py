@@ -72,9 +72,13 @@ class _JudgeProtocol(ABC):
         # 1. 预判（扩展点，可返回缓存）
         pre_judge_result = self.pre_judge(trace, user_intent=user_intent)
         if pre_judge_result is not None:
-            normalized_pre = self.normalize_result(trace, pre_judge_result)
-            reconciled_pre = self.reconcile_result(trace, normalized_pre)
             from impl.core.judge import finalize_judge_result
+            if _is_terminal_judge_failure(pre_judge_result):
+                return finalize_judge_result(pre_judge_result)
+            normalized_pre = self.normalize_result(trace, pre_judge_result)
+            if _is_terminal_judge_failure(normalized_pre):
+                return finalize_judge_result(normalized_pre)
+            reconciled_pre = self.reconcile_result(trace, normalized_pre)
             return finalize_judge_result(reconciled_pre)
 
         # 2. 构建上下文（扩展点）
@@ -97,9 +101,11 @@ class _JudgeProtocol(ABC):
             )
 
         # 4. 归一化 + 协调结果（扩展点）。LLM 执行/输出失败是公共终态，
-        # 项目 reconcile 不得为失败结果补造 assessments 或升级为 fulfilled。
-        normalized = self.normalize_result(trace, raw_result)
+        # 在任何项目后处理前短路，项目不得为失败结果补造 assessments。
         from impl.core.judge import finalize_judge_result
+        if _is_terminal_judge_failure(raw_result):
+            return finalize_judge_result(raw_result)
+        normalized = self.normalize_result(trace, raw_result)
         if _is_terminal_judge_failure(normalized):
             return finalize_judge_result(normalized)
         final_result = self.reconcile_result(trace, normalized)

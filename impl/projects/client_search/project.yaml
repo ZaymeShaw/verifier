@@ -9,25 +9,47 @@ project:
     source:
       repository: ""
       paths:
-        field_definitions: src/main/python/config/field_definitions_args.yaml
-        field_enums: src/main/python/config/field_enums_args.yaml
-        value_mappings: src/main/python/config/value_mappings_args.yaml
-        enhanced_rules: src/main/python/config/enhanced_rules_args.yaml
+        field_definitions: business://src/main/python/config/field_definitions_args.yaml
+        field_enums: business://src/main/python/config/field_enums_args.yaml
+        value_mappings: business://src/main/python/config/value_mappings_args.yaml
+        enhanced_rules: business://src/main/python/config/enhanced_rules_args.yaml
     documents:
-      application: application.md
-      mock: mock.md
-      evaluation: evaluation.md
-      judge_boundary: judge_boundary_protocals.md
-      judge_standard: judge.md
-      attribution: attribution.md
-      checklist: checklist.md
-      implementation_standard: implementation_standard.md
+      application: project://application.md
+      mock: project://mock.md
+      evaluation: project://evaluation.md
+      judge_boundary: project://judge_boundary_protocals.md
+      judge_standard: project://judge.md
+      attribution: project://attribution.md
+      checklist: project://checklist.md
+      implementation_standard: project://implementation_standard.md
 
 runtime:
   mode: existing_service_required
+  application:
+    interface:
+      shape: client search query parse POST request and normalized query/filter output
+      source: source_readme, source_config, source_prompt, and adapter.py
+    start_run: existing parser service at api.base_url with optional downstream customer search probe
+    boundary: parser output is in scope; downstream result-set verification follows application.downstream_search availability
   interaction:
     mode: single_turn
   ready: []
+  adapter:
+    request_construction:
+      builder: Adapter.build_request converts query/user intent fields into parser request body
+      required_inputs: [query]
+    output_extraction:
+      extractor: Adapter.extract_output normalizes parser response into query logic, conditions, routing, and downstream evidence
+      normalized_output: search intent and executable customer-search condition semantics
+    reference_handling:
+      source_priority: [input_reference, expected_intent, judge_generated, missing]
+      alignment: reference conditions are compared by business/search semantics rather than raw field surface only
+  batch_persistence:
+    case_shape: id, selected, input, output, reference, metadata, scenario, source, status, error
+    transient_results: do not persist full trace, judge, attribute, downstream payload, or frontend_view as durable case-pool source data
+  mock_cases:
+    source: fixture
+    default_scenarios: [single_condition, multi_condition_and, product_category_or, product_exclusion, age_boundary, premium_unit_conversion, policy_status_filter, unsupported_family_phrase]
   services:
     primary:
       base_url: http://127.0.0.1:8000
@@ -45,13 +67,26 @@ runtime:
 verifier:
   attribution:
     enabled: true
+    trace:
+      document: attribution.md
+      trace_nodes: [request_normalization, prompt_config_mapping, parser_call, adapter_extraction, downstream_search_probe, judge, attribution]
+  scenarios:
+    allowed: [single_condition, multi_condition_and, product_category_or, product_exclusion, age_boundary, premium_unit_conversion, policy_status_filter, unsupported_family_phrase]
+  judge:
+    boundary:
+      document: judge_boundary_protocals.md
+      gate: application_boundary determines parser/downstream judge_scope before fulfillment reconciliation
+  presentation:
+    frontend_view:
+      live: render normalized parser output and raw project fields under protocol extension panels
+      summary: align Output and Reference as formatted JSON with equal-size table cells and compact drill-downs
   field_provider:
-    module: field_provider.py
+    module: project://field_provider.py
     class: ClientSearchFieldDefinitionProvider
   endpoint_discovery:
     enabled: true
     framework: fastapi
-    source_roots: [src/main/python]
+    source_roots: [business://src/main/python]
     route_prefix: /api/v1
     scan_patterns: ["*.py"]
     exclude_patterns: ["*/test/*", "*/migrations/*", "*/venv/*", "*/__pycache__/*", "*/logs/*", "*/docs/*", "*/docs_BAK/*"]
@@ -60,12 +95,17 @@ verifier:
       route_keywords: [reload, reindex, delete, update, create, write]
   roles:
     attribute:
+      tool_call_limit: 8
       draft:
         enabled: true
-        module: draft/attribute.py
+        module: project://draft/attribute.py
+        tool_call_limit: 8
         reason: Batch attribution validation through the 8021 UAT frontend.
-  presentation:
-    core_forbidden_markers: [query_logic, conditions, matched_level, intent_summary, clientAge, annPremSegNum, clientSex]
+  check_rules:
+    core_forbidden_markers: [matched_level, clientAge, annPremSegNum, clientSex]
+    evidence:
+      documents: [application.md, mock.md, evaluation.md, judge_boundary_protocals.md, judge.md, attribution.md, checklist.md]
+      tests: [tests.test_demand_check_gap]
   extra:
     semantic_equivalence_rules:
       description: 客户搜索条件在 judge 中允许采用的业务语义等价规则
@@ -143,55 +183,55 @@ verifier:
       kind: investigation
       enabled: true
       roles: [attribute]
-      production_path: investigation/attribute
-      candidate_path: draft/investigation/attribute
+      production_path: project://investigation/attribute
+      candidate_path: project://draft/investigation/attribute
       replace: true
     - asset_id: attribute_investigation_tools
       kind: tool
       enabled: true
       roles: [attribute]
-      production_path: tools/investigation_tools.py
-      candidate_path: draft/tools/investigation_tools.py
+      production_path: project://tools/investigation_tools.py
+      candidate_path: project://draft/tools/investigation_tools.py
       replace: true
     - asset_id: attribute_investigation_context_builder
       kind: context_builder
       enabled: true
       roles: [attribute]
-      production_path: context_builders/attribute_investigation.py
-      candidate_path: draft/context_builders/attribute_investigation.py
+      production_path: project://context_builders/attribute_investigation.py
+      candidate_path: project://draft/context_builders/attribute_investigation.py
       replace: true
     - asset_id: judge_evaluation
       kind: context
       enabled: true
       roles: [judge]
-      production_path: evaluation.md
+      production_path: project://evaluation.md
     - asset_id: judge_boundary
       kind: context
       enabled: true
       roles: [judge]
-      production_path: judge_boundary_protocals.md
+      production_path: project://judge_boundary_protocals.md
     - asset_id: judge_standard
       kind: context
       enabled: true
       roles: [judge]
-      production_path: judge.md
+      production_path: project://judge.md
     - asset_id: mock_contract
       kind: context
       enabled: true
       roles: [mock]
-      production_path: mock.md
+      production_path: project://mock.md
     - asset_id: mock_application
       kind: context
       enabled: true
       roles: [mock]
-      production_path: application.md
+      production_path: project://application.md
 
 environment:
   variables:
     CLIENT_SEARCH_REPO:
       bind: project.resources.source.repository
       type: path
-      required: false
+      required: true
       secret: false
       description: 客户搜索业务源码挂载位置
     CLIENT_SEARCH_BASE_URL:
@@ -208,5 +248,5 @@ environment:
       description: 下游客户搜索服务地址
 
 metadata:
-  initialized_from: ../../../projects/client_search/project.yaml
+  initialized_from: route://project.yaml
   source_revision: null

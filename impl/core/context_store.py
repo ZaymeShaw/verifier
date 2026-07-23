@@ -6,12 +6,21 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .active_artifacts import ActiveArtifactContext, DEFAULT_ACTIVE_ARTIFACT_REGISTRY
 from .config import ROOT as REPOSITORY_ROOT, get_runtime_config
+from .portable_artifact import write_active_artifact
 from .schema.context import ContextRecord, ContextRecordSummary
 
-_configured_store_root = Path(get_runtime_config().context.store_root)
-STORE_DIR = _configured_store_root if _configured_store_root.is_absolute() else (REPOSITORY_ROOT / _configured_store_root).resolve()
 MAX_PER_PROJECT = get_runtime_config().context.max_records_per_project
+_ACTIVE_ARTIFACT_CONTEXT: ActiveArtifactContext | None = None
+
+
+def _artifact_context() -> ActiveArtifactContext:
+    return _ACTIVE_ARTIFACT_CONTEXT or DEFAULT_ACTIVE_ARTIFACT_REGISTRY.context(REPOSITORY_ROOT)
+
+
+def _store_dir() -> Path:
+    return DEFAULT_ACTIVE_ARTIFACT_REGISTRY.family("context_record").base_path(_artifact_context())
 
 
 def _ensure_dir(path: Path) -> None:
@@ -22,18 +31,18 @@ def _record_path(project_id: str, trace_id: str, caller: str, created_at: str, r
     ts = created_at or time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     safe_caller = caller.replace("/", "_").replace(":", "_")
     suffix = str(record_id or uuid.uuid4()).replace("/", "_").replace(":", "_")[:12]
-    return STORE_DIR / project_id / trace_id / f"{safe_caller}-{ts}-{suffix}.json"
+    return _store_dir() / project_id / trace_id / f"{safe_caller}-{ts}-{suffix}.json"
 
 
 def _record_paths_for_trace(project_id: str, trace_id: str) -> List[Path]:
-    dir_path = STORE_DIR / project_id / trace_id
+    dir_path = _store_dir() / project_id / trace_id
     if not dir_path.exists():
         return []
     return sorted(dir_path.glob("*.json"))
 
 
 def _record_paths_for_project(project_id: str) -> List[Path]:
-    dir_path = STORE_DIR / project_id
+    dir_path = _store_dir() / project_id
     if not dir_path.exists():
         return []
     return sorted(dir_path.rglob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
@@ -72,7 +81,8 @@ def _record_to_dict(record: ContextRecord) -> Dict[str, Any]:
 
 
 def save_context(record: ContextRecord) -> str:
-    _ensure_dir(STORE_DIR)
+    context = _artifact_context()
+    _ensure_dir(_store_dir())
     path = _record_path(
         record.project_id,
         record.trace_id,
@@ -81,7 +91,12 @@ def save_context(record: ContextRecord) -> str:
         record.record_id,
     )
     _ensure_dir(path.parent)
-    path.write_text(json.dumps(_record_to_dict(record), ensure_ascii=False, indent=2), encoding="utf-8")
+    write_active_artifact(
+        "context_record",
+        path,
+        _record_to_dict(record),
+        context=context,
+    )
     _prune_project(record.project_id)
     return path.as_posix()
 

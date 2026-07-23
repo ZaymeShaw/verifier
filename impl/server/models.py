@@ -25,18 +25,20 @@ class ProjectRequest(ApiRequest):
 
 class LiveRunRequest(ApiRequest):
     input: Any = None
+    case: Optional[Dict[str, Any]] = None
 
 
 class MockCasesRequest(ProjectRequest):
-    pass
+    count: int = Field(default=1, ge=1, le=500)
 
 
 class MockDatasetsRequest(ProjectRequest):
-    pass
+    count: int = Field(default=1, ge=1, le=500)
 
 
 class MockBuildIntentRequest(ApiRequest):
     scenario: Optional[str] = None
+    requested_intent: Optional[str] = None
     intent_labels: List[str] = Field(default_factory=list)
     template: Optional[Dict[str, Any]] = None
     required_input_fields: List[str] = Field(default_factory=list)
@@ -91,6 +93,7 @@ class FrontendViewRequest(ApiRequest):
 
 class RunChainRequest(ApiRequest):
     input: Any = None
+    case: Optional[Dict[str, Any]] = None
     user_intent: Optional[str] = None
 
 

@@ -14,7 +14,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from impl.core.project_loader import load_project
+from impl.core.project_loader import load_project, resolve_project_source_root
 from impl.tools import ToolResult, VerifiableTool
 
 
@@ -24,7 +24,7 @@ _EXECUTION_LOCK = threading.Lock()
 
 def _business_modules() -> tuple[Any, Any, Any]:
     spec = load_project("marketting-planning-intent")
-    source_root = Path(spec.source_project).resolve()
+    source_root = resolve_project_source_root(spec)
     if not source_root.is_dir():
         raise FileNotFoundError(f"business source repository not found: {source_root}")
     with _IMPORT_LOCK:
@@ -148,7 +148,7 @@ def build_rule_stage_replay_tool() -> VerifiableTool:
                 },
                 evidence=(
                     "executed app.workflow.steps.intent_recognition.try_rule_based_intent "
-                    f"from {Path(load_project('marketting-planning-intent').source_project).resolve()}"
+                    f"from {resolve_project_source_root(load_project('marketting-planning-intent'))}"
                 ),
                 boundary_limits=[
                     "A rule result proves only the deterministic recognizer output, not the public API envelope.",
@@ -225,7 +225,7 @@ def build_resolver_replay_tool() -> VerifiableTool:
                 },
                 evidence=(
                     "executed app.workflow.nbev_workflow._resolve_intent_result "
-                    f"from {Path(load_project('marketting-planning-intent').source_project).resolve()}"
+                    f"from {resolve_project_source_root(load_project('marketting-planning-intent'))}"
                 ),
                 boundary_limits=[
                     "This is an in-process business resolver replay, not an HTTP request or adapter extraction.",

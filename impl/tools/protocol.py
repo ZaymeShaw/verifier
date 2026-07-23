@@ -28,6 +28,7 @@ class ToolResult:
     missing_evidence: list[Any] = field(default_factory=list)
     boundary_limits: list[Any] = field(default_factory=list)
     error: str = ""
+    runtime_metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 

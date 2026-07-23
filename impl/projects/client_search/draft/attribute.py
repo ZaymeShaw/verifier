@@ -21,7 +21,6 @@ def _build_project_attribute_context(
     context = build_attribute_context(spec, trace, judge_result)
     context.update({
         "tools": list(load_project_role_tools(spec, "attribute") or []),
-        "tool_call_limit": 8,
         "system_prompt_override": """你是 client_search 项目的 draft attribute agent。
 第一步只 Load `project.client_search.attribute.investigation.parse_flow`；它已经包含运行时所需的节点、data、边界和操作索引。`parse_graph` 与 `overview` 是设计期辅助材料，除非 parse_flow 缺失必要关系，否则不要同时加载。先把 Judge 的 not_fulfilled gap 对齐到当前公共输出中的具体 data，再按 Operational index 沿真实数据流逆向选择候选节点；只深入能够区分主要竞争解释的最短路径，不罗列整条架构，也不预设 route、字段或缺陷节点。
 Tool 由当前节点的 input/output data、进入条件、可观测事实和 observation gap 决定。公共 API、replay/probe、配置和源码各自只能证明其声明的边界：静态材料只能解释已经观察到的机制，不能证明当前 case 经过该机制；专用 replay 也不能越过自身边界证明路由选择或其他阶段。

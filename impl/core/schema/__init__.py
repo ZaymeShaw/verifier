@@ -10,11 +10,12 @@ from .config import LayerConfig, SchemaLayerConfig
 from .attribute import AttributeEvidenceSelection, AttributeFindingOutput, AttributeLLMOutput, AttributeResult, AttributionFinding
 from .fallback import FallbackDecision
 from .evidence import EvidenceRef, ExecutionTraceEvent, ProbeResult
-from .investigation import INVESTIGATION_SCHEMA_VERSION, InvestigationManifest, ToolImplementationRef, ToolRequirement, dump_investigation_manifest, load_investigation_manifest, validate_investigation_manifest
+from .draft_state import DRAFT_LOOP_STATE_VERSION, DRAFT_RUN_REPORT_VERSION, DraftEvidencePointer, DraftLoopIteration, DraftLoopState
+from .investigation import INVESTIGATION_SCHEMA_VERSION, InvestigationArtifactRef, InvestigationManifest, ToolImplementationRef, ToolRequirement, dump_investigation_manifest, load_investigation_manifest, validate_investigation_manifest
 from .frontend import FrontendViewModel
 from .judge import BusinessExpectation, FulfillmentAssessment, GapItem, JudgeLLMOutput, JudgeReferenceOutput, JudgeResult, _item_value
 from .live import LiveExchange, LiveMultiTurnState, LiveRequest
-from .mock import MockBuildResult, MockBuildSpec, MockCase, MockContinueDecision, MockDataset, MockInteractionTurn, MockIntentOutput, MockNextTurnOutput, MockSpec, MultiTurnCase, MultiTurnInteraction, MultiTurnPolicy, MultiTurnTurnExpectation, SingleTurnCase
+from .mock import MockBuildResult, MockBuildSpec, MockCase, MockContinueDecision, MockDataset, MockInteractionTurn, MockIntentFidelityOutput, MockIntentOutput, MockNextTurnOutput, MockSpec, MultiTurnCase, MultiTurnInteraction, MultiTurnPolicy, MultiTurnTurnExpectation, SingleTurnCase
 from .project import ProjectAnalysis, ProjectSpec, RoleAssetMapping
 from .registry import SCHEMA_LAYERS
 from .accessors import judge_expected_actual_gaps, judge_primary_signal, trace_application_boundary, trace_conversation_summary, trace_conversation_transcript, trace_execution_trace, trace_extracted_output, trace_input, trace_mock_intent, trace_normalized_request, trace_output_source, trace_project_fields, trace_raw_response, trace_stop_reason, trace_turn_records
@@ -27,10 +28,10 @@ from .utils import _first_list_key, _first_list_value, _non_empty_reference
 
 __all__ = [
     "AttributeEvidenceSelection", "AttributeFindingOutput", "AttributeLLMOutput", "AttributeResult", "AttributionFinding", "BatchRunResult", "BusinessExpectation", "CALL_STATUSES", "CasePoolSaveResponse", "CasePoolTable", "CasePoolsResponse", "CHAIN_STATUSES",
-    "CheckReport", "ClusterSummary", "ConversationTurn", "EVENT_STATUSES", "EvidenceRef", "ExecutionTraceEvent",
+    "CheckReport", "ClusterSummary", "ConversationTurn", "DRAFT_LOOP_STATE_VERSION", "DRAFT_RUN_REPORT_VERSION", "DraftEvidencePointer", "DraftLoopIteration", "DraftLoopState", "EVENT_STATUSES", "EvidenceRef", "ExecutionTraceEvent",
     "FALLBACK_STATUSES", "FULFILLMENT_STATUSES", "FallbackDecision", "FrontendViewModel",
     "FulfillmentAssessment", "GapItem", "GateDecision", "INTERACTION_MODES", "JudgeLLMOutput", "JudgeReferenceOutput", "JudgeResult", "LayerConfig",
-    "LiveExchange", "LiveMultiTurnState", "LiveRequest", "MockBuildResponse", "MockBuildResult", "MockBuildSpec", "MockCase", "MockCasesResponse", "MockContinueDecision", "MockDatasetsResponse", "MockInteractionTurn", "MockIntentOutput", "MockNextTurnOutput",
+    "LiveExchange", "LiveMultiTurnState", "LiveRequest", "MockBuildResponse", "MockBuildResult", "MockBuildSpec", "MockCase", "MockCasesResponse", "MockContinueDecision", "MockDatasetsResponse", "MockInteractionTurn", "MockIntentFidelityOutput", "MockIntentOutput", "MockNextTurnOutput",
     "MockDataset", "MockSpec", "MultiTurnCase", "MultiTurnInteraction", "MultiTurnPolicy",
     "MultiTurnTraceSummary", "MultiTurnTurnExpectation", "ProbeResult", "ProjectAnalysis", "ProjectSpec", "RoleAssetMapping", "RunChainResponse",
     "RunTrace", "SCHEMA_FIELD_ROLES", "SCHEMA_LAYERS", "SchemaLayerConfig", "SingleTurnCase", "SubagentResult",
@@ -49,6 +50,6 @@ __all__ = [
     "trace_application_boundary", "trace_conversation_summary", "trace_conversation_transcript", "trace_execution_trace", "trace_extracted_output", "trace_turn_records",
     "trace_input", "trace_mock_intent", "trace_normalized_request", "trace_output_source", "trace_project_fields", "trace_raw_response", "trace_stop_reason",
     "judge_expected_actual_gaps", "judge_primary_signal", "INVESTIGATION_SCHEMA_VERSION", "InvestigationManifest",
-    "ToolImplementationRef", "ToolRequirement", "dump_investigation_manifest", "load_investigation_manifest",
+    "InvestigationArtifactRef", "ToolImplementationRef", "ToolRequirement", "dump_investigation_manifest", "load_investigation_manifest",
     "validate_investigation_manifest",
 ]

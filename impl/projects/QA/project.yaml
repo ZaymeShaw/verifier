@@ -7,65 +7,95 @@ project:
   capabilities: [live_run, judge, attribute, cluster, check, scenario]
   resources:
     documents:
-      application: application.md
-      mock: mock.md
-      evaluation: evaluation.md
-      judge_boundary: judge_boundary.md
-      attribution: attribution.md
-      checklist: checklist.md
-      implementation_standard: implementation_standard.md
+      application: project://application.md
+      mock: project://mock.md
+      evaluation: project://evaluation.md
+      judge_boundary: project://judge_boundary.md
+      attribution: project://attribution.md
+      checklist: project://checklist.md
+      implementation_standard: project://implementation_standard.md
 
 runtime:
   mode: uploaded_output_evaluation
+  application:
+    interface:
+      shape: uploaded question, answer/output, optional contexts, optional reference/golden answer
+      source: adapter.py and application.md
+    start_run: no external service; evaluate uploaded or provided output through adapter normalization
+    boundary: service execution is outside scope; answer quality and faithfulness are in scope
   interaction:
     mode: single_turn
   ready: [output, reference]
+  adapter:
+    request_construction:
+      builder: Adapter.build_request maps uploaded QA case fields into a normalized evaluation request
+      required_inputs: [question]
+    output_extraction:
+      extractor: Adapter.extract_output normalizes provided answer/output and context evidence
+      normalized_output: answer text with optional context and quality signals
+    reference_handling:
+      source_priority: [input_reference, actual_answer, judge_generated, missing]
+      alignment: reference is normalized to the same QA answer/key-point shape as evaluated output
+  batch_persistence:
+    case_shape: id, selected, input, output, reference, metadata, scenario, source, status, error
+    transient_results: do not persist full trace, judge, attribute, or frontend_view as durable case-pool source data
+  mock_cases:
+    source: fixture
+    default_scenarios: [qa_gold_answer, qa_context_faithfulness, qa_weak_quality]
 
 verifier:
   attribution:
     enabled: false
-  presentation:
-    scenarios: [qa_gold_answer, qa_context_faithfulness, qa_weak_quality]
+    trace:
+      document: attribution.md
+      trace_nodes: [input_normalization, output_extraction, context_alignment, answer_quality_judge, attribution]
+  scenarios:
+    allowed: [qa_gold_answer, qa_context_faithfulness, qa_weak_quality]
+  judge:
     score_dimensions: [correctness, completeness, key_point_coverage, faithfulness, relevance, usefulness, coherence, risk_control, clarity]
     error_taxonomy: [answer_incorrect, answer_incomplete, question_misunderstood, irrelevant_answer, unsupported_claim, hallucination, context_not_used, insufficient_context, context_noise, over_refusal, format_error, too_vague, contradiction, needs_human_review, none]
+    boundary:
+      document: judge_boundary.md
+      gate: uploaded-output boundary separates answer-quality errors from missing external service execution
+  presentation:
+    frontend_view:
+      live: render Input, Output, Reference, Judge, Attribute, and scenario fields from protocol objects
+      summary: render same QA case-pool shape with compact per-case judge and attribute summaries
+  check_rules:
+    require_scenario: true
     core_forbidden_markers: []
-  extra:
-    check_rules:
-      description: QA 场景检查所需的字段约束
-      value_type: mapping
-      schema_version: 1
-      consumers: [impl.core.check]
-      value:
-        require_scenario: true
-        scenario_requirements:
-          qa_gold_answer:
-            reference_field: actual_answer
-          qa_context_faithfulness:
-            input_field: contexts
-          qa_weak_quality:
-            data_quality_flag: estimated_quality_only
+    evidence:
+      documents: [application.md, mock.md, evaluation.md, judge_boundary.md, attribution.md, checklist.md]
+      tests: [tests.test_demand_check_gap]
+    scenario_requirements:
+      qa_gold_answer:
+        reference_field: actual_answer
+      qa_context_faithfulness:
+        input_field: contexts
+      qa_weak_quality:
+        data_quality_flag: estimated_quality_only
   assets:
     - asset_id: judge_evaluation
       kind: context
       enabled: true
       roles: [judge]
-      production_path: evaluation.md
+      production_path: project://evaluation.md
     - asset_id: judge_boundary
       kind: context
       enabled: true
       roles: [judge]
-      production_path: judge_boundary.md
+      production_path: project://judge_boundary.md
     - asset_id: mock_contract
       kind: context
       enabled: true
       roles: [mock]
-      production_path: mock.md
+      production_path: project://mock.md
     - asset_id: mock_application
       kind: context
       enabled: true
       roles: [mock]
-      production_path: application.md
+      production_path: project://application.md
 
 metadata:
-  initialized_from: ../../../projects/QA/project.yaml
+  initialized_from: route://project.yaml
   source_revision: null

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
-from typing import Dict
+from types import MappingProxyType
+from typing import Dict, Mapping
 
 from .config_schema import ConfigError, EnvironmentRegistry
 
@@ -39,6 +41,20 @@ def parse_dotenv(path: Path) -> Dict[str, str]:
         value = _parse_dotenv_value(raw_value, line_number)
         values[name] = value
     return values
+
+
+def effective_environment_snapshot(
+    dotenv_path: Path,
+    environ: Mapping[str, str] | None = None,
+) -> Mapping[str, str]:
+    """Freeze the exact environment visible to one verifier command.
+
+    Explicit ``environ`` has the same meaning as in the configuration resolvers:
+    it replaces the ambient process mapping for deterministic tests/callers.
+    Process values override root ``.env`` values.
+    """
+    process_environment = dict(os.environ if environ is None else environ)
+    return MappingProxyType({**parse_dotenv(dotenv_path), **process_environment})
 
 
 def _parse_dotenv_value(raw_value: str, line_number: int) -> str:
@@ -83,6 +99,9 @@ def render_env_example(environment: EnvironmentRegistry) -> str:
             f"# type={variable.type}; required={'true' if variable.required else 'false'}; "
             f"secret={'true' if variable.secret else 'false'}; bind={variable.bind}"
         )
+        if variable.required_when is not None:
+            equals = str(variable.required_when.equals).lower() if isinstance(variable.required_when.equals, bool) else str(variable.required_when.equals)
+            lines.append(f"# required_when={variable.required_when.field}=={equals}")
         lines.append(f"{variable.name}=")
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"

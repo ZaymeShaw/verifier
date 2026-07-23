@@ -113,7 +113,7 @@ def _api_status(raw_response: Any, extracted_output: dict[str, Any]) -> str:
 
 
 def build_execution_trace(input_data: dict[str, Any], request: dict[str, Any], raw_response: Any, extracted_output: dict[str, Any], spec: ProjectSpec | None = None) -> list[ExecutionTraceEvent]:
-    endpoint = spec.api.get("endpoint") if spec is not None else None
+    endpoint = spec.service("primary").get("endpoint") if spec is not None else None
     return [
         ExecutionTraceEvent(stage="request_normalization", status="ok" if request.get("user_text") else "suspicious", evidence={"user_text": request.get("user_text")}),
         ExecutionTraceEvent(stage="intent_api_call", status=_api_status(raw_response, extracted_output), evidence={"endpoint": endpoint, "raw_response_present": bool(_raw_payload(raw_response))}),
@@ -133,11 +133,12 @@ class MarketingIntentLive(RealServiceLive, SingleTurnLive):
 
     def deliver_real(self, request: Any, transport: LiveTransport) -> LiveTransport:
         try:
-            url = str(self.spec.api.get("base_url") or "").rstrip("/") + "/" + str(self.spec.api.get("endpoint") or "").lstrip("/")
+            service = self.spec.require_service("primary")
+            url = str(service["base_url"]).rstrip("/") + "/" + str(service["endpoint"]).lstrip("/")
             transport.request(
-                str(self.spec.api.get("method") or "POST"), url,
+                str(service["method"]), url,
                 json_body=request,
-                timeout=float(self.spec.api.get("timeout") or 60),
+                timeout=float(service["timeout_seconds"]),
                 carries_live_request=True,
                 contributes_raw_response=True,
             )

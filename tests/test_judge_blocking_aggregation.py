@@ -95,19 +95,24 @@ def test_llm_failure_is_terminal_and_cannot_be_upgraded_by_project_reconcile(mon
     class RecordingJudge(ProjectJudge):
         def __init__(self, spec):
             super().__init__(spec)
+            self.normalize_called = False
             self.reconcile_called = False
 
         def build_context(self, trace):
             return {}
 
-        def reconcile_result(self, trace, result):
-            self.reconcile_called = True
+        def normalize_result(self, trace, result):
+            self.normalize_called = True
             result.business_expectations = [
                 BusinessExpectation(expectation_id="fabricated", blocking=True)
             ]
             result.fulfillment_assessments = [
                 FulfillmentAssessment(expectation_id="fabricated", status="fulfilled")
             ]
+            return result
+
+        def reconcile_result(self, trace, result):
+            self.reconcile_called = True
             return result
 
     failure = JudgeResult(
@@ -122,8 +127,81 @@ def test_llm_failure_is_terminal_and_cannot_be_upgraded_by_project_reconcile(mon
 
     result = judge.judge_trace(RunTrace(trace_id="trace-failed", project_id="fixture-project"))
 
+    assert judge.normalize_called is False
     assert judge.reconcile_called is False
     assert result.business_expectations == []
     assert result.fulfillment_assessments == []
     assert result.overall_fulfillment["status"] == "not_evaluable"
     assert result.summary["fulfillment_status"] == "not_evaluable"
+
+
+def test_terminal_pre_judge_result_skips_project_post_processing() -> None:
+    class TerminalPreJudge(ProjectJudge):
+        def __init__(self, spec):
+            super().__init__(spec)
+            self.normalize_called = False
+            self.reconcile_called = False
+
+        def pre_judge(self, trace, user_intent=None):
+            return JudgeResult(
+                trace_id=trace.trace_id,
+                project_id=trace.project_id,
+                overall_fulfillment={"status": "not_evaluable"},
+                reasoning_summary="cached provider failure",
+                evidence=["llm_call_failed"],
+            )
+
+        def build_context(self, trace):
+            raise AssertionError("terminal pre-judge must bypass the LLM path")
+
+        def normalize_result(self, trace, result):
+            self.normalize_called = True
+            return result
+
+        def reconcile_result(self, trace, result):
+            self.reconcile_called = True
+            return result
+
+    judge = TerminalPreJudge(ProjectSpec(project_id="fixture-project", name="Fixture Project"))
+    result = judge.judge_trace(RunTrace(trace_id="trace-failed", project_id="fixture-project"))
+
+    assert judge.normalize_called is False
+    assert judge.reconcile_called is False
+    assert result.overall_fulfillment["status"] == "not_evaluable"
+    assert result.evidence == ["llm_call_failed"]
+
+
+def test_nonterminal_result_reaches_project_normalize_before_public_normalization(monkeypatch) -> None:
+    class IdentityJudge(ProjectJudge):
+        def __init__(self, spec):
+            super().__init__(spec)
+            self.raw_result = None
+
+        def build_context(self, trace):
+            return {}
+
+        def normalize_result(self, trace, result):
+            assert result is self.raw_result
+            assert result.project_extension == {"preserve": True}
+            return result
+
+    raw = JudgeResult(
+        trace_id="trace-normal",
+        project_id="fixture-project",
+        business_expectations=[
+            BusinessExpectation(expectation_id="core", blocking=True)
+        ],
+        fulfillment_assessments=[
+            FulfillmentAssessment(expectation_id="core", status="fulfilled")
+        ],
+    )
+    raw.project_extension = {"preserve": True}
+    judge = IdentityJudge(ProjectSpec(project_id="fixture-project", name="Fixture Project"))
+    judge.raw_result = raw
+    monkeypatch.setattr("impl.core.judge.judge_trace", lambda **_kwargs: raw)
+
+    result = judge.judge_trace(
+        RunTrace(trace_id="trace-normal", project_id="fixture-project")
+    )
+
+    assert result.overall_fulfillment["status"] == "fulfilled"

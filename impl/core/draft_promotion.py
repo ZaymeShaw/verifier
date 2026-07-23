@@ -13,12 +13,13 @@ from .schema import ProjectSpec
 
 def plan_draft_promotion(spec: ProjectSpec, role: str) -> Dict[str, Any]:
     normalized_role = str(role or "").strip()
-    draft_config = getattr(spec, f"{normalized_role}_draft", {}) or {}
+    draft_config = spec.role_draft(normalized_role)
     if draft_config.get("enabled") is not True:
         raise ValueError(f"{normalized_role}_draft.enabled must be true before promotion")
-    root = Path(spec.root).resolve()
-    module = str(draft_config.get("module") or f"draft/{normalized_role}.py")
-    candidate_role = _safe_path(root, module, "draft role")
+    root = spec.project_package_path()
+    candidate_role = spec.role_draft_path(normalized_role, must_exist=False)
+    if candidate_role is None:
+        candidate_role = _safe_path(root, f"draft/{normalized_role}.py", "draft role")
     draft_root = (root / "draft").resolve()
     if not candidate_role.is_relative_to(draft_root) or not candidate_role.is_file():
         raise FileNotFoundError(f"draft role is missing or outside draft/: {candidate_role}")
@@ -43,7 +44,7 @@ def plan_draft_promotion(spec: ProjectSpec, role: str) -> Dict[str, Any]:
             other_role
             for other_role in mapping.roles
             if other_role != normalized_role
-            and bool((getattr(spec, f"{other_role}_draft", {}) or {}).get("enabled"))
+            and spec.role_draft(other_role).get("enabled") is True
         ]
         action = "copy" if shared_consumers else "move"
         operation = _operation(
@@ -69,8 +70,10 @@ def plan_draft_promotion(spec: ProjectSpec, role: str) -> Dict[str, Any]:
 
 def apply_draft_promotion(spec: ProjectSpec, role: str) -> Dict[str, Any]:
     plan = plan_draft_promotion(spec, role)
-    root = Path(spec.root).resolve()
-    config_path = root / "project.yaml"
+    root = spec.project_package_path()
+    config_path = spec.project_package_path(
+        "project.yaml", field_path="project.config", expected_type="file"
+    )
     if not config_path.is_file():
         raise FileNotFoundError(f"project.yaml not found: {config_path}")
     transaction_root = Path(tempfile.mkdtemp(prefix=".draft-promotion-", dir=str(root)))
@@ -195,31 +198,63 @@ def _install_operation(operation: Dict[str, Any]) -> None:
 def _update_project_config(path: Path, plan: Dict[str, Any]) -> None:
     role = str(plan["role"])
     text = path.read_text(encoding="utf-8")
-    pattern = re.compile(
-        rf"(?ms)^(?P<header>{re.escape(role)}_draft:\s*\n)(?P<body>(?:^[ \t]+.*\n?)*)"
-    )
-    match = pattern.search(text)
-    if match is None:
-        raise ValueError(f"project.yaml has no {role}_draft block")
-    body = match.group("body")
-    replaced, count = re.subn(r"(?m)^(\s*enabled:\s*)true\s*$", r"\1false", body, count=1)
-    if count != 1:
-        raise ValueError(f"project.yaml {role}_draft.enabled is not true")
-    updated = text[: match.start("body")] + replaced + text[match.end("body") :]
+    updated = _disable_role_draft(text, role)
     for operation in plan["operations"]:
         candidate_path = str(operation.get("candidate_config_path") or "")
-        if not candidate_path:
-            continue
-        value = re.escape(candidate_path)
-        candidate_pattern = re.compile(
-            rf"(?m)^(?P<indent>[ \t]*)candidate_path:\s*(?:{value}|\"{value}\"|'{value}')\s*$"
-        )
-        updated, candidate_count = candidate_pattern.subn(
-            r'\g<indent>candidate_path: ""', updated, count=1
-        )
-        if candidate_count != 1:
-            raise ValueError(f"project.yaml candidate_path not found exactly once: {candidate_path}")
+        if candidate_path:
+            value = re.escape(candidate_path)
+            candidate_pattern = re.compile(
+                rf"(?m)^(?P<indent>[ \t]*)candidate_path:\s*(?:{value}|\"{value}\"|'{value}')\s*$"
+            )
+            updated, candidate_count = candidate_pattern.subn(
+                r'\g<indent>candidate_path: ""', updated, count=1
+            )
+            if candidate_count != 1:
+                raise ValueError(f"project.yaml candidate_path not found exactly once: {candidate_path}")
     path.write_text(updated, encoding="utf-8")
+
+
+def _disable_role_draft(text: str, role: str) -> str:
+    """Disable the canonical nested Role switch."""
+    lines = text.splitlines(keepends=True)
+    path = ("verifier", "roles", role, "draft")
+    lower = 0
+    upper = len(lines)
+    parent_indent = -1
+    for key in path:
+        match_index = None
+        key_pattern = re.compile(rf"^(?P<indent>[ \t]*){re.escape(key)}:\s*(?:#.*)?$")
+        for index in range(lower, upper):
+            match = key_pattern.match(lines[index].rstrip("\r\n"))
+            if match and len(match.group("indent")) > parent_indent:
+                match_index = index
+                parent_indent = len(match.group("indent"))
+                break
+        if match_index is None:
+            break
+        lower = match_index + 1
+        upper = len(lines)
+        for index in range(lower, len(lines)):
+            stripped = lines[index].strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            indent = len(lines[index]) - len(lines[index].lstrip(" \t"))
+            if indent <= parent_indent:
+                upper = index
+                break
+    else:
+        enabled = re.compile(r"^(?P<indent>[ \t]*)enabled:\s*true\s*(?P<comment>#.*)?$")
+        matches = [index for index in range(lower, upper) if enabled.match(lines[index].rstrip("\r\n"))]
+        if len(matches) != 1:
+            raise ValueError(f"project.yaml verifier.roles.{role}.draft.enabled must be true exactly once")
+        index = matches[0]
+        match = enabled.match(lines[index].rstrip("\r\n"))
+        newline = "\n" if lines[index].endswith("\n") else ""
+        comment = match.group("comment") or ""
+        lines[index] = f"{match.group('indent')}enabled: false{(' ' + comment) if comment else ''}{newline}"
+        return "".join(lines)
+
+    raise ValueError(f"project.yaml has no verifier.roles.{role}.draft block")
 
 
 def _safe_path(root: Path, value: str, label: str) -> Path:

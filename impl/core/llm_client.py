@@ -421,6 +421,8 @@ class LlmClient:
         self.model = policy.model
         self.temperature = policy.temperature
         self.reasoning_effort = policy.reasoning_effort
+        self.request_timeout_seconds = llm_config.request_timeout_seconds
+        self.capabilities = llm_config.capabilities
         self.max_attempts = llm_config.max_attempts
         self.retry_delay_seconds = llm_config.retry_delay_seconds
         self.memory_manager = memory_manager
@@ -444,12 +446,15 @@ class LlmClient:
             raise ConfigError(f"unsupported LLM protocol: {self.protocol}")
         if not self.api_key:
             raise ConfigError("missing required configuration for llm: llm.api_key")
+        if self.tools and not self.capabilities.tool_calls:
+            raise ConfigError("configured LLM does not declare tool_calls capability")
         model_kwargs = {
             "id": self.model,
             "provider": self.provider,
             "api_key": self.api_key,
             "base_url": self.base_url,
             "temperature": self.temperature,
+            "timeout": self.request_timeout_seconds,
             "supports_native_structured_outputs": False,
             "supports_json_schema_outputs": False,
         }
@@ -487,6 +492,8 @@ class LlmClient:
                 "spec/struct_output.md 要求所有 LLM 调用必须传结构化输出约束。"
                 "如果确实没有明确输出结构（如自由文本分析），请传 structured_output.FREE_TEXT_OUTPUT。"
             )
+        if not self.capabilities.json_mode:
+            raise ConfigError("configured LLM does not declare json_mode capability")
         model_client = self.build_model(reasoning_effort=reasoning_effort)
 
         # spec/struct_output.md：注入约束文案 + 返回后强校验阻断

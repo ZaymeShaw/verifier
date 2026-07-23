@@ -5,6 +5,9 @@ import re
 from pathlib import Path
 from types import SimpleNamespace
 
+from impl.core.path_contract import PathResolver, PathRoots
+from impl.core.schema import ProjectSpec
+
 
 def _load_module():
     path = (
@@ -52,10 +55,17 @@ def test_rule_replay_reports_the_actual_homepage_rule_match(monkeypatch, tmp_pat
         "_business_modules",
         lambda: (intent_module, SimpleNamespace(), request_module),
     )
+    roots = PathRoots(business_source=tmp_path)
+    source_spec = ProjectSpec(
+        project_id="marketting-planning-intent",
+        name="marketting-planning-intent",
+        path_roots=roots,
+        path_resolver=PathResolver(roots),
+    )
     monkeypatch.setattr(
         module,
         "load_project",
-        lambda _project_id: SimpleNamespace(source_project=str(tmp_path)),
+        lambda _project_id: source_spec,
     )
 
     tool = module.build_rule_stage_replay_tool()

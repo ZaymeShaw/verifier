@@ -6,21 +6,67 @@ project:
   name: 示例项目
   description: 简短说明这个项目测什么
   capabilities: [single_turn, judge, check]
+  # taxonomies:
+  #   intent:
+  #     labels: [example_intent]
+  #     descriptions:
+  #       example_intent: Example business intent
 
 runtime:
   # existing_service_required | existing_service_optional | uploaded_output_evaluation
   mode: uploaded_output_evaluation
+  application:
+    interface:
+      shape: uploaded or service request/response shape evaluated by this project
+      source: adapter.py and the project application contract
+    start_run: describe how the business application is started, reused, or intentionally bypassed
+    boundary: describe which application responsibilities are in scope
   interaction:
     mode: single_turn
   ready: [output, reference]
+  adapter:
+    request_construction:
+      builder: Adapter.build_request normalizes the formal case into the project request
+      required_inputs: [query]
+    output_extraction:
+      extractor: Adapter.extract_output normalizes the project response
+      normalized_output: project-specific normalized output contract
+    reference_handling:
+      source_priority: [input_reference, judge_generated, missing]
+      alignment: compare reference and output through the same normalized business shape
+  batch_persistence:
+    case_shape: id, selected, input, output, reference, metadata, scenario, source, status, error
+    transient_results: do not persist trace, judge, attribute, or frontend_view as durable case-pool source data
+  mock_cases:
+    source: fixture  # fixture | dynamic
+    default_scenarios: [happy_path]
 
 verifier:
   # Every project must choose one boolean. Manual attribution is a run override.
   attribution:
     enabled: false
+    trace:
+      document: attribution.md
+      trace_nodes: [request_normalization, output_extraction, judge, attribution]
+  scenarios:
+    allowed: [happy_path]
+  judge:
+    boundary:
+      document: judge_boundary.md
+      gate: declare what is evaluable before comparing expected and actual results
+  presentation:
+    frontend_view:
+      live: render normalized protocol objects
+      summary: render the same durable case shape with compact runtime summaries
+  check_rules:
+    require_scenario: true
+    core_forbidden_markers: []
+    evidence:
+      documents: [application.md, mock.md, evaluation.md, judge_boundary.md, attribution.md, checklist.md]
+      tests: []
 
 metadata:
-  initialized_from: ../../../projects/my_project/project.yaml
+  initialized_from: route://project.yaml
   source_revision: null
 
 # Add environment only when this project owns environment bindings:

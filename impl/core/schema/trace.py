@@ -57,6 +57,10 @@ class RunTrace:
     status: str = "ok"
     error: Optional[str] = None
     created_at: str = field(default_factory=now_iso)
+    # 本次执行实际采用的公共/项目配置指纹与来源（仅记录来源元数据，不记录 secret 值）。
+    config_fingerprint: str = ""
+    config_sources: Dict[str, Any] = field(default_factory=dict)
+    attribution_runs: List[Dict[str, Any]] = field(default_factory=list)
     state_history: List[TraceStateRecord] = field(default_factory=list)
     gate_decisions: List[GateDecision] = field(default_factory=list)
     transition_decisions: List[TransitionDecision] = field(default_factory=list)
@@ -64,7 +68,7 @@ class RunTrace:
     interaction_mode: str = "single_turn"
     session_id: str = ""
     turn_index: int = 0
-    # 协议层 ready 声明快照：由 pipeline 在构造 trace 时从 spec.common.ready 注入一次，
+    # 协议层 ready 声明快照：由 pipeline 在构造 trace 时从 spec.runtime.ready 注入一次，
     # judge/attribute 等下游直接读 trace.ready，单一数据源，禁止再 load_project 反查。
     ready: List[str] = field(default_factory=list)
     conversation_transcript: List[Dict[str, Any]] = field(default_factory=list)

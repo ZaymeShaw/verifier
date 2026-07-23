@@ -824,6 +824,7 @@ ToolResult:
   actual: dict | None           # 实际输出
   evidence: str                 # 执行日志，机器填充的事实记录
   status: passed | diverged | inconclusive
+  runtime_metadata: dict        # 公共运行时附加元数据；不得覆盖 actual/outputs
 ```
 
 砍掉 expected、output_schema。对照逻辑是 actual 之间的交叉对照 + actual 和 trace 的对照 + LLM 语义推理。

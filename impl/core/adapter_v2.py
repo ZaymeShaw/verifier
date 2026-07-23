@@ -47,7 +47,7 @@ class ProjectAdapter(ABC):
     def _get_or_load(self, key: str, loader_name: Optional[str] = None) -> Any:
         """懒加载并缓存专项模块实例"""
         if key not in self._cache:
-            draft_config = getattr(self.spec, f"{key}_draft", {}) or {}
+            draft_config = self.spec.role_draft(key)
             instance = None
             if draft_config.get("enabled") is True and key in {"mock"}:
                 from .project_loader import load_project_role_instance

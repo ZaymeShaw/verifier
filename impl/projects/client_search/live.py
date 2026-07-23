@@ -149,8 +149,8 @@ def provided_output_raw(case: SingleTurnCase | MultiTurnCase, request: LiveReque
 
 
 def _probe_downstream_search(spec: ProjectSpec, raw_response: Dict[str, Any], transport: LiveTransport) -> Any:
-    config = spec.application.get("downstream_search") if isinstance(spec.application, dict) else None
-    if not isinstance(config, dict) or not config.get("enabled", True):
+    config = spec.service("downstream_search")
+    if not config or config.get("enabled") is not True:
         return {"status": "not_configured"}
     extra = (((raw_response.get("data") or {}).get("extra_output_params")) or {})
     conditions = list(extra.get("conditions") or [])
@@ -162,16 +162,15 @@ def _probe_downstream_search(spec: ProjectSpec, raw_response: Dict[str, Any], tr
     }
     if not conditions:
         return {"status": "skipped", "reason": "parse returned no conditions", "payload": payload}
-    base_url = str(config.get("base_url") or "").rstrip("/") + "/"
-    endpoint = str(config.get("endpoint") or "").lstrip("/")
-    if not base_url.strip("/") or not endpoint:
-        return {"status": "not_configured", "payload": payload}
+    config = spec.require_service("downstream_search")
+    base_url = str(config["base_url"]).rstrip("/") + "/"
+    endpoint = str(config["endpoint"]).lstrip("/")
     url = urljoin(base_url, endpoint)
     try:
         view = transport.request(
-            str(config.get("method") or "POST"), url,
+            str(config["method"]), url,
             json_body=payload,
-            timeout=float(config.get("timeout") or 3),
+            timeout=float(config["timeout_seconds"]),
             contributes_raw_response=True,
         )
         return view.response
@@ -366,16 +365,15 @@ class ClientSearchLive(RealServiceLive, SingleTurnLive):
 
     def deliver_real(self, request: Any, transport: LiveTransport) -> LiveTransport:
         normalized_request = request.normalized_request if isinstance(request, LiveRequest) else (request if isinstance(request, dict) else {})
-        api = self.spec.api
-        base = str(api.get("base_url") or "").rstrip("/") + "/"
-        endpoint = str(api.get("endpoint") or "").lstrip("/")
+        service = self.spec.require_service("primary")
+        base = str(service["base_url"]).rstrip("/") + "/"
+        endpoint = str(service["endpoint"]).lstrip("/")
         url = urljoin(base, endpoint)
         with _SERVICE_LOCK:
             view = transport.request(
-                str(api.get("method") or "POST"), url,
+                str(service["method"]), url,
                 json_body=normalized_request,
-                headers=dict(api.get("headers") or {}),
-                timeout=float(api.get("timeout") or 30),
+                timeout=float(service["timeout_seconds"]),
                 carries_live_request=True,
                 contributes_raw_response=True,
             )

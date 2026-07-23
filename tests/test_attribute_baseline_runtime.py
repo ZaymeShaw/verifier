@@ -11,6 +11,7 @@ from impl.core.attribute import _default_system_prompt
 from impl.core.attribute_reviewer import review_attribute_result
 from impl.core.context.tools import GuardedContextTools
 from impl.core.context.errors import ContextValidationError
+from impl.core.path_contract import PathResolver, PathRoots
 from impl.core.attribute_protocol import ProjectAttribute
 from impl.core.summary import summary_from_attribution
 from impl.core import context_store
@@ -18,6 +19,24 @@ from impl.core.schema import AttributeResult, AttributionFinding, EvidenceRef, F
 from impl.core.schema.context import ContextRecord
 from impl.tools import ToolResult, VerifiableTool
 from impl.tools.source_retrieval import ProjectSourceFileProvider, create_source_search_tools
+
+
+def _source_spec(root):
+    roots = PathRoots(
+        verifier_repo=root.resolve(),
+        business_source=root.resolve(),
+        project_package=root.resolve(),
+        knowledge_route=root.resolve(),
+        artifact_package=root.resolve(),
+    )
+    return ProjectSpec(
+        project_id="demo",
+        name="demo",
+        project={"resources": {"source": {"repository": "business://.", "paths": {}}, "documents": {}}},
+        verifier={"endpoint_discovery": {"source_roots": []}},
+        path_roots=roots,
+        path_resolver=PathResolver(roots),
+    )
 
 
 def _judge():
@@ -67,7 +86,7 @@ def test_context_tool_schema_uses_json_arrays_and_prompt_separates_source_keys()
 def test_source_search_discovers_unregistered_technical_location(tmp_path):
     source = tmp_path / "intent_router.py"
     source.write_text("UNKNOWN_STAGE = 'unknown'\ndef route(stage):\n    return UNKNOWN_STAGE\n", encoding="utf-8")
-    provider = ProjectSourceFileProvider(SimpleNamespace(root=str(tmp_path), source_project=str(tmp_path), documents={}, adapter="", application={}, endpoint_discovery={}))
+    provider = ProjectSourceFileProvider(_source_spec(tmp_path))
     [search_tool] = create_source_search_tools(provider)
     result = search_tool.execute_fn(query="UNKNOWN_STAGE")
     assert result.actual["matches"][0]["line"] == 1
@@ -79,9 +98,7 @@ def test_source_search_can_return_bounded_context_without_full_file(tmp_path):
         "rules:\n  - name: exact-name\n    patterns:\n      - name=(.+)\n    field: client_name\nother: ignored\n",
         encoding="utf-8",
     )
-    provider = ProjectSourceFileProvider(SimpleNamespace(
-        root=str(tmp_path), source_project=str(tmp_path), documents={}, adapter="", application={}, endpoint_discovery={}
-    ))
+    provider = ProjectSourceFileProvider(_source_spec(tmp_path))
     [search_tool] = create_source_search_tools(provider)
 
     result = search_tool.execute_fn(query="exact-name", max_results=1, context_lines=3)
@@ -107,7 +124,11 @@ class _TwoRoundAttribute(ProjectAttribute):
 
 
 def test_review_issue_is_returned_to_main_executor_then_can_pass(monkeypatch):
-    attribute = _TwoRoundAttribute(ProjectSpec(project_id="demo", name="demo", attribute_draft={"enabled": True}))
+    attribute = _TwoRoundAttribute(ProjectSpec(
+        project_id="demo",
+        name="demo",
+        verifier={"roles": {"attribute": {"draft": {"enabled": True}}}},
+    ))
     attribute.configure_execution_environment(AttributeExecutionEnvironment())
     reviews = iter([{"passed": False, "issues": [{"target": "finding-stage", "problem": "缺少路由输入证据"}]}, {"passed": True, "issues": []}])
     monkeypatch.setattr(attribute, "_run_attribute_review", lambda *_args: next(reviews))
@@ -121,7 +142,11 @@ def test_review_issue_is_returned_to_main_executor_then_can_pass(monkeypatch):
 
 
 def test_second_failed_review_removes_unproved_findings(monkeypatch):
-    attribute = _TwoRoundAttribute(ProjectSpec(project_id="demo", name="demo", attribute_draft={"enabled": True}))
+    attribute = _TwoRoundAttribute(ProjectSpec(
+        project_id="demo",
+        name="demo",
+        verifier={"roles": {"attribute": {"draft": {"enabled": True}}}},
+    ))
     attribute.configure_execution_environment(AttributeExecutionEnvironment())
     monkeypatch.setattr(attribute, "_run_attribute_review", lambda *_args: {"passed": False, "issues": [{"target": "finding-stage", "problem": "证据不能证明因果连接"}]})
     result = attribute.attribute_failure(RunTrace(trace_id="trace-1", project_id="demo"), _judge())
@@ -330,6 +355,15 @@ def test_reviewer_receives_catalog_entries_beyond_first_twenty(monkeypatch):
 
 
 def test_reviewer_rejects_oversized_bundle_without_silent_truncation(monkeypatch):
+    from dataclasses import replace
+    from impl.core.config import get_runtime_config
+
+    runtime = get_runtime_config()
+    constrained = replace(
+        runtime,
+        attribute=replace(runtime.attribute, review_prompt_char_budget=100),
+    )
+    monkeypatch.setattr("impl.core.attribute_reviewer.get_runtime_config", lambda: constrained)
     monkeypatch.setattr(
         "impl.core.attribute_reviewer.project_llm_client",
         lambda *_args, **_kwargs: pytest.fail("oversized reviewer prompt must not call the LLM"),
@@ -341,7 +375,6 @@ def test_reviewer_rejects_oversized_bundle_without_silent_truncation(monkeypatch
         judge=_judge(),
         result=result,
         project_context={
-            "review_prompt_char_budget": 100,
             "_attribute_review_bundle": lambda _result: {
                 "cited_evidence_context_units": [{"content": "x" * 500}],
                 "available_context_units": [],
@@ -415,7 +448,11 @@ def test_verifiable_tool_result_is_registered_as_dynamic_context_unit():
     result = tool.entrypoint()
     assert runtime.registered[0].tags["case_id"] == "case-1"
     assert runtime.registered[0].tags["run_id"] == "attribute-run-current"
-    assert result.actual["context_unit_id"] == runtime.registered[0].id
+    assert "context_unit_id" not in result.actual
+    assert result.actual == {"stage": "unknown"}
+    assert result.runtime_metadata["attribute_context_evidence"] == {
+        "registered": True
+    }
     assert "无需重复 Load" in tool.description
 
 
@@ -424,10 +461,15 @@ def test_main_tool_material_is_immediately_recorded_as_investigated():
     class TrackingContextRun:
         def __init__(self):
             self.loaded = []
+            self.refs = {}
 
         def load_context_units(self, unit_ids):
             self.loaded.extend(unit_ids)
             return []
+
+        def selection_ref_for_loaded_context_unit(self, unit_id):
+            assert unit_id in self.loaded
+            return self.refs.setdefault(unit_id, f"C{len(self.refs) + 1}")
 
     context_run = TrackingContextRun()
     environment = AttributeExecutionEnvironment(
@@ -444,7 +486,15 @@ def test_main_tool_material_is_immediately_recorded_as_investigated():
     ], "main")
     result = tool.entrypoint()
 
-    assert result.actual["context_unit_id"] in context_run.loaded
+    assert context_run.loaded == [runtime.registered[0].id]
+    assert result.actual == {"stage": "unknown"}
+    assert result.outputs == {}
+    assert result.runtime_metadata == {
+        "attribute_context_evidence": {
+            "registered": True,
+            "selection_ref": "C1",
+        },
+    }
 
 
 def test_dynamic_context_registration_records_one_failure_then_clears_it_after_exact_success():
@@ -467,7 +517,9 @@ def test_dynamic_context_registration_records_one_failure_then_clears_it_after_e
 
     result = tool.entrypoint()
     assert runtime.attempts == 2
-    assert result.actual["context_unit_id"] == runtime.registered[0].id
+    assert "context_unit_id" not in result.actual
+    assert result.actual == {"stage": "unknown"}
+    assert result.runtime_metadata["attribute_context_evidence"]["registered"] is True
     assert environment.registration_errors == []
 
 
@@ -489,7 +541,8 @@ def test_tool_result_survives_failed_context_registration_but_cannot_be_evidence
     assert result.status == "succeeded"
     assert result.actual["stage"] == "unknown"
     assert "context_unit_id" not in result.actual
-    failure = result.outputs["evidence_registration_error"]
+    assert result.runtime_metadata["attribute_context_evidence"]["registered"] is False
+    failure = result.runtime_metadata["attribute_context_evidence"]["error"]
     assert failure == {
         "material": "main_tool_demo_probe",
         "stage": "context_unit_registration",
@@ -497,6 +550,62 @@ def test_tool_result_survives_failed_context_registration_but_cannot_be_evidence
         "reason": "embedding unavailable",
         "attempts": "1",
     }
+
+
+def test_context_wrapper_does_not_overwrite_any_business_actual_or_output_fields():
+    runtime = _FakeRuntime()
+    environment = AttributeExecutionEnvironment(
+        context_runtime=runtime,
+        trace=RunTrace(trace_id="trace-1", project_id="demo", case_id="case-1"),
+    )
+
+    def execute(**_kwargs):
+        return ToolResult(
+            tool_id="demo.probe",
+            status="succeeded",
+            actual={"evidence_registered": "business-value"},
+            outputs={
+                "context_unit_id": "business-value",
+                "_context_evidence": "business-value",
+            },
+        )
+
+    [tool] = environment._contextualize_verifiable_tools([
+        VerifiableTool(tool_id="demo.probe", description="probe stage", parameters={}, execute_fn=execute)
+    ], "main")
+    result = tool.entrypoint()
+
+    assert result.actual == {"evidence_registered": "business-value"}
+    assert result.outputs == {
+        "context_unit_id": "business-value",
+        "_context_evidence": "business-value",
+    }
+    assert result.runtime_metadata["attribute_context_evidence"] == {
+        "registered": True
+    }
+
+
+def test_context_wrapper_rejects_reserved_runtime_metadata_collision():
+    runtime = _FakeRuntime()
+    environment = AttributeExecutionEnvironment(
+        context_runtime=runtime,
+        trace=RunTrace(trace_id="trace-1", project_id="demo", case_id="case-1"),
+    )
+
+    def execute(**_kwargs):
+        return ToolResult(
+            tool_id="demo.probe",
+            status="succeeded",
+            runtime_metadata={"attribute_context_evidence": {"registered": "tool"}},
+        )
+
+    [tool] = environment._contextualize_verifiable_tools([
+        VerifiableTool(tool_id="demo.probe", description="probe stage", parameters={}, execute_fn=execute)
+    ], "main")
+
+    with pytest.raises(ValueError, match="reserved for the Attribute runtime"):
+        tool.entrypoint()
+    assert runtime.registered == []
 
 
 def test_invalid_embedding_is_not_retried_as_a_context_registration():
@@ -514,7 +623,11 @@ def test_invalid_embedding_is_not_retried_as_a_context_registration():
 
 
 def test_reviewer_infrastructure_failure_returns_no_formal_attribution(monkeypatch):
-    attribute = _TwoRoundAttribute(ProjectSpec(project_id="demo", name="demo", attribute_draft={"enabled": True}))
+    attribute = _TwoRoundAttribute(ProjectSpec(
+        project_id="demo",
+        name="demo",
+        verifier={"roles": {"attribute": {"draft": {"enabled": True}}}},
+    ))
     attribute.configure_execution_environment(AttributeExecutionEnvironment())
     monkeypatch.setattr(attribute, "_run_attribute_review", lambda *_args: {
         "passed": False,
@@ -546,7 +659,12 @@ def test_project_normalize_cannot_forge_post_finalization_finding():
 
 
 def test_context_store_keeps_multiple_review_loop_records_in_same_second(tmp_path, monkeypatch):
-    monkeypatch.setattr(context_store, "STORE_DIR", tmp_path)
+    store_root = tmp_path / "impl" / "data" / "context_store"
+    context = context_store.DEFAULT_ACTIVE_ARTIFACT_REGISTRY.context(
+        context_store.REPOSITORY_ROOT,
+        environ={"CONTEXT_STORE_ROOT": str(store_root)},
+    )
+    monkeypatch.setattr(context_store, "_ACTIVE_ARTIFACT_CONTEXT", context)
     common = dict(trace_id="trace-1", project_id="demo", caller="attribute", messages=[], created_at="2026-07-19T12:00:00Z")
     context_store.save_context(ContextRecord(record_id="round-one", **common))
     context_store.save_context(ContextRecord(record_id="round-two", **common))

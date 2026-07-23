@@ -15,6 +15,8 @@ fi
 UAT_PORT=$("$PYTHON_BIN" -c "from impl.core.config import get_uat_config; print(get_uat_config().port)" 2>/dev/null || echo "8021")
 export VERIFIER_UAT_PORT="${VERIFIER_UAT_PORT:-${UAT_PORT}}"
 
+"$PYTHON_BIN" -m impl.core.runtime_preflight
+
 # 自动重启：必须等端口完全释放后再启动。否则 health 可能误命中旧进程，
 # 而新进程因 bind 失败退出，使整批报告在中途变成 http_error。
 if lsof -ti:"$VERIFIER_UAT_PORT" >/dev/null 2>&1; then

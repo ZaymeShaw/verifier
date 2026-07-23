@@ -8,6 +8,8 @@ from typing import Any, Mapping, Optional
 
 from .config_bootstrap import parse_dotenv
 from .config_schema import (
+    AttributeCompactionConfig,
+    AttributeConfig,
     BrowserConfig,
     ConfigError,
     ConfigValueSource,
@@ -16,7 +18,9 @@ from .config_schema import (
     EnvironmentVariableSpec,
     ExecutionConfig,
     JudgeConfig,
+    LlmCapabilities,
     LlmConfig,
+    LlmRolePolicyOverride,
     PythonConfig,
     ParsedRuntimeConfig,
     RuntimeConfig,
@@ -29,6 +33,7 @@ from .config_schema import (
     parse_runtime_document,
     openai_compatible_base_url,
 )
+from .path_contract import PathContractError, PathResolver, PathRoots, PathScope
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -49,6 +54,7 @@ def resolve_runtime_config(
     """Resolve the public configuration through one deterministic precedence chain."""
     config_path = CONFIG_PATH if config_path is None else config_path
     dotenv_path = DOTENV_PATH if dotenv_path is None else dotenv_path
+    verifier_root = config_path.resolve().parent.parent
     parsed = parse_runtime_document(load_yaml_document(config_path))
     process_environment = dict(os.environ if environ is None else environ)
     dotenv = parse_dotenv(dotenv_path)
@@ -107,14 +113,28 @@ def resolve_runtime_config(
         values["llm.base_url"],
         "llm.base_url",
     )
-
-    missing_required = tuple(
-        sorted(
-            variable.bind
-            for variable in parsed.environment.variables.values()
-            if variable.required and values.get(variable.bind) in {None, ""}
+    for field_path in ("context.data_root", "context.store_root"):
+        values[field_path] = _resolve_common_runtime_path(
+            values[field_path],
+            field_path=field_path,
+            source=sources[field_path],
+            verifier_root=verifier_root,
         )
-    )
+
+    missing_required_values = {
+        variable.bind
+        for variable in parsed.environment.variables.values()
+        if (
+            variable.required
+            or (
+                variable.required_when is not None
+                and values.get(variable.required_when.field) == variable.required_when.equals
+            )
+        )
+        and values.get(variable.bind) in {None, ""}
+    }
+    missing_required = tuple(sorted(missing_required_values))
+    role_policies = _apply_role_policy_overrides(parsed, values)
     return RuntimeConfig(
         schema_version=parsed.schema_version,
         python=PythonConfig(executable=str(values["python.executable"])),
@@ -129,11 +149,18 @@ def resolve_runtime_config(
             api_key=str(values["llm.api_key"]),
             temperature=float(values["llm.temperature"]),
             reasoning_effort=str(values["llm.reasoning_effort"]),
+            request_timeout_seconds=float(values["llm.request_timeout_seconds"]),
             max_attempts=int(values["llm.max_attempts"]),
             retry_delay_seconds=float(values["llm.retry_delay_seconds"]),
-            role_policies=parsed.llm.role_policies,
+            capabilities=LlmCapabilities(
+                json_mode=bool(values["llm.capabilities.json_mode"]),
+                tool_calls=bool(values["llm.capabilities.tool_calls"]),
+                context_window_tokens=int(values["llm.capabilities.context_window_tokens"]),
+            ),
+            role_policies=role_policies,
         ),
         embedding=EmbeddingConfig(
+            enabled=bool(values["embedding.enabled"]),
             provider=str(values["embedding.provider"]),
             model=str(values["embedding.model"]),
             api_key=str(values["embedding.api_key"]),
@@ -158,6 +185,26 @@ def resolve_runtime_config(
             top_k_per_query=int(values["context.top_k_per_query"]),
         ),
         judge=JudgeConfig(raw_response_max_chars=int(values["judge.raw_response_max_chars"])),
+        attribute=AttributeConfig(
+            tool_call_limit=int(values["attribute.tool_call_limit"]),
+            investigation_error_chars=int(values["attribute.investigation_error_chars"]),
+            finalization_prompt_char_budget=int(values["attribute.finalization_prompt_char_budget"]),
+            review_prompt_char_budget=int(values["attribute.review_prompt_char_budget"]),
+            compaction=AttributeCompactionConfig(
+                list_item_limit=int(values["attribute.compaction.list_item_limit"]),
+                attribute_result_chars=int(values["attribute.compaction.attribute_result_chars"]),
+                project_context_chars=int(values["attribute.compaction.project_context_chars"]),
+                trace_input_chars=int(values["attribute.compaction.trace_input_chars"]),
+                trace_normalized_request_chars=int(values["attribute.compaction.trace_normalized_request_chars"]),
+                trace_output_chars=int(values["attribute.compaction.trace_output_chars"]),
+                trace_execution_chars=int(values["attribute.compaction.trace_execution_chars"]),
+                trace_error_chars=int(values["attribute.compaction.trace_error_chars"]),
+                judge_business_expectations_chars=int(values["attribute.compaction.judge_business_expectations_chars"]),
+                judge_fulfillment_assessments_chars=int(values["attribute.compaction.judge_fulfillment_assessments_chars"]),
+                judge_gap_chars=int(values["attribute.compaction.judge_gap_chars"]),
+                judge_reasoning_chars=int(values["attribute.compaction.judge_reasoning_chars"]),
+            ),
+        ),
         environment=parsed.environment,
         sources=MappingProxyType(dict(sources)),
         warnings=(),
@@ -201,9 +248,15 @@ def _base_values(parsed: ParsedRuntimeConfig) -> dict[str, Any]:
         "llm.api_key": "",
         "llm.temperature": parsed.llm.temperature,
         "llm.reasoning_effort": parsed.llm.reasoning_effort,
+        "llm.request_timeout_seconds": parsed.llm.request_timeout_seconds,
         "llm.max_attempts": parsed.llm.max_attempts,
         "llm.retry_delay_seconds": parsed.llm.retry_delay_seconds,
+        "llm.role_policies.live_stub.model": _role_policy_default_model(parsed, "live_stub"),
+        "llm.capabilities.json_mode": parsed.llm.capabilities.json_mode,
+        "llm.capabilities.tool_calls": parsed.llm.capabilities.tool_calls,
+        "llm.capabilities.context_window_tokens": parsed.llm.capabilities.context_window_tokens,
         "embedding.provider": parsed.embedding.provider,
+        "embedding.enabled": parsed.embedding.enabled,
         "embedding.model": parsed.embedding.model,
         "embedding.api_key": "",
         "embedding.dimensions": parsed.embedding.dimensions,
@@ -222,7 +275,55 @@ def _base_values(parsed: ParsedRuntimeConfig) -> dict[str, Any]:
         "context.query_limit": parsed.context.query_limit,
         "context.top_k_per_query": parsed.context.top_k_per_query,
         "judge.raw_response_max_chars": parsed.judge.raw_response_max_chars,
+        "attribute.finalization_prompt_char_budget": parsed.attribute.finalization_prompt_char_budget,
+        "attribute.review_prompt_char_budget": parsed.attribute.review_prompt_char_budget,
+        "attribute.tool_call_limit": parsed.attribute.tool_call_limit,
+        "attribute.investigation_error_chars": parsed.attribute.investigation_error_chars,
+        "attribute.compaction.list_item_limit": parsed.attribute.compaction.list_item_limit,
+        "attribute.compaction.attribute_result_chars": parsed.attribute.compaction.attribute_result_chars,
+        "attribute.compaction.project_context_chars": parsed.attribute.compaction.project_context_chars,
+        "attribute.compaction.trace_input_chars": parsed.attribute.compaction.trace_input_chars,
+        "attribute.compaction.trace_normalized_request_chars": parsed.attribute.compaction.trace_normalized_request_chars,
+        "attribute.compaction.trace_output_chars": parsed.attribute.compaction.trace_output_chars,
+        "attribute.compaction.trace_execution_chars": parsed.attribute.compaction.trace_execution_chars,
+        "attribute.compaction.trace_error_chars": parsed.attribute.compaction.trace_error_chars,
+        "attribute.compaction.judge_business_expectations_chars": parsed.attribute.compaction.judge_business_expectations_chars,
+        "attribute.compaction.judge_fulfillment_assessments_chars": parsed.attribute.compaction.judge_fulfillment_assessments_chars,
+        "attribute.compaction.judge_gap_chars": parsed.attribute.compaction.judge_gap_chars,
+        "attribute.compaction.judge_reasoning_chars": parsed.attribute.compaction.judge_reasoning_chars,
     }
+
+
+def _role_policy_default_model(parsed: ParsedRuntimeConfig, role: str) -> str:
+    policy = parsed.llm.role_policies.get(role)
+    if policy is None or policy.model is None:
+        return ""
+    return policy.model
+
+
+def _apply_role_policy_overrides(
+    parsed: ParsedRuntimeConfig,
+    values: dict[str, Any],
+) -> Mapping[str, LlmRolePolicyOverride]:
+    """Rebuild role policies after applying environment-registered overrides.
+
+    Only ``live_stub.model`` is currently exposed through the environment
+    registry; the override replaces the YAML model while preserving every other
+    field of the role policy.
+    """
+    role_policies: dict[str, LlmRolePolicyOverride] = dict(parsed.llm.role_policies)
+    stub_model = str(values.get("llm.role_policies.live_stub.model") or "")
+    if "live_stub" in role_policies and stub_model:
+        existing = role_policies["live_stub"]
+        if stub_model != (existing.model or ""):
+            role_policies["live_stub"] = LlmRolePolicyOverride(
+                provider=existing.provider,
+                model=stub_model,
+                base_url=existing.base_url,
+                temperature=existing.temperature,
+                reasoning_effort=existing.reasoning_effort,
+            )
+    return MappingProxyType(role_policies)
 
 
 def _select_environment_value(
@@ -235,6 +336,36 @@ def _select_environment_value(
     if variable.name in dotenv:
         return dotenv[variable.name], "dotenv", variable.name
     return None
+
+
+def _resolve_common_runtime_path(
+    value: Any,
+    *,
+    field_path: str,
+    source: ConfigValueSource,
+    verifier_root: Path,
+) -> str:
+    text = str(value)
+    candidate = Path(text)
+    if candidate.is_absolute():
+        if source.kind == "yaml":
+            raise ConfigError(f"PATH_ABSOLUTE_CONFIG at {field_path}: absolute YAML paths are forbidden")
+        return str(candidate.resolve())
+    try:
+        return str(
+            PathResolver(PathRoots(verifier_repo=verifier_root)).resolve(
+                text,
+                field_path=field_path,
+                allowed_scopes={PathScope.VERIFIER_REPO},
+                must_exist=False,
+            ).physical
+        )
+    except PathContractError as exc:
+        if source.kind != "yaml":
+            raise ConfigError(
+                f"{field_path} supplied by {source.kind} must be an absolute machine path"
+            ) from exc
+        raise ConfigError(str(exc)) from exc
 
 
 def initialize_runtime_config(
@@ -286,6 +417,13 @@ def get_llm_config() -> LlmConfig:
 
 def get_embedding_config() -> EmbeddingConfig:
     return get_runtime_config().embedding
+
+
+def resolve_batch_concurrency(value: Optional[int] = None) -> int:
+    """Resolve batch concurrency through the public execution configuration."""
+    execution = get_runtime_config().execution
+    selected = execution.batch_concurrency_default if value is None else int(value)
+    return max(1, min(selected, execution.batch_concurrency_max))
 
 
 def get_uat_base_url(scheme: str = "http") -> str:

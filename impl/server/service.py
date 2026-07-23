@@ -16,8 +16,10 @@ from ..core.schema import (
     CasePoolsResponse,
     MockBuildResponse,
     MockCasesResponse,
+    MockDataset,
     MockDatasetsResponse,
     RunChainResponse,
+    SingleTurnCase,
     normalize_attribute_result,
     normalize_attribute_results,
     normalize_case_pool_table,
@@ -157,19 +159,68 @@ def analysis(data: Dict[str, Any]) -> Any:
     return pipeline.analysis(project_from(data))
 
 
+def _runtime_case_from_live_payload(data: Dict[str, Any]) -> SingleTurnCase:
+    """Resolve the explicit transport boundary into one runtime case.
+
+    ``input`` always carries a project REQUEST_SCHEMA payload. ``case`` always
+    carries the canonical transport MockCase. Keeping the two fields distinct
+    avoids inspecting project-owned keys such as DeerFlow's top-level ``input``.
+    """
+    has_input = "input" in data
+    has_case = "case" in data
+    if has_input == has_case:
+        raise ValueError("live request must provide exactly one of 'input' or 'case'")
+
+    if has_case:
+        from ..core.mock import mock_case_to_single_turn, parse_mock_case
+
+        stored_case = parse_mock_case(data.get("case"), project_id=project_from(data))
+        return mock_case_to_single_turn(stored_case)
+
+    request = data.get("input")
+    if not isinstance(request, dict):
+        raise ValueError("live request 'input' must be an object")
+    return SingleTurnCase(
+        id="",
+        input=dict(request),
+        user_intent=str(data.get("user_intent") or ""),
+    )
+
+
 def live_run(data: Dict[str, Any]) -> Any:
-    return pipeline.live_run(project_from(data), data.get("input") or {})
+    return pipeline.live_run(project_from(data), _runtime_case_from_live_payload(data))
 
 
 def mock_cases(data: Dict[str, Any]) -> MockCasesResponse:
     project = project_from(data)
     from ..core.mock import parse_mock_case
-    return MockCasesResponse(project_id=project, cases=[parse_mock_case(case, project_id=project) for case in pipeline.mock_cases(project)])
+    count = int(data.get("count") or 1)
+    return MockCasesResponse(project_id=project, cases=[parse_mock_case(case, project_id=project) for case in pipeline.mock_cases(project, count=count)])
 
 
 def mock_datasets(data: Dict[str, Any]) -> MockDatasetsResponse:
     project = project_from(data)
-    return MockDatasetsResponse(project_id=project, datasets=pipeline.mock_datasets(project))
+    from ..core.mock import parse_mock_case
+
+    count = int(data.get("count") or 1)
+    datasets = []
+    for raw_dataset in pipeline.persisted_mock_datasets(project, count=count):
+        dataset = to_dict(raw_dataset)
+        if not isinstance(dataset, dict):
+            raise TypeError("pipeline.persisted_mock_datasets must return dataset objects")
+        cases = [
+            parse_mock_case(case, project_id=project)
+            for case in dataset.get("cases") or []
+        ]
+        datasets.append(MockDataset(
+            dataset_id=str(dataset.get("dataset_id") or dataset.get("id") or ""),
+            name=str(dataset.get("name") or ""),
+            dimension_type=str(dataset.get("dimension_type") or dataset.get("type") or ""),
+            description=str(dataset.get("description") or ""),
+            cases=cases,
+            case_count=len(cases),
+        ))
+    return MockDatasetsResponse(project_id=project, datasets=datasets)
 
 
 def mock_build_intent(data: Dict[str, Any]) -> MockBuildResponse:
@@ -177,6 +228,7 @@ def mock_build_intent(data: Dict[str, Any]) -> MockBuildResponse:
     case = pipeline.mock_build_intent(
         project,
         scenario=data.get("scenario") or "",
+        requested_intent=data.get("requested_intent") or "",
         intent_labels=data.get("intent_labels") or [],
         template=data.get("template"),
         required_input_fields=data.get("required_input_fields") or [],
@@ -225,7 +277,8 @@ def check(data: Dict[str, Any]) -> Any:
 
 
 def run_chain(data: Dict[str, Any]) -> RunChainResponse:
-    run = pipeline.run_chain(project_from(data), data.get("input") or {}, user_intent=data.get("user_intent"))
+    runtime_case = _runtime_case_from_live_payload(data)
+    run = pipeline.run_chain(project_from(data), runtime_case, user_intent=data.get("user_intent"))
     return RunChainResponse(
         trace=normalize_run_trace(run.get("trace")),
         judge=normalize_judge_result(run.get("judge")),
@@ -240,7 +293,7 @@ def run_chain(data: Dict[str, Any]) -> RunChainResponse:
 def batch_run(data: Dict[str, Any]) -> BatchRunResult:
     from ..core.mock import parse_mock_case
 
-    concurrency = max(1, min(int(data.get("concurrency") or 4), 8))
+    concurrency = data.get("concurrency")
     project = project_from(data)
     cases = [to_dict(parse_mock_case(case, project_id=project)) for case in (data.get("cases") or [])]
     result = pipeline.batch_run(project, cases, user_intent=data.get("user_intent"), concurrency=concurrency)
@@ -272,7 +325,8 @@ def trace_view(data: Dict[str, Any]) -> Any:
         return normalize_run_trace(data.get("trace"))
     if data.get("run") and isinstance(data.get("run"), dict):
         return normalize_run_trace((data.get("run") or {}).get("trace"))
-    return pipeline.live_run(project_from(data), data.get("input") or {})
+    request = data.get("input") or {}
+    return pipeline.live_run(project_from(data), SingleTurnCase(id="", input=dict(request)))
 
 
 def table_view(data: Dict[str, Any]) -> Any:

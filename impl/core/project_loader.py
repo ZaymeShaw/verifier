@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from .adapter_v2 import ProjectAdapter
 from .project_config import PROJECTS_DIR, resolve_project_config
+from .path_contract import PathRoots, PathScope, logical_ref_for_path
 from .schema import ProjectSpec, RoleAssetMapping
 
 def list_projects() -> List[str]:
@@ -20,21 +21,48 @@ def load_project(project_id: str) -> ProjectSpec:
     return resolve_project_config(project_id)
 
 
+def resolve_project_source_root(spec: ProjectSpec) -> Path:
+    """Canonical business-root accessor."""
+    accessor = getattr(spec, "source_root_path", None)
+    if not callable(accessor):
+        raise RuntimeError(f"project {spec.project_id} has no source_root_path accessor")
+    return accessor()
+
+
+def resolve_project_package_root(
+    spec: ProjectSpec, *, must_exist: bool = True
+) -> Path:
+    """Canonical project-package accessor."""
+    accessor = getattr(spec, "project_package_path", None)
+    if not callable(accessor):
+        raise RuntimeError(f"project {spec.project_id} has no project_package_path accessor")
+    return accessor(must_exist=must_exist)
+
+
 def resolve_role_assets(spec: ProjectSpec, role: str, use_candidate: bool) -> List[Dict[str, Any]]:
     """Resolve one authoritative asset list for production, draft checks and promotion."""
     normalized_role = str(role or "").strip()
     if not normalized_role:
         raise ValueError("role is required")
-    root = Path(spec.root).resolve()
+    root = resolve_project_package_root(spec, must_exist=False)
     seen_ids: set[str] = set()
     production_targets: Dict[Path, str] = {}
     resolved: List[Dict[str, Any]] = []
-    for mapping in spec.role_assets:
+    for mapping in spec.asset_mappings():
         _validate_role_asset_mapping(mapping)
         if mapping.asset_id in seen_ids:
             raise ValueError(f"duplicate role asset_id: {mapping.asset_id}")
         seen_ids.add(mapping.asset_id)
-        production_path = _resolve_project_asset_path(root, mapping.production_path, "production_path")
+        if not mapping.logical_production_path:
+            raise ValueError(
+                f"RoleAssetMapping requires logical_production_path: {mapping.asset_id}"
+            )
+        production_path = spec.resolve_path(
+            mapping.logical_production_path,
+            field_path=f"verifier.assets.{mapping.asset_id}.production_path",
+            allowed_scopes={PathScope.PROJECT_PACKAGE},
+            must_exist=False,
+        )
         draft_root = (root / "draft").resolve()
         if production_path.is_relative_to(draft_root):
             raise ValueError(
@@ -48,10 +76,18 @@ def resolve_role_assets(spec: ProjectSpec, role: str, use_candidate: bool) -> Li
         production_targets[production_path] = mapping.asset_id
         if not mapping.enabled or normalized_role not in mapping.roles:
             continue
-
         candidate_path = None
         if mapping.candidate_path:
-            candidate_path = _resolve_project_asset_path(root, mapping.candidate_path, "candidate_path")
+            if not mapping.logical_candidate_path:
+                raise ValueError(
+                    f"RoleAssetMapping requires logical_candidate_path: {mapping.asset_id}"
+                )
+            candidate_path = spec.resolve_path(
+                mapping.logical_candidate_path,
+                field_path=f"verifier.assets.{mapping.asset_id}.candidate_path",
+                allowed_scopes={PathScope.PROJECT_PACKAGE},
+                must_exist=False,
+            )
             if not candidate_path.is_relative_to(draft_root):
                 raise ValueError(
                     f"RoleAssetMapping.candidate_path must resolve under draft/: {mapping.asset_id}"
@@ -63,6 +99,12 @@ def resolve_role_assets(spec: ProjectSpec, role: str, use_candidate: bool) -> Li
             {
                 "mapping": mapping,
                 "path": selected,
+                "location_ref": logical_ref_for_path(
+                    selected,
+                    scope=PathScope.PROJECT_PACKAGE,
+                    roots=spec.path_roots or PathRoots(project_package=root),
+                    field_path=f"verifier.assets.{mapping.asset_id}.selected_path",
+                ),
                 "production_path": production_path,
                 "candidate_path": candidate_path,
                 "available": selected.exists(),
@@ -84,17 +126,6 @@ def _validate_role_asset_mapping(mapping: RoleAssetMapping) -> None:
     if not mapping.production_path.strip():
         raise ValueError(f"RoleAssetMapping.production_path is required: {mapping.asset_id}")
 
-
-def _resolve_project_asset_path(root: Path, value: str, field_name: str) -> Path:
-    relative = Path(str(value))
-    if relative.is_absolute() or ".." in relative.parts:
-        raise ValueError(f"RoleAssetMapping.{field_name} must stay under the project directory")
-    resolved = (root / relative).resolve()
-    if not resolved.is_relative_to(root):
-        raise ValueError(f"RoleAssetMapping.{field_name} escapes the project directory")
-    return resolved
-
-
 def _load_project_module(spec: ProjectSpec, filename: str, role: str) -> Optional[ModuleType]:
     """Load optional project-layer protocol module.
 
@@ -103,7 +134,13 @@ def _load_project_module(spec: ProjectSpec, filename: str, role: str) -> Optiona
     project opts in. A draft role is loaded only when project.yaml explicitly
     enables <role>_draft for manual validation; default production never auto-loads draft.
     """
-    module_path = Path(spec.root) / filename
+    module_path = Path(filename)
+    if not module_path.is_absolute():
+        module_path = spec.project_package_path(
+            filename,
+            field_path=f"verifier.roles.{role}.module",
+            must_exist=False,
+        )
     if not module_path.exists():
         return None
     module_name = f"impl_project_{spec.project_id}_{role}"
@@ -116,15 +153,31 @@ def _load_project_module(spec: ProjectSpec, filename: str, role: str) -> Optiona
 
 
 def _safe_draft_role_filename(spec: ProjectSpec, role: str) -> Optional[str]:
-    draft_cfg = getattr(spec, f"{role}_draft", {})
+    draft_cfg = spec.role_draft(role)
     if not isinstance(draft_cfg, dict) or draft_cfg.get("enabled") is not True:
         return None
+    resolved = spec.role_draft_path(role, must_exist=False)
+    if resolved is not None:
+        if not resolved.is_file():
+            raise FileNotFoundError(f"enabled {role} draft module not found: {resolved}")
+        return str(resolved)
     module = str(draft_cfg.get("module") or f"draft/{role}.py")
     module_path = Path(module)
     if module_path.is_absolute() or ".." in module_path.parts or module_path.parts[:1] != ("draft",):
         raise ValueError(f"{role}_draft.module must be a relative path under draft/")
-    draft_root = (Path(spec.root) / "draft").resolve()
-    resolved_module = (Path(spec.root) / module_path).resolve()
+    draft_root = spec.project_package_path(
+        "draft", field_path=f"verifier.roles.{role}.draft_root", must_exist=False
+    )
+    try:
+        resolved_module = spec.project_package_path(
+            module,
+            field_path=f"verifier.roles.{role}.draft.module",
+            must_exist=False,
+        )
+    except ValueError as exc:
+        raise ValueError(
+            f"{role}_draft.module must resolve under the project draft/ directory"
+        ) from exc
     if not resolved_module.is_relative_to(draft_root):
         raise ValueError(f"{role}_draft.module must resolve under the project draft/ directory")
     if not resolved_module.is_file():
@@ -154,7 +207,9 @@ def load_project_attribute(spec: ProjectSpec) -> Optional[ModuleType]:
 
 
 def load_project_tools(spec: ProjectSpec) -> Any:
-    module_path = Path(spec.root) / "tools.py"
+    module_path = spec.project_package_path(
+        "tools.py", field_path="verifier.tools.module", must_exist=False
+    )
     if module_path.is_file():
         module = _load_project_module(spec, "tools.py", "tools")
     else:
@@ -189,7 +244,7 @@ def load_project_role_tools(spec: ProjectSpec, role: str) -> List[Any]:
     RoleAssetMapping used by Draft check and Promote; no legacy fallback is mixed in.
     """
     normalized_role = str(role or "").strip()
-    use_candidate = bool((getattr(spec, f"{normalized_role}_draft", {}) or {}).get("enabled"))
+    use_candidate = spec.role_draft(normalized_role).get("enabled") is True
     selected = resolve_role_assets(spec, normalized_role, use_candidate=use_candidate)
     has_investigation = any(
         item["mapping"].kind == "investigation" and item["available"]
@@ -254,7 +309,7 @@ def load_project_role_instance(
 
 
 def load_adapter(spec: ProjectSpec) -> ProjectAdapter:
-    adapter_path = Path(spec.root) / spec.adapter
+    adapter_path = spec.adapter_path()
     module_name = f"impl_project_{spec.project_id}_adapter"
     module_spec = importlib.util.spec_from_file_location(module_name, adapter_path)
     if module_spec is None or module_spec.loader is None:
@@ -271,9 +326,12 @@ def load_field_provider(spec: ProjectSpec) -> Optional[Any]:
     项目在 project.yaml 里声明 field_provider_module + field_provider_class，
     核心代码无需对 project_id 做分支判断。
     """
-    if not spec.field_provider_module or not spec.field_provider_class:
+    field_provider = spec.field_provider_config
+    module = str(field_provider.get("module") or "")
+    class_name = str(field_provider.get("class") or "")
+    if not module or not class_name:
         return None
-    module_path = Path(spec.root) / spec.field_provider_module
+    module_path = spec.field_provider_path()
     if not module_path.exists():
         return None
     module_name = f"impl_project_{spec.project_id}_field_provider"
@@ -282,17 +340,18 @@ def load_field_provider(spec: ProjectSpec) -> Optional[Any]:
         return None
     module = importlib.util.module_from_spec(module_spec)
     module_spec.loader.exec_module(module)
-    provider_cls = getattr(module, spec.field_provider_class, None)
+    provider_cls = getattr(module, class_name, None)
     if provider_cls is None:
         return None
     return provider_cls(spec)
 
 
 def load_project_document(spec: ProjectSpec, key: str) -> str:
-    rel = spec.documents.get(key)
-    if not rel:
+    if key not in spec.document_paths:
         return ""
-    path = Path(spec.root) / rel
+    path = spec.project_document_path(key, must_exist=False)
+    if path is None:
+        return ""
     if not path.exists():
         return ""
     return path.read_text(encoding="utf-8", errors="ignore")

@@ -21,14 +21,20 @@ llm:
   base_url: https://api.deepseek.com/v1
   temperature: 0
   reasoning_effort: max
+  request_timeout_seconds: 600
   max_attempts: 2
   retry_delay_seconds: 2
+  capabilities:
+    json_mode: true
+    tool_calls: true
+    context_window_tokens: 131072
   role_policies:
     live_stub:
       model: deepseek-chat
       reasoning_effort: low
 
 embedding:
+  enabled: true
   provider: bailian
   model: text-embedding-v4
   dimensions: 1024
@@ -42,8 +48,8 @@ execution:
   batch_event_history_limit: 200
 
 context:
-  data_root: impl/data/context_runtime
-  store_root: impl/data/context_store
+  data_root: verifier://impl/data/context_runtime
+  store_root: verifier://impl/data/context_store
   max_records_per_project: 200
   candidate_limit: 20
   load_limit: 8
@@ -53,6 +59,25 @@ context:
 
 judge:
   raw_response_max_chars: 4000
+
+attribute:
+  tool_call_limit: 8
+  investigation_error_chars: 2000
+  finalization_prompt_char_budget: 160000
+  review_prompt_char_budget: 180000
+  compaction:
+    list_item_limit: 20
+    attribute_result_chars: 12000
+    project_context_chars: 4000
+    trace_input_chars: 1200
+    trace_normalized_request_chars: 1200
+    trace_output_chars: 10000
+    trace_execution_chars: 2500
+    trace_error_chars: 1200
+    judge_business_expectations_chars: 3000
+    judge_fulfillment_assessments_chars: 4000
+    judge_gap_chars: 1500
+    judge_reasoning_chars: 2000
 
 environment:
   variables:
@@ -126,12 +151,29 @@ environment:
       secret: true
       description: verifier 默认 DeepSeek API Key
 
+    LLM_LIVE_STUB_MODEL:
+      bind: llm.role_policies.live_stub.model
+      type: string
+      required: false
+      secret: false
+      description: 临时覆盖 live_stub 角色的 LLM model
+
     BAILIAN_API_KEY:
       bind: embedding.api_key
       type: string
       required: false
+      required_when:
+        field: embedding.enabled
+        equals: true
       secret: true
-      description: verifier 默认百炼 embedding API Key
+      description: embedding.enabled=true 时必须提供的百炼 API Key
+
+    EMBEDDING_ENABLED:
+      bind: embedding.enabled
+      type: boolean
+      required: false
+      secret: false
+      description: 是否启用正式 ContextUnit embedding 能力
 
     BAILIAN_EMBEDDING_MODEL:
       bind: embedding.model

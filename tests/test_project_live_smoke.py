@@ -4,7 +4,8 @@ import importlib.util
 from pathlib import Path
 
 from impl.core.pipeline import live_run
-from impl.core.schema import LiveRequest, ProjectSpec
+from impl.core.project_loader import load_project
+from impl.core.schema import LiveRequest, SingleTurnCase
 
 
 _MP_LIVE_PATH = Path(__file__).resolve().parents[1] / "impl" / "projects" / "marketting-planning" / "live.py"
@@ -18,28 +19,39 @@ def _stages(trace) -> list[str]:
     return [getattr(event, "stage", "") for event in trace.execution_trace]
 
 
+def _marketing_planning_spec():
+    return load_project("marketting-planning")
+
+
 def test_qa_live_run_provided_smoke():
-    trace = live_run("QA", {
-        "input": {"question": "q", "contexts": []},
-        "output": {"actual_answer": "a"},
-        "reference": {"actual_answer": "a"},
-        "user_intent": "根据上下文回答问题",
-    })
+    trace = live_run("QA", SingleTurnCase(
+        id="qa-provided",
+        input={"question": "q", "contexts": []},
+        output={"actual_answer": "a"},
+        reference={"actual_answer": "a"},
+        user_intent="根据上下文回答问题",
+    ))
 
     assert trace.status == "ok"
     assert trace.execution_mode == "provided"
     assert trace.output_source == "provided_output"
     assert trace.extracted_output == {"actual_answer": "a"}
+    assert len(trace.config_fingerprint) == 12
+    assert trace.config_sources["public"]["fingerprint"]
+    assert trace.config_sources["project"]["fingerprint"]
+    assert trace.config_sources["public"]["fields"]["llm.api_key"]["secret"] is True
+    assert "api_key" not in trace.config_sources["public"]["fields"]["llm.api_key"]
     assert "live_schema.validate_request" in _stages(trace)
     assert "live_schema.validate_output" in _stages(trace)
 
 
 def test_qa_invalid_provided_output_produces_error_trace():
-    trace = live_run("QA", {
-        "input": {"question": "q", "contexts": []},
-        "output": {"wrong_field": "not an answer"},
-        "user_intent": "根据上下文回答问题",
-    })
+    trace = live_run("QA", SingleTurnCase(
+        id="qa-invalid-provided",
+        input={"question": "q", "contexts": []},
+        output={"wrong_field": "not an answer"},
+        user_intent="根据上下文回答问题",
+    ))
 
     assert trace.status == "error"
     assert trace.execution_mode == "provided"
@@ -68,7 +80,11 @@ def _assert_live_smoke_trace(trace) -> None:
 
 
 def test_client_search_live_run_smoke():
-    trace = live_run("client_search", {"user_text": "有生存金未领取的客户", "user_intent": "搜索有生存金未领取的客户"})
+    trace = live_run("client_search", SingleTurnCase(
+        id="client-search-smoke",
+        input={"user_text": "有生存金未领取的客户"},
+        user_intent="搜索有生存金未领取的客户",
+    ))
 
     _assert_live_smoke_trace(trace)
     assert trace.normalized_request.get("user_text") == "有生存金未领取的客户"
@@ -78,13 +94,14 @@ def test_client_search_live_run_smoke():
 
 
 def test_marketting_planning_intent_live_run_smoke():
-    trace = live_run("marketting-planning-intent", {
-        "input": {
+    trace = live_run("marketting-planning-intent", SingleTurnCase(
+        id="mpi-smoke",
+        input={
             "session_id": "eval-mpi-smoke", "trace_id": "mpi-smoke", "org_id": "eval-org",
             "user_text": "帮我识别营销意图",
             "extra_input_params": {"agent_args": {"conversation_id": "eval-mpi-smoke", "message": {"content": "帮我识别营销意图", "content_type": "text"}}, "args": {"extensions": {}, "contexts": []}},
         },
-    })
+    ))
 
     _assert_live_smoke_trace(trace)
     if trace.status == "ok":
@@ -93,13 +110,14 @@ def test_marketting_planning_intent_live_run_smoke():
 
 
 def test_marketting_planning_intent_normalized_request_matches_live_schema_dataclass():
-    trace = live_run("marketting-planning-intent", {
-        "input": {
+    trace = live_run("marketting-planning-intent", SingleTurnCase(
+        id="mpi-normalized",
+        input={
             "session_id": "eval-mpi-normalized", "trace_id": "mpi-normalized", "org_id": "eval-org",
             "user_text": "帮我识别营销意图",
             "extra_input_params": {"agent_args": {}, "args": {}},
         },
-    })
+    ))
 
     assert trace.normalized_request["trace_id"] == "mpi-normalized"
     assert trace.normalized_request["user_text"] == "帮我识别营销意图"
@@ -109,26 +127,26 @@ def test_marketting_planning_intent_normalized_request_matches_live_schema_datac
 
 
 def test_marketting_planning_case_transport_fields_do_not_leak_into_live_request():
-    trace = live_run("marketting-planning", {
+    trace = live_run("marketting-planning", SingleTurnCase(id="mp-declared", input={
         "session_id": "declared-session",
         "trace_id": "declared-trace", "org_id": "eval-org", "user_text": "帮我做NBEV规划",
         "history": [], "user_action": "send_message", "action_scenario": "marketing_planning",
         "user_id": "eval-user", "ts": 1, "token": "mock_token", "app_scenario": "customer_service",
         "docs_num": 5, "source": "offline_task", "extra_input_params": {"agent_args": {}, "args": {}},
-    })
+    }))
 
     assert "shared_session" not in trace.normalized_request
     assert trace.normalized_request.get("session_id") == "declared-session"
 
 
 def test_marketting_planning_live_run_smoke():
-    trace = live_run("marketting-planning", {
+    trace = live_run("marketting-planning", SingleTurnCase(id="mp-smoke", input={
         "session_id": "eval-mp-smoke", "trace_id": "eval-mp-smoke", "org_id": "eval-org",
         "user_text": "帮我做NBEV规划", "history": [], "user_action": "send_message",
         "action_scenario": "marketing_planning", "user_id": "eval-user", "ts": 1,
         "token": "mock_token", "app_scenario": "customer_service", "docs_num": 5,
         "source": "offline_task", "extra_input_params": {"agent_args": {}, "args": {}},
-    })
+    }))
 
     _assert_live_smoke_trace(trace)
     assert trace.normalized_request.get("user_text") == "帮我做NBEV规划"
@@ -143,7 +161,7 @@ def test_marketting_planning_live_run_smoke():
 
 
 def test_marketting_planning_raw_sse_replay_extracts_business_evidence():
-    spec = ProjectSpec(project_id="marketting-planning", name="mp", root=".")
+    spec = _marketing_planning_spec()
     request = LiveRequest(
         project_id="marketting-planning",
         case_id="mp-replay",
@@ -221,7 +239,7 @@ def test_marketting_planning_card_business_evidence_is_preserved():
 
 
 def test_marketting_planning_card_fallback_marker_is_not_request_fallback():
-    spec = ProjectSpec(project_id="marketting-planning", name="mp", root=".")
+    spec = _marketing_planning_spec()
     request = LiveRequest(
         project_id="marketting-planning",
         case_id="mp-card-fallback",
@@ -264,7 +282,7 @@ def test_marketting_planning_card_fallback_marker_is_not_request_fallback():
 
 
 def test_marketting_planning_completion_requires_terminal_tail():
-    spec = ProjectSpec(project_id="marketting-planning", name="mp", root=".")
+    spec = _marketing_planning_spec()
 
     summary = mp_live._event_summary([{"event": "card_end"}, {"event": "error", "data": "late failure"}], spec, business_completed=True)
 
@@ -274,7 +292,7 @@ def test_marketting_planning_completion_requires_terminal_tail():
 
 
 def test_marketting_planning_completion_requires_business_evidence():
-    spec = ProjectSpec(project_id="marketting-planning", name="mp", root=".")
+    spec = _marketing_planning_spec()
 
     summary = mp_live._event_summary([{"event": "card_end"}, {"event": "heartbeat"}], spec)
 
@@ -284,7 +302,7 @@ def test_marketting_planning_completion_requires_business_evidence():
 
 
 def test_marketting_planning_completion_allows_business_evidence_after_terminal():
-    spec = ProjectSpec(project_id="marketting-planning", name="mp", root=".")
+    spec = _marketing_planning_spec()
 
     summary = mp_live._event_summary([{"event": "card_end"}, {"event": "heartbeat"}], spec, business_completed=True)
 

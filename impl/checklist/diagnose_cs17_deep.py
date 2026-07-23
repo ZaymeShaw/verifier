@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from impl.core.pipeline import live_run, judge
-from impl.core.schema import to_dict
+from impl.core.schema import SingleTurnCase, to_dict
 
 
 def deep_diagnose_cs17():
@@ -29,7 +29,7 @@ def deep_diagnose_cs17():
 
     # Step 1: Run trace
     print("\n[Step 1] Running trace...")
-    trace = live_run(project_id="client_search", input_data=input_data)
+    trace = live_run(project_id="client_search", case=SingleTurnCase(id="cs17-diagnostic", input=input_data))
     print(f"  Trace ID: {trace.trace_id}")
     print(f"  Status: {trace.status}")
 

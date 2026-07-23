@@ -21,7 +21,10 @@ def test_project_template_is_minimal():
     assert document["schema_version"] == 1
     assert set(document) == {"schema_version", "project", "runtime", "verifier", "metadata"}
     assert document["runtime"]["mode"] == "uploaded_output_evaluation"
+    assert document["runtime"]["application"]["interface"]["shape"]
+    assert document["runtime"]["adapter"]["request_construction"]["required_inputs"] == ["query"]
     assert document["verifier"]["attribution"]["enabled"] is False
+    assert document["verifier"]["judge"]["boundary"]["gate"]
 
 
 def test_existing_projects_load_from_canonical_sections():
@@ -30,18 +33,17 @@ def test_existing_projects_load_from_canonical_sections():
 
         assert spec.project_id == project_id
         assert spec.name
-        assert spec.adapter == "adapter.py"
         assert spec.schema_version == 1
         assert spec.project["id"] == project_id
         assert spec.runtime["mode"]
         assert isinstance(spec.verifier["attribution"]["enabled"], bool)
-        assert (Path(spec.root) / "adapter.py").exists()
+        assert spec.adapter_path().exists()
 
 
-def test_default_documents_are_discovered():
+def test_documents_are_exposed_from_canonical_project_resources():
     qa = load_project("QA")
 
-    assert qa.documents["application"] == "application.md"
-    assert qa.documents["evaluation"] == "evaluation.md"
-    assert qa.documents["attribution"] == "attribution.md"
-    assert qa.documents["checklist"] == "checklist.md"
+    assert qa.document_paths["application"] == "project://application.md"
+    assert qa.document_paths["evaluation"] == "project://evaluation.md"
+    assert qa.document_paths["attribution"] == "project://attribution.md"
+    assert qa.document_paths["checklist"] == "project://checklist.md"

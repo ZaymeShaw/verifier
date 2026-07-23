@@ -14,7 +14,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from impl.core.project_loader import load_project
+from impl.core.project_loader import load_project, resolve_project_source_root
 from impl.tools import ToolResult, VerifiableTool
 
 
@@ -24,7 +24,7 @@ _EXECUTION_LOCK = threading.Lock()
 
 def _business_modules() -> tuple[Any, Any, Any, Any]:
     spec = load_project("marketting-planning")
-    source_root = Path(spec.source_project).resolve()
+    source_root = resolve_project_source_root(spec)
     if not source_root.is_dir():
         raise FileNotFoundError(f"business source repository not found: {source_root}")
     with _IMPORT_LOCK:

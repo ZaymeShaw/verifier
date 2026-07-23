@@ -9,15 +9,34 @@ project:
     source:
       repository: ""
       paths:
-        lead_agent_prompt: backend/packages/harness/deerflow/agents/lead_agent/prompt.py
+        lead_agent_prompt: business://backend/packages/harness/deerflow/agents/lead_agent/prompt.py
 
 runtime:
   mode: existing_service_required
+  application:
+    interface:
+      shape: deer-flow Gateway HTTP multi-turn POST with thread_id checkpointer
+      source: report/gateway_multi_turn.py and report/gateway_simple.py
+    start_run: existing required service at api.base_url; start via startup_command when unavailable
+    boundary: deer-flow Gateway service is in scope; external data unavailability may be boundary metadata
   local_deployment:
     enabled: true
   interaction:
     mode: multi_turn
   ready: []
+  adapter:
+    request_construction:
+      builder: Adapter.build_request normalizes turns, session/thread_id, scenario, dimensions, and reference
+      required_inputs: [query]
+    output_extraction:
+      extractor: Adapter.extract_output summarizes reply text, tool_calls, stage, session, fallback, and errors per turn
+      normalized_output: turns with reply_text, tool_calls, stage, session_summary, fallback, errors
+    reference_handling:
+      source_priority: [input_reference, expected_stage, expected_dimensions, judge_generated, missing]
+      alignment: reference contract compared against compact stage/dimension/tool_call output shape
+  batch_persistence:
+    case_shape: id, selected, input, output, reference, metadata, scenario, source, status, error
+    transient_results: do not persist full message history, trace, judge, attribute, or frontend_view as durable case-pool source data
   services:
     primary:
       base_url: http://127.0.0.1:8001
@@ -29,86 +48,91 @@ runtime:
         request_timeout_seconds: 5
         interval_seconds: 2
         startup_timeout_seconds: 120
-  extra:
-    mock_cases:
-      description: deerflow mock case 的正式来源策略
-      value_type: mapping
-      schema_version: 1
-      consumers: [impl.core.pipeline]
-      value:
-        source: dynamic
+  mock_cases:
+    source: dynamic
+    default_scenarios: [single_turn_planning, multi_turn_dimension_accumulation, clarification, authorization_boundary, service_unavailable]
 
 verifier:
   attribution:
     enabled: true
+    trace:
+      document: attribution.md
+      trace_nodes: [request_normalization, thread_creation, turn_delivery, message_history_read, reply_extraction, tool_call_extraction, stage_inference, multi_turn_accumulation]
+  scenarios:
+    allowed: [single_turn_planning, multi_turn_dimension_accumulation, clarification, authorization_boundary, non_agent_intent, service_unavailable]
+    interactive: [multi_turn_dimension_accumulation]
+  judge:
+    boundary:
+      document: judge_boundary.md
+      gate: application_boundary determines judge_scope and fallback allowance before fulfillment reconciliation
   roles:
     attribute:
+      tool_call_limit: 3
       draft:
         enabled: true
-        module: draft/attribute.py
+        module: project://draft/attribute.py
+        tool_call_limit: 5
         reason: Batch attribution validation through the 8021 UAT frontend.
     mock:
       draft:
-        enabled: false
-        module: draft/mock.py
+        enabled: true
+        module: project://draft/mock.py
         reason: Frozen Current/Draft validation of the NBEV internal-staff Mock user model.
   presentation:
-    interactive_scenarios: [multi_turn_dimension_accumulation]
-    scenarios: [single_turn_planning, multi_turn_dimension_accumulation, clarification, authorization_boundary, non_agent_intent, service_unavailable]
     stages: [intent, clarification, planning, non_agent, fallback, unknown]
     dimensions: [product, team, customer, activity, unknown]
     error_taxonomy: [request_normalization, thread_creation, turn_delivery, message_history_read, reply_extraction, tool_call_extraction, stage_inference, multi_turn_accumulation, external_dependency, needs_human_review, none]
+    frontend_view:
+      live: render reply_text, tool_calls, stage, fallback, Judge, Attribute, and project extension panels
+      summary: show scenario-aware compact case-pool rows with Output and Reference aligned by stage/dimension semantics
+  check_rules:
+    require_scenario: true
     core_forbidden_markers: []
-  extra:
-    check_rules:
-      description: deerflow case 必须携带场景标识
-      value_type: mapping
-      schema_version: 1
-      consumers: [impl.core.check]
-      value:
-        require_scenario: true
+    evidence:
+      documents: [application.md, mock.md, evaluation.md, judge_boundary.md, attribution.md, checklist.md]
+      tests: []
   assets:
     - asset_id: mock_investigation
       kind: investigation
       enabled: true
       roles: [mock]
-      production_path: investigation/mock
-      candidate_path: draft/investigation/mock
+      production_path: project://investigation/mock
+      candidate_path: project://draft/investigation/mock
       replace: true
     - asset_id: mock_investigation_context_builder
       kind: context_builder
       enabled: true
       roles: [mock]
-      production_path: context_builders/mock_investigation.py
-      candidate_path: draft/context_builders/mock_investigation.py
+      production_path: project://context_builders/mock_investigation.py
+      candidate_path: project://draft/context_builders/mock_investigation.py
       replace: true
     - asset_id: mock_business_input_validator
       kind: tool
       enabled: true
       roles: [mock]
-      production_path: tools/mock_validation_tools.py
-      candidate_path: draft/tools/mock_validation_tools.py
+      production_path: project://tools/mock_validation_tools.py
+      candidate_path: project://draft/tools/mock_validation_tools.py
       replace: true
     - asset_id: attribute_investigation
       kind: investigation
       enabled: true
       roles: [attribute]
-      production_path: investigation/attribute
-      candidate_path: draft/investigation/attribute
+      production_path: project://investigation/attribute
+      candidate_path: project://draft/investigation/attribute
       replace: true
     - asset_id: attribute_investigation_tools
       kind: tool
       enabled: true
       roles: [attribute]
-      production_path: tools/investigation_tools.py
-      candidate_path: draft/tools/investigation_tools.py
+      production_path: project://tools/investigation_tools.py
+      candidate_path: project://draft/tools/investigation_tools.py
       replace: true
     - asset_id: attribute_investigation_context_builder
       kind: context_builder
       enabled: true
       roles: [attribute]
-      production_path: context_builders/attribute_investigation.py
-      candidate_path: draft/context_builders/attribute_investigation.py
+      production_path: project://context_builders/attribute_investigation.py
+      candidate_path: project://draft/context_builders/attribute_investigation.py
       replace: true
 
 environment:
@@ -127,5 +151,5 @@ environment:
       description: deer-flow Gateway 服务地址
 
 metadata:
-  initialized_from: ../../../projects/deerflow/project.yaml
+  initialized_from: route://project.yaml
   source_revision: null

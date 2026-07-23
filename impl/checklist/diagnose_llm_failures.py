@@ -20,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from impl.core.pipeline import live_run, judge, attribute
+from impl.core.schema import SingleTurnCase
 
 
 def diagnose_llm_failures():
@@ -58,7 +59,11 @@ def diagnose_llm_failures():
             # Run the case
             trace = live_run(
                 project_id=tc["project"],
-                input_data=tc["input"],
+                case=SingleTurnCase(
+                    id=tc["case_id"],
+                    input=tc["input"],
+                    user_intent=tc.get("user_intent") or "",
+                ),
             )
 
             # Judge the trace

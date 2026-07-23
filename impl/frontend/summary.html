@@ -46,7 +46,7 @@
         <textarea id="casePoolText">[{"query":"45岁女性保费10万以上"},{"query":"有生存金未领取的客户"}]</textarea>
         <div class="row" style="margin-top:10px">
           <button class="secondary" onclick="importCasePool()">导入候选区</button>
-          <button class="secondary" onclick="exportSelectedCases()">导出已选</button>
+          <button class="secondary" onclick="exportSelectedCases()">生成已选 JSON</button>
           <button class="warn" onclick="clearCasePool()">清空</button>
         </div>
         <p class="hint">参考 8011 页面后，这里把“上传/生成/选择/批量归因”集中成候选区；所有数据先转成通用 case 协议，再交给后端统一 batch 链路执行。</p>
@@ -73,7 +73,7 @@
     <section>
       <section class="card">
         <div class="row" style="justify-content:space-between">
-          <h2>用例池候选区</h2>
+          <div><h2 style="margin-bottom:4px">用例池候选区</h2><div id="casePoolMatchCount" class="muted">当前筛选命中 0 条</div></div>
           <div class="row">
             <button class="secondary" onclick="selectAllCases(true)">全选</button>
             <button class="secondary" onclick="selectAllCases(false)">取消全选</button>
@@ -85,6 +85,7 @@
               <option value="not_fulfilled">not_fulfilled</option>
               <option value="not_evaluable">not_evaluable</option>
             </select>
+            <button class="secondary" id="exportCasePoolButton" onclick="exportCurrentCasePoolXlsx()">导出当前筛选 (.xlsx)</button>
           </div>
         </div>
         <div id="progress" class="progress-box" style="display:none">
@@ -110,6 +111,8 @@
     </section>
   </div>
 </main>
+<script src="vendor/exceljs.min.js"></script>
+<script src="case_pool_export.js"></script>
 <script>
 const PAGE_VERSION='20260717-vnext-mockcase-request-key-1';
 async function post(path, body){
@@ -263,13 +266,12 @@ function normalizeCase(item,index,source){
   if(!item || typeof item!=='object' || required.some(key=>!Object.prototype.hasOwnProperty.call(item,key)) || typeof item.intent!=='object' || typeof item.live_request!=='object'){throw new Error('第 '+(index+1)+' 条不是 VNext MockCase；请先迁移为 id/project_id/scenario/intent/live_request/output/reference。');}
   return sanitizeCaseResult({...item,selected:item.selected!==false,status:item.status||'pending',source:item.source||source});
 }
-async function buildMockCases(){const data=await post('/api/mock_cases',{project:project()});caseResults={};casePool=(data.cases||[]).map((x,index)=>normalizeCase(x,index,'mock_agent_seed'));resetCasePoolFilters();saveCasePool();setStatus('已通过统一 mock agent 构建用例池。');}
+async function buildMockCases(){const data=await post('/api/mock_cases',{project:project(),count:1});caseResults={};casePool=(data.cases||[]).map((x,index)=>normalizeCase(x,index,'project_mock_agent'));resetCasePoolFilters();saveCasePool();setStatus('已加载 1 条项目 Mock 用例。');}
 async function loadMockDatasets(){
-  const data=await post('/api/mock_datasets',{project:project()});
+  const data=await post('/api/mock_datasets',{project:project(),count:3});
   mockDatasets=data.datasets||[];
-  const allCases=await post('/api/mock_cases',{project:project()});
-  const cases=(allCases.cases||[]).slice(0,500);
-  caseResults={};casePool=cases.map((x,index)=>normalizeCase(x,index,'mock_dataset_agent'));
+  const cases=mockDatasets.flatMap(dataset=>dataset.cases||[]).slice(0,500);
+  caseResults={};casePool=cases.map((x,index)=>normalizeCase(x,index,'project_mock_dataset'));
   resetCasePoolFilters();
   saveCasePool();
   show('batch',{mock_datasets:mockDatasets,dataset_count:mockDatasets.length,case_count:casePool.length});
@@ -283,7 +285,7 @@ async function importCasePoolFile(file){
   importCasePool();
   setStatus('已从文件导入自定义数据集：'+file.name);
 }
-function exportSelectedCases(){document.getElementById('casePoolText').value=JSON.stringify(casePool.filter(x=>x.selected).map(transportCase),null,2);setStatus('已导出已选择用例。');}
+function exportSelectedCases(){document.getElementById('casePoolText').value=JSON.stringify(casePool.filter(x=>x.selected).map(transportCase),null,2);setStatus('已生成已选择用例 JSON。');}
 function clearCasePool(){casePool=[];caseResults={};latestCluster=null;sessionStorage.removeItem(scopedKey('activeBatch'));saveCasePool();renderClusterSummary(null);show('batch',{});setStatus('已清空用例池。');}
 function selectAllCases(selected){casePool=casePool.map(x=>({...x,selected}));saveCasePool();}
 async function saveNamedPool(){
@@ -368,18 +370,69 @@ function renderCaseStatus(item){
   const error=item.error?'<div class="error-text">'+escapeHtml(shortText(item.error,500))+'</div>':'';
   return fulfillmentPill(status)+error;
 }
-function renderCasePool(){
+function currentFilteredCaseViews(){
   const filter=document.getElementById('caseFilter')?.value || 'all';
-  renderScenarioFilter();
   const scenarioFilter=document.getElementById('scenarioFilter')?.value || 'all';
+  return casePool.map((item,poolIndex)=>({item,view:caseView(item),poolIndex})).filter(entry=>{
+    const status=fulfillmentStatus(entry.view);
+    const statusMatches=filter==='all' || (filter==='pending' ? !status : status===filter);
+    const scenarioMatches=scenarioFilter==='all' || inferCaseScenario(entry.view)===scenarioFilter;
+    return statusMatches && scenarioMatches;
+  });
+}
+function exportStatusText(item){
+  const status=['running','error'].includes(item.status)?item.status:(fulfillmentStatus(item) || item.status || 'pending');
+  return item.error?status+'\nerror: '+String(item.error):status;
+}
+function exportJudgeSummary(item){
+  const row=tableRow(item);const summary=judgeSummary(item);
+  if(!summary){return '尚未评估';}
+  const status=row.fulfillment_status || summary.fulfillment_status || summary.status || row.status || '-';
+  const lines=['Fulfillment: '+status,'assessments='+(summary.assessment_count ?? 0)+' · blocking='+(summary.blocking_count ?? 0)];
+  if(summary.reason){lines.push(typeof summary.reason==='string'?summary.reason:JSON.stringify(summary.reason,null,2));}
+  return lines.join('\n');
+}
+function exportAttributionSummary(item){
+  const row=tableRow(item);const compact=row.attribution_summary || item.attribution_summary || item.attribute?.summary || null;
+  if(!item.attribute && !compact && !row.root_cause_summary){return '尚未归因';}
+  const attribute=attributePanel(item);const summary=judgeSummary(item) || {};
+  const fulfillment=row.fulfillment_status || row.status || summary.fulfillment_status || summary.status || '-';
+  const findings=compact?.finding_count ?? (attribute.findings || []).length;
+  const attributionStatus=compact?.attribution_status || attribute.status || '-';
+  const lines=['Fulfillment: '+fulfillment,'findings='+findings+' · status='+attributionStatus+' · issues='+(row.issue_count ?? 0)+' · fallbacks='+(row.fallback_count ?? 0)];
+  const summaryText=row.root_cause_summary || compact?.summary_text || attribute.display_summary || attribute.unresolved_reason || '';
+  if(summaryText){lines.push(typeof summaryText==='string'?summaryText:JSON.stringify(summaryText,null,2));}
+  return lines.join('\n');
+}
+function buildCasePoolExportRows(entries){
+  return (entries || []).map(({item,view})=>{
+    const row=tableRow(view);
+    return {id:row.id || item.id || '',source:item.source || '',executionMode:runModeLabel(view),scenario:inferCaseScenario(view) || '',input:caseInputPayload(view),output:view.output,reference:caseReference(view),status:exportStatusText(view),judgeSummary:exportJudgeSummary(view),judgeJson:view.judge || null,attributionSummary:exportAttributionSummary(view),attributeJson:view.attribute || null};
+  });
+}
+async function exportCurrentCasePoolXlsx(){
+  const button=document.getElementById('exportCasePoolButton');
+  const entries=currentFilteredCaseViews();
+  if(!entries.length){setStatus('当前筛选没有可导出用例。');return;}
+  const originalText=button.textContent;
+  button.disabled=true;button.textContent='正在导出…';
+  try{
+    if(!globalThis.CasePoolExporter){throw new Error('本地 Excel 导出组件未加载');}
+    const result=await globalThis.CasePoolExporter.download({projectId:project(),rows:buildCasePoolExportRows(entries)});
+    setStatus('已导出 '+result.rowCount+' 条当前筛选结果：'+result.fileName);
+  }catch(err){setStatus('导出失败：'+(err?.message || String(err)));}
+  finally{button.disabled=false;button.textContent=originalText;}
+}
+function renderCasePool(){
+  renderScenarioFilter();
   const rows=document.getElementById('casePoolRows');
-  const visible=casePool.filter(x=>{const v=caseView(x);return (filter==='all' || (filter==='pending' ? !fulfillmentStatus(v) : fulfillmentStatus(v)===filter)) && (scenarioFilter==='all' || inferCaseScenario(v)===scenarioFilter);});
+  const visible=currentFilteredCaseViews();
   const page=visible.slice(0,100);
   const more=visible.length>page.length?'<tr><td colspan="12" class="muted">仅展示前 '+page.length+' / '+visible.length+' 条；请使用场景或状态筛选缩小范围，批量执行仍会使用已选择用例。</td></tr>':'';
   const emptyText=casePool.length?'当前筛选未命中用例，候选区仍有 '+casePool.length+' 条；请选择“全部状态/全部场景”查看跑完后的结果。':'候选区为空，可构建 Mock 用例池或导入自定义数据集。';
-  rows.innerHTML=visible.length?page.map(x=>{
-    const v=caseView(x);const row=tableRow(v);
-    const poolIndex=casePool.indexOf(x);
+  document.getElementById('casePoolMatchCount').textContent='候选区共 '+casePool.length+' 条 · 当前筛选命中 '+visible.length+' 条';
+  rows.innerHTML=visible.length?page.map(({item:x,view:v,poolIndex})=>{
+    const row=tableRow(v);
     return '<tr><td><input type="checkbox" '+(x.selected?'checked':'')+' onchange="toggleCaseAt('+poolIndex+',this.checked)"></td><td>'+escapeHtml(row.id || x.id)+'</td><td>'+escapeHtml(x.source||'')+'</td><td>'+escapeHtml(runModeLabel(v))+'</td><td>'+escapeHtml(inferCaseScenario(v) || '-')+'</td><td class="case-input">'+renderInputCell(v)+'</td><td class="case-output">'+renderOutputCell(v)+'</td><td class="case-reference">'+renderReferenceCell(v)+'</td><td>'+renderCaseStatus(v)+'</td><td class="case-summary">'+renderCaseJudge(v)+'</td><td class="case-summary">'+renderCaseAttribute(v)+'</td><td class="case-trace">'+renderTraceCell(v)+'</td></tr>';
   }).join('')+more:'<tr><td colspan="12" class="muted">'+escapeHtml(emptyText)+'</td></tr>';
   updateStats();

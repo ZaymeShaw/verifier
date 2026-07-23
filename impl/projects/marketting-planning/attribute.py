@@ -154,19 +154,18 @@ def _reference_contract(trace: RunTrace) -> dict[str, Any]:
 
 def build_attribute_context(trace: RunTrace, judge_result: JudgeResult, spec: ProjectSpec) -> dict[str, Any]:
     source_config_paths = {}
-    ext_repo = spec.application.get("external_repo") if isinstance(spec.application, dict) else None
-    if ext_repo:
-        ext_path = Path(ext_repo)
+    if spec.has_business_source:
+        ext_path = spec.source_root_path()
         if ext_path.exists():
             for py_file in select_ext_repo_files_by_stage(ext_path, trace):
                 try:
                     source_config_paths[f"ext_repo:{py_file.relative_to(ext_path)}"] = str(py_file)
                 except Exception:
                     pass
-    for doc_key, doc_rel in (spec.documents or {}).items():
+    for doc_key in spec.document_paths:
         if doc_key.startswith("source_"):
-            p = Path(spec.root) / str(doc_rel)
-            if p.exists():
+            p = spec.project_document_path(doc_key, must_exist=False)
+            if p is not None and p.exists():
                 source_config_paths[f"project_doc:{doc_key}"] = str(p)
     return {
         "application_boundary": _application_boundary_from_trace(trace),
@@ -288,7 +287,6 @@ def _build_project_attribute_context(spec: ProjectSpec, trace: RunTrace, judge_r
     execution_probe = _execution_stage_probe(trace)
     planning_probe = _planning_output_probe(trace, judge_result)
     return {
-        "tool_call_limit": 4,
         "system_prompt_override": """你是 marketting-planning 项目的 attribute agent。
 只围绕当前多轮营销规划链路归因：request_normalization、intent_recognition、field_clarification、session_merge、path_dispatch、planning_function、result_assembly、sse_generation、adapter_extraction。
 优先定位最早造成 planning 输出不满足 reference contract 的阶段。target_value_unit_probe、execution_stage_probe 和 planning_output_probe 只描述边界观察与调查入口，不能单独证明根因；根因必须由当前业务链路的实际重放、原始 trace 或对应源码材料连接。

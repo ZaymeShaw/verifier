@@ -11,10 +11,10 @@ import importlib
 import re
 import sys
 import threading
-from pathlib import Path
 from typing import Any
 
-from impl.core.project_loader import load_project
+from impl.core.project_loader import load_project, resolve_project_source_root
+from impl.core.config_schema import ConfigError
 from impl.projects.client_search.tools.field_capability import build_field_capability_tool
 from impl.projects.client_search.tools.rule_verify import build_rule_verify_tool
 from impl.projects.client_search.tools.search_api import build_search_api_tool
@@ -36,18 +36,23 @@ def build_investigation_rule_verify_tool():
 
 def build_investigation_search_api_tool():
     spec = load_project("client_search")
+    service = spec.service("primary")
+    required = ("base_url", "endpoint", "method", "timeout_seconds")
+    missing = [field for field in required if service.get(field) in (None, "")]
+    if missing:
+        raise ConfigError(f"client_search runtime.services.primary missing: {', '.join(missing)}")
     return build_search_api_tool(
-        api_base=str(spec.api.get("base_url") or "http://localhost:8000"),
-        endpoint=str(spec.api.get("endpoint") or "/api/v1/client_search_query_parse_no_encipher"),
-        method=str(spec.api.get("method") or "POST"),
-        timeout=float(spec.api.get("timeout") or 10.0),
+        api_base=str(service["base_url"]),
+        endpoint=str(service["endpoint"]),
+        method=str(service["method"]),
+        timeout=float(service["timeout_seconds"]),
     )
 
 
 def build_investigation_case_route_replay_tool() -> VerifiableTool:
     """Replay the real business L2 matcher and retain its case-level internals."""
     spec = load_project("client_search")
-    source_root = Path(spec.source_project).resolve()
+    source_root = resolve_project_source_root(spec)
     tool_id = "client_search.case_route_replay"
     matcher: Any = None
     matcher_lock = threading.Lock()
