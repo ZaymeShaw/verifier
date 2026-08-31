@@ -171,9 +171,22 @@ function conversationDetail(item){
 }
 function conversationSummary(item){const row=tableRow(item);return row.conversation_summary || item.conversation_summary || null;}
 function interactionSummary(item){const detail=conversationDetail(item);const summary=conversationSummary(item);if(!summary && !detail.length){return null;}return {intent:item.intent?.user_intent || inputLabel(item.live_request),conversation_summary:summary || {},conversation_detail:detail};}
+function prettyParsedClone(value){
+  // 通用规则：字符串字段能 parse 成 JSON 就展示解析后的结构（提取协议不动，纯展示层）。
+  if(typeof value==='string'){
+    const text=value.trim();
+    if(text && (text[0]==='{' || text[0]==='[')){try{return prettyParsedClone(JSON.parse(text));}catch(e){}}
+    return value;
+  }
+  if(Array.isArray(value)){return value.map(prettyParsedClone);}
+  if(value && typeof value==='object'){
+    const out={};Object.keys(value).forEach(key=>{out[key]=prettyParsedClone(value[key]);});return out;
+  }
+  return value;
+}
 function renderOutputCell(item){
   if(item.output===null || item.output===undefined || item.output===''){return '<span class="muted">-</span>';}
-  return '<pre>'+escapeHtml(formatJsonCell(item.output))+'</pre>';
+  return '<pre>'+escapeHtml(formatJsonCell(prettyParsedClone(item.output)))+'</pre>';
 }
 function caseInputPayload(item){return item.trace?.input || item.live_request || null;}
 function renderInputCell(item){const input=caseInputPayload(item);if(input===null || input===undefined){return '<span class="muted">-</span>';}return '<pre>'+escapeHtml(formatJsonCell(input,1800))+'</pre>';}
@@ -218,9 +231,9 @@ function switchProject(){
 async function initProjects(){
   const res=await fetch('/projects');
   const data=await res.json();
-  const projects=data.projects || ['client_search'];
+  const projects=data.projects || ['llm_probe'];
   document.getElementById('project').innerHTML=projects.map(item=>'<option value="'+escapeHtml(item)+'">'+escapeHtml(item)+'</option>').join('');
-  if(projects.includes('client_search')){document.getElementById('project').value='client_search';}
+  if(projects.includes('llm_probe')){document.getElementById('project').value='llm_probe';}
   switchProject();
 }
 function expectedIntent(){return document.getElementById('expected').value.trim();}

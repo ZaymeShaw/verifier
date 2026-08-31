@@ -19,6 +19,7 @@ from .capability_carrier import (
     CARRY_NO,
     CARRY_UNDECIDABLE,
     CARRY_YES,
+    DEFAULT_TRUST_TIER,
     CarrierError,
     CarrierVerdict,
     CapabilityCarrierBase,
@@ -29,7 +30,10 @@ from .capability_carrier import (
     RECOG_MISSING_VALUE,
     RECOG_UNMAPPED,
     RECOG_UNSUPPORTED,
+    assertion_tier,
+    require_stamped_claims,
     snapshot_id,
+    stamp_claims,
 )
 
 PROCESS_FIELD = "*"
@@ -121,11 +125,17 @@ def _catalog_fields(snapshot: Mapping[str, Any]) -> set[str]:
     return {str(name) for name in fields if str(name).strip()}
 
 
+def _catalog_tier(snapshot: Mapping[str, Any]) -> str:
+    return str(snapshot.get("trust_tier") or "").strip() or DEFAULT_TRUST_TIER
+
+
 def _citation(entry: Mapping[str, Any], field: str, snapshot: Mapping[str, Any], note: str = "") -> dict[str, str]:
+    # source 即担保 w 的材料引用（judge.md §3），保链不删；tier 随断言戳记透传。
     payload = {
         "source": str(entry.get("source") or "capability_manifest"),
         "ref": field,
         "revision": str(snapshot.get("revision") or snapshot_id(snapshot)[:16]),
+        "tier": assertion_tier(entry),
     }
     if note:
         payload["note"] = note
@@ -152,6 +162,7 @@ def evaluate_reading(
                     "source": "capability_manifest",
                     "ref": "fields",
                     "revision": str(snapshot.get("revision") or snapshot_id(snapshot)[:16]),
+                    "tier": _catalog_tier(snapshot),
                     "note": "过程约束不要求新增维度",
                 },
             ),
@@ -400,7 +411,28 @@ def catalog_prompt(snapshot: Mapping[str, Any]) -> str:
     lex = lexicon_prompt(snapshot)
     if lex:
         body = f"{body}\n\n受治理业务词口径：\n{lex}" if body else f"受治理业务词口径：\n{lex}"
+    hints = attention_prompt(snapshot)
+    if hints:
+        section = (
+            "调用方注意力提示（caller_stated 最低档：仅提示读法注意某处，"
+            "不构成承载证据，不改变任何断言档位）：\n" + hints
+        )
+        body = f"{body}\n\n{section}" if body else section
     return body
+
+
+def attention_prompt(snapshot: Mapping[str, Any]) -> str:
+    """caller-stated 注意力提示（judge.md §7.3 第二用途）：只进提示面，不进断言。"""
+    lines = []
+    for item in snapshot.get("attention") or []:
+        if not isinstance(item, Mapping):
+            continue
+        note = str(item.get("note") or "").strip()
+        if not note:
+            continue
+        field = str(item.get("field") or "").strip()
+        lines.append(f"{field}：{note}" if field else note)
+    return "\n".join(lines)
 
 
 def normalize_lexicon(raw: Any) -> list[dict[str, Any]]:
@@ -479,6 +511,7 @@ def unmapped_verdict(items: Sequence[Mapping[str, Any]], snapshot: Mapping[str, 
         "source": "capability_manifest",
         "ref": "fields",
         "revision": revision,
+        "tier": _catalog_tier(snapshot),
         "note": "unmapped",
     }]
     surfaces: list[str] = []
@@ -493,10 +526,12 @@ def unmapped_verdict(items: Sequence[Mapping[str, Any]], snapshot: Mapping[str, 
             why = str(near.get("why") or "").strip()
             if not field:
                 continue
+            entry = _field_entry(snapshot, field)
             citations.append({
                 "source": "capability_manifest",
                 "ref": field,
                 "revision": revision,
+                "tier": assertion_tier(entry) if entry else _catalog_tier(snapshot),
                 "note": why or f"unmapped:{surface}",
             })
     label = "、".join(surfaces) or "未登记维度"
@@ -956,7 +991,7 @@ def snapshot_from_capability_manifest(
         operators = entry.get("operators") or []
         aliases = _aliases_for(str(name), entry)
         aliases.update(_spoken_aliases(spoken_map.get(str(name))))
-        fields[str(name)] = {
+        built = {
             "operators": sorted(str(item) for item in operators if str(item).strip()),
             "enums": sorted(str(item) for item in (entry.get("enums") or [])),
             "is_supported": entry.get("is_supported") is not False,
@@ -968,10 +1003,16 @@ def snapshot_from_capability_manifest(
             "negatives": sorted(_negatives_for(entry)),
             "spoken": sorted(_spoken_aliases(spoken_map.get(str(name)))),
         }
+        # 物料可显式声明戳记（出处/信任档位/新鲜度/担保），未声明的走缺省映射。
+        for stamp_key in ("provenance", "trust_tier", "staleness", "warrant"):
+            declared = str(entry.get(stamp_key) or "").strip()
+            if declared:
+                built[stamp_key] = declared
+        fields[str(name)] = built
     terms = normalize_lexicon(lexicon)
     payload = {"fields": fields, "lexicon": terms}
     payload["revision"] = snapshot_id({"fields": fields, "lexicon": terms})[:16]
-    return payload
+    return stamp_claims(payload)
 
 
 class StructuredCarrier(CapabilityCarrierBase):
@@ -987,7 +1028,12 @@ class StructuredCarrier(CapabilityCarrierBase):
         mapper_retries: int | None = None,
         retry_backoff: Sequence[float] | None = None,
     ):
-        self.snapshot = dict(snapshot) if isinstance(snapshot, Mapping) else {"fields": None}
+        raw = dict(snapshot) if isinstance(snapshot, Mapping) else {"fields": None}
+        if isinstance(raw.get("fields"), Mapping):
+            # 装载期戳记与 fail-fast：缺省映射补齐三件套后仍不合法（如非法档位）即拒。
+            raw = stamp_claims(raw)
+            require_stamped_claims(raw)
+        self.snapshot = raw
         self.spec = spec
         self.mapper = mapper
         self.replicate = mapper is None if replicate is None else replicate

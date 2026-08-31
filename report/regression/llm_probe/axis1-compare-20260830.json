@@ -1,0 +1,247 @@
+[
+  {
+    "name": "name-exact",
+    "query": "客户姓名是张伟的人",
+    "llm_probe": {
+      "judge": {
+        "overall": "not_fulfilled",
+        "assessments": [
+          {
+            "expectation_id": "客户姓名条件被结构化为对应字段和值",
+            "status": "fulfilled",
+            "blocking": true
+          },
+          {
+            "expectation_id": "客户姓名是张伟保持精确等值匹配语义",
+            "status": "not_fulfilled",
+            "blocking": true
+          }
+        ],
+        "reasoning": "输出成功提取了客户姓名字段和值“张伟”，因此结构化字段和值这一期望已满足。但输入中的“是”表达精确等值关系，而实际条件明确使用 match_mode 为 prefix 的前缀匹配，扩大了匹配范围，因此精确匹配语义未满足。"
+      },
+      "output_head": "{\"output_text\": \"{\\\"code\\\": 0, \\\"msg\\\": \\\"操作成功\\\", \\\"data\\\": {\\\"robot_text\\\": \\\"姓张伟的客户\\\", \\\"end_flag\\\": 1, \\\"extra_output_params\\\": {\\\"query\\\": \\\"客户姓名是张伟的人\\\", \\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"searchClientName\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"张伟\\\", \\\"match_mode\\\": \\\"prefix\\\"}], \\\"sort\\\": [], \\\"sort_source\\\": \\\"none\\\", \\\"matched_level\\\": 2, \\\"rewritten_query\\\": \\\"客户姓名是",
+      "elapsed_s": 66.3
+    },
+    "client_search": {
+      "judge": {
+        "overall": "not_fulfilled",
+        "assessments": [
+          {
+            "expectation_id": "按客户本人姓名精确筛选张伟",
+            "status": "not_fulfilled",
+            "blocking": true
+          },
+          {
+            "expectation_id": "以AND逻辑交付单一可执行姓名条件",
+            "status": "fulfilled",
+            "blocking": true
+          }
+        ],
+        "reasoning": "用户要求客户本人姓名为张伟，实际虽正确提取字段和值并使用AND单条件，但设置prefix并表述为姓张伟，扩大了匹配范围，因此核心姓名筛选未满足；结构可下游消费。"
+      },
+      "output_head": "{\"code\": 0, \"msg\": \"操作成功\", \"robot_text\": \"姓张伟的客户\", \"end_flag\": 1, \"trace_id\": null, \"query\": \"客户姓名是张伟的人\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张伟\", \"match_mode\": \"prefix\"}], \"matched_level\": 2, \"matched_patterns\": \"明确客户姓名上下文\", \"rewritten_query\": \"客户姓名是张伟的人\", \"intent_summary\": \"姓张伟的客户\", \"confidence\": 0.95, \"cost_times\": 61.0}",
+      "elapsed_s": 87.9
+    }
+  },
+  {
+    "name": "age-50plus",
+    "query": "五十岁以上的客户都有谁",
+    "llm_probe": {
+      "judge": {
+        "overall": "fulfilled",
+        "assessments": [
+          {
+            "expectation_id": "将五十岁以上准确转换为客户本人年龄条件",
+            "status": "fulfilled",
+            "blocking": true
+          }
+        ],
+        "reasoning": "本次输出可读且 HTTP 调用成功。用户查询表达的是客户本人年龄不低于50岁，其中“以上”包含50；实际 conditions 准确输出了 clientAge、GTE、50。show_schema 明确要求关注解析出的搜索条件，因此 matched_patterns 中的提示词泄漏以及路由、追踪字段不影响本次判断；“都有谁”也不要求在解析阶段返回具体客户名单。"
+      },
+      "output_head": "{\"output_text\": \"{\\\"code\\\": 0, \\\"msg\\\": \\\"操作成功\\\", \\\"data\\\": {\\\"robot_text\\\": \\\"客户年龄≥50的客户\\\", \\\"end_flag\\\": 1, \\\"extra_output_params\\\": {\\\"query\\\": \\\"五十岁以上的客户都有谁\\\", \\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 50, \\\"match_mode\\\": null}], \\\"sort\\\": [], \\\"sort_source\\\": \\\"none\\\", \\\"matched_level\\\": 4, \\\"rewritten_query\\\": \\\"五十岁以上的客户都有谁\\\", \\\"m",
+      "elapsed_s": 102.9
+    },
+    "client_search": {
+      "judge": {
+        "overall": "fulfilled",
+        "assessments": [
+          {
+            "expectation_id": "筛选本人年龄不低于五十岁的客户",
+            "status": "fulfilled",
+            "blocking": true
+          },
+          {
+            "expectation_id": "交付下游可消费的年龄查询条件",
+            "status": "fulfilled",
+            "blocking": true
+          },
+          {
+            "expectation_id": "不增加未表达的客户筛选限制",
+            "status": "fulfilled",
+            "blocking": true
+          }
+        ],
+        "reasoning": "用户明确要求本人年龄五十岁以上，实际输出clientAge GTE 50并保留包含边界，且无额外条件；仅未进行下游结果集验证，但当前范围只评价解析语义。"
+      },
+      "output_head": "{\"code\": 0, \"msg\": \"操作成功\", \"robot_text\": \"客户年龄≥50的客户\", \"end_flag\": 1, \"trace_id\": null, \"query\": \"五十岁以上的客户都有谁\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"clientAge\", \"operator\": \"GTE\", \"value\": 50, \"match_mode\": null}], \"matched_level\": 4, \"matched_patterns\": \"### 当前时间\\n2026-08-30 22:20:15 (Asia/Shanghai)\\n### 今天星期\\n周日\\n\\n### 相关字段参考（根据查询内容动态召回）\\n\\n\\n- **clientAge** | 操作符: RANGE | 值类型: numeri",
+      "elapsed_s": 118.2
+    }
+  },
+  {
+    "name": "annuity-exclusion",
+    "query": "不要买了年金险的客户",
+    "llm_probe": {
+      "judge": {
+        "overall": "fulfilled",
+        "assessments": [
+          {
+            "expectation_id": "排除购买年金险客户的结构化搜索条件",
+            "status": "fulfilled",
+            "blocking": true
+          }
+        ],
+        "reasoning": "用户语义是排除购买年金险的客户。实际输出将“年金险”映射为险种类别值“年金”，并使用polNoInfo.plancodeinfo.plantypedesc字段的NOT_CONTAINS操作符，完整保留了否定包含关系。输出中没有将普通名词“客户”误解析为额外的保险状态条件，且关注的结构化搜索条件可执行，因此该业务期望已满足。"
+      },
+      "output_head": "{\"output_text\": \"{\\\"code\\\": 0, \\\"msg\\\": \\\"操作成功\\\", \\\"data\\\": {\\\"robot_text\\\": \\\"投保险种类别不包含年金的客户\\\", \\\"end_flag\\\": 1, \\\"extra_output_params\\\": {\\\"query\\\": \\\"不要买了年金险的客户\\\", \\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"polNoInfo.plancodeinfo.plantypedesc\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"年金\\\"], \\\"match_mode\\\": null}], \\\"sort\\\": [], \\\"sort_source\\\": \\\"none\\\", \\\"matched_level\\\": ",
+      "elapsed_s": 48.2
+    },
+    "client_search": {
+      "judge": {
+        "overall": "fulfilled",
+        "assessments": [
+          {
+            "expectation_id": "排除已购买年金险的客户",
+            "status": "fulfilled",
+            "blocking": true
+          },
+          {
+            "expectation_id": "交付可供下游消费的年金险排除查询",
+            "status": "fulfilled",
+            "blocking": true
+          }
+        ],
+        "reasoning": "用户要排除已购买年金险的客户。实际输出使用保单险种类别字段的NOT_CONTAINS操作符并将年金险归一为年金，逻辑和条件均一致；下游结果集未验证，但不影响当前语义范围内判定。"
+      },
+      "output_head": "{\"code\": 0, \"msg\": \"操作成功\", \"robot_text\": \"投保险种类别不包含年金的客户\", \"end_flag\": 1, \"trace_id\": null, \"query\": \"不要买了年金险的客户\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"polNoInfo.plancodeinfo.plantypedesc\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"年金\"], \"match_mode\": null}], \"matched_level\": 4, \"matched_patterns\": \"### 当前时间\\n2026-08-30 22:23:00 (Asia/Shanghai)\\n### 今天星期\\n周日\\n\\n### 相关字段参考（根据查询内容动态召回）\\n\\n\\n",
+      "elapsed_s": 109.9
+    }
+  },
+  {
+    "name": "multi-cond",
+    "query": "我想找年龄超过45岁的女客户，而且她们每年交的保费要在一万块以上",
+    "llm_probe": {
+      "judge": {
+        "overall": "fulfilled",
+        "assessments": [
+          {
+            "expectation_id": "筛选年龄超过45岁的客户",
+            "status": "fulfilled",
+            "blocking": true
+          },
+          {
+            "expectation_id": "筛选女性客户",
+            "status": "fulfilled",
+            "blocking": true
+          },
+          {
+            "expectation_id": "筛选年缴保费超过一万元的客户",
+            "status": "fulfilled",
+            "blocking": true
+          },
+          {
+            "expectation_id": "使用AND组合全部搜索条件",
+            "status": "fulfilled",
+            "blocking": true
+          }
+        ],
+        "reasoning": "本次请求的核心业务意图是把三个自然语言筛选条件转换为可执行的结构化条件，并以AND关系组合。输出准确识别了客户本人年龄、客户本人性别和年缴保费，年龄严格超过45岁转换为GTE 46，年缴保费一万元以上按本案规则转换为GT 10000，字段、操作符、值及组合逻辑均与输入语义一致。show_schema仅要求关注解析出的搜索条件，因此未将其他响应字段作为判断依据。"
+      },
+      "output_head": "{\"output_text\": \"{\\\"code\\\": 0, \\\"msg\\\": \\\"操作成功\\\", \\\"data\\\": {\\\"robot_text\\\": \\\"客户年龄≥46\\\\n并且客户性别为女\\\\n并且年缴保费>10000的客户\\\", \\\"end_flag\\\": 1, \\\"extra_output_params\\\": {\\\"query\\\": \\\"我想找年龄超过45岁的女客户，而且她们每年交的保费要在一万块以上\\\", \\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 46, \\\"match_mode\\\": null}, {\\\"field\\\": \\\"clientSex\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"valu",
+      "elapsed_s": 225.1
+    },
+    "client_search": {
+      "judge": {
+        "overall": "fulfilled",
+        "assessments": [
+          {
+            "expectation_id": "客户年龄超过45岁",
+            "status": "fulfilled",
+            "blocking": true
+          },
+          {
+            "expectation_id": "客户性别为女性",
+            "status": "fulfilled",
+            "blocking": true
+          },
+          {
+            "expectation_id": "年缴保费超过一万元",
+            "status": "fulfilled",
+            "blocking": true
+          },
+          {
+            "expectation_id": "年龄性别保费条件按且逻辑组合",
+            "status": "fulfilled",
+            "blocking": true
+          }
+        ],
+        "reasoning": "用户要求年龄超过45岁的女性，且年缴保费严格超过10000元。实际输出为clientAge GTE 46、clientSex MATCH 女、annPremSegNum GT 10000，并以AND组合，三项语义和边界均一致；下游结果集未验证但不在本案评价范围。"
+      },
+      "output_head": "{\"code\": 0, \"msg\": \"操作成功\", \"robot_text\": \"客户年龄≥46\\n并且客户性别为女\\n并且年缴保费>10000的客户\", \"end_flag\": 1, \"trace_id\": null, \"query\": \"我想找年龄超过45岁的女客户,而且她们每年交的保费要在一万块以上\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"clientAge\", \"operator\": \"GTE\", \"value\": 46, \"match_mode\": null}, {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\", \"match_mode\": null}, {\"field\": \"annPremSegNum\", \"operator\": \"GT\", \"value",
+      "elapsed_s": 289.2
+    }
+  },
+  {
+    "name": "family-slang",
+    "query": "帮我查一下那些上有老下有小的客户",
+    "llm_probe": {
+      "judge": {
+        "overall": "fulfilled",
+        "assessments": [
+          {
+            "expectation_id": "上有老映射为父母或祖辈关系条件",
+            "status": "fulfilled",
+            "blocking": true
+          },
+          {
+            "expectation_id": "下有小映射为子女关系条件",
+            "status": "fulfilled",
+            "blocking": true
+          },
+          {
+            "expectation_id": "父母或祖辈与子女条件采用并且逻辑",
+            "status": "fulfilled",
+            "blocking": true
+          }
+        ],
+        "reasoning": "用户要查询同时具有上一代家庭成员和子女的客户。输出将父母及祖辈映射为 familyInfo.familyrelation 的 CONTAINS 条件，将子女映射为同字段的 MATCH 条件，并使用 AND 组合，完整保留了“上有老下有小”的核心语义。show_schema 仅要求关注结构化搜索条件，因此未将路由、追踪字段和 matched_patterns 中的内容作为判断依据。"
+      },
+      "output_head": "{\"output_text\": \"{\\\"code\\\": 0, \\\"msg\\\": \\\"操作成功\\\", \\\"data\\\": {\\\"robot_text\\\": \\\"家庭成员关系包含父母、(外)祖父母\\\\n并且有子女的客户\\\", \\\"end_flag\\\": 1, \\\"extra_output_params\\\": {\\\"query\\\": \\\"帮我查一下那些上有老下有小的客户\\\", \\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"父母\\\", \\\"(外)祖父母\\\"], \\\"match_mode\\\": null}, {\\\"field\\\": \\\"familyInfo.familyrelation\\\", ",
+      "elapsed_s": 67.8
+    },
+    "client_search": {
+      "judge": {
+        "overall": "not_fulfilled",
+        "assessments": [
+          {
+            "expectation_id": "筛选具有长辈家庭成员的客户",
+            "status": "fulfilled",
+            "blocking": true
+          },
+          {
+            "expectation_id": "筛选具有子女家庭成员的客户",
+            "status": "not_fulfilled",
+            "blocking": true
+          },
+          {
+            "expectation_id": "以并且逻辑组合长辈与子女条件",
+            "status": "fulfilled",
+            "blocking": true
+          }
+        ],
+        "reasoning": "实际正确识别了长辈、子女及AND关系，但familyInfo.familyrelation仅声明支持CONTAINS，实际对子女使用MATCH，导致该核心条件不满足下游可执行性。"
+      },
+      "output_head": "{\"code\": 0, \"msg\": \"操作成功\", \"robot_text\": \"家庭成员关系包含父母、(外)祖父母\\n并且有子女的客户\", \"end_flag\": 1, \"trace_id\": null, \"query\": \"帮我查一下那些上有老下有小的客户\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"父母\", \"(外)祖父母\"], \"match_mode\": null}, {\"field\": \"familyInfo.familyrelation\", \"operator\": \"MATCH\", \"value\": \"子女\", \"match_mode\": null}], \"matched_level\": 4, \"",
+      "elapsed_s": 134.7
+    }
+  }
+]

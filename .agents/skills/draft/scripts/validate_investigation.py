@@ -109,6 +109,8 @@ def main() -> int:
             tool_module_overrides=tool_module_overrides,
             tool_test_inputs=tool_inputs,
             source_root=spec.source_root_path() if spec.has_business_source else None,
+            # 调查校验关心结构与工具执行；业务源漂移记入警告，闭合归 Solidify。
+            business_source_staleness_policy="warn",
         )
         _require_key_index_selection_receipts(
             package, project_root, args.project, args.role

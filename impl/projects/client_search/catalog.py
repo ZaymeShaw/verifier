@@ -22,7 +22,7 @@ from impl.core.investigation_key_index import (
     KeyIndexSearchHit,
 )
 from impl.core.schema import InvestigationKeyEntry, InvestigationKeyIndex, ProjectSpec
-from impl.projects.client_search.draft.catalog_embedding import (
+from impl.projects.client_search.catalog_embedding import (
     search_embedding_channel,
 )
 from impl.projects.client_search.field_provider import ClientSearchFieldDefinitionProvider
@@ -411,7 +411,7 @@ def _register_field(
     spec: ProjectSpec,
     provider: ClientSearchFieldDefinitionProvider,
 ) -> None:
-    from impl.projects.client_search.draft.field_tools import (
+    from impl.projects.client_search.field_tools import (
         field_index_components,
     )
 

@@ -11,7 +11,7 @@ from .path_contract import LogicalPathRef, PathScope
 from .portable_artifact import write_active_artifact
 
 
-VALIDATION_RECEIPT_VERSION = 2
+VALIDATION_RECEIPT_VERSION = 3
 _logger = logging.getLogger(__name__)
 _emitted_staleness_warnings: set[tuple[str, str, str, str]] = set()
 
@@ -21,7 +21,9 @@ class InvestigationValidationReceipt:
     schema_version: int
     project_id: str
     role: str
-    manifest_sha256: str
+    # Structural manifest identity: ignores hash/revision pins so that drift
+    # absorption (re-pinning key_live evidence) does not invalidate the receipt.
+    manifest_structure_sha256: str
     source_revision: str
     source: Mapping[str, str] | None
     tool_inputs_sha256: str
@@ -54,7 +56,7 @@ def write_investigation_validation_receipt(
         schema_version=VALIDATION_RECEIPT_VERSION,
         project_id=str(spec.project_id),
         role=str(role),
-        manifest_sha256=str(validation_result.get("manifest_sha256") or ""),
+        manifest_structure_sha256=str(validation_result.get("manifest_structure_sha256") or ""),
         source_revision=source_revision,
         source=(
             LogicalPathRef(PathScope.BUSINESS_SOURCE, ".").to_mapping()
@@ -64,7 +66,7 @@ def write_investigation_validation_receipt(
         tool_inputs_sha256=stable_sha256(tool_inputs),
         tools=tools,
     )
-    if not receipt.manifest_sha256 or not receipt.tool_inputs_sha256:
+    if not receipt.manifest_structure_sha256 or not receipt.tool_inputs_sha256:
         raise ValueError("Investigation validation receipt is missing immutable validation hashes")
     path = validation_receipt_path(spec, role)
     verifier_accessor = getattr(spec, "verifier_root_path", None)
@@ -77,7 +79,7 @@ def write_investigation_validation_receipt(
             "schema_version": receipt.schema_version,
             "project_id": receipt.project_id,
             "role": receipt.role,
-            "manifest_sha256": receipt.manifest_sha256,
+            "manifest_structure_sha256": receipt.manifest_structure_sha256,
             "source_revision": receipt.source_revision,
             "source": receipt.source,
             "tool_inputs_sha256": receipt.tool_inputs_sha256,
@@ -157,10 +159,10 @@ def require_investigation_validation_receipt(
                 role,
                 "; ".join(str(item.get("message") or "") for item in staleness_warnings),
             )
-    if raw.get("manifest_sha256") != current.get("manifest_sha256"):
-        raise ValueError("Investigation validation receipt is stale: manifest changed")
-    # source_revision drift is informational only; it does not invalidate the receipt.
-    # The receipt remains valid as long as the manifest itself has not changed.
+    if raw.get("manifest_structure_sha256") != current.get("manifest_structure_sha256"):
+        raise ValueError("Investigation validation receipt is stale: manifest structure changed")
+    # Hash/revision pin drift (including absorb re-pins) is informational only;
+    # the receipt stays valid as long as the manifest structure has not changed.
     source_ref = raw.get("source")
     if current.get("source_root") and not isinstance(source_ref, Mapping):
         raise ValueError("Investigation validation receipt lacks a portable business source reference")

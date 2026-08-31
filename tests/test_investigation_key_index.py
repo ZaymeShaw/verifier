@@ -225,7 +225,7 @@ def test_material_decision_index_is_navigation_not_evidence():
     from impl.core.schema.investigation_judge import load_authority_investigation_report
 
     report = load_authority_investigation_report(Path(
-        "impl/projects/client_search/draft/investigation/judge/docs/authority-investigation-report.json"
+        "impl/projects/client_search/investigation/judge/docs/authority-investigation-report.json"
     ))
     registry = build_material_decision_key_index_registry(report)
     hits, _ = registry.search(MATERIAL_DECISION_INDEX_KEY, "客户搜索是否支持按年龄查询", limit=5)
@@ -250,7 +250,7 @@ def test_authority_application_rejects_catalog_metadata_mismatch():
     from impl.core.schema.investigation_judge import load_authority_investigation_report
 
     report = load_authority_investigation_report(Path(
-        "impl/projects/client_search/draft/investigation/judge/docs/authority-investigation-report.json"
+        "impl/projects/client_search/investigation/judge/docs/authority-investigation-report.json"
     ))
     invalid = replace(
         build_material_decision_key_index(report),
@@ -270,7 +270,7 @@ def test_material_decision_index_miss_has_no_unresolved_semantics():
     from impl.core.schema.investigation_judge import load_authority_investigation_report
 
     report = load_authority_investigation_report(Path(
-        "impl/projects/client_search/draft/investigation/judge/docs/authority-investigation-report.json"
+        "impl/projects/client_search/investigation/judge/docs/authority-investigation-report.json"
     ))
     registry = build_material_decision_key_index_registry(report)
     hits, receipt = registry.search(
@@ -287,7 +287,7 @@ def test_coverage_gap_trigger_hit_requires_top_hit_gap():
     from impl.core.schema.investigation_judge import load_authority_investigation_report
 
     report = load_authority_investigation_report(Path(
-        "impl/projects/client_search/draft/investigation/judge/docs/authority-investigation-report.json"
+        "impl/projects/client_search/investigation/judge/docs/authority-investigation-report.json"
     ))
     # 请求命中调查层覆盖缺口且无更相关的 MaterialDecision：返回 gap_id（确定性触发面）。
     assert coverage_gap_trigger_hit(

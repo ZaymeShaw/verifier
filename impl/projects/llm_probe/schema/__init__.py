@@ -15,6 +15,7 @@ class LlmProbeRequest:
     headers: Dict[str, Any] = field(default_factory=dict)
     capability_ref: str = ""
     capability: str = ""
+    boundary: str = ""
     show_schema: Any = None
 
 

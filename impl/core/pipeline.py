@@ -106,6 +106,8 @@ def live_run(project_id: str, case: SingleTurnCase) -> RunTrace:
     """
     if not isinstance(case, SingleTurnCase):
         raise TypeError("live_run requires a runtime SingleTurnCase; convert transport input at the boundary")
+    from .materials_store import require_materials
+    require_materials(project_id)
     spec = load_project(project_id)
     if spec.local_deployment_enabled:
         from .local_service import ensure_project_service
@@ -402,6 +404,14 @@ def _generate_reference_for_case(spec, case, project_id):
     return case
 
 
+def _request_from_trace(trace) -> dict | None:
+    for attr in ("normalized_request", "input"):
+        payload = getattr(trace, attr, None)
+        if isinstance(payload, dict) and payload:
+            return payload
+    return None
+
+
 def _run_payload(trace, judge_result, attribute_result, case_id="", execution_mode="", output_source="", error=""):
     spec = load_project(trace.project_id)
     if not trace.config_fingerprint:
@@ -414,7 +424,11 @@ def _run_payload(trace, judge_result, attribute_result, case_id="", execution_mo
         "execution_mode": execution_mode or trace.execution_mode,
         "output_source": output_source or trace.output_source,
     }
-    report = live_carrier_report(spec, judge_result)
+    report = live_carrier_report(
+        spec,
+        judge_result,
+        request=_request_from_trace(trace),
+    )
     if report is not None:
         run["capability_carrier"] = report
         carrier_errors = collect_report_errors(report)
@@ -678,6 +692,8 @@ def batch_run(
         check_report = check(project_id, None, None, None, cluster_summary)
         table = build_case_pool_table_from_runs(project_id, [])
         return BatchRunResult(project_id=project_id, total=0, runs=[], cluster=cluster_summary, check=check_report, table=table)
+    from .materials_store import require_materials
+    require_materials(project_id)
     max_workers = min(resolve_batch_concurrency(concurrency), len(case_list))
     runs_by_index: Dict[int, Dict[str, Any]] = {}
     with ThreadPoolExecutor(max_workers=max_workers) as executor:

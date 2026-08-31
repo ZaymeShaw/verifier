@@ -43,7 +43,8 @@ SCHEMA_FIELD_ROLES = {
         "view_only": ["project_info", "run_trace_summary", "raw_sections", "reference_panel",
                       "judge_panel", "attribute_panel", "fulfillment_panel",
                       "expectation_attribution_panel", "cluster_panel", "check_panel",
-                      "table_row", "project_extensions", "tool_call_log"],
+                      "capability_carrier_panel", "table_row", "project_extensions",
+                      "tool_call_log"],
     },
     "TraceTableRow": {
         "view_only": ["id", "input", "scenario", "output_summary", "reference_summary", "status",

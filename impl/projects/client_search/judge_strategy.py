@@ -9,10 +9,10 @@ from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 
 from impl.core.schema import JudgeResult, RunTrace
-from impl.projects.client_search.draft import judge_execution
+from impl.projects.client_search import judge_execution
 
 if TYPE_CHECKING:
-    from impl.projects.client_search.draft.judge import ClientSearchJudge
+    from impl.projects.client_search.judge import ClientSearchJudge
 
 
 class DraftSinglePassJudgeExecution:

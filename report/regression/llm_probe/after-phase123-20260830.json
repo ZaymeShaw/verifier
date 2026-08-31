@@ -1,0 +1,771 @@
+[
+  {
+    "case_id": "llm-probe-client_search-name",
+    "capability_ref": "client_search",
+    "input": {
+      "user_text": "客户姓名是张伟的人",
+      "user_id": "mock_user_001",
+      "trace_id": "mock_trace_001",
+      "session_id": "mock_session_001",
+      "source": "mock",
+      "extra_input_params": {}
+    },
+    "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"姓张伟的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"客户姓名是张伟的人\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张伟\", \"match_mode\": \"prefix\"}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 2, \"rewritten_query\": \"客户姓名是张伟的人\", \"matched_patterns\": \"明确客户姓名上下文\", \"cost_times\": 58.0, \"confidence\": 0.95, \"intent_summary\": \"姓张伟的客户\", \"behavior_debug\": null}, \"trace_id\": \"mock_trace_001\"}}",
+    "judge": {
+      "trace_id": "llm_probe:llm-probe-client_search-name:1788090300253",
+      "project_id": "llm_probe",
+      "business_expectations": [
+        {
+          "expectation_id": "正确识别客户姓名字段和值",
+          "blocking": true,
+          "downstream_consumer": "客户搜索执行器",
+          "user_intent": "从自然语言中识别用于筛选客户的姓名字段及其取值",
+          "expected_outcome": "将“客户姓名是张伟的人”解析为客户姓名字段，值为“张伟”的结构化条件",
+          "required_capabilities": [
+            "识别客户姓名语义",
+            "提取姓名值",
+            "输出字段和值"
+          ],
+          "acceptance_criteria": [
+            "conditions 中存在一条客户姓名相关条件",
+            "条件字段对应客户姓名搜索字段",
+            "条件值等于“张伟”"
+          ],
+          "boundary": {
+            "关注范围": "data.extra_output_params.conditions 中的字段和值",
+            "忽略范围": "路由、追踪、耗时及其他未被 show_schema 指出的字段"
+          },
+          "priority": "核心",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "保持完整客户姓名的精确匹配语义",
+          "blocking": true,
+          "downstream_consumer": "客户搜索执行器",
+          "user_intent": "搜索姓名完整等于张伟的客户，而不是姓名以张伟开头的客户",
+          "expected_outcome": "结构化条件应表达对完整客户姓名“张伟”的精确匹配，不应扩大为姓氏或前缀匹配",
+          "required_capabilities": [
+            "理解“姓名是”所表达的完整值匹配语义",
+            "选择与精确姓名匹配一致的操作符或匹配模式"
+          ],
+          "acceptance_criteria": [
+            "匹配模式应为完整姓名精确匹配或语义等价形式",
+            "不应使用 prefix 等会纳入其他以“张伟”开头姓名的匹配模式"
+          ],
+          "boundary": {
+            "关注范围": "conditions 中的 operator、match_mode 及其对姓名匹配范围的影响",
+            "忽略范围": "robot_text、confidence 及其他非搜索条件字段"
+          },
+          "priority": "核心",
+          "evidence_refs": []
+        }
+      ],
+      "fulfillment_assessments": [
+        {
+          "expectation_id": "正确识别客户姓名字段和值",
+          "status": "fulfilled",
+          "score": 1.0,
+          "expected_evidence": [
+            "应存在客户姓名条件，字段对应客户姓名，值为“张伟”"
+          ],
+          "actual_evidence": [
+            "output_text_parsed.data.extra_output_params.conditions[0] 为 {\"field\":\"searchClientName\",\"operator\":\"MATCH\",\"value\":\"张伟\",\"match_mode\":\"prefix\"}",
+            "字段 searchClientName 表示客户姓名搜索字段，value 为“张伟”"
+          ],
+          "downstream_impact": "下游能够获得客户姓名字段和值并执行相应搜索。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "保持完整客户姓名的精确匹配语义",
+          "status": "not_fulfilled",
+          "score": 0.0,
+          "expected_evidence": [
+            "“客户姓名是张伟的人”应表达完整姓名等于“张伟”的精确匹配",
+            "不应采用会匹配其他“张伟”前缀姓名的模式"
+          ],
+          "actual_evidence": [
+            "output_text_parsed.data.extra_output_params.conditions[0].match_mode 为“prefix”",
+            "output_text_parsed.data.robot_text 为“姓张伟的客户”，将原始完整姓名条件扩大为前缀或姓氏式匹配"
+          ],
+          "downstream_impact": "下游搜索可能纳入姓名以“张伟”开头但并非完整姓名“张伟”的客户，导致筛选范围过宽。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        }
+      ],
+      "overall_fulfillment": {
+        "status": "not_fulfilled",
+        "blocking_expectations": [
+          "正确识别客户姓名字段和值",
+          "保持完整客户姓名的精确匹配语义"
+        ]
+      },
+      "expected": {
+        "output_text": "应输出包含一条客户姓名结构化条件的结果：字段对应客户姓名，值为“张伟”，并使用表示完整姓名精确匹配的操作符或匹配模式，不应解释为姓氏或前缀匹配。"
+      },
+      "actual": {
+        "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"姓张伟的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"客户姓名是张伟的人\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张伟\", \"match_mode\": \"prefix\"}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 2, \"rewritten_query\": \"客户姓名是张伟的人\", \"matched_patterns\": \"明确客户姓名上下文\", \"cost_times\": 58.0, \"confidence\": 0.95, \"intent_summary\": \"姓张伟的客户\", \"behavior_debug\": null}, \"trace_id\": \"mock_trace_001\"}}"
+      },
+      "missing": [],
+      "wrong": [
+        {
+          "kind": "wrong",
+          "error_type": "匹配范围过宽",
+          "expected": "完整客户姓名“张伟”的精确匹配",
+          "actual": {
+            "field": "searchClientName",
+            "operator": "MATCH",
+            "value": "张伟",
+            "match_mode": "prefix"
+          },
+          "evidence_ref": "output_text_parsed.data.extra_output_params.conditions[0]",
+          "raw": "match_mode 为 prefix，不能保证仅匹配完整姓名“张伟”",
+          "incomplete": false
+        }
+      ],
+      "extra": [],
+      "evidence": [
+        "请求 body.user_text 为“客户姓名是张伟的人”",
+        "output_text_parsed.data.extra_output_params.conditions[0] 提供了客户姓名字段和值，但 match_mode 为 prefix"
+      ],
+      "reasoning_summary": "output_text 可读取且执行成功，因此可以直接评估。结果正确提取了客户姓名字段 searchClientName 和值“张伟”，但将匹配模式设置为 prefix，并在 robot_text 中改写为“姓张伟的客户”。这会把完整姓名等于“张伟”的意图扩大为前缀或姓氏式匹配，因此字段和值提取已满足，姓名精确匹配语义未满足。",
+      "summary": {
+        "reason": "not_fulfilled · blocking=[保持完整客户姓名的精确匹配语义] · output_text 可读取且执行成功，因此可以直接评估。结果正确提取了客户姓名字段 searchClientName 和值“张伟”，但将匹配模式设置为 prefix，并在 robot_text 中改写为“姓张伟的客户”。这会把完整姓名等于“张伟”的意图扩大为前缀或姓氏式匹配，因此字段和值提取已满足，姓名精确匹配语义未满足。",
+        "primary_failure_dimensions": [
+          {
+            "expectation_id": "保持完整客户姓名的精确匹配语义",
+            "status": "not_fulfilled",
+            "blocking": true,
+            "downstream_impact": "下游搜索可能纳入姓名以“张伟”开头但并非完整姓名“张伟”的客户，导致筛选范围过宽。",
+            "evidence": "output_text_parsed.data.extra_output_params.conditions[0].match_mode 为“prefix” | output_text_parsed.data.robot_text 为“姓张伟的客户”，将原始完整姓名条件扩大为前缀或姓氏式匹配 | “客户姓名是张伟的人”应表达完整姓名等于“张伟”的精确匹配 | 不应采用会匹配其他“张伟”前缀姓名的模式"
+          }
+        ],
+        "reason_source": "aggregated_fulfillment",
+        "fulfillment_status": "not_fulfilled",
+        "assessment_count": 2,
+        "blocking_count": 2,
+        "is_formal_attribution": true
+      }
+    },
+    "capability_carrier": {
+      "applicable": true,
+      "axis1_status": "not_fulfilled",
+      "placements": [
+        {
+          "expectation_id": "保持完整客户姓名的精确匹配语义",
+          "placement": "做错了",
+          "carry": "yes",
+          "reason": "字段定义表明确支持客户姓名字段 searchClientName 使用 MATCH 操作符；完整姓名应原样提取并输出，不设置 prefix，而 prefix 仅适用于明确的姓氏查询，因此能够承载对完整姓名“张伟”的精确匹配语义。",
+          "citations": [
+            {
+              "source": "material://llm_probe/field_definitions_args",
+              "ref": "L31-L60",
+              "note": "字段 searchClientName 支持 operator: MATCH；描述要求“完整姓名必须原样保留”，完整姓名示例输出 MATCH 且未设置 match_mode；仅单独姓氏查询才设置 match_mode=prefix。"
+            }
+          ],
+          "tool_trail": [
+            {
+              "tool": "material_search",
+              "arguments": {
+                "material_id": "field_definitions_args",
+                "query": "姓名 张伟 MATCH prefix exact 全名 精确"
+              },
+              "result_head": "{\"material\": \"material://llm_probe/field_definitions_args\", \"query\": \"姓名 张伟 MATCH prefix exact 全名 精确\", \"snippets\": [{\"keywords\": [\"MATCH\", \"prefix\", \"全名\", \"姓名\"], \"ref\": \"L31-L60\", \"text\": \"\\n  - id: name_exact\\n    retrieval_text: >\\n      客户姓名 姓名是 姓名为 名字是 名叫 叫做 名字叫 全名\\n      姓氏 姓什么 姓张 姓李 姓王 姓陈 单独输入"
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "snapshot_id": "27c03ec01b3b334b"
+    },
+    "elapsed_s": 210.0
+  },
+  {
+    "case_id": "llm-probe-mpi-customer-portrait",
+    "capability_ref": "marketting-planning-intent",
+    "input": {
+      "session_id": "default_session",
+      "trace_id": "default_trace",
+      "org_id": "default_org",
+      "user_text": "帮我看看上季度买了重疾险的客户都是啥样的？",
+      "extra_input_params": {
+        "agent_args": {
+          "conversation_id": "default_session",
+          "message": {
+            "content": "帮我看看上季度买了重疾险的客户都是啥样的？",
+            "content_type": "text"
+          }
+        },
+        "args": {
+          "extensions": {},
+          "contexts": []
+        }
+      }
+    },
+    "output_text": "{\"code\": 0, \"msg\": \"success\", \"data\": {\"robot_text\": \"其他意图\", \"end_flag\": 1, \"extra_output_params\": {\"intent\": \"4001\", \"intent_name\": \"其他意图\", \"card_result\": {\"event\": \"reasoning_message_content\", \"sse_id\": \"default_trace:reasoning_message_content\", \"think\": \"\", \"answer\": \"\", \"card_list\": [], \"extensions\": {\"trace_id\": \"default_trace\", \"session_id\": \"default_session\", \"nlu_info\": {\"subIntent\": \"其他意图\", \"intent\": \"other\", \"confidence\": 0.5, \"target_value\": null, \"path_types\": null}}}}}}",
+    "judge": {
+      "trace_id": "llm_probe:llm-probe-mpi-customer-portrait:1788090512129",
+      "project_id": "llm_probe",
+      "business_expectations": [
+        {
+          "expectation_id": "识别为客户画像分析意图",
+          "blocking": true,
+          "downstream_consumer": "营销规划意图识别下游模块",
+          "user_intent": "判断用户是在分析特定客户群体的特征，而不是将其归为其他意图",
+          "expected_outcome": "识别出客户画像或客群分析类意图，能够表达用户要分析购买重疾险客户的特征",
+          "required_capabilities": [
+            "理解“客户都是啥样的”所表达的客户画像分析诉求",
+            "将该诉求映射为客户画像或客群分析意图标签"
+          ],
+          "acceptance_criteria": [
+            "意图标签语义上属于客户画像、客群分析或等价的客户特征分析类别",
+            "不能将该请求标记为其他意图"
+          ],
+          "boundary": {
+            "in_scope": "意图标签语义是否匹配用户问句",
+            "out_of_scope": "具体营销分析结果和下游检索结果"
+          },
+          "priority": "核心",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "提取上季度时间范围槽位",
+          "blocking": true,
+          "downstream_consumer": "营销规划意图识别下游查询模块",
+          "user_intent": "限定客户分析所覆盖的时间范围",
+          "expected_outcome": "提取时间范围为上季度",
+          "required_capabilities": [
+            "识别相对时间表达“上季度”",
+            "将其作为时间范围槽位输出"
+          ],
+          "acceptance_criteria": [
+            "槽位中明确保留或规范化表达“上季度”",
+            "时间范围不能为空"
+          ],
+          "boundary": {
+            "in_scope": "请求文本中时间范围的识别",
+            "out_of_scope": "将上季度换算为具体日期所需的当前日期"
+          },
+          "priority": "核心",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "提取重疾险产品槽位",
+          "blocking": true,
+          "downstream_consumer": "营销规划意图识别下游查询模块",
+          "user_intent": "限定客户分析所针对的保险产品",
+          "expected_outcome": "提取产品为重疾险",
+          "required_capabilities": [
+            "识别产品实体“重疾险”",
+            "将产品实体作为查询槽位输出"
+          ],
+          "acceptance_criteria": [
+            "槽位中明确包含“重疾险”",
+            "产品槽位不能为空或被替换为其他产品"
+          ],
+          "boundary": {
+            "in_scope": "产品实体识别",
+            "out_of_scope": "产品编码或产品数据库匹配"
+          },
+          "priority": "核心",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "提取购买重疾险客户客群槽位",
+          "blocking": true,
+          "downstream_consumer": "营销规划意图识别下游查询模块",
+          "user_intent": "限定需要分析的目标客户群体",
+          "expected_outcome": "识别目标客群为上季度购买重疾险的客户",
+          "required_capabilities": [
+            "识别“买了重疾险的客户”所指向的目标人群",
+            "保留购买行为与客户群体之间的限定关系"
+          ],
+          "acceptance_criteria": [
+            "目标客群语义上是购买重疾险的客户",
+            "不能仅输出泛化的全部客户或空目标客群"
+          ],
+          "boundary": {
+            "in_scope": "目标客户群体和购买行为限定的识别",
+            "out_of_scope": "客户具体画像属性的实际统计"
+          },
+          "priority": "核心",
+          "evidence_refs": []
+        }
+      ],
+      "fulfillment_assessments": [
+        {
+          "expectation_id": "识别为客户画像分析意图",
+          "status": "not_fulfilled",
+          "score": 0,
+          "expected_evidence": [
+            "输出应表达客户画像、客群分析或等价的客户特征分析意图"
+          ],
+          "actual_evidence": [
+            "output_text_parsed.data.robot_text 为“其他意图”",
+            "output_text_parsed.data.extra_output_params.intent_name 为“其他意图”",
+            "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.intent 为“other”"
+          ],
+          "downstream_impact": "下游无法按客户画像分析意图选择正确的处理流程。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "提取上季度时间范围槽位",
+          "status": "not_fulfilled",
+          "score": 0,
+          "expected_evidence": [
+            "输出应包含时间范围槽位“上季度”或其明确规范化结果"
+          ],
+          "actual_evidence": [
+            "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.target_value 为 null",
+            "输出中未发现时间范围槽位"
+          ],
+          "downstream_impact": "下游无法据此限定分析数据的时间范围。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "提取重疾险产品槽位",
+          "status": "not_fulfilled",
+          "score": 0,
+          "expected_evidence": [
+            "输出应包含产品槽位“重疾险”"
+          ],
+          "actual_evidence": [
+            "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.target_value 为 null",
+            "输出中未发现产品槽位"
+          ],
+          "downstream_impact": "下游无法据此筛选重疾险相关客户。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "提取购买重疾险客户客群槽位",
+          "status": "not_fulfilled",
+          "score": 0,
+          "expected_evidence": [
+            "输出应包含购买重疾险的客户这一目标客群及其购买行为限定"
+          ],
+          "actual_evidence": [
+            "输出中未发现目标客户群体槽位",
+            "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.target_value 为 null"
+          ],
+          "downstream_impact": "下游无法确定需要分析的客户群体。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        }
+      ],
+      "overall_fulfillment": {
+        "status": "not_fulfilled",
+        "blocking_expectations": [
+          "识别为客户画像分析意图",
+          "提取上季度时间范围槽位",
+          "提取重疾险产品槽位",
+          "提取购买重疾险客户客群槽位"
+        ]
+      },
+      "expected": {
+        "output_text": "应识别为客户画像或客群分析意图，并提取时间范围“上季度”、产品“重疾险”、目标客群“购买重疾险的客户”等必要槽位。"
+      },
+      "actual": {
+        "output_text": "{\"code\": 0, \"msg\": \"success\", \"data\": {\"robot_text\": \"其他意图\", \"end_flag\": 1, \"extra_output_params\": {\"intent\": \"4001\", \"intent_name\": \"其他意图\", \"card_result\": {\"event\": \"reasoning_message_content\", \"sse_id\": \"default_trace:reasoning_message_content\", \"think\": \"\", \"answer\": \"\", \"card_list\": [], \"extensions\": {\"trace_id\": \"default_trace\", \"session_id\": \"default_session\", \"nlu_info\": {\"subIntent\": \"其他意图\", \"intent\": \"other\", \"confidence\": 0.5, \"target_value\": null, \"path_types\": null}}}}}}"
+      },
+      "missing": [
+        {
+          "kind": "missing",
+          "error_type": "缺失意图识别",
+          "expected": "客户画像或客群分析类意图",
+          "actual": "未提供对应意图，标记为其他意图",
+          "evidence_ref": "output_text_parsed.data.extra_output_params.intent_name",
+          "raw": {
+            "kind": "missing",
+            "error_type": "缺失意图识别",
+            "expected": "客户画像或客群分析类意图",
+            "actual": "未提供对应意图，标记为其他意图",
+            "evidence_ref": "output_text_parsed.data.extra_output_params.intent_name",
+            "incomplete": false
+          },
+          "incomplete": false
+        },
+        {
+          "kind": "missing",
+          "error_type": "缺失时间槽位",
+          "expected": "上季度",
+          "actual": null,
+          "evidence_ref": "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.target_value",
+          "raw": {
+            "kind": "missing",
+            "error_type": "缺失时间槽位",
+            "expected": "上季度",
+            "actual": null,
+            "evidence_ref": "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.target_value",
+            "incomplete": false
+          },
+          "incomplete": false
+        },
+        {
+          "kind": "missing",
+          "error_type": "缺失产品槽位",
+          "expected": "重疾险",
+          "actual": null,
+          "evidence_ref": "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.target_value",
+          "raw": {
+            "kind": "missing",
+            "error_type": "缺失产品槽位",
+            "expected": "重疾险",
+            "actual": null,
+            "evidence_ref": "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.target_value",
+            "incomplete": false
+          },
+          "incomplete": false
+        },
+        {
+          "kind": "missing",
+          "error_type": "缺失目标客群槽位",
+          "expected": "购买重疾险的客户",
+          "actual": null,
+          "evidence_ref": "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.target_value",
+          "raw": {
+            "kind": "missing",
+            "error_type": "缺失目标客群槽位",
+            "expected": "购买重疾险的客户",
+            "actual": null,
+            "evidence_ref": "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.target_value",
+            "incomplete": false
+          },
+          "incomplete": false
+        }
+      ],
+      "wrong": [
+        {
+          "kind": "wrong",
+          "error_type": "意图标签语义不匹配",
+          "expected": "客户画像或客群分析类意图",
+          "actual": "其他意图",
+          "evidence_ref": "output_text_parsed.data.extra_output_params.intent_name",
+          "raw": {
+            "kind": "wrong",
+            "error_type": "意图标签语义不匹配",
+            "expected": "客户画像或客群分析类意图",
+            "actual": "其他意图",
+            "evidence_ref": "output_text_parsed.data.extra_output_params.intent_name",
+            "incomplete": false
+          },
+          "incomplete": false
+        }
+      ],
+      "extra": [],
+      "evidence": [
+        "请求 body.user_text 为“帮我看看上季度买了重疾险的客户都是啥样的？”",
+        "output_text_parsed 可读且 HTTP 调用成功，因此按能力描述直接进行满足性判断",
+        "实际输出的意图为“其他意图”，nlu_info.intent 为“other”，target_value 为 null"
+      ],
+      "reasoning_summary": "用户问句明确要求分析上季度购买重疾险客户的特征，核心是客户画像或客群分析，并包含上季度、重疾险和目标客户群体三个必要信息维度。实际输出将意图标记为“其他意图”，且 target_value 为 null，没有提供任何必要槽位，因此各项业务期望均未满足。",
+      "summary": {
+        "reason": "not_fulfilled · blocking=[提取上季度时间范围槽位,提取购买重疾险客户客群槽位,提取重疾险产品槽位,识别为客户画像分析意图] · 用户问句明确要求分析上季度购买重疾险客户的特征，核心是客户画像或客群分析，并包含上季度、重疾险和目标客户群体三个必要信息维度。实际输出将意图标记为“其他意图”，且 target_value 为 null，没有提供任何必要槽位，因此各项业务期望均未满足。",
+        "primary_failure_dimensions": [
+          {
+            "expectation_id": "提取上季度时间范围槽位",
+            "status": "not_fulfilled",
+            "blocking": true,
+            "downstream_impact": "下游无法据此限定分析数据的时间范围。",
+            "evidence": "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.target_value 为 null | 输出中未发现时间范围槽位 | 输出应包含时间范围槽位“上季度”或其明确规范化结果"
+          },
+          {
+            "expectation_id": "提取购买重疾险客户客群槽位",
+            "status": "not_fulfilled",
+            "blocking": true,
+            "downstream_impact": "下游无法确定需要分析的客户群体。",
+            "evidence": "输出中未发现目标客户群体槽位 | output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.target_value 为 null | 输出应包含购买重疾险的客户这一目标客群及其购买行为限定"
+          },
+          {
+            "expectation_id": "提取重疾险产品槽位",
+            "status": "not_fulfilled",
+            "blocking": true,
+            "downstream_impact": "下游无法据此筛选重疾险相关客户。",
+            "evidence": "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.target_value 为 null | 输出中未发现产品槽位 | 输出应包含产品槽位“重疾险”"
+          },
+          {
+            "expectation_id": "识别为客户画像分析意图",
+            "status": "not_fulfilled",
+            "blocking": true,
+            "downstream_impact": "下游无法按客户画像分析意图选择正确的处理流程。",
+            "evidence": "output_text_parsed.data.robot_text 为“其他意图” | output_text_parsed.data.extra_output_params.intent_name 为“其他意图” | output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.intent 为“other” | 输出应表达客户画像、客群分析或等价的客户特征分析意图"
+          }
+        ],
+        "reason_source": "aggregated_fulfillment",
+        "fulfillment_status": "not_fulfilled",
+        "assessment_count": 4,
+        "blocking_count": 4,
+        "is_formal_attribution": true
+      }
+    },
+    "capability_carrier": {
+      "applicable": true,
+      "axis1_status": "not_fulfilled",
+      "placements": [
+        {
+          "expectation_id": "识别为客户画像分析意图",
+          "placement": "说不清",
+          "carry": "undecidable",
+          "reason": "能力边界仅明确支持“单轮营销规划问句的意图识别与必要槽位抽取”，未明确说明客户画像、客群分析或客户特征分析是否属于营销规划问句及其意图标签范围，因此无法判断该期望是否被承载。",
+          "citations": [
+            {
+              "source": "boundary",
+              "ref": "boundary",
+              "note": "支持：单轮营销规划问句的意图识别与必要槽位抽取。"
+            }
+          ],
+          "gap_kind": "口径分歧",
+          "missing_material": "需要补充意图分类标签定义或覆盖范围，明确客户画像、客群分析、购买重疾险客户特征分析是否纳入单轮营销规划问句的意图识别范围。"
+        },
+        {
+          "expectation_id": "提取上季度时间范围槽位",
+          "placement": "说不清",
+          "carry": "undecidable",
+          "reason": "能力边界描述仅说明支持单轮营销规划问句的意图识别与必要槽位抽取，但未具体定义必要槽位是否包括时间范围槽位，也未说明是否支持将时间范围规范化为'上季度'。期望中提取'上季度'并规范化的要求超出了描述的明确覆盖范围。",
+          "citations": [
+            {
+              "source": "capability_boundary",
+              "ref": "boundary",
+              "note": "能力边界描述仅说明支持单轮营销规划问句的意图识别与必要槽位抽取，但未具体定义必要槽位是否包括时间范围槽位，也未说明是否支持将时间范围规范化为'上季度'。期望中提取'上季度'并规范化的要求超出了描述的明确覆盖范围。"
+            }
+          ],
+          "gap_kind": "口径分歧",
+          "missing_material": "需要更详细的能力边界描述，具体说明支持的槽位类型（如是否包含时间范围槽位）和时间范围处理能力（如规范化表达'上季度'）。"
+        },
+        {
+          "expectation_id": "提取重疾险产品槽位",
+          "placement": "说不清",
+          "carry": "undecidable",
+          "reason": "能力边界描述仅说明支持单轮营销规划问句的意图识别与必要槽位抽取，但未明确产品槽位是否属于必要槽位，也未规定能否抽取并保留“重疾险”这一具体产品值，因此无法判断该期望是否在承载范围内。",
+          "citations": [
+            {
+              "source": "boundary",
+              "ref": "boundary",
+              "note": "支持：单轮营销规划问句的意图识别与必要槽位抽取。"
+            }
+          ],
+          "gap_kind": "空间未受治理",
+          "missing_material": "需要提供支持的槽位清单、产品槽位定义及产品值抽取规则，明确“重疾险”是否应作为产品槽位值并禁止被替换为空或其他产品。"
+        },
+        {
+          "expectation_id": "提取购买重疾险客户客群槽位",
+          "placement": "做错了",
+          "carry": "yes",
+          "reason": "能力边界描述明确支持单轮营销规划问句的意图识别与必要槽位抽取，该期望要求提取并限定目标客户群体槽位，属于支持范围内。",
+          "citations": [
+            {
+              "source": "boundary",
+              "ref": "boundary",
+              "note": "支持：单轮营销规划问句的意图识别与必要槽位抽取。"
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "snapshot_id": "822d865adf44b153"
+    },
+    "elapsed_s": 223.0
+  },
+  {
+    "case_id": "llm-probe-client_search-unsupported",
+    "capability_ref": "client_search",
+    "input": {
+      "user_text": "帮我查一下那些上有老下有小的客户",
+      "user_id": "mock_user_001",
+      "trace_id": "cs-unsup",
+      "session_id": "cs-unsup",
+      "source": "llm_probe_accuracy",
+      "extra_input_params": {}
+    },
+    "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"家庭成员关系包含父母、(外)祖父母\\n并且有子女的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"帮我查一下那些上有老下有小的客户\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"父母\", \"(外)祖父母\"], \"match_mode\": null}, {\"field\": \"familyInfo.familyrelation\", \"operator\": \"MATCH\", \"value\": \"子女\", \"match_mode\": null}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 4, \"rewritten_query\": \"帮我查一下那些上有老下有小的客户\", \"matched_patterns\": \"### 当前时间\\n2026-08-30 19:52:14 (Asia/Shanghai)\\n### 今天星期\\n周日\\n\\n### 相关字段参考（根据查询内容动态召回）\\n\\n\\n- **pajjMemberGradeInfo.pajjmembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['平安居家V0', '平安居家V1', '平安居家V1优享', '平安居家V2', '平安居家V2优享'] | 定义: 平安居家会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：平安居家V0<平安居家V1<平安居家V1优享<平安居家V2<平安居家V2优享。平安居家V1以上和及以上=含平安居家V1即平安居家V1/平安居家V1优享/平安居家V2/平安居家V2优享；平安居家V2以下和及以下=含平安居家V2即平安居家V0/平安居家V1/平安居家V1优享/平安居家V2\\n\\n  示例: \\\"居家V0和V2都要\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V2\\\"]}\\n\\n  示例: \\\"居家V1以上的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\", \\\"平安居家V2优享\\\"]}\\n\\n  示例: \\\"居家V1及以上的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\", \\\"平安居家V2优享\\\"]}\\n\\n  示例: \\\"居家V2以下的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\"]}\\n\\n  示例: \\\"居家V2及以下的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\"]}\\n\\n  反例: \\\"居家V1的客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **birthdayMd** | 操作符: RANGE | 值类型: date | 格式: MM-dd | 说明: 只含月日（不含年），格式MM-dd；本月生日取当月1日至月末；下月生日取下个月1日至月末；下周/下星期/下个星期生日必须取下一个自然周周一至周天，不能理解为从今天开始的未来7天；未来一周/未来7天/接下来一周才取今天至往后顺延6天；未来一个月生日取今天至往后延顺29天；农历/阴历N月生日需将农历月份换算为当前公历年份对应的公历日期范围（农历正月初一为春节，各农历月对应公历日期每年不同，可依据常识估算近似范围，取该农历月初一至月末对应的公历日期）\\n\\n  示例: \\\"3月15日生日的客户\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-15\\\", \\\"max\\\": \\\"03-15\\\"}}\\n\\n  示例: \\\"本月生日的客户（当前2026年3月）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-01\\\", \\\"max\\\": \\\"03-31\\\"}}\\n\\n  示例: \\\"下个月生日的客户（当前2026年3月）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"04-01\\\", \\\"max\\\": \\\"04-30\\\"}}\\n\\n  示例: \\\"下周有哪些客户过生日（当前2026年3月25号）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-30\\\", \\\"max\\\": \\\"04-05\\\"}}\\n\\n  示例: \\\"下周生日的客户张宇（当前2026年3月25号）\\\" → \\n\\n  示例: \\\"未来一周的客户（当前2026年4月1号）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"04-01\\\", \\\"max\\\": \\\"04-07\\\"}}\\n\\n  示例: \\\"未来一个月的客户（当前2026年3月25号）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-25\\\", \\\"max\\\": \\\"04-25\\\"}}\\n\\n  示例: \\\"四、五月客户\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"04-01\\\", \\\"max\\\": \\\"05-31\\\"}}\\n\\n  示例: \\\"农历五月生日的客户\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"06-15\\\", \\\"max\\\": \\\"07-14\\\"}}\\n\\n- **zxjyMemberGradeInfo.zxjymembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['臻享家医V1', '臻享家医V2', '臻享家医V3'] | 定义: 臻享家医会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：臻享家医V1<臻享家医V2<臻享家医V3。臻享家医V2以上和及以上=含臻享家医V2即臻享家医V2和臻享家医V3；臻享家医V2以下和及以下=含臻享家医V2即臻享家医V1和臻享家医V2\\n\\n  示例: \\\"臻享家医V1或者V3的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"臻享家医V2以上的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V2\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"家医V2及以上的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V2\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"家医V2以下的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V2\\\"]}\\n\\n  示例: \\\"家医V2及以下的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V2\\\"]}\\n\\n  反例: \\\"家医V3的客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **gdkyMemberGradeInfo.gdkymembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['逸享会员', '逸享PLUS会员', '颐享家会员', '臻享V1会员', '臻享V2会员'] | 定义: 高端康养会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：逸享会员<逸享PLUS会员<颐享家会员<臻享V1会员<臻享V2会员。逸享会员以上和及以上=含逸享会员即全部5个；颐享家会员以下和及以下=含颐享家会员即逸享会员/逸享PLUS会员/颐享家会员\\n\\n  示例: \\\"逸享会员或者颐享家会员\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"颐享家会员\\\"]}\\n\\n  示例: \\\"康养逸享以上的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\", \\\"臻享V1会员\\\", \\\"臻享V2会员\\\"]}\\n\\n  示例: \\\"康养逸享及以上的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\", \\\"臻享V1会员\\\", \\\"臻享V2会员\\\"]}\\n\\n  示例: \\\"康养颐享家以下的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\"]}\\n\\n  示例: \\\"康养颐享家及以下的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\"]}\\n\\n  反例: \\\"康养逸享会员客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“及以上”、“以下”、“及以下”含边界 | 说明: 只处理业务集合、多个候选和等级范围：裸A/A类=A1/A2/A3/A4，A或B/AB类=A1/A2/A3/A4/B；紧凑连续等级（如ABCD）按各字母等级并集解析；高价值/有钱客户=A1/A2/A3/A4/B/C；以上/以下按F<E<D<C<B<A4<A3<A2<A1展开并包含边界。明确的单个完整等级值（如A2、B、B类）使用customer_value_exact的MATCH。\\n\\n  示例: \\\"A\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"A类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"购物中心6公里以内的A类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"有钱客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  示例: \\\"AB类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"高价值客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  示例: \\\"B以上的客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B及以上的客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B类以下客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"F\\\", \\\"E\\\", \\\"D\\\", \\\"C\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B类及以下客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"F\\\", \\\"E\\\", \\\"D\\\", \\\"C\\\", \\\"B\\\"]}\\n\\n  示例: \\\"优质客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  反例: \\\"会员等级高的客户\\\" → 不输出该字段；原因: 这是寿险VIP等级语义，应映射到 vipType，不是客户价值 newValueLabel\\n\\n- **onlyShareClientFlag** | 操作符: MATCH | 值类型: enum | 枚举: ['Y'] | 定义: 表示客户已成功授权，并在授权后30天内未完成面访而触发回收、共享给当前用户；该字段是后端组合业务标签，只有 Y，没有 N。 | 说明: “共享客户”“成功共享给我的客户”是该组合口径的业务简称。显式自然语言必须同时包含授权成功和30天未面访回收语义；仅授权成功、仅30天未面访、保单托管授权、未共享以及当前用户分享给别人的客户均不映射为该字段。\\n\\n  示例: \\\"成功共享给我的客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  示例: \\\"分享客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  示例: \\\"客户成功授权且30天未面访回收的客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  示例: \\\"完成授权后满30天没有面访被回收的客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  反例: \\\"仅查询授权成功的客户\\\" → 不输出该字段\\n\\n  反例: \\\"30天没有面访的客户\\\" → 不输出该字段\\n\\n  反例: \\\"完成保单托管授权的客户\\\" → 不输出该字段\\n\\n  反例: \\\"我分享给其他人的客户\\\" → 不输出该字段\\n\\n- **pajjMemberGradeInfo.pajjmemberperiod** | 操作符: MATCH | 值类型: extract | 格式: 格式：YYYY，例如：2023 | 定义: 平安居家会员期次（年度），不表示平安居家达标时间 | 说明: 期次为年份格式YYYY，如2023、2024、2025；一个客户可能拥有多个年度的期次记录\\n\\n  示例: \\\"平安居家2024年期的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2024\\\"}\\n\\n  示例: \\\"23年那期平安居家\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2023\\\"}\\n\\n  反例: \\\"2024年达标的平安居家客户\\\" → 不输出该字段；原因: 2024年是达标时间(qualifiedtime)，不是期次(period)\\n\\n- **clientChurnTag** | 操作符: MATCH | 值类型: enum | 枚举: ['是'] | 定义: 客户是否属于濒临失效高客；定义为可投资资产达到或超过50万元，且存在保单失效风险 | 说明: 该字段是业务侧已计算的组合标签，不要拆成资产规模与保单状态。\\n\\n  示例: \\\"濒临失效高客\\\" → {\\\"field\\\": \\\"clientChurnTag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"是\\\"}\\n\\n  示例: \\\"可投资资产50万以上且有保单失效风险的客户\\\" → {\\\"field\\\": \\\"clientChurnTag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"是\\\"}\\n\\n  反例: \\\"可投资资产50万以上的客户\\\" → 不输出该字段；原因: 缺少保单失效风险条件，不能判定为濒临失效高客\\n\\n  反例: \\\"有失效保单的客户\\\" → 不输出该字段；原因: 保单已经失效不等同于存在失效风险\\n\\n- **ayyMemberGradeInfo.ayymemberperiod** | 操作符: MATCH | 值类型: extract | 格式: 格式：YYYY，例如：2023 | 定义: 安有医会员期次（年度），不表示安有医达标时间 | 说明: 期次为年份格式YYYY，如2023、2024、2025；一个客户可能拥有多个年度的期次记录\\n\\n  示例: \\\"安有医2024年期的客户\\\" → {\\\"field\\\": \\\"ayyMemberGradeInfo.ayymemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2024\\\"}\\n\\n  示例: \\\"23年那期安有医\\\" → {\\\"field\\\": \\\"ayyMemberGradeInfo.ayymemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2023\\\"}\\n\\n  反例: \\\"2024年达标的安有医客户\\\" → 不输出该字段；原因: 2024年是达标时间(qualifiedtime)，不是期次(period)\\n\\n- **ayhMemberGradeInfo.ayhmemberperiod** | 操作符: MATCH | 值类型: extract | 格式: 格式：YYYY，例如：2023 | 定义: 安有护会员期次（年度），不表示安有护达标时间 | 说明: 期次为年份格式YYYY，如2023、2024、2025；一个客户可能拥有多个年度的期次记录\\n\\n  示例: \\\"安有护2024年期的客户\\\" → {\\\"field\\\": \\\"ayhMemberGradeInfo.ayhmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2024\\\"}\\n\\n  示例: \\\"23年那期安有护\\\" → {\\\"field\\\": \\\"ayhMemberGradeInfo.ayhmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2023\\\"}\\n\\n  反例: \\\"2024年达标的安有护客户\\\" → 不输出该字段；原因: 2024年是达标时间(qualifiedtime)，不是期次(period)\\n\\n### 客户行为候选选择\\n任务：根据用户完整原句，从下列候选中选择最匹配的 candidate_id。\\n\\n选择规则：\\n1. 只能选择候选段中出现的 candidate_id，禁止生成候选外 ID，禁止直接输出 activity 或把客户行为写入 conditions。\\n2. “有没有、是否有、有无、有人……吗”是在查询行为是否发生，不是否定。只要原句在查找发生过行为的客户，就必须返回至少 1 个候选。\\n3. 只有原句明确表示行为未发生（如“从未、未曾、没做过、不曾”），或原句根本不是客户行为查询时，才返回空数组。\\n4. 不得因为缺少渠道、时长、产品名、文章名或其他可选槽位而返回空数组。\\n5. 按以下优先级比较候选：行为动作 > 行为对象 > 渠道/场景 > 状态/结果 > 行为主体/角色 > 时长与槽位。\\n6. 原句明确线索与候选冲突时不得选择，例如“转发”不能选“浏览”、“失败”不能选“成功”、明确渠道或角色不一致时不能选择。\\n7. 若 1 个候选能解释原句全部明确线索且明显优于其他候选，只返回该候选。\\n8. 若 2 至 3 个候选都能合理解释原句，且原句缺少区分线索，返回这些候选而不是空数组，按匹配程度从高到低排列。\\n9. 原句明确包含多个独立行为时，返回覆盖这些行为的候选，总数最多 5 个。\\n10. 召回顺序和 lexical_score、semantic_score 仅供参考，不得替代语义判断。\\n\\n- candidate_id=behavior_candidate_014 category=客户与您解除了保单管家服务关系原因如下 template=客户与您解除了保单管家服务关系，原因如下：$replaceReason$ semantic_template=客户与您解除了保单管家服务关系，原因如下： 信息  lexical_score=0.113393\\n  description: 表示客户发生了“客户与您解除了保单管家服务关系原因如下”行为。\\n  positive_examples: 找客户与您解除了保单管家服务关系的客户；查询客户与您解除了保单管家服务关系原因如下的人\\n  negative_examples: 找没有客户与您解除保单管家服务关系的客户；排除客户与您解除保单管家服务关系的客户\\n- candidate_id=behavior_candidate_022 category=在面访扫码结束后参加码上有礼活动领取了权益 template=在面访扫码结束后参加“码上有礼”活动，领取了权益“$rightsName$” semantic_template=在面访扫码结束后参加“码上有礼”活动，领取了权益“ 权益 ” lexical_score=0.113095\\n  description: 表示客户发生了“在面访扫码结束后参加码上有礼活动领取了权益”行为。\\n  positive_examples: 找在面访扫码结束后参加码上有礼活动领取了权益的客户；查询在面访扫码结束后参加码上有礼活动领取权益的人\\n  negative_examples: 找没有在面访扫码结束后参加码上有礼活动领取权益的客户；排除在面访扫码结束后参加码上有礼活动领取权益的客户\\n- candidate_id=behavior_candidate_139 category=客户关系人动态行为 template=客户 $relation$$action$$item$ semantic_template=客户  信息  信息  服务  semantic_score=0.636005\\n  description: 客户的家属、亲友、同事等关系人针对某个项目发生推荐、领取、查看或参与行为。\\n  positive_examples: 找家属领取过服务项目的客户；查询亲友或同事推荐过项目的客户\\n  negative_examples: 找客户本人领取服务项目的记录；查询客户本人参加活动的行为\\n- candidate_id=behavior_candidate_157 category=客户关系人动态行为 template=客户 $relation$$action$$item$ semantic_template=客户  信息  信息  服务  semantic_score=0.635993\\n  description: 客户的家属、亲友、同事等关系人针对某个项目发生推荐、领取、查看或参与行为。\\n  positive_examples: 找家属领取过服务项目的客户；查询亲友或同事推荐过项目的客户\\n  negative_examples: 找客户本人领取服务项目的记录；查询客户本人参加活动的行为\\n- candidate_id=behavior_candidate_061 category=赠送了亲友慢病服务包 template=赠送了亲友慢病服务包 semantic_template=赠送了亲友慢病服务包 semantic_score=0.613699\\n  description: 表示客户发生了“赠送了亲友慢病服务包”行为。\\n  positive_examples: 找赠送了亲友慢病服务包的客户；查询赠送亲友慢病服务包的人\\n  negative_examples: 找没有赠送亲友慢病服务包的客户；排除赠送亲友慢病服务包的客户\\n- candidate_id=behavior_candidate_140 category=在金管家使用了分类的服务保险产品为保单号投保单号 template=在金管家使用了「$serviceType$」分类的「$serviceName$」服务，保险产品为「$productName$」，保单号（投保单号）: $policyNo$ semantic_template=在金管家使用了「 服务 」分类的「 服务 」服务，保险产品为「 产品 」，保单号（投保单号）:  保单  semantic_score=0.582114\\n  description: 客户在金管家使用明确服务分类下的服务，或办理资料变更、保全等具有确定分类归属的新版保单服务。\\n  selection_notes: 必须明确出现服务分类，或明确资料变更、保全等分类型服务动作；只有具体服务名、产品名、保单号或泛化“使用保单服务”时选择 JGJ_POLICY_SERVICE_01，不要仅凭保单号选择本候选。\\n  positive_examples: 找在金管家办过客户资料变更服务的人；查询使用过保单关联服务的客户\\n  negative_examples: 找只开通保单管家但没有办理服务的客户；查询完成保单托管授权的人\\n- candidate_id=behavior_candidate_086 category=成为了你名下老客户的紧急联络人并领取了你赠送的权益他们之间的关系为 template=成为了你名下老客户$inviterName$的紧急联络人，并领取了你赠送的权益$giftName$，他们之间的关系为$relationShip$ semantic_template=成为了你名下老客户 活动 的紧急联络人，并领取了你赠送的权益 权益 ，他们之间的关系为 信息  semantic_score=0.582005\\n  description: 表示客户发生了“成为了你名下老客户的紧急联络人并领取了你赠送的权益他们之间的关系为”行为。\\n  positive_examples: 找成为了你名下老客户的紧急联络人并领取了你赠送的权益他们之间的关系为的客户；查询成为你名下老客户的紧急联络人并领取你赠送的权益他们之间的关系为的人\\n  negative_examples: 找没有成为你名下老客户的紧急联络人并领取你赠送的权益他们之间的关系为的客户；排除成为你名下老客户的紧急联络人并领取你赠送的权益他们之间的关系为的客户\\n\\n输出要求：在原有 query_logic、conditions 之外增加 behavior_candidate_ids 数组，只输出严格 JSON。\\n格式：{\\\"query_logic\\\":\\\"AND\\\",\\\"conditions\\\":[],\\\"behavior_candidate_ids\\\":[\\\"候选ID1\\\",\\\"候选ID2\\\"]}\\n\\n### 用户查询\\n帮我查一下那些上有老下有小的客户\", \"cost_times\": 4382.0, \"confidence\": 0.8, \"intent_summary\": \"家庭成员关系包含父母、(外)祖父母\\n并且有子女的客户\", \"behavior_debug\": {\"has_negative_behavior\": false, \"deterministic_activities\": [], \"semantic_direct_hit\": false, \"semantic_direct_score\": null, \"llm_invoked\": true, \"candidates\": [{\"candidate_id\": \"behavior_candidate_014\", \"activity\": \"KDE_BDTG_RAU\", \"score\": 0.016393, \"lexical_score\": 0.113393, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_022\", \"activity\": \"scanCode_activity_01\", \"score\": 0.016129, \"lexical_score\": 0.113095, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_139\", \"activity\": \"JGJ_RIGHT_HOMESERVICE1\", \"score\": 0.016393, \"lexical_score\": null, \"semantic_score\": 0.636005, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_157\", \"activity\": \"JGJ_RIGHT_HOMESERVICE2\", \"score\": 0.016129, \"lexical_score\": null, \"semantic_score\": 0.635993, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_061\", \"activity\": \"JGJ_CHRONIC_DISEASE_03\", \"score\": 0.015873, \"lexical_score\": null, \"semantic_score\": 0.613699, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_140\", \"activity\": \"JGJ_POLICY_SERVICE_2026\", \"score\": 0.015625, \"lexical_score\": null, \"semantic_score\": 0.582114, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_086\", \"activity\": \"JGJ_POLICY_CLAIM_ASSIST\", \"score\": 0.015385, \"lexical_score\": null, \"semantic_score\": 0.582005, \"retrieval_source\": \"hybrid\"}], \"llm_selected_candidate_ids\": [], \"selection_source\": \"empty\", \"final_activities\": []}}, \"trace_id\": \"cs-unsup\"}}",
+    "judge": {
+      "trace_id": "llm_probe:llm-probe-client_search-unsupported:1788090737557",
+      "project_id": "llm_probe",
+      "business_expectations": [
+        {
+          "expectation_id": "识别上有老的家庭成员条件",
+          "blocking": true,
+          "downstream_consumer": "客户搜索条件执行器",
+          "user_intent": "从“上有老”识别客户具有父母或祖父母辈家庭成员",
+          "expected_outcome": "输出家庭成员关系字段对应父母及祖父母辈关系的可执行条件",
+          "required_capabilities": [
+            "识别家庭成员关系语义",
+            "将关系语义映射为字段、操作符和值"
+          ],
+          "acceptance_criteria": [
+            "字段为familyInfo.familyrelation",
+            "操作符为CONTAINS",
+            "值包含父母和(外)祖父母"
+          ],
+          "boundary": {
+            "关注范围": "extra_output_params.conditions中的字段、操作符和值",
+            "忽略范围": "路由、追踪字段和matched_patterns"
+          },
+          "priority": "高",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "识别下有小的子女条件",
+          "blocking": true,
+          "downstream_consumer": "客户搜索条件执行器",
+          "user_intent": "从“下有小”识别客户具有子女",
+          "expected_outcome": "输出家庭成员关系字段匹配子女的可执行条件",
+          "required_capabilities": [
+            "识别子女家庭关系语义",
+            "将关系语义映射为字段、操作符和值"
+          ],
+          "acceptance_criteria": [
+            "字段为familyInfo.familyrelation",
+            "操作符为MATCH",
+            "值为子女"
+          ],
+          "boundary": {
+            "关注范围": "extra_output_params.conditions中的字段、操作符和值",
+            "忽略范围": "路由、追踪字段和matched_patterns"
+          },
+          "priority": "高",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "使用并且逻辑组合家庭条件",
+          "blocking": true,
+          "downstream_consumer": "客户搜索条件执行器",
+          "user_intent": "只筛选同时满足上有老和下有小的客户",
+          "expected_outcome": "以AND逻辑组合父母或祖父母辈成员条件与子女条件",
+          "required_capabilities": [
+            "识别多条件并列关系",
+            "输出可执行的条件组合逻辑"
+          ],
+          "acceptance_criteria": [
+            "query_logic为AND",
+            "conditions同时包含上有老条件和子女条件"
+          ],
+          "boundary": {
+            "关注范围": "extra_output_params.query_logic及conditions",
+            "忽略范围": "行为候选、排序、路由和追踪字段"
+          },
+          "priority": "高",
+          "evidence_refs": []
+        }
+      ],
+      "fulfillment_assessments": [
+        {
+          "expectation_id": "识别上有老的家庭成员条件",
+          "status": "fulfilled",
+          "score": 1,
+          "expected_evidence": [
+            "应有familyInfo.familyrelation字段、CONTAINS操作符，值为父母和(外)祖父母"
+          ],
+          "actual_evidence": [
+            "conditions包含{\"field\":\"familyInfo.familyrelation\",\"operator\":\"CONTAINS\",\"value\":[\"父母\",\"(外)祖父母\"]}"
+          ],
+          "downstream_impact": "下游可以据此筛选具有父母或祖父母辈家庭成员的客户",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "识别下有小的子女条件",
+          "status": "fulfilled",
+          "score": 1,
+          "expected_evidence": [
+            "应有familyInfo.familyrelation字段、MATCH操作符，值为子女"
+          ],
+          "actual_evidence": [
+            "conditions包含{\"field\":\"familyInfo.familyrelation\",\"operator\":\"MATCH\",\"value\":\"子女\"}"
+          ],
+          "downstream_impact": "下游可以据此筛选具有子女的客户",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "使用并且逻辑组合家庭条件",
+          "status": "fulfilled",
+          "score": 1,
+          "expected_evidence": [
+            "query_logic应为AND，并同时包含两类家庭成员条件"
+          ],
+          "actual_evidence": [
+            "extra_output_params.query_logic为AND",
+            "conditions同时包含上有老条件和子女条件"
+          ],
+          "downstream_impact": "下游能够执行同时满足两类家庭关系的客户筛选",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        }
+      ],
+      "overall_fulfillment": {
+        "status": "fulfilled",
+        "blocking_expectations": [
+          "识别上有老的家庭成员条件",
+          "识别下有小的子女条件",
+          "使用并且逻辑组合家庭条件"
+        ]
+      },
+      "expected": {
+        "output_text": "{\"query_logic\":\"AND\",\"conditions\":[{\"field\":\"familyInfo.familyrelation\",\"operator\":\"CONTAINS\",\"value\":[\"父母\",\"(外)祖父母\"]},{\"field\":\"familyInfo.familyrelation\",\"operator\":\"MATCH\",\"value\":\"子女\"}]}"
+      },
+      "actual": {
+        "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"家庭成员关系包含父母、(外)祖父母\\n并且有子女的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"帮我查一下那些上有老下有小的客户\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"父母\", \"(外)祖父母\"], \"match_mode\": null}, {\"field\": \"familyInfo.familyrelation\", \"operator\": \"MATCH\", \"value\": \"子女\", \"match_mode\": null}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 4, \"rewritten_query\": \"帮我查一下那些上有老下有小的客户\", \"matched_patterns\": \"### 当前时间\\n2026-08-30 19:52:14 (Asia/Shanghai)\\n### 今天星期\\n周日\\n\\n### 相关字段参考（根据查询内容动态召回）\\n\\n\\n- **pajjMemberGradeInfo.pajjmembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['平安居家V0', '平安居家V1', '平安居家V1优享', '平安居家V2', '平安居家V2优享'] | 定义: 平安居家会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：平安居家V0<平安居家V1<平安居家V1优享<平安居家V2<平安居家V2优享。平安居家V1以上和及以上=含平安居家V1即平安居家V1/平安居家V1优享/平安居家V2/平安居家V2优享；平安居家V2以下和及以下=含平安居家V2即平安居家V0/平安居家V1/平安居家V1优享/平安居家V2\\n\\n  示例: \\\"居家V0和V2都要\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V2\\\"]}\\n\\n  示例: \\\"居家V1以上的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\", \\\"平安居家V2优享\\\"]}\\n\\n  示例: \\\"居家V1及以上的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\", \\\"平安居家V2优享\\\"]}\\n\\n  示例: \\\"居家V2以下的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\"]}\\n\\n  示例: \\\"居家V2及以下的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\"]}\\n\\n  反例: \\\"居家V1的客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **birthdayMd** | 操作符: RANGE | 值类型: date | 格式: MM-dd | 说明: 只含月日（不含年），格式MM-dd；本月生日取当月1日至月末；下月生日取下个月1日至月末；下周/下星期/下个星期生日必须取下一个自然周周一至周天，不能理解为从今天开始的未来7天；未来一周/未来7天/接下来一周才取今天至往后顺延6天；未来一个月生日取今天至往后延顺29天；农历/阴历N月生日需将农历月份换算为当前公历年份对应的公历日期范围（农历正月初一为春节，各农历月对应公历日期每年不同，可依据常识估算近似范围，取该农历月初一至月末对应的公历日期）\\n\\n  示例: \\\"3月15日生日的客户\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-15\\\", \\\"max\\\": \\\"03-15\\\"}}\\n\\n  示例: \\\"本月生日的客户（当前2026年3月）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-01\\\", \\\"max\\\": \\\"03-31\\\"}}\\n\\n  示例: \\\"下个月生日的客户（当前2026年3月）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"04-01\\\", \\\"max\\\": \\\"04-30\\\"}}\\n\\n  示例: \\\"下周有哪些客户过生日（当前2026年3月25号）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-30\\\", \\\"max\\\": \\\"04-05\\\"}}\\n\\n  示例: \\\"下周生日的客户张宇（当前2026年3月25号）\\\" → \\n\\n  示例: \\\"未来一周的客户（当前2026年4月1号）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"04-01\\\", \\\"max\\\": \\\"04-07\\\"}}\\n\\n  示例: \\\"未来一个月的客户（当前2026年3月25号）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-25\\\", \\\"max\\\": \\\"04-25\\\"}}\\n\\n  示例: \\\"四、五月客户\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"04-01\\\", \\\"max\\\": \\\"05-31\\\"}}\\n\\n  示例: \\\"农历五月生日的客户\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"06-15\\\", \\\"max\\\": \\\"07-14\\\"}}\\n\\n- **zxjyMemberGradeInfo.zxjymembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['臻享家医V1', '臻享家医V2', '臻享家医V3'] | 定义: 臻享家医会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：臻享家医V1<臻享家医V2<臻享家医V3。臻享家医V2以上和及以上=含臻享家医V2即臻享家医V2和臻享家医V3；臻享家医V2以下和及以下=含臻享家医V2即臻享家医V1和臻享家医V2\\n\\n  示例: \\\"臻享家医V1或者V3的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"臻享家医V2以上的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V2\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"家医V2及以上的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V2\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"家医V2以下的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V2\\\"]}\\n\\n  示例: \\\"家医V2及以下的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V2\\\"]}\\n\\n  反例: \\\"家医V3的客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **gdkyMemberGradeInfo.gdkymembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['逸享会员', '逸享PLUS会员', '颐享家会员', '臻享V1会员', '臻享V2会员'] | 定义: 高端康养会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：逸享会员<逸享PLUS会员<颐享家会员<臻享V1会员<臻享V2会员。逸享会员以上和及以上=含逸享会员即全部5个；颐享家会员以下和及以下=含颐享家会员即逸享会员/逸享PLUS会员/颐享家会员\\n\\n  示例: \\\"逸享会员或者颐享家会员\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"颐享家会员\\\"]}\\n\\n  示例: \\\"康养逸享以上的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\", \\\"臻享V1会员\\\", \\\"臻享V2会员\\\"]}\\n\\n  示例: \\\"康养逸享及以上的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\", \\\"臻享V1会员\\\", \\\"臻享V2会员\\\"]}\\n\\n  示例: \\\"康养颐享家以下的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\"]}\\n\\n  示例: \\\"康养颐享家及以下的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\"]}\\n\\n  反例: \\\"康养逸享会员客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“及以上”、“以下”、“及以下”含边界 | 说明: 只处理业务集合、多个候选和等级范围：裸A/A类=A1/A2/A3/A4，A或B/AB类=A1/A2/A3/A4/B；紧凑连续等级（如ABCD）按各字母等级并集解析；高价值/有钱客户=A1/A2/A3/A4/B/C；以上/以下按F<E<D<C<B<A4<A3<A2<A1展开并包含边界。明确的单个完整等级值（如A2、B、B类）使用customer_value_exact的MATCH。\\n\\n  示例: \\\"A\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"A类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"购物中心6公里以内的A类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"有钱客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  示例: \\\"AB类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"高价值客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  示例: \\\"B以上的客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B及以上的客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B类以下客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"F\\\", \\\"E\\\", \\\"D\\\", \\\"C\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B类及以下客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"F\\\", \\\"E\\\", \\\"D\\\", \\\"C\\\", \\\"B\\\"]}\\n\\n  示例: \\\"优质客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  反例: \\\"会员等级高的客户\\\" → 不输出该字段；原因: 这是寿险VIP等级语义，应映射到 vipType，不是客户价值 newValueLabel\\n\\n- **onlyShareClientFlag** | 操作符: MATCH | 值类型: enum | 枚举: ['Y'] | 定义: 表示客户已成功授权，并在授权后30天内未完成面访而触发回收、共享给当前用户；该字段是后端组合业务标签，只有 Y，没有 N。 | 说明: “共享客户”“成功共享给我的客户”是该组合口径的业务简称。显式自然语言必须同时包含授权成功和30天未面访回收语义；仅授权成功、仅30天未面访、保单托管授权、未共享以及当前用户分享给别人的客户均不映射为该字段。\\n\\n  示例: \\\"成功共享给我的客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  示例: \\\"分享客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  示例: \\\"客户成功授权且30天未面访回收的客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  示例: \\\"完成授权后满30天没有面访被回收的客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  反例: \\\"仅查询授权成功的客户\\\" → 不输出该字段\\n\\n  反例: \\\"30天没有面访的客户\\\" → 不输出该字段\\n\\n  反例: \\\"完成保单托管授权的客户\\\" → 不输出该字段\\n\\n  反例: \\\"我分享给其他人的客户\\\" → 不输出该字段\\n\\n- **pajjMemberGradeInfo.pajjmemberperiod** | 操作符: MATCH | 值类型: extract | 格式: 格式：YYYY，例如：2023 | 定义: 平安居家会员期次（年度），不表示平安居家达标时间 | 说明: 期次为年份格式YYYY，如2023、2024、2025；一个客户可能拥有多个年度的期次记录\\n\\n  示例: \\\"平安居家2024年期的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2024\\\"}\\n\\n  示例: \\\"23年那期平安居家\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2023\\\"}\\n\\n  反例: \\\"2024年达标的平安居家客户\\\" → 不输出该字段；原因: 2024年是达标时间(qualifiedtime)，不是期次(period)\\n\\n- **clientChurnTag** | 操作符: MATCH | 值类型: enum | 枚举: ['是'] | 定义: 客户是否属于濒临失效高客；定义为可投资资产达到或超过50万元，且存在保单失效风险 | 说明: 该字段是业务侧已计算的组合标签，不要拆成资产规模与保单状态。\\n\\n  示例: \\\"濒临失效高客\\\" → {\\\"field\\\": \\\"clientChurnTag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"是\\\"}\\n\\n  示例: \\\"可投资资产50万以上且有保单失效风险的客户\\\" → {\\\"field\\\": \\\"clientChurnTag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"是\\\"}\\n\\n  反例: \\\"可投资资产50万以上的客户\\\" → 不输出该字段；原因: 缺少保单失效风险条件，不能判定为濒临失效高客\\n\\n  反例: \\\"有失效保单的客户\\\" → 不输出该字段；原因: 保单已经失效不等同于存在失效风险\\n\\n- **ayyMemberGradeInfo.ayymemberperiod** | 操作符: MATCH | 值类型: extract | 格式: 格式：YYYY，例如：2023 | 定义: 安有医会员期次（年度），不表示安有医达标时间 | 说明: 期次为年份格式YYYY，如2023、2024、2025；一个客户可能拥有多个年度的期次记录\\n\\n  示例: \\\"安有医2024年期的客户\\\" → {\\\"field\\\": \\\"ayyMemberGradeInfo.ayymemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2024\\\"}\\n\\n  示例: \\\"23年那期安有医\\\" → {\\\"field\\\": \\\"ayyMemberGradeInfo.ayymemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2023\\\"}\\n\\n  反例: \\\"2024年达标的安有医客户\\\" → 不输出该字段；原因: 2024年是达标时间(qualifiedtime)，不是期次(period)\\n\\n- **ayhMemberGradeInfo.ayhmemberperiod** | 操作符: MATCH | 值类型: extract | 格式: 格式：YYYY，例如：2023 | 定义: 安有护会员期次（年度），不表示安有护达标时间 | 说明: 期次为年份格式YYYY，如2023、2024、2025；一个客户可能拥有多个年度的期次记录\\n\\n  示例: \\\"安有护2024年期的客户\\\" → {\\\"field\\\": \\\"ayhMemberGradeInfo.ayhmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2024\\\"}\\n\\n  示例: \\\"23年那期安有护\\\" → {\\\"field\\\": \\\"ayhMemberGradeInfo.ayhmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2023\\\"}\\n\\n  反例: \\\"2024年达标的安有护客户\\\" → 不输出该字段；原因: 2024年是达标时间(qualifiedtime)，不是期次(period)\\n\\n### 客户行为候选选择\\n任务：根据用户完整原句，从下列候选中选择最匹配的 candidate_id。\\n\\n选择规则：\\n1. 只能选择候选段中出现的 candidate_id，禁止生成候选外 ID，禁止直接输出 activity 或把客户行为写入 conditions。\\n2. “有没有、是否有、有无、有人……吗”是在查询行为是否发生，不是否定。只要原句在查找发生过行为的客户，就必须返回至少 1 个候选。\\n3. 只有原句明确表示行为未发生（如“从未、未曾、没做过、不曾”），或原句根本不是客户行为查询时，才返回空数组。\\n4. 不得因为缺少渠道、时长、产品名、文章名或其他可选槽位而返回空数组。\\n5. 按以下优先级比较候选：行为动作 > 行为对象 > 渠道/场景 > 状态/结果 > 行为主体/角色 > 时长与槽位。\\n6. 原句明确线索与候选冲突时不得选择，例如“转发”不能选“浏览”、“失败”不能选“成功”、明确渠道或角色不一致时不能选择。\\n7. 若 1 个候选能解释原句全部明确线索且明显优于其他候选，只返回该候选。\\n8. 若 2 至 3 个候选都能合理解释原句，且原句缺少区分线索，返回这些候选而不是空数组，按匹配程度从高到低排列。\\n9. 原句明确包含多个独立行为时，返回覆盖这些行为的候选，总数最多 5 个。\\n10. 召回顺序和 lexical_score、semantic_score 仅供参考，不得替代语义判断。\\n\\n- candidate_id=behavior_candidate_014 category=客户与您解除了保单管家服务关系原因如下 template=客户与您解除了保单管家服务关系，原因如下：$replaceReason$ semantic_template=客户与您解除了保单管家服务关系，原因如下： 信息  lexical_score=0.113393\\n  description: 表示客户发生了“客户与您解除了保单管家服务关系原因如下”行为。\\n  positive_examples: 找客户与您解除了保单管家服务关系的客户；查询客户与您解除了保单管家服务关系原因如下的人\\n  negative_examples: 找没有客户与您解除保单管家服务关系的客户；排除客户与您解除保单管家服务关系的客户\\n- candidate_id=behavior_candidate_022 category=在面访扫码结束后参加码上有礼活动领取了权益 template=在面访扫码结束后参加“码上有礼”活动，领取了权益“$rightsName$” semantic_template=在面访扫码结束后参加“码上有礼”活动，领取了权益“ 权益 ” lexical_score=0.113095\\n  description: 表示客户发生了“在面访扫码结束后参加码上有礼活动领取了权益”行为。\\n  positive_examples: 找在面访扫码结束后参加码上有礼活动领取了权益的客户；查询在面访扫码结束后参加码上有礼活动领取权益的人\\n  negative_examples: 找没有在面访扫码结束后参加码上有礼活动领取权益的客户；排除在面访扫码结束后参加码上有礼活动领取权益的客户\\n- candidate_id=behavior_candidate_139 category=客户关系人动态行为 template=客户 $relation$$action$$item$ semantic_template=客户  信息  信息  服务  semantic_score=0.636005\\n  description: 客户的家属、亲友、同事等关系人针对某个项目发生推荐、领取、查看或参与行为。\\n  positive_examples: 找家属领取过服务项目的客户；查询亲友或同事推荐过项目的客户\\n  negative_examples: 找客户本人领取服务项目的记录；查询客户本人参加活动的行为\\n- candidate_id=behavior_candidate_157 category=客户关系人动态行为 template=客户 $relation$$action$$item$ semantic_template=客户  信息  信息  服务  semantic_score=0.635993\\n  description: 客户的家属、亲友、同事等关系人针对某个项目发生推荐、领取、查看或参与行为。\\n  positive_examples: 找家属领取过服务项目的客户；查询亲友或同事推荐过项目的客户\\n  negative_examples: 找客户本人领取服务项目的记录；查询客户本人参加活动的行为\\n- candidate_id=behavior_candidate_061 category=赠送了亲友慢病服务包 template=赠送了亲友慢病服务包 semantic_template=赠送了亲友慢病服务包 semantic_score=0.613699\\n  description: 表示客户发生了“赠送了亲友慢病服务包”行为。\\n  positive_examples: 找赠送了亲友慢病服务包的客户；查询赠送亲友慢病服务包的人\\n  negative_examples: 找没有赠送亲友慢病服务包的客户；排除赠送亲友慢病服务包的客户\\n- candidate_id=behavior_candidate_140 category=在金管家使用了分类的服务保险产品为保单号投保单号 template=在金管家使用了「$serviceType$」分类的「$serviceName$」服务，保险产品为「$productName$」，保单号（投保单号）: $policyNo$ semantic_template=在金管家使用了「 服务 」分类的「 服务 」服务，保险产品为「 产品 」，保单号（投保单号）:  保单  semantic_score=0.582114\\n  description: 客户在金管家使用明确服务分类下的服务，或办理资料变更、保全等具有确定分类归属的新版保单服务。\\n  selection_notes: 必须明确出现服务分类，或明确资料变更、保全等分类型服务动作；只有具体服务名、产品名、保单号或泛化“使用保单服务”时选择 JGJ_POLICY_SERVICE_01，不要仅凭保单号选择本候选。\\n  positive_examples: 找在金管家办过客户资料变更服务的人；查询使用过保单关联服务的客户\\n  negative_examples: 找只开通保单管家但没有办理服务的客户；查询完成保单托管授权的人\\n- candidate_id=behavior_candidate_086 category=成为了你名下老客户的紧急联络人并领取了你赠送的权益他们之间的关系为 template=成为了你名下老客户$inviterName$的紧急联络人，并领取了你赠送的权益$giftName$，他们之间的关系为$relationShip$ semantic_template=成为了你名下老客户 活动 的紧急联络人，并领取了你赠送的权益 权益 ，他们之间的关系为 信息  semantic_score=0.582005\\n  description: 表示客户发生了“成为了你名下老客户的紧急联络人并领取了你赠送的权益他们之间的关系为”行为。\\n  positive_examples: 找成为了你名下老客户的紧急联络人并领取了你赠送的权益他们之间的关系为的客户；查询成为你名下老客户的紧急联络人并领取你赠送的权益他们之间的关系为的人\\n  negative_examples: 找没有成为你名下老客户的紧急联络人并领取你赠送的权益他们之间的关系为的客户；排除成为你名下老客户的紧急联络人并领取你赠送的权益他们之间的关系为的客户\\n\\n输出要求：在原有 query_logic、conditions 之外增加 behavior_candidate_ids 数组，只输出严格 JSON。\\n格式：{\\\"query_logic\\\":\\\"AND\\\",\\\"conditions\\\":[],\\\"behavior_candidate_ids\\\":[\\\"候选ID1\\\",\\\"候选ID2\\\"]}\\n\\n### 用户查询\\n帮我查一下那些上有老下有小的客户\", \"cost_times\": 4382.0, \"confidence\": 0.8, \"intent_summary\": \"家庭成员关系包含父母、(外)祖父母\\n并且有子女的客户\", \"behavior_debug\": {\"has_negative_behavior\": false, \"deterministic_activities\": [], \"semantic_direct_hit\": false, \"semantic_direct_score\": null, \"llm_invoked\": true, \"candidates\": [{\"candidate_id\": \"behavior_candidate_014\", \"activity\": \"KDE_BDTG_RAU\", \"score\": 0.016393, \"lexical_score\": 0.113393, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_022\", \"activity\": \"scanCode_activity_01\", \"score\": 0.016129, \"lexical_score\": 0.113095, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_139\", \"activity\": \"JGJ_RIGHT_HOMESERVICE1\", \"score\": 0.016393, \"lexical_score\": null, \"semantic_score\": 0.636005, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_157\", \"activity\": \"JGJ_RIGHT_HOMESERVICE2\", \"score\": 0.016129, \"lexical_score\": null, \"semantic_score\": 0.635993, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_061\", \"activity\": \"JGJ_CHRONIC_DISEASE_03\", \"score\": 0.015873, \"lexical_score\": null, \"semantic_score\": 0.613699, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_140\", \"activity\": \"JGJ_POLICY_SERVICE_2026\", \"score\": 0.015625, \"lexical_score\": null, \"semantic_score\": 0.582114, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_086\", \"activity\": \"JGJ_POLICY_CLAIM_ASSIST\", \"score\": 0.015385, \"lexical_score\": null, \"semantic_score\": 0.582005, \"retrieval_source\": \"hybrid\"}], \"llm_selected_candidate_ids\": [], \"selection_source\": \"empty\", \"final_activities\": []}}, \"trace_id\": \"cs-unsup\"}}"
+      },
+      "missing": [],
+      "wrong": [],
+      "extra": [],
+      "evidence": [
+        {
+          "source": "request.body.user_text",
+          "content": "帮我查一下那些上有老下有小的客户"
+        },
+        {
+          "source": "output_text_parsed.data.extra_output_params",
+          "content": {
+            "query_logic": "AND",
+            "conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "CONTAINS",
+                "value": [
+                  "父母",
+                  "(外)祖父母"
+                ]
+              },
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              }
+            ]
+          }
+        }
+      ],
+      "reasoning_summary": "用户要求将“上有老下有小”的自然语言客户群体描述转换为可执行搜索条件。输出准确识别了父母或祖父母辈关系和子女关系，分别使用CONTAINS与MATCH操作符，并通过AND逻辑要求两类条件同时满足。show_schema仅要求关注解析出的搜索条件，因此未将行为候选等非搜索条件字段作为评估依据。",
+      "summary": {
+        "reason": "fulfilled · 3 blocking expectations all met · 用户要求将“上有老下有小”的自然语言客户群体描述转换为可执行搜索条件。输出准确识别了父母或祖父母辈关系和子女关系，分别使用CONTAINS与MATCH操作符，并通过AND逻辑要求两类条件同时满足。show_schema仅要求关注解析出的搜索条件，因此未将行为候选等非搜索条件字段作为评估依据。",
+        "primary_failure_dimensions": [],
+        "reason_source": "aggregated_fulfillment",
+        "fulfillment_status": "fulfilled",
+        "assessment_count": 3,
+        "blocking_count": 3,
+        "is_formal_attribution": true
+      }
+    },
+    "capability_carrier": {
+      "applicable": false,
+      "axis1_status": "fulfilled",
+      "placements": [],
+      "errors": [],
+      "snapshot_id": "27c03ec01b3b334b"
+    },
+    "elapsed_s": 56.3
+  }
+]

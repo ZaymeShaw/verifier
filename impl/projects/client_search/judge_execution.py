@@ -388,7 +388,7 @@ def judge_trace(
             stage="judge",
             trace_id=str(trace.trace_id or ""),
             case_id=str(getattr(trace, "case_id", "") or ""),
-            compiler_source="impl/projects/client_search/draft/judge_execution.py#judge_trace",
+            compiler_source="impl/projects/client_search/judge_execution.py#judge_trace",
             user_source="trace://judge-evidence-view",
         )
     else:

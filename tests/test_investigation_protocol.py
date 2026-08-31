@@ -1260,8 +1260,9 @@ def test_draft_promotion_apply_moves_exclusive_assets_and_disables_switch(tmp_pa
     assert not (tmp_path / "draft" / "attribute.py").exists()
     assert (tmp_path / "tools" / "verify.py").read_text(encoding="utf-8") == "candidate tool"
     assert not (tmp_path / "draft" / "tools" / "verify.py").exists()
-    assert "enabled: false" in (tmp_path / "project.yaml").read_text(encoding="utf-8")
-    assert 'candidate_path: ""' in (tmp_path / "project.yaml").read_text(encoding="utf-8")
+    config_text = (tmp_path / "project.yaml").read_text(encoding="utf-8")
+    assert "draft/attribute.py" not in config_text
+    assert 'candidate_path: ""' in config_text
 
 
 def test_draft_promotion_rejects_legacy_top_level_role_switch() -> None:

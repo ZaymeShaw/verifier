@@ -3,9 +3,25 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable, List
 from urllib.parse import unquote, urlparse
+from urllib.request import url2pathname
 
 from .errors import ContextResolutionError
 from .models import ContextUnitRecord
+
+
+class MaterialContentResolver:
+    """展开 material://<project>/<id>；内容在资料库，不依赖业务源码。"""
+
+    def can_resolve(self, content_ref: str) -> bool:
+        return str(content_ref).startswith("material://")
+
+    def resolve(self, content_ref: str, record: ContextUnitRecord) -> str:
+        from impl.core.materials_store import resolve_material_uri
+
+        try:
+            return resolve_material_uri(content_ref)
+        except ValueError as exc:
+            raise ContextResolutionError(str(exc)) from exc
 
 
 class CompositeContentResolver:
@@ -44,12 +60,13 @@ class FileContentResolver:
         parsed = urlparse(content_ref)
         if parsed.scheme != "file":
             raise ContextResolutionError(f"unsupported file reference: {content_ref}")
-        raw_path = unquote(parsed.path or "")
         if parsed.netloc and parsed.netloc != "localhost":
             # Treat file://docs/guide.md as a project-relative reference, never as a remote host.
-            candidate = Path(parsed.netloc) / raw_path.lstrip("/")
+            candidate = Path(parsed.netloc) / unquote(parsed.path or "").lstrip("/")
         else:
-            candidate = Path(raw_path)
+            # url2pathname is the platform-aware inverse of Path.as_uri(): on Windows it
+            # strips the leading slash before drive letters (file:///D:/x -> D:\x).
+            candidate = Path(url2pathname(parsed.path or ""))
         if not candidate.is_absolute():
             candidate = self._allowed_roots[0] / candidate
         resolved = candidate.expanduser().resolve()
@@ -58,6 +75,16 @@ class FileContentResolver:
         if not resolved.is_file():
             raise ContextResolutionError(f"referenced content file does not exist: {resolved}")
         return resolved.read_text(encoding="utf-8")
+
+
+def standard_content_resolver(file_roots: Iterable[Path] | None = None) -> CompositeContentResolver:
+    """文件根（可空）+ material:// 解析器。"""
+    resolvers: List[object] = []
+    roots = [Path(root) for root in (file_roots or []) if root]
+    if roots:
+        resolvers.append(FileContentResolver(roots))
+    resolvers.append(MaterialContentResolver())
+    return CompositeContentResolver(resolvers)
 
 
 def _is_relative_to(path: Path, root: Path) -> bool:

@@ -427,6 +427,16 @@ def judge_trace(
     if system_extras:
         system += "\n\n" + "\n\n".join(system_extras) + "\n"
 
+    # 资料槽位 binding：项目声明 roles 含 judge 的槽位资料确定性注入（required 未填在此抛错）。
+    from .materials_store import binding_materials_for_role
+    bound_materials = binding_materials_for_role(spec.project_id, "judge")
+    if bound_materials:
+        material_sections = "\n\n".join(
+            f"### {item['title']}（{item['uri']}，sha256 {item['sha256'][:12]}）\n{item['content']}"
+            for item in bound_materials
+        )
+        system += "## 项目资料（槽位绑定，资料管理页维护）\n" + material_sections + "\n\n"
+
     if not has_actual:
         system += (
             "## 仅生成 reference（expected）模式\n"
@@ -492,6 +502,12 @@ def judge_trace(
                 "source": "contextunit://" + ",".join(mandatory_context.get("unit_ids") or []),
                 "content": mandatory_context["content"],
             })
+        for item in bound_materials:
+            governance_segments.append({
+                "segment_id": f"material-{item['id']}",
+                "source": item["uri"],
+                "content": item["content"],
+            })
         governance_config["segments"] = governance_segments
         from .context_governance import configure_context_governance
         governance_report = configure_context_governance(
@@ -525,7 +541,16 @@ def judge_trace(
         if inconsistencies:
             data["reasoning_summary"] = (data.get("reasoning_summary") or "") + f" [self_check_failed: {json.dumps(inconsistencies, ensure_ascii=False)}]"
 
-    return _build_judge_result_from_data(spec, trace, data, user_intent, boundary_standard)
+    result = _build_judge_result_from_data(spec, trace, data, user_intent, boundary_standard)
+    # 资料版本进证据链：judge 结论依赖了哪份资料的哪个版本，可归因。
+    for item in bound_materials:
+        result.evidence.append({
+            "kind": "bound_material",
+            "material": item["uri"],
+            "title": item["title"],
+            "sha256": item["sha256"],
+        })
+    return result
 
 
 def generate_reference(

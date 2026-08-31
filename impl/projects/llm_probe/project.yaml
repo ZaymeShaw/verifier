@@ -56,7 +56,9 @@ runtime:
   mock_cases:
     source: fixture
     default_scenarios:
-    - http_probe
+    - client_search
+    - policy_search
+    - marketting-planning-intent
   services:
     primary:
       base_url: http://127.0.0.1:9
@@ -64,6 +66,9 @@ runtime:
       method: POST
       timeout_seconds: 60
 verifier:
+  authority:
+    enabled_scopes:
+    - capability_carrier
   attribution:
     enabled: false
     trace:
@@ -76,7 +81,9 @@ verifier:
       - attribution
   scenarios:
     allowed:
-    - http_probe
+    - client_search
+    - policy_search
+    - marketting-planning-intent
   judge:
     boundary:
       document: judge_boundary.md

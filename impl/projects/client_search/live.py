@@ -208,7 +208,7 @@ def value_mappings(spec: ProjectSpec) -> dict:
         path = config_paths.get("source_value_mappings")
         if not path or not Path(path).exists():
             return {}
-        with open(path) as f:
+        with open(path, encoding='utf-8') as f:
             data = _yaml.safe_load(f)
         return data if isinstance(data, dict) else {}
     except Exception:
@@ -222,7 +222,7 @@ def enhanced_rules(spec: ProjectSpec) -> dict:
         path = config_paths.get("source_enhanced_rules")
         if not path or not Path(path).exists():
             return {}
-        with open(path) as f:
+        with open(path, encoding='utf-8') as f:
             data = _yaml.safe_load(f)
         return data if isinstance(data, dict) else {}
     except Exception:

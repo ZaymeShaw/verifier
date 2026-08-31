@@ -126,7 +126,7 @@ def _mktemp_verdict(tid: str, verdict: str = "APPROVED") -> Path:
     AUDIT_DIR.mkdir(parents=True, exist_ok=True)
     verdict_path = AUDIT_DIR / f"issue{tid}.txt"
     content = SAMPLE_VERDICT_APPROVED if verdict == "APPROVED" else SAMPLE_VERDICT_REJECTED
-    verdict_path.write_text(content)
+    verdict_path.write_text(content, encoding="utf-8")
     _TEMP_FILES.append(verdict_path)
     return verdict_path
 
@@ -284,7 +284,7 @@ def test_verdict_format(result: TestResult):
         return
 
     import yaml
-    with open(str(CONFIG_FILE)) as f:
+    with open(str(CONFIG_FILE), encoding='utf-8') as f:
         cfg = yaml.safe_load(f)
     expected_verdict_field = cfg["verdict"]["verdict_field"]
     expected_reason_field = cfg["verdict"]["reason_field"]
@@ -482,7 +482,7 @@ def test_entry(result: TestResult):
     # Overwrite with uppercase CLOSED
     issue3 = ISSUE_DIR / f"issue{tid3}-temp-test.md"
     uppercase_content = SAMPLE_ISSUE_CLOSED.format(id=tid3).replace("status: closed", "status: CLOSED")
-    issue3.write_text(uppercase_content)
+    issue3.write_text(uppercase_content, encoding="utf-8")
     time.sleep(0.1)
     out = run_hook()
     if out.get("decision") == "block" and "缺少审核" in out.get("reason", ""):
@@ -596,7 +596,7 @@ def test_consistency(result: TestResult):
 
     import yaml
 
-    with open(str(CONFIG_FILE)) as f:
+    with open(str(CONFIG_FILE), encoding='utf-8') as f:
         cfg = yaml.safe_load(f)
     prompt_text = AUDIT_PROMPT.read_text("utf-8")
     hook_text = HOOK_SCRIPT.read_text("utf-8")

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -34,6 +35,14 @@ from .schema.investigation_trace import (
     validate_trace_graph,
 )
 from .path_contract import LogicalPathRef, PathContractError, PathResolver, PathRoots
+from .source_staleness import (
+    CONSUMPTION_KEY_LIVE,
+    CONSUMPTION_POSITIONAL_FROZEN,
+    ROUTING_ABSORB,
+    ROUTING_NEEDS_REVIEW,
+    ROUTING_POSITIONAL_REBUILD,
+    normalize_consumption,
+)
 
 
 _MERMAID_HEADER = re.compile(r"^(?:flowchart|graph)\s+(?:TB|TD|BT|RL|LR)\b")
@@ -46,6 +55,44 @@ _ATTRIBUTE_TRACE_SECTIONS = (
     "## Operational index",
     "## Investigation procedure",
 )
+
+
+_MANIFEST_PIN_METADATA_KEYS = (
+    "sha256",
+    "content_hash",
+    "slice_hashes",
+    "slice_hashes_source_sha256",
+    "source_revision",
+    "revision",
+    "commit",
+)
+
+
+def manifest_structure_sha256(manifest_path: Path) -> str:
+    """Manifest identity that ignores content-hash pins and revision pins.
+
+    Drift absorption (key_live re-pin via source_staleness_cli) rewrites hash
+    pins without changing what the investigation covers. Receipts keyed on this
+    structural identity survive absorption, while any structural edit (refs,
+    tools, artifacts, contracts) still invalidates them.
+    """
+    document = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+    if isinstance(document, dict):
+        document.pop("source_revision", None)
+        refs = document.get("evidence_refs")
+        for ref in refs if isinstance(refs, list) else []:
+            if not isinstance(ref, dict):
+                continue
+            location = ref.get("location")
+            if isinstance(location, dict):
+                location.pop("sha256", None)
+            metadata = ref.get("metadata")
+            if isinstance(metadata, dict):
+                for key in _MANIFEST_PIN_METADATA_KEYS:
+                    metadata.pop(key, None)
+    return hashlib.sha256(
+        json.dumps(document, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
 
 
 def validate_investigation_package(
@@ -264,11 +311,7 @@ def validate_investigation_package(
             _validate_evidence_integrity(
                 evidence,
                 located,
-                allow_hash_mismatch=(
-                    business_source_staleness_policy == "warn"
-                    and source is not None
-                    and located.is_relative_to(source)
-                ),
+                allow_hash_mismatch=(business_source_staleness_policy == "warn"),
                 staleness_warnings=staleness_warnings,
             )
             evidence_files.append(str(located))
@@ -379,6 +422,7 @@ def validate_investigation_package(
         "warnings": [item["message"] for item in staleness_warnings],
         "manifest": str(manifest_path),
         "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+        "manifest_structure_sha256": manifest_structure_sha256(manifest_path),
         "source_root": str(source) if source is not None else "",
         "source_revision_verified": bool(detected_revision) and not source_revision_drifted,
         "overview": str(overview_path),
@@ -435,6 +479,8 @@ def load_role_investigation_tools(
     seen: set[str] = set()
     for package in packages:
         manifest = load_investigation_manifest(package / "manifest.json")
+        # Runtime tool loading never blocks on business-source drift; strict
+        # closure is enforced at Solidify/Promotion/config_check instead.
         validate_investigation_package(
             package,
             project_root=resolve_project_package_root(spec),
@@ -442,7 +488,7 @@ def load_role_investigation_tools(
             expected_role=role,
             tool_module_overrides=tool_aliases,
             source_root=(resolve_project_source_root(spec) if spec.has_business_source else None),
-            business_source_staleness_policy=("warn" if use_candidate else "strict"),
+            business_source_staleness_policy="warn",
         )
         for requirement in manifest.tool_requirements:
             implementation = requirement.implementation
@@ -677,6 +723,24 @@ def detect_source_revision(source_root: Path) -> str:
     return revision
 
 
+def _drift_routing(consumption: Any) -> str:
+    """Coarse drift routing from registered consumption modes (audit info only).
+
+    Mirrors source_staleness routing without slice analysis: pure key_live
+    consumers absorb drift, positional consumers need an index rebuild, and
+    unregistered or mixed consumption fails closed to needs_review.
+    """
+    try:
+        modes = {item["mode"] for item in normalize_consumption(consumption)}
+    except ValueError:
+        return ROUTING_NEEDS_REVIEW
+    if CONSUMPTION_POSITIONAL_FROZEN in modes:
+        return ROUTING_POSITIONAL_REBUILD
+    if modes == {CONSUMPTION_KEY_LIVE}:
+        return ROUTING_ABSORB
+    return ROUTING_NEEDS_REVIEW
+
+
 def _validate_evidence_integrity(
     evidence: Any,
     path: Path,
@@ -705,6 +769,7 @@ def _validate_evidence_integrity(
                     "ref_id": str(evidence.ref_id),
                     "expected": expected_hash,
                     "actual": actual_hash,
+                    "routing": _drift_routing(evidence.metadata.get("consumption")),
                 })
     symbol = (
         evidence.location_ref.symbol

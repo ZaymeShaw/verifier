@@ -1,0 +1,1376 @@
+[
+  {
+    "case_id": "llm-probe-client_search-name",
+    "capability_ref": "client_search",
+    "input": {
+      "user_text": "客户姓名是张伟的人",
+      "user_id": "mock_user_001",
+      "trace_id": "mock_trace_001",
+      "session_id": "mock_session_001",
+      "source": "mock",
+      "extra_input_params": {}
+    },
+    "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"姓张伟的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"客户姓名是张伟的人\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张伟\", \"match_mode\": \"prefix\"}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 2, \"rewritten_query\": \"客户姓名是张伟的人\", \"matched_patterns\": \"明确客户姓名上下文\", \"cost_times\": 54.0, \"confidence\": 0.95, \"intent_summary\": \"姓张伟的客户\", \"behavior_debug\": null}, \"trace_id\": \"mock_trace_001\"}}",
+    "judge": {
+      "trace_id": "llm_probe:llm-probe-client_search-name:1788104734832",
+      "project_id": "llm_probe",
+      "business_expectations": [
+        {
+          "expectation_id": "客户姓名必须精确等于张伟",
+          "blocking": true,
+          "downstream_consumer": "Elasticsearch 查询执行器",
+          "user_intent": "检回客户姓名恰好为张伟的客户",
+          "expected_outcome": "生成仅匹配客户姓名等于张伟的查询谓词，不扩大到姓名以张伟开头或包含张伟的客户",
+          "required_capabilities": [
+            "识别客户姓名字段",
+            "保留姓名值张伟",
+            "使用等值语义而非前缀或包含语义"
+          ],
+          "acceptance_criteria": [
+            "查询条件的客户姓名值为张伟",
+            "客户姓名条件的执行语义是精确等值匹配",
+            "查询不得检回姓名为张伟明、张伟强等其他前缀匹配对象"
+          ],
+          "boundary": {
+            "input_scope": "客户姓名是张伟的人",
+            "relevant_output": "data.extra_output_params.conditions",
+            "excluded_semantics": [
+              "prefix",
+              "contains",
+              "fuzzy"
+            ]
+          },
+          "priority": "核心",
+          "evidence_refs": []
+        }
+      ],
+      "fulfillment_assessments": [
+        {
+          "expectation_id": "客户姓名必须精确等于张伟",
+          "status": "not_fulfilled",
+          "score": 0,
+          "expected_evidence": [
+            "客户姓名条件的值应为张伟，且匹配语义必须是精确等值"
+          ],
+          "actual_evidence": [
+            "data.extra_output_params.conditions[0] 为 {\"field\":\"searchClientName\",\"operator\":\"MATCH\",\"value\":\"张伟\",\"match_mode\":\"prefix\"}",
+            "data.robot_text 为“姓张伟的客户”，也体现为前缀语义"
+          ],
+          "downstream_impact": "前缀匹配会把姓名以张伟开头但不等于张伟的客户一并检回，导致结果集合超出用户描述的人群。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        }
+      ],
+      "overall_fulfillment": {
+        "status": "not_fulfilled",
+        "blocking_expectations": [
+          "客户姓名必须精确等于张伟"
+        ]
+      },
+      "expected": {
+        "output_text": "{\"data\":{\"extra_output_params\":{\"query_logic\":\"AND\",\"conditions\":[{\"field\":\"searchClientName\",\"operator\":\"TERM\",\"value\":\"张伟\"}]}}}"
+      },
+      "actual": {
+        "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"姓张伟的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"客户姓名是张伟的人\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张伟\", \"match_mode\": \"prefix\"}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 2, \"rewritten_query\": \"客户姓名是张伟的人\", \"matched_patterns\": \"明确客户姓名上下文\", \"cost_times\": 54.0, \"confidence\": 0.95, \"intent_summary\": \"姓张伟的客户\", \"behavior_debug\": null}, \"trace_id\": \"mock_trace_001\"}}"
+      },
+      "missing": [
+        {
+          "kind": "query_condition",
+          "error_type": "缺失精确等值语义",
+          "expected": "客户姓名等于张伟",
+          "actual": "未提供精确等值条件",
+          "evidence_ref": "data.extra_output_params.conditions[0]",
+          "raw": {
+            "kind": "query_condition",
+            "error_type": "缺失精确等值语义",
+            "expected": "客户姓名等于张伟",
+            "actual": "未提供精确等值条件",
+            "evidence_ref": "data.extra_output_params.conditions[0]",
+            "incomplete": false
+          },
+          "incomplete": false
+        }
+      ],
+      "wrong": [
+        {
+          "kind": "query_condition",
+          "error_type": "语义放大",
+          "expected": "客户姓名精确匹配张伟",
+          "actual": "客户姓名使用 MATCH 且 match_mode 为 prefix",
+          "evidence_ref": "data.extra_output_params.conditions[0].match_mode",
+          "raw": {
+            "kind": "query_condition",
+            "error_type": "语义放大",
+            "expected": "客户姓名精确匹配张伟",
+            "actual": "客户姓名使用 MATCH 且 match_mode 为 prefix",
+            "evidence_ref": "data.extra_output_params.conditions[0].match_mode",
+            "incomplete": false
+          },
+          "incomplete": false
+        }
+      ],
+      "extra": [],
+      "evidence": [
+        {
+          "path": "output_text_parsed.data.extra_output_params.conditions[0]",
+          "value": {
+            "field": "searchClientName",
+            "operator": "MATCH",
+            "value": "张伟",
+            "match_mode": "prefix"
+          }
+        },
+        {
+          "path": "output_text_parsed.data.robot_text",
+          "value": "姓张伟的客户"
+        },
+        {
+          "path": "request.body.user_text",
+          "value": "客户姓名是张伟的人"
+        }
+      ],
+      "reasoning_summary": "用户明确要求客户姓名是张伟，语义是精确等值匹配。输出虽然保留了客户姓名字段和值张伟，但明确设置 match_mode 为 prefix，并将结果描述为“姓张伟的客户”，会检回姓名以张伟开头的更大集合，因此未兑现用户要求的精确人群。",
+      "summary": {
+        "reason": "not_fulfilled · blocking=[客户姓名必须精确等于张伟] · 用户明确要求客户姓名是张伟，语义是精确等值匹配。输出虽然保留了客户姓名字段和值张伟，但明确设置 match_mode 为 prefix，并将结果描述为“姓张伟的客户”，会检回姓名以张伟开头的更大集合，因此未兑现用户要求的精确人群。",
+        "primary_failure_dimensions": [
+          {
+            "expectation_id": "客户姓名必须精确等于张伟",
+            "status": "not_fulfilled",
+            "blocking": true,
+            "downstream_impact": "前缀匹配会把姓名以张伟开头但不等于张伟的客户一并检回，导致结果集合超出用户描述的人群。",
+            "evidence": "data.extra_output_params.conditions[0] 为 {\"field\":\"searchClientName\",\"operator\":\"MATCH\",\"value\":\"张伟\",\"match_mode\":\"prefix\"} | data.robot_text 为“姓张伟的客户”，也体现为前缀语义 | 客户姓名条件的值应为张伟，且匹配语义必须是精确等值"
+          }
+        ],
+        "reason_source": "aggregated_fulfillment",
+        "fulfillment_status": "not_fulfilled",
+        "assessment_count": 1,
+        "blocking_count": 1,
+        "is_formal_attribution": true
+      }
+    },
+    "capability_carrier": {
+      "applicable": true,
+      "axis1_status": "not_fulfilled",
+      "placements": [
+        {
+          "expectation_id": "客户姓名必须精确等于张伟",
+          "placement": "做错了",
+          "carry": "yes",
+          "reason": "能力边界明确支持客户本人姓名的 name_exact 意图，字段为 searchClientName、操作符为 MATCH，并要求完整姓名原样保留；同时将包含匹配单独定义为 name_contains/CONTAINS。因此可承载姓名值为张伟且不扩大到张伟明、张伟强的精确姓名查询。",
+          "citations": [
+            {
+              "source": "material://llm_probe/field_definitions_args",
+              "ref": "L32-L69",
+              "note": "- id: name_exact\n    retrieval_text: >\n      客户姓名 姓名是 姓名为 名字是 名叫 叫做 名字叫 全名\n      姓氏 姓什么 姓张 姓李 姓王 姓陈 单独输入姓氏 按姓名查客户 查询姓名\n    field: searchClientName\n    operator: MATCH"
+            },
+            {
+              "source": "material://llm_probe/field_definitions_args",
+              "ref": "L32-L69",
+              "note": "完整姓名必须原样保留，如“陈成”“李保”“张无”“金美”“王小明”。"
+            },
+            {
+              "source": "material://llm_probe/field_definitions_args",
+              "ref": "L70-L106",
+              "note": "- id: name_contains\n    retrieval_text: >\n      多个客户姓名 多个姓名 姓名列表 姓名分别是 姓名包括\n      名字带 名字含 名字包含 名字里有 名字中有\n    field: searchClientName\n    operator: CONTAINS"
+            }
+          ],
+          "tool_trail": [
+            {
+              "tool": "material_outline",
+              "material_id": "field_definitions_args",
+              "returned_locators": [
+                "L28-L8330",
+                "L32-L69",
+                "L70-L91",
+                "L92-L106",
+                "L107-L121",
+                "L122-L141",
+                "L142-L170",
+                "L171-L187",
+                "L188-L200",
+                "L201-L216",
+                "L217-L245",
+                "L246-L273",
+                "L274-L294",
+                "L295-L312",
+                "L313-L341",
+                "L342-L357",
+                "L358-L376",
+                "L377-L395",
+                "L396-L410",
+                "L411-L427"
+              ]
+            },
+            {
+              "tool": "material_read",
+              "material_id": "field_definitions_args",
+              "locator": "L32-L69",
+              "returned_locators": [
+                "L32-L69"
+              ]
+            },
+            {
+              "tool": "material_read",
+              "material_id": "field_definitions_args",
+              "locator": "L70-L106",
+              "returned_locators": [
+                "L70-L106"
+              ]
+            },
+            {
+              "tool": "material_search",
+              "material_id": "field_definitions_args",
+              "query": "name_exact customer name MATCH exact",
+              "returned_locators": [
+                "L29-L35",
+                "L40-L56",
+                "L631-L637"
+              ]
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "snapshot_id": "27c03ec01b3b334b"
+    },
+    "elapsed_s": 252.1
+  },
+  {
+    "case_id": "llm-probe-client_search-age",
+    "capability_ref": "client_search",
+    "input": {
+      "user_text": "五十岁以上的客户都有谁",
+      "user_id": "mock_user_001",
+      "trace_id": "mock_trace_001",
+      "session_id": "mock_session_001",
+      "source": "mock_app",
+      "extra_input_params": {}
+    },
+    "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"客户年龄≥50的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"五十岁以上的客户都有谁\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"clientAge\", \"operator\": \"GTE\", \"value\": 50, \"match_mode\": null}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 4, \"rewritten_query\": \"五十岁以上的客户都有谁\", \"matched_patterns\": \"### 当前时间\\n2026-08-30 23:49:48 (Asia/Shanghai)\\n### 今天星期\\n周日\\n\\n### 相关字段参考（根据查询内容动态召回）\\n\\n\\n- **clientAge** | 操作符: RANGE | 值类型: numeric | 单位: 岁，直接取数字 | 定义: 表示客户本人的精确年龄、近似年龄、年龄区间或语义年龄段，不表示家庭成员年龄 | 说明: 统一处理精确年龄、近似年龄、明确起止区间和语义年龄段。原文年龄片段只有‘N岁’且该数字后没有以上、以下、大于、小于、左右、约、大概或起止区间时，输出RANGE {min:N,max:N}；数字相邻位置明示‘左右/上下/大约/约/大概’时，输出RANGE {min:N-5,max:N+5}，不得改成上下2岁或十年年龄段。其他字段片段中的比较词不得作用于年龄。青年=18~35，中年=36~55，老年=56~100，未成年=0~17；‘N0多岁’表示N0~N9，例如30多岁→30~39。以上、以下、大于、小于等边界表达仍由对应的GTE/LTE知识处理。\\n\\n  示例: \\\"30到40岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 30, \\\"max\\\": 40}}\\n\\n  示例: \\\"中年客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 36, \\\"max\\\": 55}}\\n\\n  示例: \\\"30多岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 30, \\\"max\\\": 39}}\\n\\n  示例: \\\"40岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 40, \\\"max\\\": 40}}\\n\\n  示例: \\\"45岁左右的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 40, \\\"max\\\": 50}}\\n\\n  示例: \\\"大约50岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 45, \\\"max\\\": 55}}\\n\\n  反例: \\\"配偶30到40岁的客户\\\" → 不输出该字段；原因: 这是家庭成员年龄范围，应映射到 familyInfo.familyclientage 并组合 familyInfo.familyrelation\\n\\n- **zxjyMemberGradeInfo.zxjymembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['臻享家医V1', '臻享家医V2', '臻享家医V3'] | 定义: 臻享家医会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：臻享家医V1<臻享家医V2<臻享家医V3。臻享家医V2以上和及以上=含臻享家医V2即臻享家医V2和臻享家医V3；臻享家医V2以下和及以下=含臻享家医V2即臻享家医V1和臻享家医V2\\n\\n  示例: \\\"臻享家医V1或者V3的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"臻享家医V2以上的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V2\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"家医V2及以上的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V2\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"家医V2以下的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V2\\\"]}\\n\\n  示例: \\\"家医V2及以下的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V2\\\"]}\\n\\n  反例: \\\"家医V3的客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **pajjMemberGradeInfo.pajjmembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['平安居家V0', '平安居家V1', '平安居家V1优享', '平安居家V2', '平安居家V2优享'] | 定义: 平安居家会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：平安居家V0<平安居家V1<平安居家V1优享<平安居家V2<平安居家V2优享。平安居家V1以上和及以上=含平安居家V1即平安居家V1/平安居家V1优享/平安居家V2/平安居家V2优享；平安居家V2以下和及以下=含平安居家V2即平安居家V0/平安居家V1/平安居家V1优享/平安居家V2\\n\\n  示例: \\\"居家V0和V2都要\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V2\\\"]}\\n\\n  示例: \\\"居家V1以上的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\", \\\"平安居家V2优享\\\"]}\\n\\n  示例: \\\"居家V1及以上的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\", \\\"平安居家V2优享\\\"]}\\n\\n  示例: \\\"居家V2以下的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\"]}\\n\\n  示例: \\\"居家V2及以下的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\"]}\\n\\n  反例: \\\"居家V1的客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **gdkyMemberGradeInfo.gdkymembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['逸享会员', '逸享PLUS会员', '颐享家会员', '臻享V1会员', '臻享V2会员'] | 定义: 高端康养会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：逸享会员<逸享PLUS会员<颐享家会员<臻享V1会员<臻享V2会员。逸享会员以上和及以上=含逸享会员即全部5个；颐享家会员以下和及以下=含颐享家会员即逸享会员/逸享PLUS会员/颐享家会员\\n\\n  示例: \\\"逸享会员或者颐享家会员\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"颐享家会员\\\"]}\\n\\n  示例: \\\"康养逸享以上的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\", \\\"臻享V1会员\\\", \\\"臻享V2会员\\\"]}\\n\\n  示例: \\\"康养逸享及以上的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\", \\\"臻享V1会员\\\", \\\"臻享V2会员\\\"]}\\n\\n  示例: \\\"康养颐享家以下的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\"]}\\n\\n  示例: \\\"康养颐享家及以下的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\"]}\\n\\n  反例: \\\"康养逸享会员客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **familyInfo.familyclientage** | 操作符: GTE | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄（大于等于），不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday）；出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件\\n\\n  示例: \\\"孩子10岁及以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"孩子10岁以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"父母70岁及以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"父母\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 70}]}\\n\\n  示例: \\\"家里有孩子10岁及以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"有老人的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 55}]}\\n\\n  反例: \\\"45岁及以上的客户\\\" → 不输出该字段；原因: 这是客户本人年龄，应映射到 clientAge，不是 familyInfo.familyclientage\\n\\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“及以上”、“以下”、“及以下”含边界 | 说明: 只处理业务集合、多个候选和等级范围：裸A/A类=A1/A2/A3/A4，A或B/AB类=A1/A2/A3/A4/B；紧凑连续等级（如ABCD）按各字母等级并集解析；高价值/有钱客户=A1/A2/A3/A4/B/C；以上/以下按F<E<D<C<B<A4<A3<A2<A1展开并包含边界。明确的单个完整等级值（如A2、B、B类）使用customer_value_exact的MATCH。\\n\\n  示例: \\\"A\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"A类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"购物中心6公里以内的A类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"有钱客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  示例: \\\"AB类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"高价值客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  示例: \\\"B以上的客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B及以上的客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B类以下客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"F\\\", \\\"E\\\", \\\"D\\\", \\\"C\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B类及以下客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"F\\\", \\\"E\\\", \\\"D\\\", \\\"C\\\", \\\"B\\\"]}\\n\\n  示例: \\\"优质客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  反例: \\\"会员等级高的客户\\\" → 不输出该字段；原因: 这是寿险VIP等级语义，应映射到 vipType，不是客户价值 newValueLabel\\n\\n- **clientAge** | 操作符: GTE | 值类型: numeric | 单位: 岁，直接取数字，无需换算 | 定义: 表示客户本人年龄，不表示家庭成员年龄 | 说明: 此字段仅支持GTE操作符。边界词必须按原文区分：‘N岁以上/及以上’包含N，始终输出GTE N，不能加1；只有‘大于/超过/高于N岁’不包含N，才转换为GTE N+1。该规则在年龄与VIP、保单、投保时间等其他条件组合时仍不改变。\\n\\n  示例: \\\"45岁以上的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 45}\\n\\n  示例: \\\"45岁及以上的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 45}\\n\\n  示例: \\\"大于60岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 61}\\n\\n  示例: \\\"年龄超过50岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 51}\\n\\n  示例: \\\"我附近5公里内且客户年龄大于50岁\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 51}\\n\\n  示例: \\\"60或50岁及以上的客户\\\" → \\n\\n  反例: \\\"子女10岁及以上的客户\\\" → 不输出该字段；原因: 这是家庭成员年龄，应映射到 familyInfo.familyclientage 并组合 familyInfo.familyrelation\\n\\n- **familyInfo.familyclientage** | 操作符: GT | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄（大于），不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday）；出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件\\n\\n  示例: \\\"孩子10岁以上（不含10岁）的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GT\\\", \\\"value\\\": 10}]}\\n\\n- **vipType** | 操作符: CONTAINS | 值类型: enum | 枚举: ['白银1', '白银2', '白银3', '黄金V1', '黄金V2', '黄金V3', '原黄金VIP', '铂金V1', '铂金V2', '原铂金VIP', '钻石VIP', '金钻VIP', '黑钻VIP'] | 定义: 表示寿险VIP业务等级组、多个候选或等级范围。 | 说明: 黄金=黄金V1、黄金V2、黄金V3、原黄金VIP；铂金=铂金V1、铂金V2、原铂金VIP；白银=白银1、白银2、白银3。等级从低到高为白银1<白银2<白银3<黄金V1<黄金V2<黄金V3<原黄金VIP<铂金V1<铂金V2<原铂金VIP<钻石VIP<金钻VIP<黑钻VIP；以上/以下包含边界。\\n\\n  示例: \\\"黄金VIP客户\\\" → {\\\"field\\\": \\\"vipType\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"黄金V1\\\", \\\"黄金V2\\\", \\\"黄金V3\\\", \\\"原黄金VIP\\\"]}\\n\\n  示例: \\\"铂金客户\\\" → {\\\"field\\\": \\\"vipType\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"铂金V1\\\", \\\"铂金V2\\\", \\\"原铂金VIP\\\"]}\\n\\n  示例: \\\"客户等级在黄金及以上\\\" → {\\\"field\\\": \\\"vipType\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"黄金V1\\\", \\\"黄金V2\\\", \\\"黄金V3\\\", \\\"原黄金VIP\\\", \\\"铂金V1\\\", \\\"铂金V2\\\", \\\"原铂金VIP\\\", \\\"钻石VIP\\\", \\\"金钻VIP\\\", \\\"黑钻VIP\\\"]}\\n\\n  反例: \\\"VIP开通时间在2024年的客户\\\" → 不输出该字段；原因: 这是开通时间，不是 VIP 等级\\n\\n  反例: \\\"客户价值黄金档客户\\\" → 不输出该字段；原因: 这里是客户价值语境，应优先映射到 newValueLabel，而不是 vipType\\n\\n  反例: \\\"高端康养会员等级高\\\" → 不输出该字段；原因: 如果明确是高端康养、臻享家医等权益体系，应优先映射到对应权益字段；但单独说会员等级高通常是 vipType\\n\\n- **clientTemperature** | 操作符: CONTAINS | 值类型: enum | 枚举: ['冷却', '低温', '中温', '高温'] | 定义: 表示客户温度等级范围，不表示联系时间范围；“以上”、“及以上”、“以下”、“及以下”含边界 | 说明: 根据客户活跃度分类，温度从低到高：冷却<低温<中温<高温；“中温以上”和“中温及以上”均包含中温和高温\\n\\n  示例: \\\"中高温客户\\\" → {\\\"field\\\": \\\"clientTemperature\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"中温\\\", \\\"高温\\\"]}\\n\\n  示例: \\\"中温以上客户\\\" → {\\\"field\\\": \\\"clientTemperature\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"中温\\\", \\\"高温\\\"]}\\n\\n  示例: \\\"中温及以上客户\\\" → {\\\"field\\\": \\\"clientTemperature\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"中温\\\", \\\"高温\\\"]}\\n\\n  反例: \\\"最近一个月联系频繁的客户\\\" → 不输出该字段；原因: 这是最近联系时间范围，不是客户温度等级范围\\n\\n### 用户查询\\n五十岁以上的客户都有谁\\n\\n=== open_intent prompt ===\\n### 任务\\n你是客户搜索查询解析器中的开放字段子模型。你的任务和普通查询解析模型相同， 都是把自然语言转换为 query_logic 和 conditions；区别是你只能处理配置给出的 少数开放字段，且这些字段上下文已全部给出，不需要 RAG 召回。\\n\\n### 规则\\n- 只能输出\\\"允许输出字段\\\"中列出的 field/operator。\\n- 对白名单字段，无论用户是裸输入还是明确说明字段名，都应尽量解析。\\n- 如果用户查询同时包含白名单字段和其他内容，只输出你能处理的白名单字段，忽略其他内容。\\n- 客户姓名(searchClientName)只表示客户本人自然人姓名，不表示投保人、被保人、客户经理、联系人、家庭成员姓名，也不表示公司、机构、地区、地址或泛指客户集合。\\n- 裸自然人姓名，以及“姓名/名字为X”“名叫X的客户”“把叫X的客户列出来”默认都是客户本人姓名；只有“投保人X”“X作为被保人”“女儿叫X”等角色直接修饰姓名的原文证据，才排除 searchClientName。\\n- 只有 X 本身是原文中独立、明确的1-4字自然人姓名时，“X有子女/有父母/有配偶/有保单”中的 X 才是客户本人姓名；“家里/家中/我家/家庭中有子女”等家庭范围表达不包含客户姓名，不得把整段家庭条件输出为 searchClientName。\\n- \\\"全部客户/所有客户/全量客户/全体客户/客户列表/客户名单\\\"等集合词不是姓名；包含\\\"公司/有限公司/集团/工厂/粉体/科技/商贸/医院/学校/银行/门店\\\"等组织机构特征的文本不是姓名，不能输出 searchClientName。\\n- 地址字段表示查询范围，operator表示查询方式。明确\\\"联系地址/通讯地址/通信地址\\\"时使用 contactAddress；只有明确\\\"家庭地址/家庭住址\\\"时使用 homeAddress；\\\"居住地址/地址/住址/住在/家住\\\"没有明确地址类型，必须使用 contactOrHomeAddress，由后端同时查询联系地址和家庭地址。\\n- 公司名、机构名和普通裸地址在未明确地址类型时输出 contactOrHomeAddress + MATCH，value保留原文。\\n- 地址和机构 value 必须是用户原文中的连续完整片段；必须保留街道、社区、小区、园区、公司、有限公司、楼、座、室等语义后缀，不得缩写、改写或自行删除后缀。\\n- value 不得包含查询动作、字段名称、客户集合词或其他条件，例如“帮我查、筛下、给我看、姓名、家庭住址、学历、年龄、的客户”都不能进入地址 value。\\n- 同一句包含姓名、地址、学历、年龄等多个独立条件时，分别抽取为多个 conditions，不得把整句或前一个条件合并为地址 value；只忽略不属于开放字段且已经由普通模型负责的部分。\\n- 同一句明确包含客户姓名和客户地址时，必须同时输出姓名与地址两个开放条件，不得因地址条件存在而遗漏姓名，也不得因姓名条件存在而遗漏地址。\\n- 住在、居住在、定居、家住、籍贯、户籍、老家、家在、户口、迁居、现居、移居等表达没有明确说明联系地址或家庭地址，统一输出 contactOrHomeAddress。\\n- 裸值只要可能是地址就必须输出 contactOrHomeAddress + MATCH。宁可把模糊值当地址，不要遗漏。\\n- 判断是地址的依据（满足任一即视为地址）：包含\\\"路\\\"\\\"街\\\"\\\"巷\\\"\\\"弄\\\"\\\"小区\\\"\\\"花园\\\"\\\"公馆\\\"\\\"大厦\\\"\\\"广场\\\"\\\"园\\\"\\\"楼\\\"\\\"号\\\"\\\"栋\\\"\\\"单元\\\"\\\"层\\\"\\\"座\\\"\\\"区\\\"\\\"县\\\"\\\"市\\\"\\\"省\\\"\\\"镇\\\"\\\"乡\\\"\\\"村\\\"\\\"花苑\\\"\\\"新苑\\\"\\\"嘉园\\\"\\\"华庭\\\"\\\"名都\\\"\\\"新城\\\"\\\"国际\\\"\\\"环\\\"\\\"苑\\\"\\\"里\\\"\\\"庄\\\"\\\"营\\\"\\\"屯\\\"\\\"堡\\\"\\\"店\\\"\\\"集\\\"\\\"渡\\\"\\\"港\\\"\\\"桥\\\"\\\"站\\\"\\\"门\\\"\\\"关\\\"\\\"口\\\"\\\"岗\\\"\\\"岭\\\"\\\"坡\\\"\\\"湾\\\"\\\"湖\\\"\\\"海\\\"\\\"江\\\"\\\"河\\\"\\\"溪\\\"\\\"岛\\\"\\\"半岛\\\"\\\"三角\\\"\\\"学院\\\"\\\"大学城\\\"\\\"公司\\\"\\\"集团\\\"\\\"企业\\\"\\\"工厂\\\"\\\"银行\\\"\\\"医院\\\"\\\"学校\\\"\\\"门店\\\"\\\"高新区\\\"\\\"新区\\\"\\\"开发区\\\"\\\"街道\\\"\\\"社区\\\"\\\"弄堂\\\"\\\"胡同\\\"\\\"CBD\\\"\\\"中心\\\"\\\"城\\\"\\\"商圈\\\"\\\"汇\\\"\\\"壹号院\\\"\\\"壹号\\\"\\\"公馆\\\"等地址特征词，或以省/市/区/县/旗/州/盟结尾\\n- 中国常见区域名也是地址：京津冀、江浙沪、长三角、珠三角、粤港澳、成渝、东北、华北、华东、华南、华中、西北、西南、中关村、望京、国贸、亦庄、燕郊、通州、回龙观、天通苑\\n- 以下方向表达也应识别为地址：X环内、X环外、X旁边、X对面、X沿线、X以北、X以南、X以东、X以西、城东、城西、城南、城北、城中心、市中心；X附近、X周边、X周围按后述默认5公里GEO规则处理。\\n- 明确\\\"联系地址\\\"\\\"通讯地址\\\"\\\"通信地址\\\"等只输出 contactAddress + MATCH。\\n- 只有明确\\\"家庭地址\\\"\\\"家庭住址\\\"时输出 homeAddress + MATCH；\\\"居住地址\\\"和单独\\\"住址\\\"不等于家庭地址，输出 contactOrHomeAddress + MATCH。\\n- 裸值中的\\\"X旁边\\\"\\\"X对面\\\"\\\"X沿线\\\"\\\"X环外\\\"\\\"X环内\\\"是普通地址，未明确地址类型时输出 contactOrHomeAddress + MATCH，不要用 GEO operator。\\n- “X环外、X环内、X旁边、X对面、X沿线”等没有距离数值的相对位置表达不得补充默认距离，不得转换成 GEO_RADIUS 或 NOT_GEO_RADIUS。\\n- 明确地点的\\\"X附近\\\"\\\"X周边\\\"\\\"X周围\\\"没有距离数字时默认按5公里内查询；字段仍按地址类型选择，未明确类型使用 contactOrHomeAddress，operator=GEO_RADIUS。\\n- 当前用户位置表达（我附近、我周围、我周边、我身边、当前位置附近、坐席附近、代理人周边）没有明确距离时默认按5公里内查询；未明确地址类型使用 contactOrHomeAddress + GEO_RADIUS，value.place_name=null、is_current_location=true、distance=5、unit=\\\"km\\\"。\\n- 地点 N 公里/米内使用按地址类型选择的字段 + GEO_RADIUS；地点 N 公里/米外、超过 N 公里、以外使用按地址类型选择的字段 + NOT_GEO_RADIUS。\\n- 除“附近、周边、周围”明确约定的默认5公里规则外，原文没有距离数字时禁止编造 distance。\\n- 当前位置、附近、我周围、我的位置作为半径中心时，value.place_name 必须为 null，is_current_location 为 true。\\n- 指定地点作为半径中心时，value.place_name 必须为地点名，is_current_location 为 false。\\n- value.distance 和 value.unit 统一输出 km： \\\"3公里内\\\" -> distance=3, unit=\\\"km\\\"; \\\"500米内\\\" -> distance=0.5, unit=\\\"km\\\"; \\\"1200米内\\\" -> distance=1.2, unit=\\\"km\\\"。\\n- 如果查询是明显的地址，result_type 必须为 RESOLVED，confidence 必须为 0.95（数值，不带引号）。\\n- 如果查询是明显的人名（不包含地址特征词、不像地名），但\\\"允许输出字段\\\"中有 searchClientName，则输出 searchClientName + MATCH，result_type=RESOLVED，confidence=0.95。\\n- 如果无法区分是姓名还是地址（如\\\"张江\\\"既是人名又是地名），返回 result_type=AMBIGUOUS，confidence=0.5。\\n- 代理人、客户经理、投保人、被保人、联系人、家庭成员、家属、受益人后的姓名属于对应角色，不是客户本人姓名；不得改写成 searchClientName，也不得改写成投保人或被保人条件。\\n- 如果查询与白名单字段无关（如纯数字、保单号等），返回 result_type=NONE，conditions 为空。\\n- 如果查询只有年龄、家庭成员、保单、产品、客户标签等普通字段条件，没有明确姓名或地址，则必须返回 result_type=NONE；不得为了命中开放字段白名单而把普通条件片段改写成姓名或地址。\\n- 不要编造白名单外字段。\\n- 只输出 JSON，不输出 Markdown 或解释。\\n- JSON 中必须包含 result_type、query_logic、conditions、confidence 四个字段，不要省略任何字段。\\n\\n### 允许输出字段\\n- id=open_client_name field=searchClientName operator=MATCH value_type=text\\n  description: 客户本人自然人姓名。裸姓名、“姓名/名字为X”“名叫X的客户”“把叫X的客户列出来”属于客户本人姓名；“姓X”表示客户姓氏，输出value=X并设置match_mode=prefix。“X本人/客户X本人”明确表示X是客户本人。完整姓名或姓氏即使与手机号、地址、年龄、VIP等其他条件同句出现也必须提取，不能因为普通模型已识别其他字段而遗漏姓名。“X有子女/有父母/有配偶/有保单”仅在X本身是原文中独立、明确的1-4字自然人姓名时成立。“家里/家中/我家/家庭中有子女”等家庭范围表达不包含客户姓名。不包括投保人、被保人、受益人、客户经理、联系人和家庭成员姓名。\\n  examples: 客户姓名是张三；名字叫李四的客户；顾清禾；把叫顾清禾的客户列出来；姓张且45岁左右的客户 -> 姓氏条件 value=\\\"张\\\", match_mode=\\\"prefix\\\"，年龄由普通模型独立处理；帮我找张晨本人手机号是18610000001的客户 -> 姓名条件 value=\\\"张晨\\\"，手机号由普通模型独立处理；顾清禾有子女的客户 -> value=\\\"顾清禾\\\"；姓名为江知遥、通讯地址为星海商务区 -> 姓名条件 value=\\\"江知遥\\\"，并保留独立地址条件\\n  negative_examples: 投保人张三；客户经理张三；顾清禾作为投保人；女儿叫林溪；全部客户；所有客户名单；全量客户给我看看；家里有未成年子女；家中有老人；有子女但没有买学平险的客户\\n- id=open_contact_address_match field=contactAddress operator=MATCH value_type=text\\n  description: 用户明确查询客户本人的联系地址、通讯地址或通信地址时的文本匹配；value 必须保留原文中的完整地址后缀，单值使用 MATCH。\\n  examples: 通信地址为浙江省湖州市安吉县递铺街道 -> value=\\\"浙江省湖州市安吉县递铺街道\\\"；联系地址是海南省儋州市那大镇先锋社区 -> value=\\\"海南省儋州市那大镇先锋社区\\\"\\n  negative_examples: 投保人联系地址为青岛路8号；客户经理联系地址是春江明月；联系人通讯地址为南京西路\\n- id=open_contact_address_geo_within field=contactAddress operator=GEO_RADIUS value_type=geo_radius\\n  description: 用户明确对客户本人联系地址执行范围内查询；附近、周边、周围未给距离时固定为 5km，米必须换算成 km。\\n  examples: 联系地址在杭州大会展中心周边 -> value={place_name: \\\"杭州大会展中心\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}；联系地址在火车站500米内 -> value={place_name: \\\"火车站\\\", is_current_location: false, distance: 0.5, unit: \\\"km\\\"}\\n  negative_examples: 投保人联系地址在幸福花园3公里内；客户经理联系地址在火车站周边\\n- id=open_contact_address_geo_outside field=contactAddress operator=NOT_GEO_RADIUS value_type=geo_radius\\n  description: 用户明确对客户本人联系地址执行范围外查询；“外、以外、超过、大于”必须使用 NOT_GEO_RADIUS，米必须换算成 km。\\n  examples: 联系地址距离重庆西站超过6公里 -> operator=NOT_GEO_RADIUS, value={place_name: \\\"重庆西站\\\", is_current_location: false, distance: 6, unit: \\\"km\\\"}\\n  negative_examples: 被保人联系地址在幸福花园3公里外\\n- id=open_family_address_match field=homeAddress operator=MATCH value_type=text\\n  description: 用户明确查询客户本人的家庭地址、家庭住址时的文本匹配；value 必须保留原文中的完整地址后缀，单值使用 MATCH。单独“住址/住在/家住”没有明确地址类型，应使用 contactOrHomeAddress。\\n  examples: 家庭地址为青海省海西州德令哈市河西街道 -> value=\\\"青海省海西州德令哈市河西街道\\\"\\n  negative_examples: 客户经理家庭地址是春江明月；被保人家住悦湖新城；家庭成员住在南京西路；居住地址为星河公寓\\n- id=open_family_address_geo_within field=homeAddress operator=GEO_RADIUS value_type=geo_radius\\n  description: 用户明确对客户本人家庭地址执行范围内查询；附近、周边、周围未给距离时固定为 5km，米必须换算成 km。\\n  examples: 家庭住址在苏州湾大剧院周围 -> value={place_name: \\\"苏州湾大剧院\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}\\n  negative_examples: 客户经理家庭地址在幸福花园3公里内；居住地址在苏州湾大剧院周围\\n- id=open_family_address_geo_outside field=homeAddress operator=NOT_GEO_RADIUS value_type=geo_radius\\n  description: 用户明确对客户本人家庭地址执行范围外查询；“外、以外、超过、大于”必须使用 NOT_GEO_RADIUS，米必须换算成 km。\\n  examples: 家庭地址距离重庆西站超过6公里 -> operator=NOT_GEO_RADIUS, value={place_name: \\\"重庆西站\\\", is_current_location: false, distance: 6, unit: \\\"km\\\"}\\n  negative_examples: 被保人家庭地址在幸福花园3公里外\\n- id=open_any_address_match field=contactOrHomeAddress operator=MATCH value_type=text\\n  description: 用户没有明确说联系地址或家庭地址时，同时查询两类地址的文本匹配；“居住地址/地址/住址/住在/家住”均不算指定地址类型。完整保留街道、社区、小区、园区、楼、座、室、脚下等地址语义后缀；“那边、一带”只作口语边界词，不转换为 GEO。\\n  examples: 浙江省湖州市安吉县递铺街道 -> value=\\\"浙江省湖州市安吉县递铺街道\\\"；青海省海西州德令哈市河西街道 -> value=\\\"青海省海西州德令哈市河西街道\\\"；海南省儋州市那大镇先锋社区 -> value=\\\"海南省儋州市那大镇先锋社区\\\"；给我找住玉龙雪山脚下的客户 -> operator=MATCH, value=\\\"玉龙雪山脚下\\\"；家住钱塘云湾一带的客户 -> operator=MATCH, value=\\\"钱塘云湾\\\"；家在麓湖生态城那边的客户 -> operator=MATCH, value=\\\"麓湖生态城\\\"；住址东冉村 -> operator=MATCH, value=\\\"东冉村\\\"；居住地址为星河公寓 -> operator=MATCH, value=\\\"星河公寓\\\"；区域化营村客户 -> operator=MATCH, value=\\\"区域化营村\\\"；单位名称为瀚海工程咨询院的客户 -> operator=MATCH, value=\\\"瀚海工程咨询院\\\"；大学本科学历并且机构名称是晨曦教育集团 -> 仅抽取 value=\\\"晨曦教育集团\\\"，不得把学历并入地址\\n  negative_examples: 投保人联系地址为青岛路8号；被保人家住悦湖新城；客户经理家庭地址是春江明月；全部客户；所有客户名单；全量客户给我看看\\n- id=open_any_address_geo_within field=contactOrHomeAddress operator=GEO_RADIUS value_type=geo_radius\\n  description: 用户没有说明地址类型时，同时对联系地址和家庭地址执行范围内查询；附近、周边、周围未给距离时固定为 5km；代理人/坐席周围表示当前位置，place_name 必须为 null；米统一换算为 km。\\n  examples: 查一下杭州大会展中心周边的客户 -> value={place_name: \\\"杭州大会展中心\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}；苏州湾大剧院周围的客户 -> value={place_name: \\\"苏州湾大剧院\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}；居住地址在苏州湾大剧院周围 -> value={place_name: \\\"苏州湾大剧院\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}；在建华大街附近的客户 -> value={place_name: \\\"建华大街\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}；地址是滨江浙二附近的客户 -> value={place_name: \\\"滨江浙二\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}；按着客户家住搜索在建华大街附近的客户 -> value={place_name: \\\"建华大街\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}；我周围2公里内有哪些客户 -> value={place_name: null, is_current_location: true, distance: 2, unit: \\\"km\\\"}；我附近的客户 -> value={place_name: null, is_current_location: true, distance: 5, unit: \\\"km\\\"}；当前位置500米内 -> value={place_name: null, is_current_location: true, distance: 0.5, unit: \\\"km\\\"}\\n  negative_examples: 家住钱塘云湾一带的客户；家在麓湖生态城那边的客户；给我找住玉龙雪山脚下的客户\\n- id=open_any_address_geo_outside field=contactOrHomeAddress operator=NOT_GEO_RADIUS value_type=geo_radius\\n  description: 用户没有说明地址类型时，同时对联系地址和家庭地址执行范围外查询；“外、以外、超过、大于”必须使用 NOT_GEO_RADIUS；米统一换算为 km。\\n  examples: 重庆西站超过6公里的客户 -> operator=NOT_GEO_RADIUS, value={place_name: \\\"重庆西站\\\", is_current_location: false, distance: 6, unit: \\\"km\\\"}；当前位置1200米以外 -> operator=NOT_GEO_RADIUS, value={place_name: null, is_current_location: true, distance: 1.2, unit: \\\"km\\\"}\\n\\n### 输出格式\\n{\\\"result_type\\\":\\\"RESOLVED\\\",\\\"query_logic\\\":\\\"AND\\\",\\\"conditions\\\":[{\\\"field\\\":\\\"contactOrHomeAddress\\\",\\\"operator\\\":\\\"MATCH\\\",\\\"value\\\":\\\"幸福花园\\\"}],\\\"confidence\\\":0.95}\\n\\n### 用户查询\\n五十岁以上的客户都有谁\", \"cost_times\": 4250.0, \"confidence\": 0.8, \"intent_summary\": \"客户年龄≥50的客户\", \"behavior_debug\": {\"has_negative_behavior\": false, \"deterministic_activities\": [], \"semantic_direct_hit\": false, \"semantic_direct_score\": null, \"llm_invoked\": false, \"candidates\": [], \"llm_selected_candidate_ids\": [], \"selection_source\": \"empty\", \"final_activities\": []}}, \"trace_id\": \"mock_trace_001\"}}",
+    "judge": {
+      "trace_id": "llm_probe:llm-probe-client_search-age:1788104991068",
+      "project_id": "llm_probe",
+      "business_expectations": [
+        {
+          "expectation_id": "识别客户本人年龄不少于五十岁",
+          "blocking": true,
+          "downstream_consumer": "Elasticsearch 查询执行器",
+          "user_intent": "筛选年龄为五十岁及以上的客户本人",
+          "expected_outcome": "生成客户本人年龄大于等于50岁的查询条件",
+          "required_capabilities": [
+            "识别“客户”指客户本人而非家庭成员",
+            "将“五十岁以上”解释为包含50岁的下界条件",
+            "映射到clientAge字段并使用GTE操作符"
+          ],
+          "acceptance_criteria": [
+            "conditions中包含field为clientAge的条件",
+            "operator为GTE",
+            "value为50",
+            "不得将条件映射到familyInfo.familyclientage"
+          ],
+          "boundary": {
+            "subject": "客户本人",
+            "age_boundary": "包含50岁",
+            "excluded_semantics": [
+              "家庭成员年龄"
+            ]
+          },
+          "priority": "核心",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "查询逻辑仅保留用户表达的年龄筛选",
+          "blocking": true,
+          "downstream_consumer": "Elasticsearch 查询执行器",
+          "user_intent": "检回恰好符合年龄描述的人群，不附加或遗漏其他筛选条件",
+          "expected_outcome": "查询逻辑为AND且谓词集中只有年龄大于等于50岁这一项条件",
+          "required_capabilities": [
+            "正确设置组合逻辑",
+            "不编造姓名、地址、会员等级或其他客户条件",
+            "不遗漏用户表达的年龄条件"
+          ],
+          "acceptance_criteria": [
+            "query_logic为AND",
+            "除clientAge GTE 50外没有其他语义筛选条件",
+            "执行该谓词得到的客户集合等价于年龄不低于50岁的客户集合"
+          ],
+          "boundary": {
+            "included": [
+              "年龄等于50岁的客户",
+              "年龄大于50岁的客户"
+            ],
+            "excluded": [
+              "年龄小于50岁的客户",
+              "家庭成员年龄满足条件但客户本人年龄不满足的客户"
+            ]
+          },
+          "priority": "核心",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "以结构化格式交付可执行查询谓词",
+          "blocking": true,
+          "downstream_consumer": "Elasticsearch 查询构造与执行模块",
+          "user_intent": "获得字段、操作符、值和组合逻辑明确的机器可用查询谓词集",
+          "expected_outcome": "在可读取的JSON响应中提供query_logic和conditions结构",
+          "required_capabilities": [
+            "输出可解析的结构化JSON",
+            "明确给出字段、操作符、值及组合逻辑"
+          ],
+          "acceptance_criteria": [
+            "output_text可读取并解析为JSON",
+            "data.extra_output_params中包含query_logic和conditions",
+            "条件字段、操作符和值均明确"
+          ],
+          "boundary": {
+            "in_scope": [
+              "非流式HTTP响应中的结构化查询谓词"
+            ],
+            "out_of_scope": [
+              "实际Elasticsearch检索结果和客户名单"
+            ]
+          },
+          "priority": "项目契约",
+          "evidence_refs": []
+        }
+      ],
+      "fulfillment_assessments": [
+        {
+          "expectation_id": "识别客户本人年龄不少于五十岁",
+          "status": "fulfilled",
+          "score": 1,
+          "expected_evidence": [
+            "应生成clientAge字段、GTE操作符、数值50的条件",
+            "年龄主体应为客户本人而非familyInfo家庭成员"
+          ],
+          "actual_evidence": [
+            "data.extra_output_params.conditions包含{\"field\":\"clientAge\",\"operator\":\"GTE\",\"value\":50,\"match_mode\":null}",
+            "data.robot_text为“客户年龄≥50的客户”"
+          ],
+          "downstream_impact": "下游可按客户本人年龄大于等于50岁构造筛选谓词，包含边界年龄50岁。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "查询逻辑仅保留用户表达的年龄筛选",
+          "status": "fulfilled",
+          "score": 1,
+          "expected_evidence": [
+            "query_logic应为AND",
+            "conditions中仅应有年龄大于等于50岁的条件，不应附加其他筛选条件"
+          ],
+          "actual_evidence": [
+            "data.extra_output_params.query_logic为AND",
+            "data.extra_output_params.conditions仅包含一个clientAge GTE 50条件",
+            "未发现姓名、地址、家庭成员或其他未表达的语义条件"
+          ],
+          "downstream_impact": "谓词不会因附加条件而缩小用户目标集合，也没有遗漏年龄限制。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "以结构化格式交付可执行查询谓词",
+          "status": "fulfilled",
+          "score": 1,
+          "expected_evidence": [
+            "应提供可读取的JSON响应",
+            "响应中应有query_logic和conditions，且条件包含字段、操作符和值"
+          ],
+          "actual_evidence": [
+            "output_text_parsed可读取为JSON对象",
+            "data.extra_output_params中提供query_logic、conditions、field、operator和value",
+            "HTTP响应及输出字符串化阶段均成功"
+          ],
+          "downstream_impact": "下游可以直接读取结构化条件并生成Elasticsearch查询；实际客户检索结果不在本次评估范围内。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        }
+      ],
+      "overall_fulfillment": {
+        "status": "fulfilled",
+        "blocking_expectations": [
+          "识别客户本人年龄不少于五十岁",
+          "查询逻辑仅保留用户表达的年龄筛选",
+          "以结构化格式交付可执行查询谓词"
+        ]
+      },
+      "expected": {
+        "output_text": "{\"query_logic\":\"AND\",\"conditions\":[{\"field\":\"clientAge\",\"operator\":\"GTE\",\"value\":50}]}"
+      },
+      "actual": {
+        "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"客户年龄≥50的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"五十岁以上的客户都有谁\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"clientAge\", \"operator\": \"GTE\", \"value\": 50, \"match_mode\": null}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 4, \"rewritten_query\": \"五十岁以上的客户都有谁\", \"matched_patterns\": \"### 当前时间\\n2026-08-30 23:49:48 (Asia/Shanghai)\\n### 今天星期\\n周日\\n\\n### 相关字段参考（根据查询内容动态召回）\\n\\n\\n- **clientAge** | 操作符: RANGE | 值类型: numeric | 单位: 岁，直接取数字 | 定义: 表示客户本人的精确年龄、近似年龄、年龄区间或语义年龄段，不表示家庭成员年龄 | 说明: 统一处理精确年龄、近似年龄、明确起止区间和语义年龄段。原文年龄片段只有‘N岁’且该数字后没有以上、以下、大于、小于、左右、约、大概或起止区间时，输出RANGE {min:N,max:N}；数字相邻位置明示‘左右/上下/大约/约/大概’时，输出RANGE {min:N-5,max:N+5}，不得改成上下2岁或十年年龄段。其他字段片段中的比较词不得作用于年龄。青年=18~35，中年=36~55，老年=56~100，未成年=0~17；‘N0多岁’表示N0~N9，例如30多岁→30~39。以上、以下、大于、小于等边界表达仍由对应的GTE/LTE知识处理。\\n\\n  示例: \\\"30到40岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 30, \\\"max\\\": 40}}\\n\\n  示例: \\\"中年客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 36, \\\"max\\\": 55}}\\n\\n  示例: \\\"30多岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 30, \\\"max\\\": 39}}\\n\\n  示例: \\\"40岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 40, \\\"max\\\": 40}}\\n\\n  示例: \\\"45岁左右的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 40, \\\"max\\\": 50}}\\n\\n  示例: \\\"大约50岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 45, \\\"max\\\": 55}}\\n\\n  反例: \\\"配偶30到40岁的客户\\\" → 不输出该字段；原因: 这是家庭成员年龄范围，应映射到 familyInfo.familyclientage 并组合 familyInfo.familyrelation\\n\\n- **zxjyMemberGradeInfo.zxjymembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['臻享家医V1', '臻享家医V2', '臻享家医V3'] | 定义: 臻享家医会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：臻享家医V1<臻享家医V2<臻享家医V3。臻享家医V2以上和及以上=含臻享家医V2即臻享家医V2和臻享家医V3；臻享家医V2以下和及以下=含臻享家医V2即臻享家医V1和臻享家医V2\\n\\n  示例: \\\"臻享家医V1或者V3的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"臻享家医V2以上的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V2\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"家医V2及以上的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V2\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"家医V2以下的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V2\\\"]}\\n\\n  示例: \\\"家医V2及以下的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V2\\\"]}\\n\\n  反例: \\\"家医V3的客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **pajjMemberGradeInfo.pajjmembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['平安居家V0', '平安居家V1', '平安居家V1优享', '平安居家V2', '平安居家V2优享'] | 定义: 平安居家会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：平安居家V0<平安居家V1<平安居家V1优享<平安居家V2<平安居家V2优享。平安居家V1以上和及以上=含平安居家V1即平安居家V1/平安居家V1优享/平安居家V2/平安居家V2优享；平安居家V2以下和及以下=含平安居家V2即平安居家V0/平安居家V1/平安居家V1优享/平安居家V2\\n\\n  示例: \\\"居家V0和V2都要\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V2\\\"]}\\n\\n  示例: \\\"居家V1以上的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\", \\\"平安居家V2优享\\\"]}\\n\\n  示例: \\\"居家V1及以上的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\", \\\"平安居家V2优享\\\"]}\\n\\n  示例: \\\"居家V2以下的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\"]}\\n\\n  示例: \\\"居家V2及以下的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\"]}\\n\\n  反例: \\\"居家V1的客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **gdkyMemberGradeInfo.gdkymembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['逸享会员', '逸享PLUS会员', '颐享家会员', '臻享V1会员', '臻享V2会员'] | 定义: 高端康养会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：逸享会员<逸享PLUS会员<颐享家会员<臻享V1会员<臻享V2会员。逸享会员以上和及以上=含逸享会员即全部5个；颐享家会员以下和及以下=含颐享家会员即逸享会员/逸享PLUS会员/颐享家会员\\n\\n  示例: \\\"逸享会员或者颐享家会员\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"颐享家会员\\\"]}\\n\\n  示例: \\\"康养逸享以上的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\", \\\"臻享V1会员\\\", \\\"臻享V2会员\\\"]}\\n\\n  示例: \\\"康养逸享及以上的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\", \\\"臻享V1会员\\\", \\\"臻享V2会员\\\"]}\\n\\n  示例: \\\"康养颐享家以下的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\"]}\\n\\n  示例: \\\"康养颐享家及以下的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\"]}\\n\\n  反例: \\\"康养逸享会员客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **familyInfo.familyclientage** | 操作符: GTE | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄（大于等于），不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday）；出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件\\n\\n  示例: \\\"孩子10岁及以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"孩子10岁以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"父母70岁及以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"父母\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 70}]}\\n\\n  示例: \\\"家里有孩子10岁及以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"有老人的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 55}]}\\n\\n  反例: \\\"45岁及以上的客户\\\" → 不输出该字段；原因: 这是客户本人年龄，应映射到 clientAge，不是 familyInfo.familyclientage\\n\\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“及以上”、“以下”、“及以下”含边界 | 说明: 只处理业务集合、多个候选和等级范围：裸A/A类=A1/A2/A3/A4，A或B/AB类=A1/A2/A3/A4/B；紧凑连续等级（如ABCD）按各字母等级并集解析；高价值/有钱客户=A1/A2/A3/A4/B/C；以上/以下按F<E<D<C<B<A4<A3<A2<A1展开并包含边界。明确的单个完整等级值（如A2、B、B类）使用customer_value_exact的MATCH。\\n\\n  示例: \\\"A\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"A类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"购物中心6公里以内的A类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"有钱客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  示例: \\\"AB类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"高价值客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  示例: \\\"B以上的客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B及以上的客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B类以下客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"F\\\", \\\"E\\\", \\\"D\\\", \\\"C\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B类及以下客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"F\\\", \\\"E\\\", \\\"D\\\", \\\"C\\\", \\\"B\\\"]}\\n\\n  示例: \\\"优质客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  反例: \\\"会员等级高的客户\\\" → 不输出该字段；原因: 这是寿险VIP等级语义，应映射到 vipType，不是客户价值 newValueLabel\\n\\n- **clientAge** | 操作符: GTE | 值类型: numeric | 单位: 岁，直接取数字，无需换算 | 定义: 表示客户本人年龄，不表示家庭成员年龄 | 说明: 此字段仅支持GTE操作符。边界词必须按原文区分：‘N岁以上/及以上’包含N，始终输出GTE N，不能加1；只有‘大于/超过/高于N岁’不包含N，才转换为GTE N+1。该规则在年龄与VIP、保单、投保时间等其他条件组合时仍不改变。\\n\\n  示例: \\\"45岁以上的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 45}\\n\\n  示例: \\\"45岁及以上的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 45}\\n\\n  示例: \\\"大于60岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 61}\\n\\n  示例: \\\"年龄超过50岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 51}\\n\\n  示例: \\\"我附近5公里内且客户年龄大于50岁\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 51}\\n\\n  示例: \\\"60或50岁及以上的客户\\\" → \\n\\n  反例: \\\"子女10岁及以上的客户\\\" → 不输出该字段；原因: 这是家庭成员年龄，应映射到 familyInfo.familyclientage 并组合 familyInfo.familyrelation\\n\\n- **familyInfo.familyclientage** | 操作符: GT | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄（大于），不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday）；出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件\\n\\n  示例: \\\"孩子10岁以上（不含10岁）的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GT\\\", \\\"value\\\": 10}]}\\n\\n- **vipType** | 操作符: CONTAINS | 值类型: enum | 枚举: ['白银1', '白银2', '白银3', '黄金V1', '黄金V2', '黄金V3', '原黄金VIP', '铂金V1', '铂金V2', '原铂金VIP', '钻石VIP', '金钻VIP', '黑钻VIP'] | 定义: 表示寿险VIP业务等级组、多个候选或等级范围。 | 说明: 黄金=黄金V1、黄金V2、黄金V3、原黄金VIP；铂金=铂金V1、铂金V2、原铂金VIP；白银=白银1、白银2、白银3。等级从低到高为白银1<白银2<白银3<黄金V1<黄金V2<黄金V3<原黄金VIP<铂金V1<铂金V2<原铂金VIP<钻石VIP<金钻VIP<黑钻VIP；以上/以下包含边界。\\n\\n  示例: \\\"黄金VIP客户\\\" → {\\\"field\\\": \\\"vipType\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"黄金V1\\\", \\\"黄金V2\\\", \\\"黄金V3\\\", \\\"原黄金VIP\\\"]}\\n\\n  示例: \\\"铂金客户\\\" → {\\\"field\\\": \\\"vipType\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"铂金V1\\\", \\\"铂金V2\\\", \\\"原铂金VIP\\\"]}\\n\\n  示例: \\\"客户等级在黄金及以上\\\" → {\\\"field\\\": \\\"vipType\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"黄金V1\\\", \\\"黄金V2\\\", \\\"黄金V3\\\", \\\"原黄金VIP\\\", \\\"铂金V1\\\", \\\"铂金V2\\\", \\\"原铂金VIP\\\", \\\"钻石VIP\\\", \\\"金钻VIP\\\", \\\"黑钻VIP\\\"]}\\n\\n  反例: \\\"VIP开通时间在2024年的客户\\\" → 不输出该字段；原因: 这是开通时间，不是 VIP 等级\\n\\n  反例: \\\"客户价值黄金档客户\\\" → 不输出该字段；原因: 这里是客户价值语境，应优先映射到 newValueLabel，而不是 vipType\\n\\n  反例: \\\"高端康养会员等级高\\\" → 不输出该字段；原因: 如果明确是高端康养、臻享家医等权益体系，应优先映射到对应权益字段；但单独说会员等级高通常是 vipType\\n\\n- **clientTemperature** | 操作符: CONTAINS | 值类型: enum | 枚举: ['冷却', '低温', '中温', '高温'] | 定义: 表示客户温度等级范围，不表示联系时间范围；“以上”、“及以上”、“以下”、“及以下”含边界 | 说明: 根据客户活跃度分类，温度从低到高：冷却<低温<中温<高温；“中温以上”和“中温及以上”均包含中温和高温\\n\\n  示例: \\\"中高温客户\\\" → {\\\"field\\\": \\\"clientTemperature\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"中温\\\", \\\"高温\\\"]}\\n\\n  示例: \\\"中温以上客户\\\" → {\\\"field\\\": \\\"clientTemperature\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"中温\\\", \\\"高温\\\"]}\\n\\n  示例: \\\"中温及以上客户\\\" → {\\\"field\\\": \\\"clientTemperature\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"中温\\\", \\\"高温\\\"]}\\n\\n  反例: \\\"最近一个月联系频繁的客户\\\" → 不输出该字段；原因: 这是最近联系时间范围，不是客户温度等级范围\\n\\n### 用户查询\\n五十岁以上的客户都有谁\\n\\n=== open_intent prompt ===\\n### 任务\\n你是客户搜索查询解析器中的开放字段子模型。你的任务和普通查询解析模型相同， 都是把自然语言转换为 query_logic 和 conditions；区别是你只能处理配置给出的 少数开放字段，且这些字段上下文已全部给出，不需要 RAG 召回。\\n\\n### 规则\\n- 只能输出\\\"允许输出字段\\\"中列出的 field/operator。\\n- 对白名单字段，无论用户是裸输入还是明确说明字段名，都应尽量解析。\\n- 如果用户查询同时包含白名单字段和其他内容，只输出你能处理的白名单字段，忽略其他内容。\\n- 客户姓名(searchClientName)只表示客户本人自然人姓名，不表示投保人、被保人、客户经理、联系人、家庭成员姓名，也不表示公司、机构、地区、地址或泛指客户集合。\\n- 裸自然人姓名，以及“姓名/名字为X”“名叫X的客户”“把叫X的客户列出来”默认都是客户本人姓名；只有“投保人X”“X作为被保人”“女儿叫X”等角色直接修饰姓名的原文证据，才排除 searchClientName。\\n- 只有 X 本身是原文中独立、明确的1-4字自然人姓名时，“X有子女/有父母/有配偶/有保单”中的 X 才是客户本人姓名；“家里/家中/我家/家庭中有子女”等家庭范围表达不包含客户姓名，不得把整段家庭条件输出为 searchClientName。\\n- \\\"全部客户/所有客户/全量客户/全体客户/客户列表/客户名单\\\"等集合词不是姓名；包含\\\"公司/有限公司/集团/工厂/粉体/科技/商贸/医院/学校/银行/门店\\\"等组织机构特征的文本不是姓名，不能输出 searchClientName。\\n- 地址字段表示查询范围，operator表示查询方式。明确\\\"联系地址/通讯地址/通信地址\\\"时使用 contactAddress；只有明确\\\"家庭地址/家庭住址\\\"时使用 homeAddress；\\\"居住地址/地址/住址/住在/家住\\\"没有明确地址类型，必须使用 contactOrHomeAddress，由后端同时查询联系地址和家庭地址。\\n- 公司名、机构名和普通裸地址在未明确地址类型时输出 contactOrHomeAddress + MATCH，value保留原文。\\n- 地址和机构 value 必须是用户原文中的连续完整片段；必须保留街道、社区、小区、园区、公司、有限公司、楼、座、室等语义后缀，不得缩写、改写或自行删除后缀。\\n- value 不得包含查询动作、字段名称、客户集合词或其他条件，例如“帮我查、筛下、给我看、姓名、家庭住址、学历、年龄、的客户”都不能进入地址 value。\\n- 同一句包含姓名、地址、学历、年龄等多个独立条件时，分别抽取为多个 conditions，不得把整句或前一个条件合并为地址 value；只忽略不属于开放字段且已经由普通模型负责的部分。\\n- 同一句明确包含客户姓名和客户地址时，必须同时输出姓名与地址两个开放条件，不得因地址条件存在而遗漏姓名，也不得因姓名条件存在而遗漏地址。\\n- 住在、居住在、定居、家住、籍贯、户籍、老家、家在、户口、迁居、现居、移居等表达没有明确说明联系地址或家庭地址，统一输出 contactOrHomeAddress。\\n- 裸值只要可能是地址就必须输出 contactOrHomeAddress + MATCH。宁可把模糊值当地址，不要遗漏。\\n- 判断是地址的依据（满足任一即视为地址）：包含\\\"路\\\"\\\"街\\\"\\\"巷\\\"\\\"弄\\\"\\\"小区\\\"\\\"花园\\\"\\\"公馆\\\"\\\"大厦\\\"\\\"广场\\\"\\\"园\\\"\\\"楼\\\"\\\"号\\\"\\\"栋\\\"\\\"单元\\\"\\\"层\\\"\\\"座\\\"\\\"区\\\"\\\"县\\\"\\\"市\\\"\\\"省\\\"\\\"镇\\\"\\\"乡\\\"\\\"村\\\"\\\"花苑\\\"\\\"新苑\\\"\\\"嘉园\\\"\\\"华庭\\\"\\\"名都\\\"\\\"新城\\\"\\\"国际\\\"\\\"环\\\"\\\"苑\\\"\\\"里\\\"\\\"庄\\\"\\\"营\\\"\\\"屯\\\"\\\"堡\\\"\\\"店\\\"\\\"集\\\"\\\"渡\\\"\\\"港\\\"\\\"桥\\\"\\\"站\\\"\\\"门\\\"\\\"关\\\"\\\"口\\\"\\\"岗\\\"\\\"岭\\\"\\\"坡\\\"\\\"湾\\\"\\\"湖\\\"\\\"海\\\"\\\"江\\\"\\\"河\\\"\\\"溪\\\"\\\"岛\\\"\\\"半岛\\\"\\\"三角\\\"\\\"学院\\\"\\\"大学城\\\"\\\"公司\\\"\\\"集团\\\"\\\"企业\\\"\\\"工厂\\\"\\\"银行\\\"\\\"医院\\\"\\\"学校\\\"\\\"门店\\\"\\\"高新区\\\"\\\"新区\\\"\\\"开发区\\\"\\\"街道\\\"\\\"社区\\\"\\\"弄堂\\\"\\\"胡同\\\"\\\"CBD\\\"\\\"中心\\\"\\\"城\\\"\\\"商圈\\\"\\\"汇\\\"\\\"壹号院\\\"\\\"壹号\\\"\\\"公馆\\\"等地址特征词，或以省/市/区/县/旗/州/盟结尾\\n- 中国常见区域名也是地址：京津冀、江浙沪、长三角、珠三角、粤港澳、成渝、东北、华北、华东、华南、华中、西北、西南、中关村、望京、国贸、亦庄、燕郊、通州、回龙观、天通苑\\n- 以下方向表达也应识别为地址：X环内、X环外、X旁边、X对面、X沿线、X以北、X以南、X以东、X以西、城东、城西、城南、城北、城中心、市中心；X附近、X周边、X周围按后述默认5公里GEO规则处理。\\n- 明确\\\"联系地址\\\"\\\"通讯地址\\\"\\\"通信地址\\\"等只输出 contactAddress + MATCH。\\n- 只有明确\\\"家庭地址\\\"\\\"家庭住址\\\"时输出 homeAddress + MATCH；\\\"居住地址\\\"和单独\\\"住址\\\"不等于家庭地址，输出 contactOrHomeAddress + MATCH。\\n- 裸值中的\\\"X旁边\\\"\\\"X对面\\\"\\\"X沿线\\\"\\\"X环外\\\"\\\"X环内\\\"是普通地址，未明确地址类型时输出 contactOrHomeAddress + MATCH，不要用 GEO operator。\\n- “X环外、X环内、X旁边、X对面、X沿线”等没有距离数值的相对位置表达不得补充默认距离，不得转换成 GEO_RADIUS 或 NOT_GEO_RADIUS。\\n- 明确地点的\\\"X附近\\\"\\\"X周边\\\"\\\"X周围\\\"没有距离数字时默认按5公里内查询；字段仍按地址类型选择，未明确类型使用 contactOrHomeAddress，operator=GEO_RADIUS。\\n- 当前用户位置表达（我附近、我周围、我周边、我身边、当前位置附近、坐席附近、代理人周边）没有明确距离时默认按5公里内查询；未明确地址类型使用 contactOrHomeAddress + GEO_RADIUS，value.place_name=null、is_current_location=true、distance=5、unit=\\\"km\\\"。\\n- 地点 N 公里/米内使用按地址类型选择的字段 + GEO_RADIUS；地点 N 公里/米外、超过 N 公里、以外使用按地址类型选择的字段 + NOT_GEO_RADIUS。\\n- 除“附近、周边、周围”明确约定的默认5公里规则外，原文没有距离数字时禁止编造 distance。\\n- 当前位置、附近、我周围、我的位置作为半径中心时，value.place_name 必须为 null，is_current_location 为 true。\\n- 指定地点作为半径中心时，value.place_name 必须为地点名，is_current_location 为 false。\\n- value.distance 和 value.unit 统一输出 km： \\\"3公里内\\\" -> distance=3, unit=\\\"km\\\"; \\\"500米内\\\" -> distance=0.5, unit=\\\"km\\\"; \\\"1200米内\\\" -> distance=1.2, unit=\\\"km\\\"。\\n- 如果查询是明显的地址，result_type 必须为 RESOLVED，confidence 必须为 0.95（数值，不带引号）。\\n- 如果查询是明显的人名（不包含地址特征词、不像地名），但\\\"允许输出字段\\\"中有 searchClientName，则输出 searchClientName + MATCH，result_type=RESOLVED，confidence=0.95。\\n- 如果无法区分是姓名还是地址（如\\\"张江\\\"既是人名又是地名），返回 result_type=AMBIGUOUS，confidence=0.5。\\n- 代理人、客户经理、投保人、被保人、联系人、家庭成员、家属、受益人后的姓名属于对应角色，不是客户本人姓名；不得改写成 searchClientName，也不得改写成投保人或被保人条件。\\n- 如果查询与白名单字段无关（如纯数字、保单号等），返回 result_type=NONE，conditions 为空。\\n- 如果查询只有年龄、家庭成员、保单、产品、客户标签等普通字段条件，没有明确姓名或地址，则必须返回 result_type=NONE；不得为了命中开放字段白名单而把普通条件片段改写成姓名或地址。\\n- 不要编造白名单外字段。\\n- 只输出 JSON，不输出 Markdown 或解释。\\n- JSON 中必须包含 result_type、query_logic、conditions、confidence 四个字段，不要省略任何字段。\\n\\n### 允许输出字段\\n- id=open_client_name field=searchClientName operator=MATCH value_type=text\\n  description: 客户本人自然人姓名。裸姓名、“姓名/名字为X”“名叫X的客户”“把叫X的客户列出来”属于客户本人姓名；“姓X”表示客户姓氏，输出value=X并设置match_mode=prefix。“X本人/客户X本人”明确表示X是客户本人。完整姓名或姓氏即使与手机号、地址、年龄、VIP等其他条件同句出现也必须提取，不能因为普通模型已识别其他字段而遗漏姓名。“X有子女/有父母/有配偶/有保单”仅在X本身是原文中独立、明确的1-4字自然人姓名时成立。“家里/家中/我家/家庭中有子女”等家庭范围表达不包含客户姓名。不包括投保人、被保人、受益人、客户经理、联系人和家庭成员姓名。\\n  examples: 客户姓名是张三；名字叫李四的客户；顾清禾；把叫顾清禾的客户列出来；姓张且45岁左右的客户 -> 姓氏条件 value=\\\"张\\\", match_mode=\\\"prefix\\\"，年龄由普通模型独立处理；帮我找张晨本人手机号是18610000001的客户 -> 姓名条件 value=\\\"张晨\\\"，手机号由普通模型独立处理；顾清禾有子女的客户 -> value=\\\"顾清禾\\\"；姓名为江知遥、通讯地址为星海商务区 -> 姓名条件 value=\\\"江知遥\\\"，并保留独立地址条件\\n  negative_examples: 投保人张三；客户经理张三；顾清禾作为投保人；女儿叫林溪；全部客户；所有客户名单；全量客户给我看看；家里有未成年子女；家中有老人；有子女但没有买学平险的客户\\n- id=open_contact_address_match field=contactAddress operator=MATCH value_type=text\\n  description: 用户明确查询客户本人的联系地址、通讯地址或通信地址时的文本匹配；value 必须保留原文中的完整地址后缀，单值使用 MATCH。\\n  examples: 通信地址为浙江省湖州市安吉县递铺街道 -> value=\\\"浙江省湖州市安吉县递铺街道\\\"；联系地址是海南省儋州市那大镇先锋社区 -> value=\\\"海南省儋州市那大镇先锋社区\\\"\\n  negative_examples: 投保人联系地址为青岛路8号；客户经理联系地址是春江明月；联系人通讯地址为南京西路\\n- id=open_contact_address_geo_within field=contactAddress operator=GEO_RADIUS value_type=geo_radius\\n  description: 用户明确对客户本人联系地址执行范围内查询；附近、周边、周围未给距离时固定为 5km，米必须换算成 km。\\n  examples: 联系地址在杭州大会展中心周边 -> value={place_name: \\\"杭州大会展中心\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}；联系地址在火车站500米内 -> value={place_name: \\\"火车站\\\", is_current_location: false, distance: 0.5, unit: \\\"km\\\"}\\n  negative_examples: 投保人联系地址在幸福花园3公里内；客户经理联系地址在火车站周边\\n- id=open_contact_address_geo_outside field=contactAddress operator=NOT_GEO_RADIUS value_type=geo_radius\\n  description: 用户明确对客户本人联系地址执行范围外查询；“外、以外、超过、大于”必须使用 NOT_GEO_RADIUS，米必须换算成 km。\\n  examples: 联系地址距离重庆西站超过6公里 -> operator=NOT_GEO_RADIUS, value={place_name: \\\"重庆西站\\\", is_current_location: false, distance: 6, unit: \\\"km\\\"}\\n  negative_examples: 被保人联系地址在幸福花园3公里外\\n- id=open_family_address_match field=homeAddress operator=MATCH value_type=text\\n  description: 用户明确查询客户本人的家庭地址、家庭住址时的文本匹配；value 必须保留原文中的完整地址后缀，单值使用 MATCH。单独“住址/住在/家住”没有明确地址类型，应使用 contactOrHomeAddress。\\n  examples: 家庭地址为青海省海西州德令哈市河西街道 -> value=\\\"青海省海西州德令哈市河西街道\\\"\\n  negative_examples: 客户经理家庭地址是春江明月；被保人家住悦湖新城；家庭成员住在南京西路；居住地址为星河公寓\\n- id=open_family_address_geo_within field=homeAddress operator=GEO_RADIUS value_type=geo_radius\\n  description: 用户明确对客户本人家庭地址执行范围内查询；附近、周边、周围未给距离时固定为 5km，米必须换算成 km。\\n  examples: 家庭住址在苏州湾大剧院周围 -> value={place_name: \\\"苏州湾大剧院\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}\\n  negative_examples: 客户经理家庭地址在幸福花园3公里内；居住地址在苏州湾大剧院周围\\n- id=open_family_address_geo_outside field=homeAddress operator=NOT_GEO_RADIUS value_type=geo_radius\\n  description: 用户明确对客户本人家庭地址执行范围外查询；“外、以外、超过、大于”必须使用 NOT_GEO_RADIUS，米必须换算成 km。\\n  examples: 家庭地址距离重庆西站超过6公里 -> operator=NOT_GEO_RADIUS, value={place_name: \\\"重庆西站\\\", is_current_location: false, distance: 6, unit: \\\"km\\\"}\\n  negative_examples: 被保人家庭地址在幸福花园3公里外\\n- id=open_any_address_match field=contactOrHomeAddress operator=MATCH value_type=text\\n  description: 用户没有明确说联系地址或家庭地址时，同时查询两类地址的文本匹配；“居住地址/地址/住址/住在/家住”均不算指定地址类型。完整保留街道、社区、小区、园区、楼、座、室、脚下等地址语义后缀；“那边、一带”只作口语边界词，不转换为 GEO。\\n  examples: 浙江省湖州市安吉县递铺街道 -> value=\\\"浙江省湖州市安吉县递铺街道\\\"；青海省海西州德令哈市河西街道 -> value=\\\"青海省海西州德令哈市河西街道\\\"；海南省儋州市那大镇先锋社区 -> value=\\\"海南省儋州市那大镇先锋社区\\\"；给我找住玉龙雪山脚下的客户 -> operator=MATCH, value=\\\"玉龙雪山脚下\\\"；家住钱塘云湾一带的客户 -> operator=MATCH, value=\\\"钱塘云湾\\\"；家在麓湖生态城那边的客户 -> operator=MATCH, value=\\\"麓湖生态城\\\"；住址东冉村 -> operator=MATCH, value=\\\"东冉村\\\"；居住地址为星河公寓 -> operator=MATCH, value=\\\"星河公寓\\\"；区域化营村客户 -> operator=MATCH, value=\\\"区域化营村\\\"；单位名称为瀚海工程咨询院的客户 -> operator=MATCH, value=\\\"瀚海工程咨询院\\\"；大学本科学历并且机构名称是晨曦教育集团 -> 仅抽取 value=\\\"晨曦教育集团\\\"，不得把学历并入地址\\n  negative_examples: 投保人联系地址为青岛路8号；被保人家住悦湖新城；客户经理家庭地址是春江明月；全部客户；所有客户名单；全量客户给我看看\\n- id=open_any_address_geo_within field=contactOrHomeAddress operator=GEO_RADIUS value_type=geo_radius\\n  description: 用户没有说明地址类型时，同时对联系地址和家庭地址执行范围内查询；附近、周边、周围未给距离时固定为 5km；代理人/坐席周围表示当前位置，place_name 必须为 null；米统一换算为 km。\\n  examples: 查一下杭州大会展中心周边的客户 -> value={place_name: \\\"杭州大会展中心\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}；苏州湾大剧院周围的客户 -> value={place_name: \\\"苏州湾大剧院\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}；居住地址在苏州湾大剧院周围 -> value={place_name: \\\"苏州湾大剧院\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}；在建华大街附近的客户 -> value={place_name: \\\"建华大街\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}；地址是滨江浙二附近的客户 -> value={place_name: \\\"滨江浙二\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}；按着客户家住搜索在建华大街附近的客户 -> value={place_name: \\\"建华大街\\\", is_current_location: false, distance: 5, unit: \\\"km\\\"}；我周围2公里内有哪些客户 -> value={place_name: null, is_current_location: true, distance: 2, unit: \\\"km\\\"}；我附近的客户 -> value={place_name: null, is_current_location: true, distance: 5, unit: \\\"km\\\"}；当前位置500米内 -> value={place_name: null, is_current_location: true, distance: 0.5, unit: \\\"km\\\"}\\n  negative_examples: 家住钱塘云湾一带的客户；家在麓湖生态城那边的客户；给我找住玉龙雪山脚下的客户\\n- id=open_any_address_geo_outside field=contactOrHomeAddress operator=NOT_GEO_RADIUS value_type=geo_radius\\n  description: 用户没有说明地址类型时，同时对联系地址和家庭地址执行范围外查询；“外、以外、超过、大于”必须使用 NOT_GEO_RADIUS；米统一换算为 km。\\n  examples: 重庆西站超过6公里的客户 -> operator=NOT_GEO_RADIUS, value={place_name: \\\"重庆西站\\\", is_current_location: false, distance: 6, unit: \\\"km\\\"}；当前位置1200米以外 -> operator=NOT_GEO_RADIUS, value={place_name: null, is_current_location: true, distance: 1.2, unit: \\\"km\\\"}\\n\\n### 输出格式\\n{\\\"result_type\\\":\\\"RESOLVED\\\",\\\"query_logic\\\":\\\"AND\\\",\\\"conditions\\\":[{\\\"field\\\":\\\"contactOrHomeAddress\\\",\\\"operator\\\":\\\"MATCH\\\",\\\"value\\\":\\\"幸福花园\\\"}],\\\"confidence\\\":0.95}\\n\\n### 用户查询\\n五十岁以上的客户都有谁\", \"cost_times\": 4250.0, \"confidence\": 0.8, \"intent_summary\": \"客户年龄≥50的客户\", \"behavior_debug\": {\"has_negative_behavior\": false, \"deterministic_activities\": [], \"semantic_direct_hit\": false, \"semantic_direct_score\": null, \"llm_invoked\": false, \"candidates\": [], \"llm_selected_candidate_ids\": [], \"selection_source\": \"empty\", \"final_activities\": []}}, \"trace_id\": \"mock_trace_001\"}}"
+      },
+      "missing": [],
+      "wrong": [],
+      "extra": [],
+      "evidence": [
+        {
+          "source": "request.body.user_text",
+          "content": "五十岁以上的客户都有谁"
+        },
+        {
+          "source": "output_text_parsed.data.extra_output_params",
+          "content": {
+            "query_logic": "AND",
+            "conditions": [
+              {
+                "field": "clientAge",
+                "operator": "GTE",
+                "value": 50,
+                "match_mode": null
+              }
+            ]
+          }
+        },
+        {
+          "source": "output_text_parsed.data.robot_text",
+          "content": "客户年龄≥50的客户"
+        }
+      ],
+      "reasoning_summary": "用户只表达了一个条件：客户本人年龄五十岁以上，且“以上”包含50岁。实际结构化输出使用clientAge、GTE、50，并将query_logic设为AND；conditions中没有附加其他筛选条件，也没有将年龄错误解释为家庭成员年龄。因此查询谓词与用户描述的人群语义等价，结构化交付也完整可读。",
+      "summary": {
+        "reason": "fulfilled · 3 blocking expectations all met · 用户只表达了一个条件：客户本人年龄五十岁以上，且“以上”包含50岁。实际结构化输出使用clientAge、GTE、50，并将query_logic设为AND；conditions中没有附加其他筛选条件，也没有将年龄错误解释为家庭成员年龄。因此查询谓词与用户描述的人群语义等价，结构化交付也完整可读。",
+        "primary_failure_dimensions": [],
+        "reason_source": "aggregated_fulfillment",
+        "fulfillment_status": "fulfilled",
+        "assessment_count": 3,
+        "blocking_count": 3,
+        "is_formal_attribution": true
+      }
+    },
+    "capability_carrier": {
+      "applicable": false,
+      "axis1_status": "fulfilled",
+      "placements": [],
+      "errors": [],
+      "snapshot_id": "27c03ec01b3b334b"
+    },
+    "elapsed_s": 64.2
+  },
+  {
+    "case_id": "llm-probe-client_search-exclusion",
+    "capability_ref": "client_search",
+    "input": {
+      "user_text": "不要买了年金险的客户",
+      "user_id": "mock_user_001",
+      "trace_id": "cs-excl",
+      "session_id": "cs-excl",
+      "source": "llm_probe_accuracy",
+      "extra_input_params": {}
+    },
+    "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"投保险种类别不包含年金的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"不要买了年金险的客户\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"polNoInfo.plancodeinfo.plantypedesc\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"年金\"], \"match_mode\": null}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 4, \"rewritten_query\": \"不要买了年金险的客户\", \"matched_patterns\": \"### 当前时间\\n2026-08-30 23:50:52 (Asia/Shanghai)\\n### 今天星期\\n周日\\n\\n### 相关字段参考（根据查询内容动态召回）\\n\\n\\n- **polNoInfo.plancodeinfo.plantypedesc** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['年金', '两全险', '健康险', '寿险', '定期险'] | 定义: 表示客户保单险种类别中不包含某类险种，不表示没有任何保单\\n\\n  示例: \\\"没有年金险种的客户\\\" → {\\\"field\\\": \\\"polNoInfo.plancodeinfo.plantypedesc\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"年金\\\"]}\\n\\n  示例: \\\"没有健康险种的客户\\\" → {\\\"field\\\": \\\"polNoInfo.plancodeinfo.plantypedesc\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"健康险\\\"]}\\n\\n  示例: \\\"没买寿险的客户\\\" → {\\\"field\\\": \\\"polNoInfo.plancodeinfo.plantypedesc\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"寿险\\\"]}\\n\\n- **polNoInfo.plancodeinfo.plantypedesc** | 操作符: MATCH | 值类型: enum | 枚举: ['年金', '两全险', '健康险', '寿险', '定期险'] | 定义: 保单投保险种类别，明确指定单一险种类别时使用MATCH | 说明: 年金险/年金保险映射为年金。明确一个完整类别值时使用MATCH；只有原文明示多个候选时才使用CONTAINS。\\n\\n  示例: \\\"寿险的客户\\\" → {\\\"field\\\": \\\"polNoInfo.plancodeinfo.plantypedesc\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"寿险\\\"}\\n\\n  示例: \\\"购买过寿险的客户\\\" → {\\\"field\\\": \\\"polNoInfo.plancodeinfo.plantypedesc\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"寿险\\\"}\\n\\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户。重要：只有查询明确包含‘有保险/没有保险/没保险/买过保险/未投保/是否投保/全部客户/所有客户/全量客户’等保险状态关键词时才输出此字段。‘客户’作为普通名词后缀（如‘姓X的客户’‘XX岁的客户’‘购买过XX产品的客户’）不表示保险状态，严禁输出此字段\\n\\n  示例: \\\"全部客户\\\" → {\\\"field\\\": \\\"isBuyInsurance\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"客户\\\", \\\"准客\\\", \\\"用户\\\"]}\\n\\n  示例: \\\"有保险的客户\\\" → {\\\"field\\\": \\\"isBuyInsurance\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"客户\\\", \\\"准客\\\"]}\\n\\n  示例: \\\"没有保险的客户\\\" → {\\\"field\\\": \\\"isBuyInsurance\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"用户\\\"]}\\n\\n  反例: \\\"5月盘客客户\\\" → 不输出该字段；原因: “盘客”是业务动作，不表示买过保险或没买保险，不能映射到客户类型\\n\\n  反例: \\\"姓张的客户\\\" → 不输出该字段；原因: ‘客户’在这里只是普通名词后缀，查询意图是找姓张的人，不是在问保险购买状态\\n\\n  反例: \\\"购买过盛世金越的客户\\\" → 不输出该字段；原因: ‘客户’只是普通名词后缀，查询意图是限定产品而非保险类型；已通过产品字段限定时不额外输出客户类型\\n\\n  反例: \\\"45岁以上的客户\\\" → 不输出该字段；原因: ‘客户’只是普通名词后缀，查询意图是年龄筛选，不是在问保险购买状态\\n\\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\\n\\n  示例: \\\"有养老险的客户\\\" → {\\\"field\\\": \\\"isBuyPension\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"有购买\\\"}\\n\\n  示例: \\\"没有买养老险的客户\\\" → {\\\"field\\\": \\\"isBuyPension\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"没有购买\\\"}\\n\\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\\n\\n  示例: \\\"有健康险的客户\\\" → {\\\"field\\\": \\\"isBuyHealth\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"有购买\\\"}\\n\\n  示例: \\\"没有买健康险的客户\\\" → {\\\"field\\\": \\\"isBuyHealth\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"没有购买\\\"}\\n\\n- **pCategorys** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户未持有某个险种大类，不表示未持有具体产品名称，也不表示字段为空。 | 说明: 只召回明确的未购买、不包含或医疗意向缺口表达。车险但没有购买意外险等查询中，未购买意外险应映射为 pCategorys NOT_CONTAINS 意外伤害保险；车险本身不是该字段。医疗意向表示医疗保险缺口，不是六条权益服务线的会员状态。\\n\\n  示例: \\\"没有买意外险的客户\\\" → {\\\"field\\\": \\\"pCategorys\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"意外伤害保险\\\"]}\\n\\n  示例: \\\"买了车险，但没有购买意外险的客户\\\" → {\\\"field\\\": \\\"pCategorys\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"意外伤害保险\\\"]}\\n\\n  示例: \\\"有意向医疗客户\\\" → {\\\"field\\\": \\\"pCategorys\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"医疗保险\\\"]}\\n\\n  示例: \\\"没买终身寿险的客户\\\" → {\\\"field\\\": \\\"pCategorys\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"终身寿险\\\"]}\\n\\n  示例: \\\"没有定期寿险的客户\\\" → {\\\"field\\\": \\\"pCategorys\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"定期寿险\\\"]}\\n\\n- **ayyMemberGradeInfo.ayymemberproductname** | 操作符: MATCH | 值类型: enum | 枚举: ['安有医'] | 定义: 安有医会员服务线名称，不表示其他服务线 | 说明: 枚举值「安有医」；有该服务线即表示客户开通了安有医会员服务\\n\\n  示例: \\\"服务线为安有医的客户\\\" → {\\\"field\\\": \\\"ayyMemberGradeInfo.ayymemberproductname\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"安有医\\\"}\\n\\n  反例: \\\"安有医达标的客户\\\" → 不输出该字段；原因: 达标是会员状态(status)，不是服务线\\n\\n- **ayhMemberGradeInfo.ayhmemberproductname** | 操作符: MATCH | 值类型: enum | 枚举: ['安有护'] | 定义: 安有护会员服务线名称，不表示其他服务线 | 说明: 枚举值「安有护」；有该服务线即表示客户开通了安有护会员服务\\n\\n  示例: \\\"服务线为安有护的客户\\\" → {\\\"field\\\": \\\"ayhMemberGradeInfo.ayhmemberproductname\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"安有护\\\"}\\n\\n  反例: \\\"安有护达标的客户\\\" → 不输出该字段；原因: 达标是会员状态(status)，不是服务线\\n\\n- **yxgyMemberGradeInfo.yxgymemberproductname** | 操作符: MATCH | 值类型: enum | 枚举: ['御享国医'] | 定义: 御享国医会员服务线名称，不表示其他服务线 | 说明: 枚举值「御享国医」；有该服务线即表示客户开通了御享国医会员服务\\n\\n  示例: \\\"服务线名为御享国医的客户\\\" → {\\\"field\\\": \\\"yxgyMemberGradeInfo.yxgymemberproductname\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"御享国医\\\"}\\n\\n  反例: \\\"御享国医达标的客户\\\" → 不输出该字段；原因: 达标是会员状态(status)，不是服务线\\n\\n- **policies_insure_date** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 保单投保日期，嵌套字段；‘去年购买/买了/买过/投保某险种’中的‘去年’也是投保日期条件。该字段当前不支持搜索，但必须解析以便给出不支持提示 | 说明: 投保日期与承保日期、生效日期不同，任何‘时间范围+投保/买保险/购买保险’都必须识别为本不支持字段，不能改写为 latelyUndwrtSegTime 或 polNoInfo.poleffdate。若原文同时表达已经投保/买过保险，购买状态可另外输出 isBuyInsurance，时间条件仍由本字段产生不支持提示。‘最近一年买保险、最近半年投保’之所以表示过去，是因为投保/买过是已经发生的事件；该方向规则只属于投保日期，不得用于‘积分即将过期、保单将要到期、证件快要失效’等未来事件。本月取当月1日至月末；下月取下月1日至月末；下周取下周一至周天；未来一周取今天至往后顺延6天；未来一个月取今天至往后延顺29天。\\n\\n  示例: \\\"今年投保的客户（当前时间为2026-04-29）\\\" → {\\\"field\\\": \\\"policies_insure_date\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"2026-01-01 00:00:00\\\", \\\"max\\\": \\\"2026-12-31 23:59:59\\\"}}\\n\\n  示例: \\\"今年买过保险的客户（当前时间为2026-08-12）\\\" → {\\\"field\\\": \\\"policies_insure_date\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"2026-01-01 00:00:00\\\", \\\"max\\\": \\\"2026-12-31 23:59:59\\\"}}\\n\\n  示例: \\\"去年投保的客户（当前时间为2026-04-29）\\\" → {\\\"field\\\": \\\"policies_insure_date\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"2025-01-01 00:00:00\\\", \\\"max\\\": \\\"2025-12-31 23:59:59\\\"}}\\n\\n  示例: \\\"去年购买了保险的客户名单（当前时间为2026-04-29）\\\" → {\\\"field\\\": \\\"policies_insure_date\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"2025-01-01 00:00:00\\\", \\\"max\\\": \\\"2025-12-31 23:59:59\\\"}}\\n\\n  示例: \\\"最近一年买保险的人（当前时间为2026-04-29）\\\" → {\\\"field\\\": \\\"policies_insure_date\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"2025-04-29 00:00:00\\\", \\\"max\\\": \\\"2026-04-29 00:00:00\\\"}}\\n\\n  示例: \\\"最近半年投保了的客户（当前时间为2026-08-10）\\\" → {\\\"field\\\": \\\"policies_insure_date\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"2026-02-10 00:00:00\\\", \\\"max\\\": \\\"2026-08-10 00:00:00\\\"}}\\n\\n### 客户行为候选选择\\n任务：根据用户完整原句，从下列候选中选择最匹配的 candidate_id。\\n\\n选择规则：\\n1. 只能选择候选段中出现的 candidate_id，禁止生成候选外 ID，禁止直接输出 activity 或把客户行为写入 conditions。\\n2. “有没有、是否有、有无、有人……吗”是在查询行为是否发生，不是否定。只要原句在查找发生过行为的客户，就必须返回至少 1 个候选。\\n3. 只有原句明确表示行为未发生（如“从未、未曾、没做过、不曾”），或原句根本不是客户行为查询时，才返回空数组。\\n4. 不得因为缺少渠道、时长、产品名、文章名或其他可选槽位而返回空数组。\\n5. 按以下优先级比较候选：行为动作 > 行为对象 > 渠道/场景 > 状态/结果 > 行为主体/角色 > 时长与槽位。\\n6. 原句明确线索与候选冲突时不得选择，例如“转发”不能选“浏览”、“失败”不能选“成功”、明确渠道或角色不一致时不能选择。\\n7. 若 1 个候选能解释原句全部明确线索且明显优于其他候选，只返回该候选。\\n8. 若 2 至 3 个候选都能合理解释原句，且原句缺少区分线索，返回这些候选而不是空数组，按匹配程度从高到低排列。\\n9. 原句明确包含多个独立行为时，返回覆盖这些行为的候选，总数最多 5 个。\\n10. 召回顺序和 lexical_score、semantic_score 仅供参考，不得替代语义判断。\\n\\n- candidate_id=behavior_candidate_124 category=购买产品 template=购买产品“$productname$” semantic_template=购买产品“ 产品 ” lexical_score=0.225000\\n  description: 表示客户发生了“购买产品”行为。\\n  positive_examples: 找购买了产品的客户；查询买了产品的人\\n  negative_examples: 找购买成功的客户；找完成购买的客户\\n- candidate_id=behavior_candidate_116 category=在视频号直播间购买了咨询链接 template=在视频号直播间购买了咨询链接“$serviceName$\\\" semantic_template=在视频号直播间购买了咨询链接“ 服务 \\\" lexical_score=0.178333\\n  description: 表示客户发生了“在视频号直播间购买了咨询链接”行为。\\n  positive_examples: 找在视频号直播间购买了咨询链接的客户；查询在视频号直播间购买咨询链接的人\\n  negative_examples: 找没有购买咨询链接的客户；排除购买咨询链接的客户\\n- candidate_id=behavior_candidate_089 category=在金管家税务场景预约了解如何购买税优险 template=在金管家税优场景预约了解「如何购买税优险」 semantic_template=在金管家税优场景预约了解「如何购买税优险」 lexical_score=0.143333 semantic_score=0.571070\\n  description: 客户在金管家税务场景预约了解如何购买税优险；必须包含税务场景或购买税优险的明确线索。\\n  positive_examples: 找在金管家税务专区咨询如何购买税优险的客户；查询预约了解税优险购买方式的人\\n  negative_examples: 找从口袋E资讯预约税优服务的客户；查询预约税优政策和保险产品咨询的人\\n- candidate_id=behavior_candidate_099 category=在金管家预约了家庭财富保障方案讲解服务 template=在金管家预约了「家庭财富保障方案讲解」服务 semantic_template=在金管家预约了「家庭财富保障方案讲解」服务 semantic_score=0.594129\\n  description: 客户预约家庭财富保障方案讲解服务。\\n  selection_notes: 必须明确家庭财富保障方案讲解；泛化服务预约或明确通过金管家APP预约产品时不选本候选。\\n  positive_examples: 找在金管家预约了家庭财富保障方案讲解服务的客户；查询在金管家预约家庭财富保障方案讲解服务的人\\n  negative_examples: 找只说预约某项服务但没有家庭财富保障方案线索的客户；查询明确通过金管家APP预约了解产品的人\\n- candidate_id=behavior_candidate_004 category=点击我要投保 template=在金管家查看《$productName$》时点击了“我要投保” semantic_template=在金管家查看《 产品 》时点击了“我要投保” semantic_score=0.579027\\n  description: 表示客户发生了“点击我要投保”行为。\\n  positive_examples: 找点击我要投保的客户；查询点了我要投保的人\\n  negative_examples: 找点击立即投保但未完成的客户；找没有点击我要投保的客户\\n- candidate_id=behavior_candidate_140 category=在金管家使用了分类的服务保险产品为保单号投保单号 template=在金管家使用了「$serviceType$」分类的「$serviceName$」服务，保险产品为「$productName$」，保单号（投保单号）: $policyNo$ semantic_template=在金管家使用了「 服务 」分类的「 服务 」服务，保险产品为「 产品 」，保单号（投保单号）:  保单  semantic_score=0.574742\\n  description: 客户在金管家使用明确服务分类下的服务，或办理资料变更、保全等具有确定分类归属的新版保单服务。\\n  selection_notes: 必须明确出现服务分类，或明确资料变更、保全等分类型服务动作；只有具体服务名、产品名、保单号或泛化“使用保单服务”时选择 JGJ_POLICY_SERVICE_01，不要仅凭保单号选择本候选。\\n  positive_examples: 找在金管家办过客户资料变更服务的人；查询使用过保单关联服务的客户\\n  negative_examples: 找只开通保单管家但没有办理服务的客户；查询完成保单托管授权的人\\n- candidate_id=behavior_candidate_054 category=完成购买 template=完成购买《$productName$》 semantic_template=完成购买《 产品 》 lexical_score=0.225000\\n  description: 表示客户发生了“完成购买”行为。\\n  positive_examples: 找完成购买的客户；查询买完产品的人\\n  negative_examples: 找购买成功的客户；找完成支付的客户\\n- candidate_id=behavior_candidate_067 category=核保失败 template=购买产品“$productName$”时，核保失败 semantic_template=购买产品“ 产品 ”时，核保失败 semantic_score=0.573575\\n  description: 寿险或健康险产品购买流程中的核保失败、未通过或不成功。\\n  selection_notes: 原句明确车辆、车险或汽车核保时必须选择车辆核保结论候选，不选本候选。\\n  positive_examples: 找核保失败的客户；查询未通过核保的人\\n  negative_examples: 找车辆、车险或汽车核保未通过的客户；找寿险产品核保成功或通过的客户\\n- candidate_id=behavior_candidate_007 category=购买成功 template=购买产品“$productName$”时，购买成功 semantic_template=购买产品“ 产品 ”时，购买成功 lexical_score=0.225000\\n  description: 表示客户发生了“购买成功”行为。\\n  positive_examples: 找购买成功的客户；查询产品购买成功的人\\n  negative_examples: 完成支付；支付失败\\n- candidate_id=behavior_candidate_055 category=支付失败 template=购买产品“$productName$”时，支付失败 semantic_template=购买产品“ 产品 ”时，支付失败 lexical_score=0.152083\\n  description: 表示客户发生了“支付失败”行为。\\n  positive_examples: 找支付失败的客户；查询付款失败的人\\n  negative_examples: 点击支付；完成支付\\n\\n输出要求：在原有 query_logic、conditions 之外增加 behavior_candidate_ids 数组，只输出严格 JSON。\\n格式：{\\\"query_logic\\\":\\\"AND\\\",\\\"conditions\\\":[],\\\"behavior_candidate_ids\\\":[\\\"候选ID1\\\",\\\"候选ID2\\\"]}\\n\\n### 用户查询\\n不要买了年金险的客户\", \"cost_times\": 3807.0, \"confidence\": 0.8, \"intent_summary\": \"投保险种类别不包含年金的客户\", \"behavior_debug\": {\"has_negative_behavior\": false, \"deterministic_activities\": [], \"semantic_direct_hit\": false, \"semantic_direct_score\": null, \"llm_invoked\": true, \"candidates\": [{\"candidate_id\": \"behavior_candidate_124\", \"activity\": \"JGJ_Product_YJX_BUY_SUCCESS\", \"score\": 0.016393, \"lexical_score\": 0.225, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_116\", \"activity\": \"CHENGXING_LIVE_RESERVE\", \"score\": 0.016129, \"lexical_score\": 0.178333, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_089\", \"activity\": \"JGJ_SY_SCENE_PRODUCT_RESERVE\", \"score\": 0.031258, \"lexical_score\": 0.143333, \"semantic_score\": 0.57107, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_099\", \"activity\": \"JGJ_FORTUNE_SERVICE_RESERVE\", \"score\": 0.016393, \"lexical_score\": null, \"semantic_score\": 0.594129, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_004\", \"activity\": \"JGJ_Product_Insure\", \"score\": 0.016129, \"lexical_score\": null, \"semantic_score\": 0.579027, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_140\", \"activity\": \"JGJ_POLICY_SERVICE_2026\", \"score\": 0.015873, \"lexical_score\": null, \"semantic_score\": 0.574742, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_054\", \"activity\": \"JGJ_Product_Succeed\", \"score\": 0.015625, \"lexical_score\": 0.225, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_067\", \"activity\": \"ZEB_PRODUCT_UNDERWRITE_FAIL\", \"score\": 0.015625, \"lexical_score\": null, \"semantic_score\": 0.573575, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_007\", \"activity\": \"ZEB_PRODUCT_BUY\", \"score\": 0.015385, \"lexical_score\": 0.225, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_055\", \"activity\": \"ZEB_PRODUCT_PAY_FAIL\", \"score\": 0.015152, \"lexical_score\": 0.152083, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}], \"llm_selected_candidate_ids\": [], \"selection_source\": \"empty\", \"final_activities\": []}}, \"trace_id\": \"cs-excl\"}}",
+    "judge": {
+      "trace_id": "llm_probe:llm-probe-client_search-exclusion:1788105054813",
+      "project_id": "llm_probe",
+      "business_expectations": [
+        {
+          "expectation_id": "排除购买年金险的客户",
+          "blocking": true,
+          "downstream_consumer": "Elasticsearch 查询执行器",
+          "user_intent": "检索未购买年金险的客户群体",
+          "expected_outcome": "生成表示保单险种类别不包含年金的查询谓词",
+          "required_capabilities": [
+            "识别年金险对应的险种类别值年金",
+            "使用排除包含关系的操作符",
+            "输出正确的保单险种字段与组合逻辑"
+          ],
+          "acceptance_criteria": [
+            "字段为 polNoInfo.plancodeinfo.plantypedesc",
+            "操作符为 NOT_CONTAINS",
+            "值为包含年金的数组",
+            "查询逻辑为 AND，且不加入与用户未表达内容相关的额外条件"
+          ],
+          "boundary": {
+            "included": "没有年金险的客户，包括没有其他保单的客户",
+            "excluded": "购买过年金险的客户"
+          },
+          "priority": "核心",
+          "evidence_refs": []
+        }
+      ],
+      "fulfillment_assessments": [
+        {
+          "expectation_id": "排除购买年金险的客户",
+          "status": "fulfilled",
+          "score": 1.0,
+          "expected_evidence": [
+            {
+              "query_logic": "AND",
+              "conditions": [
+                {
+                  "field": "polNoInfo.plancodeinfo.plantypedesc",
+                  "operator": "NOT_CONTAINS",
+                  "value": [
+                    "年金"
+                  ]
+                }
+              ]
+            }
+          ],
+          "actual_evidence": [
+            {
+              "path": "data.extra_output_params.query_logic",
+              "value": "AND"
+            },
+            {
+              "path": "data.extra_output_params.conditions",
+              "value": [
+                {
+                  "field": "polNoInfo.plancodeinfo.plantypedesc",
+                  "operator": "NOT_CONTAINS",
+                  "value": [
+                    "年金"
+                  ],
+                  "match_mode": null
+                }
+              ]
+            }
+          ],
+          "downstream_impact": "查询执行后会排除保单险种类别中包含年金的客户，且未增加其他筛选条件，符合用户要求的人群范围。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        }
+      ],
+      "overall_fulfillment": {
+        "status": "fulfilled",
+        "blocking_expectations": [
+          "排除购买年金险的客户"
+        ]
+      },
+      "expected": {
+        "output_text": "{\"query_logic\":\"AND\",\"conditions\":[{\"field\":\"polNoInfo.plancodeinfo.plantypedesc\",\"operator\":\"NOT_CONTAINS\",\"value\":[\"年金\"]}]}"
+      },
+      "actual": {
+        "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"投保险种类别不包含年金的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"不要买了年金险的客户\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"polNoInfo.plancodeinfo.plantypedesc\", \"operator\": \"NOT_CONTAINS\", \"value\": [\"年金\"], \"match_mode\": null}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 4, \"rewritten_query\": \"不要买了年金险的客户\", \"matched_patterns\": \"### 当前时间\\n2026-08-30 23:50:52 (Asia/Shanghai)\\n### 今天星期\\n周日\\n\\n### 相关字段参考（根据查询内容动态召回）\\n\\n\\n- **polNoInfo.plancodeinfo.plantypedesc** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['年金', '两全险', '健康险', '寿险', '定期险'] | 定义: 表示客户保单险种类别中不包含某类险种，不表示没有任何保单\\n\\n  示例: \\\"没有年金险种的客户\\\" → {\\\"field\\\": \\\"polNoInfo.plancodeinfo.plantypedesc\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"年金\\\"]}\\n\\n  示例: \\\"没有健康险种的客户\\\" → {\\\"field\\\": \\\"polNoInfo.plancodeinfo.plantypedesc\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"健康险\\\"]}\\n\\n  示例: \\\"没买寿险的客户\\\" → {\\\"field\\\": \\\"polNoInfo.plancodeinfo.plantypedesc\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"寿险\\\"]}\\n\\n- **polNoInfo.plancodeinfo.plantypedesc** | 操作符: MATCH | 值类型: enum | 枚举: ['年金', '两全险', '健康险', '寿险', '定期险'] | 定义: 保单投保险种类别，明确指定单一险种类别时使用MATCH | 说明: 年金险/年金保险映射为年金。明确一个完整类别值时使用MATCH；只有原文明示多个候选时才使用CONTAINS。\\n\\n  示例: \\\"寿险的客户\\\" → {\\\"field\\\": \\\"polNoInfo.plancodeinfo.plantypedesc\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"寿险\\\"}\\n\\n  示例: \\\"购买过寿险的客户\\\" → {\\\"field\\\": \\\"polNoInfo.plancodeinfo.plantypedesc\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"寿险\\\"}\\n\\n- **isBuyInsurance** | 操作符: CONTAINS | 值类型: enum | 枚举: ['客户', '准客', '用户'] | 定义: 客户类型；客户/准客=买过保险，用户=没有买过保险 | 说明: 客户=已签约，准客=潜在客户已接触，用户=未购买；买过保险→客户或准客，没有买过保险→用户。重要：只有查询明确包含‘有保险/没有保险/没保险/买过保险/未投保/是否投保/全部客户/所有客户/全量客户’等保险状态关键词时才输出此字段。‘客户’作为普通名词后缀（如‘姓X的客户’‘XX岁的客户’‘购买过XX产品的客户’）不表示保险状态，严禁输出此字段\\n\\n  示例: \\\"全部客户\\\" → {\\\"field\\\": \\\"isBuyInsurance\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"客户\\\", \\\"准客\\\", \\\"用户\\\"]}\\n\\n  示例: \\\"有保险的客户\\\" → {\\\"field\\\": \\\"isBuyInsurance\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"客户\\\", \\\"准客\\\"]}\\n\\n  示例: \\\"没有保险的客户\\\" → {\\\"field\\\": \\\"isBuyInsurance\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"用户\\\"]}\\n\\n  反例: \\\"5月盘客客户\\\" → 不输出该字段；原因: “盘客”是业务动作，不表示买过保险或没买保险，不能映射到客户类型\\n\\n  反例: \\\"姓张的客户\\\" → 不输出该字段；原因: ‘客户’在这里只是普通名词后缀，查询意图是找姓张的人，不是在问保险购买状态\\n\\n  反例: \\\"购买过盛世金越的客户\\\" → 不输出该字段；原因: ‘客户’只是普通名词后缀，查询意图是限定产品而非保险类型；已通过产品字段限定时不额外输出客户类型\\n\\n  反例: \\\"45岁以上的客户\\\" → 不输出该字段；原因: ‘客户’只是普通名词后缀，查询意图是年龄筛选，不是在问保险购买状态\\n\\n- **isBuyPension** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否养老险客户\\n\\n  示例: \\\"有养老险的客户\\\" → {\\\"field\\\": \\\"isBuyPension\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"有购买\\\"}\\n\\n  示例: \\\"没有买养老险的客户\\\" → {\\\"field\\\": \\\"isBuyPension\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"没有购买\\\"}\\n\\n- **isBuyHealth** | 操作符: MATCH | 值类型: enum | 枚举: ['有购买', '没有购买'] | 定义: 是否健康险客户\\n\\n  示例: \\\"有健康险的客户\\\" → {\\\"field\\\": \\\"isBuyHealth\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"有购买\\\"}\\n\\n  示例: \\\"没有买健康险的客户\\\" → {\\\"field\\\": \\\"isBuyHealth\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"没有购买\\\"}\\n\\n- **pCategorys** | 操作符: NOT_CONTAINS | 值类型: enum | 枚举: ['意外伤害保险', '医疗保险', '护理保险', '疾病保险', '定期寿险', '终身寿险'] | 定义: 表示客户未持有某个险种大类，不表示未持有具体产品名称，也不表示字段为空。 | 说明: 只召回明确的未购买、不包含或医疗意向缺口表达。车险但没有购买意外险等查询中，未购买意外险应映射为 pCategorys NOT_CONTAINS 意外伤害保险；车险本身不是该字段。医疗意向表示医疗保险缺口，不是六条权益服务线的会员状态。\\n\\n  示例: \\\"没有买意外险的客户\\\" → {\\\"field\\\": \\\"pCategorys\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"意外伤害保险\\\"]}\\n\\n  示例: \\\"买了车险，但没有购买意外险的客户\\\" → {\\\"field\\\": \\\"pCategorys\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"意外伤害保险\\\"]}\\n\\n  示例: \\\"有意向医疗客户\\\" → {\\\"field\\\": \\\"pCategorys\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"医疗保险\\\"]}\\n\\n  示例: \\\"没买终身寿险的客户\\\" → {\\\"field\\\": \\\"pCategorys\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"终身寿险\\\"]}\\n\\n  示例: \\\"没有定期寿险的客户\\\" → {\\\"field\\\": \\\"pCategorys\\\", \\\"operator\\\": \\\"NOT_CONTAINS\\\", \\\"value\\\": [\\\"定期寿险\\\"]}\\n\\n- **ayyMemberGradeInfo.ayymemberproductname** | 操作符: MATCH | 值类型: enum | 枚举: ['安有医'] | 定义: 安有医会员服务线名称，不表示其他服务线 | 说明: 枚举值「安有医」；有该服务线即表示客户开通了安有医会员服务\\n\\n  示例: \\\"服务线为安有医的客户\\\" → {\\\"field\\\": \\\"ayyMemberGradeInfo.ayymemberproductname\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"安有医\\\"}\\n\\n  反例: \\\"安有医达标的客户\\\" → 不输出该字段；原因: 达标是会员状态(status)，不是服务线\\n\\n- **ayhMemberGradeInfo.ayhmemberproductname** | 操作符: MATCH | 值类型: enum | 枚举: ['安有护'] | 定义: 安有护会员服务线名称，不表示其他服务线 | 说明: 枚举值「安有护」；有该服务线即表示客户开通了安有护会员服务\\n\\n  示例: \\\"服务线为安有护的客户\\\" → {\\\"field\\\": \\\"ayhMemberGradeInfo.ayhmemberproductname\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"安有护\\\"}\\n\\n  反例: \\\"安有护达标的客户\\\" → 不输出该字段；原因: 达标是会员状态(status)，不是服务线\\n\\n- **yxgyMemberGradeInfo.yxgymemberproductname** | 操作符: MATCH | 值类型: enum | 枚举: ['御享国医'] | 定义: 御享国医会员服务线名称，不表示其他服务线 | 说明: 枚举值「御享国医」；有该服务线即表示客户开通了御享国医会员服务\\n\\n  示例: \\\"服务线名为御享国医的客户\\\" → {\\\"field\\\": \\\"yxgyMemberGradeInfo.yxgymemberproductname\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"御享国医\\\"}\\n\\n  反例: \\\"御享国医达标的客户\\\" → 不输出该字段；原因: 达标是会员状态(status)，不是服务线\\n\\n- **policies_insure_date** | 操作符: RANGE | 值类型: date | 格式: yyyy-MM-dd HH:mm:ss | 定义: 保单投保日期，嵌套字段；‘去年购买/买了/买过/投保某险种’中的‘去年’也是投保日期条件。该字段当前不支持搜索，但必须解析以便给出不支持提示 | 说明: 投保日期与承保日期、生效日期不同，任何‘时间范围+投保/买保险/购买保险’都必须识别为本不支持字段，不能改写为 latelyUndwrtSegTime 或 polNoInfo.poleffdate。若原文同时表达已经投保/买过保险，购买状态可另外输出 isBuyInsurance，时间条件仍由本字段产生不支持提示。‘最近一年买保险、最近半年投保’之所以表示过去，是因为投保/买过是已经发生的事件；该方向规则只属于投保日期，不得用于‘积分即将过期、保单将要到期、证件快要失效’等未来事件。本月取当月1日至月末；下月取下月1日至月末；下周取下周一至周天；未来一周取今天至往后顺延6天；未来一个月取今天至往后延顺29天。\\n\\n  示例: \\\"今年投保的客户（当前时间为2026-04-29）\\\" → {\\\"field\\\": \\\"policies_insure_date\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"2026-01-01 00:00:00\\\", \\\"max\\\": \\\"2026-12-31 23:59:59\\\"}}\\n\\n  示例: \\\"今年买过保险的客户（当前时间为2026-08-12）\\\" → {\\\"field\\\": \\\"policies_insure_date\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"2026-01-01 00:00:00\\\", \\\"max\\\": \\\"2026-12-31 23:59:59\\\"}}\\n\\n  示例: \\\"去年投保的客户（当前时间为2026-04-29）\\\" → {\\\"field\\\": \\\"policies_insure_date\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"2025-01-01 00:00:00\\\", \\\"max\\\": \\\"2025-12-31 23:59:59\\\"}}\\n\\n  示例: \\\"去年购买了保险的客户名单（当前时间为2026-04-29）\\\" → {\\\"field\\\": \\\"policies_insure_date\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"2025-01-01 00:00:00\\\", \\\"max\\\": \\\"2025-12-31 23:59:59\\\"}}\\n\\n  示例: \\\"最近一年买保险的人（当前时间为2026-04-29）\\\" → {\\\"field\\\": \\\"policies_insure_date\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"2025-04-29 00:00:00\\\", \\\"max\\\": \\\"2026-04-29 00:00:00\\\"}}\\n\\n  示例: \\\"最近半年投保了的客户（当前时间为2026-08-10）\\\" → {\\\"field\\\": \\\"policies_insure_date\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"2026-02-10 00:00:00\\\", \\\"max\\\": \\\"2026-08-10 00:00:00\\\"}}\\n\\n### 客户行为候选选择\\n任务：根据用户完整原句，从下列候选中选择最匹配的 candidate_id。\\n\\n选择规则：\\n1. 只能选择候选段中出现的 candidate_id，禁止生成候选外 ID，禁止直接输出 activity 或把客户行为写入 conditions。\\n2. “有没有、是否有、有无、有人……吗”是在查询行为是否发生，不是否定。只要原句在查找发生过行为的客户，就必须返回至少 1 个候选。\\n3. 只有原句明确表示行为未发生（如“从未、未曾、没做过、不曾”），或原句根本不是客户行为查询时，才返回空数组。\\n4. 不得因为缺少渠道、时长、产品名、文章名或其他可选槽位而返回空数组。\\n5. 按以下优先级比较候选：行为动作 > 行为对象 > 渠道/场景 > 状态/结果 > 行为主体/角色 > 时长与槽位。\\n6. 原句明确线索与候选冲突时不得选择，例如“转发”不能选“浏览”、“失败”不能选“成功”、明确渠道或角色不一致时不能选择。\\n7. 若 1 个候选能解释原句全部明确线索且明显优于其他候选，只返回该候选。\\n8. 若 2 至 3 个候选都能合理解释原句，且原句缺少区分线索，返回这些候选而不是空数组，按匹配程度从高到低排列。\\n9. 原句明确包含多个独立行为时，返回覆盖这些行为的候选，总数最多 5 个。\\n10. 召回顺序和 lexical_score、semantic_score 仅供参考，不得替代语义判断。\\n\\n- candidate_id=behavior_candidate_124 category=购买产品 template=购买产品“$productname$” semantic_template=购买产品“ 产品 ” lexical_score=0.225000\\n  description: 表示客户发生了“购买产品”行为。\\n  positive_examples: 找购买了产品的客户；查询买了产品的人\\n  negative_examples: 找购买成功的客户；找完成购买的客户\\n- candidate_id=behavior_candidate_116 category=在视频号直播间购买了咨询链接 template=在视频号直播间购买了咨询链接“$serviceName$\\\" semantic_template=在视频号直播间购买了咨询链接“ 服务 \\\" lexical_score=0.178333\\n  description: 表示客户发生了“在视频号直播间购买了咨询链接”行为。\\n  positive_examples: 找在视频号直播间购买了咨询链接的客户；查询在视频号直播间购买咨询链接的人\\n  negative_examples: 找没有购买咨询链接的客户；排除购买咨询链接的客户\\n- candidate_id=behavior_candidate_089 category=在金管家税务场景预约了解如何购买税优险 template=在金管家税优场景预约了解「如何购买税优险」 semantic_template=在金管家税优场景预约了解「如何购买税优险」 lexical_score=0.143333 semantic_score=0.571070\\n  description: 客户在金管家税务场景预约了解如何购买税优险；必须包含税务场景或购买税优险的明确线索。\\n  positive_examples: 找在金管家税务专区咨询如何购买税优险的客户；查询预约了解税优险购买方式的人\\n  negative_examples: 找从口袋E资讯预约税优服务的客户；查询预约税优政策和保险产品咨询的人\\n- candidate_id=behavior_candidate_099 category=在金管家预约了家庭财富保障方案讲解服务 template=在金管家预约了「家庭财富保障方案讲解」服务 semantic_template=在金管家预约了「家庭财富保障方案讲解」服务 semantic_score=0.594129\\n  description: 客户预约家庭财富保障方案讲解服务。\\n  selection_notes: 必须明确家庭财富保障方案讲解；泛化服务预约或明确通过金管家APP预约产品时不选本候选。\\n  positive_examples: 找在金管家预约了家庭财富保障方案讲解服务的客户；查询在金管家预约家庭财富保障方案讲解服务的人\\n  negative_examples: 找只说预约某项服务但没有家庭财富保障方案线索的客户；查询明确通过金管家APP预约了解产品的人\\n- candidate_id=behavior_candidate_004 category=点击我要投保 template=在金管家查看《$productName$》时点击了“我要投保” semantic_template=在金管家查看《 产品 》时点击了“我要投保” semantic_score=0.579027\\n  description: 表示客户发生了“点击我要投保”行为。\\n  positive_examples: 找点击我要投保的客户；查询点了我要投保的人\\n  negative_examples: 找点击立即投保但未完成的客户；找没有点击我要投保的客户\\n- candidate_id=behavior_candidate_140 category=在金管家使用了分类的服务保险产品为保单号投保单号 template=在金管家使用了「$serviceType$」分类的「$serviceName$」服务，保险产品为「$productName$」，保单号（投保单号）: $policyNo$ semantic_template=在金管家使用了「 服务 」分类的「 服务 」服务，保险产品为「 产品 」，保单号（投保单号）:  保单  semantic_score=0.574742\\n  description: 客户在金管家使用明确服务分类下的服务，或办理资料变更、保全等具有确定分类归属的新版保单服务。\\n  selection_notes: 必须明确出现服务分类，或明确资料变更、保全等分类型服务动作；只有具体服务名、产品名、保单号或泛化“使用保单服务”时选择 JGJ_POLICY_SERVICE_01，不要仅凭保单号选择本候选。\\n  positive_examples: 找在金管家办过客户资料变更服务的人；查询使用过保单关联服务的客户\\n  negative_examples: 找只开通保单管家但没有办理服务的客户；查询完成保单托管授权的人\\n- candidate_id=behavior_candidate_054 category=完成购买 template=完成购买《$productName$》 semantic_template=完成购买《 产品 》 lexical_score=0.225000\\n  description: 表示客户发生了“完成购买”行为。\\n  positive_examples: 找完成购买的客户；查询买完产品的人\\n  negative_examples: 找购买成功的客户；找完成支付的客户\\n- candidate_id=behavior_candidate_067 category=核保失败 template=购买产品“$productName$”时，核保失败 semantic_template=购买产品“ 产品 ”时，核保失败 semantic_score=0.573575\\n  description: 寿险或健康险产品购买流程中的核保失败、未通过或不成功。\\n  selection_notes: 原句明确车辆、车险或汽车核保时必须选择车辆核保结论候选，不选本候选。\\n  positive_examples: 找核保失败的客户；查询未通过核保的人\\n  negative_examples: 找车辆、车险或汽车核保未通过的客户；找寿险产品核保成功或通过的客户\\n- candidate_id=behavior_candidate_007 category=购买成功 template=购买产品“$productName$”时，购买成功 semantic_template=购买产品“ 产品 ”时，购买成功 lexical_score=0.225000\\n  description: 表示客户发生了“购买成功”行为。\\n  positive_examples: 找购买成功的客户；查询产品购买成功的人\\n  negative_examples: 完成支付；支付失败\\n- candidate_id=behavior_candidate_055 category=支付失败 template=购买产品“$productName$”时，支付失败 semantic_template=购买产品“ 产品 ”时，支付失败 lexical_score=0.152083\\n  description: 表示客户发生了“支付失败”行为。\\n  positive_examples: 找支付失败的客户；查询付款失败的人\\n  negative_examples: 点击支付；完成支付\\n\\n输出要求：在原有 query_logic、conditions 之外增加 behavior_candidate_ids 数组，只输出严格 JSON。\\n格式：{\\\"query_logic\\\":\\\"AND\\\",\\\"conditions\\\":[],\\\"behavior_candidate_ids\\\":[\\\"候选ID1\\\",\\\"候选ID2\\\"]}\\n\\n### 用户查询\\n不要买了年金险的客户\", \"cost_times\": 3807.0, \"confidence\": 0.8, \"intent_summary\": \"投保险种类别不包含年金的客户\", \"behavior_debug\": {\"has_negative_behavior\": false, \"deterministic_activities\": [], \"semantic_direct_hit\": false, \"semantic_direct_score\": null, \"llm_invoked\": true, \"candidates\": [{\"candidate_id\": \"behavior_candidate_124\", \"activity\": \"JGJ_Product_YJX_BUY_SUCCESS\", \"score\": 0.016393, \"lexical_score\": 0.225, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_116\", \"activity\": \"CHENGXING_LIVE_RESERVE\", \"score\": 0.016129, \"lexical_score\": 0.178333, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_089\", \"activity\": \"JGJ_SY_SCENE_PRODUCT_RESERVE\", \"score\": 0.031258, \"lexical_score\": 0.143333, \"semantic_score\": 0.57107, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_099\", \"activity\": \"JGJ_FORTUNE_SERVICE_RESERVE\", \"score\": 0.016393, \"lexical_score\": null, \"semantic_score\": 0.594129, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_004\", \"activity\": \"JGJ_Product_Insure\", \"score\": 0.016129, \"lexical_score\": null, \"semantic_score\": 0.579027, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_140\", \"activity\": \"JGJ_POLICY_SERVICE_2026\", \"score\": 0.015873, \"lexical_score\": null, \"semantic_score\": 0.574742, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_054\", \"activity\": \"JGJ_Product_Succeed\", \"score\": 0.015625, \"lexical_score\": 0.225, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_067\", \"activity\": \"ZEB_PRODUCT_UNDERWRITE_FAIL\", \"score\": 0.015625, \"lexical_score\": null, \"semantic_score\": 0.573575, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_007\", \"activity\": \"ZEB_PRODUCT_BUY\", \"score\": 0.015385, \"lexical_score\": 0.225, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_055\", \"activity\": \"ZEB_PRODUCT_PAY_FAIL\", \"score\": 0.015152, \"lexical_score\": 0.152083, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}], \"llm_selected_candidate_ids\": [], \"selection_source\": \"empty\", \"final_activities\": []}}, \"trace_id\": \"cs-excl\"}}"
+      },
+      "missing": [],
+      "wrong": [],
+      "extra": [],
+      "evidence": [
+        {
+          "source": "output_text_parsed.data.extra_output_params",
+          "items": [
+            "query_logic",
+            "conditions"
+          ]
+        }
+      ],
+      "reasoning_summary": "用户要求排除买了年金险的客户。实际输出使用 polNoInfo.plancodeinfo.plantypedesc 的 NOT_CONTAINS 操作符，值为年金，且组合逻辑为 AND；该谓词准确表达险种类别不包含年金，也没有编造或遗漏其他筛选条件。",
+      "summary": {
+        "reason": "fulfilled · 1 blocking expectations all met · 用户要求排除买了年金险的客户。实际输出使用 polNoInfo.plancodeinfo.plantypedesc 的 NOT_CONTAINS 操作符，值为年金，且组合逻辑为 AND；该谓词准确表达险种类别不包含年金，也没有编造或遗漏其他筛选条件。",
+        "primary_failure_dimensions": [],
+        "reason_source": "aggregated_fulfillment",
+        "fulfillment_status": "fulfilled",
+        "assessment_count": 1,
+        "blocking_count": 1,
+        "is_formal_attribution": true
+      }
+    },
+    "capability_carrier": {
+      "applicable": false,
+      "axis1_status": "fulfilled",
+      "placements": [],
+      "errors": [],
+      "snapshot_id": "27c03ec01b3b334b"
+    },
+    "elapsed_s": 52.8
+  },
+  {
+    "case_id": "llm-probe-client_search-multi",
+    "capability_ref": "client_search",
+    "input": {
+      "user_text": "我想找年龄超过45岁的女客户，而且她们每年交的保费要在一万块以上",
+      "user_id": "mock_user_001",
+      "trace_id": "cs-multi",
+      "session_id": "cs-multi",
+      "source": "llm_probe_accuracy",
+      "extra_input_params": {}
+    },
+    "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"客户年龄≥46\\n并且客户性别为女\\n并且年缴保费>10000的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"我想找年龄超过45岁的女客户，而且她们每年交的保费要在一万块以上\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"clientAge\", \"operator\": \"GTE\", \"value\": 46, \"match_mode\": null}, {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\", \"match_mode\": null}, {\"field\": \"annPremSegNum\", \"operator\": \"GT\", \"value\": 10000, \"match_mode\": null}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 4, \"rewritten_query\": \"我想找年龄超过45岁的女客户,而且她们每年交的保费要在一万块以上\", \"matched_patterns\": \"### 当前时间\\n2026-08-30 23:51:46 (Asia/Shanghai)\\n### 今天星期\\n周日\\n\\n### 相关字段参考（根据查询内容动态召回）\\n\\n\\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\\n\\n  示例: \\\"男性客户\\\" → {\\\"field\\\": \\\"clientSex\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"男\\\"}\\n\\n  示例: \\\"女客户\\\" → {\\\"field\\\": \\\"clientSex\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"女\\\"}\\n\\n  反例: \\\"子女是男性的客户\\\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\\n\\n- **clientAge** | 操作符: GTE | 值类型: numeric | 单位: 岁，直接取数字，无需换算 | 定义: 表示客户本人年龄，不表示家庭成员年龄 | 说明: 此字段仅支持GTE操作符。边界词必须按原文区分：‘N岁以上/及以上’包含N，始终输出GTE N，不能加1；只有‘大于/超过/高于N岁’不包含N，才转换为GTE N+1。该规则在年龄与VIP、保单、投保时间等其他条件组合时仍不改变。\\n\\n  示例: \\\"45岁以上的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 45}\\n\\n  示例: \\\"45岁及以上的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 45}\\n\\n  示例: \\\"大于60岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 61}\\n\\n  示例: \\\"年龄超过50岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 51}\\n\\n  示例: \\\"我附近5公里内且客户年龄大于50岁\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 51}\\n\\n  示例: \\\"60或50岁及以上的客户\\\" → \\n\\n  反例: \\\"子女10岁及以上的客户\\\" → 不输出该字段；原因: 这是家庭成员年龄，应映射到 familyInfo.familyclientage 并组合 familyInfo.familyrelation\\n\\n- **clientAge** | 操作符: RANGE | 值类型: numeric | 单位: 岁，直接取数字 | 定义: 表示客户本人的精确年龄、近似年龄、年龄区间或语义年龄段，不表示家庭成员年龄 | 说明: 统一处理精确年龄、近似年龄、明确起止区间和语义年龄段。原文年龄片段只有‘N岁’且该数字后没有以上、以下、大于、小于、左右、约、大概或起止区间时，输出RANGE {min:N,max:N}；数字相邻位置明示‘左右/上下/大约/约/大概’时，输出RANGE {min:N-5,max:N+5}，不得改成上下2岁或十年年龄段。其他字段片段中的比较词不得作用于年龄。青年=18~35，中年=36~55，老年=56~100，未成年=0~17；‘N0多岁’表示N0~N9，例如30多岁→30~39。以上、以下、大于、小于等边界表达仍由对应的GTE/LTE知识处理。\\n\\n  示例: \\\"30到40岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 30, \\\"max\\\": 40}}\\n\\n  示例: \\\"中年客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 36, \\\"max\\\": 55}}\\n\\n  示例: \\\"30多岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 30, \\\"max\\\": 39}}\\n\\n  示例: \\\"40岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 40, \\\"max\\\": 40}}\\n\\n  示例: \\\"45岁左右的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 40, \\\"max\\\": 50}}\\n\\n  示例: \\\"大约50岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 45, \\\"max\\\": 55}}\\n\\n  反例: \\\"配偶30到40岁的客户\\\" → 不输出该字段；原因: 这是家庭成员年龄范围，应映射到 familyInfo.familyclientage 并组合 familyInfo.familyrelation\\n\\n- **familyInfo.familyclientsex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示家庭成员性别，不表示客户本人性别；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件\\n\\n  示例: \\\"有儿子的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientsex\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"男\\\"}]}\\n\\n  示例: \\\"有女儿的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientsex\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"女\\\"}]}\\n\\n  反例: \\\"男性客户\\\" → 不输出该字段；原因: 这是客户本人性别，应映射到 clientSex，不是 familyInfo.familyclientsex\\n\\n  反例: \\\"女性客户\\\" → 不输出该字段；原因: 这是客户本人性别，应映射到 clientSex，不是 familyInfo.familyclientsex\\n\\n- **familyInfo.familyclientage** | 操作符: GT | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄（大于），不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday）；出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件\\n\\n  示例: \\\"孩子10岁以上（不含10岁）的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GT\\\", \\\"value\\\": 10}]}\\n\\n- **familyInfo.familyclientage** | 操作符: RANGE | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄，不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday），语义年龄：未成年0-17，青年18-35；出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件。‘未成年子女/未成年孩子’是不可拆分的复合语义，必须同时输出familyInfo.familyrelation=子女与familyInfo.familyclientage RANGE 0~17，禁止只输出子女关系。即使同句还有客户价值、温度、险种、保单等多个条件，也不得遗漏家庭成员年龄。\\n\\n  示例: \\\"子女5到10岁的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 5, \\\"max\\\": 10}}]}\\n\\n  示例: \\\"子女未成年的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 0, \\\"max\\\": 17}}]}\\n\\n  示例: \\\"家里有70岁老人\\\" → {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 70, \\\"max\\\": 70}}\\n\\n  反例: \\\"45岁以上的客户\\\" → 不输出该字段；原因: 这是客户本人年龄，应映射到 clientAge，不是 familyInfo.familyclientage\\n\\n- **familyInfo.familyclientage** | 操作符: LTE | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄（小于等于），不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday）；出现子女/父母/配偶等关系词时应同时输出 familyInfo.familyrelation 条件\\n\\n  示例: \\\"孩子10岁及以下的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"LTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"孩子10岁以下的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"LTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"父母60岁及以下的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"父母\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"LTE\\\", \\\"value\\\": 60}]}\\n\\n  示例: \\\"配偶年龄不超过40岁的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"配偶\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"LTE\\\", \\\"value\\\": 40}]}\\n\\n  反例: \\\"45岁以下的客户\\\" → 不输出该字段；原因: 这是客户本人年龄，应映射到 clientAge，不是 familyInfo.familyclientage\\n\\n- **familyInfo.familyclientage** | 操作符: GTE | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄（大于等于），不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday）；出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件\\n\\n  示例: \\\"孩子10岁及以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"孩子10岁以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"父母70岁及以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"父母\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 70}]}\\n\\n  示例: \\\"家里有孩子10岁及以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"有老人的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 55}]}\\n\\n  反例: \\\"45岁及以上的客户\\\" → 不输出该字段；原因: 这是客户本人年龄，应映射到 clientAge，不是 familyInfo.familyclientage\\n\\n- **annPremSegNum** | 操作符: RANGE | 值类型: numeric | 单位: 元，万=×10000，千=×1000 | 定义: 表示年缴保费区间，或精确值（不带'以上'/'以下'等范围词时）\\n\\n  示例: \\\"年缴保费1万到5万的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 10000, \\\"max\\\": 50000}}\\n\\n  示例: \\\"年交保费2万的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 20000, \\\"max\\\": 20000}}\\n\\n  示例: \\\"年交保费5千的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 5000, \\\"max\\\": 5000}}\\n\\n  示例: \\\"年缴保费20000的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 20000, \\\"max\\\": 20000}}\\n\\n  示例: \\\"年交5万的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 50000, \\\"max\\\": 50000}}\\n\\n- **annPremSegNum** | 操作符: LTE | 值类型: numeric | 单位: 元，万=×10000，千=×1000，若为明确是万还是千单位，则默认是元 | 定义: 表示年缴保费上限（小于等于），不表示总保费上限、产品总保额上限 | 说明: 仅‘及以下/不超过/不高于/小于等于’使用LTE；‘以下/低于/小于/不足’不包含边界，使用LT。\\n\\n  示例: \\\"年缴保费不超过1万的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"LTE\\\", \\\"value\\\": 10000}\\n\\n  示例: \\\"年缴保费1万及以下的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"LTE\\\", \\\"value\\\": 10000}\\n\\n  反例: \\\"总保费不超过50万的客户\\\" → 不输出该字段；原因: 这是总保费语义，不是年缴保费；当前不能映射到 annPremSegNum\\n\\n- **polNoInfo.totmodalpremsum** | 操作符: GT | 值类型: numeric | 单位: 元，万=×10000，千=×1000，如果没有明确单位，则默认是元，不用做运算 | 定义: 期交保费金额，＞ 严格超过；区别于年交保费\\n\\n  示例: \\\"期交保费大于1万的客户\\\" → {\\\"field\\\": \\\"polNoInfo.totmodalpremsum\\\", \\\"operator\\\": \\\"GT\\\", \\\"value\\\": 10000}\\n\\n- **annPremSegNum** | 操作符: GT | 值类型: numeric | 单位: 元，万=×10000，千=×1000，若为明确是万还是千单位，则默认是元 | 定义: 表示年缴保费金额（大于），不表示总保费、产品总保额 | 说明: 仅包含大于关系，不包含等于。‘超过/大于/高于’必须使用GT；不得因为其他年缴保费知识中出现GTE就改成GTE。\\n\\n  示例: \\\"年缴保费1万以上（不含1万）的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"GT\\\", \\\"value\\\": 10000}\\n\\n  示例: \\\"保费超过5万的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"GT\\\", \\\"value\\\": 50000}\\n\\n  反例: \\\"总保费为50万的客户\\\" → 不输出该字段；原因: 这是总保费语义，不是年缴保费；当前不能映射到 annPremSegNum\\n\\n  反例: \\\"上个月刚缴完费的客户\\\" → 不输出该字段；原因: 这是应缴日/缴费日完成语义，应映射到 polNoInfo.paytodate，不是年缴保费金额\\n\\n### 客户行为候选选择\\n任务：根据用户完整原句，从下列候选中选择最匹配的 candidate_id。\\n\\n选择规则：\\n1. 只能选择候选段中出现的 candidate_id，禁止生成候选外 ID，禁止直接输出 activity 或把客户行为写入 conditions。\\n2. “有没有、是否有、有无、有人……吗”是在查询行为是否发生，不是否定。只要原句在查找发生过行为的客户，就必须返回至少 1 个候选。\\n3. 只有原句明确表示行为未发生（如“从未、未曾、没做过、不曾”），或原句根本不是客户行为查询时，才返回空数组。\\n4. 不得因为缺少渠道、时长、产品名、文章名或其他可选槽位而返回空数组。\\n5. 按以下优先级比较候选：行为动作 > 行为对象 > 渠道/场景 > 状态/结果 > 行为主体/角色 > 时长与槽位。\\n6. 原句明确线索与候选冲突时不得选择，例如“转发”不能选“浏览”、“失败”不能选“成功”、明确渠道或角色不一致时不能选择。\\n7. 若 1 个候选能解释原句全部明确线索且明显优于其他候选，只返回该候选。\\n8. 若 2 至 3 个候选都能合理解释原句，且原句缺少区分线索，返回这些候选而不是空数组，按匹配程度从高到低排列。\\n9. 原句明确包含多个独立行为时，返回覆盖这些行为的候选，总数最多 5 个。\\n10. 召回顺序和 lexical_score、semantic_score 仅供参考，不得替代语义判断。\\n\\n- candidate_id=behavior_candidate_080 category=在微信阅读了建议书时长秒 template=在微信阅读了建议书“$productName$”，时长$time$秒 semantic_template=在微信阅读了建议书“ 产品 ”，时长 时长 秒 lexical_score=0.052923\\n  description: 表示客户发生了“在微信阅读了建议书时长秒”行为。\\n  positive_examples: 找在微信阅读建议书超过一分钟的客户；查询在微信阅读了建议书时长秒的人\\n  negative_examples: 找没有阅读建议书的客户；排除阅读建议书的客户\\n- candidate_id=behavior_candidate_008 category=查看了展业工具时长秒 template=查看了展业工具“$toolName$”，时长$time$秒 semantic_template=查看了展业工具“ 活动 ”，时长 时长 秒 lexical_score=0.057818\\n  description: 表示客户发生了“查看了展业工具时长秒”行为。\\n  positive_examples: 找查看展业工具超过一分钟的客户；查询查看了展业工具时长秒的人\\n  negative_examples: 找没有查看展业工具的客户；排除查看展业工具的客户\\n- candidate_id=behavior_candidate_150 category=浏览了展业短视频时长秒 template=浏览了展业短视频“$videoName$”，时长$time$秒 semantic_template=浏览了展业短视频“ 活动 ”，时长 时长 秒 lexical_score=0.055167\\n  description: 表示客户发生了“浏览了展业短视频时长秒”行为。\\n  positive_examples: 找浏览展业短视频超过一分钟的客户；查询浏览了展业短视频时长秒的人\\n  negative_examples: 找没有浏览展业短视频的客户；排除浏览展业短视频的客户\\n- candidate_id=behavior_candidate_004 category=点击我要投保 template=在金管家查看《$productName$》时点击了“我要投保” semantic_template=在金管家查看《 产品 》时点击了“我要投保” semantic_score=0.553770\\n  description: 表示客户发生了“点击我要投保”行为。\\n  positive_examples: 找点击我要投保的客户；查询点了我要投保的人\\n  negative_examples: 找点击立即投保但未完成的客户；找没有点击我要投保的客户\\n- candidate_id=behavior_candidate_009 category=查看了个人名片精英版时长秒 template=查看了个人名片(精英版)，时长$time$秒 semantic_template=查看了个人名片(精英版)，时长 时长 秒 lexical_score=0.051000\\n  description: 表示客户发生了“查看了个人名片精英版时长秒”行为。\\n  positive_examples: 找查看个人名片精英版超过一分钟的客户；查询查看了个人名片精英版时长秒的人\\n  negative_examples: 找没有查看个人名片精英版的客户；排除查看个人名片精英版的客户\\n- candidate_id=behavior_candidate_044 category=浏览了展业短视频时长秒 template=浏览了展业短视频“$videoName$”，时长$time$秒 semantic_template=浏览了展业短视频“ 活动 ”，时长 时长 秒 lexical_score=0.055167\\n  description: 表示客户发生了“浏览了展业短视频时长秒”行为。\\n  positive_examples: 找浏览展业短视频超过一分钟的客户；查询浏览了展业短视频时长秒的人\\n  negative_examples: 找没有浏览展业短视频的客户；排除浏览展业短视频的客户\\n- candidate_id=behavior_candidate_015 category=查看了个人名片标准版时长秒 template=查看了个人名片(标准版)，时长$time$秒 semantic_template=查看了个人名片(标准版)，时长 时长 秒 lexical_score=0.051000\\n  description: 表示客户发生了“查看了个人名片标准版时长秒”行为。\\n  positive_examples: 找查看个人名片标准版超过一分钟的客户；查询查看了个人名片标准版时长秒的人\\n  negative_examples: 找没有查看个人名片标准版的客户；排除查看个人名片标准版的客户\\n- candidate_id=behavior_candidate_039 category=浏览了车险报价单时长秒 template=浏览了车险报价单“$productName$”，时长$time$秒 semantic_template=浏览了车险报价单“ 产品 ”，时长 时长 秒 lexical_score=0.055167\\n  description: 表示客户发生了“浏览了车险报价单时长秒”行为。\\n  positive_examples: 找浏览车险报价单超过一分钟的客户；查询浏览了车险报价单时长秒的人\\n  negative_examples: 找没有浏览车险报价单的客户；排除浏览车险报价单的客户\\n- candidate_id=behavior_candidate_029 category=阅读了资讯阅读时长秒 template=阅读了资讯《$articleName$》，阅读时长$time$秒 semantic_template=阅读了资讯《 文章 》，阅读时长 时长 秒 lexical_score=0.064889\\n  description: 客户阅读普通单篇资讯或文章，事件包含文章名称和阅读时长。\\n  selection_notes: 未明确文章业务分类时优先选择；明确保险基础、名医出诊等 typeName 分类时选择分类文章阅读候选。\\n  positive_examples: 找阅读某篇普通资讯超过一分钟的客户；查询阅读具名文章并记录阅读时长的人\\n  negative_examples: 找明确阅读保险基础、名医出诊等分类文章的客户；查询资讯专题或产品页面的查看时长\\n- candidate_id=behavior_candidate_025 category=查看了资讯专题时长秒 template=查看了资讯专题《$topicName$》，时长$time$秒 semantic_template=查看了资讯专题《 专题 》，时长 时长 秒 lexical_score=0.057818\\n  description: 客户查看资讯专题，事件记录包含秒、分钟或停留时长信息。\\n  positive_examples: 找查看资讯专题超过一分钟的客户；查询在某个资讯专题停留过一段时间的人\\n  negative_examples: 找只转发资讯专题但没有查看的客户；查询阅读单篇资讯文章时长的人\\n\\n输出要求：在原有 query_logic、conditions 之外增加 behavior_candidate_ids 数组，只输出严格 JSON。\\n格式：{\\\"query_logic\\\":\\\"AND\\\",\\\"conditions\\\":[],\\\"behavior_candidate_ids\\\":[\\\"候选ID1\\\",\\\"候选ID2\\\"]}\\n\\n### 用户查询\\n我想找年龄超过45岁的女客户,而且她们每年交的保费要在一万块以上\", \"cost_times\": 8657.0, \"confidence\": 0.8, \"intent_summary\": \"客户年龄≥46\\n并且客户性别为女\\n并且年缴保费>10000的客户\", \"behavior_debug\": {\"has_negative_behavior\": false, \"deterministic_activities\": [], \"semantic_direct_hit\": false, \"semantic_direct_score\": null, \"llm_invoked\": true, \"candidates\": [{\"candidate_id\": \"behavior_candidate_080\", \"activity\": \"MIT_PROPOSAL_READEND\", \"score\": 0.016393, \"lexical_score\": 0.052923, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_008\", \"activity\": \"ZEB_TOOL_READEND\", \"score\": 0.016129, \"lexical_score\": 0.057818, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_150\", \"activity\": \"SYZQ_ZEB_VIDEO_READEND\", \"score\": 0.015873, \"lexical_score\": 0.055167, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_004\", \"activity\": \"JGJ_Product_Insure\", \"score\": 0.016393, \"lexical_score\": null, \"semantic_score\": 0.55377, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_009\", \"activity\": \"ZEB_BUSINESS_CARD_ELITE_READEND\", \"score\": 0.015625, \"lexical_score\": 0.051, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_044\", \"activity\": \"ZEB_VIDEO_READEND\", \"score\": 0.015385, \"lexical_score\": 0.055167, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_015\", \"activity\": \"ZEB_BUSINESS_CARD_READEND\", \"score\": 0.015152, \"lexical_score\": 0.051, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_039\", \"activity\": \"ZEB_ZT_PRODUCT_READEND\", \"score\": 0.014925, \"lexical_score\": 0.055167, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_029\", \"activity\": \"ZEB_INFO_READEND\", \"score\": 0.014706, \"lexical_score\": 0.064889, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_025\", \"activity\": \"ZEB_TOPIC_READEND\", \"score\": 0.014493, \"lexical_score\": 0.057818, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}], \"llm_selected_candidate_ids\": [], \"selection_source\": \"empty\", \"final_activities\": []}}, \"trace_id\": \"cs-multi\"}}",
+    "judge": {
+      "trace_id": "llm_probe:llm-probe-client_search-multi:1788105112513",
+      "project_id": "llm_probe",
+      "business_expectations": [
+        {
+          "expectation_id": "客户年龄严格超过四十五岁",
+          "blocking": true,
+          "downstream_consumer": "Elasticsearch 查询执行器",
+          "user_intent": "筛选年龄严格超过45岁的客户",
+          "expected_outcome": "客户年龄谓词应表示 clientAge 大于45岁，按整数年龄等价表示为 GTE 46",
+          "required_capabilities": [
+            "识别客户本人年龄",
+            "保留严格超过的边界语义",
+            "将年龄条件映射到 clientAge"
+          ],
+          "acceptance_criteria": [
+            "存在字段为 clientAge 的条件",
+            "操作符为 GTE 且值为46，或使用语义等价的严格大于45表示",
+            "不能包含45岁客户"
+          ],
+          "boundary": {
+            "lower_bound": 46,
+            "inclusive": true,
+            "original_semantics": "超过45岁"
+          },
+          "priority": "核心筛选条件",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "客户本人性别为女性",
+          "blocking": true,
+          "downstream_consumer": "Elasticsearch 查询执行器",
+          "user_intent": "筛选客户本人性别为女的客户",
+          "expected_outcome": "客户性别谓词应为 clientSex MATCH 女",
+          "required_capabilities": [
+            "识别客户本人性别",
+            "将女性语义映射到 clientSex",
+            "使用等值匹配"
+          ],
+          "acceptance_criteria": [
+            "存在字段为 clientSex 的条件",
+            "操作符为 MATCH",
+            "值为女",
+            "不能将性别映射为家庭成员字段"
+          ],
+          "boundary": {
+            "matched_value": "女",
+            "subject": "客户本人"
+          },
+          "priority": "核心筛选条件",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "年缴保费至少一万元",
+          "blocking": true,
+          "downstream_consumer": "Elasticsearch 查询执行器",
+          "user_intent": "筛选每年交纳保费达到或超过一万元的客户",
+          "expected_outcome": "年缴保费谓词应保留一万元的包含边界，即 annPremSegNum 大于等于10000",
+          "required_capabilities": [
+            "识别年缴保费而非总保费或期交保费",
+            "将一万换算为10000元",
+            "保留“以上”的包含边界"
+          ],
+          "acceptance_criteria": [
+            "存在字段为 annPremSegNum 的条件",
+            "金额阈值为10000",
+            "条件包含年缴保费恰好等于10000的客户",
+            "不能使用严格大于10000而排除边界值"
+          ],
+          "boundary": {
+            "lower_bound": 10000,
+            "inclusive": true,
+            "original_semantics": "一万块以上"
+          },
+          "priority": "核心筛选条件",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "多个筛选条件使用且逻辑组合",
+          "blocking": true,
+          "downstream_consumer": "Elasticsearch 查询执行器",
+          "user_intent": "同时满足年龄、性别和年缴保费三个条件",
+          "expected_outcome": "查询逻辑应为 AND，使检索集合是三个条件的交集",
+          "required_capabilities": [
+            "识别“而且”连接的并列条件",
+            "输出 AND 组合逻辑",
+            "保留全部三个条件"
+          ],
+          "acceptance_criteria": [
+            "query_logic 为 AND",
+            "年龄、性别、年缴保费三个条件均参与组合",
+            "不存在 OR 或遗漏条件"
+          ],
+          "boundary": {
+            "logic": "AND",
+            "condition_count": 3
+          },
+          "priority": "查询语义底线",
+          "evidence_refs": []
+        }
+      ],
+      "fulfillment_assessments": [
+        {
+          "expectation_id": "客户年龄严格超过四十五岁",
+          "status": "fulfilled",
+          "score": 1,
+          "expected_evidence": [
+            {
+              "field": "clientAge",
+              "operator": "GTE",
+              "value": 46
+            }
+          ],
+          "actual_evidence": [
+            {
+              "path": "data.extra_output_params.conditions[0]",
+              "value": {
+                "field": "clientAge",
+                "operator": "GTE",
+                "value": 46,
+                "match_mode": null
+              }
+            }
+          ],
+          "downstream_impact": "年龄边界被正确转换为46岁及以上，不会纳入45岁客户。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "客户本人性别为女性",
+          "status": "fulfilled",
+          "score": 1,
+          "expected_evidence": [
+            {
+              "field": "clientSex",
+              "operator": "MATCH",
+              "value": "女"
+            }
+          ],
+          "actual_evidence": [
+            {
+              "path": "data.extra_output_params.conditions[1]",
+              "value": {
+                "field": "clientSex",
+                "operator": "MATCH",
+                "value": "女",
+                "match_mode": null
+              }
+            }
+          ],
+          "downstream_impact": "性别条件正确限定为客户本人且等值匹配女性。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "年缴保费至少一万元",
+          "status": "not_fulfilled",
+          "score": 0,
+          "expected_evidence": [
+            {
+              "field": "annPremSegNum",
+              "operator": "GTE",
+              "value": 10000
+            }
+          ],
+          "actual_evidence": [
+            {
+              "path": "data.extra_output_params.conditions[2]",
+              "value": {
+                "field": "annPremSegNum",
+                "operator": "GT",
+                "value": 10000,
+                "match_mode": null
+              }
+            }
+          ],
+          "downstream_impact": "严格大于10000会排除年缴保费恰好为10000元的客户，导致检索集合相对于用户描述发生缩小。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "多个筛选条件使用且逻辑组合",
+          "status": "fulfilled",
+          "score": 1,
+          "expected_evidence": [
+            {
+              "query_logic": "AND",
+              "conditions": [
+                "clientAge",
+                "clientSex",
+                "annPremSegNum"
+              ]
+            }
+          ],
+          "actual_evidence": [
+            {
+              "path": "data.extra_output_params.query_logic",
+              "value": "AND"
+            },
+            {
+              "path": "data.extra_output_params.conditions",
+              "value": [
+                {
+                  "field": "clientAge",
+                  "operator": "GTE",
+                  "value": 46,
+                  "match_mode": null
+                },
+                {
+                  "field": "clientSex",
+                  "operator": "MATCH",
+                  "value": "女",
+                  "match_mode": null
+                },
+                {
+                  "field": "annPremSegNum",
+                  "operator": "GT",
+                  "value": 10000,
+                  "match_mode": null
+                }
+              ]
+            }
+          ],
+          "downstream_impact": "三个已识别条件按交集组合，年龄和性别条件不会被 OR 放大。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        }
+      ],
+      "overall_fulfillment": {
+        "status": "not_fulfilled",
+        "blocking_expectations": [
+          "客户年龄严格超过四十五岁",
+          "客户本人性别为女性",
+          "年缴保费至少一万元",
+          "多个筛选条件使用且逻辑组合"
+        ]
+      },
+      "expected": {
+        "output_text": "{\"query_logic\":\"AND\",\"conditions\":[{\"field\":\"clientAge\",\"operator\":\"GTE\",\"value\":46},{\"field\":\"clientSex\",\"operator\":\"MATCH\",\"value\":\"女\"},{\"field\":\"annPremSegNum\",\"operator\":\"GTE\",\"value\":10000}]}"
+      },
+      "actual": {
+        "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"客户年龄≥46\\n并且客户性别为女\\n并且年缴保费>10000的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"我想找年龄超过45岁的女客户，而且她们每年交的保费要在一万块以上\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"clientAge\", \"operator\": \"GTE\", \"value\": 46, \"match_mode\": null}, {\"field\": \"clientSex\", \"operator\": \"MATCH\", \"value\": \"女\", \"match_mode\": null}, {\"field\": \"annPremSegNum\", \"operator\": \"GT\", \"value\": 10000, \"match_mode\": null}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 4, \"rewritten_query\": \"我想找年龄超过45岁的女客户,而且她们每年交的保费要在一万块以上\", \"matched_patterns\": \"### 当前时间\\n2026-08-30 23:51:46 (Asia/Shanghai)\\n### 今天星期\\n周日\\n\\n### 相关字段参考（根据查询内容动态召回）\\n\\n\\n- **clientSex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示客户本人性别，不表示家庭成员、被保人、投保人性别\\n\\n  示例: \\\"男性客户\\\" → {\\\"field\\\": \\\"clientSex\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"男\\\"}\\n\\n  示例: \\\"女客户\\\" → {\\\"field\\\": \\\"clientSex\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"女\\\"}\\n\\n  反例: \\\"子女是男性的客户\\\" → 不输出该字段；原因: 这是家庭成员性别，应映射到 familyInfo.familyclientsex 并组合 familyInfo.familyrelation\\n\\n- **clientAge** | 操作符: GTE | 值类型: numeric | 单位: 岁，直接取数字，无需换算 | 定义: 表示客户本人年龄，不表示家庭成员年龄 | 说明: 此字段仅支持GTE操作符。边界词必须按原文区分：‘N岁以上/及以上’包含N，始终输出GTE N，不能加1；只有‘大于/超过/高于N岁’不包含N，才转换为GTE N+1。该规则在年龄与VIP、保单、投保时间等其他条件组合时仍不改变。\\n\\n  示例: \\\"45岁以上的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 45}\\n\\n  示例: \\\"45岁及以上的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 45}\\n\\n  示例: \\\"大于60岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 61}\\n\\n  示例: \\\"年龄超过50岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 51}\\n\\n  示例: \\\"我附近5公里内且客户年龄大于50岁\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 51}\\n\\n  示例: \\\"60或50岁及以上的客户\\\" → \\n\\n  反例: \\\"子女10岁及以上的客户\\\" → 不输出该字段；原因: 这是家庭成员年龄，应映射到 familyInfo.familyclientage 并组合 familyInfo.familyrelation\\n\\n- **clientAge** | 操作符: RANGE | 值类型: numeric | 单位: 岁，直接取数字 | 定义: 表示客户本人的精确年龄、近似年龄、年龄区间或语义年龄段，不表示家庭成员年龄 | 说明: 统一处理精确年龄、近似年龄、明确起止区间和语义年龄段。原文年龄片段只有‘N岁’且该数字后没有以上、以下、大于、小于、左右、约、大概或起止区间时，输出RANGE {min:N,max:N}；数字相邻位置明示‘左右/上下/大约/约/大概’时，输出RANGE {min:N-5,max:N+5}，不得改成上下2岁或十年年龄段。其他字段片段中的比较词不得作用于年龄。青年=18~35，中年=36~55，老年=56~100，未成年=0~17；‘N0多岁’表示N0~N9，例如30多岁→30~39。以上、以下、大于、小于等边界表达仍由对应的GTE/LTE知识处理。\\n\\n  示例: \\\"30到40岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 30, \\\"max\\\": 40}}\\n\\n  示例: \\\"中年客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 36, \\\"max\\\": 55}}\\n\\n  示例: \\\"30多岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 30, \\\"max\\\": 39}}\\n\\n  示例: \\\"40岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 40, \\\"max\\\": 40}}\\n\\n  示例: \\\"45岁左右的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 40, \\\"max\\\": 50}}\\n\\n  示例: \\\"大约50岁的客户\\\" → {\\\"field\\\": \\\"clientAge\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 45, \\\"max\\\": 55}}\\n\\n  反例: \\\"配偶30到40岁的客户\\\" → 不输出该字段；原因: 这是家庭成员年龄范围，应映射到 familyInfo.familyclientage 并组合 familyInfo.familyrelation\\n\\n- **familyInfo.familyclientsex** | 操作符: MATCH | 值类型: enum | 枚举: ['男', '女'] | 定义: 表示家庭成员性别，不表示客户本人性别；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件\\n\\n  示例: \\\"有儿子的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientsex\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"男\\\"}]}\\n\\n  示例: \\\"有女儿的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientsex\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"女\\\"}]}\\n\\n  反例: \\\"男性客户\\\" → 不输出该字段；原因: 这是客户本人性别，应映射到 clientSex，不是 familyInfo.familyclientsex\\n\\n  反例: \\\"女性客户\\\" → 不输出该字段；原因: 这是客户本人性别，应映射到 clientSex，不是 familyInfo.familyclientsex\\n\\n- **familyInfo.familyclientage** | 操作符: GT | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄（大于），不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday）；出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件\\n\\n  示例: \\\"孩子10岁以上（不含10岁）的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GT\\\", \\\"value\\\": 10}]}\\n\\n- **familyInfo.familyclientage** | 操作符: RANGE | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄，不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday），语义年龄：未成年0-17，青年18-35；出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件。‘未成年子女/未成年孩子’是不可拆分的复合语义，必须同时输出familyInfo.familyrelation=子女与familyInfo.familyclientage RANGE 0~17，禁止只输出子女关系。即使同句还有客户价值、温度、险种、保单等多个条件，也不得遗漏家庭成员年龄。\\n\\n  示例: \\\"子女5到10岁的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 5, \\\"max\\\": 10}}]}\\n\\n  示例: \\\"子女未成年的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 0, \\\"max\\\": 17}}]}\\n\\n  示例: \\\"家里有70岁老人\\\" → {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 70, \\\"max\\\": 70}}\\n\\n  反例: \\\"45岁以上的客户\\\" → 不输出该字段；原因: 这是客户本人年龄，应映射到 clientAge，不是 familyInfo.familyclientage\\n\\n- **familyInfo.familyclientage** | 操作符: LTE | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄（小于等于），不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday）；出现子女/父母/配偶等关系词时应同时输出 familyInfo.familyrelation 条件\\n\\n  示例: \\\"孩子10岁及以下的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"LTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"孩子10岁以下的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"LTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"父母60岁及以下的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"父母\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"LTE\\\", \\\"value\\\": 60}]}\\n\\n  示例: \\\"配偶年龄不超过40岁的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"配偶\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"LTE\\\", \\\"value\\\": 40}]}\\n\\n  反例: \\\"45岁以下的客户\\\" → 不输出该字段；原因: 这是客户本人年龄，应映射到 clientAge，不是 familyInfo.familyclientage\\n\\n- **familyInfo.familyclientage** | 操作符: GTE | 值类型: numeric | 单位: 岁，直接取数字；系统会自动将年龄转换为 familyInfo.familyclientbirthday 日期范围 | 定义: 表示家庭成员年龄（大于等于），不表示客户本人年龄；出现关系词时应与 familyInfo.familyrelation 组合 | 说明: 年龄会自动转换为出生日期范围（familyInfo.familyclientbirthday）；出现子女/父母/配偶等关系词时应同时输出familyInfo.familyrelation条件\\n\\n  示例: \\\"孩子10岁及以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"孩子10岁以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"父母70岁及以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"父母\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 70}]}\\n\\n  示例: \\\"家里有孩子10岁及以上的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyrelation\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"子女\\\"]}, {\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 10}]}\\n\\n  示例: \\\"有老人的客户\\\" → {\\\"query_logic\\\": \\\"AND\\\", \\\"conditions\\\": [{\\\"field\\\": \\\"familyInfo.familyclientage\\\", \\\"operator\\\": \\\"GTE\\\", \\\"value\\\": 55}]}\\n\\n  反例: \\\"45岁及以上的客户\\\" → 不输出该字段；原因: 这是客户本人年龄，应映射到 clientAge，不是 familyInfo.familyclientage\\n\\n- **annPremSegNum** | 操作符: RANGE | 值类型: numeric | 单位: 元，万=×10000，千=×1000 | 定义: 表示年缴保费区间，或精确值（不带'以上'/'以下'等范围词时）\\n\\n  示例: \\\"年缴保费1万到5万的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 10000, \\\"max\\\": 50000}}\\n\\n  示例: \\\"年交保费2万的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 20000, \\\"max\\\": 20000}}\\n\\n  示例: \\\"年交保费5千的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 5000, \\\"max\\\": 5000}}\\n\\n  示例: \\\"年缴保费20000的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 20000, \\\"max\\\": 20000}}\\n\\n  示例: \\\"年交5万的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": 50000, \\\"max\\\": 50000}}\\n\\n- **annPremSegNum** | 操作符: LTE | 值类型: numeric | 单位: 元，万=×10000，千=×1000，若为明确是万还是千单位，则默认是元 | 定义: 表示年缴保费上限（小于等于），不表示总保费上限、产品总保额上限 | 说明: 仅‘及以下/不超过/不高于/小于等于’使用LTE；‘以下/低于/小于/不足’不包含边界，使用LT。\\n\\n  示例: \\\"年缴保费不超过1万的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"LTE\\\", \\\"value\\\": 10000}\\n\\n  示例: \\\"年缴保费1万及以下的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"LTE\\\", \\\"value\\\": 10000}\\n\\n  反例: \\\"总保费不超过50万的客户\\\" → 不输出该字段；原因: 这是总保费语义，不是年缴保费；当前不能映射到 annPremSegNum\\n\\n- **polNoInfo.totmodalpremsum** | 操作符: GT | 值类型: numeric | 单位: 元，万=×10000，千=×1000，如果没有明确单位，则默认是元，不用做运算 | 定义: 期交保费金额，＞ 严格超过；区别于年交保费\\n\\n  示例: \\\"期交保费大于1万的客户\\\" → {\\\"field\\\": \\\"polNoInfo.totmodalpremsum\\\", \\\"operator\\\": \\\"GT\\\", \\\"value\\\": 10000}\\n\\n- **annPremSegNum** | 操作符: GT | 值类型: numeric | 单位: 元，万=×10000，千=×1000，若为明确是万还是千单位，则默认是元 | 定义: 表示年缴保费金额（大于），不表示总保费、产品总保额 | 说明: 仅包含大于关系，不包含等于。‘超过/大于/高于’必须使用GT；不得因为其他年缴保费知识中出现GTE就改成GTE。\\n\\n  示例: \\\"年缴保费1万以上（不含1万）的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"GT\\\", \\\"value\\\": 10000}\\n\\n  示例: \\\"保费超过5万的客户\\\" → {\\\"field\\\": \\\"annPremSegNum\\\", \\\"operator\\\": \\\"GT\\\", \\\"value\\\": 50000}\\n\\n  反例: \\\"总保费为50万的客户\\\" → 不输出该字段；原因: 这是总保费语义，不是年缴保费；当前不能映射到 annPremSegNum\\n\\n  反例: \\\"上个月刚缴完费的客户\\\" → 不输出该字段；原因: 这是应缴日/缴费日完成语义，应映射到 polNoInfo.paytodate，不是年缴保费金额\\n\\n### 客户行为候选选择\\n任务：根据用户完整原句，从下列候选中选择最匹配的 candidate_id。\\n\\n选择规则：\\n1. 只能选择候选段中出现的 candidate_id，禁止生成候选外 ID，禁止直接输出 activity 或把客户行为写入 conditions。\\n2. “有没有、是否有、有无、有人……吗”是在查询行为是否发生，不是否定。只要原句在查找发生过行为的客户，就必须返回至少 1 个候选。\\n3. 只有原句明确表示行为未发生（如“从未、未曾、没做过、不曾”），或原句根本不是客户行为查询时，才返回空数组。\\n4. 不得因为缺少渠道、时长、产品名、文章名或其他可选槽位而返回空数组。\\n5. 按以下优先级比较候选：行为动作 > 行为对象 > 渠道/场景 > 状态/结果 > 行为主体/角色 > 时长与槽位。\\n6. 原句明确线索与候选冲突时不得选择，例如“转发”不能选“浏览”、“失败”不能选“成功”、明确渠道或角色不一致时不能选择。\\n7. 若 1 个候选能解释原句全部明确线索且明显优于其他候选，只返回该候选。\\n8. 若 2 至 3 个候选都能合理解释原句，且原句缺少区分线索，返回这些候选而不是空数组，按匹配程度从高到低排列。\\n9. 原句明确包含多个独立行为时，返回覆盖这些行为的候选，总数最多 5 个。\\n10. 召回顺序和 lexical_score、semantic_score 仅供参考，不得替代语义判断。\\n\\n- candidate_id=behavior_candidate_080 category=在微信阅读了建议书时长秒 template=在微信阅读了建议书“$productName$”，时长$time$秒 semantic_template=在微信阅读了建议书“ 产品 ”，时长 时长 秒 lexical_score=0.052923\\n  description: 表示客户发生了“在微信阅读了建议书时长秒”行为。\\n  positive_examples: 找在微信阅读建议书超过一分钟的客户；查询在微信阅读了建议书时长秒的人\\n  negative_examples: 找没有阅读建议书的客户；排除阅读建议书的客户\\n- candidate_id=behavior_candidate_008 category=查看了展业工具时长秒 template=查看了展业工具“$toolName$”，时长$time$秒 semantic_template=查看了展业工具“ 活动 ”，时长 时长 秒 lexical_score=0.057818\\n  description: 表示客户发生了“查看了展业工具时长秒”行为。\\n  positive_examples: 找查看展业工具超过一分钟的客户；查询查看了展业工具时长秒的人\\n  negative_examples: 找没有查看展业工具的客户；排除查看展业工具的客户\\n- candidate_id=behavior_candidate_150 category=浏览了展业短视频时长秒 template=浏览了展业短视频“$videoName$”，时长$time$秒 semantic_template=浏览了展业短视频“ 活动 ”，时长 时长 秒 lexical_score=0.055167\\n  description: 表示客户发生了“浏览了展业短视频时长秒”行为。\\n  positive_examples: 找浏览展业短视频超过一分钟的客户；查询浏览了展业短视频时长秒的人\\n  negative_examples: 找没有浏览展业短视频的客户；排除浏览展业短视频的客户\\n- candidate_id=behavior_candidate_004 category=点击我要投保 template=在金管家查看《$productName$》时点击了“我要投保” semantic_template=在金管家查看《 产品 》时点击了“我要投保” semantic_score=0.553770\\n  description: 表示客户发生了“点击我要投保”行为。\\n  positive_examples: 找点击我要投保的客户；查询点了我要投保的人\\n  negative_examples: 找点击立即投保但未完成的客户；找没有点击我要投保的客户\\n- candidate_id=behavior_candidate_009 category=查看了个人名片精英版时长秒 template=查看了个人名片(精英版)，时长$time$秒 semantic_template=查看了个人名片(精英版)，时长 时长 秒 lexical_score=0.051000\\n  description: 表示客户发生了“查看了个人名片精英版时长秒”行为。\\n  positive_examples: 找查看个人名片精英版超过一分钟的客户；查询查看了个人名片精英版时长秒的人\\n  negative_examples: 找没有查看个人名片精英版的客户；排除查看个人名片精英版的客户\\n- candidate_id=behavior_candidate_044 category=浏览了展业短视频时长秒 template=浏览了展业短视频“$videoName$”，时长$time$秒 semantic_template=浏览了展业短视频“ 活动 ”，时长 时长 秒 lexical_score=0.055167\\n  description: 表示客户发生了“浏览了展业短视频时长秒”行为。\\n  positive_examples: 找浏览展业短视频超过一分钟的客户；查询浏览了展业短视频时长秒的人\\n  negative_examples: 找没有浏览展业短视频的客户；排除浏览展业短视频的客户\\n- candidate_id=behavior_candidate_015 category=查看了个人名片标准版时长秒 template=查看了个人名片(标准版)，时长$time$秒 semantic_template=查看了个人名片(标准版)，时长 时长 秒 lexical_score=0.051000\\n  description: 表示客户发生了“查看了个人名片标准版时长秒”行为。\\n  positive_examples: 找查看个人名片标准版超过一分钟的客户；查询查看了个人名片标准版时长秒的人\\n  negative_examples: 找没有查看个人名片标准版的客户；排除查看个人名片标准版的客户\\n- candidate_id=behavior_candidate_039 category=浏览了车险报价单时长秒 template=浏览了车险报价单“$productName$”，时长$time$秒 semantic_template=浏览了车险报价单“ 产品 ”，时长 时长 秒 lexical_score=0.055167\\n  description: 表示客户发生了“浏览了车险报价单时长秒”行为。\\n  positive_examples: 找浏览车险报价单超过一分钟的客户；查询浏览了车险报价单时长秒的人\\n  negative_examples: 找没有浏览车险报价单的客户；排除浏览车险报价单的客户\\n- candidate_id=behavior_candidate_029 category=阅读了资讯阅读时长秒 template=阅读了资讯《$articleName$》，阅读时长$time$秒 semantic_template=阅读了资讯《 文章 》，阅读时长 时长 秒 lexical_score=0.064889\\n  description: 客户阅读普通单篇资讯或文章，事件包含文章名称和阅读时长。\\n  selection_notes: 未明确文章业务分类时优先选择；明确保险基础、名医出诊等 typeName 分类时选择分类文章阅读候选。\\n  positive_examples: 找阅读某篇普通资讯超过一分钟的客户；查询阅读具名文章并记录阅读时长的人\\n  negative_examples: 找明确阅读保险基础、名医出诊等分类文章的客户；查询资讯专题或产品页面的查看时长\\n- candidate_id=behavior_candidate_025 category=查看了资讯专题时长秒 template=查看了资讯专题《$topicName$》，时长$time$秒 semantic_template=查看了资讯专题《 专题 》，时长 时长 秒 lexical_score=0.057818\\n  description: 客户查看资讯专题，事件记录包含秒、分钟或停留时长信息。\\n  positive_examples: 找查看资讯专题超过一分钟的客户；查询在某个资讯专题停留过一段时间的人\\n  negative_examples: 找只转发资讯专题但没有查看的客户；查询阅读单篇资讯文章时长的人\\n\\n输出要求：在原有 query_logic、conditions 之外增加 behavior_candidate_ids 数组，只输出严格 JSON。\\n格式：{\\\"query_logic\\\":\\\"AND\\\",\\\"conditions\\\":[],\\\"behavior_candidate_ids\\\":[\\\"候选ID1\\\",\\\"候选ID2\\\"]}\\n\\n### 用户查询\\n我想找年龄超过45岁的女客户,而且她们每年交的保费要在一万块以上\", \"cost_times\": 8657.0, \"confidence\": 0.8, \"intent_summary\": \"客户年龄≥46\\n并且客户性别为女\\n并且年缴保费>10000的客户\", \"behavior_debug\": {\"has_negative_behavior\": false, \"deterministic_activities\": [], \"semantic_direct_hit\": false, \"semantic_direct_score\": null, \"llm_invoked\": true, \"candidates\": [{\"candidate_id\": \"behavior_candidate_080\", \"activity\": \"MIT_PROPOSAL_READEND\", \"score\": 0.016393, \"lexical_score\": 0.052923, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_008\", \"activity\": \"ZEB_TOOL_READEND\", \"score\": 0.016129, \"lexical_score\": 0.057818, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_150\", \"activity\": \"SYZQ_ZEB_VIDEO_READEND\", \"score\": 0.015873, \"lexical_score\": 0.055167, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_004\", \"activity\": \"JGJ_Product_Insure\", \"score\": 0.016393, \"lexical_score\": null, \"semantic_score\": 0.55377, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_009\", \"activity\": \"ZEB_BUSINESS_CARD_ELITE_READEND\", \"score\": 0.015625, \"lexical_score\": 0.051, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_044\", \"activity\": \"ZEB_VIDEO_READEND\", \"score\": 0.015385, \"lexical_score\": 0.055167, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_015\", \"activity\": \"ZEB_BUSINESS_CARD_READEND\", \"score\": 0.015152, \"lexical_score\": 0.051, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_039\", \"activity\": \"ZEB_ZT_PRODUCT_READEND\", \"score\": 0.014925, \"lexical_score\": 0.055167, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_029\", \"activity\": \"ZEB_INFO_READEND\", \"score\": 0.014706, \"lexical_score\": 0.064889, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_025\", \"activity\": \"ZEB_TOPIC_READEND\", \"score\": 0.014493, \"lexical_score\": 0.057818, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}], \"llm_selected_candidate_ids\": [], \"selection_source\": \"empty\", \"final_activities\": []}}, \"trace_id\": \"cs-multi\"}}"
+      },
+      "missing": [],
+      "wrong": [
+        {
+          "kind": "范围边界",
+          "error_type": "下界被错误排除",
+          "expected": {
+            "field": "annPremSegNum",
+            "operator": "GTE",
+            "value": 10000
+          },
+          "actual": {
+            "field": "annPremSegNum",
+            "operator": "GT",
+            "value": 10000,
+            "match_mode": null
+          },
+          "evidence_ref": "data.extra_output_params.conditions[2]",
+          "raw": {
+            "kind": "范围边界",
+            "error_type": "下界被错误排除",
+            "expected": {
+              "field": "annPremSegNum",
+              "operator": "GTE",
+              "value": 10000
+            },
+            "actual": {
+              "field": "annPremSegNum",
+              "operator": "GT",
+              "value": 10000,
+              "match_mode": null
+            },
+            "evidence_ref": "data.extra_output_params.conditions[2]",
+            "incomplete": false
+          },
+          "incomplete": false
+        }
+      ],
+      "extra": [],
+      "evidence": [
+        {
+          "path": "request.body.user_text",
+          "value": "我想找年龄超过45岁的女客户，而且她们每年交的保费要在一万块以上"
+        },
+        {
+          "path": "data.extra_output_params.query_logic",
+          "value": "AND"
+        },
+        {
+          "path": "data.extra_output_params.conditions",
+          "value": [
+            {
+              "field": "clientAge",
+              "operator": "GTE",
+              "value": 46,
+              "match_mode": null
+            },
+            {
+              "field": "clientSex",
+              "operator": "MATCH",
+              "value": "女",
+              "match_mode": null
+            },
+            {
+              "field": "annPremSegNum",
+              "operator": "GT",
+              "value": 10000,
+              "match_mode": null
+            }
+          ]
+        }
+      ],
+      "reasoning_summary": "输出正确识别了客户本人年龄、女性性别和年缴保费字段，并使用 AND 组合。年龄“超过45岁”被等价转换为 clientAge GTE 46，性别也正确匹配为女。但“每年交的保费要在一万块以上”包含一万元这一边界，实际使用 annPremSegNum GT 10000 会排除恰好缴纳10000元的客户，使结果集合相对于用户描述发生缩小，因此年缴保费条件未完全兑现。",
+      "summary": {
+        "reason": "not_fulfilled · blocking=[年缴保费至少一万元] · 输出正确识别了客户本人年龄、女性性别和年缴保费字段，并使用 AND 组合。年龄“超过45岁”被等价转换为 clientAge GTE 46，性别也正确匹配为女。但“每年交的保费要在一万块以上”包含一万元这一边界，实际使用 annPremSegNum GT 10000 会排除恰好缴纳10000元的客户，使结果集合相对于用户描述发生缩小，因此年缴保费条件未完全兑现。",
+        "primary_failure_dimensions": [
+          {
+            "expectation_id": "年缴保费至少一万元",
+            "status": "not_fulfilled",
+            "blocking": true,
+            "downstream_impact": "严格大于10000会排除年缴保费恰好为10000元的客户，导致检索集合相对于用户描述发生缩小。",
+            "evidence": "{'field': 'annPremSegNum', 'operator': 'GT', 'value': 10000, 'match_mode': None} | 10000"
+          }
+        ],
+        "reason_source": "aggregated_fulfillment",
+        "fulfillment_status": "not_fulfilled",
+        "assessment_count": 4,
+        "blocking_count": 4,
+        "is_formal_attribution": true
+      }
+    },
+    "capability_carrier": {
+      "applicable": true,
+      "axis1_status": "not_fulfilled",
+      "placements": [
+        {
+          "expectation_id": "年缴保费至少一万元",
+          "placement": "做错了",
+          "carry": "yes",
+          "reason": "能力边界明确支持年缴保费字段 annPremSegNum 使用 GTE 数值条件，并将“至少”和“1万以上”映射为阈值 10000，因此能够承载包含等于10000边界的筛选期望。",
+          "citations": [
+            {
+              "source": "material://llm_probe/field_definitions_args",
+              "ref": "L1913-L1938",
+              "note": "    field: annPremSegNum\n    operator: GTE\n    value_type: numeric\n    unit: \"元，万=×10000，千=×1000，若为明确是万还是千单位，则默认是元\"\n    description: \"表示年缴保费金额（大于等于），不表示总保费、产品总保额\"\n    notes: \"‘以上/及以上/大于等于/不低于/不少于’使用GTE；‘超过/大于/高于’属于严格大于，必须改用annual_premium_gt的GT。‘年交/年缴’明确表示年缴保费，绝不能解释为年收入。\"\n    examples:\n      - query: \"年缴保费1万及以上的客户\"\n        output: {field: annPremSegNum, operator: GTE, value: 10000}\n      - query: \"年缴保费1万以上的客户\"\n        output: {field: annPremSegNum, operator: GTE, value: 10000}\n      - query: \"年交3万以上的客户\"\n        output: {field: annPremSegNum, operator: GTE, value: 30000}"
+            }
+          ],
+          "tool_trail": [
+            {
+              "tool": "material_outline",
+              "material_id": "field_definitions_args",
+              "returned_locators": [
+                "L28-L8330",
+                "L32-L69",
+                "L70-L91",
+                "L92-L106",
+                "L107-L121",
+                "L122-L141",
+                "L142-L170",
+                "L171-L187",
+                "L188-L200",
+                "L201-L216",
+                "L217-L245",
+                "L246-L273",
+                "L274-L294",
+                "L295-L312",
+                "L313-L341",
+                "L342-L357",
+                "L358-L376",
+                "L377-L395",
+                "L396-L410",
+                "L411-L427"
+              ]
+            },
+            {
+              "tool": "material_read",
+              "material_id": "field_definitions_args",
+              "locator": "L1913-L1938",
+              "returned_locators": [
+                "L1913-L1938"
+              ]
+            },
+            {
+              "tool": "material_search",
+              "material_id": "field_definitions_args",
+              "query": "annPremSegNum annual_premium_gte",
+              "returned_locators": [
+                "L1893-L1899",
+                "L1901-L1921",
+                "L1923-L1931"
+              ]
+            },
+            {
+              "tool": "material_search",
+              "material_id": "field_definitions_args",
+              "query": "annual premium gte 10000",
+              "returned_locators": [
+                "L815-L821",
+                "L1061-L1067",
+                "L1148-L1154",
+                "L1231-L1237",
+                "L1330-L1336",
+                "L1889-L1895",
+                "L1910-L1916",
+                "L1920-L1926"
+              ]
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "snapshot_id": "27c03ec01b3b334b"
+    },
+    "elapsed_s": 130.9
+  },
+  {
+    "case_id": "llm-probe-client_search-unsupported",
+    "capability_ref": "client_search",
+    "input": {
+      "user_text": "帮我查一下那些上有老下有小的客户",
+      "user_id": "mock_user_001",
+      "trace_id": "cs-unsup",
+      "session_id": "cs-unsup",
+      "source": "llm_probe_accuracy",
+      "extra_input_params": {}
+    },
+    "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"家庭成员关系包含父母、(外)祖父母\\n并且有子女的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"帮我查一下那些上有老下有小的客户\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"父母\", \"(外)祖父母\"], \"match_mode\": null}, {\"field\": \"familyInfo.familyrelation\", \"operator\": \"MATCH\", \"value\": \"子女\", \"match_mode\": null}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 4, \"rewritten_query\": \"帮我查一下那些上有老下有小的客户\", \"matched_patterns\": \"### 当前时间\\n2026-08-30 23:53:57 (Asia/Shanghai)\\n### 今天星期\\n周日\\n\\n### 相关字段参考（根据查询内容动态召回）\\n\\n\\n- **pajjMemberGradeInfo.pajjmembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['平安居家V0', '平安居家V1', '平安居家V1优享', '平安居家V2', '平安居家V2优享'] | 定义: 平安居家会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：平安居家V0<平安居家V1<平安居家V1优享<平安居家V2<平安居家V2优享。平安居家V1以上和及以上=含平安居家V1即平安居家V1/平安居家V1优享/平安居家V2/平安居家V2优享；平安居家V2以下和及以下=含平安居家V2即平安居家V0/平安居家V1/平安居家V1优享/平安居家V2\\n\\n  示例: \\\"居家V0和V2都要\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V2\\\"]}\\n\\n  示例: \\\"居家V1以上的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\", \\\"平安居家V2优享\\\"]}\\n\\n  示例: \\\"居家V1及以上的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\", \\\"平安居家V2优享\\\"]}\\n\\n  示例: \\\"居家V2以下的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\"]}\\n\\n  示例: \\\"居家V2及以下的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\"]}\\n\\n  反例: \\\"居家V1的客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **birthdayMd** | 操作符: RANGE | 值类型: date | 格式: MM-dd | 说明: 只含月日（不含年），格式MM-dd；本月生日取当月1日至月末；下月生日取下个月1日至月末；下周/下星期/下个星期生日必须取下一个自然周周一至周天，不能理解为从今天开始的未来7天；未来一周/未来7天/接下来一周才取今天至往后顺延6天；未来一个月生日取今天至往后延顺29天；农历/阴历N月生日需将农历月份换算为当前公历年份对应的公历日期范围（农历正月初一为春节，各农历月对应公历日期每年不同，可依据常识估算近似范围，取该农历月初一至月末对应的公历日期）\\n\\n  示例: \\\"3月15日生日的客户\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-15\\\", \\\"max\\\": \\\"03-15\\\"}}\\n\\n  示例: \\\"本月生日的客户（当前2026年3月）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-01\\\", \\\"max\\\": \\\"03-31\\\"}}\\n\\n  示例: \\\"下个月生日的客户（当前2026年3月）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"04-01\\\", \\\"max\\\": \\\"04-30\\\"}}\\n\\n  示例: \\\"下周有哪些客户过生日（当前2026年3月25号）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-30\\\", \\\"max\\\": \\\"04-05\\\"}}\\n\\n  示例: \\\"下周生日的客户张宇（当前2026年3月25号）\\\" → \\n\\n  示例: \\\"未来一周的客户（当前2026年4月1号）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"04-01\\\", \\\"max\\\": \\\"04-07\\\"}}\\n\\n  示例: \\\"未来一个月的客户（当前2026年3月25号）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-25\\\", \\\"max\\\": \\\"04-25\\\"}}\\n\\n  示例: \\\"四、五月客户\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"04-01\\\", \\\"max\\\": \\\"05-31\\\"}}\\n\\n  示例: \\\"农历五月生日的客户\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"06-15\\\", \\\"max\\\": \\\"07-14\\\"}}\\n\\n- **zxjyMemberGradeInfo.zxjymembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['臻享家医V1', '臻享家医V2', '臻享家医V3'] | 定义: 臻享家医会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：臻享家医V1<臻享家医V2<臻享家医V3。臻享家医V2以上和及以上=含臻享家医V2即臻享家医V2和臻享家医V3；臻享家医V2以下和及以下=含臻享家医V2即臻享家医V1和臻享家医V2\\n\\n  示例: \\\"臻享家医V1或者V3的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"臻享家医V2以上的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V2\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"家医V2及以上的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V2\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"家医V2以下的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V2\\\"]}\\n\\n  示例: \\\"家医V2及以下的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V2\\\"]}\\n\\n  反例: \\\"家医V3的客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **gdkyMemberGradeInfo.gdkymembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['逸享会员', '逸享PLUS会员', '颐享家会员', '臻享V1会员', '臻享V2会员'] | 定义: 高端康养会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：逸享会员<逸享PLUS会员<颐享家会员<臻享V1会员<臻享V2会员。逸享会员以上和及以上=含逸享会员即全部5个；颐享家会员以下和及以下=含颐享家会员即逸享会员/逸享PLUS会员/颐享家会员\\n\\n  示例: \\\"逸享会员或者颐享家会员\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"颐享家会员\\\"]}\\n\\n  示例: \\\"康养逸享以上的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\", \\\"臻享V1会员\\\", \\\"臻享V2会员\\\"]}\\n\\n  示例: \\\"康养逸享及以上的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\", \\\"臻享V1会员\\\", \\\"臻享V2会员\\\"]}\\n\\n  示例: \\\"康养颐享家以下的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\"]}\\n\\n  示例: \\\"康养颐享家及以下的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\"]}\\n\\n  反例: \\\"康养逸享会员客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“及以上”、“以下”、“及以下”含边界 | 说明: 只处理业务集合、多个候选和等级范围：裸A/A类=A1/A2/A3/A4，A或B/AB类=A1/A2/A3/A4/B；紧凑连续等级（如ABCD）按各字母等级并集解析；高价值/有钱客户=A1/A2/A3/A4/B/C；以上/以下按F<E<D<C<B<A4<A3<A2<A1展开并包含边界。明确的单个完整等级值（如A2、B、B类）使用customer_value_exact的MATCH。\\n\\n  示例: \\\"A\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"A类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"购物中心6公里以内的A类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"有钱客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  示例: \\\"AB类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"高价值客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  示例: \\\"B以上的客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B及以上的客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B类以下客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"F\\\", \\\"E\\\", \\\"D\\\", \\\"C\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B类及以下客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"F\\\", \\\"E\\\", \\\"D\\\", \\\"C\\\", \\\"B\\\"]}\\n\\n  示例: \\\"优质客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  反例: \\\"会员等级高的客户\\\" → 不输出该字段；原因: 这是寿险VIP等级语义，应映射到 vipType，不是客户价值 newValueLabel\\n\\n- **onlyShareClientFlag** | 操作符: MATCH | 值类型: enum | 枚举: ['Y'] | 定义: 表示客户已成功授权，并在授权后30天内未完成面访而触发回收、共享给当前用户；该字段是后端组合业务标签，只有 Y，没有 N。 | 说明: “共享客户”“成功共享给我的客户”是该组合口径的业务简称。显式自然语言必须同时包含授权成功和30天未面访回收语义；仅授权成功、仅30天未面访、保单托管授权、未共享以及当前用户分享给别人的客户均不映射为该字段。\\n\\n  示例: \\\"成功共享给我的客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  示例: \\\"分享客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  示例: \\\"客户成功授权且30天未面访回收的客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  示例: \\\"完成授权后满30天没有面访被回收的客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  反例: \\\"仅查询授权成功的客户\\\" → 不输出该字段\\n\\n  反例: \\\"30天没有面访的客户\\\" → 不输出该字段\\n\\n  反例: \\\"完成保单托管授权的客户\\\" → 不输出该字段\\n\\n  反例: \\\"我分享给其他人的客户\\\" → 不输出该字段\\n\\n- **pajjMemberGradeInfo.pajjmemberperiod** | 操作符: MATCH | 值类型: extract | 格式: 格式：YYYY，例如：2023 | 定义: 平安居家会员期次（年度），不表示平安居家达标时间 | 说明: 期次为年份格式YYYY，如2023、2024、2025；一个客户可能拥有多个年度的期次记录\\n\\n  示例: \\\"平安居家2024年期的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2024\\\"}\\n\\n  示例: \\\"23年那期平安居家\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2023\\\"}\\n\\n  反例: \\\"2024年达标的平安居家客户\\\" → 不输出该字段；原因: 2024年是达标时间(qualifiedtime)，不是期次(period)\\n\\n- **clientChurnTag** | 操作符: MATCH | 值类型: enum | 枚举: ['是'] | 定义: 客户是否属于濒临失效高客；定义为可投资资产达到或超过50万元，且存在保单失效风险 | 说明: 该字段是业务侧已计算的组合标签，不要拆成资产规模与保单状态。\\n\\n  示例: \\\"濒临失效高客\\\" → {\\\"field\\\": \\\"clientChurnTag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"是\\\"}\\n\\n  示例: \\\"可投资资产50万以上且有保单失效风险的客户\\\" → {\\\"field\\\": \\\"clientChurnTag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"是\\\"}\\n\\n  反例: \\\"可投资资产50万以上的客户\\\" → 不输出该字段；原因: 缺少保单失效风险条件，不能判定为濒临失效高客\\n\\n  反例: \\\"有失效保单的客户\\\" → 不输出该字段；原因: 保单已经失效不等同于存在失效风险\\n\\n- **ayyMemberGradeInfo.ayymemberperiod** | 操作符: MATCH | 值类型: extract | 格式: 格式：YYYY，例如：2023 | 定义: 安有医会员期次（年度），不表示安有医达标时间 | 说明: 期次为年份格式YYYY，如2023、2024、2025；一个客户可能拥有多个年度的期次记录\\n\\n  示例: \\\"安有医2024年期的客户\\\" → {\\\"field\\\": \\\"ayyMemberGradeInfo.ayymemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2024\\\"}\\n\\n  示例: \\\"23年那期安有医\\\" → {\\\"field\\\": \\\"ayyMemberGradeInfo.ayymemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2023\\\"}\\n\\n  反例: \\\"2024年达标的安有医客户\\\" → 不输出该字段；原因: 2024年是达标时间(qualifiedtime)，不是期次(period)\\n\\n- **ayhMemberGradeInfo.ayhmemberperiod** | 操作符: MATCH | 值类型: extract | 格式: 格式：YYYY，例如：2023 | 定义: 安有护会员期次（年度），不表示安有护达标时间 | 说明: 期次为年份格式YYYY，如2023、2024、2025；一个客户可能拥有多个年度的期次记录\\n\\n  示例: \\\"安有护2024年期的客户\\\" → {\\\"field\\\": \\\"ayhMemberGradeInfo.ayhmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2024\\\"}\\n\\n  示例: \\\"23年那期安有护\\\" → {\\\"field\\\": \\\"ayhMemberGradeInfo.ayhmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2023\\\"}\\n\\n  反例: \\\"2024年达标的安有护客户\\\" → 不输出该字段；原因: 2024年是达标时间(qualifiedtime)，不是期次(period)\\n\\n### 客户行为候选选择\\n任务：根据用户完整原句，从下列候选中选择最匹配的 candidate_id。\\n\\n选择规则：\\n1. 只能选择候选段中出现的 candidate_id，禁止生成候选外 ID，禁止直接输出 activity 或把客户行为写入 conditions。\\n2. “有没有、是否有、有无、有人……吗”是在查询行为是否发生，不是否定。只要原句在查找发生过行为的客户，就必须返回至少 1 个候选。\\n3. 只有原句明确表示行为未发生（如“从未、未曾、没做过、不曾”），或原句根本不是客户行为查询时，才返回空数组。\\n4. 不得因为缺少渠道、时长、产品名、文章名或其他可选槽位而返回空数组。\\n5. 按以下优先级比较候选：行为动作 > 行为对象 > 渠道/场景 > 状态/结果 > 行为主体/角色 > 时长与槽位。\\n6. 原句明确线索与候选冲突时不得选择，例如“转发”不能选“浏览”、“失败”不能选“成功”、明确渠道或角色不一致时不能选择。\\n7. 若 1 个候选能解释原句全部明确线索且明显优于其他候选，只返回该候选。\\n8. 若 2 至 3 个候选都能合理解释原句，且原句缺少区分线索，返回这些候选而不是空数组，按匹配程度从高到低排列。\\n9. 原句明确包含多个独立行为时，返回覆盖这些行为的候选，总数最多 5 个。\\n10. 召回顺序和 lexical_score、semantic_score 仅供参考，不得替代语义判断。\\n\\n- candidate_id=behavior_candidate_014 category=客户与您解除了保单管家服务关系原因如下 template=客户与您解除了保单管家服务关系，原因如下：$replaceReason$ semantic_template=客户与您解除了保单管家服务关系，原因如下： 信息  lexical_score=0.113393\\n  description: 表示客户发生了“客户与您解除了保单管家服务关系原因如下”行为。\\n  positive_examples: 找客户与您解除了保单管家服务关系的客户；查询客户与您解除了保单管家服务关系原因如下的人\\n  negative_examples: 找没有客户与您解除保单管家服务关系的客户；排除客户与您解除保单管家服务关系的客户\\n- candidate_id=behavior_candidate_022 category=在面访扫码结束后参加码上有礼活动领取了权益 template=在面访扫码结束后参加“码上有礼”活动，领取了权益“$rightsName$” semantic_template=在面访扫码结束后参加“码上有礼”活动，领取了权益“ 权益 ” lexical_score=0.113095\\n  description: 表示客户发生了“在面访扫码结束后参加码上有礼活动领取了权益”行为。\\n  positive_examples: 找在面访扫码结束后参加码上有礼活动领取了权益的客户；查询在面访扫码结束后参加码上有礼活动领取权益的人\\n  negative_examples: 找没有在面访扫码结束后参加码上有礼活动领取权益的客户；排除在面访扫码结束后参加码上有礼活动领取权益的客户\\n- candidate_id=behavior_candidate_139 category=客户关系人动态行为 template=客户 $relation$$action$$item$ semantic_template=客户  信息  信息  服务  semantic_score=0.636005\\n  description: 客户的家属、亲友、同事等关系人针对某个项目发生推荐、领取、查看或参与行为。\\n  positive_examples: 找家属领取过服务项目的客户；查询亲友或同事推荐过项目的客户\\n  negative_examples: 找客户本人领取服务项目的记录；查询客户本人参加活动的行为\\n- candidate_id=behavior_candidate_157 category=客户关系人动态行为 template=客户 $relation$$action$$item$ semantic_template=客户  信息  信息  服务  semantic_score=0.635993\\n  description: 客户的家属、亲友、同事等关系人针对某个项目发生推荐、领取、查看或参与行为。\\n  positive_examples: 找家属领取过服务项目的客户；查询亲友或同事推荐过项目的客户\\n  negative_examples: 找客户本人领取服务项目的记录；查询客户本人参加活动的行为\\n- candidate_id=behavior_candidate_061 category=赠送了亲友慢病服务包 template=赠送了亲友慢病服务包 semantic_template=赠送了亲友慢病服务包 semantic_score=0.613699\\n  description: 表示客户发生了“赠送了亲友慢病服务包”行为。\\n  positive_examples: 找赠送了亲友慢病服务包的客户；查询赠送亲友慢病服务包的人\\n  negative_examples: 找没有赠送亲友慢病服务包的客户；排除赠送亲友慢病服务包的客户\\n- candidate_id=behavior_candidate_140 category=在金管家使用了分类的服务保险产品为保单号投保单号 template=在金管家使用了「$serviceType$」分类的「$serviceName$」服务，保险产品为「$productName$」，保单号（投保单号）: $policyNo$ semantic_template=在金管家使用了「 服务 」分类的「 服务 」服务，保险产品为「 产品 」，保单号（投保单号）:  保单  semantic_score=0.582114\\n  description: 客户在金管家使用明确服务分类下的服务，或办理资料变更、保全等具有确定分类归属的新版保单服务。\\n  selection_notes: 必须明确出现服务分类，或明确资料变更、保全等分类型服务动作；只有具体服务名、产品名、保单号或泛化“使用保单服务”时选择 JGJ_POLICY_SERVICE_01，不要仅凭保单号选择本候选。\\n  positive_examples: 找在金管家办过客户资料变更服务的人；查询使用过保单关联服务的客户\\n  negative_examples: 找只开通保单管家但没有办理服务的客户；查询完成保单托管授权的人\\n- candidate_id=behavior_candidate_086 category=成为了你名下老客户的紧急联络人并领取了你赠送的权益他们之间的关系为 template=成为了你名下老客户$inviterName$的紧急联络人，并领取了你赠送的权益$giftName$，他们之间的关系为$relationShip$ semantic_template=成为了你名下老客户 活动 的紧急联络人，并领取了你赠送的权益 权益 ，他们之间的关系为 信息  semantic_score=0.582005\\n  description: 表示客户发生了“成为了你名下老客户的紧急联络人并领取了你赠送的权益他们之间的关系为”行为。\\n  positive_examples: 找成为了你名下老客户的紧急联络人并领取了你赠送的权益他们之间的关系为的客户；查询成为你名下老客户的紧急联络人并领取你赠送的权益他们之间的关系为的人\\n  negative_examples: 找没有成为你名下老客户的紧急联络人并领取你赠送的权益他们之间的关系为的客户；排除成为你名下老客户的紧急联络人并领取你赠送的权益他们之间的关系为的客户\\n\\n输出要求：在原有 query_logic、conditions 之外增加 behavior_candidate_ids 数组，只输出严格 JSON。\\n格式：{\\\"query_logic\\\":\\\"AND\\\",\\\"conditions\\\":[],\\\"behavior_candidate_ids\\\":[\\\"候选ID1\\\",\\\"候选ID2\\\"]}\\n\\n### 用户查询\\n帮我查一下那些上有老下有小的客户\", \"cost_times\": 5691.0, \"confidence\": 0.8, \"intent_summary\": \"家庭成员关系包含父母、(外)祖父母\\n并且有子女的客户\", \"behavior_debug\": {\"has_negative_behavior\": false, \"deterministic_activities\": [], \"semantic_direct_hit\": false, \"semantic_direct_score\": null, \"llm_invoked\": true, \"candidates\": [{\"candidate_id\": \"behavior_candidate_014\", \"activity\": \"KDE_BDTG_RAU\", \"score\": 0.016393, \"lexical_score\": 0.113393, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_022\", \"activity\": \"scanCode_activity_01\", \"score\": 0.016129, \"lexical_score\": 0.113095, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_139\", \"activity\": \"JGJ_RIGHT_HOMESERVICE1\", \"score\": 0.016393, \"lexical_score\": null, \"semantic_score\": 0.636005, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_157\", \"activity\": \"JGJ_RIGHT_HOMESERVICE2\", \"score\": 0.016129, \"lexical_score\": null, \"semantic_score\": 0.635993, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_061\", \"activity\": \"JGJ_CHRONIC_DISEASE_03\", \"score\": 0.015873, \"lexical_score\": null, \"semantic_score\": 0.613699, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_140\", \"activity\": \"JGJ_POLICY_SERVICE_2026\", \"score\": 0.015625, \"lexical_score\": null, \"semantic_score\": 0.582114, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_086\", \"activity\": \"JGJ_POLICY_CLAIM_ASSIST\", \"score\": 0.015385, \"lexical_score\": null, \"semantic_score\": 0.582005, \"retrieval_source\": \"hybrid\"}], \"llm_selected_candidate_ids\": [], \"selection_source\": \"empty\", \"final_activities\": []}}, \"trace_id\": \"cs-unsup\"}}",
+    "judge": {
+      "trace_id": "llm_probe:llm-probe-client_search-unsupported:1788105240441",
+      "project_id": "llm_probe",
+      "business_expectations": [
+        {
+          "expectation_id": "筛选出有上一代家庭成员的客户",
+          "blocking": true,
+          "downstream_consumer": "Elasticsearch 查询执行器",
+          "user_intent": "查询家庭成员中有父母或（外）祖父母的客户。",
+          "expected_outcome": "谓词应包含家庭成员关系为父母或（外）祖父母的条件。",
+          "required_capabilities": [
+            "将“上有老”解析为家庭成员关系条件",
+            "使用正确的 familyInfo.familyrelation 字段、操作符和值"
+          ],
+          "acceptance_criteria": [
+            "包含字段 familyInfo.familyrelation",
+            "操作符为 CONTAINS",
+            "值覆盖父母和（外）祖父母",
+            "不附加用户未表达的其他筛选条件"
+          ],
+          "boundary": {
+            "evidence_scope": "只评估 extra_output_params.conditions",
+            "ignored": [
+              "matched_patterns",
+              "路由字段",
+              "追踪字段"
+            ]
+          },
+          "priority": "核心条件",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "筛选出有子女家庭成员的客户",
+          "blocking": true,
+          "downstream_consumer": "Elasticsearch 查询执行器",
+          "user_intent": "查询家庭成员中有子女的客户。",
+          "expected_outcome": "谓词应包含家庭成员关系为子女的精确匹配条件。",
+          "required_capabilities": [
+            "将“下有小”解析为子女关系条件",
+            "使用正确的 familyInfo.familyrelation 字段和精确匹配操作"
+          ],
+          "acceptance_criteria": [
+            "包含字段 familyInfo.familyrelation",
+            "操作符为 MATCH",
+            "值为子女",
+            "不附加用户未表达的其他筛选条件"
+          ],
+          "boundary": {
+            "evidence_scope": "只评估 extra_output_params.conditions",
+            "ignored": [
+              "matched_patterns",
+              "路由字段",
+              "追踪字段"
+            ]
+          },
+          "priority": "核心条件",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "按客户层面同时具备上下两代成员进行组合筛选",
+          "blocking": true,
+          "downstream_consumer": "Elasticsearch 查询执行器及其客户集合消费者",
+          "user_intent": "检索同时满足“上有老”和“下有小”的客户，结果集合必须恰好对应该人群。",
+          "expected_outcome": "应表达客户层面的 AND：客户存在父母或（外）祖父母成员记录，并且存在子女成员记录；不能把互斥的家庭关系条件压在同一条成员记录上而导致空集。",
+          "required_capabilities": [
+            "正确表达客户层面的组合逻辑",
+            "保持家庭成员关系条件的记录作用域",
+            "避免父母或祖父母与子女关系在同一成员记录上的互斥交集"
+          ],
+          "acceptance_criteria": [
+            "客户必须同时具备上一代成员和子女成员",
+            "组合逻辑不能将父母或祖父母成员记录与子女成员记录错误要求为同一条记录",
+            "查询不能因关系条件互斥而退化为空集",
+            "不能扩大或缩小用户描述的人群"
+          ],
+          "boundary": {
+            "same_table_rule": "同一从表的多个条件作用于同一条成员记录",
+            "semantic_target": "客户级别同时存在两类家庭成员"
+          },
+          "priority": "决定性条件",
+          "evidence_refs": []
+        }
+      ],
+      "fulfillment_assessments": [
+        {
+          "expectation_id": "筛选出有上一代家庭成员的客户",
+          "status": "fulfilled",
+          "score": 1,
+          "expected_evidence": [
+            "应有 familyInfo.familyrelation 使用 CONTAINS 匹配父母和（外）祖父母"
+          ],
+          "actual_evidence": [
+            {
+              "field": "familyInfo.familyrelation",
+              "operator": "CONTAINS",
+              "value": [
+                "父母",
+                "(外)祖父母"
+              ]
+            }
+          ],
+          "downstream_impact": "上一代家庭成员条件已被正确解析。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "筛选出有子女家庭成员的客户",
+          "status": "fulfilled",
+          "score": 1,
+          "expected_evidence": [
+            "应有 familyInfo.familyrelation 使用 MATCH 精确匹配子女"
+          ],
+          "actual_evidence": [
+            {
+              "field": "familyInfo.familyrelation",
+              "operator": "MATCH",
+              "value": "子女"
+            }
+          ],
+          "downstream_impact": "子女家庭成员条件已被正确解析。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "按客户层面同时具备上下两代成员进行组合筛选",
+          "status": "not_fulfilled",
+          "score": 0,
+          "expected_evidence": [
+            "应在客户层面表达上一代成员存在与子女成员存在的同时满足关系，避免要求同一成员记录同时满足两种互斥关系"
+          ],
+          "actual_evidence": [
+            {
+              "query_logic": "AND",
+              "conditions": [
+                {
+                  "field": "familyInfo.familyrelation",
+                  "operator": "CONTAINS",
+                  "value": [
+                    "父母",
+                    "(外)祖父母"
+                  ],
+                  "match_mode": null
+                },
+                {
+                  "field": "familyInfo.familyrelation",
+                  "operator": "MATCH",
+                  "value": "子女",
+                  "match_mode": null
+                }
+              ]
+            }
+          ],
+          "downstream_impact": "按照同一 familyInfo 成员记录作用域推演，父母或（外）祖父母与子女关系不能由同一成员记录同时满足，组合谓词会产生空集或无法召回目标客户。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        }
+      ],
+      "overall_fulfillment": {
+        "status": "not_fulfilled",
+        "blocking_expectations": [
+          "筛选出有上一代家庭成员的客户",
+          "筛选出有子女家庭成员的客户",
+          "按客户层面同时具备上下两代成员进行组合筛选"
+        ]
+      },
+      "expected": {
+        "output_text": "应表达客户层面的 AND：存在 familyInfo.familyrelation 为父母或（外）祖父母的家庭成员记录，并且存在 familyInfo.familyrelation 为子女的家庭成员记录；两个条件不能错误地要求同一条成员记录同时满足。"
+      },
+      "actual": {
+        "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"家庭成员关系包含父母、(外)祖父母\\n并且有子女的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"帮我查一下那些上有老下有小的客户\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"familyInfo.familyrelation\", \"operator\": \"CONTAINS\", \"value\": [\"父母\", \"(外)祖父母\"], \"match_mode\": null}, {\"field\": \"familyInfo.familyrelation\", \"operator\": \"MATCH\", \"value\": \"子女\", \"match_mode\": null}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 4, \"rewritten_query\": \"帮我查一下那些上有老下有小的客户\", \"matched_patterns\": \"### 当前时间\\n2026-08-30 23:53:57 (Asia/Shanghai)\\n### 今天星期\\n周日\\n\\n### 相关字段参考（根据查询内容动态召回）\\n\\n\\n- **pajjMemberGradeInfo.pajjmembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['平安居家V0', '平安居家V1', '平安居家V1优享', '平安居家V2', '平安居家V2优享'] | 定义: 平安居家会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：平安居家V0<平安居家V1<平安居家V1优享<平安居家V2<平安居家V2优享。平安居家V1以上和及以上=含平安居家V1即平安居家V1/平安居家V1优享/平安居家V2/平安居家V2优享；平安居家V2以下和及以下=含平安居家V2即平安居家V0/平安居家V1/平安居家V1优享/平安居家V2\\n\\n  示例: \\\"居家V0和V2都要\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V2\\\"]}\\n\\n  示例: \\\"居家V1以上的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\", \\\"平安居家V2优享\\\"]}\\n\\n  示例: \\\"居家V1及以上的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\", \\\"平安居家V2优享\\\"]}\\n\\n  示例: \\\"居家V2以下的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\"]}\\n\\n  示例: \\\"居家V2及以下的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"平安居家V0\\\", \\\"平安居家V1\\\", \\\"平安居家V1优享\\\", \\\"平安居家V2\\\"]}\\n\\n  反例: \\\"居家V1的客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **birthdayMd** | 操作符: RANGE | 值类型: date | 格式: MM-dd | 说明: 只含月日（不含年），格式MM-dd；本月生日取当月1日至月末；下月生日取下个月1日至月末；下周/下星期/下个星期生日必须取下一个自然周周一至周天，不能理解为从今天开始的未来7天；未来一周/未来7天/接下来一周才取今天至往后顺延6天；未来一个月生日取今天至往后延顺29天；农历/阴历N月生日需将农历月份换算为当前公历年份对应的公历日期范围（农历正月初一为春节，各农历月对应公历日期每年不同，可依据常识估算近似范围，取该农历月初一至月末对应的公历日期）\\n\\n  示例: \\\"3月15日生日的客户\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-15\\\", \\\"max\\\": \\\"03-15\\\"}}\\n\\n  示例: \\\"本月生日的客户（当前2026年3月）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-01\\\", \\\"max\\\": \\\"03-31\\\"}}\\n\\n  示例: \\\"下个月生日的客户（当前2026年3月）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"04-01\\\", \\\"max\\\": \\\"04-30\\\"}}\\n\\n  示例: \\\"下周有哪些客户过生日（当前2026年3月25号）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-30\\\", \\\"max\\\": \\\"04-05\\\"}}\\n\\n  示例: \\\"下周生日的客户张宇（当前2026年3月25号）\\\" → \\n\\n  示例: \\\"未来一周的客户（当前2026年4月1号）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"04-01\\\", \\\"max\\\": \\\"04-07\\\"}}\\n\\n  示例: \\\"未来一个月的客户（当前2026年3月25号）\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"03-25\\\", \\\"max\\\": \\\"04-25\\\"}}\\n\\n  示例: \\\"四、五月客户\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"04-01\\\", \\\"max\\\": \\\"05-31\\\"}}\\n\\n  示例: \\\"农历五月生日的客户\\\" → {\\\"field\\\": \\\"birthdayMd\\\", \\\"operator\\\": \\\"RANGE\\\", \\\"value\\\": {\\\"min\\\": \\\"06-15\\\", \\\"max\\\": \\\"07-14\\\"}}\\n\\n- **zxjyMemberGradeInfo.zxjymembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['臻享家医V1', '臻享家医V2', '臻享家医V3'] | 定义: 臻享家医会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：臻享家医V1<臻享家医V2<臻享家医V3。臻享家医V2以上和及以上=含臻享家医V2即臻享家医V2和臻享家医V3；臻享家医V2以下和及以下=含臻享家医V2即臻享家医V1和臻享家医V2\\n\\n  示例: \\\"臻享家医V1或者V3的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"臻享家医V2以上的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V2\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"家医V2及以上的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V2\\\", \\\"臻享家医V3\\\"]}\\n\\n  示例: \\\"家医V2以下的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V2\\\"]}\\n\\n  示例: \\\"家医V2及以下的客户\\\" → {\\\"field\\\": \\\"zxjyMemberGradeInfo.zxjymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"臻享家医V1\\\", \\\"臻享家医V2\\\"]}\\n\\n  反例: \\\"家医V3的客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **gdkyMemberGradeInfo.gdkymembergradesearch** | 操作符: CONTAINS | 值类型: enum | 枚举: ['逸享会员', '逸享PLUS会员', '颐享家会员', '臻享V1会员', '臻享V2会员'] | 定义: 高端康养会员等级多值查询与范围比较；“以上”、”及以上”、”以下”、”及以下”含边界 | 说明: 排序：逸享会员<逸享PLUS会员<颐享家会员<臻享V1会员<臻享V2会员。逸享会员以上和及以上=含逸享会员即全部5个；颐享家会员以下和及以下=含颐享家会员即逸享会员/逸享PLUS会员/颐享家会员\\n\\n  示例: \\\"逸享会员或者颐享家会员\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"颐享家会员\\\"]}\\n\\n  示例: \\\"康养逸享以上的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\", \\\"臻享V1会员\\\", \\\"臻享V2会员\\\"]}\\n\\n  示例: \\\"康养逸享及以上的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\", \\\"臻享V1会员\\\", \\\"臻享V2会员\\\"]}\\n\\n  示例: \\\"康养颐享家以下的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\"]}\\n\\n  示例: \\\"康养颐享家及以下的客户\\\" → {\\\"field\\\": \\\"gdkyMemberGradeInfo.gdkymembergradesearch\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"逸享会员\\\", \\\"逸享PLUS会员\\\", \\\"颐享家会员\\\"]}\\n\\n  反例: \\\"康养逸享会员客户\\\" → 不输出该字段；原因: 单一等级精确匹配应使用MATCH\\n\\n- **newValueLabel** | 操作符: CONTAINS | 值类型: enum | 枚举: ['F', 'E', 'D', 'C', 'B', 'A4', 'A3', 'A2', 'A1'] | 定义: 表示客户价值等级范围，不表示金额区间；“以上”、“及以上”、“以下”、“及以下”含边界 | 说明: 只处理业务集合、多个候选和等级范围：裸A/A类=A1/A2/A3/A4，A或B/AB类=A1/A2/A3/A4/B；紧凑连续等级（如ABCD）按各字母等级并集解析；高价值/有钱客户=A1/A2/A3/A4/B/C；以上/以下按F<E<D<C<B<A4<A3<A2<A1展开并包含边界。明确的单个完整等级值（如A2、B、B类）使用customer_value_exact的MATCH。\\n\\n  示例: \\\"A\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"A类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"购物中心6公里以内的A类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\"]}\\n\\n  示例: \\\"有钱客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  示例: \\\"AB类客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"高价值客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  示例: \\\"B以上的客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B及以上的客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B类以下客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"F\\\", \\\"E\\\", \\\"D\\\", \\\"C\\\", \\\"B\\\"]}\\n\\n  示例: \\\"B类及以下客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"F\\\", \\\"E\\\", \\\"D\\\", \\\"C\\\", \\\"B\\\"]}\\n\\n  示例: \\\"优质客户\\\" → {\\\"field\\\": \\\"newValueLabel\\\", \\\"operator\\\": \\\"CONTAINS\\\", \\\"value\\\": [\\\"A1\\\", \\\"A2\\\", \\\"A3\\\", \\\"A4\\\", \\\"B\\\", \\\"C\\\"]}\\n\\n  反例: \\\"会员等级高的客户\\\" → 不输出该字段；原因: 这是寿险VIP等级语义，应映射到 vipType，不是客户价值 newValueLabel\\n\\n- **onlyShareClientFlag** | 操作符: MATCH | 值类型: enum | 枚举: ['Y'] | 定义: 表示客户已成功授权，并在授权后30天内未完成面访而触发回收、共享给当前用户；该字段是后端组合业务标签，只有 Y，没有 N。 | 说明: “共享客户”“成功共享给我的客户”是该组合口径的业务简称。显式自然语言必须同时包含授权成功和30天未面访回收语义；仅授权成功、仅30天未面访、保单托管授权、未共享以及当前用户分享给别人的客户均不映射为该字段。\\n\\n  示例: \\\"成功共享给我的客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  示例: \\\"分享客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  示例: \\\"客户成功授权且30天未面访回收的客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  示例: \\\"完成授权后满30天没有面访被回收的客户\\\" → {\\\"field\\\": \\\"onlyShareClientFlag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"Y\\\"}\\n\\n  反例: \\\"仅查询授权成功的客户\\\" → 不输出该字段\\n\\n  反例: \\\"30天没有面访的客户\\\" → 不输出该字段\\n\\n  反例: \\\"完成保单托管授权的客户\\\" → 不输出该字段\\n\\n  反例: \\\"我分享给其他人的客户\\\" → 不输出该字段\\n\\n- **pajjMemberGradeInfo.pajjmemberperiod** | 操作符: MATCH | 值类型: extract | 格式: 格式：YYYY，例如：2023 | 定义: 平安居家会员期次（年度），不表示平安居家达标时间 | 说明: 期次为年份格式YYYY，如2023、2024、2025；一个客户可能拥有多个年度的期次记录\\n\\n  示例: \\\"平安居家2024年期的客户\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2024\\\"}\\n\\n  示例: \\\"23年那期平安居家\\\" → {\\\"field\\\": \\\"pajjMemberGradeInfo.pajjmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2023\\\"}\\n\\n  反例: \\\"2024年达标的平安居家客户\\\" → 不输出该字段；原因: 2024年是达标时间(qualifiedtime)，不是期次(period)\\n\\n- **clientChurnTag** | 操作符: MATCH | 值类型: enum | 枚举: ['是'] | 定义: 客户是否属于濒临失效高客；定义为可投资资产达到或超过50万元，且存在保单失效风险 | 说明: 该字段是业务侧已计算的组合标签，不要拆成资产规模与保单状态。\\n\\n  示例: \\\"濒临失效高客\\\" → {\\\"field\\\": \\\"clientChurnTag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"是\\\"}\\n\\n  示例: \\\"可投资资产50万以上且有保单失效风险的客户\\\" → {\\\"field\\\": \\\"clientChurnTag\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"是\\\"}\\n\\n  反例: \\\"可投资资产50万以上的客户\\\" → 不输出该字段；原因: 缺少保单失效风险条件，不能判定为濒临失效高客\\n\\n  反例: \\\"有失效保单的客户\\\" → 不输出该字段；原因: 保单已经失效不等同于存在失效风险\\n\\n- **ayyMemberGradeInfo.ayymemberperiod** | 操作符: MATCH | 值类型: extract | 格式: 格式：YYYY，例如：2023 | 定义: 安有医会员期次（年度），不表示安有医达标时间 | 说明: 期次为年份格式YYYY，如2023、2024、2025；一个客户可能拥有多个年度的期次记录\\n\\n  示例: \\\"安有医2024年期的客户\\\" → {\\\"field\\\": \\\"ayyMemberGradeInfo.ayymemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2024\\\"}\\n\\n  示例: \\\"23年那期安有医\\\" → {\\\"field\\\": \\\"ayyMemberGradeInfo.ayymemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2023\\\"}\\n\\n  反例: \\\"2024年达标的安有医客户\\\" → 不输出该字段；原因: 2024年是达标时间(qualifiedtime)，不是期次(period)\\n\\n- **ayhMemberGradeInfo.ayhmemberperiod** | 操作符: MATCH | 值类型: extract | 格式: 格式：YYYY，例如：2023 | 定义: 安有护会员期次（年度），不表示安有护达标时间 | 说明: 期次为年份格式YYYY，如2023、2024、2025；一个客户可能拥有多个年度的期次记录\\n\\n  示例: \\\"安有护2024年期的客户\\\" → {\\\"field\\\": \\\"ayhMemberGradeInfo.ayhmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2024\\\"}\\n\\n  示例: \\\"23年那期安有护\\\" → {\\\"field\\\": \\\"ayhMemberGradeInfo.ayhmemberperiod\\\", \\\"operator\\\": \\\"MATCH\\\", \\\"value\\\": \\\"2023\\\"}\\n\\n  反例: \\\"2024年达标的安有护客户\\\" → 不输出该字段；原因: 2024年是达标时间(qualifiedtime)，不是期次(period)\\n\\n### 客户行为候选选择\\n任务：根据用户完整原句，从下列候选中选择最匹配的 candidate_id。\\n\\n选择规则：\\n1. 只能选择候选段中出现的 candidate_id，禁止生成候选外 ID，禁止直接输出 activity 或把客户行为写入 conditions。\\n2. “有没有、是否有、有无、有人……吗”是在查询行为是否发生，不是否定。只要原句在查找发生过行为的客户，就必须返回至少 1 个候选。\\n3. 只有原句明确表示行为未发生（如“从未、未曾、没做过、不曾”），或原句根本不是客户行为查询时，才返回空数组。\\n4. 不得因为缺少渠道、时长、产品名、文章名或其他可选槽位而返回空数组。\\n5. 按以下优先级比较候选：行为动作 > 行为对象 > 渠道/场景 > 状态/结果 > 行为主体/角色 > 时长与槽位。\\n6. 原句明确线索与候选冲突时不得选择，例如“转发”不能选“浏览”、“失败”不能选“成功”、明确渠道或角色不一致时不能选择。\\n7. 若 1 个候选能解释原句全部明确线索且明显优于其他候选，只返回该候选。\\n8. 若 2 至 3 个候选都能合理解释原句，且原句缺少区分线索，返回这些候选而不是空数组，按匹配程度从高到低排列。\\n9. 原句明确包含多个独立行为时，返回覆盖这些行为的候选，总数最多 5 个。\\n10. 召回顺序和 lexical_score、semantic_score 仅供参考，不得替代语义判断。\\n\\n- candidate_id=behavior_candidate_014 category=客户与您解除了保单管家服务关系原因如下 template=客户与您解除了保单管家服务关系，原因如下：$replaceReason$ semantic_template=客户与您解除了保单管家服务关系，原因如下： 信息  lexical_score=0.113393\\n  description: 表示客户发生了“客户与您解除了保单管家服务关系原因如下”行为。\\n  positive_examples: 找客户与您解除了保单管家服务关系的客户；查询客户与您解除了保单管家服务关系原因如下的人\\n  negative_examples: 找没有客户与您解除保单管家服务关系的客户；排除客户与您解除保单管家服务关系的客户\\n- candidate_id=behavior_candidate_022 category=在面访扫码结束后参加码上有礼活动领取了权益 template=在面访扫码结束后参加“码上有礼”活动，领取了权益“$rightsName$” semantic_template=在面访扫码结束后参加“码上有礼”活动，领取了权益“ 权益 ” lexical_score=0.113095\\n  description: 表示客户发生了“在面访扫码结束后参加码上有礼活动领取了权益”行为。\\n  positive_examples: 找在面访扫码结束后参加码上有礼活动领取了权益的客户；查询在面访扫码结束后参加码上有礼活动领取权益的人\\n  negative_examples: 找没有在面访扫码结束后参加码上有礼活动领取权益的客户；排除在面访扫码结束后参加码上有礼活动领取权益的客户\\n- candidate_id=behavior_candidate_139 category=客户关系人动态行为 template=客户 $relation$$action$$item$ semantic_template=客户  信息  信息  服务  semantic_score=0.636005\\n  description: 客户的家属、亲友、同事等关系人针对某个项目发生推荐、领取、查看或参与行为。\\n  positive_examples: 找家属领取过服务项目的客户；查询亲友或同事推荐过项目的客户\\n  negative_examples: 找客户本人领取服务项目的记录；查询客户本人参加活动的行为\\n- candidate_id=behavior_candidate_157 category=客户关系人动态行为 template=客户 $relation$$action$$item$ semantic_template=客户  信息  信息  服务  semantic_score=0.635993\\n  description: 客户的家属、亲友、同事等关系人针对某个项目发生推荐、领取、查看或参与行为。\\n  positive_examples: 找家属领取过服务项目的客户；查询亲友或同事推荐过项目的客户\\n  negative_examples: 找客户本人领取服务项目的记录；查询客户本人参加活动的行为\\n- candidate_id=behavior_candidate_061 category=赠送了亲友慢病服务包 template=赠送了亲友慢病服务包 semantic_template=赠送了亲友慢病服务包 semantic_score=0.613699\\n  description: 表示客户发生了“赠送了亲友慢病服务包”行为。\\n  positive_examples: 找赠送了亲友慢病服务包的客户；查询赠送亲友慢病服务包的人\\n  negative_examples: 找没有赠送亲友慢病服务包的客户；排除赠送亲友慢病服务包的客户\\n- candidate_id=behavior_candidate_140 category=在金管家使用了分类的服务保险产品为保单号投保单号 template=在金管家使用了「$serviceType$」分类的「$serviceName$」服务，保险产品为「$productName$」，保单号（投保单号）: $policyNo$ semantic_template=在金管家使用了「 服务 」分类的「 服务 」服务，保险产品为「 产品 」，保单号（投保单号）:  保单  semantic_score=0.582114\\n  description: 客户在金管家使用明确服务分类下的服务，或办理资料变更、保全等具有确定分类归属的新版保单服务。\\n  selection_notes: 必须明确出现服务分类，或明确资料变更、保全等分类型服务动作；只有具体服务名、产品名、保单号或泛化“使用保单服务”时选择 JGJ_POLICY_SERVICE_01，不要仅凭保单号选择本候选。\\n  positive_examples: 找在金管家办过客户资料变更服务的人；查询使用过保单关联服务的客户\\n  negative_examples: 找只开通保单管家但没有办理服务的客户；查询完成保单托管授权的人\\n- candidate_id=behavior_candidate_086 category=成为了你名下老客户的紧急联络人并领取了你赠送的权益他们之间的关系为 template=成为了你名下老客户$inviterName$的紧急联络人，并领取了你赠送的权益$giftName$，他们之间的关系为$relationShip$ semantic_template=成为了你名下老客户 活动 的紧急联络人，并领取了你赠送的权益 权益 ，他们之间的关系为 信息  semantic_score=0.582005\\n  description: 表示客户发生了“成为了你名下老客户的紧急联络人并领取了你赠送的权益他们之间的关系为”行为。\\n  positive_examples: 找成为了你名下老客户的紧急联络人并领取了你赠送的权益他们之间的关系为的客户；查询成为你名下老客户的紧急联络人并领取你赠送的权益他们之间的关系为的人\\n  negative_examples: 找没有成为你名下老客户的紧急联络人并领取你赠送的权益他们之间的关系为的客户；排除成为你名下老客户的紧急联络人并领取你赠送的权益他们之间的关系为的客户\\n\\n输出要求：在原有 query_logic、conditions 之外增加 behavior_candidate_ids 数组，只输出严格 JSON。\\n格式：{\\\"query_logic\\\":\\\"AND\\\",\\\"conditions\\\":[],\\\"behavior_candidate_ids\\\":[\\\"候选ID1\\\",\\\"候选ID2\\\"]}\\n\\n### 用户查询\\n帮我查一下那些上有老下有小的客户\", \"cost_times\": 5691.0, \"confidence\": 0.8, \"intent_summary\": \"家庭成员关系包含父母、(外)祖父母\\n并且有子女的客户\", \"behavior_debug\": {\"has_negative_behavior\": false, \"deterministic_activities\": [], \"semantic_direct_hit\": false, \"semantic_direct_score\": null, \"llm_invoked\": true, \"candidates\": [{\"candidate_id\": \"behavior_candidate_014\", \"activity\": \"KDE_BDTG_RAU\", \"score\": 0.016393, \"lexical_score\": 0.113393, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_022\", \"activity\": \"scanCode_activity_01\", \"score\": 0.016129, \"lexical_score\": 0.113095, \"semantic_score\": null, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_139\", \"activity\": \"JGJ_RIGHT_HOMESERVICE1\", \"score\": 0.016393, \"lexical_score\": null, \"semantic_score\": 0.636005, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_157\", \"activity\": \"JGJ_RIGHT_HOMESERVICE2\", \"score\": 0.016129, \"lexical_score\": null, \"semantic_score\": 0.635993, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_061\", \"activity\": \"JGJ_CHRONIC_DISEASE_03\", \"score\": 0.015873, \"lexical_score\": null, \"semantic_score\": 0.613699, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_140\", \"activity\": \"JGJ_POLICY_SERVICE_2026\", \"score\": 0.015625, \"lexical_score\": null, \"semantic_score\": 0.582114, \"retrieval_source\": \"hybrid\"}, {\"candidate_id\": \"behavior_candidate_086\", \"activity\": \"JGJ_POLICY_CLAIM_ASSIST\", \"score\": 0.015385, \"lexical_score\": null, \"semantic_score\": 0.582005, \"retrieval_source\": \"hybrid\"}], \"llm_selected_candidate_ids\": [], \"selection_source\": \"empty\", \"final_activities\": []}}, \"trace_id\": \"cs-unsup\"}}"
+      },
+      "missing": [
+        {
+          "kind": "缺失",
+          "error_type": "客户层面的成员存在性组合",
+          "expected": "上一代成员存在条件与子女成员存在条件应在客户层面同时成立，且分别保持各自成员记录作用域",
+          "actual": "仅输出两个共享同一 familyInfo.familyrelation 记录作用域的平面条件",
+          "evidence_ref": "output_text_parsed.data.extra_output_params.conditions",
+          "raw": {
+            "kind": "缺失",
+            "error_type": "客户层面的成员存在性组合",
+            "expected": "上一代成员存在条件与子女成员存在条件应在客户层面同时成立，且分别保持各自成员记录作用域",
+            "actual": "仅输出两个共享同一 familyInfo.familyrelation 记录作用域的平面条件",
+            "evidence_ref": "output_text_parsed.data.extra_output_params.conditions",
+            "incomplete": false
+          },
+          "incomplete": false
+        }
+      ],
+      "wrong": [
+        {
+          "kind": "组合逻辑错误",
+          "error_type": "同一成员记录上的互斥关系条件",
+          "expected": "客户同时拥有上一代成员和子女成员",
+          "actual": "query_logic=AND 将父母或（外）祖父母与子女条件直接作用于同一成员记录",
+          "evidence_ref": "output_text_parsed.data.extra_output_params.query_logic_and_conditions",
+          "raw": {
+            "kind": "组合逻辑错误",
+            "error_type": "同一成员记录上的互斥关系条件",
+            "expected": "客户同时拥有上一代成员和子女成员",
+            "actual": "query_logic=AND 将父母或（外）祖父母与子女条件直接作用于同一成员记录",
+            "evidence_ref": "output_text_parsed.data.extra_output_params.query_logic_and_conditions",
+            "incomplete": false
+          },
+          "incomplete": false
+        }
+      ],
+      "extra": [],
+      "evidence": [
+        {
+          "source": "request.body.user_text",
+          "content": "帮我查一下那些上有老下有小的客户"
+        },
+        {
+          "source": "output_text_parsed.data.extra_output_params",
+          "content": {
+            "query_logic": "AND",
+            "conditions": [
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "CONTAINS",
+                "value": [
+                  "父母",
+                  "(外)祖父母"
+                ]
+              },
+              {
+                "field": "familyInfo.familyrelation",
+                "operator": "MATCH",
+                "value": "子女"
+              }
+            ]
+          }
+        }
+      ],
+      "reasoning_summary": "输出正确识别了“上有老”和“下有小”对应的两个家庭成员关系条件，但将它们以平面 AND 方式放在同一 familyInfo 成员记录作用域内。父母或（外）祖父母与子女是互斥的成员关系，因此该谓词无法检索客户层面同时拥有两类家庭成员的目标人群，组合结果不能兑现用户要求的精确客户集合。",
+      "summary": {
+        "reason": "not_fulfilled · blocking=[按客户层面同时具备上下两代成员进行组合筛选] · 输出正确识别了“上有老”和“下有小”对应的两个家庭成员关系条件，但将它们以平面 AND 方式放在同一 familyInfo 成员记录作用域内。父母或（外）祖父母与子女是互斥的成员关系，因此该谓词无法检索客户层面同时拥有两类家庭成员的目标人群，组合结果不能兑现用户要求的精确客户集合。",
+        "primary_failure_dimensions": [
+          {
+            "expectation_id": "按客户层面同时具备上下两代成员进行组合筛选",
+            "status": "not_fulfilled",
+            "blocking": true,
+            "downstream_impact": "按照同一 familyInfo 成员记录作用域推演，父母或（外）祖父母与子女关系不能由同一成员记录同时满足，组合谓词会产生空集或无法召回目标客户。",
+            "evidence": "应在客户层面表达上一代成员存在与子女成员存在的同时满足关系，避免要求同一成员记录同时满足两种互斥关系"
+          }
+        ],
+        "reason_source": "aggregated_fulfillment",
+        "fulfillment_status": "not_fulfilled",
+        "assessment_count": 3,
+        "blocking_count": 3,
+        "is_formal_attribution": true
+      }
+    },
+    "capability_carrier": {
+      "applicable": true,
+      "axis1_status": "not_fulfilled",
+      "placements": [
+        {
+          "expectation_id": "按客户层面同时具备上下两代成员进行组合筛选",
+          "placement": "说不清",
+          "carry": "undecidable",
+          "reason": "能力边界描述明确支持按客户家庭关系筛选，也列出父母、子女、祖父母等关系词，但没有说明多个 familyInfo.familyrelation 条件是否在客户层面做 AND、是否分别匹配不同家庭成员记录，或是否会错误要求同一条成员记录同时满足互斥关系。因此无法判定该期望能否被准确承载。",
+          "citations": [
+            {
+              "source": "material://llm_probe/field_definitions_args",
+              "ref": "L3176-L3213",
+              "note": "表示客户家庭中存在的成员关系。关系词前出现的客户姓名仍是客户本人姓名，不得因此映射为家庭成员姓名。"
+            },
+            {
+              "source": "material://llm_probe/field_definitions_args",
+              "ref": "L3176-L3213",
+              "note": "涉及家庭成员属性时，familyInfo.familyrelation可与年龄、出生日期、性别、姓名等条件组合输出"
+            }
+          ],
+          "gap_kind": "口径分歧",
+          "missing_material": "需要补充查询逻辑规范，明确多个家庭关系条件的 AND 语义、客户层面的存在性组合方式，以及不同关系条件是否允许分别匹配不同家庭成员记录。",
+          "tool_trail": [
+            {
+              "tool": "material_outline",
+              "material_id": "field_definitions_args",
+              "returned_locators": [
+                "L28-L8330",
+                "L32-L69",
+                "L70-L91",
+                "L92-L106",
+                "L107-L121",
+                "L122-L141",
+                "L142-L170",
+                "L171-L187",
+                "L188-L200",
+                "L201-L216",
+                "L217-L245",
+                "L246-L273",
+                "L274-L294",
+                "L295-L312",
+                "L313-L341",
+                "L342-L357",
+                "L358-L376",
+                "L377-L395",
+                "L396-L410",
+                "L411-L427"
+              ]
+            },
+            {
+              "tool": "material_read",
+              "material_id": "field_definitions_args",
+              "locator": "L3176-L3213",
+              "returned_locators": [
+                "L3176-L3213"
+              ]
+            },
+            {
+              "tool": "material_search",
+              "material_id": "field_definitions_args",
+              "query": "family_relation AND customer parent child",
+              "returned_locators": [
+                "L17-L23",
+                "L89-L115",
+                "L585-L591"
+              ]
+            },
+            {
+              "tool": "material_search",
+              "material_id": "field_definitions_args",
+              "query": "family relation 关系 父母 子女 祖父母",
+              "returned_locators": [
+                "L2781-L2787",
+                "L2972-L2978",
+                "L3001-L3007",
+                "L3019-L3025",
+                "L3081-L3087",
+                "L3182-L3188",
+                "L3219-L3225",
+                "L3259-L3265"
+              ]
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "snapshot_id": "27c03ec01b3b334b"
+    },
+    "elapsed_s": 376.0
+  }
+]

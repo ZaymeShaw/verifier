@@ -64,7 +64,7 @@ def main():
             })();
         """)
         time.sleep(1)
-        with open(f'{SDIR}/mock_datasets_raw.json', 'w') as f:
+        with open(f'{SDIR}/mock_datasets_raw.json', 'w', encoding='utf-8') as f:
             json.dump(api_data, f, indent=2, ensure_ascii=False)
         datasets = api_data.get('datasets', [])
         print(f"\n[API mock_datasets] 返回 {len(datasets)} 个 dataset")
@@ -86,7 +86,7 @@ def main():
             })();
         """)
         time.sleep(1)
-        with open(f'{SDIR}/mock_cases_raw.json', 'w') as f:
+        with open(f'{SDIR}/mock_cases_raw.json', 'w', encoding='utf-8') as f:
             json.dump(cases_data, f, indent=2, ensure_ascii=False)
         cases = cases_data.get('cases', [])
         ref_cnt = sum(1 for c in cases if c.get('reference') is not None)
@@ -109,7 +109,7 @@ def main():
                 reference_source: c.frontend_view && c.frontend_view.reference_panel ? c.frontend_view.reference_panel.source : null
             }));
         """)
-        with open(f'{SDIR}/casepool_reference_sources.json', 'w') as f:
+        with open(f'{SDIR}/casepool_reference_sources.json', 'w', encoding='utf-8') as f:
             json.dump(pool_info, f, indent=2, ensure_ascii=False)
         print(f"\n[前端 casePool] {len(pool_info)} 条,reference 来源统计:")
         ref_field_cnt = sum(1 for p in pool_info if p['has_reference_field'])
@@ -133,7 +133,7 @@ def main():
                 inputReference_result: inputReference(c)
             }));
         """)
-        with open(f'{SDIR}/rendered_reference.json', 'w') as f:
+        with open(f'{SDIR}/rendered_reference.json', 'w', encoding='utf-8') as f:
             json.dump(rendered_ref, f, indent=2, ensure_ascii=False)
         print(f"\n[前端 caseReference() 实际取值] 前 3 条:")
         for r in rendered_ref:

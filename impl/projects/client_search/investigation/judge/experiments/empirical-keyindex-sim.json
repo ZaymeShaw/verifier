@@ -1,0 +1,2759 @@
+{
+  "schema_version": 1,
+  "experiment_id": "empirical-keyindex-sim-20260813",
+  "note": "Offline empirical sim only. Not selected/promoted/solidified. Source-derived projections; no AI synonyms.",
+  "smoke": {
+    "v0": {
+      "n_entries": 120,
+      "关爱客户_in_clientAge": false,
+      "有钱客户_in_newValueLabel": true,
+      "盘客_in_customerReview": true,
+      "金凤_anywhere": false
+    },
+    "v1": {
+      "n_entries": 120,
+      "关爱客户_in_clientAge": true,
+      "有钱客户_in_newValueLabel": true,
+      "盘客_in_customerReview": true,
+      "金凤_anywhere": false
+    },
+    "rules": {
+      "n": 761,
+      "关爱客户": true,
+      "有钱": true,
+      "盘客": true,
+      "O2O": true
+    },
+    "abbr": {
+      "n": 8328,
+      "金凤": true
+    }
+  },
+  "entry_counts": {
+    "field_v0": 120,
+    "field_v1": 120,
+    "rules": 761,
+    "abbrname_members": 8328
+  },
+  "query_counts": {
+    "labeled_frozen": 38,
+    "stress": 352,
+    "focus": 11,
+    "style_extra": 1
+  },
+  "variants": {
+    "V0": {
+      "labeled_metrics": {
+        "development": {
+          "relevant_n": 22,
+          "top8_recall_rate": 0.7272727272727273,
+          "irrelevant_n": 9,
+          "irrelevant_rejection_rate": 0.5555555555555556,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 25,
+          "queries_total": 30,
+          "empty_hit_rate": 0.16666666666666666,
+          "avg_hit_count": 5.833333333333333
+        },
+        "development_field_only": {
+          "relevant_n": 22,
+          "top8_recall_rate": 0.7272727272727273,
+          "irrelevant_n": 9,
+          "irrelevant_rejection_rate": 0.5555555555555556,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 25,
+          "queries_total": 30,
+          "empty_hit_rate": 0.16666666666666666,
+          "avg_hit_count": 5.833333333333333
+        },
+        "holdout": {
+          "relevant_n": 5,
+          "top8_recall_rate": 0.4,
+          "irrelevant_n": 3,
+          "irrelevant_rejection_rate": 0.0,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 7,
+          "queries_total": 8,
+          "empty_hit_rate": 0.125,
+          "avg_hit_count": 6.0
+        },
+        "holdout_field_only": {
+          "relevant_n": 5,
+          "top8_recall_rate": 0.4,
+          "irrelevant_n": 3,
+          "irrelevant_rejection_rate": 0.0,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 7,
+          "queries_total": 8,
+          "empty_hit_rate": 0.125,
+          "avg_hit_count": 6.0
+        }
+      },
+      "labeled_failures": [
+        {
+          "id": "multi-object-child-age",
+          "split": "development",
+          "category": "ambiguity_multi_object",
+          "query": "子女年龄10岁",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientage"
+          ],
+          "hits": [
+            "clientAge",
+            "agentPerspProductType",
+            "familyInfo.familyclientage",
+            "clientGroupLabel"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "multi-object-parent-age",
+          "split": "development",
+          "category": "ambiguity_multi_object",
+          "query": "父母60岁以下",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientage"
+          ],
+          "hits": [
+            "clientAge",
+            "agentPerspProductType",
+            "familyInfo.familyclientage",
+            "ayhMemberGradeInfo.ayhqualifiedtime",
+            "ayyMemberGradeInfo.ayyqualifiedtime",
+            "clientNo",
+            "customerUnredeemedPoints",
+            "gdkyMemberGradeInfo.gdkyqualifiedtime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "irrelevant-weather",
+          "split": "development",
+          "category": "irrelevant",
+          "query": "天气怎么样",
+          "required": [],
+          "hits": [
+            "ayhMemberGradeInfo.ayhmemberproductname",
+            "ayyMemberGradeInfo.ayymemberproductname",
+            "carInsuranceMatuDateTime",
+            "gdkyMemberGradeInfo.gdkymemberproductname",
+            "pajjMemberGradeInfo.pajjmemberproductname",
+            "polNoInfo.poleffdate",
+            "sdbjyMemberGradeInfo.sdbjymemberproductname",
+            "yxgyMemberGradeInfo.yxgymemberproductname"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-child-colloquial",
+          "split": "development",
+          "category": "source_paraphrase",
+          "query": "孩子今年12岁",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientage"
+          ],
+          "hits": [
+            "clientAge",
+            "agentPerspProductType",
+            "familyInfo.familyclientage",
+            "ayhMemberGradeInfo.ayhqualifiedtime",
+            "ayyMemberGradeInfo.ayyqualifiedtime",
+            "effAppEndDate",
+            "gdkyMemberGradeInfo.gdkyqualifiedtime",
+            "latelyUndwrtSegTime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-insured-mobile",
+          "split": "development",
+          "category": "source_term",
+          "query": "被保人手机号",
+          "required": [
+            "polNoInfo.insuredphoneno"
+          ],
+          "hits": [
+            "clientMobile",
+            "polNoInfo.plancodeinfo.insphoneno",
+            "polNoInfo.applicantphoneno",
+            "policies_beneficiary_mobile",
+            "familyInfo.familyclientmobile",
+            "searchClientName",
+            "clientSex",
+            "is_life_insured"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-child-age",
+          "split": "development",
+          "category": "source_paraphrase",
+          "query": "小孩不到6岁",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientage"
+          ],
+          "hits": [
+            "clientAge",
+            "agentPerspProductType",
+            "familyInfo.familyclientage",
+            "ayhMemberGradeInfo.ayhqualifiedtime",
+            "ayyMemberGradeInfo.ayyqualifiedtime",
+            "newValueLabel",
+            "sdbjyMemberGradeInfo.sdbjyqualifiedtime",
+            "yxgyMemberGradeInfo.yxgyqualifiedtime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-partner-age",
+          "split": "development",
+          "category": "ambiguity_multi_object",
+          "query": "爱人不到45岁",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientage"
+          ],
+          "hits": [
+            "clientAge",
+            "agentPerspProductType",
+            "familyInfo.familyclientage",
+            "clientGroupLabel",
+            "ayhMemberGradeInfo.ayhmemberproductname",
+            "ayhMemberGradeInfo.ayhqualifiedtime",
+            "ayyMemberGradeInfo.ayymemberproductname",
+            "ayyMemberGradeInfo.ayyqualifiedtime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-coffee",
+          "split": "development",
+          "category": "irrelevant",
+          "query": "怎么制作咖啡",
+          "required": [],
+          "hits": [
+            "profName",
+            "ayhMemberGradeInfo.ayhmemberproductname",
+            "ayyMemberGradeInfo.ayymemberproductname",
+            "gdkyMemberGradeInfo.gdkymemberproductname",
+            "pajjMemberGradeInfo.pajjmemberproductname",
+            "sdbjyMemberGradeInfo.sdbjymemberproductname",
+            "yxgyMemberGradeInfo.yxgymemberproductname",
+            "zxjyMemberGradeInfo.zxjymemberproductname"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-galaxy",
+          "split": "development",
+          "category": "irrelevant",
+          "query": "银河系有多老",
+          "required": [],
+          "hits": [
+            "familyInfo.familyclientage"
+          ],
+          "collections": [
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-spouse-birthday",
+          "split": "holdout",
+          "category": "source_paraphrase",
+          "query": "另一半是哪天出生的",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientbirthday"
+          ],
+          "hits": [
+            "idValidDate",
+            "clientBirthday",
+            "clientZodiac",
+            "familyInfo.familyclientbirthday",
+            "idNo",
+            "idType",
+            "polNoInfo.poleffdate"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-insured-name",
+          "split": "holdout",
+          "category": "source_paraphrase",
+          "query": "这张保单保的是谁",
+          "required": [
+            "polNoInfo.insuredname"
+          ],
+          "hits": [
+            "latelyUndwrtSegTime",
+            "polNoInfo.applicantname",
+            "polNoInfo.benefinfo.benefname",
+            "polNoInfo.plancodeinfo.insname",
+            "polNoInfo.poleffdate",
+            "polNum",
+            "searchClientName"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-contact-address",
+          "split": "holdout",
+          "category": "search_to_load",
+          "query": "客户收信寄到哪里",
+          "required": [
+            "CONTACT_ADDRESS_FIELD"
+          ],
+          "hits": [],
+          "collections": []
+        },
+        {
+          "id": "holdout-v3-unsupported-hobby",
+          "split": "holdout",
+          "category": "unsupported",
+          "query": "客户平时有什么兴趣爱好",
+          "required": [],
+          "hits": [
+            "gdkyMemberGradeInfo.gdkymembergradesearch",
+            "gdkyMemberGradeInfo.gdkymemberperiod",
+            "gdkyMemberGradeInfo.gdkyqualifiedtime",
+            "pajjMemberGradeInfo.pajjmembergradesearch",
+            "pajjMemberGradeInfo.pajjmemberperiod",
+            "pajjMemberGradeInfo.pajjqualifiedtime",
+            "ayhMemberGradeInfo.ayhmemberperiod",
+            "ayhMemberGradeInfo.ayhqualifiedtime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-irrelevant-recipe",
+          "split": "holdout",
+          "category": "irrelevant",
+          "query": "红烧肉怎么做",
+          "required": [],
+          "hits": [
+            "ayhMemberGradeInfo.ayhmemberproductname",
+            "ayyMemberGradeInfo.ayymemberproductname",
+            "gdkyMemberGradeInfo.gdkymemberproductname",
+            "pajjMemberGradeInfo.pajjmemberproductname",
+            "profName",
+            "sdbjyMemberGradeInfo.sdbjymemberproductname",
+            "searchClientName",
+            "yxgyMemberGradeInfo.yxgymemberproductname"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-irrelevant-astronomy",
+          "split": "holdout",
+          "category": "irrelevant",
+          "query": "黑洞为什么会蒸发",
+          "required": [],
+          "hits": [
+            "ayhMemberGradeInfo.ayhmembergradesearch",
+            "ayhMemberGradeInfo.ayhmemberperiod",
+            "ayhMemberGradeInfo.ayhmemberstatus",
+            "ayyMemberGradeInfo.ayymembergradesearch",
+            "ayyMemberGradeInfo.ayymemberperiod",
+            "ayyMemberGradeInfo.ayymemberstatus",
+            "gdkyMemberGradeInfo.gdkymembergradesearch",
+            "gdkyMemberGradeInfo.gdkymemberperiod"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        }
+      ],
+      "focus": [
+        {
+          "id": "focus-guanai",
+          "query": "关爱客户",
+          "bucket": "business_noun",
+          "qual": "MISS",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-youqian",
+          "query": "有钱",
+          "bucket": "business_noun",
+          "qual": "MISS",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-youqian-kehu",
+          "query": "有钱客户",
+          "bucket": "business_noun",
+          "qual": "MISS",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-jinfeng",
+          "query": "金凤",
+          "bucket": "business_noun",
+          "qual": "MISS",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-panke",
+          "query": "盘客",
+          "bucket": "business_noun",
+          "qual": "MISS",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-qupanke",
+          "query": "去盘客",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "customerReview",
+              "collection": "field",
+              "score": 2.0
+            }
+          ],
+          "loaded_count": 1,
+          "hit_count": 1
+        },
+        {
+          "id": "focus-latin-a",
+          "query": "A",
+          "bucket": "latin_bareword",
+          "qual": "OK",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-latin-o2o",
+          "query": "O2O",
+          "bucket": "latin_bareword",
+          "qual": "MISS",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-name-chen",
+          "query": "陈金秀",
+          "bucket": "person_name",
+          "qual": "MISS",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-weather",
+          "query": "天气怎么样",
+          "bucket": "irrelevant_like",
+          "qual": "FALSE",
+          "hits": [
+            {
+              "key": "ayhMemberGradeInfo.ayhmemberproductname",
+              "collection": "field",
+              "score": 2.0
+            },
+            {
+              "key": "ayyMemberGradeInfo.ayymemberproductname",
+              "collection": "field",
+              "score": 2.0
+            },
+            {
+              "key": "carInsuranceMatuDateTime",
+              "collection": "field",
+              "score": 2.0
+            },
+            {
+              "key": "gdkyMemberGradeInfo.gdkymemberproductname",
+              "collection": "field",
+              "score": 2.0
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjmemberproductname",
+              "collection": "field",
+              "score": 2.0
+            },
+            {
+              "key": "polNoInfo.poleffdate",
+              "collection": "field",
+              "score": 2.0
+            },
+            {
+              "key": "sdbjyMemberGradeInfo.sdbjymemberproductname",
+              "collection": "field",
+              "score": 2.0
+            },
+            {
+              "key": "yxgyMemberGradeInfo.yxgymemberproductname",
+              "collection": "field",
+              "score": 2.0
+            }
+          ],
+          "loaded_count": 8,
+          "hit_count": 8
+        },
+        {
+          "id": "focus-hobby",
+          "query": "客户平时有什么兴趣爱好",
+          "bucket": "unsupported_like",
+          "qual": "FALSE",
+          "hits": [
+            {
+              "key": "gdkyMemberGradeInfo.gdkymembergradesearch",
+              "collection": "field",
+              "score": 4.0
+            },
+            {
+              "key": "gdkyMemberGradeInfo.gdkymemberperiod",
+              "collection": "field",
+              "score": 4.0
+            },
+            {
+              "key": "gdkyMemberGradeInfo.gdkyqualifiedtime",
+              "collection": "field",
+              "score": 4.0
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjmembergradesearch",
+              "collection": "field",
+              "score": 4.0
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjmemberperiod",
+              "collection": "field",
+              "score": 4.0
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjqualifiedtime",
+              "collection": "field",
+              "score": 4.0
+            },
+            {
+              "key": "ayhMemberGradeInfo.ayhmemberperiod",
+              "collection": "field",
+              "score": 3.0
+            },
+            {
+              "key": "ayhMemberGradeInfo.ayhqualifiedtime",
+              "collection": "field",
+              "score": 3.0
+            }
+          ],
+          "loaded_count": 8,
+          "hit_count": 8
+        },
+        {
+          "id": "focus-style-iter-source-badcase-078",
+          "query": "关爱客户",
+          "bucket": "iteration_style",
+          "qual": "MISS",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        }
+      ],
+      "focus_flips": {
+        "关爱客户": "MISS",
+        "有钱": "MISS",
+        "金凤": "MISS",
+        "盘客": "MISS"
+      },
+      "stress_summary": {
+        "n": 352,
+        "with_hits": 341,
+        "empty_rate": 0.03125,
+        "avg_hits": 7.5625,
+        "load_success_rate": 1.0,
+        "false_accept_proxy": {
+          "irrelevant_like": 1,
+          "unsupported_like": 1
+        },
+        "buckets": {
+          "business_noun": {
+            "n": 14,
+            "with_hits": 10,
+            "empty": 4
+          },
+          "irrelevant_like": {
+            "n": 1,
+            "with_hits": 1,
+            "empty": 0
+          },
+          "iteration_case": {
+            "n": 30,
+            "with_hits": 26,
+            "empty": 4,
+            "weak_labeled": 26,
+            "weak_any_hit": 13
+          },
+          "latin_bareword": {
+            "n": 2,
+            "with_hits": 0,
+            "empty": 2
+          },
+          "other": {
+            "n": 300,
+            "with_hits": 300,
+            "empty": 0
+          },
+          "person_name": {
+            "n": 1,
+            "with_hits": 0,
+            "empty": 1
+          },
+          "person_name_context": {
+            "n": 3,
+            "with_hits": 3,
+            "empty": 0
+          },
+          "unsupported_like": {
+            "n": 1,
+            "with_hits": 1,
+            "empty": 0
+          }
+        }
+      },
+      "stress_sample_false_accepts": [
+        {
+          "id": "focus-weather",
+          "query": "天气怎么样",
+          "bucket": "irrelevant_like",
+          "hits": [
+            "ayhMemberGradeInfo.ayhmemberproductname",
+            "ayyMemberGradeInfo.ayymemberproductname",
+            "carInsuranceMatuDateTime",
+            "gdkyMemberGradeInfo.gdkymemberproductname",
+            "pajjMemberGradeInfo.pajjmemberproductname"
+          ]
+        },
+        {
+          "id": "focus-hobby",
+          "query": "客户平时有什么兴趣爱好",
+          "bucket": "unsupported_like",
+          "hits": [
+            "gdkyMemberGradeInfo.gdkymembergradesearch",
+            "gdkyMemberGradeInfo.gdkymemberperiod",
+            "gdkyMemberGradeInfo.gdkyqualifiedtime",
+            "pajjMemberGradeInfo.pajjmembergradesearch",
+            "pajjMemberGradeInfo.pajjmemberperiod"
+          ]
+        }
+      ]
+    },
+    "V1": {
+      "labeled_metrics": {
+        "development": {
+          "relevant_n": 22,
+          "top8_recall_rate": 0.7727272727272727,
+          "irrelevant_n": 9,
+          "irrelevant_rejection_rate": 0.5555555555555556,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 25,
+          "queries_total": 30,
+          "empty_hit_rate": 0.16666666666666666,
+          "avg_hit_count": 5.633333333333334
+        },
+        "development_field_only": {
+          "relevant_n": 22,
+          "top8_recall_rate": 0.7727272727272727,
+          "irrelevant_n": 9,
+          "irrelevant_rejection_rate": 0.5555555555555556,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 25,
+          "queries_total": 30,
+          "empty_hit_rate": 0.16666666666666666,
+          "avg_hit_count": 5.633333333333334
+        },
+        "holdout": {
+          "relevant_n": 5,
+          "top8_recall_rate": 0.2,
+          "irrelevant_n": 3,
+          "irrelevant_rejection_rate": 0.6666666666666666,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 6,
+          "queries_total": 8,
+          "empty_hit_rate": 0.25,
+          "avg_hit_count": 4.375
+        },
+        "holdout_field_only": {
+          "relevant_n": 5,
+          "top8_recall_rate": 0.2,
+          "irrelevant_n": 3,
+          "irrelevant_rejection_rate": 0.6666666666666666,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 6,
+          "queries_total": 8,
+          "empty_hit_rate": 0.25,
+          "avg_hit_count": 4.375
+        }
+      },
+      "labeled_failures": [
+        {
+          "id": "multi-term-prospect-source",
+          "split": "development",
+          "category": "unsupported",
+          "query": "准客来源包含综拓 O2O 意健险",
+          "required": [
+            "pcustSourcType"
+          ],
+          "hits": [
+            "ayhMemberGradeInfo.ayhmembergradesearch",
+            "ayhMemberGradeInfo.ayhmemberperiod",
+            "ayhMemberGradeInfo.ayhmemberstatus",
+            "ayyMemberGradeInfo.ayymembergradesearch",
+            "ayyMemberGradeInfo.ayymemberperiod",
+            "ayyMemberGradeInfo.ayymemberstatus",
+            "education",
+            "gdkyMemberGradeInfo.gdkymembergradesearch"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-child-colloquial",
+          "split": "development",
+          "category": "source_paraphrase",
+          "query": "孩子今年12岁",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientage"
+          ],
+          "hits": [
+            "clientAge",
+            "ayhMemberGradeInfo.ayhqualifiedtime",
+            "ayyMemberGradeInfo.ayyqualifiedtime",
+            "gdkyMemberGradeInfo.gdkyqualifiedtime",
+            "pajjMemberGradeInfo.pajjqualifiedtime",
+            "sdbjyMemberGradeInfo.sdbjyqualifiedtime",
+            "yxgyMemberGradeInfo.yxgyqualifiedtime",
+            "zxjyMemberGradeInfo.zxjyqualifiedtime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-unsupported-color",
+          "split": "development",
+          "category": "unsupported",
+          "query": "客户最喜欢的颜色",
+          "required": [],
+          "hits": [
+            "isBuyInsurance",
+            "clientTemperature",
+            "dateCreated",
+            "gdkyMemberGradeInfo.gdkyqualifiedtime",
+            "polNoInfo.surrenderDateTime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-unsupported-pet-name",
+          "split": "development",
+          "category": "unsupported",
+          "query": "客户宠物名字",
+          "required": [],
+          "hits": [
+            "searchClientName",
+            "isBuyInsurance",
+            "familyInfo.familyclientname",
+            "polNoInfo.applicantname",
+            "polNoInfo.benefinfo.benefname",
+            "polNoInfo.plancodeinfo.insname"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-insured-mobile",
+          "split": "development",
+          "category": "source_term",
+          "query": "被保人手机号",
+          "required": [
+            "polNoInfo.insuredphoneno"
+          ],
+          "hits": [
+            "polNoInfo.plancodeinfo.insphoneno",
+            "clientMobile",
+            "clientSex",
+            "polNoInfo.applicantphoneno",
+            "familyInfo.familyclientmobile",
+            "policies_beneficiary_mobile",
+            "is_life_insured",
+            "polNoInfo.plancodeinfo.insname"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-child-age",
+          "split": "development",
+          "category": "source_paraphrase",
+          "query": "小孩不到6岁",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientage"
+          ],
+          "hits": [
+            "clientAge",
+            "gdkyMemberGradeInfo.gdkymembergradesearch",
+            "pajjMemberGradeInfo.pajjmembergradesearch",
+            "zxjyMemberGradeInfo.zxjymembergradesearch",
+            "familyInfo.familyclientage"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-partner-age",
+          "split": "development",
+          "category": "ambiguity_multi_object",
+          "query": "爱人不到45岁",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientage"
+          ],
+          "hits": [
+            "clientAge",
+            "gdkyMemberGradeInfo.gdkymembergradesearch",
+            "pajjMemberGradeInfo.pajjmembergradesearch",
+            "zxjyMemberGradeInfo.zxjymembergradesearch",
+            "familyInfo.familyclientage"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-favorite-film",
+          "split": "development",
+          "category": "unsupported",
+          "query": "客户最爱的电影",
+          "required": [],
+          "hits": [
+            "isBuyInsurance",
+            "clientTemperature",
+            "dateCreated",
+            "gdkyMemberGradeInfo.gdkyqualifiedtime",
+            "polNoInfo.surrenderDateTime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-spouse-birthday",
+          "split": "holdout",
+          "category": "source_paraphrase",
+          "query": "另一半是哪天出生的",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientbirthday"
+          ],
+          "hits": [
+            "clientBirthday",
+            "familyInfo.familyclientbirthday"
+          ],
+          "collections": [
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-insured-name",
+          "split": "holdout",
+          "category": "source_paraphrase",
+          "query": "这张保单保的是谁",
+          "required": [
+            "polNoInfo.insuredname"
+          ],
+          "hits": [
+            "polNum",
+            "polNoInfo.applicantname",
+            "polNoInfo.polStatus",
+            "polNoInfo.poleffdate",
+            "agentPerspProductType",
+            "latelyUndwrtSegTime",
+            "polNoInfo.plancodeinfo.abbrname",
+            "polNoInfo.surrenderDateTime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-occupation",
+          "split": "holdout",
+          "category": "source_paraphrase",
+          "query": "客户是做哪一行的",
+          "required": [
+            "profName"
+          ],
+          "hits": [
+            "isBuyInsurance",
+            "clientChurnTag",
+            "isBuyInsuranceCar",
+            "isBuyPension",
+            "is_life_insured",
+            "onlyShareClientFlag",
+            "ayhMemberGradeInfo.ayhmemberperiod",
+            "ayyMemberGradeInfo.ayymemberperiod"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-contact-address",
+          "split": "holdout",
+          "category": "search_to_load",
+          "query": "客户收信寄到哪里",
+          "required": [
+            "CONTACT_ADDRESS_FIELD"
+          ],
+          "hits": [
+            "isBuyInsurance"
+          ],
+          "collections": [
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-unsupported-hobby",
+          "split": "holdout",
+          "category": "unsupported",
+          "query": "客户平时有什么兴趣爱好",
+          "required": [],
+          "hits": [
+            "isBuyInsurance",
+            "pajjMemberGradeInfo.pajjmemberproductname",
+            "pajjMemberGradeInfo.pajjmembergradesearch",
+            "pajjMemberGradeInfo.pajjmemberperiod",
+            "pajjMemberGradeInfo.pajjmemberstatus",
+            "pajjMemberGradeInfo.pajjqualifiedtime",
+            "ayhMemberGradeInfo.ayhmemberproductname",
+            "ayyMemberGradeInfo.ayymemberproductname"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        }
+      ],
+      "focus": [
+        {
+          "id": "focus-guanai",
+          "query": "关爱客户",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "clientAge",
+              "collection": "field",
+              "score": 1147.2135855328884
+            },
+            {
+              "key": "isBuyInsurance",
+              "collection": "field",
+              "score": 1022.0
+            }
+          ],
+          "loaded_count": 2,
+          "hit_count": 2
+        },
+        {
+          "id": "focus-youqian",
+          "query": "有钱",
+          "bucket": "business_noun",
+          "qual": "MISS",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-youqian-kehu",
+          "query": "有钱客户",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "newValueLabel",
+              "collection": "field",
+              "score": 1173.2135855328884
+            },
+            {
+              "key": "isBuyInsurance",
+              "collection": "field",
+              "score": 1022.0
+            }
+          ],
+          "loaded_count": 2,
+          "hit_count": 2
+        },
+        {
+          "id": "focus-jinfeng",
+          "query": "金凤",
+          "bucket": "business_noun",
+          "qual": "MISS",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-panke",
+          "query": "盘客",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "customerReview",
+              "collection": "field",
+              "score": 1137.1026433650368
+            }
+          ],
+          "loaded_count": 1,
+          "hit_count": 1
+        },
+        {
+          "id": "focus-qupanke",
+          "query": "去盘客",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "customerReview",
+              "collection": "field",
+              "score": 1155.2052867300736
+            }
+          ],
+          "loaded_count": 1,
+          "hit_count": 1
+        },
+        {
+          "id": "focus-latin-a",
+          "query": "A",
+          "bucket": "latin_bareword",
+          "qual": "OK",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-latin-o2o",
+          "query": "O2O",
+          "bucket": "latin_bareword",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "pcustSourcType",
+              "collection": "field",
+              "score": 1182.3943565138572
+            },
+            {
+              "key": "validSinsPol",
+              "collection": "field",
+              "score": 1156.3943565138572
+            }
+          ],
+          "loaded_count": 2,
+          "hit_count": 2
+        },
+        {
+          "id": "focus-name-chen",
+          "query": "陈金秀",
+          "bucket": "person_name",
+          "qual": "MISS",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-weather",
+          "query": "天气怎么样",
+          "bucket": "irrelevant_like",
+          "qual": "OK",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-hobby",
+          "query": "客户平时有什么兴趣爱好",
+          "bucket": "unsupported_like",
+          "qual": "FALSE",
+          "hits": [
+            {
+              "key": "isBuyInsurance",
+              "collection": "field",
+              "score": 1022.0
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjmemberproductname",
+              "collection": "field",
+              "score": 38.72867888310029
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjmembergradesearch",
+              "collection": "field",
+              "score": 37.17053426505374
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjmemberperiod",
+              "collection": "field",
+              "score": 37.17053426505374
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjmemberstatus",
+              "collection": "field",
+              "score": 37.17053426505374
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjqualifiedtime",
+              "collection": "field",
+              "score": 37.17053426505374
+            },
+            {
+              "key": "ayhMemberGradeInfo.ayhmemberproductname",
+              "collection": "field",
+              "score": 24.7246478067316
+            },
+            {
+              "key": "ayyMemberGradeInfo.ayymemberproductname",
+              "collection": "field",
+              "score": 24.7246478067316
+            }
+          ],
+          "loaded_count": 8,
+          "hit_count": 8
+        },
+        {
+          "id": "focus-style-iter-source-badcase-078",
+          "query": "关爱客户",
+          "bucket": "iteration_style",
+          "qual": "FALSE",
+          "hits": [
+            {
+              "key": "clientAge",
+              "collection": "field",
+              "score": 1147.2135855328884
+            },
+            {
+              "key": "isBuyInsurance",
+              "collection": "field",
+              "score": 1022.0
+            }
+          ],
+          "loaded_count": 2,
+          "hit_count": 2
+        }
+      ],
+      "focus_flips": {
+        "关爱客户": "OK",
+        "有钱": "MISS",
+        "金凤": "MISS",
+        "盘客": "OK"
+      },
+      "stress_summary": {
+        "n": 352,
+        "with_hits": 343,
+        "empty_rate": 0.02556818181818182,
+        "avg_hits": 7.514204545454546,
+        "load_success_rate": 1.0,
+        "false_accept_proxy": {
+          "unsupported_like": 1
+        },
+        "buckets": {
+          "business_noun": {
+            "n": 14,
+            "with_hits": 12,
+            "empty": 2
+          },
+          "irrelevant_like": {
+            "n": 1,
+            "with_hits": 0,
+            "empty": 1
+          },
+          "iteration_case": {
+            "n": 30,
+            "with_hits": 26,
+            "empty": 4,
+            "weak_labeled": 26,
+            "weak_any_hit": 17
+          },
+          "latin_bareword": {
+            "n": 2,
+            "with_hits": 1,
+            "empty": 1
+          },
+          "other": {
+            "n": 300,
+            "with_hits": 300,
+            "empty": 0
+          },
+          "person_name": {
+            "n": 1,
+            "with_hits": 0,
+            "empty": 1
+          },
+          "person_name_context": {
+            "n": 3,
+            "with_hits": 3,
+            "empty": 0
+          },
+          "unsupported_like": {
+            "n": 1,
+            "with_hits": 1,
+            "empty": 0
+          }
+        }
+      },
+      "stress_sample_false_accepts": [
+        {
+          "id": "focus-hobby",
+          "query": "客户平时有什么兴趣爱好",
+          "bucket": "unsupported_like",
+          "hits": [
+            "isBuyInsurance",
+            "pajjMemberGradeInfo.pajjmemberproductname",
+            "pajjMemberGradeInfo.pajjmembergradesearch",
+            "pajjMemberGradeInfo.pajjmemberperiod",
+            "pajjMemberGradeInfo.pajjmemberstatus"
+          ]
+        }
+      ]
+    },
+    "V2": {
+      "labeled_metrics": {
+        "development": {
+          "relevant_n": 22,
+          "top8_recall_rate": 0.7727272727272727,
+          "irrelevant_n": 9,
+          "irrelevant_rejection_rate": 0.5555555555555556,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 25,
+          "queries_total": 30,
+          "empty_hit_rate": 0.16666666666666666,
+          "avg_hit_count": 5.733333333333333
+        },
+        "development_field_only": {
+          "relevant_n": 22,
+          "top8_recall_rate": 0.7727272727272727,
+          "irrelevant_n": 9,
+          "irrelevant_rejection_rate": 0.5555555555555556,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 25,
+          "queries_total": 30,
+          "empty_hit_rate": 0.16666666666666666,
+          "avg_hit_count": 5.5
+        },
+        "holdout": {
+          "relevant_n": 5,
+          "top8_recall_rate": 0.2,
+          "irrelevant_n": 3,
+          "irrelevant_rejection_rate": 0.6666666666666666,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 6,
+          "queries_total": 8,
+          "empty_hit_rate": 0.25,
+          "avg_hit_count": 4.375
+        },
+        "holdout_field_only": {
+          "relevant_n": 5,
+          "top8_recall_rate": 0.2,
+          "irrelevant_n": 3,
+          "irrelevant_rejection_rate": 0.6666666666666666,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 6,
+          "queries_total": 8,
+          "empty_hit_rate": 0.25,
+          "avg_hit_count": 4.375
+        }
+      },
+      "labeled_failures": [
+        {
+          "id": "multi-term-prospect-source",
+          "split": "development",
+          "category": "unsupported",
+          "query": "准客来源包含综拓 O2O 意健险",
+          "required": [
+            "pcustSourcType"
+          ],
+          "hits": [
+            "ayhMemberGradeInfo.ayhmembergradesearch",
+            "ayhMemberGradeInfo.ayhmemberperiod",
+            "ayhMemberGradeInfo.ayhmemberstatus",
+            "ayyMemberGradeInfo.ayymembergradesearch",
+            "ayyMemberGradeInfo.ayymemberperiod",
+            "ayyMemberGradeInfo.ayymemberstatus",
+            "education",
+            "gdkyMemberGradeInfo.gdkymembergradesearch"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-child-colloquial",
+          "split": "development",
+          "category": "source_paraphrase",
+          "query": "孩子今年12岁",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientage"
+          ],
+          "hits": [
+            "clientAge",
+            "ayhMemberGradeInfo.ayhqualifiedtime",
+            "ayyMemberGradeInfo.ayyqualifiedtime",
+            "gdkyMemberGradeInfo.gdkyqualifiedtime",
+            "pajjMemberGradeInfo.pajjqualifiedtime",
+            "sdbjyMemberGradeInfo.sdbjyqualifiedtime",
+            "yxgyMemberGradeInfo.yxgyqualifiedtime",
+            "zxjyMemberGradeInfo.zxjyqualifiedtime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-unsupported-color",
+          "split": "development",
+          "category": "unsupported",
+          "query": "客户最喜欢的颜色",
+          "required": [],
+          "hits": [
+            "isBuyInsurance",
+            "clientTemperature",
+            "dateCreated",
+            "gdkyMemberGradeInfo.gdkyqualifiedtime",
+            "polNoInfo.surrenderDateTime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-unsupported-pet-name",
+          "split": "development",
+          "category": "unsupported",
+          "query": "客户宠物名字",
+          "required": [],
+          "hits": [
+            "searchClientName",
+            "isBuyInsurance",
+            "familyInfo.familyclientname",
+            "polNoInfo.applicantname",
+            "polNoInfo.benefinfo.benefname",
+            "polNoInfo.plancodeinfo.insname"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-insured-mobile",
+          "split": "development",
+          "category": "source_term",
+          "query": "被保人手机号",
+          "required": [
+            "polNoInfo.insuredphoneno"
+          ],
+          "hits": [
+            "被保人手机号",
+            "polNoInfo.plancodeinfo.insphoneno",
+            "clientMobile",
+            "clientSex",
+            "polNoInfo.applicantphoneno",
+            "familyInfo.familyclientmobile",
+            "policies_beneficiary_mobile",
+            "is_life_insured"
+          ],
+          "collections": [
+            "enhanced_rules",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-child-age",
+          "split": "development",
+          "category": "source_paraphrase",
+          "query": "小孩不到6岁",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientage"
+          ],
+          "hits": [
+            "clientAge",
+            "gdkyMemberGradeInfo.gdkymembergradesearch",
+            "pajjMemberGradeInfo.pajjmembergradesearch",
+            "zxjyMemberGradeInfo.zxjymembergradesearch",
+            "familyInfo.familyclientage"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-partner-age",
+          "split": "development",
+          "category": "ambiguity_multi_object",
+          "query": "爱人不到45岁",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientage"
+          ],
+          "hits": [
+            "clientAge",
+            "gdkyMemberGradeInfo.gdkymembergradesearch",
+            "pajjMemberGradeInfo.pajjmembergradesearch",
+            "zxjyMemberGradeInfo.zxjymembergradesearch",
+            "familyInfo.familyclientage"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-favorite-film",
+          "split": "development",
+          "category": "unsupported",
+          "query": "客户最爱的电影",
+          "required": [],
+          "hits": [
+            "isBuyInsurance",
+            "clientTemperature",
+            "dateCreated",
+            "gdkyMemberGradeInfo.gdkyqualifiedtime",
+            "polNoInfo.surrenderDateTime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-spouse-birthday",
+          "split": "holdout",
+          "category": "source_paraphrase",
+          "query": "另一半是哪天出生的",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientbirthday"
+          ],
+          "hits": [
+            "clientBirthday",
+            "familyInfo.familyclientbirthday"
+          ],
+          "collections": [
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-insured-name",
+          "split": "holdout",
+          "category": "source_paraphrase",
+          "query": "这张保单保的是谁",
+          "required": [
+            "polNoInfo.insuredname"
+          ],
+          "hits": [
+            "polNum",
+            "polNoInfo.applicantname",
+            "polNoInfo.polStatus",
+            "polNoInfo.poleffdate",
+            "agentPerspProductType",
+            "latelyUndwrtSegTime",
+            "polNoInfo.plancodeinfo.abbrname",
+            "polNoInfo.surrenderDateTime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-occupation",
+          "split": "holdout",
+          "category": "source_paraphrase",
+          "query": "客户是做哪一行的",
+          "required": [
+            "profName"
+          ],
+          "hits": [
+            "isBuyInsurance",
+            "clientChurnTag",
+            "isBuyInsuranceCar",
+            "isBuyPension",
+            "is_life_insured",
+            "onlyShareClientFlag",
+            "ayhMemberGradeInfo.ayhmemberperiod",
+            "ayyMemberGradeInfo.ayymemberperiod"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-contact-address",
+          "split": "holdout",
+          "category": "search_to_load",
+          "query": "客户收信寄到哪里",
+          "required": [
+            "CONTACT_ADDRESS_FIELD"
+          ],
+          "hits": [
+            "isBuyInsurance"
+          ],
+          "collections": [
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-unsupported-hobby",
+          "split": "holdout",
+          "category": "unsupported",
+          "query": "客户平时有什么兴趣爱好",
+          "required": [],
+          "hits": [
+            "isBuyInsurance",
+            "pajjMemberGradeInfo.pajjmemberproductname",
+            "pajjMemberGradeInfo.pajjmembergradesearch",
+            "pajjMemberGradeInfo.pajjmemberperiod",
+            "pajjMemberGradeInfo.pajjmemberstatus",
+            "pajjMemberGradeInfo.pajjqualifiedtime",
+            "ayhMemberGradeInfo.ayhmemberproductname",
+            "ayyMemberGradeInfo.ayymemberproductname"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        }
+      ],
+      "focus": [
+        {
+          "id": "focus-guanai",
+          "query": "关爱客户",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "关爱客户-40岁及以上女性",
+              "collection": "enhanced_rules",
+              "score": 55.0
+            },
+            {
+              "key": "clientAge",
+              "collection": "field",
+              "score": 1147.2135855328884
+            },
+            {
+              "key": "isBuyInsurance",
+              "collection": "field",
+              "score": 1022.0
+            }
+          ],
+          "loaded_count": 3,
+          "hit_count": 3
+        },
+        {
+          "id": "focus-youqian",
+          "query": "有钱",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "客户价值-高价值",
+              "collection": "enhanced_rules",
+              "score": 47.0
+            },
+            {
+              "key": "最近半年未联系的高价值客户",
+              "collection": "enhanced_rules",
+              "score": 47.0
+            }
+          ],
+          "loaded_count": 2,
+          "hit_count": 2
+        },
+        {
+          "id": "focus-youqian-kehu",
+          "query": "有钱客户",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "newValueLabel",
+              "collection": "field",
+              "score": 1173.2135855328884
+            },
+            {
+              "key": "isBuyInsurance",
+              "collection": "field",
+              "score": 1022.0
+            }
+          ],
+          "loaded_count": 2,
+          "hit_count": 2
+        },
+        {
+          "id": "focus-jinfeng",
+          "query": "金凤",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "金凤",
+              "collection": "abbrname",
+              "score": 100.0
+            }
+          ],
+          "loaded_count": 1,
+          "hit_count": 1
+        },
+        {
+          "id": "focus-panke",
+          "query": "盘客",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "盘客-暂不支持",
+              "collection": "enhanced_rules",
+              "score": 47.0
+            },
+            {
+              "key": "customerReview",
+              "collection": "field",
+              "score": 1137.1026433650368
+            }
+          ],
+          "loaded_count": 2,
+          "hit_count": 2
+        },
+        {
+          "id": "focus-qupanke",
+          "query": "去盘客",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "customerReview",
+              "collection": "field",
+              "score": 1155.2052867300736
+            }
+          ],
+          "loaded_count": 1,
+          "hit_count": 1
+        },
+        {
+          "id": "focus-latin-a",
+          "query": "A",
+          "bucket": "latin_bareword",
+          "qual": "OK",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-latin-o2o",
+          "query": "O2O",
+          "bucket": "latin_bareword",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "准客来源-简称",
+              "collection": "enhanced_rules",
+              "score": 48.0
+            },
+            {
+              "key": "pcustSourcType",
+              "collection": "field",
+              "score": 1182.3943565138572
+            },
+            {
+              "key": "validSinsPol",
+              "collection": "field",
+              "score": 1156.3943565138572
+            }
+          ],
+          "loaded_count": 3,
+          "hit_count": 3
+        },
+        {
+          "id": "focus-name-chen",
+          "query": "陈金秀",
+          "bucket": "person_name",
+          "qual": "MISS",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-weather",
+          "query": "天气怎么样",
+          "bucket": "irrelevant_like",
+          "qual": "OK",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-hobby",
+          "query": "客户平时有什么兴趣爱好",
+          "bucket": "unsupported_like",
+          "qual": "FALSE",
+          "hits": [
+            {
+              "key": "isBuyInsurance",
+              "collection": "field",
+              "score": 1022.0
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjmemberproductname",
+              "collection": "field",
+              "score": 38.72867888310029
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjmembergradesearch",
+              "collection": "field",
+              "score": 37.17053426505374
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjmemberperiod",
+              "collection": "field",
+              "score": 37.17053426505374
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjmemberstatus",
+              "collection": "field",
+              "score": 37.17053426505374
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjqualifiedtime",
+              "collection": "field",
+              "score": 37.17053426505374
+            },
+            {
+              "key": "ayhMemberGradeInfo.ayhmemberproductname",
+              "collection": "field",
+              "score": 24.7246478067316
+            },
+            {
+              "key": "ayyMemberGradeInfo.ayymemberproductname",
+              "collection": "field",
+              "score": 24.7246478067316
+            }
+          ],
+          "loaded_count": 8,
+          "hit_count": 8
+        },
+        {
+          "id": "focus-style-iter-source-badcase-078",
+          "query": "关爱客户",
+          "bucket": "iteration_style",
+          "qual": "FALSE",
+          "hits": [
+            {
+              "key": "关爱客户-40岁及以上女性",
+              "collection": "enhanced_rules",
+              "score": 55.0
+            },
+            {
+              "key": "clientAge",
+              "collection": "field",
+              "score": 1147.2135855328884
+            },
+            {
+              "key": "isBuyInsurance",
+              "collection": "field",
+              "score": 1022.0
+            }
+          ],
+          "loaded_count": 3,
+          "hit_count": 3
+        }
+      ],
+      "focus_flips": {
+        "关爱客户": "OK",
+        "有钱": "OK",
+        "金凤": "OK",
+        "盘客": "OK"
+      },
+      "stress_summary": {
+        "n": 352,
+        "with_hits": 346,
+        "empty_rate": 0.017045454545454544,
+        "avg_hits": 7.548295454545454,
+        "load_success_rate": 1.0,
+        "false_accept_proxy": {
+          "unsupported_like": 1
+        },
+        "buckets": {
+          "business_noun": {
+            "n": 14,
+            "with_hits": 14,
+            "empty": 0
+          },
+          "irrelevant_like": {
+            "n": 1,
+            "with_hits": 0,
+            "empty": 1
+          },
+          "iteration_case": {
+            "n": 30,
+            "with_hits": 27,
+            "empty": 3,
+            "weak_labeled": 26,
+            "weak_any_hit": 17
+          },
+          "latin_bareword": {
+            "n": 2,
+            "with_hits": 1,
+            "empty": 1
+          },
+          "other": {
+            "n": 300,
+            "with_hits": 300,
+            "empty": 0
+          },
+          "person_name": {
+            "n": 1,
+            "with_hits": 0,
+            "empty": 1
+          },
+          "person_name_context": {
+            "n": 3,
+            "with_hits": 3,
+            "empty": 0
+          },
+          "unsupported_like": {
+            "n": 1,
+            "with_hits": 1,
+            "empty": 0
+          }
+        }
+      },
+      "stress_sample_false_accepts": [
+        {
+          "id": "focus-hobby",
+          "query": "客户平时有什么兴趣爱好",
+          "bucket": "unsupported_like",
+          "hits": [
+            "isBuyInsurance",
+            "pajjMemberGradeInfo.pajjmemberproductname",
+            "pajjMemberGradeInfo.pajjmembergradesearch",
+            "pajjMemberGradeInfo.pajjmemberperiod",
+            "pajjMemberGradeInfo.pajjmemberstatus"
+          ]
+        }
+      ]
+    },
+    "V3": {
+      "labeled_metrics": {
+        "development": {
+          "relevant_n": 22,
+          "top8_recall_rate": 0.7727272727272727,
+          "irrelevant_n": 9,
+          "irrelevant_rejection_rate": 0.5555555555555556,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 25,
+          "queries_total": 30,
+          "empty_hit_rate": 0.16666666666666666,
+          "avg_hit_count": 5.633333333333334
+        },
+        "development_field_only": {
+          "relevant_n": 22,
+          "top8_recall_rate": 0.7727272727272727,
+          "irrelevant_n": 9,
+          "irrelevant_rejection_rate": 0.5555555555555556,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 25,
+          "queries_total": 30,
+          "empty_hit_rate": 0.16666666666666666,
+          "avg_hit_count": 5.633333333333334
+        },
+        "holdout": {
+          "relevant_n": 5,
+          "top8_recall_rate": 0.2,
+          "irrelevant_n": 3,
+          "irrelevant_rejection_rate": 0.6666666666666666,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 6,
+          "queries_total": 8,
+          "empty_hit_rate": 0.25,
+          "avg_hit_count": 4.375
+        },
+        "holdout_field_only": {
+          "relevant_n": 5,
+          "top8_recall_rate": 0.2,
+          "irrelevant_n": 3,
+          "irrelevant_rejection_rate": 0.6666666666666666,
+          "search_to_load_resolution_rate": 1.0,
+          "queries_with_hits": 6,
+          "queries_total": 8,
+          "empty_hit_rate": 0.25,
+          "avg_hit_count": 4.375
+        }
+      },
+      "labeled_failures": [
+        {
+          "id": "multi-term-prospect-source",
+          "split": "development",
+          "category": "unsupported",
+          "query": "准客来源包含综拓 O2O 意健险",
+          "required": [
+            "pcustSourcType"
+          ],
+          "hits": [
+            "ayhMemberGradeInfo.ayhmembergradesearch",
+            "ayhMemberGradeInfo.ayhmemberperiod",
+            "ayhMemberGradeInfo.ayhmemberstatus",
+            "ayyMemberGradeInfo.ayymembergradesearch",
+            "ayyMemberGradeInfo.ayymemberperiod",
+            "ayyMemberGradeInfo.ayymemberstatus",
+            "education",
+            "gdkyMemberGradeInfo.gdkymembergradesearch"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-child-colloquial",
+          "split": "development",
+          "category": "source_paraphrase",
+          "query": "孩子今年12岁",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientage"
+          ],
+          "hits": [
+            "clientAge",
+            "ayhMemberGradeInfo.ayhqualifiedtime",
+            "ayyMemberGradeInfo.ayyqualifiedtime",
+            "gdkyMemberGradeInfo.gdkyqualifiedtime",
+            "pajjMemberGradeInfo.pajjqualifiedtime",
+            "sdbjyMemberGradeInfo.sdbjyqualifiedtime",
+            "yxgyMemberGradeInfo.yxgyqualifiedtime",
+            "zxjyMemberGradeInfo.zxjyqualifiedtime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-unsupported-color",
+          "split": "development",
+          "category": "unsupported",
+          "query": "客户最喜欢的颜色",
+          "required": [],
+          "hits": [
+            "isBuyInsurance",
+            "clientTemperature",
+            "dateCreated",
+            "gdkyMemberGradeInfo.gdkyqualifiedtime",
+            "polNoInfo.surrenderDateTime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-unsupported-pet-name",
+          "split": "development",
+          "category": "unsupported",
+          "query": "客户宠物名字",
+          "required": [],
+          "hits": [
+            "searchClientName",
+            "isBuyInsurance",
+            "familyInfo.familyclientname",
+            "polNoInfo.applicantname",
+            "polNoInfo.benefinfo.benefname",
+            "polNoInfo.plancodeinfo.insname"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-insured-mobile",
+          "split": "development",
+          "category": "source_term",
+          "query": "被保人手机号",
+          "required": [
+            "polNoInfo.insuredphoneno"
+          ],
+          "hits": [
+            "polNoInfo.plancodeinfo.insphoneno",
+            "clientMobile",
+            "clientSex",
+            "polNoInfo.applicantphoneno",
+            "familyInfo.familyclientmobile",
+            "policies_beneficiary_mobile",
+            "is_life_insured",
+            "polNoInfo.plancodeinfo.insname"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-child-age",
+          "split": "development",
+          "category": "source_paraphrase",
+          "query": "小孩不到6岁",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientage"
+          ],
+          "hits": [
+            "clientAge",
+            "gdkyMemberGradeInfo.gdkymembergradesearch",
+            "pajjMemberGradeInfo.pajjmembergradesearch",
+            "zxjyMemberGradeInfo.zxjymembergradesearch",
+            "familyInfo.familyclientage"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-partner-age",
+          "split": "development",
+          "category": "ambiguity_multi_object",
+          "query": "爱人不到45岁",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientage"
+          ],
+          "hits": [
+            "clientAge",
+            "gdkyMemberGradeInfo.gdkymembergradesearch",
+            "pajjMemberGradeInfo.pajjmembergradesearch",
+            "zxjyMemberGradeInfo.zxjymembergradesearch",
+            "familyInfo.familyclientage"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "development-former-holdout-favorite-film",
+          "split": "development",
+          "category": "unsupported",
+          "query": "客户最爱的电影",
+          "required": [],
+          "hits": [
+            "isBuyInsurance",
+            "clientTemperature",
+            "dateCreated",
+            "gdkyMemberGradeInfo.gdkyqualifiedtime",
+            "polNoInfo.surrenderDateTime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-spouse-birthday",
+          "split": "holdout",
+          "category": "source_paraphrase",
+          "query": "另一半是哪天出生的",
+          "required": [
+            "familyInfo.familyrelation",
+            "familyInfo.familyclientbirthday"
+          ],
+          "hits": [
+            "clientBirthday",
+            "familyInfo.familyclientbirthday"
+          ],
+          "collections": [
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-insured-name",
+          "split": "holdout",
+          "category": "source_paraphrase",
+          "query": "这张保单保的是谁",
+          "required": [
+            "polNoInfo.insuredname"
+          ],
+          "hits": [
+            "polNum",
+            "polNoInfo.applicantname",
+            "polNoInfo.polStatus",
+            "polNoInfo.poleffdate",
+            "agentPerspProductType",
+            "latelyUndwrtSegTime",
+            "polNoInfo.plancodeinfo.abbrname",
+            "polNoInfo.surrenderDateTime"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-occupation",
+          "split": "holdout",
+          "category": "source_paraphrase",
+          "query": "客户是做哪一行的",
+          "required": [
+            "profName"
+          ],
+          "hits": [
+            "isBuyInsurance",
+            "clientChurnTag",
+            "isBuyInsuranceCar",
+            "isBuyPension",
+            "is_life_insured",
+            "onlyShareClientFlag",
+            "ayhMemberGradeInfo.ayhmemberperiod",
+            "ayyMemberGradeInfo.ayymemberperiod"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-contact-address",
+          "split": "holdout",
+          "category": "search_to_load",
+          "query": "客户收信寄到哪里",
+          "required": [
+            "CONTACT_ADDRESS_FIELD"
+          ],
+          "hits": [
+            "isBuyInsurance"
+          ],
+          "collections": [
+            "field"
+          ]
+        },
+        {
+          "id": "holdout-v3-unsupported-hobby",
+          "split": "holdout",
+          "category": "unsupported",
+          "query": "客户平时有什么兴趣爱好",
+          "required": [],
+          "hits": [
+            "isBuyInsurance",
+            "pajjMemberGradeInfo.pajjmemberproductname",
+            "pajjMemberGradeInfo.pajjmembergradesearch",
+            "pajjMemberGradeInfo.pajjmemberperiod",
+            "pajjMemberGradeInfo.pajjmemberstatus",
+            "pajjMemberGradeInfo.pajjqualifiedtime",
+            "ayhMemberGradeInfo.ayhmemberproductname",
+            "ayyMemberGradeInfo.ayymemberproductname"
+          ],
+          "collections": [
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field",
+            "field"
+          ]
+        }
+      ],
+      "focus": [
+        {
+          "id": "focus-guanai",
+          "query": "关爱客户",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "clientAge",
+              "collection": "field",
+              "score": 1147.2135855328884
+            },
+            {
+              "key": "isBuyInsurance",
+              "collection": "field",
+              "score": 1022.0
+            }
+          ],
+          "loaded_count": 2,
+          "hit_count": 2
+        },
+        {
+          "id": "focus-youqian",
+          "query": "有钱",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "newValueLabel",
+              "collection": "field",
+              "score": 1160.1026433650368
+            }
+          ],
+          "loaded_count": 1,
+          "hit_count": 1
+        },
+        {
+          "id": "focus-youqian-kehu",
+          "query": "有钱客户",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "newValueLabel",
+              "collection": "field",
+              "score": 1173.2135855328884
+            },
+            {
+              "key": "isBuyInsurance",
+              "collection": "field",
+              "score": 1022.0
+            }
+          ],
+          "loaded_count": 2,
+          "hit_count": 2
+        },
+        {
+          "id": "focus-jinfeng",
+          "query": "金凤",
+          "bucket": "business_noun",
+          "qual": "MISS",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-panke",
+          "query": "盘客",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "customerReview",
+              "collection": "field",
+              "score": 1280.1026433650368
+            }
+          ],
+          "loaded_count": 1,
+          "hit_count": 1
+        },
+        {
+          "id": "focus-qupanke",
+          "query": "去盘客",
+          "bucket": "business_noun",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "customerReview",
+              "collection": "field",
+              "score": 1155.2052867300736
+            }
+          ],
+          "loaded_count": 1,
+          "hit_count": 1
+        },
+        {
+          "id": "focus-latin-a",
+          "query": "A",
+          "bucket": "latin_bareword",
+          "qual": "OK",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-latin-o2o",
+          "query": "O2O",
+          "bucket": "latin_bareword",
+          "qual": "OK",
+          "hits": [
+            {
+              "key": "pcustSourcType",
+              "collection": "field",
+              "score": 1182.3943565138572
+            },
+            {
+              "key": "validSinsPol",
+              "collection": "field",
+              "score": 1156.3943565138572
+            }
+          ],
+          "loaded_count": 2,
+          "hit_count": 2
+        },
+        {
+          "id": "focus-name-chen",
+          "query": "陈金秀",
+          "bucket": "person_name",
+          "qual": "MISS",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-weather",
+          "query": "天气怎么样",
+          "bucket": "irrelevant_like",
+          "qual": "OK",
+          "hits": [],
+          "loaded_count": 0,
+          "hit_count": 0
+        },
+        {
+          "id": "focus-hobby",
+          "query": "客户平时有什么兴趣爱好",
+          "bucket": "unsupported_like",
+          "qual": "FALSE",
+          "hits": [
+            {
+              "key": "isBuyInsurance",
+              "collection": "field",
+              "score": 1022.0
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjmemberproductname",
+              "collection": "field",
+              "score": 38.72867888310029
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjmembergradesearch",
+              "collection": "field",
+              "score": 37.17053426505374
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjmemberperiod",
+              "collection": "field",
+              "score": 37.17053426505374
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjmemberstatus",
+              "collection": "field",
+              "score": 37.17053426505374
+            },
+            {
+              "key": "pajjMemberGradeInfo.pajjqualifiedtime",
+              "collection": "field",
+              "score": 37.17053426505374
+            },
+            {
+              "key": "ayhMemberGradeInfo.ayhmemberproductname",
+              "collection": "field",
+              "score": 24.7246478067316
+            },
+            {
+              "key": "ayyMemberGradeInfo.ayymemberproductname",
+              "collection": "field",
+              "score": 24.7246478067316
+            }
+          ],
+          "loaded_count": 8,
+          "hit_count": 8
+        },
+        {
+          "id": "focus-style-iter-source-badcase-078",
+          "query": "关爱客户",
+          "bucket": "iteration_style",
+          "qual": "FALSE",
+          "hits": [
+            {
+              "key": "clientAge",
+              "collection": "field",
+              "score": 1147.2135855328884
+            },
+            {
+              "key": "isBuyInsurance",
+              "collection": "field",
+              "score": 1022.0
+            }
+          ],
+          "loaded_count": 2,
+          "hit_count": 2
+        }
+      ],
+      "focus_flips": {
+        "关爱客户": "OK",
+        "有钱": "OK",
+        "金凤": "MISS",
+        "盘客": "OK"
+      },
+      "stress_summary": {
+        "n": 352,
+        "with_hits": 345,
+        "empty_rate": 0.019886363636363636,
+        "avg_hits": 7.534090909090909,
+        "load_success_rate": 1.0,
+        "false_accept_proxy": {
+          "unsupported_like": 1
+        },
+        "buckets": {
+          "business_noun": {
+            "n": 14,
+            "with_hits": 13,
+            "empty": 1
+          },
+          "irrelevant_like": {
+            "n": 1,
+            "with_hits": 0,
+            "empty": 1
+          },
+          "iteration_case": {
+            "n": 30,
+            "with_hits": 27,
+            "empty": 3,
+            "weak_labeled": 26,
+            "weak_any_hit": 18
+          },
+          "latin_bareword": {
+            "n": 2,
+            "with_hits": 1,
+            "empty": 1
+          },
+          "other": {
+            "n": 300,
+            "with_hits": 300,
+            "empty": 0
+          },
+          "person_name": {
+            "n": 1,
+            "with_hits": 0,
+            "empty": 1
+          },
+          "person_name_context": {
+            "n": 3,
+            "with_hits": 3,
+            "empty": 0
+          },
+          "unsupported_like": {
+            "n": 1,
+            "with_hits": 1,
+            "empty": 0
+          }
+        }
+      },
+      "stress_sample_false_accepts": [
+        {
+          "id": "focus-hobby",
+          "query": "客户平时有什么兴趣爱好",
+          "bucket": "unsupported_like",
+          "hits": [
+            "isBuyInsurance",
+            "pajjMemberGradeInfo.pajjmemberproductname",
+            "pajjMemberGradeInfo.pajjmembergradesearch",
+            "pajjMemberGradeInfo.pajjmemberperiod",
+            "pajjMemberGradeInfo.pajjmemberstatus"
+          ]
+        }
+      ]
+    }
+  }
+}

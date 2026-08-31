@@ -393,6 +393,41 @@ def _case_pool_payload(
                 raise TypeError(f"case pool for {project_id!r} has invalid shape")
 
 
+def _material_manifest_payload(
+    _context: ActiveArtifactContext,
+    path: Path,
+    payload: Any,
+) -> None:
+    from .materials_store import validate_manifest_payload
+
+    validate_manifest_payload(Path(path), payload)
+
+
+def _validate_material_manifest(context: ActiveArtifactContext, path: Path) -> None:
+    payload = _read_payload(context, path)
+    _material_manifest_payload(context, path, payload)
+    from .materials_store import verify_content_seal
+
+    verify_content_seal(Path(path), payload)
+
+
+def _capability_map_payload(
+    _context: ActiveArtifactContext,
+    _path: Path,
+    payload: Any,
+) -> None:
+    if not isinstance(payload, Mapping):
+        raise TypeError("capability map store must be an object of name -> entry")
+    from .capability_store import validate_entry
+
+    for name, entry in payload.items():
+        validate_entry(str(name), entry)
+
+
+def _validate_capability_map(context: ActiveArtifactContext, path: Path) -> None:
+    _capability_map_payload(context, path, _read_payload(context, path))
+
+
 def _mock_cases_payload(
     _context: ActiveArtifactContext,
     path: Path,
@@ -1269,6 +1304,27 @@ DEFAULT_ACTIVE_ARTIFACT_REGISTRY = ActiveArtifactRegistry(
             consumer_boundaries=("MockCase loading", "evaluation input selection"),
             base=".",
             payload_validator=_mock_cases_payload,
+        ),
+        ActiveArtifactFamily(
+            "capability_map_store",
+            "derived_active",
+            "impl/data/*/capability_map.json",
+            _validate_capability_map,
+            consumer_boundaries=("capability preset resolution", "materials management API"),
+            base=".",
+            payload_validator=_capability_map_payload,
+        ),
+        ActiveArtifactFamily(
+            "materials_store",
+            "derived_active",
+            "impl/data/*/materials/*/manifest.json",
+            _validate_material_manifest,
+            consumer_boundaries=(
+                "materials slot binding", "materials management API", "material:// resolver",
+            ),
+            base=".",
+            payload_validator=_material_manifest_payload,
+            owned_directory_patterns=("impl/data/*/materials",),
         ),
         ActiveArtifactFamily(
             "context_record",

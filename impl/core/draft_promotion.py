@@ -215,12 +215,19 @@ def _update_project_config(path: Path, plan: Dict[str, Any]) -> None:
 
 
 def _disable_role_draft(text: str, role: str) -> str:
-    """Disable the canonical nested Role switch."""
+    """Remove the promoted role's draft block (and the role entry if left empty).
+
+    晋升后 draft 块（enabled/module/reason）指向已搬走的候选文件，属于死配置；
+    只翻 enabled=false 会留下悬空 module 路径，通不过配置路径校验，所以整块删除。
+    角色块删掉 draft 后若不再有任何配置（schema 要求 role policy 或 draft 至少其一），
+    连角色条目一起删除。
+    """
     lines = text.splitlines(keepends=True)
     path = ("verifier", "roles", role, "draft")
     lower = 0
     upper = len(lines)
     parent_indent = -1
+    spans: List[tuple[int, int]] = []
     for key in path:
         match_index = None
         key_pattern = re.compile(rf"^(?P<indent>[ \t]*){re.escape(key)}:\s*(?:#.*)?$")
@@ -231,7 +238,7 @@ def _disable_role_draft(text: str, role: str) -> str:
                 parent_indent = len(match.group("indent"))
                 break
         if match_index is None:
-            break
+            raise ValueError(f"project.yaml has no verifier.roles.{role}.draft block")
         lower = match_index + 1
         upper = len(lines)
         for index in range(lower, len(lines)):
@@ -242,19 +249,18 @@ def _disable_role_draft(text: str, role: str) -> str:
             if indent <= parent_indent:
                 upper = index
                 break
-    else:
-        enabled = re.compile(r"^(?P<indent>[ \t]*)enabled:\s*true\s*(?P<comment>#.*)?$")
-        matches = [index for index in range(lower, upper) if enabled.match(lines[index].rstrip("\r\n"))]
-        if len(matches) != 1:
-            raise ValueError(f"project.yaml verifier.roles.{role}.draft.enabled must be true exactly once")
-        index = matches[0]
-        match = enabled.match(lines[index].rstrip("\r\n"))
-        newline = "\n" if lines[index].endswith("\n") else ""
-        comment = match.group("comment") or ""
-        lines[index] = f"{match.group('indent')}enabled: false{(' ' + comment) if comment else ''}{newline}"
-        return "".join(lines)
+        spans.append((match_index, upper))
 
-    raise ValueError(f"project.yaml has no verifier.roles.{role}.draft block")
+    draft_start, draft_end = spans[-1]
+    role_start, role_end = spans[-2]
+    role_has_other_config = any(
+        lines[index].strip() and not lines[index].strip().startswith("#")
+        for index in range(role_start + 1, role_end)
+        if not (draft_start <= index < draft_end)
+    )
+    if role_has_other_config:
+        return "".join(lines[:draft_start] + lines[draft_end:])
+    return "".join(lines[:role_start] + lines[role_end:])
 
 
 def _safe_path(root: Path, value: str, label: str) -> Path:

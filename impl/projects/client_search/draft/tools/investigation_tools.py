@@ -66,7 +66,9 @@ def build_investigation_case_route_replay_tool() -> VerifiableTool:
         source_text = str(source_root)
         if source_text not in sys.path:
             sys.path.insert(0, source_text)
-        module = importlib.import_module("src.main.python.steps.level2_enhanced_matcher")
+        module = importlib.import_module(
+            "src.main.python.steps.client_search_query_parse.level2_enhanced_matcher"
+        )
         matcher = module.Level2EnhancedMatcher()
         return matcher
 

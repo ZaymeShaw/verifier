@@ -14,7 +14,7 @@ from .adapters import initialize_context_adapters, load_configured_context_adapt
 from .bootstrap import build_context_runtime
 from .embedding import DeterministicHashEmbeddingProvider
 from .models import ContextUnitRecord
-from .resolvers import CompositeContentResolver, FileContentResolver
+from .resolvers import standard_content_resolver
 from ..config import get_runtime_config
 
 
@@ -128,7 +128,7 @@ def load_role_mandatory_context(
         return None
 
     roots = _content_roots(spec)
-    resolver = CompositeContentResolver([FileContentResolver(roots)] if roots else [])
+    resolver = standard_content_resolver(roots)
     records = _context_records(
         spec,
         role=normalized_role,

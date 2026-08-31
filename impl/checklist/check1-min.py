@@ -99,7 +99,7 @@ def main():
 
         # Get results
         results = d.execute_script("return batchResults")
-        with open(f'{SDIR}/results.json', 'w') as f:
+        with open(f'{SDIR}/results.json', 'w', encoding='utf-8') as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
 
         print(f"\n✓ Test completed in {elapsed}s")
@@ -122,7 +122,7 @@ def main():
         print("=" * 60)
         session_file = f'{ROOT}/impl/knowledge/{PROJECT}/agno_memory.json/agno_sessions.json'
         if os.path.exists(session_file):
-            with open(session_file) as f:
+            with open(session_file, encoding='utf-8') as f:
                 sessions = json.load(f)
             print(f"  Total sessions: {len(sessions)}")
             print("  Last 5 session IDs:")

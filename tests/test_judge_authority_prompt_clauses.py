@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from impl.projects.client_search.draft.judge import authority_mode_prompt_clauses
+from impl.projects.client_search.judge import authority_mode_prompt_clauses
 
 
 def test_enabled_branch_has_no_closed_mode_wording() -> None:

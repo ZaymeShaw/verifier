@@ -48,6 +48,48 @@ class CasePoolsRequest(ProjectRequest):
     pass
 
 
+class CapabilityListRequest(ProjectRequest):
+    pass
+
+
+class MaterialsListRequest(ProjectRequest):
+    pass
+
+
+class MaterialUploadRequest(ApiRequest):
+    id: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    content: Optional[str] = None
+
+
+class MaterialGetRequest(ApiRequest):
+    id: Optional[str] = None
+
+
+class MaterialAssetViewRequest(ApiRequest):
+    asset_id: Optional[str] = None
+
+
+class MaterialAssetFileRequest(ApiRequest):
+    asset_id: Optional[str] = None
+    scope: Optional[str] = None
+    path: Optional[str] = None
+
+
+class MaterialDeleteRequest(ApiRequest):
+    id: Optional[str] = None
+
+
+class CapabilitySaveRequest(ApiRequest):
+    name: Optional[str] = None
+    entry: Optional[Dict[str, Any]] = None
+
+
+class CapabilityDeleteRequest(ApiRequest):
+    name: Optional[str] = None
+
+
 class CasePoolSaveRequest(ApiRequest):
     name: Optional[str] = None
     cases: List[Dict[str, Any]] = Field(default_factory=list)

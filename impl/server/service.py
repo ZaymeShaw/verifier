@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
-from ..core import case_pool, context_store, pipeline
+from ..core import capability_store, case_pool, context_store, materials_store, pipeline
 from ..core.config import get_runtime_config
 from ..core.project_loader import list_projects
 from ..core.schema import (
@@ -260,6 +260,65 @@ def load_case_pool(data: Dict[str, Any]) -> Any:
 
 def delete_case_pool(data: Dict[str, Any]) -> Any:
     return case_pool.delete_case_pool(project_from(data), data.get("id") or "")
+
+
+def materials_overview(data: Dict[str, Any]) -> Any:
+    from ..core import materials_overview as overview
+
+    return overview.project_overview(project_from(data))
+
+
+def material_asset_view(data: Dict[str, Any]) -> Any:
+    from ..core import materials_overview as overview
+
+    return overview.asset_view(project_from(data), str(data.get("asset_id") or ""))
+
+
+def material_asset_file(data: Dict[str, Any]) -> Any:
+    from ..core import materials_overview as overview
+
+    return overview.asset_file(
+        project_from(data),
+        str(data.get("asset_id") or ""),
+        str(data.get("scope") or ""),
+        str(data.get("path") or ""),
+    )
+
+
+def get_material(data: Dict[str, Any]) -> Any:
+    return materials_store.get_material(project_from(data), str(data.get("id") or ""))
+
+
+def upload_material(data: Dict[str, Any]) -> Any:
+    import uuid
+
+    material_id = str(data.get("id") or "") or f"m-{uuid.uuid4().hex[:8]}"
+    return materials_store.save_material(
+        project_from(data),
+        material_id,
+        content=str(data.get("content") or ""),
+        title=str(data.get("title") or ""),
+        description=str(data.get("description") or ""),
+    )
+
+
+def delete_material(data: Dict[str, Any]) -> Any:
+    return materials_store.delete_material(project_from(data), str(data.get("id") or ""))
+
+
+def list_capabilities(data: Dict[str, Any]) -> Any:
+    project = project_from(data)
+    return {"project_id": project, "capabilities": capability_store.load_capability_map(project)}
+
+
+def save_capability(data: Dict[str, Any]) -> Any:
+    return capability_store.save_capability(
+        project_from(data), str(data.get("name") or ""), data.get("entry") or {}
+    )
+
+
+def delete_capability(data: Dict[str, Any]) -> Any:
+    return capability_store.delete_capability(project_from(data), str(data.get("name") or ""))
 
 
 def judge(data: Dict[str, Any]) -> Any:

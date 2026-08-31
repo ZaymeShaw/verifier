@@ -1,0 +1,622 @@
+[
+  {
+    "case_id": "llm-probe-client_search-name",
+    "capability_ref": "client_search",
+    "input": {
+      "user_text": "客户姓名是张伟的人",
+      "user_id": "mock_user_001",
+      "trace_id": "mock_trace_001",
+      "session_id": "mock_session_001",
+      "source": "mock",
+      "extra_input_params": {}
+    },
+    "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"姓张伟的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"客户姓名是张伟的人\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张伟\", \"match_mode\": \"prefix\"}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 2, \"rewritten_query\": \"客户姓名是张伟的人\", \"matched_patterns\": \"明确客户姓名上下文\", \"cost_times\": 69.0, \"confidence\": 0.95, \"intent_summary\": \"姓张伟的客户\", \"behavior_debug\": null}, \"trace_id\": \"mock_trace_001\"}}",
+    "judge": {
+      "trace_id": "llm_probe:llm-probe-client_search-name:1788095986693",
+      "project_id": "llm_probe",
+      "business_expectations": [
+        {
+          "expectation_id": "将客户姓名“张伟”解析为精确姓名条件",
+          "blocking": true,
+          "downstream_consumer": "客户搜索执行器",
+          "user_intent": "根据“客户姓名是张伟的人”筛选姓名等于张伟的客户。",
+          "expected_outcome": "输出包含客户姓名字段、张伟这一取值以及表示精确等值匹配的操作符和匹配模式。",
+          "required_capabilities": [
+            "识别客户姓名字段",
+            "提取姓名值“张伟”",
+            "保留“是”所表达的精确等值语义",
+            "输出可执行的结构化条件"
+          ],
+          "acceptance_criteria": [
+            "条件字段应为客户姓名对应字段，例如 searchClientName",
+            "条件值应为“张伟”",
+            "操作符或匹配模式必须表示精确等值匹配，不得转换为前缀匹配或包含匹配",
+            "不得增加输入未表达的姓名范围"
+          ],
+          "boundary": {
+            "in_scope": [
+              "字段",
+              "操作符",
+              "值",
+              "匹配模式"
+            ],
+            "out_of_scope": [
+              "路由字段",
+              "追踪字段",
+              "排序信息"
+            ]
+          },
+          "priority": "核心",
+          "evidence_refs": []
+        }
+      ],
+      "fulfillment_assessments": [
+        {
+          "expectation_id": "将客户姓名“张伟”解析为精确姓名条件",
+          "status": "not_fulfilled",
+          "score": 0,
+          "expected_evidence": [
+            "客户姓名“是张伟”表达的是姓名等于张伟的精确匹配语义",
+            "预期条件应使用客户姓名字段，值为“张伟”，并明确表示 exact 等值匹配"
+          ],
+          "actual_evidence": [
+            "output_text_parsed.data.extra_output_params.conditions[0] 为 {\"field\":\"searchClientName\",\"operator\":\"MATCH\",\"value\":\"张伟\",\"match_mode\":\"prefix\"}",
+            "输出中的 match_mode 为 prefix，将“姓名是张伟”扩大为以张伟开头的姓名集合",
+            "robot_text 和 intent_summary 均为“姓张伟的客户”，进一步表明输出采用了姓氏或前缀语义"
+          ],
+          "downstream_impact": "下游搜索会额外命中姓名以“张伟”开头但不等于“张伟”的客户，无法准确执行用户要求的姓名等值筛选。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        }
+      ],
+      "overall_fulfillment": {
+        "status": "not_fulfilled",
+        "blocking_expectations": [
+          "将客户姓名“张伟”解析为精确姓名条件"
+        ]
+      },
+      "expected": {
+        "output_text": "{\"data\":{\"extra_output_params\":{\"conditions\":[{\"field\":\"searchClientName\",\"operator\":\"MATCH\",\"value\":\"张伟\",\"match_mode\":\"exact\"}]}}}"
+      },
+      "actual": {
+        "output_text": "{\"code\": 0, \"msg\": \"操作成功\", \"data\": {\"robot_text\": \"姓张伟的客户\", \"end_flag\": 1, \"extra_output_params\": {\"query\": \"客户姓名是张伟的人\", \"query_logic\": \"AND\", \"conditions\": [{\"field\": \"searchClientName\", \"operator\": \"MATCH\", \"value\": \"张伟\", \"match_mode\": \"prefix\"}], \"sort\": [], \"sort_source\": \"none\", \"matched_level\": 2, \"rewritten_query\": \"客户姓名是张伟的人\", \"matched_patterns\": \"明确客户姓名上下文\", \"cost_times\": 69.0, \"confidence\": 0.95, \"intent_summary\": \"姓张伟的客户\", \"behavior_debug\": null}, \"trace_id\": \"mock_trace_001\"}}"
+      },
+      "missing": [
+        {
+          "kind": "semantic_requirement",
+          "error_type": "缺失精确匹配语义",
+          "expected": "客户姓名条件应表示姓名精确等于“张伟”",
+          "actual": "未提供 exact 等值匹配，实际为 prefix 前缀匹配",
+          "evidence_ref": "output_text_parsed.data.extra_output_params.conditions[0].match_mode",
+          "raw": {
+            "kind": "semantic_requirement",
+            "error_type": "缺失精确匹配语义",
+            "expected": "客户姓名条件应表示姓名精确等于“张伟”",
+            "actual": "未提供 exact 等值匹配，实际为 prefix 前缀匹配",
+            "evidence_ref": "output_text_parsed.data.extra_output_params.conditions[0].match_mode",
+            "incomplete": false
+          },
+          "incomplete": false
+        }
+      ],
+      "wrong": [
+        {
+          "kind": "condition",
+          "error_type": "匹配范围被扩大",
+          "expected": "match_mode 为 exact，或使用其他明确表示等值的操作符",
+          "actual": "{\"field\":\"searchClientName\",\"operator\":\"MATCH\",\"value\":\"张伟\",\"match_mode\":\"prefix\"}",
+          "evidence_ref": "output_text_parsed.data.extra_output_params.conditions[0]",
+          "raw": {
+            "kind": "condition",
+            "error_type": "匹配范围被扩大",
+            "expected": "match_mode 为 exact，或使用其他明确表示等值的操作符",
+            "actual": "{\"field\":\"searchClientName\",\"operator\":\"MATCH\",\"value\":\"张伟\",\"match_mode\":\"prefix\"}",
+            "evidence_ref": "output_text_parsed.data.extra_output_params.conditions[0]",
+            "incomplete": false
+          },
+          "incomplete": false
+        }
+      ],
+      "extra": [],
+      "evidence": [
+        {
+          "source": "request.body.user_text",
+          "content": "客户姓名是张伟的人"
+        },
+        {
+          "source": "output_text_parsed.data.extra_output_params.conditions[0]",
+          "content": {
+            "field": "searchClientName",
+            "operator": "MATCH",
+            "value": "张伟",
+            "match_mode": "prefix"
+          }
+        }
+      ],
+      "reasoning_summary": "输出正确识别了客户姓名字段和“张伟”这一值，但将输入中的“姓名是张伟”改写为 prefix 前缀匹配，并在自然语言摘要中表达为“姓张伟”。这会扩大搜索结果范围，未忠实保留用户明确要求的姓名精确等值语义，因此该核心期望未满足。",
+      "summary": {
+        "reason": "not_fulfilled · blocking=[将客户姓名“张伟”解析为精确姓名条件] · 输出正确识别了客户姓名字段和“张伟”这一值，但将输入中的“姓名是张伟”改写为 prefix 前缀匹配，并在自然语言摘要中表达为“姓张伟”。这会扩大搜索结果范围，未忠实保留用户明确要求的姓名精确等值语义，因此该核心期望未满足。",
+        "primary_failure_dimensions": [
+          {
+            "expectation_id": "将客户姓名“张伟”解析为精确姓名条件",
+            "status": "not_fulfilled",
+            "blocking": true,
+            "downstream_impact": "下游搜索会额外命中姓名以“张伟”开头但不等于“张伟”的客户，无法准确执行用户要求的姓名等值筛选。",
+            "evidence": "output_text_parsed.data.extra_output_params.conditions[0] 为 {\"field\":\"searchClientName\",\"operator\":\"MATCH\",\"value\":\"张伟\",\"match_mode\":\"prefix\"} | 输出中的 match_mode 为 prefix，将“姓名是张伟”扩大为以张伟开头的姓名集合 | robot_text 和 intent_summary 均为“姓张伟的客户”，进一步表明输出采用了姓氏或前缀语义 | 客户姓名“是张伟”表达的是姓名等于张伟的精确匹配语义 | 预期条件应使用客户姓名字段，值为“张伟”，并明确表示 exact 等值匹配"
+          }
+        ],
+        "reason_source": "aggregated_fulfillment",
+        "fulfillment_status": "not_fulfilled",
+        "assessment_count": 1,
+        "blocking_count": 1,
+        "is_formal_attribution": true
+      }
+    },
+    "capability_carrier": {
+      "applicable": true,
+      "axis1_status": "not_fulfilled",
+      "placements": [
+        {
+          "expectation_id": "将客户姓名“张伟”解析为精确姓名条件",
+          "placement": "做错了",
+          "carry": "yes",
+          "reason": "能力边界描述中的字段定义表明确支持 searchClientName 字段使用 MATCH 操作符，且对于完整姓名（如“张伟”）的输出示例不指定 match_mode，表示精确等值匹配，符合期望要求。",
+          "citations": [
+            {
+              "source": "material://llm_probe/field_definitions_args",
+              "ref": "L32-L69",
+              "note": "- query: \"陈成\"\n        output: {field: searchClientName, operator: MATCH, value: \"陈成\"}"
+            }
+          ],
+          "tool_trail": [
+            {
+              "tool": "material_outline",
+              "material_id": "field_definitions_args",
+              "returned_locators": [
+                "L28-L8330",
+                "L32-L69",
+                "L70-L91",
+                "L92-L106",
+                "L107-L121",
+                "L122-L141",
+                "L142-L170",
+                "L171-L187",
+                "L188-L200",
+                "L201-L216",
+                "L217-L245",
+                "L246-L273",
+                "L274-L294",
+                "L295-L312",
+                "L313-L341",
+                "L342-L357",
+                "L358-L376",
+                "L377-L395",
+                "L396-L410",
+                "L411-L427"
+              ]
+            },
+            {
+              "tool": "material_search",
+              "material_id": "field_definitions_args",
+              "query": "searchClientName",
+              "returned_locators": [
+                "L33-L58"
+              ]
+            },
+            {
+              "tool": "material_read",
+              "material_id": "field_definitions_args",
+              "locator": "L33-L58",
+              "returned_locators": [
+                "L33-L58"
+              ]
+            },
+            {
+              "tool": "material_search",
+              "material_id": "field_definitions_args",
+              "query": "match_mode exact",
+              "returned_locators": [
+                "L29-L35",
+                "L37-L60",
+                "L145-L157"
+              ]
+            },
+            {
+              "tool": "material_read",
+              "material_id": "field_definitions_args",
+              "locator": "L32-L69",
+              "returned_locators": [
+                "L32-L69"
+              ]
+            },
+            {
+              "tool": "material_search",
+              "material_id": "field_definitions_args",
+              "query": "match_mode 默认",
+              "returned_locators": [
+                "L37-L60",
+                "L145-L159"
+              ]
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "snapshot_id": "27c03ec01b3b334b"
+    },
+    "elapsed_s": 122.0
+  },
+  {
+    "case_id": "llm-probe-mpi-customer-portrait",
+    "capability_ref": "marketting-planning-intent",
+    "input": {
+      "session_id": "default_session",
+      "trace_id": "default_trace",
+      "org_id": "default_org",
+      "user_text": "帮我看看上季度买了重疾险的客户都是啥样的？",
+      "extra_input_params": {
+        "agent_args": {
+          "conversation_id": "default_session",
+          "message": {
+            "content": "帮我看看上季度买了重疾险的客户都是啥样的？",
+            "content_type": "text"
+          }
+        },
+        "args": {
+          "extensions": {},
+          "contexts": []
+        }
+      }
+    },
+    "output_text": "{\"code\": 0, \"msg\": \"success\", \"data\": {\"robot_text\": \"其他意图\", \"end_flag\": 1, \"extra_output_params\": {\"intent\": \"4001\", \"intent_name\": \"其他意图\", \"card_result\": {\"event\": \"reasoning_message_content\", \"sse_id\": \"default_trace:reasoning_message_content\", \"think\": \"\", \"answer\": \"\", \"card_list\": [], \"extensions\": {\"trace_id\": \"default_trace\", \"session_id\": \"default_session\", \"nlu_info\": {\"subIntent\": \"其他意图\", \"intent\": \"other\", \"confidence\": 0.5, \"target_value\": null, \"path_types\": null}}}}}}",
+    "judge": {
+      "trace_id": "llm_probe:llm-probe-mpi-customer-portrait:1788096111020",
+      "project_id": "llm_probe",
+      "business_expectations": [
+        {
+          "expectation_id": "识别为客户画像分析意图",
+          "blocking": true,
+          "downstream_consumer": "营销规划意图识别下游",
+          "user_intent": "识别用户希望了解特定客群特征的营销规划意图",
+          "expected_outcome": "将该问句归类为客户画像或客群分析类意图，而不是其他意图",
+          "required_capabilities": [
+            "理解“客户都是啥样的”表达的客群画像分析诉求",
+            "输出与客户画像分析对应的意图标签"
+          ],
+          "acceptance_criteria": [
+            "意图标签明确表示客户画像、客户群体分析或等价语义",
+            "不能将该请求归类为“其他意图”"
+          ],
+          "boundary": {
+            "in_scope": "意图标签识别",
+            "out_of_scope": "实际客户数据查询和画像结果生成"
+          },
+          "priority": "核心",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "提取上季度时间范围槽位",
+          "blocking": true,
+          "downstream_consumer": "营销规划查询条件构建模块",
+          "user_intent": "限定待分析客户的购买时间范围",
+          "expected_outcome": "识别并保留时间槽位“上季度”",
+          "required_capabilities": [
+            "时间表达识别",
+            "时间槽位抽取"
+          ],
+          "acceptance_criteria": [
+            "输出包含时间范围槽位",
+            "槽位值与“上季度”等值，不能被改写为其他时间范围"
+          ],
+          "boundary": {
+            "in_scope": "抽取用户明确表达的时间范围",
+            "out_of_scope": "将上季度换算为具体日期"
+          },
+          "priority": "核心",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "提取重疾险产品槽位",
+          "blocking": true,
+          "downstream_consumer": "营销规划查询条件构建模块",
+          "user_intent": "限定分析购买了某类保险产品的客户",
+          "expected_outcome": "识别并保留产品槽位“重疾险”",
+          "required_capabilities": [
+            "保险产品实体识别",
+            "产品槽位抽取"
+          ],
+          "acceptance_criteria": [
+            "输出包含产品槽位",
+            "产品值明确为“重疾险”，不能泛化为保险或改写为其他险种"
+          ],
+          "boundary": {
+            "in_scope": "抽取用户明确表达的保险产品",
+            "out_of_scope": "判断产品是否真实存在或查询产品数据"
+          },
+          "priority": "核心",
+          "evidence_refs": []
+        },
+        {
+          "expectation_id": "保留已购买客户筛选条件",
+          "blocking": true,
+          "downstream_consumer": "营销规划查询条件构建模块",
+          "user_intent": "分析已经购买重疾险的客户群体，而非所有客户或有意向客户",
+          "expected_outcome": "保留“客户已购买重疾险”的行为和对象关系",
+          "required_capabilities": [
+            "购买行为识别",
+            "客户对象识别",
+            "行为与产品条件的关系保留"
+          ],
+          "acceptance_criteria": [
+            "筛选对象为客户",
+            "行为为已经购买",
+            "购买行为与重疾险产品关联"
+          ],
+          "boundary": {
+            "in_scope": "识别问句中的客户对象和购买行为条件",
+            "out_of_scope": "实际筛选客户数据"
+          },
+          "priority": "核心",
+          "evidence_refs": []
+        }
+      ],
+      "fulfillment_assessments": [
+        {
+          "expectation_id": "识别为客户画像分析意图",
+          "status": "not_fulfilled",
+          "score": 0,
+          "expected_evidence": [
+            "问句“帮我看看上季度买了重疾险的客户都是啥样的？”表达的是对特定客户群体特征进行分析的诉求",
+            "能力描述要求给出营销规划问句的意图标签"
+          ],
+          "actual_evidence": [
+            "output_text_parsed.data.robot_text 为“其他意图”",
+            "output_text_parsed.data.extra_output_params.intent_name 为“其他意图”",
+            "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.subIntent 为“其他意图”",
+            "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.intent 为“other”"
+          ],
+          "downstream_impact": "意图分类错误会使下游无法进入客户画像分析流程，阻断该问句的核心业务处理。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "提取上季度时间范围槽位",
+          "status": "not_fulfilled",
+          "score": 0,
+          "expected_evidence": [
+            "输入 user_text 明确包含时间表达“上季度”",
+            "能力描述要求给出必要槽位"
+          ],
+          "actual_evidence": [
+            "返回的 nlu_info.target_value 为 null",
+            "返回内容中没有可识别的时间范围槽位或“上季度”字段"
+          ],
+          "downstream_impact": "缺少时间范围会导致下游无法限定分析周期，无法忠实执行用户请求。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "提取重疾险产品槽位",
+          "status": "not_fulfilled",
+          "score": 0,
+          "expected_evidence": [
+            "输入 user_text 明确包含产品条件“重疾险”",
+            "能力描述要求给出必要槽位"
+          ],
+          "actual_evidence": [
+            "返回的 nlu_info.target_value 为 null",
+            "返回内容中没有产品槽位或“重疾险”字段"
+          ],
+          "downstream_impact": "缺少产品条件会使下游无法限定目标客群，查询范围将偏离用户意图。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        },
+        {
+          "expectation_id": "保留已购买客户筛选条件",
+          "status": "not_fulfilled",
+          "score": 0,
+          "expected_evidence": [
+            "输入 user_text 表达了“买了重疾险的客户”，其中包含客户对象和已购买行为",
+            "该关系是用户请求目标客群的必要组成部分"
+          ],
+          "actual_evidence": [
+            "返回的 nlu_info.target_value 为 null",
+            "返回内容没有提取“客户”对象或“已购买”行为条件"
+          ],
+          "downstream_impact": "未保留购买行为与客户对象关系，无法确保下游分析的是已购买重疾险的客户群体。",
+          "confidence": null,
+          "evidence_refs": [],
+          "authority_tool_call_ids": []
+        }
+      ],
+      "overall_fulfillment": {
+        "status": "not_fulfilled",
+        "blocking_expectations": [
+          "识别为客户画像分析意图",
+          "提取上季度时间范围槽位",
+          "提取重疾险产品槽位",
+          "保留已购买客户筛选条件"
+        ]
+      },
+      "expected": {
+        "output_text": "{\"intent_name\":\"客户画像\",\"slots\":{\"time_range\":\"上季度\",\"product\":\"重疾险\",\"behavior\":\"已购买\",\"target\":\"客户\"}}"
+      },
+      "actual": {
+        "output_text": "{\"code\": 0, \"msg\": \"success\", \"data\": {\"robot_text\": \"其他意图\", \"end_flag\": 1, \"extra_output_params\": {\"intent\": \"4001\", \"intent_name\": \"其他意图\", \"card_result\": {\"event\": \"reasoning_message_content\", \"sse_id\": \"default_trace:reasoning_message_content\", \"think\": \"\", \"answer\": \"\", \"card_list\": [], \"extensions\": {\"trace_id\": \"default_trace\", \"session_id\": \"default_session\", \"nlu_info\": {\"subIntent\": \"其他意图\", \"intent\": \"other\", \"confidence\": 0.5, \"target_value\": null, \"path_types\": null}}}}}}"
+      },
+      "missing": [
+        {
+          "kind": "missing",
+          "error_type": "缺少时间槽位",
+          "expected": "上季度",
+          "actual": null,
+          "evidence_ref": "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.target_value",
+          "raw": "返回 target_value 为 null",
+          "incomplete": false
+        },
+        {
+          "kind": "missing",
+          "error_type": "缺少产品槽位",
+          "expected": "重疾险",
+          "actual": null,
+          "evidence_ref": "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.target_value",
+          "raw": "返回内容未包含重疾险产品条件",
+          "incomplete": false
+        },
+        {
+          "kind": "missing",
+          "error_type": "缺少购买行为和客户对象槽位",
+          "expected": "行为为已购买，目标对象为客户",
+          "actual": null,
+          "evidence_ref": "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.target_value",
+          "raw": "返回内容未包含客户对象及已购买行为",
+          "incomplete": false
+        }
+      ],
+      "wrong": [
+        {
+          "kind": "wrong",
+          "error_type": "意图标签错误",
+          "expected": "客户画像或客群分析",
+          "actual": "其他意图",
+          "evidence_ref": "output_text_parsed.data.extra_output_params.intent_name",
+          "raw": "其他意图",
+          "incomplete": false
+        }
+      ],
+      "extra": [],
+      "evidence": [
+        {
+          "source": "request.body.user_text",
+          "value": "帮我看看上季度买了重疾险的客户都是啥样的？"
+        },
+        {
+          "source": "output_text_parsed.data.extra_output_params",
+          "value": {
+            "intent": "4001",
+            "intent_name": "其他意图"
+          }
+        },
+        {
+          "source": "output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info",
+          "value": {
+            "subIntent": "其他意图",
+            "intent": "other",
+            "confidence": 0.5,
+            "target_value": null
+          }
+        }
+      ],
+      "reasoning_summary": "输出文本可读取且 HTTP 调用成功，因此可以直接进行能力兑现判断。用户问句的核心是分析上季度已购买重疾险客户的画像，至少需要识别客户画像类意图，并保留“上季度”“重疾险”“已购买客户”等必要语义。实际输出将意图归为“其他意图”，且 target_value 为 null，没有返回任何必要槽位，因此各项业务期望均未满足。",
+      "summary": {
+        "reason": "not_fulfilled · blocking=[保留已购买客户筛选条件,提取上季度时间范围槽位,提取重疾险产品槽位,识别为客户画像分析意图] · 输出文本可读取且 HTTP 调用成功，因此可以直接进行能力兑现判断。用户问句的核心是分析上季度已购买重疾险客户的画像，至少需要识别客户画像类意图，并保留“上季度”“重疾险”“已购买客户”等必要语义。实际输出将意图归为“其他意图”，且 target_value 为 null，没有返回任何必要槽位，因此各项业务期望均未满足。",
+        "primary_failure_dimensions": [
+          {
+            "expectation_id": "保留已购买客户筛选条件",
+            "status": "not_fulfilled",
+            "blocking": true,
+            "downstream_impact": "未保留购买行为与客户对象关系，无法确保下游分析的是已购买重疾险的客户群体。",
+            "evidence": "返回的 nlu_info.target_value 为 null | 返回内容没有提取“客户”对象或“已购买”行为条件 | 输入 user_text 表达了“买了重疾险的客户”，其中包含客户对象和已购买行为 | 该关系是用户请求目标客群的必要组成部分"
+          },
+          {
+            "expectation_id": "提取上季度时间范围槽位",
+            "status": "not_fulfilled",
+            "blocking": true,
+            "downstream_impact": "缺少时间范围会导致下游无法限定分析周期，无法忠实执行用户请求。",
+            "evidence": "返回的 nlu_info.target_value 为 null | 返回内容中没有可识别的时间范围槽位或“上季度”字段 | 输入 user_text 明确包含时间表达“上季度” | 能力描述要求给出必要槽位"
+          },
+          {
+            "expectation_id": "提取重疾险产品槽位",
+            "status": "not_fulfilled",
+            "blocking": true,
+            "downstream_impact": "缺少产品条件会使下游无法限定目标客群，查询范围将偏离用户意图。",
+            "evidence": "返回的 nlu_info.target_value 为 null | 返回内容中没有产品槽位或“重疾险”字段 | 输入 user_text 明确包含产品条件“重疾险” | 能力描述要求给出必要槽位"
+          },
+          {
+            "expectation_id": "识别为客户画像分析意图",
+            "status": "not_fulfilled",
+            "blocking": true,
+            "downstream_impact": "意图分类错误会使下游无法进入客户画像分析流程，阻断该问句的核心业务处理。",
+            "evidence": "output_text_parsed.data.robot_text 为“其他意图” | output_text_parsed.data.extra_output_params.intent_name 为“其他意图” | output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.subIntent 为“其他意图” | output_text_parsed.data.extra_output_params.card_result.extensions.nlu_info.intent 为“other” | 问句“帮我看看上季度买了重疾险的客户都是啥样的？”表达的是对特定客户群体特征进行分析的诉求 | 能力描述要求给出营销规划问句的意图标签"
+          }
+        ],
+        "reason_source": "aggregated_fulfillment",
+        "fulfillment_status": "not_fulfilled",
+        "assessment_count": 4,
+        "blocking_count": 4,
+        "is_formal_attribution": true
+      }
+    },
+    "capability_carrier": {
+      "applicable": true,
+      "axis1_status": "not_fulfilled",
+      "placements": [
+        {
+          "expectation_id": "识别为客户画像分析意图",
+          "placement": "做错了",
+          "carry": "yes",
+          "reason": "能力边界描述明确支持单轮营销规划问句的意图识别，并将“1001”定义为“客户画像”，覆盖识别客户画像分析意图及将其归类为客户画像或客群分析类意图的期望。",
+          "citations": [
+            {
+              "source": "boundary",
+              "ref": "boundary",
+              "note": "支持：单轮营销规划问句的意图识别与必要槽位抽取。意图标签空间：1001=客户画像、1002=队伍画像、1003=达成路径规划、4001=其他。"
+            }
+          ]
+        },
+        {
+          "expectation_id": "提取上季度时间范围槽位",
+          "placement": "说不清",
+          "carry": "undecidable",
+          "reason": "能力边界描述仅明确支持单轮营销规划问句的必要槽位抽取，但未明确时间范围是否属于必要槽位，也未说明是否能够原样保留“上季度”及其等值，无法证明该具体期望在覆盖范围内。",
+          "citations": [
+            {
+              "source": "boundary",
+              "ref": "boundary",
+              "note": "支持：单轮营销规划问句的意图识别与必要槽位抽取。意图标签空间：1001=客户画像、1002=队伍画像、1003=达成路径规划、4001=其他。"
+            }
+          ],
+          "gap_kind": "口径分歧",
+          "missing_material": "需要明确营销规划问句中是否支持时间范围槽位抽取，以及是否要求并支持保留“上季度”等原始时间表达及其等值，不改写为其他时间范围。"
+        },
+        {
+          "expectation_id": "提取重疾险产品槽位",
+          "placement": "说不清",
+          "carry": "undecidable",
+          "reason": "能力边界描述仅说明支持单轮营销规划问句的意图识别与必要槽位抽取，但未明确“产品槽位”是否属于必要槽位、是否覆盖保险产品类型，以及能否将产品值精确保留为“重疾险”，因此无法判定该期望是否承载得了。",
+          "citations": [
+            {
+              "source": "boundary",
+              "ref": "boundary",
+              "note": "支持：单轮营销规划问句的意图识别与必要槽位抽取。意图标签空间：1001=客户画像、1002=队伍画像、1003=达成路径规划、4001=其他。"
+            }
+          ],
+          "gap_kind": "口径分歧",
+          "missing_material": "需要补充支持的槽位定义或字段范围，明确是否支持保险产品槽位，以及产品值“重疾险”的精确提取与保留规则。"
+        },
+        {
+          "expectation_id": "保留已购买客户筛选条件",
+          "placement": "说不清",
+          "carry": "undecidable",
+          "reason": "能力边界描述仅明确支持单轮营销规划问句的意图识别与必要槽位抽取，但未说明是否能识别并保留“客户已购买重疾险”的行为、对象及产品关联关系，无法判断该具体筛选条件是否在承载范围内。",
+          "citations": [
+            {
+              "source": "boundary",
+              "ref": "boundary",
+              "note": "支持：单轮营销规划问句的意图识别与必要槽位抽取。意图标签空间：1001=客户画像、1002=队伍画像、1003=达成路径规划、4001=其他。"
+            }
+          ],
+          "gap_kind": "口径分歧",
+          "missing_material": "需要补充能力边界中对槽位抽取范围的明确说明，尤其是是否支持客户对象、已购买行为、重疾险产品及购买行为与产品之间关联关系的识别和保留。"
+        }
+      ],
+      "errors": [],
+      "snapshot_id": "0430e39d0bf85e8a"
+    },
+    "elapsed_s": 115.6
+  }
+]

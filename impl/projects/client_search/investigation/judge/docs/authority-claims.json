@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "claims": [
+    {
+      "claim_id": "orphan-type-orphan-value-mapping",
+      "subject_id": "value_mapping:orphanType:孤儿单",
+      "subject_kind": "value_mapping",
+      "conclusion_kind": "normative_rule",
+      "claim": "孤儿单映射为纯存续单客户",
+      "conditions": [
+        "当前启用 value_mappings"
+      ],
+      "source_ref_ids": [
+        "business-value-mappings"
+      ]
+    },
+    {
+      "claim_id": "orphan-type-orphan-field-note",
+      "subject_id": "value_mapping:orphanType:孤儿单",
+      "subject_kind": "value_mapping",
+      "conclusion_kind": "normative_rule",
+      "claim": "孤儿单映射为在职有效客户",
+      "conditions": [
+        "当前启用字段定义 notes"
+      ],
+      "source_ref_ids": [
+        "business-field-definitions"
+      ]
+    },
+    {
+      "claim_id": "family-birthday-operator-declaration",
+      "subject_id": "operator_support:familyInfo.familyclientbirthday",
+      "subject_kind": "operator_support",
+      "conclusion_kind": "inlive_boundary",
+      "claim": "字段定义 intent 声明 RANGE、GT、GTE、LT",
+      "conditions": [
+        "当前启用字段定义"
+      ],
+      "source_ref_ids": [
+        "business-field-definitions"
+      ]
+    },
+    {
+      "claim_id": "family-birthday-operator-rules",
+      "subject_id": "operator_support:familyInfo.familyclientbirthday",
+      "subject_kind": "operator_support",
+      "conclusion_kind": "inlive_boundary",
+      "claim": "enhanced_rules 另使用 LTE、EXISTS，以及 RANGE、GT、GTE、LT",
+      "conditions": [
+        "当前启用字段定义示例与 enhanced_rules"
+      ],
+      "source_ref_ids": [
+        "business-field-definitions",
+        "business-enhanced-rules"
+      ]
+    },
+    {
+      "claim_id": "orphan-type-enum-space",
+      "subject_id": "enum_space:orphanType",
+      "subject_kind": "field_semantic",
+      "conclusion_kind": "inlive_boundary",
+      "claim": "合法值空间包含在职有效客户、纯存续单客户、非纯存续单客户",
+      "conditions": [
+        "当前启用字段枚举"
+      ],
+      "source_ref_ids": [
+        "business-field-enums"
+      ]
+    },
+    {
+      "claim_id": "customer-activity-field-enum-space",
+      "subject_id": "field_semantic:customer_activity",
+      "subject_kind": "field_semantic",
+      "conclusion_kind": "inlive_boundary",
+      "claim": "customer_activity 字段支持 MATCH，activity 枚举值空间来自 behavior_intent_definitions_args.yaml 的 intents[].activity",
+      "conditions": [
+        "当前启用 behavior_intent_definitions"
+      ],
+      "source_ref_ids": [
+        "business-behavior-intents"
+      ]
+    }
+  ],
+  "resolutions": [],
+  "gap_bindings": [
+    {
+      "subject_id": "value_mapping:orphanType:孤儿单",
+      "gap_id": "semantic-mapping-authority"
+    },
+    {
+      "subject_id": "operator_support:familyInfo.familyclientbirthday",
+      "gap_id": "query-form-equivalence-authority"
+    }
+  ]
+}

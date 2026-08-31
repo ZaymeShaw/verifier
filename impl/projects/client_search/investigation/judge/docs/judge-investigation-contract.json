@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "business_expectations": [
+    {
+      "expectation_id": "find-target-customers",
+      "user_role": "需要寻找目标客户的业务人员",
+      "use_scenario": "用户通过自然语言描述目标客户群体并使用客户搜索产品",
+      "desired_outcome": "获得符合其已表达筛选要求的客户集合"
+    }
+  ],
+  "live_boundary": {
+    "live_role": "将自然语言客户搜索要求转换为下游搜索服务可消费的结构化查询",
+    "in_scope_responsibilities": [
+      "完整保留用户已经表达或确认的筛选要求",
+      "以真实下游支持的字段、值、操作符和逻辑交付查询"
+    ],
+    "out_of_scope_responsibilities": [
+      "保证数据库中存在符合条件的客户",
+      "保证外部客户数据完整、实时或可访问",
+      "替用户决定未表达且无法确认的业务条件"
+    ],
+    "external_constraints": [
+      "下游数据库不存在目标客户记录",
+      "下游搜索或数据库服务不可用",
+      "业务所需字段或数据尚未接入下游系统"
+    ]
+  },
+  "evaluation_dimensions": [
+    {
+      "dimension_id": "search-intent-preservation",
+      "expectation_ids": [
+        "find-target-customers"
+      ],
+      "name": "搜索意图承接",
+      "evaluation_question": "Live 的查询语义是否完整、准确地保留用户描述的目标客户范围、限制和关系？",
+      "fulfilled_when": [
+        "所有会改变目标客户集合的已表达要求均被保留",
+        "条件的组合、排除和范围关系与用户意图一致"
+      ],
+      "not_fulfilled_when": [
+        "遗漏、增加或改变了会影响目标客户集合的条件",
+        "应交付查询时没有提供可用查询表达"
+      ],
+      "not_evaluable_when": [
+        "用户要求存在决定性歧义且没有有效澄清或业务约定",
+        "无法取得或确认 Live 的实际输出"
+      ]
+    },
+    {
+      "dimension_id": "downstream-query-consumability",
+      "expectation_ids": [
+        "find-target-customers"
+      ],
+      "name": "下游查询可消费性",
+      "evaluation_question": "Live 是否以真实下游支持的形式交付查询并保持用户目标客户范围？",
+      "fulfilled_when": [
+        "查询使用已验证的下游字段、值、操作符和组合结构",
+        "下游执行证据证明查询形式保持用户目标客户范围"
+      ],
+      "not_fulfilled_when": [
+        "查询包含已证实不受下游支持的字段、值、操作符或结构",
+        "下游执行证据证明查询改变了用户目标客户范围"
+      ],
+      "not_evaluable_when": [
+        "缺少决定性的下游协议、枚举现实或查询等价事实",
+        "无法取得或确认交付给下游的实际查询"
+      ]
+    }
+  ],
+  "mandatory_reviews": {
+    "honest_refusal_is_not_fulfilled": "如实拒绝、态度好不等于办成。安全拒绝与透明说明只能作为 non-blocking 说明，不能替代核心交付（fulfilled.md §5 / 反面 1、5、8）。",
+    "three_states_exclusive": "每个案子只能落进 fulfilled / not_fulfilled / not_evaluable 之一；说不清必须写清差在哪儿。三态互斥，不得用第四态或同义词逃逸（fulfilled.md §2 / §7）。",
+    "no_escape": "不允许用「不写核心验收项」「无必办项算办成」「该出结果没出包装成说不清」「没查证就判职责外」逃逸（fulfilled.md §6 / 反面 2、4、9、11）。"
+  }
+}

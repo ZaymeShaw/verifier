@@ -24,7 +24,7 @@ from impl.core.portable_artifact import (
     write_active_artifact,
     write_portable_export,
 )
-from impl.projects.client_search.draft.field_tools import (
+from impl.projects.client_search.field_tools import (
     _load_field_key_index,
     build_field_key_index_registry,
 )
@@ -93,8 +93,8 @@ def _phrases(value: Any) -> list[str]:
 
 
 def _augmented_source_entries(spec, entries: Sequence[InvestigationKeyEntry]) -> tuple[InvestigationKeyEntry, ...]:
-    enums = yaml.safe_load(Path(spec.source_path("field_enums")).read_text()) or {}
-    mappings = yaml.safe_load(Path(spec.source_path("value_mappings")).read_text()) or {}
+    enums = yaml.safe_load(Path(spec.source_path("field_enums")).read_text(encoding="utf-8")) or {}
+    mappings = yaml.safe_load(Path(spec.source_path("value_mappings")).read_text(encoding="utf-8")) or {}
     source_terms: dict[str, list[str]] = {entry.key: [] for entry in entries}
     for entry in entries:
         enum_config = enums.get(entry.key) or {}
@@ -234,7 +234,7 @@ def _fused_strategy(exact: Strategy, lexical: Strategy) -> Strategy:
     return search
 
 
-EMBEDDING_CACHE_PATH = Path(__file__).parent / "investigation/judge/experiments/field-key-index-embeddings.json"
+EMBEDDING_CACHE_PATH = Path(__file__).parent.parent / "investigation/judge/experiments/field-key-index-embeddings.json"
 EMBEDDING_PROJECTION_VERSION = "client-search-field-projection-v1"
 EMBEDDING_MODEL_VERSION = "dashscope-text-embedding-api-v1"
 
@@ -352,12 +352,12 @@ def _refresh_embedding_cache(
 def _load_embedding_cache(entries: Sequence[InvestigationKeyEntry], probes: Sequence[dict[str, Any]], *, refresh: bool = False) -> dict[str, Any]:
     if refresh:
         try:
-            existing = json.loads(EMBEDDING_CACHE_PATH.read_text())
+            existing = json.loads(EMBEDDING_CACHE_PATH.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             existing = None
         cache = _refresh_embedding_cache(entries, probes, existing=existing)
     else:
-        cache = json.loads(EMBEDDING_CACHE_PATH.read_text())
+        cache = json.loads(EMBEDDING_CACHE_PATH.read_text(encoding="utf-8"))
     if cache.get("input_sha256") != _embedding_input_hash(entries, probes):
         raise ValueError("embedding cache input/projection drifted; rerun with --refresh-embeddings")
     if cache.get("model_version") != EMBEDDING_MODEL_VERSION or cache.get("projection_version") != EMBEDDING_PROJECTION_VERSION:
@@ -485,7 +485,7 @@ def _candidate(candidate_id, channels, strategy, registry, entries, projection_f
         "suite": {
             "index_key": "client-search.field-definitions",
             "collection_ref": "business-field-definitions",
-            "builder": "impl.projects.client_search.draft.field_tools._load_field_key_index",
+            "builder": "impl.projects.client_search.field_tools._load_field_key_index",
             "projection_fields": projection_fields or ["field", "retrieval_text", "description"],
             "search_strategy": candidate_id,
             "target_ref_template": "client-search-field://<field>",
@@ -567,7 +567,7 @@ def build_report(*, refresh_embeddings: bool = False) -> dict[str, Any]:
             holdout["average_loaded_entries"] <= thresholds["average_loaded_entries_max"],
         )):
             shortlist.append(candidate["candidate_id"])
-    manifest = json.loads((Path(__file__).parent / "investigation/judge/manifest.json").read_text())
+    manifest = json.loads((Path(__file__).parent / "investigation/judge/manifest.json").read_text(encoding="utf-8"))
     return {
         "schema_version": 2,
         "experiment_id": "client-search-field-key-index-v3",

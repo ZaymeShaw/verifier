@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import hashlib
 import json
 import subprocess
@@ -23,6 +24,7 @@ from typing import Any
 from impl.core.project_loader import (
     load_project,
     resolve_project_source_root,
+    resolve_role_assets,
 )
 from impl.core.portable_artifact import project_artifact_repository_root, write_active_artifact
 from impl.core.schema.investigation import (
@@ -50,11 +52,19 @@ def _manifest_and_paths(spec: Any, role: str):
         field_path="project.package",
         expected_type="directory",
     )
-    package = spec.project_package_path(
-        f"draft/investigation/{role}",
-        field_path=f"verifier.assets.investigation.{role}",
-        expected_type="directory",
-    )
+    # 经角色资产解析调查包：draft 期落 candidate_path，晋升后落 production_path。
+    packages = [
+        Path(item["path"])
+        for item in resolve_role_assets(spec, role, use_candidate=True)
+        if item["mapping"].kind == "investigation"
+    ]
+    if len(packages) != 1:
+        raise ValueError(
+            f"expected exactly one {role} investigation package, got {len(packages)}"
+        )
+    package = packages[0]
+    if not package.is_dir():
+        raise FileNotFoundError(f"{role} investigation package not found: {package}")
     source_root = resolve_project_source_root(spec) if spec.has_business_source else None
     manifest_path = package / "manifest.json"
     manifest = load_investigation_manifest(manifest_path)
@@ -281,7 +291,9 @@ def _cmd_refresh_absorbable(spec: Any, role: str) -> int:
             continue
         metadata = ref.metadata
         if ref.location_ref is not None:
-            ref.location_ref.sha256 = report.actual_sha256
+            ref.location_ref = dataclasses.replace(
+                ref.location_ref, sha256=report.actual_sha256
+            )
         metadata["sha256"] = report.actual_sha256
         slice_spec = metadata.get("slice") if isinstance(metadata.get("slice"), dict) else None
         if slice_spec is not None and report.actual_sha256:
@@ -306,7 +318,7 @@ def _cmd_refresh_absorbable(spec: Any, role: str) -> int:
     )
     print(f"refreshed: {', '.join(updated)}")
     print(f"audit ledger: {ledger}")
-    print("receipt is stale: re-run validation with --execute-tools to regenerate it")
+    print("validation receipt stays valid: absorb only re-pins hashes, manifest structure is unchanged")
     return 0
 
 

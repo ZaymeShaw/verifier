@@ -29,7 +29,7 @@ def _source_path():
 
 def _enhanced_slice_spec():
     manifest = load_investigation_manifest(
-        "impl/projects/client_search/draft/investigation/judge/manifest.json"
+        "impl/projects/client_search/investigation/judge/manifest.json"
     )
     for ref in manifest.evidence_refs:
         if ref.ref_id == "business-enhanced-rules":

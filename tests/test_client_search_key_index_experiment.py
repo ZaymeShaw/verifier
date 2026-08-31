@@ -10,7 +10,7 @@ from impl.projects.client_search.draft.simulate_field_key_index import build_rep
 
 ROOT = Path(__file__).resolve().parents[1]
 GATE_PATH = ROOT / ".agents/skills/draft/scripts/validate_key_index_experiment.py"
-REPORT_PATH = ROOT / "impl/projects/client_search/draft/investigation/judge/experiments/field-key-index-simulation.json"
+REPORT_PATH = ROOT / "impl/projects/client_search/investigation/judge/experiments/field-key-index-simulation.json"
 
 
 def _payload_sha256(payload) -> str:

@@ -12,6 +12,15 @@ from .models import (
     BatchRunRequest,
     BatchStartRequest,
     BatchStatusRequest,
+    CapabilityDeleteRequest,
+    CapabilityListRequest,
+    CapabilitySaveRequest,
+    MaterialAssetFileRequest,
+    MaterialAssetViewRequest,
+    MaterialDeleteRequest,
+    MaterialGetRequest,
+    MaterialsListRequest,
+    MaterialUploadRequest,
     CasePoolDeleteRequest,
     CasePoolLoadRequest,
     CasePoolSaveRequest,
@@ -102,6 +111,51 @@ def case_pool_load(payload: CasePoolLoadRequest) -> JSONResponse:
 @router.post("/api/case_pool/delete")
 def case_pool_delete(payload: CasePoolDeleteRequest) -> JSONResponse:
     return route(service.delete_case_pool, payload)
+
+
+@router.post("/api/materials")
+def materials(payload: MaterialsListRequest) -> JSONResponse:
+    return route(service.materials_overview, payload)
+
+
+@router.post("/api/material/asset_view")
+def material_asset_view(payload: MaterialAssetViewRequest) -> JSONResponse:
+    return route(service.material_asset_view, payload)
+
+
+@router.post("/api/material/asset_file")
+def material_asset_file(payload: MaterialAssetFileRequest) -> JSONResponse:
+    return route(service.material_asset_file, payload)
+
+
+@router.post("/api/material/get")
+def material_get(payload: MaterialGetRequest) -> JSONResponse:
+    return route(service.get_material, payload)
+
+
+@router.post("/api/material/upload")
+def material_upload(payload: MaterialUploadRequest) -> JSONResponse:
+    return route(service.upload_material, payload)
+
+
+@router.post("/api/material/delete")
+def material_delete(payload: MaterialDeleteRequest) -> JSONResponse:
+    return route(service.delete_material, payload)
+
+
+@router.post("/api/capabilities")
+def capabilities(payload: CapabilityListRequest) -> JSONResponse:
+    return route(service.list_capabilities, payload)
+
+
+@router.post("/api/capability/save")
+def capability_save(payload: CapabilitySaveRequest) -> JSONResponse:
+    return route(service.save_capability, payload)
+
+
+@router.post("/api/capability/delete")
+def capability_delete(payload: CapabilityDeleteRequest) -> JSONResponse:
+    return route(service.delete_capability, payload)
 
 
 @router.post("/api/judge")

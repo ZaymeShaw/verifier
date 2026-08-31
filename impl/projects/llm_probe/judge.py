@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, Optional
 
 from impl.core.judge_protocol import ProjectJudge
@@ -18,16 +19,48 @@ def _capability(trace: RunTrace) -> str:
     return resolve_capability(_request_payload(trace))
 
 
+def _parse_output_text(output_text: str) -> Any:
+    """output_text 能 parse 成 JSON 时返回解析结果，否则 None。
+
+    提取协议不变（output_text 仍是唯一输出字段）；这里只是给 judge 一份
+    可读的结构化视图，免得它在转义字符串里找证据找不到而误判 not_evaluable。
+    """
+    text = str(output_text or "").strip()
+    if not text or text[0] not in "{[":
+        return None
+    try:
+        return json.loads(text)
+    except (ValueError, TypeError):
+        return None
+
+
 class LlmProbeJudge(ProjectJudge):
     def build_context(self, trace: RunTrace) -> dict:
         request = _request_payload(trace)
         capability = _capability(trace)
         show_schema = request.get("show_schema")
         output = trace.extracted_output if isinstance(trace.extracted_output, dict) else {}
+        output_text = str(output.get("output_text") or "")
+        output_text_parsed = _parse_output_text(output_text)
         system_extras = [
             "## 能力描述\n"
-            "只根据能力描述判断 output_text 是否兑现了该能力。没有 gold output，不要编造参考答案。\n"
+            "只根据能力描述判断 output_text 是否兑现了该能力。没有 gold output，不要编造参考答案。\n",
+            "## not_evaluable 的边界\n"
+            "not_evaluable 只在证据本身缺失时使用：output_text 为空、无法读取、或 HTTP 层失败。\n"
+            "只要 output_text 有内容且可读，就必须对照能力描述和本次输入判 fulfilled 或 not_fulfilled。\n"
+            "不要因为「不知道被测系统支不支持这种查询」而判 not_evaluable——系统能力边界是判后承载性裁决（轴2）的职责，不是本判定的输入。\n"
+            "## 期望派生\n"
+            "期望只来自两处：能力描述声明的职责，以及本次输入字面表达的语义。\n"
+            "输入里明确表达的语义必须被输出忠实保留——等值/前缀/包含、范围与边界、数量与单位、逻辑关系；"
+            "语义被放大、缩小或改写即 not_fulfilled（如输入说「姓名是张三」，输出却做前缀匹配）。\n"
+            "不要发明两处都没有的要求：能力描述未声明「拒绝不支持的表述」时，不得要求输出必须拒绝。\n",
         ]
+        if output_text_parsed is not None:
+            system_extras.append(
+                "## output_text_parsed\n"
+                "output_text 是 JSON 字符串，user prompt 里附了解析后的 output_text_parsed。"
+                "找证据以 output_text_parsed 为准，两者内容等价。\n"
+            )
         if show_schema not in (None, "", {}, []):
             system_extras.append(
                 "## show_schema\n"
@@ -54,7 +87,8 @@ class LlmProbeJudge(ProjectJudge):
                     "body": request.get("body") or {},
                     "capability_ref": request.get("capability_ref") or "",
                 },
-                "output_text": output.get("output_text") or "",
+                "output_text": output_text,
+                "output_text_parsed": output_text_parsed,
                 "application_boundary": {
                     "scope": "non_streaming_http_llm_probe",
                     "streaming": False,

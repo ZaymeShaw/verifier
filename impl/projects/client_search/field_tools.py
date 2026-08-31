@@ -209,7 +209,7 @@ def build_field_key_index_registry(
     spec: ProjectSpec,
     provider: ClientSearchFieldDefinitionProvider | None = None,
 ) -> InvestigationKeyIndexRegistry:
-    from impl.projects.client_search.draft.catalog import make_exact_strategy
+    from impl.projects.client_search.catalog import make_exact_strategy
 
     index, resolve_target, validate_target = field_index_components(spec, provider)
     registry = InvestigationKeyIndexRegistry()

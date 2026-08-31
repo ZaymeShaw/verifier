@@ -174,14 +174,17 @@ async function loadProjects() {
   const sel = document.getElementById('projectSelect');
   sel.innerHTML = '';
   const list = data.projects || [];
+  const ids = [];
   for (const p of list) {
     const pid = typeof p === 'string' ? p : (p.project_id || p.id || '');
     if (!pid) continue;
+    ids.push(pid);
     const opt = document.createElement('option');
     opt.value = pid;
     opt.textContent = pid;
     sel.appendChild(opt);
   }
+  if (ids.includes('llm_probe')) sel.value = 'llm_probe';
   currentProject = sel.value;
   loadSummary();
 }

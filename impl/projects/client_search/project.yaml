@@ -103,11 +103,6 @@ verifier:
       methods: [PUT, DELETE, PATCH]
       route_keywords: [reload, reindex, delete, update, create, write]
   roles:
-    judge:
-      draft:
-        enabled: true
-        module: project://draft/judge.py
-        reason: Validate the investigation-driven Judge authority contract before promotion.
     attribute:
       tool_call_limit: 8
       draft:
@@ -115,6 +110,11 @@ verifier:
         module: project://draft/attribute.py
         tool_call_limit: 8
         reason: Batch attribution validation through the 8021 UAT frontend.
+    judge:
+      draft:
+        enabled: true
+        module: project://draft/judge.py
+        reason: 增量调查 draft 模式（investigate.md 增量门禁）；实现为薄 wrapper，零行为变化。
   check_rules:
     core_forbidden_markers: [matched_level, clientAge, annPremSegNum, clientSex]
     evidence:
@@ -220,7 +220,7 @@ verifier:
       enabled: true
       roles: [judge]
       production_path: project://context/judge_business_contract.md
-      candidate_path: project://draft/context/judge_business_contract.md
+      candidate_path: ""
       replace: true
       metadata:
         dimensions:
@@ -237,6 +237,55 @@ verifier:
           find-target-customers: 用户通过自然语言描述目标客户群体并使用客户搜索产品
         live_boundary_sha256: da82716fcf9e829d803d6b71c5d003c107f704bf46e620478b1aa6f8b39d11fa
         revision: 2b24c53
+    - asset_id: judge_execution_module
+      kind: other
+      enabled: true
+      roles: [judge]
+      production_path: project://judge_execution.py
+      candidate_path: ""
+      replace: true
+    - asset_id: judge_strategy_module
+      kind: other
+      enabled: true
+      roles: [judge]
+      production_path: project://judge_strategy.py
+      candidate_path: ""
+      replace: true
+    - asset_id: judge_catalog_module
+      kind: other
+      enabled: true
+      roles: [judge]
+      production_path: project://catalog.py
+      candidate_path: ""
+      replace: true
+    - asset_id: judge_catalog_embedding_module
+      kind: other
+      enabled: true
+      roles: [judge]
+      production_path: project://catalog_embedding.py
+      candidate_path: ""
+      replace: true
+    - asset_id: judge_enhanced_rules_key_index_module
+      kind: other
+      enabled: true
+      roles: [judge]
+      production_path: project://enhanced_rules_key_index.py
+      candidate_path: ""
+      replace: true
+    - asset_id: judge_field_tools_module
+      kind: other
+      enabled: true
+      roles: [judge]
+      production_path: project://field_tools.py
+      candidate_path: ""
+      replace: true
+    - asset_id: judge_field_sufficiency_module
+      kind: other
+      enabled: true
+      roles: [judge]
+      production_path: project://field_sufficiency.py
+      candidate_path: ""
+      replace: true
     - asset_id: judge_authority_enum_values
       kind: context
       enabled: false

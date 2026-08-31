@@ -116,7 +116,7 @@ def test_audit_writes_report_file(tmp_path):
     report_path = schema_audit.write_report(result, cfg)
 
     assert report_path.exists()
-    data = json.loads(report_path.read_text())
+    data = json.loads(report_path.read_text(encoding="utf-8"))
     assert set(data) == {"passed", "summary", "functions", "schema_issues"}
 
 
@@ -126,6 +126,6 @@ def test_hook_script_writes_report_and_prints_summary():
     assert proc.stdout.strip(), proc.stderr
     assert "schema audit report:" in proc.stdout
     assert (HOOK_DIR / "schema-audit-report.json").exists()
-    data = json.loads((HOOK_DIR / "schema-audit-report.json").read_text())
+    data = json.loads((HOOK_DIR / "schema-audit-report.json").read_text(encoding="utf-8"))
     assert set(data) == {"passed", "summary", "functions", "schema_issues"}
     assert proc.returncode == (0 if data["passed"] else 1)

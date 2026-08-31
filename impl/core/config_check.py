@@ -1613,19 +1613,22 @@ def _check_capability_carrier_binding(
     if not capability_carrier_enabled(spec):
         return
     project_id = str(getattr(spec, "project_id", "") or "")
-    import importlib
+    from .capability_carrier import CapabilityCarrierNotBound, resolve_capability_provider
 
     try:
-        module = importlib.import_module(f"impl.projects.{project_id}.live")
-    except ImportError:
-        module = None
-    if callable(getattr(module, "capability_provider", None)):
-        return
-    report.add(ConfigCheckIssue(
-        "capability_carrier_unbound",
-        f"{project_id} 轴2接入未完成：缺 capability_provider",
-        str(config_file),
-    ))
+        resolve_capability_provider(spec)
+    except CapabilityCarrierNotBound as exc:
+        report.add(ConfigCheckIssue(
+            "capability_carrier_unbound",
+            str(exc),
+            str(config_file),
+        ))
+    except Exception as exc:  # live 模块装载崩溃：单独报出，不伪装成"缺 provider"。
+        report.add(ConfigCheckIssue(
+            "capability_provider_import_error",
+            f"{project_id} capability_provider 装载崩溃：{exc}",
+            str(config_file),
+        ))
 
 
 def _check_extra_consumers(

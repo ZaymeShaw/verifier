@@ -9,7 +9,7 @@ from .embedding import UnconfiguredEmbeddingProvider
 from .errors import ContextValidationError
 from .policy import ContextPolicyResolver
 from .registry import SQLiteContextDatabase, SQLiteContextRegistry
-from .resolvers import CompositeContentResolver, FileContentResolver
+from .resolvers import standard_content_resolver
 from .runtime import ContextRuntime
 from .vector_index import SQLiteContextVectorIndex
 
@@ -50,10 +50,7 @@ def build_context_runtime(
 
     resolver = content_resolver
     if resolver is None:
-        resolvers = []
-        if project_root is not None:
-            resolvers.append(FileContentResolver([Path(project_root)]))
-        resolver = CompositeContentResolver(resolvers)
+        resolver = standard_content_resolver([Path(project_root)] if project_root is not None else None)
 
     return ContextRuntime(
         project_id=normalized_project_id,

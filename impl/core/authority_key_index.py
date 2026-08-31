@@ -16,6 +16,7 @@ from impl.core.investigation_key_index import (
 )
 from impl.core.schema.investigation_judge import (
     AuthorityInvestigationReport,
+    decision_proof_power,
 )
 from impl.core.schema.investigation_key_index import (
     InvestigationKeyEntry,
@@ -148,6 +149,8 @@ def build_material_decision_key_index(
                 part
                 for part in (
                     decision.conclusion_kind,
+                    # 显式担保档位（未声明时为空，检索面与既有逐字一致）。
+                    decision.warrant_tier,
                     decision.governs,
                     decision.statement,
                     decision.scenario,
@@ -228,6 +231,9 @@ def build_material_decision_key_index_registry(
                     part for part in (material.source_ref_id, decision.locator) if part
                 ),
                 "decision": decision.as_dict(),
+                # 证明力最终档位：warrant_tier 优先，未声明时缺省映射到
+                # conclusion_kind（judge.md §6，与既有档位判断结果一致）。
+                "proof_power": decision_proof_power(decision),
                 "limitations": list(material.limitations),
                 "connections": [item.as_dict() for item in material.connections],
                 "navigation_only": True,

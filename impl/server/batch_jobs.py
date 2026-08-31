@@ -42,6 +42,9 @@ def start_batch(data: Dict[str, Any]) -> Dict[str, Any]:
     concurrency = resolve_batch_concurrency(data.get("concurrency"))
     raw_cases = data.get("cases") or []
     cases = [to_dict(parse_mock_case(case, project_id=project)) for case in raw_cases]
+    if cases:
+        from ..core.materials_store import require_materials
+        require_materials(project)
     job_id = uuid.uuid4().hex
     identities = [
         {

@@ -7,14 +7,14 @@ from impl.core.schema import (
     JudgeResult,
     RunTrace,
 )
-from impl.projects.client_search.draft.field_sufficiency import (
+from impl.projects.client_search.field_sufficiency import (
     decide,
     decide_from_trace,
     load_field_standards,
     result_if_speaks,
     sufficiency_hint,
 )
-from impl.projects.client_search.draft.judge import ClientSearchJudge
+from impl.projects.client_search.judge import ClientSearchJudge
 
 
 def _trace(trace_id: str, query: str, pairs: list[tuple[str, str]]) -> RunTrace:

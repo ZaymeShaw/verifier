@@ -14,6 +14,7 @@ PORT="${CLIENT_SEARCH_PORT:-8000}"
 BASE_URL="${CLIENT_SEARCH_BASE_URL:-http://127.0.0.1:${PORT}}"
 STARTUP_TIMEOUT_SECONDS="${CLIENT_SEARCH_STARTUP_TIMEOUT_SECONDS:-240}"
 REQUEST_TIMEOUT_SECONDS="${CLIENT_SEARCH_REQUEST_TIMEOUT_SECONDS:-120}"
+REINDEX_TIMEOUT_SECONDS="${CLIENT_SEARCH_REINDEX_TIMEOUT_SECONDS:-360}"
 
 usage() {
   cat <<USAGE
@@ -24,7 +25,8 @@ Environment overrides:
   PYTHON_EXECUTABLE                     Python used to start the business service
   CLIENT_SEARCH_PORT                    Service port (default: 8000)
   CLIENT_SEARCH_BASE_URL                Service URL (default: http://127.0.0.1:<port>)
-  CLIENT_SEARCH_STARTUP_TIMEOUT_SECONDS Startup/reindex wait timeout (default: 240)
+  CLIENT_SEARCH_STARTUP_TIMEOUT_SECONDS Startup/liveness wait timeout (default: 240)
+  CLIENT_SEARCH_REINDEX_TIMEOUT_SECONDS Force field reindex wait timeout (default: 360)
   CLIENT_SEARCH_REQUEST_TIMEOUT_SECONDS Parse request timeout (default: 120)
   CLIENT_SEARCH_LAUNCHD_LABEL             macOS launchd label
 USAGE
@@ -66,6 +68,10 @@ load_environment() {
   }
 
   mkdir -p "${RUNTIME_DIR}"
+
+  STARTUP_TIMEOUT_SECONDS="${CLIENT_SEARCH_STARTUP_TIMEOUT_SECONDS:-240}"
+  REQUEST_TIMEOUT_SECONDS="${CLIENT_SEARCH_REQUEST_TIMEOUT_SECONDS:-120}"
+  REINDEX_TIMEOUT_SECONDS="${CLIENT_SEARCH_REINDEX_TIMEOUT_SECONDS:-360}"
 }
 
 listener_pids() {
@@ -173,6 +179,140 @@ require_elasticsearch() {
   echo "Elasticsearch ready: ${es_url}"
 }
 
+service_exited() {
+  if [[ -f "${PID_FILE}" ]]; then
+    local pid
+    pid="$(cat "${PID_FILE}" 2>/dev/null || true)"
+    if [[ -n "${pid}" ]] && ! kill -0 "${pid}" 2>/dev/null; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+fail_with_logs() {
+  echo "$1" >&2
+  echo "--- reload/reindex log ---" >&2
+  grep -E "Deleted old index|Indexed .* intents|force_reindex_fields|配置热更新|Query router background" "${LOG_FILE}" 2>/dev/null | tail -n 30 >&2 || true
+  echo "--- last log lines ---" >&2
+  tail -n 20 "${LOG_FILE}" >&2 || true
+  return 1
+}
+
+clear_stale_reload_marker() {
+  local marker_dir="${APP_DIR}/config/client_search_query_parse"
+  local marker="${marker_dir}/.client_search_runtime_reload.json"
+  if [[ -f "${marker}" ]]; then
+    echo "removing stale runtime reload marker: ${marker}"
+    rm -f "${marker}"
+  fi
+  rm -f "${marker_dir}"/.client_search_runtime_reload.*.tmp
+}
+
+inspect_reload_health() {
+  local mode="$1"
+  local body="$2"
+  printf '%s' "${body}" | "${PYTHON_BIN}" -c '
+import json, sys
+
+mode = sys.argv[1]
+try:
+    body = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+
+def looks_like_reload_status(payload):
+    return isinstance(payload, dict) and (
+        "reload_running" in payload or "last_reload_result" in payload
+    )
+
+readiness = None
+if looks_like_reload_status(body.get("readiness")):
+    readiness = body["readiness"]
+else:
+    detail = body.get("detail")
+    if looks_like_reload_status(detail.get("readiness") if isinstance(detail, dict) else None):
+        readiness = detail["readiness"]
+    elif looks_like_reload_status(detail):
+        readiness = detail
+if not isinstance(readiness, dict):
+    raise SystemExit(1)
+
+running = bool(readiness.get("reload_running"))
+error = readiness.get("last_reload_error")
+result = readiness.get("last_reload_result")
+if not isinstance(result, dict):
+    result = {}
+force = result.get("force_reindex_fields") is True
+
+if running:
+    raise SystemExit(2)
+if mode == "force_done":
+    if error:
+        print(error)
+        raise SystemExit(4)
+    if not force:
+        raise SystemExit(3)
+print(json.dumps({
+    "reload_running": running,
+    "force_reindex_fields": force,
+    "field_intent_total": result.get("field_intent_total"),
+}, ensure_ascii=False))
+' "${mode}"
+}
+
+fetch_health_body() {
+  curl -sS --max-time 10 "${BASE_URL}/health" 2>/dev/null || true
+}
+
+wait_for_reload_health() {
+  local mode="$1"
+  local deadline="$2"
+  local message="$3"
+  echo "${message}"
+  while (( SECONDS < deadline )); do
+    if service_exited; then
+      fail_with_logs "client_search exited while waiting for field reindex"
+      return 1
+    fi
+    local body status=0
+    body="$(fetch_health_body)"
+    if [[ -n "${body}" ]]; then
+      local output=""
+      output="$(inspect_reload_health "${mode}" "${body}")" && {
+        echo "${output}"
+        return 0
+      } || status=$?
+      if [[ "${status}" -eq 4 ]]; then
+        fail_with_logs "field reindex failed: ${output:-unknown error}"
+        return 1
+      fi
+    fi
+    sleep 2
+  done
+  fail_with_logs "timed out waiting for field reindex (${mode}); last log lines:"
+  return 1
+}
+
+submit_field_reindex() {
+  local response
+  response="$(curl -sS --fail --max-time 30 -X POST \
+    -H 'Content-Type: application/json' \
+    --data '{"force_reindex_fields":true}' \
+    "${BASE_URL}/api/v1/fields/reindex")" || return 1
+  printf '%s' "${response}" | "${PYTHON_BIN}" -c '
+import json, sys
+body = json.load(sys.stdin)
+if body.get("success") is not True:
+    raise SystemExit("field reindex rejected: %s" % body)
+if body.get("started") is True:
+    print("field reindex started")
+    raise SystemExit(0)
+print("field reindex reused existing reload; waiting to retry")
+raise SystemExit(2)
+'
+}
+
 wait_for_liveness() {
   local url="$1"
   local deadline=$((SECONDS + STARTUP_TIMEOUT_SECONDS))
@@ -197,19 +337,31 @@ wait_for_liveness() {
 }
 
 reindex_fields() {
-  echo "submitting field reindex"
-  local response
-  response="$(curl -fsS --max-time 30 -X POST \
-    -H 'Content-Type: application/json' \
-    --data '{"force_reindex_fields":true}' \
-    "${BASE_URL}/api/v1/fields/reindex")"
-  printf '%s' "${response}" | "${PYTHON_BIN}" -c '
-import json, sys
-body = json.load(sys.stdin)
-if body.get("success") is not True:
-    raise SystemExit(f"field reindex rejected: {body}")
-print("field reindex accepted")
-'
+  local deadline=$((SECONDS + REINDEX_TIMEOUT_SECONDS))
+  echo "submitting field reindex (timeout=${REINDEX_TIMEOUT_SECONDS}s)"
+
+  while (( SECONDS < deadline )); do
+    if service_exited; then
+      fail_with_logs "client_search exited before field reindex was submitted"
+      return 1
+    fi
+
+    local submit_rc=0
+    submit_field_reindex || submit_rc=$?
+    if [[ "${submit_rc}" -eq 0 ]]; then
+      wait_for_reload_health "force_done" "${deadline}" "waiting for force field reindex to finish" || return 1
+      echo "field reindex completed"
+      return 0
+    fi
+    if [[ "${submit_rc}" -ne 2 ]]; then
+      fail_with_logs "field reindex request failed"
+      return 1
+    fi
+    wait_for_reload_health "idle" "${deadline}" "waiting for in-flight reload to finish before retrying reindex" || return 1
+  done
+
+  fail_with_logs "timed out submitting force field reindex; last log lines:"
+  return 1
 }
 
 verify_parse_endpoint() {
@@ -277,6 +429,7 @@ start_service() {
   echo "  url:        ${BASE_URL}"
   echo "  log:        ${LOG_FILE}"
 
+  clear_stale_reload_marker
   rm -f "${PID_FILE}"
   local pid=""
   if launchd_available; then
@@ -321,7 +474,40 @@ show_status() {
   for pid in ${pids}; do
     echo "  pid=${pid} cwd=$(pid_cwd "${pid}")"
   done
-  curl -fsS --max-time 30 "${BASE_URL}/health" | "${PYTHON_BIN}" -m json.tool
+
+  # /health 的自探测路径按线上网关前缀写死，本地部署恒为 503；
+  # 这里改从 body 里提取 reload 状态，另用解析接口判断实际可用性。
+  local health_body
+  health_body="$(fetch_health_body)"
+  if [[ -n "${health_body}" ]]; then
+    local reload_summary
+    if reload_summary="$(inspect_reload_health "idle" "${health_body}")"; then
+      echo "runtime reload status: ${reload_summary}"
+    else
+      echo "runtime reload status: reload in progress or unavailable"
+    fi
+  else
+    echo "health endpoint unreachable"
+  fi
+
+  local probe_response
+  probe_response="$(curl -sS --max-time 30 \
+    -H 'Content-Type: application/json' \
+    --data '{"source":"verifier-status","user_text":"大于50岁的客户","session_id":"verifier-status","trace_id":"verifier-status","user_id":"verifier","user_action":"write","action_scenario":"customerSearch","extra_input_params":{}}' \
+    "${BASE_URL}/api/v1/client_search_query_parse_no_encipher" 2>/dev/null || true)"
+  if [[ -n "${probe_response}" ]] && printf '%s' "${probe_response}" | "${PYTHON_BIN}" -c '
+import json, sys
+try:
+    body = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+raise SystemExit(0 if body.get("code") == 0 else 1)
+'; then
+    echo "parse endpoint: OK"
+  else
+    echo "parse endpoint: NOT responding correctly"
+    return 1
+  fi
 }
 
 show_logs() {

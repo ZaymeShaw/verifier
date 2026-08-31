@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from impl.core.mock_protocol import ProjectMock, SingleTurnMock
-from impl.projects.llm_probe.capability import default_capability_ref, mock_body
+from impl.projects.llm_probe.capability import default_capability_ref, load_capability_map, mock_body
 
 
 class LlmProbeMock(SingleTurnMock, ProjectMock):
@@ -17,7 +17,10 @@ class LlmProbeMock(SingleTurnMock, ProjectMock):
 
     def build_initial_request(self, intent) -> Dict[str, Any]:
         query = str(getattr(intent, "query", "") or getattr(intent, "user_intent", "") or "")
-        ref = default_capability_ref()
+        mapping = load_capability_map()
+        ref = str(getattr(intent, "scenario", "") or "").strip()
+        if ref not in mapping:
+            ref = default_capability_ref()
         return {
             "body": mock_body(ref, query),
             "method": "POST",

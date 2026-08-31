@@ -7,9 +7,8 @@ from urllib.parse import urlsplit
 
 from impl.core.live_protocol import LiveServiceUnavailableError, RealServiceLive, SingleTurnLive
 from impl.core.live_transport import LiveForbiddenContentTypeError, LiveHTTPStatusError, LiveTransport
-from impl.core.project_loader import load_project
 from impl.core.schema import ExecutionTraceEvent, LiveRequest, ProjectSpec
-from impl.projects.llm_probe.capability import resolve_capability
+from impl.projects.llm_probe.capability import capability_service, resolve_capability
 
 APPLICATION_BOUNDARY = {
     "scope": "non_streaming_http_llm_probe",
@@ -44,13 +43,14 @@ def resolve_http(request: Dict[str, Any], spec: ProjectSpec) -> tuple[str, str, 
     timeout = float(primary["timeout_seconds"])
     ref = str(request.get("capability_ref") or "").strip()
     if ref:
-        # 有 capability_ref 时始终合并目标项目 primary 配置，url 显式与否不改变 timeout/method 来源。
-        service = load_project(ref).require_service("primary")
+        # capability 预设自包含端点配置（资料管理页维护的 service 块），与项目注册表解耦；
+        # url 显式与否不改变 timeout/method 来源。
+        service = capability_service(ref)
         if not url:
-            url = str(service["base_url"]).rstrip("/") + "/" + str(service["endpoint"]).lstrip("/")
+            url = str(service["url"]).strip()
         if not method:
-            method = str(service["method"]).upper()
-        timeout = float(service["timeout_seconds"])
+            method = str(service.get("method") or "").upper()
+        timeout = float(service.get("timeout_seconds") or timeout)
     if not url:
         raise ValueError("llm_probe request 需要 url 或 capability_ref")
     if not method:
@@ -141,3 +141,10 @@ class LlmProbeLive(RealServiceLive, SingleTurnLive):
                 evidence={"output_chars": len(str((extracted_output or {}).get("output_text") or ""))},
             ),
         ]
+
+
+def capability_provider(spec: ProjectSpec):
+    """轴2 g-provider：TextCarrier 从本次 live request 取本 case 的 boundary。"""
+    from impl.projects.llm_probe.text_carrier import TextCarrier
+
+    return TextCarrier(spec=spec)

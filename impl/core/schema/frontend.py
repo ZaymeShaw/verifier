@@ -19,6 +19,8 @@ class FrontendViewModel:
     expectation_attribution_panel: Dict[str, Any] = field(default_factory=dict)
     cluster_panel: Dict[str, Any] = field(default_factory=dict)
     check_panel: Dict[str, Any] = field(default_factory=dict)
+    # 轴2承载性报告（live_carrier_report 原样结构：applicable/placements/errors/snapshot_id）
+    capability_carrier_panel: Dict[str, Any] = field(default_factory=dict)
     table_row: Optional[TraceTableRow] = None
     project_extensions: Dict[str, Any] = field(default_factory=dict)
     tool_call_log: list[Dict[str, Any]] = field(default_factory=list)

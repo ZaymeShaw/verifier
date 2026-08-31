@@ -208,15 +208,21 @@ def build_frontend_view(
         except Exception as exc:
             extensions["trace_show"] = {"available": False, "reason": str(exc)}
     table_row = None
+    carrier_report = None
     if trace:
-        report = live_carrier_report(spec, judge)
+        request = None
+        if isinstance(trace.normalized_request, dict) and trace.normalized_request:
+            request = trace.normalized_request
+        elif isinstance(trace.input, dict) and trace.input:
+            request = trace.input
+        carrier_report = live_carrier_report(spec, judge, request=request)
         table_row = build_trace_table_row(
             trace,
             judge,
             attribute,
             None,
             check,
-            case_context={"capability_carrier": report} if report is not None else {},
+            case_context={"capability_carrier": carrier_report} if carrier_report is not None else {},
         )
     return FrontendViewModel(
         project_info={"project_id": spec.project_id, "name": spec.name, "description": spec.description},
@@ -229,6 +235,7 @@ def build_frontend_view(
         expectation_attribution_panel=_expectation_attribution_panel(attribute),
         cluster_panel=to_dict(cluster) if cluster else {},
         check_panel=to_dict(check) if check else {},
+        capability_carrier_panel=carrier_report or {},
         table_row=table_row,
         project_extensions=extensions,
         tool_call_log=[],

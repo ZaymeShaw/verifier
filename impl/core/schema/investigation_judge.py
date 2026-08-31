@@ -465,6 +465,9 @@ _DECISION_FIELDS = {
     "locator",
     "scenario",
     "conditions",
+    # 可选显式担保档位（judge.md §6）：档位随"谁担保/担保多强"定；
+    # 未声明时按 conclusion_kind（内容类型）缺省映射，结果与既有口径完全一致。
+    "warrant_tier",
 }
 _CONNECTION_FIELDS = {
     "direction",
@@ -551,7 +554,12 @@ def _logical_path_ref_compact(ref: LogicalPathRef) -> str:
 
 @dataclass(frozen=True)
 class MaterialDecision:
-    """一份资料在某个结论种类、场景和条件下直接决定的唯一范围。"""
+    """一份资料在某个结论种类、场景和条件下直接决定的唯一范围。
+
+    ``warrant_tier`` 是可选的显式担保档位（judge.md §6）：证明力随
+    "谁担保/担保多强"定，``conclusion_kind``（内容类型）只是缺省映射。
+    未声明时（既有全部报告）证明力 = conclusion_kind，与既有口径逐位一致。
+    """
 
     conclusion_kind: str
     governs: str
@@ -559,6 +567,7 @@ class MaterialDecision:
     locator: str
     scenario: str
     conditions: tuple[str, ...]
+    warrant_tier: str = ""
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> "MaterialDecision":
@@ -572,10 +581,11 @@ class MaterialDecision:
             locator=_required_text_value(root["locator"], "MaterialDecision.locator"),
             scenario=_required_text_value(root["scenario"], "MaterialDecision.scenario"),
             conditions=_str_tuple(root, "conditions", "MaterialDecision"),
+            warrant_tier=str(root.get("warrant_tier") or "").strip(),
         )
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "conclusion_kind": self.conclusion_kind,
             "governs": self.governs,
             "statement": self.statement,
@@ -583,6 +593,19 @@ class MaterialDecision:
             "scenario": self.scenario,
             "conditions": list(self.conditions),
         }
+        # 未声明担保档位的既有报告序列化逐键不变（零迁移）。
+        if self.warrant_tier:
+            payload["warrant_tier"] = self.warrant_tier
+        return payload
+
+
+def decision_proof_power(decision: MaterialDecision) -> str:
+    """证明力档位：显式担保档位优先，内容类型只是缺省映射（judge.md §6）。
+
+    档位随"谁担保/担保多强"定，不由内容类型单独决定；无显式担保元数据时，
+    缺省映射 = conclusion_kind 本身——与既有"内容类型即定义"的结果完全一致。
+    """
+    return decision.warrant_tier or decision.conclusion_kind
 
 
 @dataclass(frozen=True)
@@ -840,6 +863,8 @@ def validate_authority_report(
             owner = f"MaterialInvestigation.{material.source_ref_id}.decisions[{index}]"
             if decision.conclusion_kind not in _VALID_CONCLUSION_KINDS:
                 raise ValueError(f"{owner}.conclusion_kind is invalid: {decision.conclusion_kind}")
+            if decision.warrant_tier and decision.warrant_tier not in _VALID_CONCLUSION_KINDS:
+                raise ValueError(f"{owner}.warrant_tier is invalid: {decision.warrant_tier}")
             for field, value in (
                 ("governs", decision.governs),
                 ("statement", decision.statement),
@@ -851,7 +876,10 @@ def validate_authority_report(
             decision_keys.add(
                 (decision.conclusion_kind, _normalized_governs(decision.governs))
             )
-            if decision.conclusion_kind == "inlive_boundary":
+            # 信任模型登记要求（material-positioning.md §5.2）：只要内容类型或
+            # 显式担保档位任一为 inlive_boundary 即须回指登记——warrant_tier
+            # 不得成为绕开边界代理登记的旁路。
+            if "inlive_boundary" in {decision.conclusion_kind, decision_proof_power(decision)}:
                 has_inlive_boundary = True
                 if not any(
                     item.strip().startswith(_TRUST_MODEL_CONDITION_PREFIX)
@@ -864,7 +892,7 @@ def validate_authority_report(
                         f"spec/alg/material-positioning.md §5.2)"
                     )
             if (
-                decision.conclusion_kind == "normative_rule"
+                decision_proof_power(decision) == "normative_rule"
                 and _TRUST_MODEL_GOVERNS_MARKER in _normalized_governs(decision.governs)
             ):
                 trust_model_registration = owner
@@ -1036,6 +1064,11 @@ def render_authority_report_markdown(report: AuthorityInvestigationReport) -> st
         lines.append("")
         for index, decision in enumerate(material.decisions, start=1):
             lines.append(f"{index}. **{decision.conclusion_kind}** — {decision.governs}")
+            if decision.warrant_tier:
+                lines.append(
+                    f"   - warrant_tier: `{decision.warrant_tier}`"
+                    f"（证明力以显式担保档位为准，conclusion_kind 仅为内容类型）"
+                )
             lines.append(f"   - statement: {decision.statement}")
             lines.append(f"   - locator: `{decision.locator}`")
             lines.append(f"   - scenario: {decision.scenario}")

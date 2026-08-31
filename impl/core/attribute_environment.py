@@ -28,7 +28,7 @@ from .context.adapters import (
 from .context.bootstrap import DEFAULT_CONTEXT_DATA_ROOT, build_context_runtime
 from .context.embedding import BailianEmbeddingProvider
 from .context.errors import ContextValidationError
-from .context.resolvers import CompositeContentResolver, FileContentResolver
+from .context.resolvers import CompositeContentResolver, standard_content_resolver
 from .context.tools import GuardedContextTools
 from .context.models import ContextUnitRecord
 from .context.project import role_asset_context_records
@@ -123,7 +123,7 @@ def _content_resolver(spec: Any) -> CompositeContentResolver:
         source_root = resolve_project_source_root(spec)
         if source_root not in roots:
             roots.append(source_root)
-    return CompositeContentResolver([FileContentResolver(roots)] if roots else [])
+    return standard_content_resolver(roots)
 
 
 def _build_context_tools(

@@ -181,6 +181,31 @@ def test_judge_capability_resolution_failure_fails_fast():
         judge.build_context(trace)
 
 
+SAMPLE_TOKEN = "{material://llm_probe/client-search-match-rule}"
+SAMPLE_BODY_MARK = "姓名全值等值匹配"
+
+
+def test_judge_context_expands_sample_material_into_capability() -> None:
+    """轴1 喂给 judge 的 user_intent / extras.capability 必须是展开后的资料正文。"""
+    judge = LlmProbeJudge(load_project("llm_probe"))
+    before = judge.build_context(_probe_trace({
+        "body": {"user_text": "客户姓名是张伟的人"},
+        "url": "http://127.0.0.1:8000/x",
+        "capability": "接收自然语言客户群体描述，输出结构化搜索条件。",
+    }))
+    after = judge.build_context(_probe_trace({
+        "body": {"user_text": "客户姓名是张伟的人"},
+        "url": "http://127.0.0.1:8000/x",
+        "capability": f"接收自然语言客户群体描述。匹配规则见 {SAMPLE_TOKEN}",
+    }))
+    assert SAMPLE_BODY_MARK not in before["user_intent"]
+    assert SAMPLE_BODY_MARK not in json.dumps(before["user_prompt_extras"], ensure_ascii=False)
+    assert SAMPLE_BODY_MARK in after["user_intent"]
+    assert SAMPLE_BODY_MARK in after["user_prompt_extras"]["capability"]
+    # 展开后的能力描述里应带正文，而不是只剩未解析记号
+    assert "--- material://llm_probe/client-search-match-rule ---" in after["user_intent"]
+
+
 def test_judge_context_redacts_credential_headers():
     judge = LlmProbeJudge(load_project("llm_probe"))
     trace = _probe_trace({
@@ -244,6 +269,7 @@ def test_mock_dynamic_request_is_valid_for_default_capability():
     class _Intent:
         query = "五十岁以上的客户都有谁"
         user_intent = "筛选五十岁以上的客户"
+        scenario = ""
 
     mock = LlmProbeMock(load_project("llm_probe"))
     request = mock.build_initial_request(_Intent())
@@ -251,6 +277,19 @@ def test_mock_dynamic_request_is_valid_for_default_capability():
     assert probe_schema.check.request(request)
     assert request["body"]["user_text"] == _Intent.query
     assert "text" not in request["body"]
+
+
+def test_mock_dynamic_request_follows_scenario_capability():
+    class _Intent:
+        query = "合同号码里带4826的"
+        user_intent = "按保单号片段筛保单"
+        scenario = "policy_search"
+
+    mock = LlmProbeMock(load_project("llm_probe"))
+    request = mock.build_initial_request(_Intent())
+    assert request["capability_ref"] == "policy_search"
+    assert probe_schema.check.request(request)
+    assert request["body"]["extra_input_params"]["policySearchParseArgs"]["query"] == _Intent.query
 
 
 def test_default_capability_ref_does_not_depend_on_yaml_key_order(monkeypatch):
@@ -295,6 +334,13 @@ def test_mock_cases_fixture_restores_regression_cases_and_passes_schema():
     assert restored.issubset(set(ids))
     for case in cases:
         assert probe_schema.check.request(case["live_request"]), case["id"]
+        ref = case["live_request"]["capability_ref"]
+        assert case["scenario"] == ref, case["id"]
+        assert ref in {
+            "client_search",
+            "policy_search",
+            "marketting-planning-intent",
+        }
 
 
 def test_streaming_response_is_rejected_before_body_read(monkeypatch):

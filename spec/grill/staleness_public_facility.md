@@ -39,10 +39,10 @@
 1. 检测粒度为切片级：调查冻结时把每条 EvidenceRef 的切片 hash 清单写入 manifest（当前 schema 无此字段，需扩展）。旧格式 manifest 退化为文件级检测；`client_search` 重新冻结一次补齐切片 hash。
 2. 生成责任：切片 hash 由 investigation 冻结工具写入（谁冻结谁负责），solidify 只消费。
 3. strict 与 warn 共用同一个边界函数，只是处置不同：
-   - `warn`：记录漂移继续（Draft 实验）；
-   - `strict`：必须"变化被派生比对证明无影响，或已完成定点重验证并重钉 revision"后才放行（Solidify/Promotion/Production）。
+   - `warn`：记录漂移继续（运行期统一档位：Draft 与 Production 的 case 运行、调查校验脚本都是 warn，业务源小改不打死无关 case）；
+   - `strict`：必须"变化被派生比对证明无影响，或已完成定点重验证并重钉 revision"后才放行（Solidify/Promotion/config_check 审计）。
 4. strict 门禁要求先把源提交、再重钉 revision，消除工作区噪声误触发（当前全部漂移均为未提交工作区改动）。
-5. 自动刷新必须是单个确定性原子操作：更新 manifest hash →（如需要）重建派生产物 → 重发 validation receipt → 写审计记录，不允许中间态。
+5. 自动刷新必须是单个确定性原子操作：更新 manifest hash →（如需要）重建派生产物 → 写审计记录，不允许中间态。validation receipt 以结构指纹（剔除 hash/revision pin 后的 manifest 结构 sha256）为身份，absorb 重钉不作废收据；只有结构性改动（refs/tools/artifacts 变化）或工具字节变化才要求重发收据。
 6. 自动吸收的保守约束：某 ref 只要被任何**无依赖键**的 material decision 引用，其漂移就不走自动吸收，该 decision 保守地必须重验证。v1 的 decision 是自由文本、无依赖键；新增 decision 必须写结构化依赖键（描述的 slice_key/字段键），之后才能精确命中"只重验证描述了被改切片的 decision"。
 7. 漂移检测/记录属于确定性验证（hash 比对、机器可复验），不做业务材料充分性判断；与 context_governance.md §3.2"Runtime 只做确定性验证"边界一致（2026-08-09 协解确认）。
 8. 大材料门禁：任何业务源材料全量超过阈值（默认 30k 字符）且未在 manifest 登记检索通道（`metadata.consumption` 的 `key_live`/`positional_frozen`）时，禁止整块注入 Runtime 上下文；调查层必须先补 key-index/切片再消费。`source_staleness_cli report-large-materials` 确定性报告该缺口，并扫描 `project.yaml` 声明的全部业务源（未登记进 manifest 的大文件同样报出，避免门禁盲区）。这是对 context_governance.md §6.2"Runtime 只加载已登记 segment"的落地约束。已落地：`enhanced-rules`（全量 40 万字符）按 field 建成 key-index（`impl/projects/client_search/draft/enhanced_rules_key_index.py`），Draft Judge 按键检索消费（key_live），不再整块/截断注入。
@@ -57,10 +57,10 @@
 2. **分流**：按每条 ref 登记的消费模式路由；`key_live` 消费方无需动作。
 3. **投影**：确定性计算受影响清单——变化切片 → 寻址这些切片的 key-index 条目（`evidence-navigation://ref/locator`）→ 引用该 ref 的 material decisions（有依赖键按键命中，无键保守全中）→ 输入投影变化的 embedding 条目。
 4. **分档执行**：
-   - 档 A（机器）：纯 `key_live` 且无 decision 牵涉 → 原子重钉 hash + 重发 receipt + 审计；
+   - 档 A（机器）：纯 `key_live` 且无 decision 牵涉 → 原子重钉 hash + 审计（收据以结构指纹为身份，无需重发）；
    - 档 B（机器）：位置型资产 → 整代重建（重分块、重生成导航条目、按条目内容 hash 键控只重嵌变化条目），新代 ID，引用不跨代；
    - 档 C（Harness）：只对投影命中的 decision 定点重验证——读"decision 原文 + 被改切片"，判定仍成立/更新/作废。不是重查项目，是复核几条结论。
-5. **收口**：全部闭环后重钉 hash、（strict 场景）要求源已提交并重钉 revision、重发 receipt、写全局审计账本，门禁重跑通过。
+5. **收口**：全部闭环后重钉 hash、（strict 场景）要求源已提交并重钉 revision、写全局审计账本，门禁重跑通过。
 
 最坏情况退化到"整条 ref 的 decision 重验证"，永不退化到全项目重调查。
 
@@ -68,8 +68,8 @@
 
 ## 5. 门禁语义
 
-- Draft 实验：漂移只记录不阻断（warn）；位置型漂移触发整代重建，重建后继续。
-- Solidify/Promotion/Production：strict；被引用文件的所有变化必须"证明无影响"或"完成定点重验证并重钉 revision"。
+- 运行期（Draft 与 Production 的 case 运行、调查校验脚本）：漂移只记录不阻断（warn）；位置型漂移触发整代重建，重建后继续。
+- Solidify/Promotion/config_check 审计：strict；被引用文件的所有变化必须"证明无影响"或"完成定点重验证并重钉 revision"。
 - 位置型资产漂移在 warn 下也整体阻断该位置空间，直到整代重建完成（错误内容一旦出现可能波及所有位置，不做部分降级）。
 - 未登记消费方的文件变化：fail-closed，视为有影响。
 

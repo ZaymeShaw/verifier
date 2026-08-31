@@ -35,7 +35,7 @@ def _load_enum_file(path: Path) -> dict[str, list[str]]:
     if not path.exists():
         raise FileNotFoundError(f"client_search enum registry not found: {path}")
     try:
-        data = _yaml.safe_load(path.read_text()) or {}
+        data = _yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     except Exception as exc:
         raise ValueError(f"client_search enum registry is invalid YAML: {path}") from exc
     if not isinstance(data, dict):
@@ -76,7 +76,7 @@ def build_capability_manifest(
 
     enum_registry = _load_enum_registry(enums_path)
 
-    data = _yaml.safe_load(path.read_text()) or {}
+    data = _yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     intents = data.get("intents", []) if isinstance(data, dict) else []
     fields: dict[str, dict[str, Any]] = {}
     for item in intents:

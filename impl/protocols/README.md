@@ -17,6 +17,8 @@ ProjectSpec / MockCase
 
 The core system only depends on these protocols. Project-specific API formats, business fields, ports, prompts, and code paths belong in `impl/projects/<project>` and are adapted into the shared carriers above.
 
+User-managed evaluation materials (slot fill, free documents, `material://` references) follow `materials.md`. System assets such as `evaluation.md` stay code-managed and are outside that protocol.
+
 `project_fields` is not a second protocol. It may carry adapter-private debug/display details that are surfaced as `schema_protocol_extensions`, but shared facts must use typed protocol fields:
 
 - reference or expected contract: `RunTrace.reference_contract` and normalized request/reference fields

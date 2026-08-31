@@ -27,16 +27,12 @@ from impl.core.schema import (
     trace_extracted_output,
 )
 from impl.core.summary import summary_from_fulfillment
-from impl.projects.client_search.judge import (
-    judge_governance,
-    protocol_tools,
-    semantic_equivalence_rules,
-)
 from impl.projects.client_search.live import FIELD_PATTERNS, boundary_from_trace, capability_manifest, external_boundary_sources, value_mappings
-from impl.projects.client_search.draft.enhanced_rules_key_index import (
-    retrieve_enhanced_rules_for_fields,
+from impl.projects.client_search.tools import ClientSearchConditionCompareTool
+from impl.projects.client_search.enhanced_rules_key_index import (
+    provide_enhanced_rules_for_fields,
 )
-from impl.projects.client_search.draft.catalog import (
+from impl.projects.client_search.catalog import (
     FIELD_INDEX_KEY,
     MAPPINGS_INDEX_KEY,
     STRONG_HIT_FLOOR,
@@ -44,19 +40,51 @@ from impl.projects.client_search.draft.catalog import (
     create_catalog_tools,
     search_catalog,
 )
-from impl.projects.client_search.draft.field_tools import (
+from impl.projects.client_search.field_tools import (
     create_minimal_field_definition_tool,
     load_explicit_field_support,
 )
-from impl.projects.client_search.draft.field_sufficiency import (
+from impl.projects.client_search.field_sufficiency import (
     apply_last_word,
     result_if_speaks,
     sufficiency_hint,
 )
-from impl.tools import ToolContext, ToolResult
+from impl.tools import ToolContext, ToolRegistry, ToolResult
 from impl.tools import build_agno_tools
 
 logger = logging.getLogger(__name__)
+
+
+def _semantic_equivalence_config(spec: ProjectSpec) -> Dict[str, Any]:
+    config = spec.verifier_extra_value("semantic_equivalence_rules")
+    return config if isinstance(config, dict) else {}
+
+
+def semantic_equivalence_rules(spec: ProjectSpec) -> list[Dict[str, Any]]:
+    config = _semantic_equivalence_config(spec)
+    rules = []
+    rules.extend(list(config.get("equivalent_condition_forms") or []))
+    rules.extend(list(config.get("operator_compatibility") or []))
+    rules.extend(list(config.get("equivalent_fields") or []))
+    return rules
+
+
+def protocol_tools(spec: ProjectSpec) -> ToolRegistry:
+    registry = ToolRegistry()
+    registry.register(ClientSearchConditionCompareTool())
+    return registry
+
+
+def judge_governance() -> Dict[str, Any]:
+    return {
+        "canonical_method": "current_case_llm_judge",
+        "judge_role": "只判断当前 API actual output 是否语义覆盖当前 query，不做根因归因。",
+        "must_ignore_as_verdict_basis": ["HTTP 200", "review_verdict", "source", "run_status", "root_cause_cluster", "attribute_result", "cluster", "history"],
+        "binary_when_evidence_sufficient": True,
+        "not_evaluable_only_when": ["LLM/API judge 调用不可用", "当前配置/枚举/字段证据不足以判断 expected-vs-actual", "application_boundary 明确排除了该需求且无法判断范围内输出"],
+        "actual_output_priority": "以 API 最终 actual conditions 的下游可执行语义为准；prompt/config/后处理存在表述冲突时，先判断 actual 是否能搜出用户核心意图，再把冲突写入 evidence/check。",
+        "required_comparison": ["query core intent", "field semantic carrier", "operator for field type", "value normalization", "query_logic", "missing/wrong/extra conditions"],
+    }
 
 _FIELD_LIST_KEYS = frozenset(["conditions", "structured_output"])
 _CJK_TEXT = re.compile(r"[\u3400-\u9fff]+")
@@ -86,11 +114,21 @@ _FIELD_PATH_TOKEN = re.compile(r"\b[A-Za-z][A-Za-z0-9]*(\.[A-Za-z][A-Za-z0-9_]*)
 _AUTHORITY_REPORT_RELATIVE = "docs/authority-investigation-report.json"
 
 
+def _judge_draft_enabled(spec: ProjectSpec) -> bool:
+    """judge 调查资产选择跟随 draft 开关（与页面/materialize auto 同一信号）。
+
+    历史上这里硬编码 use_candidate=True（draft loop 时代残留），导致开关关着
+    时运行时仍读 candidate 包、页面却显示 production。现统一读开关：
+    draft 开→candidate，关→production。
+    """
+    return spec.role_draft("judge").get("enabled") is True
+
+
 def _load_authority_report(spec: ProjectSpec):
     """读取冻结权威调查报告（固定逻辑路径的 artifact，investigate-authority-judge.md §13）。"""
     selected = [
         item
-        for item in resolve_role_assets(spec, "judge", use_candidate=True)
+        for item in resolve_role_assets(spec, "judge", use_candidate=_judge_draft_enabled(spec))
         if item["mapping"].kind == "investigation"
     ]
     if len(selected) != 1:
@@ -1427,7 +1465,7 @@ def _build_core_context(
     """
     context = build_judge_context(spec, trace) or {}
     intent_frame = build_intent_frame(spec, trace, context)
-    judge_assets = resolve_role_assets(spec, "judge", use_candidate=True)
+    judge_assets = resolve_role_assets(spec, "judge", use_candidate=_judge_draft_enabled(spec))
     contract_metadata = next(
         (
             item.get("metadata") or {}
@@ -1441,10 +1479,12 @@ def _build_core_context(
     intent_frame["capability_manifest"] = compact_manifest
     semantic_rules = _compact_semantic_rules(context, trace_fields)
     mapping_values = _compact_value_mappings(context, trace_fields)
-    enhanced = retrieve_enhanced_rules_for_fields(
+    # key_live 经 g-provider 合同消费（provider-contract.md §4.1）：Judge 只取
+    # value（与旧直连输出逐字节一致），三件套与锚点留在 ProvidedValue 上供审计。
+    enhanced = provide_enhanced_rules_for_fields(
         trace_fields,
         spec_id=spec.project_id,
-    )
+    ).value
     critical_dimensions = (
         intent_frame.get("critical_intent_dimensions")
         or context.get("critical_intent_dimensions")
@@ -1630,7 +1670,7 @@ def _build_core_context(
     authority_tool = None
     catalog_embedding = embedding_provider
     if catalog_embedding is None:
-        from impl.projects.client_search.draft.catalog_embedding import (
+        from impl.projects.client_search.catalog_embedding import (
             resolve_catalog_embedding_provider,
         )
 
@@ -1641,7 +1681,7 @@ def _build_core_context(
         authority_env = build_authority_environment(
             spec,
             role="judge",
-            use_candidate=True,
+            use_candidate=_judge_draft_enabled(spec),
             embedding_provider=embedding_provider,
             trace_id=str(trace.trace_id or ""),
             case_id=str(getattr(trace, "case_id", "") or ""),
@@ -1737,7 +1777,7 @@ def _build_core_context(
             "mode": "draft",
             "role": "judge",
             "stage": "judge",
-            "compiler_source": "impl/projects/client_search/draft/judge_execution.py#judge_trace",
+            "compiler_source": "impl/projects/client_search/judge_execution.py#judge_trace",
             "user_source": "trace://judge-evidence-view",
             "runtime_owned_fields": [
                 "overall_fulfillment",
@@ -1766,7 +1806,7 @@ def _build_core_context(
             "segments": [
                 {
                     "segment_id": f"client-search-draft-system-extra-{index + 1}",
-                    "source": "project://draft/judge.py#system_prompt_extras",
+                    "source": "project://judge.py#system_prompt_extras",
                     "content": content,
                 }
                 for index, content in enumerate(system_extras)
@@ -1783,7 +1823,7 @@ class ClientSearchJudge(ProjectJudge):
         return _build_core_context(self.spec, trace)
 
     def judge_execution(self):
-        from impl.projects.client_search.draft.judge_strategy import (
+        from impl.projects.client_search.judge_strategy import (
             DraftSinglePassJudgeExecution,
         )
 
@@ -1809,7 +1849,7 @@ class ClientSearchJudge(ProjectJudge):
             result.business_expectations, result.fulfillment_assessments
         )
         result.summary = summary_from_fulfillment(to_dict(result))
-        from impl.projects.client_search.draft.judge_execution import (
+        from impl.projects.client_search.judge_execution import (
             fail_closed_authority_off_judge_result,
         )
         closed = fail_closed_authority_off_judge_result(self.spec, result)

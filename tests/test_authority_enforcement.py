@@ -11,7 +11,7 @@ from impl.core.schema import (
     to_dict,
 )
 from impl.core.summary import summary_from_fulfillment
-from impl.projects.client_search.draft.judge_execution import (
+from impl.projects.client_search.judge_execution import (
     _judge_self_check,
 )
 

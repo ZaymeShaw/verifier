@@ -402,9 +402,9 @@ def write_report(ALL, TOTAL_TIME, final=False):
     R.append(f"- check1.py (test script)")
 
     report = '\n'.join(R)
-    with open(f'{SDIR}/report.md', 'w') as f: f.write(report)
+    with open(f'{SDIR}/report.md', 'w', encoding='utf-8') as f: f.write(report)
     if final:
-        with open(f'{SDIR}/results.json', 'w') as f: json.dump({'projects': ALL, 'times': TOTAL_TIME}, f, ensure_ascii=False, indent=2)
+        with open(f'{SDIR}/results.json', 'w', encoding='utf-8') as f: json.dump({'projects': ALL, 'times': TOTAL_TIME}, f, ensure_ascii=False, indent=2)
         print(report[:4000])
         print(f"\n📁 {SDIR}/")
     return report

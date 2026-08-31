@@ -596,9 +596,63 @@ Investigate 必须先读取 `DraftConfig.role` 对应的 ROLE.md，再决定调�
 ### 初始化与更新
 
 - 新项目初始化：按对应 ROLE.md 调查目标相关对象、关键边界、必需产物和基础验证能力；
-- 存量项目更新：读取已有调查包，只重查 source revision 变化和当前 objective 相关部分；
+- 存量项目更新：走本节的增量门禁（Gate 1 / Gate 2），不裸开新调查；
 - 调查包来源版本变化时记录 drift，但不自动判定调查包失效，也不自动调用 AI 重写；
 - 初始化和更新都由用户手动触发 Draft。
+
+#### 增量门禁
+
+"从已晋升调查包开始增量更新"的机制化流程。production 包是 draft 的**生成基线**，
+不是运行时依赖：draft 包一经建立即自包含，运行时消费只走 `candidate_path`。
+
+门禁分为两个，按顺序执行，由确定性模块完成，范围型操作（以项目+角色推导路径），不允许逐个文件手工执行：
+
+**Gate 1 baseline（production → draft）**——纯机器、零判断：
+
+1. 范围型复制：将 `investigation/<role>/` 整包复制到 `draft/investigation/<role>/`，
+   排除基线包不应携带的文件（如 `.bak*` 备份、`__pycache__`）；
+2. 校验：除排除项外，draft 基线包与 production 包逐文件哈希一致；
+3. draft 模式可用性：若 `draft/<role>.py` 缺失，把 production 实现逐字节
+   复制过去（行为等价由逐字节相同保证；调查层想优化直接改 draft 副本；
+   晋升走标准流程把 draft 副本搬回 production）；已有真实 draft 实现时不动；
+4. candidate 资产完整性：该 role 声明了 `candidate_path` 的资产必须存在，
+   缺失即 fail-closed（draft 模式无法启用）；
+5. 写基线回执（`draft/.state/<role>/investigation-baseline.json`）：
+   来源路径、来源 `source_revision`、复制时刻的业务源 `revision`、文件清单与哈希、
+   角色实现复制状态、candidate 资产缺口（应为空）。
+
+出口条件：包逐字节一致且 candidate 资产无缺口。基线回执缺失或校验失败时，
+禁止进入 Gate 2。Gate 1 不配置 `candidate_path`、不打开 draft 开关，
+production 运行不受影响。
+
+**Gate 2 increment（draft → draft）**——机器算范围、人确认、机器执行，可重复多轮：
+
+1. **业务源漂移范围（机器）**：对基线包内每份 `business_source` 证据，按
+   `spec/grill/staleness_public_facility.md` 的切片级检测得出待重钉的
+   EvidenceRef、变化切片与牵连的 material decision（复用
+   `source_staleness_cli report-drift` 语义）；
+2. **逻辑型漂移（机器，只报不钉）**：对 `project_package` / `artifact_package`
+   证据（project.yaml、judge.md、边界文档等）做哈希比对。其内容变化=行为变化，
+   只报告并提示人复核是否影响判定逻辑，不自动重钉；
+3. **人确认范围**：以 1 的输出为准，由人勾选本轮增量范围；逻辑型漂移由人判断
+   是否需要同步更新判定逻辑。未确认项本轮不处理，但必须留在回执里明示；
+4. **执行（机器，仅限确认范围）**：重钉确认范围内源文件的 `location.sha256` /
+   `metadata.sha256` / `slice_hashes`；人给出的 decision 文本更新只允许作用于
+   确认范围；
+5. **闭合校验**：登记哈希 == 磁盘实际哈希、切片哈希 == 按新文件重算值、
+   登记条目不引用已消失的切片；
+6. 写增量回执（追加进 `draft/.state/<role>/staleness/`，不覆盖历史）。
+
+出口条件：闭合校验全过。增量回执缺失或未闭合时，禁止配置 `candidate_path`、
+禁止 `materialize`、禁止 Solidify 与 Promote。
+
+边界：
+
+- Gate 2 只处理哈希/切片/`source_revision` 的重钉与人确认的 decision 文本；
+  新增 EvidenceRef、新增 ToolRequirement、结构调整仍属完整 Investigate，
+  由人显式发起，不受本节门禁简化；
+- Gate 2 的执行入口不得修改确认范围外的任何字节；
+- 增量回执以追加方式留痕，历史不覆盖、不删除（与 Draft Loop 归档同纪律）。
 
 ## 1.9 Schema 流与固化
 

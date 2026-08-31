@@ -5,9 +5,9 @@ from pathlib import Path
 import pytest
 
 from impl.core.project_loader import load_project
-from impl.projects.client_search.draft import catalog as catalog_mod
+from impl.projects.client_search import catalog as catalog_mod
 from impl.core.schema import InvestigationKeyEntry, InvestigationKeyIndex
-from impl.projects.client_search.draft.catalog import (
+from impl.projects.client_search.catalog import (
     ABBR_INDEX_KEY,
     COLLECTION_SPECS,
     FIELD_INDEX_KEY,
@@ -20,7 +20,7 @@ from impl.projects.client_search.draft.catalog import (
     rewrite_query,
     search_catalog,
 )
-from impl.projects.client_search.draft.catalog_embedding import (
+from impl.projects.client_search.catalog_embedding import (
     catalog_embedding_projection,
     clear_entry_vector_cache,
     cosine_l2,
@@ -370,7 +370,7 @@ def test_catalog_tools_do_not_treat_exclusive_below_lt_as_illegal():
     assert "17周岁" not in source
 
 def test_field_search_definition_operators_describe_support_not_ban():
-    from impl.projects.client_search.draft.field_tools import (
+    from impl.projects.client_search.field_tools import (
         create_minimal_field_definition_tool,
     )
     from impl.projects.client_search.field_provider import (

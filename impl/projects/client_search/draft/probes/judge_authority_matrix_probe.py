@@ -32,7 +32,7 @@ RESOLUTION_STATUSES = (
 
 
 def _load_json(path: Path) -> Any:
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _blocking_ids(result: dict[str, Any]) -> list[str]:

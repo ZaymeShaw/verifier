@@ -1,0 +1,3874 @@
+{
+  "generated_at_shanghai": "2026-08-13 12:34:22 CST",
+  "n_cases": 30,
+  "recommended_policy": "P2_load_only_silent_miss",
+  "catalog_meta": {
+    "embedding": "BailianEmbeddingProvider",
+    "index_keys": [
+      "client-search.abbrname-enums",
+      "client-search.enhanced-rules",
+      "client-search.field-definitions",
+      "client-search.value-mappings"
+    ],
+    "cases_with_strong_load": 4,
+    "silent_miss_cases": 26,
+    "error": null
+  },
+  "scores_vs_desired": {
+    "P0_core_only": {
+      "n": 30,
+      "match": 30,
+      "false_F": 0,
+      "false_NF": 0,
+      "false_NE": 0,
+      "diverged_ids": [],
+      "focus": {
+        "008": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "core_only"
+        },
+        "048": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "core_only"
+        },
+        "073": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "core_only"
+        },
+        "088": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "core_only"
+        },
+        "093": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "core_only"
+        },
+        "113": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "core_only"
+        },
+        "128": {
+          "pred": "NF",
+          "gold": "NF",
+          "reason": "core_only"
+        },
+        "133": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "core_only"
+        }
+      }
+    },
+    "P1_searchhit_pollutes": {
+      "n": 30,
+      "match": 27,
+      "false_F": 2,
+      "false_NF": 1,
+      "false_NE": 0,
+      "diverged_ids": [
+        "source-badcase-023",
+        "source-badcase-088",
+        "source-badcase-128"
+      ],
+      "focus": {
+        "008": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_pollution_trigger"
+        },
+        "048": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_pollution_trigger"
+        },
+        "073": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "no_pollution_trigger"
+        },
+        "088": {
+          "pred": "NF",
+          "gold": "F",
+          "reason": "empty_plus_any_hit"
+        },
+        "093": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_pollution_trigger"
+        },
+        "113": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "no_pollution_trigger"
+        },
+        "128": {
+          "pred": "F",
+          "gold": "NF",
+          "reason": "nearmiss_as_synonym:合家福~合家欢"
+        },
+        "133": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_pollution_trigger"
+        }
+      }
+    },
+    "P2_load_only_silent_miss": {
+      "n": 30,
+      "match": 30,
+      "false_F": 0,
+      "false_NF": 0,
+      "false_NE": 0,
+      "diverged_ids": [],
+      "focus": {
+        "008": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "mapping_live_matches:孤儿单->纯存续单客户"
+        },
+        "048": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "073": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "088": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "unsupported_honest_refusal:customerReview"
+        },
+        "093": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "113": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "128": {
+          "pred": "NF",
+          "gold": "NF",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "133": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "silent_miss_no_strong_load"
+        }
+      }
+    },
+    "P3_enrich_gate_current": {
+      "n": 30,
+      "match": 25,
+      "false_F": 0,
+      "false_NF": 5,
+      "false_NE": 0,
+      "diverged_ids": [
+        "source-badcase-073",
+        "source-badcase-088",
+        "source-badcase-093",
+        "source-badcase-113",
+        "source-badcase-133"
+      ],
+      "focus": {
+        "008": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "048": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "073": {
+          "pred": "NF",
+          "gold": "NE",
+          "reason": "e1_unsupported_field_nf:policies_insure_date"
+        },
+        "088": {
+          "pred": "NF",
+          "gold": "F",
+          "reason": "e1_unsupported_field_nf:customerReview"
+        },
+        "093": {
+          "pred": "NF",
+          "gold": "F",
+          "reason": "e1_unsupported_field_nf:licensePlateNo"
+        },
+        "113": {
+          "pred": "NF",
+          "gold": "NE",
+          "reason": "e1_empty_blocking_nf"
+        },
+        "128": {
+          "pred": "NF",
+          "gold": "NF",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "133": {
+          "pred": "NF",
+          "gold": "F",
+          "reason": "e1_empty_blocking_nf"
+        }
+      }
+    },
+    "P4_rewrite_as_synonym": {
+      "n": 30,
+      "match": 30,
+      "false_F": 0,
+      "false_NF": 0,
+      "false_NE": 0,
+      "diverged_ids": [],
+      "focus": {
+        "008": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_rewrite_synonym"
+        },
+        "048": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_rewrite_synonym"
+        },
+        "073": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "no_rewrite_synonym"
+        },
+        "088": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_rewrite_synonym"
+        },
+        "093": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_rewrite_synonym"
+        },
+        "113": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "no_rewrite_synonym"
+        },
+        "128": {
+          "pred": "NF",
+          "gold": "NF",
+          "reason": "no_rewrite_synonym"
+        },
+        "133": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_rewrite_synonym"
+        }
+      }
+    }
+  },
+  "scores_vs_current": {
+    "P0_core_only": {
+      "n": 30,
+      "match": 30,
+      "false_F": 0,
+      "false_NF": 0,
+      "false_NE": 0,
+      "diverged_ids": [],
+      "focus": {
+        "008": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "core_only"
+        },
+        "048": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "core_only"
+        },
+        "073": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "core_only"
+        },
+        "088": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "core_only"
+        },
+        "093": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "core_only"
+        },
+        "113": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "core_only"
+        },
+        "128": {
+          "pred": "NF",
+          "gold": "NF",
+          "reason": "core_only"
+        },
+        "133": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "core_only"
+        }
+      }
+    },
+    "P1_searchhit_pollutes": {
+      "n": 30,
+      "match": 27,
+      "false_F": 2,
+      "false_NF": 1,
+      "false_NE": 0,
+      "diverged_ids": [
+        "source-badcase-023",
+        "source-badcase-088",
+        "source-badcase-128"
+      ],
+      "focus": {
+        "008": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_pollution_trigger"
+        },
+        "048": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_pollution_trigger"
+        },
+        "073": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "no_pollution_trigger"
+        },
+        "088": {
+          "pred": "NF",
+          "gold": "F",
+          "reason": "empty_plus_any_hit"
+        },
+        "093": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_pollution_trigger"
+        },
+        "113": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "no_pollution_trigger"
+        },
+        "128": {
+          "pred": "F",
+          "gold": "NF",
+          "reason": "nearmiss_as_synonym:合家福~合家欢"
+        },
+        "133": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_pollution_trigger"
+        }
+      }
+    },
+    "P2_load_only_silent_miss": {
+      "n": 30,
+      "match": 30,
+      "false_F": 0,
+      "false_NF": 0,
+      "false_NE": 0,
+      "diverged_ids": [],
+      "focus": {
+        "008": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "mapping_live_matches:孤儿单->纯存续单客户"
+        },
+        "048": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "073": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "088": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "unsupported_honest_refusal:customerReview"
+        },
+        "093": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "113": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "128": {
+          "pred": "NF",
+          "gold": "NF",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "133": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "silent_miss_no_strong_load"
+        }
+      }
+    },
+    "P3_enrich_gate_current": {
+      "n": 30,
+      "match": 25,
+      "false_F": 0,
+      "false_NF": 5,
+      "false_NE": 0,
+      "diverged_ids": [
+        "source-badcase-073",
+        "source-badcase-088",
+        "source-badcase-093",
+        "source-badcase-113",
+        "source-badcase-133"
+      ],
+      "focus": {
+        "008": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "048": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "073": {
+          "pred": "NF",
+          "gold": "NE",
+          "reason": "e1_unsupported_field_nf:policies_insure_date"
+        },
+        "088": {
+          "pred": "NF",
+          "gold": "F",
+          "reason": "e1_unsupported_field_nf:customerReview"
+        },
+        "093": {
+          "pred": "NF",
+          "gold": "F",
+          "reason": "e1_unsupported_field_nf:licensePlateNo"
+        },
+        "113": {
+          "pred": "NF",
+          "gold": "NE",
+          "reason": "e1_empty_blocking_nf"
+        },
+        "128": {
+          "pred": "NF",
+          "gold": "NF",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "133": {
+          "pred": "NF",
+          "gold": "F",
+          "reason": "e1_empty_blocking_nf"
+        }
+      }
+    },
+    "P4_rewrite_as_synonym": {
+      "n": 30,
+      "match": 30,
+      "false_F": 0,
+      "false_NF": 0,
+      "false_NE": 0,
+      "diverged_ids": [],
+      "focus": {
+        "008": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_rewrite_synonym"
+        },
+        "048": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_rewrite_synonym"
+        },
+        "073": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "no_rewrite_synonym"
+        },
+        "088": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_rewrite_synonym"
+        },
+        "093": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_rewrite_synonym"
+        },
+        "113": {
+          "pred": "NE",
+          "gold": "NE",
+          "reason": "no_rewrite_synonym"
+        },
+        "128": {
+          "pred": "NF",
+          "gold": "NF",
+          "reason": "no_rewrite_synonym"
+        },
+        "133": {
+          "pred": "F",
+          "gold": "F",
+          "reason": "no_rewrite_synonym"
+        }
+      }
+    }
+  },
+  "draft_vs_desired": {
+    "n": 30,
+    "match": 20,
+    "false_F": 1,
+    "false_NF": 8,
+    "false_NE": 1,
+    "diverged_ids": [
+      "source-badcase-008",
+      "source-badcase-048",
+      "source-badcase-073",
+      "source-badcase-088",
+      "source-badcase-093",
+      "source-badcase-113",
+      "source-badcase-128",
+      "source-badcase-133",
+      "source-badcase-138",
+      "source-badcase-148"
+    ],
+    "focus": {
+      "008": {
+        "pred": "NF",
+        "gold": "F"
+      },
+      "048": {
+        "pred": "NF",
+        "gold": "F"
+      },
+      "073": {
+        "pred": "NF",
+        "gold": "NE"
+      },
+      "088": {
+        "pred": "NF",
+        "gold": "F"
+      },
+      "093": {
+        "pred": "NE",
+        "gold": "F"
+      },
+      "113": {
+        "pred": "NF",
+        "gold": "NE"
+      },
+      "128": {
+        "pred": "F",
+        "gold": "NF"
+      },
+      "133": {
+        "pred": "NF",
+        "gold": "F"
+      }
+    }
+  },
+  "cases": [
+    {
+      "case_id": "source-badcase-003",
+      "query": "在职单",
+      "live_text": "存续客户类型为在职有效客户",
+      "live_values": [
+        "在职有效客户"
+      ],
+      "live_fields": [
+        "orphanType"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "fulfilled",
+      "draft": "fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "orphanType::在职单",
+          "name": "在职单",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact"
+        }
+      ],
+      "loads": [
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "orphanType::在职单",
+          "name": "在职单",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "orphanType",
+            "spoken": "在职单",
+            "normalized": "在职有效客户"
+          },
+          "locator": "value_mappings_args.yaml#key=orphanType::在职单"
+        }
+      ],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "mapping_live_matches:在职单->在职有效客户"
+        },
+        "P3_enrich_gate_current": {
+          "status": "fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "current_confirmed_by_load:mapping_live_matches:在职单->在职有效客户"
+      }
+    },
+    {
+      "case_id": "source-badcase-008",
+      "query": "孤儿单",
+      "live_text": "存续客户类型为纯存续单客户",
+      "live_values": [
+        "纯存续单客户"
+      ],
+      "live_fields": [
+        "orphanType"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "fulfilled",
+      "draft": "not_fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "orphanType",
+          "name": "orphanType",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "orphanType::孤儿单",
+          "name": "孤儿单",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "单亲",
+          "name": "单亲",
+          "score": 58.54483790917361,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "loads": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "orphanType",
+          "name": "orphanType",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "orphanType",
+            "operators": [
+              "MATCH"
+            ],
+            "value_types": [
+              "enum"
+            ]
+          },
+          "locator": "field_definitions_args.yaml#field=orphanType"
+        },
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "orphanType::孤儿单",
+          "name": "孤儿单",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "orphanType",
+            "spoken": "孤儿单",
+            "normalized": "纯存续单客户"
+          },
+          "locator": "value_mappings_args.yaml#key=orphanType::孤儿单"
+        }
+      ],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "mapping_live_matches:孤儿单->纯存续单客户"
+        },
+        "P3_enrich_gate_current": {
+          "status": "fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "current_confirmed_by_load:mapping_live_matches:孤儿单->纯存续单客户"
+      }
+    },
+    {
+      "case_id": "source-badcase-013",
+      "query": "居家临界客户",
+      "live_text": "平安居家权益状态包含潜客、意向的客户",
+      "live_values": [
+        "潜客",
+        "意向"
+      ],
+      "live_fields": [
+        "pajjMemberGradeInfo.pajjmemberstatus"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "fulfilled",
+      "draft": "fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "平安居家-临界客户",
+          "name": "平安居家-临界客户",
+          "score": 77.62487210576552,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "高端康养-临界客户",
+          "name": "高端康养-临界客户",
+          "score": 74.46736520850817,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "臻享家医-临界客户",
+          "name": "臻享家医-临界客户",
+          "score": 73.17791081454796,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "安有护-临界客户",
+          "name": "安有护-临界客户",
+          "score": 69.23383566973075,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "御享国医-临界客户",
+          "name": "御享国医-临界客户",
+          "score": 68.03596284622212,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "安有医-临界客户",
+          "name": "安有医-临界客户",
+          "score": 67.98334823429711,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "私董保健医-临界客户",
+          "name": "私董保健医-临界客户",
+          "score": 66.42704881918846,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "clientChurnTag",
+          "name": "客户是否属于濒临失效高客；定义为可投资资产达到或超过50万元",
+          "score": 61.49964945285219,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-018",
+      "query": "我的铂金客户名单",
+      "live_text": "客户VIP等级包含铂金V1、铂金V2、原铂金VIP的客户",
+      "live_values": [
+        "铂金V1",
+        "铂金V2",
+        "原铂金VIP"
+      ],
+      "live_fields": [
+        "vipType"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": {
+        "query_span": "的铂金",
+        "live_span": "原铂金"
+      },
+      "production": "fulfilled",
+      "draft": "fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "寿险VIP-铂金客户",
+          "name": "寿险VIP-铂金客户",
+          "score": 67.80933398751061,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "寿险VIP-及以上-铂金",
+          "name": "寿险VIP-及以上-铂金",
+          "score": 63.18621839526445,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "寿险VIP-及以上-铂金::vipType::107",
+          "name": "寿险VIP-及以上-铂金",
+          "score": 62.42560432161775,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "寿险VIP-黄金客户",
+          "name": "寿险VIP-黄金客户",
+          "score": 58.62398086790842,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "寿险VIP-白银客户",
+          "name": "寿险VIP-白银客户",
+          "score": 58.26681699469015,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "nearmiss_as_synonym:的铂金~原铂金"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-023",
+      "query": "少儿万能险",
+      "live_text": "产品类型为万能型 并且有子女 并且子女年龄在0-17岁之间的客户",
+      "live_values": [
+        "万能型",
+        "子女",
+        "{'max': '2026-07-28 23:59:59', 'min': '2008-07-29 00:00:00'}"
+      ],
+      "live_fields": [
+        "pTypes",
+        "familyInfo.familyrelation",
+        "familyInfo.familyclientbirthday"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": {
+        "query_span": "万能险",
+        "live_span": "万能型"
+      },
+      "production": "not_fulfilled",
+      "draft": "not_fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "polNoInfo.plancodeinfo.abbrname::少儿万能险",
+          "name": "少儿万能险",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "年缴保费-及以上-非万",
+          "name": "年缴保费-及以上-非万",
+          "score": 60.78290199440869,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "保额-及以上-非万",
+          "name": "保额-及以上-非万",
+          "score": 59.625597449704635,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "年缴保费-以上-非万",
+          "name": "年缴保费-以上-非万",
+          "score": 58.25548335612296,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "pTypes::万能险",
+          "name": "万能险",
+          "score": 40.0,
+          "channels": [
+            "rewrite"
+          ],
+          "strength": "rewrite"
+        }
+      ],
+      "loads": [
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "polNoInfo.plancodeinfo.abbrname::少儿万能险",
+          "name": "少儿万能险",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "polNoInfo.plancodeinfo.abbrname",
+            "spoken": "少儿万能险",
+            "normalized": "少儿万能险"
+          },
+          "locator": "value_mappings_args.yaml#key=polNoInfo.plancodeinfo.abbrname::少儿万能险"
+        }
+      ],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "not_fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "nearmiss_as_synonym:万能险~万能型"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "not_fulfilled",
+          "reason": "mapping_live_differs:少儿万能险->少儿万能险"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "not_fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "not_fulfilled",
+        "reason": "current_confirmed_by_load:mapping_live_differs:少儿万能险->少儿万能险"
+      }
+    },
+    {
+      "case_id": "source-badcase-028",
+      "query": "近两年成交客户",
+      "live_text": "保单生效日在2024-07-28 至 2026-07-28的客户",
+      "live_values": [
+        "{'max': '2026-07-28 00:00:00', 'min': '2024-07-28 00:00:00'}"
+      ],
+      "live_fields": [
+        "polNoInfo.poleffdate"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "fulfilled",
+      "draft": "fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "polNoInfo.poleffdate",
+          "name": "业务口径中的签单、签约和成交时间统一映射为保单生效日期范围",
+          "score": 40.0,
+          "channels": [
+            "rewrite"
+          ],
+          "strength": "rewrite"
+        }
+      ],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-033",
+      "query": "2023年生",
+      "live_text": "客户出生日期在2023年的客户",
+      "live_values": [
+        "{'max': '2023-12-31 00:00:00', 'min': '2023-01-01 00:00:00'}"
+      ],
+      "live_fields": [
+        "clientBirthday"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "fulfilled",
+      "draft": "fulfilled",
+      "hits": [],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-038",
+      "query": "一年内客户",
+      "live_text": "客户类型包含客户、准客、用户的客户",
+      "live_values": [
+        "客户",
+        "准客",
+        "用户"
+      ],
+      "live_fields": [
+        "isBuyInsurance"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "not_fulfilled",
+      "draft": "not_fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "客户添加日-近一个月",
+          "name": "客户添加日-近一个月",
+          "score": 63.43050476468524,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "客户添加日-近N年",
+          "name": "客户添加日-近N年",
+          "score": 61.74173421074754,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "ayhMemberGradeInfo.ayhqualifiedtime",
+          "name": "安有护会员达标时间（达标日期）",
+          "score": 40.0,
+          "channels": [
+            "rewrite"
+          ],
+          "strength": "rewrite"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "ayyMemberGradeInfo.ayyqualifiedtime",
+          "name": "安有医会员达标时间（达标日期）",
+          "score": 40.0,
+          "channels": [
+            "rewrite"
+          ],
+          "strength": "rewrite"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "gdkyMemberGradeInfo.gdkyqualifiedtime",
+          "name": "高端康养会员达标时间（达标日期）；“新获得/新拿到/新增/刚获得",
+          "score": 40.0,
+          "channels": [
+            "rewrite"
+          ],
+          "strength": "rewrite"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "pajjMemberGradeInfo.pajjqualifiedtime",
+          "name": "平安居家会员达标时间（达标日期）；“新获得/新拿到/新增/刚获得",
+          "score": 40.0,
+          "channels": [
+            "rewrite"
+          ],
+          "strength": "rewrite"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "sdbjyMemberGradeInfo.sdbjyqualifiedtime",
+          "name": "私董保健医会员达标时间（达标日期）",
+          "score": 40.0,
+          "channels": [
+            "rewrite"
+          ],
+          "strength": "rewrite"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "yxgyMemberGradeInfo.yxgyqualifiedtime",
+          "name": "御享国医会员达标时间（达标日期）",
+          "score": 40.0,
+          "channels": [
+            "rewrite"
+          ],
+          "strength": "rewrite"
+        }
+      ],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "not_fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "not_fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "not_fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "not_fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "not_fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-043",
+      "query": "0到5周岁客户名单",
+      "live_text": "客户年龄在0~5之间的客户",
+      "live_values": [
+        "{'max': 5, 'min': 0}"
+      ],
+      "live_fields": [
+        "clientAge"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "fulfilled",
+      "draft": "fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "年龄-孩子按客户本人年龄",
+          "name": "年龄-孩子按客户本人年龄",
+          "score": 64.2788638544744,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "关爱客户-40岁及以上女性",
+          "name": "关爱客户-40岁及以上女性",
+          "score": 62.5435250124272,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "familyInfo.familyclientage",
+          "name": "家庭成员年龄",
+          "score": 60.10395252562116,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "高端康养-临界客户",
+          "name": "高端康养-临界客户",
+          "score": 59.738596540400366,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "客户价值-及以上",
+          "name": "客户价值-及以上",
+          "score": 59.68980437287183,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "子女年龄-及以上",
+          "name": "子女年龄-及以上",
+          "score": 59.39559339280592,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "clientChurnTag",
+          "name": "客户是否属于濒临失效高客；定义为可投资资产达到或超过50万元",
+          "score": 59.30197899990218,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "客户未兑换积分下限-暂不支持",
+          "name": "客户未兑换积分下限-暂不支持",
+          "score": 59.23258079102902,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-048",
+      "query": "158****5078",
+      "live_text": "客户手机号尾号为5078的客户",
+      "live_values": [
+        "5078"
+      ],
+      "live_fields": [
+        "clientMobile"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "fulfilled",
+      "draft": "not_fulfilled",
+      "hits": [],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-053",
+      "query": "权益",
+      "live_text": "客户姓名为权益的客户",
+      "live_values": [
+        "权益"
+      ],
+      "live_fields": [
+        "searchClientName"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "not_fulfilled",
+      "draft": "not_fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "安有护-权益不存在",
+          "name": "安有护-权益不存在",
+          "score": 61.88434906171582,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "安有护-权益存在",
+          "name": "安有护-权益存在",
+          "score": 61.41861458750212,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "臻享家医-权益存在",
+          "name": "臻享家医-权益存在",
+          "score": 59.69836439860631,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "御享国医-权益存在",
+          "name": "御享国医-权益存在",
+          "score": 59.35040604312986,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "高端康养-权益存在",
+          "name": "高端康养-权益存在",
+          "score": 59.167947476924454,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "安有医-权益不存在",
+          "name": "安有医-权益不存在",
+          "score": 59.07796511015972,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "安有医-权益存在",
+          "name": "安有医-权益存在",
+          "score": 58.92322868093317,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "御享国医-权益不存在",
+          "name": "御享国医-权益不存在",
+          "score": 58.82418040779527,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "not_fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "not_fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "not_fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "not_fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "not_fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-058",
+      "query": "17周岁以下少儿客户名单",
+      "live_text": "客户年龄<17的客户",
+      "live_values": [
+        "17"
+      ],
+      "live_fields": [
+        "clientAge"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "not_fulfilled",
+      "draft": "not_fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "年龄-孩子按客户本人年龄",
+          "name": "年龄-孩子按客户本人年龄",
+          "score": 67.032743037115,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "子女年龄-未成年",
+          "name": "子女年龄-未成年",
+          "score": 62.31553369721428,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "子女年龄-及以上",
+          "name": "子女年龄-及以上",
+          "score": 61.79812196015105,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "年龄-未成年",
+          "name": "年龄-未成年",
+          "score": 61.19868186181863,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "orphanType",
+          "name": "orphanType",
+          "score": 60.76406683141031,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "子女年龄-以下",
+          "name": "子女年龄-以下",
+          "score": 60.60148321869122,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "年龄-少儿范围",
+          "name": "年龄-少儿范围",
+          "score": 60.194888468483654,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "年龄-少儿精确",
+          "name": "年龄-少儿精确",
+          "score": 60.128720946497914,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "not_fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "not_fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "not_fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "not_fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "not_fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-063",
+      "query": "按1958年1970年1982年搜索客户名单",
+      "live_text": "客户出生日期在1958年 或者客户出生日期在1970年 或者客户出生日期在1982年的客户",
+      "live_values": [
+        "{'max': '1958-12-31 00:00:00', 'min': '1958-01-01 00:00:00'}",
+        "{'max': '1970-12-31 00:00:00', 'min': '1970-01-01 00:00:00'}",
+        "{'max': '1982-12-31 00:00:00', 'min': '1982-01-01 00:00:00'}"
+      ],
+      "live_fields": [
+        "clientBirthday",
+        "clientBirthday",
+        "clientBirthday"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "fulfilled",
+      "draft": "fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "客户添加日-明确年月区间名单",
+          "name": "客户添加日-明确年月区间名单",
+          "score": 61.88417786638014,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "客户姓名包含",
+          "name": "客户姓名包含",
+          "score": 60.65792734117822,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "客户添加日-近N年",
+          "name": "客户添加日-近N年",
+          "score": 58.9006210329323,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "dateCreated",
+          "name": "客户添加到系统中的日期时间；未指定其他时间范围时",
+          "score": 58.548967671177884,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "clientBirthday",
+          "name": "客户本人出生日期",
+          "score": 58.28542080875301,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-068",
+      "query": "45岁以张和奎",
+      "live_text": "客户姓名为张 或者客户姓名为奎的客户",
+      "live_values": [
+        "张",
+        "奎"
+      ],
+      "live_fields": [
+        "searchClientName",
+        "searchClientName"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "not_fulfilled",
+      "draft": "not_fulfilled",
+      "hits": [],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "not_fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "not_fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "not_fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "not_fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "not_fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-073",
+      "query": "2025年6月份投保的新客户名单，",
+      "live_text": "客户类型包含客户、准客的客户 提示：投保日期暂不支持搜索，系统将按可支持字段搜索。",
+      "live_values": [
+        "客户",
+        "准客"
+      ],
+      "live_fields": [
+        "isBuyInsurance"
+      ],
+      "live_empty": false,
+      "refusal_notice": true,
+      "notice_labels": [
+        "客户类型包含客户、准客的客户 提示：投保日期"
+      ],
+      "nearmiss": null,
+      "production": "not_evaluable",
+      "draft": "not_fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "isBuyInsurance",
+          "name": "客户类型；客户/准客=买过保险",
+          "score": 65.34258210939619,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "客户类型-没买过保险",
+          "name": "客户类型-没买过保险",
+          "score": 64.81352733368979,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "pcustSourcType",
+          "name": "pcustSourcType",
+          "score": 62.48373206151482,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "customerActivity",
+          "name": "营销活动或活动季名称",
+          "score": 62.30748620443261,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "客户添加日-明确年月区间名单",
+          "name": "客户添加日-明确年月区间名单",
+          "score": 59.69452106011496,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "最近半年未联系的高价值客户",
+          "name": "最近半年未联系的高价值客户",
+          "score": 59.685458062004905,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "年缴保费-及以上",
+          "name": "年缴保费-及以上",
+          "score": 59.34636999967555,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "客户添加日-不存在",
+          "name": "客户添加日-不存在",
+          "score": 59.315458077508154,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "loads": [],
+      "notice_hits": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "effAnniversaryDate",
+          "name": "保单周年日",
+          "score": 180.0,
+          "channels": [
+            "exact",
+            "rewrite"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "policies_insure_date",
+          "name": "保单投保日期",
+          "score": 180.0,
+          "channels": [
+            "exact",
+            "rewrite"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "isBuyInsurance",
+          "name": "客户类型；客户/准客=买过保险",
+          "score": 81.15424328244416,
+          "channels": [
+            "rewrite",
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "客户类型-没买过保险",
+          "name": "客户类型-没买过保险",
+          "score": 77.29451211036735,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "pcustSourcType",
+          "name": "pcustSourcType",
+          "score": 74.41687888795879,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "客户类型-买过保险",
+          "name": "客户类型-买过保险",
+          "score": 74.17821375678224,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "clientSex",
+          "name": "客户本人性别",
+          "score": 70.66694086443422,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "isBuyInsuranceCar",
+          "name": "客户是车险还是非车险",
+          "score": 70.64229554103105,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "notice_loads": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "effAnniversaryDate",
+          "name": "保单周年日",
+          "score": 180.0,
+          "channels": [
+            "exact",
+            "rewrite"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "effAnniversaryDate",
+            "description": "表示保单周年日，不表示投保时间、投保日期、签单日期",
+            "operators": [
+              "RANGE"
+            ],
+            "value_types": [
+              "date"
+            ]
+          },
+          "locator": "field_definitions_args.yaml#field=effAnniversaryDate"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "policies_insure_date",
+          "name": "保单投保日期",
+          "score": 180.0,
+          "channels": [
+            "exact",
+            "rewrite"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "policies_insure_date",
+            "is_supported": false,
+            "is_supported_explicit": true,
+            "description": "保单投保日期，嵌套字段；‘去年购买/买了/买过/投保某险种’中的‘去年’也是投保日期条件。该字段当前不支持搜索，但必须解析以便给出不支持提示",
+            "operators": [
+              "RANGE"
+            ],
+            "value_types": [
+              "date"
+            ]
+          },
+          "locator": "field_definitions_args.yaml#field=policies_insure_date"
+        }
+      ],
+      "policies": {
+        "P0_core_only": {
+          "status": "not_evaluable",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "not_evaluable",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "not_evaluable",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_fulfilled",
+          "reason": "e1_unsupported_field_nf:policies_insure_date"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "not_evaluable",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "not_evaluable",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-078",
+      "query": "关爱客户",
+      "live_text": "客户姓名为关爱 并且客户性别为女的客户",
+      "live_values": [
+        "关爱",
+        "女"
+      ],
+      "live_fields": [
+        "searchClientName",
+        "clientSex"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "not_fulfilled",
+      "draft": "not_fulfilled",
+      "hits": [],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "not_fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "not_fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "not_fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "not_fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "not_fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-083",
+      "query": "客户查年华",
+      "live_text": "客户姓名为年华的客户",
+      "live_values": [
+        "年华"
+      ],
+      "live_fields": [
+        "searchClientName"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "fulfilled",
+      "draft": "fulfilled",
+      "hits": [],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-088",
+      "query": "7月盘客",
+      "live_text": "提示：盘客暂不支持搜索，无法进行查询。",
+      "live_values": [],
+      "live_fields": [],
+      "live_empty": true,
+      "refusal_notice": true,
+      "notice_labels": [
+        "盘客"
+      ],
+      "nearmiss": null,
+      "production": "fulfilled",
+      "draft": "not_fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "customerReview",
+          "name": "代理人的盘客业务动作或盘客月份",
+          "score": 200.0,
+          "channels": [
+            "exact",
+            "embedding"
+          ],
+          "strength": "exact"
+        }
+      ],
+      "loads": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "customerReview",
+          "name": "代理人的盘客业务动作或盘客月份",
+          "score": 200.0,
+          "channels": [
+            "exact",
+            "embedding"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "customerReview",
+            "is_supported": false,
+            "is_supported_explicit": true,
+            "description": "表示代理人的盘客业务动作或盘客月份，不表示客户添加日、联系日期或保单日期；当前暂不支持作为客户搜索条件",
+            "operators": [
+              "MATCH"
+            ],
+            "value_types": [
+              "static"
+            ]
+          },
+          "locator": "field_definitions_args.yaml#field=customerReview"
+        }
+      ],
+      "notice_hits": [
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "盘客-暂不支持",
+          "name": "盘客-暂不支持",
+          "score": 59.093306527437036,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "not_fulfilled",
+          "reason": "empty_plus_any_hit"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "unsupported_honest_refusal:customerReview"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_fulfilled",
+          "reason": "e1_unsupported_field_nf:customerReview"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "current_confirmed_by_load:unsupported_honest_refusal:customerReview"
+      }
+    },
+    {
+      "case_id": "source-badcase-093",
+      "query": "贵C826N1",
+      "live_text": "提示：车牌号暂不支持搜索，无法进行查询。",
+      "live_values": [],
+      "live_fields": [],
+      "live_empty": true,
+      "refusal_notice": true,
+      "notice_labels": [
+        "车牌号"
+      ],
+      "nearmiss": null,
+      "production": "fulfilled",
+      "draft": "not_evaluable",
+      "hits": [],
+      "loads": [],
+      "notice_hits": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "licensePlateNo",
+          "name": "车辆号牌号码",
+          "score": 200.0,
+          "channels": [
+            "exact",
+            "embedding"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "车牌号-匹配",
+          "name": "车牌号-匹配",
+          "score": 63.46439074731302,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "notice_loads": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "licensePlateNo",
+          "name": "车辆号牌号码",
+          "score": 200.0,
+          "channels": [
+            "exact",
+            "embedding"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "licensePlateNo",
+            "is_supported": false,
+            "is_supported_explicit": true,
+            "description": "表示车辆号牌号码，非枚举字段；不表示车架号、发动机号或车险保单号。字母统一转为大写，如苏A80789、贵J00990",
+            "operators": [
+              "MATCH"
+            ],
+            "value_types": [
+              "extract"
+            ]
+          },
+          "locator": "field_definitions_args.yaml#field=licensePlateNo"
+        }
+      ],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_fulfilled",
+          "reason": "e1_unsupported_field_nf:licensePlateNo"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-098",
+      "query": "c00037044862",
+      "live_text": "客户号为C00037044862的客户",
+      "live_values": [
+        "C00037044862"
+      ],
+      "live_fields": [
+        "clientNo"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "fulfilled",
+      "draft": "fulfilled",
+      "hits": [],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-103",
+      "query": "18岁的孩子",
+      "live_text": "客户年龄=18的客户",
+      "live_values": [
+        "{'max': 18, 'min': 18}"
+      ],
+      "live_fields": [
+        "clientAge"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "not_fulfilled",
+      "draft": "not_fulfilled",
+      "hits": [],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "not_fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "not_fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "not_fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "not_fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "not_fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-108",
+      "query": "尾号保单尾号是。三幺二五",
+      "live_text": "保单号尾号为3125的客户",
+      "live_values": [
+        "3125"
+      ],
+      "live_fields": [
+        "polNo"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "fulfilled",
+      "draft": "fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "保单号-尾号",
+          "name": "保单号-尾号",
+          "score": 70.2916379723846,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "保单号尾号不为某值",
+          "name": "保单号尾号不为某值",
+          "score": 67.80103887909445,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "保单号尾号",
+          "name": "保单号尾号",
+          "score": 67.35469723212793,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "理赔案件号尾号",
+          "name": "理赔案件号尾号",
+          "score": 63.23883032226731,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "保单托管-是",
+          "name": "保单托管-是",
+          "score": 61.436641122494606,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "保单号包含",
+          "name": "保单号包含",
+          "score": 61.4183829983905,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "polNoInfo.plancodeinfo.insphoneno",
+          "name": "保单被保人手机号",
+          "score": 61.35702087729228,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "客户号-尾号",
+          "name": "客户号-尾号",
+          "score": 60.26245341350419,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-113",
+      "query": "东莞何叶玩具制品有限公司",
+      "live_text": "未识别到明确查询条件",
+      "live_values": [],
+      "live_fields": [],
+      "live_empty": true,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "not_evaluable",
+      "draft": "not_fulfilled",
+      "hits": [],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "not_evaluable",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "not_evaluable",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "not_evaluable",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_fulfilled",
+          "reason": "e1_empty_blocking_nf"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "not_evaluable",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "not_evaluable",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-118",
+      "query": "续保",
+      "live_text": "保单状态为等待续保的客户",
+      "live_values": [
+        "等待续保"
+      ],
+      "live_fields": [
+        "polNoInfo.polStatus"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "fulfilled",
+      "draft": "fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "保单状态-续保",
+          "name": "保单状态-续保",
+          "score": 65.80018865795559,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "年缴保费-及以上",
+          "name": "年缴保费-及以上",
+          "score": 59.19185991333269,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-123",
+      "query": "VIE。",
+      "live_text": "客户姓名为VIE的客户",
+      "live_values": [
+        "VIE"
+      ],
+      "live_fields": [
+        "searchClientName"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "not_fulfilled",
+      "draft": "not_fulfilled",
+      "hits": [],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "not_fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "not_fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "not_fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "not_fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "not_fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-128",
+      "query": "合家福客户",
+      "live_text": "综拓产品类别为合家欢的客户",
+      "live_values": [
+        "合家欢"
+      ],
+      "live_fields": [
+        "agentPerspProductType"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": {
+        "query_span": "合家福",
+        "live_span": "合家欢"
+      },
+      "production": "not_fulfilled",
+      "draft": "fulfilled",
+      "hits": [],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "not_fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "nearmiss_as_synonym:合家福~合家欢"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "not_fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "not_fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "not_fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-133",
+      "query": "中银保信",
+      "live_text": "未识别到明确查询条件",
+      "live_values": [],
+      "live_fields": [],
+      "live_empty": true,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "fulfilled",
+      "draft": "not_fulfilled",
+      "hits": [],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_fulfilled",
+          "reason": "e1_empty_blocking_nf"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-138",
+      "query": "陈金秀在别的业务员的投保的平安产品",
+      "live_text": "客户姓名为陈金秀的客户",
+      "live_values": [
+        "陈金秀"
+      ],
+      "live_fields": [
+        "searchClientName"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "not_evaluable",
+      "draft": "not_fulfilled",
+      "hits": [],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "not_evaluable",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "not_evaluable",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "not_evaluable",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_evaluable",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "not_evaluable",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "not_evaluable",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-143",
+      "query": "保单号为P16个049300214。这是什么客户？",
+      "live_text": "保单号为P16000000000000049300214的客户",
+      "live_values": [
+        "P16000000000000049300214"
+      ],
+      "live_fields": [
+        "polNo"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "not_fulfilled",
+      "draft": "not_fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "polNo",
+          "name": "保单号",
+          "score": 67.70717246469833,
+          "channels": [
+            "rewrite",
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "pcustSourcType",
+          "name": "pcustSourcType",
+          "score": 65.52627216079982,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "保单号包含",
+          "name": "保单号包含",
+          "score": 63.70483275288423,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "pTypes",
+          "name": "客户持有的保险类型枚举值",
+          "score": 62.48815503256362,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "isBuyInsurance",
+          "name": "客户类型；客户/准客=买过保险",
+          "score": 61.98030295648691,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "polNoInfo.plancodeinfo.insphoneno",
+          "name": "保单被保人手机号",
+          "score": 61.27656447121124,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "客户类型-没买过保险",
+          "name": "客户类型-没买过保险",
+          "score": 61.082482497923166,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "polNum",
+          "name": "客户持有的保单总数量；张以上/张及以上表示 ≥N",
+          "score": 60.776580013653344,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "not_fulfilled",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "not_fulfilled",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "not_fulfilled",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_fulfilled",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "not_fulfilled",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "not_fulfilled",
+        "reason": "default_current"
+      }
+    },
+    {
+      "case_id": "source-badcase-148",
+      "query": "查一下徐晓燕名下是否有住院医疗保险",
+      "live_text": "客户姓名为徐晓燕的客户",
+      "live_values": [
+        "徐晓燕"
+      ],
+      "live_fields": [
+        "searchClientName"
+      ],
+      "live_empty": false,
+      "refusal_notice": false,
+      "notice_labels": [],
+      "nearmiss": null,
+      "production": "not_evaluable",
+      "draft": "not_fulfilled",
+      "hits": [
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "姓名-名下询问住院医疗",
+          "name": "姓名-名下询问住院医疗",
+          "score": 62.42520017165813,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "臻享家医-权益不存在",
+          "name": "臻享家医-权益不存在",
+          "score": 59.095850237098915,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "安有医-权益不存在",
+          "name": "安有医-权益不存在",
+          "score": 58.90706423362059,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "有健康险",
+          "name": "有健康险",
+          "score": 58.44035947133588,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "臻享家医-权益存在",
+          "name": "臻享家医-权益存在",
+          "score": 58.35117911244079,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "御享国医-权益不存在",
+          "name": "御享国医-权益不存在",
+          "score": 58.001602903697744,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.abbrname-enums",
+          "key": "住院医疗",
+          "name": "住院医疗",
+          "score": 40.0,
+          "channels": [
+            "rewrite"
+          ],
+          "strength": "rewrite"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "pCategorys",
+          "name": "客户持有的寿险险种大类",
+          "score": 40.0,
+          "channels": [
+            "rewrite"
+          ],
+          "strength": "rewrite"
+        }
+      ],
+      "loads": [],
+      "notice_hits": [],
+      "notice_loads": [],
+      "policies": {
+        "P0_core_only": {
+          "status": "not_evaluable",
+          "reason": "core_only"
+        },
+        "P1_searchhit_pollutes": {
+          "status": "not_evaluable",
+          "reason": "no_pollution_trigger"
+        },
+        "P2_load_only_silent_miss": {
+          "status": "not_evaluable",
+          "reason": "silent_miss_no_strong_load"
+        },
+        "P3_enrich_gate_current": {
+          "status": "not_evaluable",
+          "reason": "e1_no_empty_no_unsupported"
+        },
+        "P4_rewrite_as_synonym": {
+          "status": "not_evaluable",
+          "reason": "no_rewrite_synonym"
+        }
+      },
+      "desired": {
+        "status": "not_evaluable",
+        "reason": "default_current"
+      }
+    }
+  ],
+  "holdouts": [
+    {
+      "query": "金凤",
+      "hits": [
+        {
+          "index_key": "client-search.abbrname-enums",
+          "key": "金凤",
+          "name": "金凤",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact"
+        }
+      ],
+      "loads": [
+        {
+          "index_key": "client-search.abbrname-enums",
+          "key": "金凤",
+          "name": "金凤",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "polNoInfo.plancodeinfo.abbrname",
+            "value": "金凤",
+            "membership": "exact"
+          },
+          "locator": "abbrname_enums_args.yaml#value=金凤"
+        }
+      ]
+    },
+    {
+      "query": "关爱客户",
+      "hits": [],
+      "loads": []
+    },
+    {
+      "query": "天气怎么样",
+      "hits": [],
+      "loads": []
+    },
+    {
+      "query": "客户平时有什么兴趣爱好",
+      "hits": [],
+      "loads": []
+    },
+    {
+      "query": "盘客",
+      "hits": [
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "盘客-暂不支持",
+          "name": "盘客-暂不支持",
+          "score": 59.093306527437036,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "loads": []
+    },
+    {
+      "query": "去盘客",
+      "hits": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "customerReview",
+          "name": "代理人的盘客业务动作或盘客月份",
+          "score": 200.0,
+          "channels": [
+            "exact",
+            "embedding"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "盘客-暂不支持",
+          "name": "盘客-暂不支持",
+          "score": 62.361279124628666,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "loads": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "customerReview",
+          "name": "代理人的盘客业务动作或盘客月份",
+          "score": 200.0,
+          "channels": [
+            "exact",
+            "embedding"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "customerReview",
+            "is_supported": false,
+            "is_supported_explicit": true,
+            "description": "表示代理人的盘客业务动作或盘客月份，不表示客户添加日、联系日期或保单日期；当前暂不支持作为客户搜索条件",
+            "operators": [
+              "MATCH"
+            ],
+            "value_types": [
+              "static"
+            ]
+          },
+          "locator": "field_definitions_args.yaml#field=customerReview"
+        }
+      ]
+    },
+    {
+      "query": "A",
+      "hits": [],
+      "loads": []
+    },
+    {
+      "query": "O2O",
+      "hits": [
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "pcustSourcType::O2o",
+          "name": "O2o",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "pcustSourcType::o2O",
+          "name": "o2O",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "pcustSourcType::o2o",
+          "name": "o2o",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "validSinsPol::O2o",
+          "name": "O2o",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "validSinsPol::o2O",
+          "name": "o2O",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "validSinsPol::o2o",
+          "name": "o2o",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact"
+        }
+      ],
+      "loads": [
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "pcustSourcType::O2o",
+          "name": "O2o",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "pcustSourcType",
+            "spoken": "O2o",
+            "normalized": "O2O"
+          },
+          "locator": "value_mappings_args.yaml#key=pcustSourcType::O2o"
+        },
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "pcustSourcType::o2O",
+          "name": "o2O",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "pcustSourcType",
+            "spoken": "o2O",
+            "normalized": "O2O"
+          },
+          "locator": "value_mappings_args.yaml#key=pcustSourcType::o2O"
+        },
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "pcustSourcType::o2o",
+          "name": "o2o",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "pcustSourcType",
+            "spoken": "o2o",
+            "normalized": "O2O"
+          },
+          "locator": "value_mappings_args.yaml#key=pcustSourcType::o2o"
+        },
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "validSinsPol::O2o",
+          "name": "O2o",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "validSinsPol",
+            "spoken": "O2o",
+            "normalized": "O2O"
+          },
+          "locator": "value_mappings_args.yaml#key=validSinsPol::O2o"
+        },
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "validSinsPol::o2O",
+          "name": "o2O",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "validSinsPol",
+            "spoken": "o2O",
+            "normalized": "O2O"
+          },
+          "locator": "value_mappings_args.yaml#key=validSinsPol::o2O"
+        },
+        {
+          "index_key": "client-search.value-mappings",
+          "key": "validSinsPol::o2o",
+          "name": "o2o",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "validSinsPol",
+            "spoken": "o2o",
+            "normalized": "O2O"
+          },
+          "locator": "value_mappings_args.yaml#key=validSinsPol::o2o"
+        }
+      ]
+    },
+    {
+      "query": "合家福",
+      "hits": [],
+      "loads": []
+    },
+    {
+      "query": "合家欢",
+      "hits": [
+        {
+          "index_key": "client-search.abbrname-enums",
+          "key": "合家欢",
+          "name": "合家欢",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "agentPerspProductType",
+          "name": "客户持有某个明确的综拓产品类别",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact"
+        }
+      ],
+      "loads": [
+        {
+          "index_key": "client-search.abbrname-enums",
+          "key": "合家欢",
+          "name": "合家欢",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "polNoInfo.plancodeinfo.abbrname",
+            "value": "合家欢",
+            "membership": "exact"
+          },
+          "locator": "abbrname_enums_args.yaml#value=合家欢"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "agentPerspProductType",
+          "name": "客户持有某个明确的综拓产品类别",
+          "score": 200.0,
+          "channels": [
+            "exact"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "agentPerspProductType",
+            "description": "表示客户持有某个明确的综拓产品类别，如中高端医疗、家财险、学平险、合家欢等。",
+            "operators": [
+              "CONTAINS",
+              "EXISTS",
+              "NOT_CONTAINS",
+              "NOT_EXISTS"
+            ],
+            "value_types": [
+              "enum"
+            ]
+          },
+          "locator": "field_definitions_args.yaml#field=agentPerspProductType"
+        }
+      ]
+    },
+    {
+      "query": "车牌号",
+      "hits": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "licensePlateNo",
+          "name": "车辆号牌号码",
+          "score": 200.0,
+          "channels": [
+            "exact",
+            "embedding"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "车牌号-匹配",
+          "name": "车牌号-匹配",
+          "score": 63.46439074731302,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "loads": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "licensePlateNo",
+          "name": "车辆号牌号码",
+          "score": 200.0,
+          "channels": [
+            "exact",
+            "embedding"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "licensePlateNo",
+            "is_supported": false,
+            "is_supported_explicit": true,
+            "description": "表示车辆号牌号码，非枚举字段；不表示车架号、发动机号或车险保单号。字母统一转为大写，如苏A80789、贵J00990",
+            "operators": [
+              "MATCH"
+            ],
+            "value_types": [
+              "extract"
+            ]
+          },
+          "locator": "field_definitions_args.yaml#field=licensePlateNo"
+        }
+      ]
+    },
+    {
+      "query": "投保日期",
+      "hits": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "effAnniversaryDate",
+          "name": "保单周年日",
+          "score": 200.0,
+          "channels": [
+            "exact",
+            "embedding"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "policies_insure_date",
+          "name": "保单投保日期",
+          "score": 200.0,
+          "channels": [
+            "exact",
+            "embedding"
+          ],
+          "strength": "exact"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "投保日期-去年",
+          "name": "投保日期-去年",
+          "score": 65.84894907520787,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "期交保费-及以上",
+          "name": "期交保费-及以上",
+          "score": 64.69379681698993,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "期交保费-存在",
+          "name": "期交保费-存在",
+          "score": 64.42687915015087,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "投保日期-去年片段",
+          "name": "投保日期-去年片段",
+          "score": 62.43440589203156,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "保单生效日-存在",
+          "name": "保单生效日-存在",
+          "score": 62.11077137122464,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        },
+        {
+          "index_key": "client-search.enhanced-rules",
+          "key": "期交保费-以上",
+          "name": "期交保费-以上",
+          "score": 61.73662415856233,
+          "channels": [
+            "embedding"
+          ],
+          "strength": "embedding"
+        }
+      ],
+      "loads": [
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "effAnniversaryDate",
+          "name": "保单周年日",
+          "score": 200.0,
+          "channels": [
+            "exact",
+            "embedding"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "effAnniversaryDate",
+            "description": "表示保单周年日，不表示投保时间、投保日期、签单日期",
+            "operators": [
+              "RANGE"
+            ],
+            "value_types": [
+              "date"
+            ]
+          },
+          "locator": "field_definitions_args.yaml#field=effAnniversaryDate"
+        },
+        {
+          "index_key": "client-search.field-definitions",
+          "key": "policies_insure_date",
+          "name": "保单投保日期",
+          "score": 200.0,
+          "channels": [
+            "exact",
+            "embedding"
+          ],
+          "strength": "exact",
+          "load_ok": true,
+          "content": {
+            "field": "policies_insure_date",
+            "is_supported": false,
+            "is_supported_explicit": true,
+            "description": "保单投保日期，嵌套字段；‘去年购买/买了/买过/投保某险种’中的‘去年’也是投保日期条件。该字段当前不支持搜索，但必须解析以便给出不支持提示",
+            "operators": [
+              "RANGE"
+            ],
+            "value_types": [
+              "date"
+            ]
+          },
+          "locator": "field_definitions_args.yaml#field=policies_insure_date"
+        }
+      ]
+    }
+  ],
+  "focus_notes": [
+    "**128** `合家福客户` Current=NF Draft=F desired=NF hits=0 strong_load=0 notice_load=0；P2=silent_miss_no_strong_load；P3=e1_no_empty_no_unsupported",
+    "**088** `7月盘客` Current=F Draft=NF desired=F hits=1 strong_load=1 notice_load=0；P2=unsupported_honest_refusal:customerReview；P3=e1_unsupported_field_nf:customerReview",
+    "**093** `贵C826N1` Current=F Draft=NE desired=F hits=0 strong_load=0 notice_load=1；P2=silent_miss_no_strong_load；P3=e1_unsupported_field_nf:licensePlateNo",
+    "**008** `孤儿单` Current=F Draft=NF desired=F hits=3 strong_load=2 notice_load=0；P2=mapping_live_matches:孤儿单->纯存续单客户；P3=e1_no_empty_no_unsupported",
+    "**048** `158****5078` Current=F Draft=NF desired=F hits=0 strong_load=0 notice_load=0；P2=silent_miss_no_strong_load；P3=e1_no_empty_no_unsupported",
+    "**073** `2025年6月份投保的新客户名单，` Current=NE Draft=NF desired=NE hits=8 strong_load=0 notice_load=2；P2=silent_miss_no_strong_load；P3=e1_unsupported_field_nf:policies_insure_date",
+    "**113** `东莞何叶玩具制品有限公司` Current=NE Draft=NF desired=NE hits=0 strong_load=0 notice_load=0；P2=silent_miss_no_strong_load；P3=e1_empty_blocking_nf",
+    "**133** `中银保信` Current=F Draft=NF desired=F hits=0 strong_load=0 notice_load=0；P2=silent_miss_no_strong_load；P3=e1_empty_blocking_nf"
+  ],
+  "anti_hack": {
+    "case_128_hit_count": 0,
+    "p1_128": "F",
+    "p2_128": "NF",
+    "p4_128": "NF",
+    "wildcard_loads": 0,
+    "max_loads_per_case": 2,
+    "p2_lexicon_clean": true,
+    "p2_lexicon_found": [],
+    "holdout_summary": "金凤 hits=1 strong=1；关爱客户 hits=0 strong=0；天气怎么样 hits=0 strong=0；客户平时有什么兴趣爱好 hits=0 strong=0；盘客 hits=1 strong=0；去盘客 hits=2 strong=1；A hits=0 strong=0；O2O hits=6 strong=6；合家福 hits=0 strong=0；合家欢 hits=2 strong=2；车牌号 hits=2 strong=1；投保日期 hits=8 strong=2"
+  },
+  "consumption_contract": [
+    "Key-Index 只定位/补载可 Load 材料，不得改写 F/NF 核心；无强命中 Load 时静默走原路径（= production Current）。",
+    "SearchHit 不是 Evidence。rewrite / embedding 近邻不得当同义证明；未 Load 不得改 overall。",
+    "仅当 Load 到 value_mapping / abbr 且 spoken 出现在 query：live 用了 canonical → F；live 用了别的值 → NF。",
+    "仅当 Load 到字段定义 is_supported=false（显式）且 live 为空 + 透明「暂不支持」通知 → F（边界处理成功，不是把 parser 打成 NF）。",
+    "仅当 Load 到字段 is_supported=true 且 live 为空 → NF（能力内漏检）。",
+    "Authority 关闭时，不得仅因存在能力边界就判 NE；诚实拒绝是 F，不是 NF/NE。",
+    "禁止业务词表 / COMMON_TOKENS / query-shape 路由；契约跨项目泛型为 Search→Load supplement。",
+    "禁止全量 dump（key=* 或遍历 mappings）；每次只 Load Search 返回的有限候选（limit=8）。"
+  ]
+}

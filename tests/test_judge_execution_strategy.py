@@ -1,37 +1,27 @@
 from __future__ import annotations
 
-from impl.core.judge_execution import SinglePassJudgeExecution
 from impl.core.project_loader import load_project
 from impl.core.schema import JudgeResult, RunTrace
-from impl.projects.client_search.draft.judge import (
-    ClientSearchJudge as DraftClientSearchJudge,
-)
-from impl.projects.client_search.draft.judge_strategy import (
+from impl.projects.client_search.judge import ClientSearchJudge
+from impl.projects.client_search.judge_strategy import (
     DraftSinglePassJudgeExecution,
 )
-from impl.projects.client_search.judge import (
-    ClientSearchJudge as ProductionClientSearchJudge,
-)
 
 
-def test_production_and_draft_select_different_execution_strategies() -> None:
+def test_promoted_judge_selects_single_pass_strategy() -> None:
     spec = load_project("client_search")
 
     assert isinstance(
-        ProductionClientSearchJudge(spec).judge_execution(),
-        SinglePassJudgeExecution,
-    )
-    assert isinstance(
-        DraftClientSearchJudge(spec).judge_execution(),
+        ClientSearchJudge(spec).judge_execution(),
         DraftSinglePassJudgeExecution,
     )
 
 
 def test_draft_strategy_executes_one_judge_call_without_planning(monkeypatch) -> None:
     """方案 i：Draft 单次 agentic 会话，不再有 planning→assessment 两阶段。"""
-    from impl.projects.client_search.draft import judge_execution as je_module
-    from impl.projects.client_search.draft.judge import ClientSearchJudge
-    from impl.projects.client_search.draft.judge_strategy import (
+    from impl.projects.client_search import judge_execution as je_module
+    from impl.projects.client_search.judge import ClientSearchJudge
+    from impl.projects.client_search.judge_strategy import (
         DraftSinglePassJudgeExecution,
     )
 

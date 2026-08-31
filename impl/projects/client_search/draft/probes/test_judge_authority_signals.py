@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from impl.core.schema import RunTrace
-from impl.projects.client_search.draft.judge import (
+from impl.projects.client_search.judge import (
     _enum_completeness_evidence,
     _unsupported_boundary_evidence,
 )
@@ -87,7 +87,7 @@ def test_clear_unsupported_notice_preserves_boundary_acceptance_path() -> None:
 
 def test_explicit_unsupported_field_is_loaded_from_top_key_index_hit() -> None:
     from impl.core.project_loader import load_project
-    from impl.projects.client_search.draft.judge import (
+    from impl.projects.client_search.judge import (
         _enrich_unsupported_boundary_evidence,
     )
 
@@ -114,7 +114,7 @@ def test_explicit_unsupported_field_is_loaded_from_top_key_index_hit() -> None:
 def test_authority_disabled_evidence_requires_intent_based_fulfillment() -> None:
     """关闭 Authority 时，显式不支持仍按用户交付判断 NF，不自动转 NE。"""
     from impl.core.project_loader import load_project
-    from impl.projects.client_search.draft.judge import (
+    from impl.projects.client_search.judge import (
         _enrich_unsupported_boundary_evidence,
         _unsupported_boundary_evidence,
     )
@@ -148,7 +148,7 @@ def test_authority_disabled_zero_condition_no_overlap_preserves_effect_verdict()
     """
     from impl.core.project_loader import load_project
     from impl.core.schema import BusinessExpectation, FulfillmentAssessment, JudgeResult
-    from impl.projects.client_search.draft.judge import (
+    from impl.projects.client_search.judge import (
         ClientSearchJudge,
         _enrich_unsupported_boundary_evidence,
         _unsupported_boundary_evidence,
@@ -195,7 +195,7 @@ def test_authority_disabled_zero_condition_no_overlap_preserves_effect_verdict()
 def test_authority_disabled_empty_semantic_carrier_preserves_not_fulfilled() -> None:
     from impl.core.project_loader import load_project
     from impl.core.schema import BusinessExpectation, FulfillmentAssessment, JudgeResult
-    from impl.projects.client_search.draft.judge import ClientSearchJudge
+    from impl.projects.client_search.judge import ClientSearchJudge
 
     trace = RunTrace(
         trace_id="synthetic-empty-carrier",
@@ -234,7 +234,7 @@ def test_authority_disabled_empty_semantic_carrier_preserves_not_fulfilled() -> 
 def test_authority_disabled_reconcile_preserves_partial_delivery_failure() -> None:
     from impl.core.project_loader import load_project
     from impl.core.schema import BusinessExpectation, FulfillmentAssessment, JudgeResult
-    from impl.projects.client_search.draft.judge import ClientSearchJudge
+    from impl.projects.client_search.judge import ClientSearchJudge
 
     trace = RunTrace(
         trace_id="synthetic-partial-delivery",
@@ -268,7 +268,7 @@ def test_authority_disabled_reconcile_preserves_partial_delivery_failure() -> No
 def test_authority_disabled_partial_dimensions_keep_fulfilled_and_not_fulfilled() -> None:
     from impl.core.project_loader import load_project
     from impl.core.schema import BusinessExpectation, FulfillmentAssessment, JudgeResult
-    from impl.projects.client_search.draft.judge import ClientSearchJudge
+    from impl.projects.client_search.judge import ClientSearchJudge
 
     trace = RunTrace(
         trace_id="synthetic-enum-search-boundary",
@@ -308,7 +308,7 @@ def test_authority_disabled_partial_dimensions_keep_fulfilled_and_not_fulfilled(
 
 
 def test_material_mapping_conflict_opens_authority_without_choosing_precedence() -> None:
-    from impl.projects.client_search.draft.judge import _material_conflict_reasons
+    from impl.projects.client_search.judge import _material_conflict_reasons
 
     trace = RunTrace(
         trace_id="synthetic-material-conflict",
@@ -327,7 +327,7 @@ def test_material_mapping_conflict_opens_authority_without_choosing_precedence()
 
 
 def test_empty_actual_opens_missing_carrier_authority_but_explicit_unsupported_does_not() -> None:
-    from impl.projects.client_search.draft.judge import _authority_candidate_reasons
+    from impl.projects.client_search.judge import _authority_candidate_reasons
     from impl.core.project_loader import load_project
 
     trace = RunTrace(
@@ -359,7 +359,7 @@ def test_empty_actual_opens_missing_carrier_authority_but_explicit_unsupported_d
 
 def test_pre_authority_obligations_are_material_decision_guidance_not_key_index() -> None:
     from impl.core.project_loader import load_project
-    from impl.projects.client_search.draft.judge import _authority_pre_obligations
+    from impl.projects.client_search.judge import _authority_pre_obligations
 
     obligations = _authority_pre_obligations(
         load_project("client_search"),
@@ -389,7 +389,7 @@ def test_pre_authority_obligations_are_material_decision_guidance_not_key_index(
 def test_authority_disabled_context_does_not_inject_unusable_pre_obligations() -> None:
     from impl.core.project_loader import load_project
     from impl.core.schema import RunTrace
-    from impl.projects.client_search.draft.judge import _build_core_context
+    from impl.projects.client_search.judge import _build_core_context
 
     context = _build_core_context(
         load_project("client_search"),

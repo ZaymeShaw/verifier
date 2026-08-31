@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>资料管理</title>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f6f8fb;color:#172033}header{background:#101828;color:white;padding:22px 30px}header p{margin:6px 0 0;color:#cbd5e1}main{display:grid;grid-template-columns:360px 1fr;gap:16px;padding:18px}.panel,.card{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:16px}h3.sec{margin:18px 0 6px;font-size:14px;color:#475569;border-top:1px solid #e5e7eb;padding-top:14px}h3.sec:first-of-type{border-top:0;padding-top:0}h3.sec .ro{font-weight:400;color:#94a3b8;font-size:12px}label{display:block;font-weight:700;margin:12px 0 6px}input,textarea,select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:10px}textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}button{background:#2563eb;color:white;border:0;border-radius:8px;padding:10px 13px;font-weight:700;cursor:pointer;margin-top:12px}button.secondary{background:#e2e8f0;color:#172033}button.danger{background:#dc2626}button.small{padding:6px 10px;font-size:12px;margin-top:8px}.row{display:flex;gap:8px;flex-wrap:wrap}.hint,.muted{color:#64748b;font-size:13px}.entry{border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin:8px 0;cursor:pointer;background:#f8fafc}.entry:hover{border-color:#2563eb}.entry.active{border-color:#2563eb;background:#eff6ff}.entry b{display:inline-block;margin-bottom:4px}.entry .preview{color:#64748b;font-size:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.badge{display:inline-block;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;background:#e2e8f0;color:#334155;margin-left:6px}.badge.ok{background:#dcfce7;color:#166534}.badge.bad{background:#fee2e2;color:#991b1b}.badge.warn{background:#fef3c7;color:#92400e}.badge.ro{background:#f1f5f9;color:#64748b}.empty{color:#94a3b8;padding:8px 0;font-size:13px}.grid2{display:grid;grid-template-columns:1fr 160px 160px;gap:10px}.meta{font-size:12px;color:#64748b;margin-top:8px}.meta .edited{color:#b45309;font-weight:700}pre.viewer{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;max-height:520px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}table.files{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}table.files td{border-bottom:1px solid #f1f5f9;padding:4px 6px;color:#475569}table.files td:last-child{text-align:right;color:#94a3b8}table.files tr.openable{cursor:pointer}table.files tr.openable:hover td{background:#eff6ff}details.sysassets{margin-top:18px;border-top:1px solid #e5e7eb;padding-top:12px}details.sysassets summary.sec-summary{cursor:pointer;font-size:14px;color:#475569;font-weight:700;list-style:revert}@media(max-width:1000px){main{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header><h1>资料管理</h1><p>可编辑：槽位 / 自由资料（内容哈希封口，手改派生资料会标记）· 只读：调查产物（机器对业务系统的调查，证据可逐份点开）· 系统资产（verifier 怎么评，折叠在底部）。</p></header>
+<main>
+  <section class="panel">
+    <label>Project</label>
+    <select id="project" onchange="loadAll()"></select>
+    <div id="sections"><div class="empty">加载中…</div></div>
+  </section>
+
+  <section>
+    <!-- 槽位/自由资料编辑器 -->
+    <div class="card" id="matEditor" style="display:none">
+      <h2 id="matTitle">资料</h2>
+      <div id="matSlotInfo" class="hint"></div>
+      <label id="matIdLabel">资料 id</label>
+      <input id="matId" placeholder="小写字母开头，可含数字 / _ / -" />
+      <div class="hint" id="matUriLine" style="margin:6px 0">
+        引用标识符：<code id="matUri"></code>
+        <button class="secondary small" style="margin-top:0;padding:2px 8px" onclick="copyMatUri()">复制</button>
+      </div>
+      <label>标题</label>
+      <input id="matTitleInput" />
+      <label>说明（可选）</label>
+      <input id="matDesc" />
+      <label>内容（纯文本 / Markdown；也可选择本地文件读入）</label>
+      <input type="file" id="matFile" accept=".md,.txt,.yaml,.yml,.json" onchange="readFileToTextarea()" style="padding:6px" />
+      <textarea id="matContent" style="min-height:260px" placeholder="资料正文"></textarea>
+      <div class="row">
+        <button onclick="saveMaterial()">保存</button>
+        <button class="danger" id="matDeleteBtn" onclick="deleteMaterial()" style="display:none">删除该资料</button>
+      </div>
+      <div id="matMeta" class="meta"></div>
+    </div>
+
+    <!-- capability 预设编辑器（仅声明了 capability_map 的项目） -->
+    <div class="card" id="capEditor" style="display:none">
+      <h2 id="editorTitle">新建预设</h2>
+      <label>预设名（小写字母开头，可含数字 / _ / -；作为 case 里的 capability_ref）</label>
+      <input id="name" placeholder="如 client_search" />
+      <label>能力描述（轴1：系统定位，回答三问——①用户拿它办什么事（用户视角，勿写实现视角）②交付物被谁怎么消费执行（judge 据此把输出放到消费方语义下推演）③什么算办成/没办成。可写 {material://项目/资料id} 引用自由资料）</label>
+      <textarea id="capability" class="uri-textarea" style="min-height:140px" placeholder="例：用户拿它办的事：从客户库（ES）检回正好符合描述的那群客户。交付物是给 ES 执行的查询谓词集（同从表多条件落同一记录），达成=执行后检回的集合恰好是意图人群。等价表达算办成；互斥/放大/缩小/编造/丢条件算没办成。支持范围写到下面的能力边界。"></textarea>
+      <label>能力边界（选填，轴2：能做什么、不能做什么，写成陈述句清单，不写解析规则。填写后启用承载性判定：当调用未达预期时，判断是「接口确实做不到」还是「本该做到但没做对」。可写 {material://项目/资料id}；引用的大资料自动转检索式消费）</label>
+      <textarea id="boundary" class="uri-textarea" style="min-height:120px" placeholder="陈述句清单，例如：支持按客户姓名等值检索完整姓名；仅对单姓输入做前缀匹配；不支持按年龄筛选。"></textarea>
+      <div class="row">
+        <select id="refPicker" style="flex:2"><option value="">插入资料引用…</option></select>
+        <button class="secondary small" style="margin-top:0" onclick="insertRef()">插入到光标处</button>
+        <span class="hint" id="refStatus"></span>
+      </div>
+      <label>探测端点 service（可选；不填则每个 case 必须自带 url）</label>
+      <div class="grid2">
+        <input id="serviceUrl" placeholder="http://127.0.0.1:15001/api/..." />
+        <select id="serviceMethod"><option>POST</option><option>PUT</option><option>PATCH</option></select>
+        <input id="serviceTimeout" type="number" placeholder="超时秒数，默认 60" />
+      </div>
+      <label>mock_body 请求模板（可选，JSON；{query} 为造 case 时的占位符）</label>
+      <textarea id="mockBody" style="min-height:160px" placeholder='{"user_text": "{query}"}'></textarea>
+      <div class="row">
+        <button onclick="saveCap()">保存</button>
+        <button class="danger" onclick="delCap()" id="deleteBtn" style="display:none">删除该预设</button>
+      </div>
+    </div>
+
+    <!-- 只读查看器：调查产物 / 系统资产 -->
+    <div class="card" id="assetViewer" style="display:none">
+      <h2 id="avTitle">资产</h2>
+      <div id="avMeta" class="meta"></div>
+      <div id="avManifest" class="hint" style="margin-top:10px"></div>
+      <div id="avHint" class="hint" style="display:none;margin-top:10px"></div>
+      <div id="avEvidence"></div>
+      <div id="avArtifacts"></div>
+      <h3 class="sec" id="avContentTitle" style="display:none"></h3>
+      <pre class="viewer" id="avContent" style="display:none"></pre>
+      <div id="avFiles"></div>
+    </div>
+
+    <div class="card" id="placeholder">
+      <h2>从左侧选择或新建</h2>
+      <p class="muted">槽位资料：项目声明的契约，必填槽位缺失时评测拒跑。调查产物与系统资产：只读展示，编辑走本地调查/代码流程。手改派生资料会标记「内容已非原样」。</p>
+    </div>
+    <div id="status" class="muted" style="margin:12px 4px">&nbsp;</div>
+  </section>
+</main>
+<script>
+let overview = {sections: []};
+let selected = null;   // {type: 'slot'|'free'|'newmat'|'cap'|'asset', key}
+function project(){return document.getElementById('project').value}
+function escapeHtml(text){return String(text).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function setStatus(text, isError){const el=document.getElementById('status');el.textContent=text||'\u00a0';el.style.color=isError?'#dc2626':'#64748b';}
+async function post(path, body){
+  const res = await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data = await res.json();
+  if(!res.ok || data.error){throw new Error(data.error || ('HTTP '+res.status));}
+  return data;
+}
+function show(mode){
+  document.getElementById('matEditor').style.display=(mode==='mat')?'block':'none';
+  document.getElementById('capEditor').style.display=(mode==='cap')?'block':'none';
+  document.getElementById('assetViewer').style.display=(mode==='asset')?'block':'none';
+  document.getElementById('placeholder').style.display=mode?'none':'block';
+}
+function sectionByKind(kind){return (overview.sections||[]).find(s=>s.kind===kind)}
+function slotById(id){const s=sectionByKind('slots');return ((s&&s.slots)||[]).find(x=>x.slot_id===id)}
+function freeById(id){const s=sectionByKind('free');return ((s&&s.items)||[]).find(x=>x.id===id)}
+function capEntries(){const s=sectionByKind('capability_map');return (s&&s.capabilities)||{}}
+function assetById(id){
+  for(const kind of ['investigation','system_assets']){
+    const s=sectionByKind(kind);
+    const hit=((s&&s.items)||[]).find(x=>x.asset_id===id);
+    if(hit){return hit;}
+  }
+  return null;
+}
+async function initProjects(){
+  const res=await fetch('/projects');
+  const data=await res.json();
+  const projects=data.projects || ['llm_probe'];
+  document.getElementById('project').innerHTML=projects.map(item=>'<option value="'+escapeHtml(item)+'">'+escapeHtml(item)+'</option>').join('');
+  if(projects.includes('llm_probe')){document.getElementById('project').value='llm_probe';}
+  await loadAll();
+}
+async function loadAll(){
+  selected=null;show(null);setStatus('');
+  try{
+    overview=await post('/api/materials',{project:project()});
+  }catch(err){
+    document.getElementById('sections').innerHTML='<div class="empty">加载失败：'+escapeHtml(err.message)+'</div>';
+    return;
+  }
+  renderSections();
+  refreshRefPicker();
+}
+function provenanceLabel(prov){
+  if(!prov){return '';}
+  const names={user_upload:'上传',investigation:'调查',derived:'派生'};
+  let text=names[prov.source]||prov.source||'';
+  if(prov.edited){text+='·已改';}
+  return text;
+}
+const SECTION_ORDER={slots:0,free:1,capability_map:2,investigation:3,system_assets:4};
+function renderSections(){
+  const parts=[];
+  const ordered=[...(overview.sections||[])].sort((a,b)=>(SECTION_ORDER[a.kind]??9)-(SECTION_ORDER[b.kind]??9));
+  for(const section of ordered){
+    const ro=section.editable?'':' <span class="ro">只读</span>';
+    if(section.kind!=='system_assets'){
+      parts.push('<h3 class="sec">'+escapeHtml(section.title)+ro+'</h3>');
+    }
+    if(section.kind==='slots'){
+      const slots=section.slots||[];
+      parts.push(slots.length?slots.map(slot=>{
+        const active=(selected&&selected.type==='slot'&&selected.key===slot.slot_id)?' active':'';
+        const req=slot.required?'<span class="badge warn">必填</span>':'';
+        const st=slot.status==='filled'?'<span class="badge ok">已填</span>':'<span class="badge bad">缺</span>';
+        const prov=slot.manifest?provenanceLabel(slot.manifest.provenance):'';
+        const provBadge=prov?'<span class="badge">'+escapeHtml(prov)+'</span>':'';
+        return '<div class="entry'+active+'" onclick="selectSlot(\''+escapeHtml(slot.slot_id)+'\')"><b>'+escapeHtml(slot.title)+'</b>'+req+st+provBadge+'<div class="preview">'+escapeHtml(slot.description||'')+'</div></div>';
+      }).join(''):'<div class="empty">该项目未声明资料槽位。</div>');
+    }else if(section.kind==='free'){
+      parts.push('<button class="small" onclick="newMaterial()">新建资料</button>');
+      const free=section.items||[];
+      parts.push(free.length?free.map(m=>{
+        const active=(selected&&selected.type==='free'&&selected.key===m.id)?' active':'';
+        const provBadge='<span class="badge">'+escapeHtml(provenanceLabel(m.provenance)||'')+'</span>';
+        return '<div class="entry'+active+'" onclick="selectFree(\''+escapeHtml(m.id)+'\')"><b>'+escapeHtml(m.title||m.id)+'</b><span class="badge">'+escapeHtml(m.id)+'</span>'+provBadge+'<div class="preview">'+escapeHtml(m.description||'')+'</div></div>';
+      }).join(''):'<div class="empty">暂无自由资料。</div>');
+    }else if(section.kind==='investigation'||section.kind==='system_assets'){
+      const items=section.items||[];
+      const entries=items.map(item=>{
+        const active=(selected&&selected.type==='asset'&&selected.key===item.asset_id)?' active':'';
+        const kindBadge=section.kind==='system_assets'?'<span class="badge ro">'+escapeHtml(item.asset_kind)+'</span>':'';
+        const activeBadge=section.kind==='investigation'
+          ?(item.active_source==='candidate'?'<span class="badge warn">生效 draft</span>':'<span class="badge ok">生效生产</span>')
+          :'';
+        const prodBadge=item.production_exists?'<span class="badge ok">生产</span>':'<span class="badge bad">生产缺</span>';
+        const candBadge=item.candidate_exists?'<span class="badge warn">候选</span>':'';
+        const enabledBadge=item.enabled?'':'<span class="badge">停用</span>';
+        const roles=(item.roles||[]).join('/');
+        return '<div class="entry'+active+'" onclick="selectAsset(\''+escapeHtml(item.asset_id)+'\')"><b>'+escapeHtml(item.asset_id)+'</b>'+kindBadge+activeBadge+prodBadge+candBadge+enabledBadge+'<div class="preview">'+escapeHtml(roles?('roles: '+roles):'')+'</div></div>';
+      }).join('');
+      if(section.kind==='system_assets'){
+        // verifier 侧"怎么评"的资产：折叠降权，别挤占业务视野
+        parts.push('<details class="sysassets"><summary class="sec-summary">'+escapeHtml(section.title)+' · '+items.length+' 项 <span class="ro">只读</span></summary>'+(entries||'<div class="empty">无。</div>')+'</details>');
+      }else{
+        if(section.error){parts.push('<div class="empty">'+escapeHtml(section.error)+'</div>');}
+        parts.push(entries||(section.error?'':'<div class="empty">无。</div>'));
+      }
+    }else if(section.kind==='capability_map'){
+      parts.push('<button class="small" onclick="newCap()">新建预设</button>');
+      const names=Object.keys(section.capabilities||{}).sort();
+      parts.push(names.length?names.map(name=>{
+        const entry=(section.capabilities||{})[name]||{};
+        const active=(selected&&selected.type==='cap'&&selected.key===name)?' active':'';
+        return '<div class="entry'+active+'" onclick="selectCap(\''+escapeHtml(name)+'\')"><b>'+escapeHtml(name)+'</b><div class="preview">'+escapeHtml((entry.capability||'').trim())+'</div></div>';
+      }).join(''):'<div class="empty">还没有预设。</div>');
+    }
+  }
+  document.getElementById('sections').innerHTML=parts.join('')||'<div class="empty">该项目没有可展示的资料。</div>';
+}
+async function fetchContent(id){
+  const data=await post('/api/material/get',{project:project(),id:id});
+  return data.content||'';
+}
+function materialMetaLine(manifest){
+  if(!manifest){return '';}
+  const prov=manifest.provenance||{};
+  let line='sha256 '+String(manifest.sha256||'').slice(0,12)+' · '+(manifest.size_chars||0)+' 字符 · 更新于 '+(manifest.updated_at||'')+' · 来源 '+(prov.source||'');
+  if(prov.detail){line+='（'+prov.detail+'）';}
+  return escapeHtml(line)+(prov.edited?' <span class="edited">内容已非原样</span>':'');
+}
+async function selectSlot(id){
+  selected={type:'slot',key:id};
+  const slot=slotById(id)||{};
+  show('mat');renderSections();
+  document.getElementById('matTitle').textContent='槽位：'+(slot.title||id);
+  document.getElementById('matSlotInfo').innerHTML=escapeHtml(slot.description||'')+(slot.required?'（<b>必填</b>，缺失时评测拒跑）':'（可选）');
+  document.getElementById('matId').value=id;
+  document.getElementById('matId').disabled=true;
+  document.getElementById('matIdLabel').textContent='槽位 id（固定）';
+  document.getElementById('matTitleInput').value=(slot.manifest&&slot.manifest.title)||slot.title||'';
+  document.getElementById('matDesc').value=(slot.manifest&&slot.manifest.description)||'';
+  document.getElementById('matContent').value='';
+  document.getElementById('matDeleteBtn').style.display=slot.status==='filled'?'inline-block':'none';
+  document.getElementById('matMeta').innerHTML=materialMetaLine(slot.manifest);
+  updateMatUri();
+  setStatus('');
+  if(slot.status!=='filled'){
+    document.getElementById('matContent').placeholder='粘贴资料正文，或选择文件读入。';
+    return;
+  }
+  document.getElementById('matContent').placeholder='加载中…';
+  try{
+    const content=await fetchContent(id);
+    if(!(selected&&selected.type==='slot'&&selected.key===id)){return;}
+    document.getElementById('matContent').value=content;
+    document.getElementById('matContent').placeholder='资料正文';
+  }catch(err){setStatus('读取内容失败：'+err.message, true);}
+}
+async function selectFree(id){
+  selected={type:'free',key:id};
+  const m=freeById(id)||{};
+  show('mat');renderSections();
+  document.getElementById('matTitle').textContent='自由资料：'+(m.title||id);
+  document.getElementById('matSlotInfo').innerHTML='可在能力描述或能力边界中以 <code>{material://'+escapeHtml(project())+'/'+escapeHtml(id)+'}</code> 引用。';
+  document.getElementById('matId').value=id;
+  document.getElementById('matId').disabled=true;
+  document.getElementById('matIdLabel').textContent='资料 id（固定）';
+  document.getElementById('matTitleInput').value=m.title||'';
+  document.getElementById('matDesc').value=m.description||'';
+  document.getElementById('matContent').value='';
+  document.getElementById('matContent').placeholder='加载中…';
+  document.getElementById('matDeleteBtn').style.display='inline-block';
+  document.getElementById('matMeta').innerHTML=materialMetaLine(m);
+  updateMatUri();
+  setStatus('');
+  try{
+    const content=await fetchContent(id);
+    if(!(selected&&selected.type==='free'&&selected.key===id)){return;}
+    document.getElementById('matContent').value=content;
+    document.getElementById('matContent').placeholder='资料正文';
+  }catch(err){setStatus('读取内容失败：'+err.message, true);}
+}
+function newMaterial(){
+  selected={type:'newmat',key:null};
+  show('mat');renderSections();
+  document.getElementById('matTitle').textContent='新建自由资料';
+  document.getElementById('matSlotInfo').textContent='';
+  document.getElementById('matId').value='';
+  document.getElementById('matId').disabled=false;
+  document.getElementById('matIdLabel').textContent='资料 id（留空自动生成）';
+  document.getElementById('matTitleInput').value='';
+  document.getElementById('matDesc').value='';
+  document.getElementById('matContent').value='';
+  document.getElementById('matContent').placeholder='粘贴资料正文，或选择文件读入。';
+  document.getElementById('matDeleteBtn').style.display='none';
+  document.getElementById('matMeta').textContent='';
+  updateMatUri();
+  setStatus('');
+}
+function readFileToTextarea(){
+  const input=document.getElementById('matFile');
+  const file=input.files&&input.files[0];
+  if(!file){return;}
+  const reader=new FileReader();
+  reader.onload=()=>{
+    document.getElementById('matContent').value=String(reader.result||'');
+    if(!document.getElementById('matTitleInput').value){document.getElementById('matTitleInput').value=file.name.replace(/\.[^.]+$/,'');}
+    setStatus('已读入文件 '+file.name+'，点保存生效。');
+  };
+  reader.readAsText(file);
+  input.value='';
+}
+async function saveMaterial(){
+  const content=document.getElementById('matContent').value;
+  if(!content.trim()){setStatus('内容为空：请粘贴正文或选择文件后再保存。', true);return;}
+  const body={project:project(),
+    title:document.getElementById('matTitleInput').value.trim(),
+    description:document.getElementById('matDesc').value.trim(),
+    content:content};
+  const id=document.getElementById('matId').value.trim();
+  if(id){body.id=id;}
+  try{
+    const saved=await post('/api/material/upload',body);
+    setStatus('已保存 '+saved.id+'（sha256 '+String(saved.sha256).slice(0,12)+'）。');
+    overview=await post('/api/materials',{project:project()});
+    if(slotById(saved.id)){await selectSlot(saved.id);}else{await selectFree(saved.id);}
+  }catch(err){setStatus('保存失败：'+err.message, true);}
+}
+async function deleteMaterial(){
+  const id=document.getElementById('matId').value.trim();
+  if(!id){return;}
+  const slot=slotById(id);
+  const warning=slot&&slot.required?'这是必填槽位，删除后该项目评测将被拒跑，确认删除？':'确认删除资料「'+id+'」？引用它的地方将解析失败。';
+  if(!confirm(warning)){return;}
+  try{
+    await post('/api/material/delete',{project:project(),id:id});
+    setStatus('已删除 '+id+'。');
+    await loadAll();
+  }catch(err){setStatus('删除失败：'+err.message, true);}
+}
+
+/* ---------- 只读资产查看 ---------- */
+async function selectAsset(id){
+  selected={type:'asset',key:id};
+  show('asset');renderSections();
+  const item=assetById(id)||{};
+  document.getElementById('avTitle').textContent=(item.asset_kind==='investigation'?'调查产物：':'系统资产：')+id;
+  document.getElementById('avMeta').textContent='加载中…';
+  document.getElementById('avManifest').textContent='';
+  document.getElementById('avHint').style.display='none';
+  document.getElementById('avHint').textContent='';
+  document.getElementById('avEvidence').innerHTML='';
+  document.getElementById('avArtifacts').innerHTML='';
+  document.getElementById('avContent').style.display='none';
+  document.getElementById('avContentTitle').style.display='none';
+  document.getElementById('avFiles').innerHTML='';
+  setStatus('');
+  try{
+    const view=await post('/api/material/asset_view',{project:project(),asset_id:id});
+    if(!(selected&&selected.type==='asset'&&selected.key===id)){return;}
+    const meta=['kind '+(view.asset_kind||''),'roles '+((view.roles||[]).join('/')||'-'),view.enabled?'启用':'停用','生产 '+(view.production_path||'-')];
+    if(view.candidate_path){meta.push('候选 '+view.candidate_path);}
+    if(view.active_source){meta.push('生效 '+(view.active_source==='candidate'?'draft 候选包':'生产包'));}
+    document.getElementById('avMeta').textContent=meta.join(' · ')+(view.missing?' · 生产文件缺失':'');
+    if(view.manifest){
+      const m=view.manifest;
+      const lines=[];
+      if(m.source_revision){lines.push('source_revision: '+m.source_revision);}
+      for(const key of ['artifact_refs_count','evidence_refs_count','key_indexes_count','tool_requirements_count']){
+        if(m[key]!==undefined){lines.push(key.replace('_count','')+': '+m[key]);}
+      }
+      if(m.unresolved_reason){lines.push('unresolved: '+m.unresolved_reason);}
+      if(m.error){lines.push(m.error);}
+      document.getElementById('avManifest').textContent=lines.join(' · ');
+    }
+    const hintEl=document.getElementById('avHint');
+    if(view.materialize_hint){
+      hintEl.textContent=view.materialize_hint;
+      hintEl.style.display='block';
+    }
+    if(view.evidence_refs&&view.evidence_refs.length){
+      const rows=view.evidence_refs.map(r=>{
+        const scope=r.scope==='business_source'?'<span class="badge warn">业务源码</span>':'<span class="badge ro">'+escapeHtml(r.scope||'')+'</span>';
+        const rev=r.source_revision?('<span class="badge">'+escapeHtml(String(r.source_revision).slice(0,10))+'</span>'):'';
+        return '<tr class="openable" onclick="openAssetFile(\''+escapeHtml(r.scope||'')+'\',\''+escapeHtml(r.path||'')+'\')"><td>'+scope+' '+escapeHtml(r.path||'')+rev+'<div class="preview">'+escapeHtml(r.summary||'')+'</div></td></tr>';
+      }).join('');
+      document.getElementById('avEvidence').innerHTML='<h3 class="sec">调查对象（点击查看原文；业务源码仅在有业务代码的机器可读）</h3><table class="files">'+rows+'</table>';
+    }
+    if(view.artifact_refs&&view.artifact_refs.length){
+      const rows=view.artifact_refs.map(r=>'<tr class="openable" onclick="openAssetFile(\'artifact_package\',\''+escapeHtml(r.path||'')+'\')"><td>'+escapeHtml(r.path||'')+'<div class="preview">'+escapeHtml(r.purpose||'')+'</div></td></tr>').join('');
+      document.getElementById('avArtifacts').innerHTML='<h3 class="sec">包内产物（点击查看）</h3><table class="files">'+rows+'</table>';
+    }
+    if(view.content){
+      showAssetContent(view.asset_kind==='investigation'?'overview.md':(view.production_path||''),view.content);
+    }
+    if(view.files&&view.files.length){
+      const rows=view.files.map(f=>{
+        const openable=!f.path.startsWith('…');
+        const attrs=openable?' class="openable" onclick="openAssetFile(\'artifact_package\',\''+escapeHtml(f.path)+'\')"':'';
+        return '<tr'+attrs+'><td>'+escapeHtml(f.path)+'</td><td>'+(f.size_bytes?f.size_bytes.toLocaleString()+' B':'')+'</td></tr>';
+      }).join('');
+      document.getElementById('avFiles').innerHTML='<h3 class="sec">文件清单（点击查看）</h3><table class="files">'+rows+'</table>';
+    }
+  }catch(err){document.getElementById('avMeta').textContent='加载失败：'+err.message;}
+}
+function showAssetContent(title, text){
+  const titleEl=document.getElementById('avContentTitle');
+  titleEl.textContent=title;
+  titleEl.style.display='block';
+  const pre=document.getElementById('avContent');
+  pre.textContent=text;
+  pre.style.display='block';
+}
+async function openAssetFile(scope, path){
+  if(!selected||selected.type!=='asset'){return;}
+  showAssetContent(path,'加载中…');
+  try{
+    const data=await post('/api/material/asset_file',{project:project(),asset_id:selected.key,scope:scope,path:path});
+    showAssetContent((scope==='business_source'?'业务源码：':'')+path, data.content||'');
+    document.getElementById('avContentTitle').scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(err){
+    showAssetContent(path,'无法打开：'+err.message);
+  }
+}
+
+/* ---------- capability 预设（仅声明了 capability_map 的项目） ---------- */
+const REF_TOKEN_RE=/\{material:\/\/[A-Za-z][A-Za-z0-9_-]*\/[a-z][a-z0-9_-]*\}/g;
+const URI_LOOSE_RE=/material:\/\/[^\s，。；）\]\}\>"'`]+/g;
+let lastCapFocus='capability';
+let refOptions=[];
+function toRefToken(uri){return '{'+uri+'}';}
+function collectReferences(){
+  if(overview.references&&overview.references.length){return overview.references;}
+  const refs=[];
+  for(const m of ((sectionByKind('free')||{}).items)||[]){
+    refs.push({uri:'material://'+project()+'/'+m.id,id:m.id,title:m.title||m.id,kind:'free'});
+  }
+  for(const slot of ((sectionByKind('slots')||{}).slots)||[]){
+    if(slot.status==='filled'){
+      refs.push({uri:'material://'+project()+'/'+slot.slot_id,id:slot.slot_id,title:slot.title||slot.slot_id,kind:'slot'});
+    }
+  }
+  return refs;
+}
+function refreshRefPicker(){
+  const select=document.getElementById('refPicker');
+  const refs=collectReferences();
+  refOptions=refs;
+  select.innerHTML='<option value="">插入资料引用…</option>'+refs.map(item=>'<option value="'+escapeHtml(toRefToken(item.uri))+'">'+escapeHtml(item.title)+' ('+escapeHtml(item.id)+')</option>').join('');
+  if(!refs.length){
+    select.innerHTML='<option value="">先建自由资料，再来插入</option>';
+  }
+  validateRefs();
+}
+function validateRefs(){
+  const valid=new Set((refOptions||[]).map(item=>toRefToken(item.uri)));
+  const problems=[];
+  for(const taId of ['capability','boundary']){
+    const text=document.getElementById(taId).value||'';
+    const masked=text.replace(REF_TOKEN_RE,' ');
+    for(const m of text.matchAll(REF_TOKEN_RE)){
+      const token=m[0];
+      if(valid.size&&!valid.has(token)){
+        problems.push('资料 '+token+' 不存在');
+      }
+    }
+    for(const m of masked.matchAll(URI_LOOSE_RE)){
+      problems.push('「'+m[0]+'」不是合法引用，请写成 {material://…}');
+    }
+  }
+  const el=document.getElementById('refStatus');
+  el.textContent=problems.length?problems[0]:'';
+  el.style.color=problems.length?'#dc2626':'#64748b';
+}
+function insertRef(){
+  const select=document.getElementById('refPicker');
+  const token=select.value;
+  if(!token){setStatus('先选一条资料。', true);return;}
+  const ta=document.getElementById(lastCapFocus)||document.getElementById('capability');
+  const start=ta.selectionStart||ta.value.length;
+  const end=ta.selectionEnd||start;
+  ta.value=ta.value.slice(0,start)+token+ta.value.slice(end);
+  const cursor=start+token.length;
+  ta.focus();ta.setSelectionRange(cursor,cursor);
+  select.value='';
+  validateRefs();
+}
+document.getElementById('matId').addEventListener('input',updateMatUri);
+function updateMatUri(){
+  const id=document.getElementById('matId').value.trim();
+  document.getElementById('matUri').textContent=id?('{material://'+project()+'/'+id+'}'):'（先填资料 id）';
+}
+function copyMatUri(){
+  const text=document.getElementById('matUri').textContent||'';
+  if(!text.startsWith('{material://')){setStatus('先填资料 id。', true);return;}
+  navigator.clipboard.writeText(text);
+  setStatus('已复制 '+text);
+}
+document.addEventListener('focusin',ev=>{
+  const target=ev.target;
+  if(target&&target.classList&&target.classList.contains('uri-textarea')){lastCapFocus=target.id;}
+});
+document.getElementById('capability').addEventListener('input',validateRefs);
+document.getElementById('boundary').addEventListener('input',validateRefs);
+function selectCap(name){
+  selected={type:'cap',key:name};
+  const entry=capEntries()[name]||{};
+  show('cap');renderSections();
+  document.getElementById('editorTitle').textContent='编辑：'+name;
+  document.getElementById('name').value=name;
+  document.getElementById('name').disabled=true;
+  document.getElementById('capability').value=entry.capability||'';
+  document.getElementById('boundary').value=entry.boundary||'';
+  const service=entry.service||{};
+  document.getElementById('serviceUrl').value=service.url||'';
+  document.getElementById('serviceMethod').value=(service.method||'POST').toUpperCase();
+  document.getElementById('serviceTimeout').value=service.timeout_seconds||'';
+  document.getElementById('mockBody').value=entry.mock_body?JSON.stringify(entry.mock_body,null,2):'';
+  document.getElementById('deleteBtn').style.display='inline-block';
+  validateRefs();
+  setStatus('');
+}
+function newCap(){
+  selected={type:'cap',key:null};
+  show('cap');renderSections();
+  document.getElementById('editorTitle').textContent='新建预设';
+  document.getElementById('name').value='';
+  document.getElementById('name').disabled=false;
+  document.getElementById('capability').value='';
+  document.getElementById('boundary').value='';
+  document.getElementById('serviceUrl').value='';
+  document.getElementById('serviceMethod').value='POST';
+  document.getElementById('serviceTimeout').value='';
+  document.getElementById('mockBody').value='';
+  document.getElementById('deleteBtn').style.display='none';
+  validateRefs();
+  setStatus('');
+}
+async function saveCap(){
+  const name=document.getElementById('name').value.trim();
+  if(!name){setStatus('预设名不能为空', true);return;}
+  validateRefs();
+  const refError=document.getElementById('refStatus').textContent.trim();
+  if(refError){setStatus(refError, true);return;}
+  const entry={capability:document.getElementById('capability').value};
+  const boundary=document.getElementById('boundary').value.trim();
+  if(boundary){entry.boundary=boundary;}
+  const url=document.getElementById('serviceUrl').value.trim();
+  if(url){
+    entry.service={url:url,method:document.getElementById('serviceMethod').value};
+    const timeout=document.getElementById('serviceTimeout').value;
+    if(timeout){entry.service.timeout_seconds=Number(timeout);}
+  }
+  const mockText=document.getElementById('mockBody').value.trim();
+  if(mockText){
+    try{entry.mock_body=JSON.parse(mockText);}
+    catch(err){setStatus('mock_body 不是合法 JSON：'+err.message, true);return;}
+  }
+  try{
+    await post('/api/capability/save',{project:project(),name:name,entry:entry});
+    setStatus('已保存 '+name+'，评测立即可用（capability_ref: '+name+'）。');
+    overview=await post('/api/materials',{project:project()});
+    selectCap(name);
+  }catch(err){setStatus('保存失败：'+err.message, true);}
+}
+async function delCap(){
+  if(!selected||selected.type!=='cap'||!selected.key){return;}
+  if(!confirm('确认删除预设「'+selected.key+'」？引用它的 case 将无法解析。')){return;}
+  try{
+    await post('/api/capability/delete',{project:project(),name:selected.key});
+    setStatus('已删除。');
+    await loadAll();
+  }catch(err){setStatus('删除失败：'+err.message, true);}
+}
+initProjects();
+</script>
+</body>
+</html>

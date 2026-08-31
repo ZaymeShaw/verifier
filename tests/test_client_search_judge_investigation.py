@@ -43,7 +43,7 @@ def test_client_search_judge_solidify_projection_matches_smoke_evidence(monkeypa
         expected_type="directory",
     )
     package = spec.project_package_path(
-        "draft/investigation/judge",
+        "investigation/judge",
         field_path="verifier.assets.investigation.judge",
         expected_type="directory",
     )
@@ -147,7 +147,7 @@ def test_client_search_runtime_loads_solidified_authority_context_not_investigat
 
 def test_client_search_builds_comparator_evidence_before_assessment(monkeypatch):
     """Draft 单次上下文：comparator 证据与 authority.resolve 工具一起进入同一会话。"""
-    from impl.projects.client_search.draft import judge as candidate_module
+    from impl.projects.client_search import judge as candidate_module
 
     spec = _authority_spec()
     comparison = {
@@ -184,7 +184,7 @@ def test_client_search_builds_comparator_evidence_before_assessment(monkeypatch)
 
 
 def test_comparator_does_not_self_authorize():
-    from impl.projects.client_search.draft.judge import condition_comparison
+    from impl.projects.client_search.judge import condition_comparison
 
     comparison = condition_comparison(
         load_project("client_search"),
@@ -222,7 +222,7 @@ def test_comparator_does_not_self_authorize():
 
 
 def test_non_oracle_reference_is_evidence_only_not_a_comparison_standard():
-    from impl.projects.client_search.draft.judge import condition_comparison
+    from impl.projects.client_search.judge import condition_comparison
 
     comparison = condition_comparison(
         load_project("client_search"),
@@ -259,7 +259,7 @@ def test_non_oracle_reference_is_evidence_only_not_a_comparison_standard():
 
 
 def test_comparator_cannot_use_reference_without_trace_readiness():
-    from impl.projects.client_search.draft.judge import condition_comparison
+    from impl.projects.client_search.judge import condition_comparison
 
     comparison = condition_comparison(
         load_project("client_search"),
@@ -331,8 +331,8 @@ def test_client_search_runtime_applies_traceable_authority_gate():
     unresolved 的引用 → 依赖 assessment 转 not_evaluable；无关 assessment 不阻断；
     authority_runtime 审计证据写入 result.evidence。
     """
-    from impl.projects.client_search.draft import judge as candidate_module
-    from impl.projects.client_search.draft.judge_execution import judge_trace
+    from impl.projects.client_search import judge as candidate_module
+    from impl.projects.client_search.judge_execution import judge_trace
 
     spec = _authority_spec()
     trace = RunTrace(
@@ -434,8 +434,8 @@ def test_client_search_runtime_applies_traceable_authority_gate():
 
 def test_client_search_judge_reference_missing_tool_call_marks_needs_human_review():
     """§8：assessment 引用了 audit 中不存在的 tool_call_id → needs_human_review，不静默放行。"""
-    from impl.projects.client_search.draft import judge as candidate_module
-    from impl.projects.client_search.draft.judge_execution import judge_trace
+    from impl.projects.client_search import judge as candidate_module
+    from impl.projects.client_search.judge_execution import judge_trace
 
     spec = _authority_spec()
     trace = RunTrace(
@@ -497,7 +497,7 @@ def test_client_search_judge_reference_missing_tool_call_marks_needs_human_revie
 
 
 def test_candidate_accepts_live_request_user_text_as_pre_actual_intent():
-    from impl.projects.client_search.draft.judge import build_intent_frame
+    from impl.projects.client_search.judge import build_intent_frame
 
     spec = load_project("client_search")
     intent_frame = build_intent_frame(
@@ -523,12 +523,12 @@ def test_candidate_accepts_live_request_user_text_as_pre_actual_intent():
 
 
 def test_candidate_catalog_tools_search_and_load_without_dumping_collections():
-    from impl.projects.client_search.draft.catalog import (
+    from impl.projects.client_search.catalog import (
         FIELD_INDEX_KEY,
         build_draft_catalog_registry,
         search_catalog,
     )
-    from impl.projects.client_search.draft.judge import _build_judge_tools
+    from impl.projects.client_search.judge import _build_judge_tools
 
     spec = load_project("client_search")
     registry = build_draft_catalog_registry(spec)
@@ -572,7 +572,7 @@ def test_candidate_catalog_tools_search_and_load_without_dumping_collections():
 
 
 def test_candidate_context_is_small_and_rejects_unrelated_request():
-    from impl.projects.client_search.draft.judge import _build_core_context
+    from impl.projects.client_search.judge import _build_core_context
 
     context = _build_core_context(
         _authority_spec(),
@@ -610,7 +610,7 @@ def test_judge_context_injects_evidence_space_not_curated_conclusions():
     上下文不再注入 judge_authority_resolutions / authority_reuse_records；
     authority 判断由 Judge 现场调用 authority.resolve 在物化证据空间内裁决。
     """
-    from impl.projects.client_search.draft.judge import (
+    from impl.projects.client_search.judge import (
         _build_core_context,
         _load_authority_report,
     )
@@ -649,8 +649,8 @@ def test_judge_context_injects_evidence_space_not_curated_conclusions():
 
 def test_single_pass_judge_consumes_unresolved_authority_resolutions():
     """§8：单次会话内多个 unresolved authority.resolve 分别转对应 assessment 为 not_evaluable。"""
-    from impl.projects.client_search.draft import judge as candidate_module
-    from impl.projects.client_search.draft.judge_execution import judge_trace
+    from impl.projects.client_search import judge as candidate_module
+    from impl.projects.client_search.judge_execution import judge_trace
 
     spec = _authority_spec()
     trace = RunTrace(
@@ -745,8 +745,8 @@ def test_single_pass_judge_consumes_unresolved_authority_resolutions():
 
 def test_single_pass_judge_uses_resolved_authority_without_override():
     """§8：resolution=resolved 时不覆盖 Judge 结论，assessment 保持原判定。"""
-    from impl.projects.client_search.draft import judge as candidate_module
-    from impl.projects.client_search.draft.judge_execution import judge_trace
+    from impl.projects.client_search import judge as candidate_module
+    from impl.projects.client_search.judge_execution import judge_trace
 
     spec = _authority_spec()
     trace = RunTrace(
@@ -803,8 +803,8 @@ def test_single_pass_judge_uses_resolved_authority_without_override():
 def test_candidate_reports_unrelated_request_as_not_applicable(monkeypatch):
     """适用性判断交回单次 Judge LLM：不适用时 LLM 输出空 business_expectations。"""
     from impl.core import llm_client as llm_client_module
-    from impl.projects.client_search.draft import judge as candidate_module
-    from impl.projects.client_search.draft.judge import ClientSearchJudge
+    from impl.projects.client_search import judge as candidate_module
+    from impl.projects.client_search.judge import ClientSearchJudge
     from impl.core.authority_environment import build_authority_environment as real_build
 
     def _test_build(
@@ -891,7 +891,7 @@ def test_judge_prompt_contract_requires_not_evaluable_cause_markers():
     导致输入坏/完全无关等豁免成因也被标 needs_human_review（噪音人审）。
     Authority 关闭时不向模型展示 not_evaluable 词表或成因契约（该块已删除）。
     """
-    from impl.projects.client_search.draft import judge as candidate_module
+    from impl.projects.client_search import judge as candidate_module
 
     spec = load_project("client_search")
     trace = RunTrace(
@@ -929,7 +929,7 @@ def test_judge_prompt_contract_requires_not_evaluable_cause_markers():
 def test_candidate_judge_tool_reuses_same_audited_result_for_duplicate_arguments(
     monkeypatch,
 ):
-    from impl.projects.client_search.draft import judge as candidate_module
+    from impl.projects.client_search import judge as candidate_module
     from impl.tools import ToolResult, VerifiableTool
 
     calls = []
@@ -979,7 +979,7 @@ def test_candidate_judge_tool_reuses_same_audited_result_for_duplicate_arguments
 
 def test_operator_justified_enum_exact_match_gate():
     """MATCH→CONTAINS 收敛：单值精确命中清单枚举才放行，清单外值/多值/字典不放行。"""
-    from impl.projects.client_search.draft.judge import _operator_justified
+    from impl.projects.client_search.judge import _operator_justified
 
     entry = {
         "operators": ["CONTAINS", "EXISTS", "NOT_CONTAINS", "NOT_EXISTS"],
@@ -1002,7 +1002,7 @@ def test_operator_justified_enum_exact_match_gate():
 
 def test_operator_justified_range_family_and_equivalence_rules():
     """范围族互容与显式等价规则仍放行，不依赖枚举命中。"""
-    from impl.projects.client_search.draft.judge import _operator_justified
+    from impl.projects.client_search.judge import _operator_justified
 
     age_entry = {
         "operators": ["EXISTS", "GTE", "LTE", "NOT_EXISTS", "RANGE"],
@@ -1021,7 +1021,7 @@ def test_operator_capability_check_defers_conflict_field():
     决议#4（unresolved，观察）声明该字段 MATCH 定义与 RANGE 示例冲突，实际可执行
     操作符无法由资料唯一确定 → 留给 authority.resolve 现场裁决。
     """
-    from impl.projects.client_search.draft.judge import _apply_operator_capability_check
+    from impl.projects.client_search.judge import _apply_operator_capability_check
     from impl.core.schema import FulfillmentAssessment, JudgeResult, RunTrace
 
     spec = _authority_spec()
@@ -1081,7 +1081,7 @@ def test_operator_capability_check_defers_conflict_field():
 def test_operator_capability_check_does_not_override_judge_when_authority_disabled():
     """Authority 关闭时，capability mismatch 不得覆盖 Judge 的 F/NF。"""
     from impl.core.project_loader import load_project
-    from impl.projects.client_search.draft.judge import _apply_operator_capability_check
+    from impl.projects.client_search.judge import _apply_operator_capability_check
     from impl.core.schema import FulfillmentAssessment, JudgeResult, RunTrace
 
     spec = load_project("client_search")
@@ -1116,7 +1116,7 @@ def test_operator_capability_check_does_not_override_judge_when_authority_disabl
 
 def test_operator_capability_check_accepts_family_birthday_range_forms():
     from impl.core.project_loader import load_project
-    from impl.projects.client_search.draft.judge import _actual_operator_violations
+    from impl.projects.client_search.judge import _actual_operator_violations
     from impl.core.schema import RunTrace
 
     spec = load_project("client_search")
@@ -1142,7 +1142,7 @@ def test_operator_capability_check_accepts_family_birthday_range_forms():
 
 def test_operator_capability_check_does_not_penalize_unrelated_assessment():
     from impl.core.project_loader import load_project
-    from impl.projects.client_search.draft.judge import _apply_operator_capability_check
+    from impl.projects.client_search.judge import _apply_operator_capability_check
     from impl.core.schema import FulfillmentAssessment, JudgeResult, RunTrace
 
     spec = load_project("client_search")
@@ -1180,7 +1180,7 @@ def test_operator_capability_check_preserves_semantic_equivalence_without_author
     monkeypatch,
 ):
     from impl.core.project_loader import load_project
-    from impl.projects.client_search.draft import judge as judge_module
+    from impl.projects.client_search import judge as judge_module
     from impl.core.schema import FulfillmentAssessment, JudgeResult, RunTrace
 
     spec = load_project("client_search")
@@ -1240,7 +1240,7 @@ def test_operator_capability_check_preserves_semantic_equivalence_without_author
 def test_operator_capability_check_keeps_enum_exact_match():
     """单值 MATCH 精确命中清单枚举（128 形态）不被 operator gate 判不可执行。"""
     from impl.core.project_loader import load_project
-    from impl.projects.client_search.draft.judge import _apply_operator_capability_check
+    from impl.projects.client_search.judge import _apply_operator_capability_check
     from impl.core.schema import FulfillmentAssessment, JudgeResult, RunTrace
 
     spec = load_project("client_search")
@@ -1275,7 +1275,7 @@ def test_operator_capability_check_keeps_enum_exact_match():
 
 
 def test_candidate_skips_authority_environment_for_direct_evidence_case(monkeypatch):
-    from impl.projects.client_search.draft import judge as candidate_module
+    from impl.projects.client_search import judge as candidate_module
 
     calls = []
 
@@ -1314,7 +1314,7 @@ def test_candidate_skips_authority_environment_for_direct_evidence_case(monkeypa
 
 
 def test_disabled_authority_preserves_boundary_candidates_without_building_tool(monkeypatch):
-    from impl.projects.client_search.draft import judge as candidate_module
+    from impl.projects.client_search import judge as candidate_module
 
     calls = []
 
@@ -1350,7 +1350,7 @@ def test_disabled_authority_preserves_boundary_candidates_without_building_tool(
 
 
 def test_candidate_builds_authority_environment_for_boundary_candidate(monkeypatch):
-    from impl.projects.client_search.draft import judge as candidate_module
+    from impl.projects.client_search import judge as candidate_module
 
     monkeypatch.setattr(
         candidate_module,
@@ -1413,7 +1413,7 @@ def test_candidate_triggers_on_explicit_unsupported_without_lexical_overlap():
     miss. Do not search live labels (that echoed Live's own field name).
     Authority may still assemble via empty actual conditions.
     """
-    from impl.projects.client_search.draft import judge as candidate_module
+    from impl.projects.client_search import judge as candidate_module
 
     spec = _authority_spec()
     trace = _license_plate_trace()
@@ -1440,7 +1440,7 @@ def test_candidate_triggers_on_explicit_unsupported_without_lexical_overlap():
 
 def test_enrich_loads_unsupported_field_from_user_query():
     """User query itself hits an explicit unsupported field (盘客 → customerReview)."""
-    from impl.projects.client_search.draft import judge as candidate_module
+    from impl.projects.client_search import judge as candidate_module
 
     spec = _authority_spec()
     trace = _panke_trace()
@@ -1470,7 +1470,7 @@ def test_enrich_loads_unsupported_field_from_user_query():
 
 def test_enrich_does_not_inject_blocking_nf_rule():
     """Catalog supplement must not rewrite incoming decision_rule with NF doctrine."""
-    from impl.projects.client_search.draft import judge as candidate_module
+    from impl.projects.client_search import judge as candidate_module
 
     forbidden = "missing blocking result is not_fulfilled"
     spec_on = _authority_spec()
@@ -1489,7 +1489,7 @@ def test_enrich_does_not_inject_blocking_nf_rule():
 
 def test_disabled_authority_088_093_decision_rule_does_not_leak_not_evaluable():
     """Authority off: 088 盘客 / 093 车牌 decision_rule must not leak NE."""
-    from impl.projects.client_search.draft import judge as candidate_module
+    from impl.projects.client_search import judge as candidate_module
 
     spec_off = load_project("client_search")
     from impl.core.authority_scopes import in_run_authority_enabled
@@ -1548,7 +1548,7 @@ def test_candidate_triggers_on_partial_acknowledged_unsupported():
     acknowledges_requested_constraint=True（约束标签与请求词法重叠）即视为
     能力边界判断点，即使不是 all_conditions_unsupported 也要装配 authority。
     """
-    from impl.projects.client_search.draft import judge as candidate_module
+    from impl.projects.client_search import judge as candidate_module
 
     spec = _authority_spec()
     trace = RunTrace(
@@ -1589,7 +1589,7 @@ def test_candidate_triggers_on_coverage_gap_for_silently_dropped_dimension():
     MaterialDecision 时，必须装配 authority：职责外/职责内能力缺失由 authority
     现场裁决（依赖调查层缺口索引，非启发式；investigate-authority-judge.md §11/§17）。
     """
-    from impl.projects.client_search.draft import judge as candidate_module
+    from impl.projects.client_search import judge as candidate_module
 
     spec = _authority_spec()
     trace = RunTrace(
@@ -1622,7 +1622,7 @@ def test_candidate_triggers_on_coverage_gap_for_silently_dropped_dimension():
 
 
 def test_field_definition_tool_preserves_explicit_unsupported_flags():
-    from impl.projects.client_search.draft.field_tools import (
+    from impl.projects.client_search.field_tools import (
         build_field_key_index_registry,
         create_minimal_field_definition_tool,
     )
@@ -1654,7 +1654,7 @@ def test_semantic_field_hits_does_not_inject_value_mapping_aliases():
     contains a value_mapping spoken key must not add that field. Field name
     in the request and enum hits remain valid compact-manifest seeds.
     """
-    from impl.projects.client_search.draft.judge import (
+    from impl.projects.client_search.judge import (
         _extract_fields_from_trace,
         _manifest_label_fragments,
         _semantic_field_hits,
@@ -1722,7 +1722,7 @@ def test_authority_off_excludes_f_ne_licensing_clauses_for_088_093():
     Markers drop old production-style boundary sentences from mandatory_context.
     Authority on keeps the JudgeResult marker only (those docs stay intact).
     """
-    from impl.projects.client_search.draft import judge as candidate_module
+    from impl.projects.client_search import judge as candidate_module
 
     spec_off = load_project("client_search")
     spec_on = _authority_spec()
@@ -1763,7 +1763,7 @@ def test_authority_off_catalog_consumption_instructs_search_then_load():
     """
     from pathlib import Path
 
-    from impl.projects.client_search.draft import judge as candidate_module
+    from impl.projects.client_search import judge as candidate_module
 
     spec = load_project("client_search")
     trace = RunTrace(
@@ -1797,7 +1797,7 @@ def test_authority_off_catalog_consumption_instructs_search_then_load():
     )
     assert "not_evaluable" not in decision_rule
     execution_src = Path(
-        "impl/projects/client_search/draft/judge_execution.py"
+        "impl/projects/client_search/judge_execution.py"
     ).read_text(encoding="utf-8")
     assert "优先使用 prompt 信息" not in execution_src
     assert context["user_prompt_extras"].get("catalog_consumption", {}).get(
@@ -1807,7 +1807,7 @@ def test_authority_off_catalog_consumption_instructs_search_then_load():
 
 def test_loaded_mapping_facts_strong_hit_and_silent_miss():
     """P2: strong exact mapping Load is a fact; a Catalog miss stays silent."""
-    from impl.projects.client_search.draft import judge as candidate_module
+    from impl.projects.client_search import judge as candidate_module
 
     spec = load_project("client_search")
     hit_context = candidate_module._build_core_context(
@@ -1869,7 +1869,7 @@ def _assert_no_not_evaluable_status(result) -> None:
 def test_authority_off_abort_stays_not_evaluable():
     """LLM/tool abort is not a business NF. At most not_evaluable."""
     from impl.core.judge import _minimal_honest_judge_result, finalize_judge_result
-    from impl.projects.client_search.draft.judge_execution import (
+    from impl.projects.client_search.judge_execution import (
         fail_closed_authority_off_judge_result,
     )
 
@@ -1912,7 +1912,7 @@ def test_authority_off_abort_stays_not_evaluable():
 def test_authority_off_llm_cooling_stays_not_evaluable():
     from impl.core.judge import finalize_judge_result
     from impl.core.schema import JudgeResult
-    from impl.projects.client_search.draft.judge_execution import (
+    from impl.projects.client_search.judge_execution import (
         fail_closed_authority_off_judge_result,
     )
 
@@ -1937,7 +1937,7 @@ def test_authority_off_llm_cooling_stays_not_evaluable():
 def test_authority_off_empty_assessments_fail_closed_to_not_fulfilled():
     from impl.core.judge import finalize_judge_result
     from impl.core.schema import FulfillmentAssessment, JudgeResult
-    from impl.projects.client_search.draft.judge_execution import (
+    from impl.projects.client_search.judge_execution import (
         fail_closed_authority_off_judge_result,
     )
 
@@ -1982,8 +1982,8 @@ def test_authority_off_empty_assessments_fail_closed_to_not_fulfilled():
 
 def test_authority_off_extras_do_not_force_inclusive_below_or_ban_lt():
     """Generic 以下/LT: Authority-off extras compare live operator; LT n is legal."""
-    from impl.projects.client_search.draft import judge as candidate_module
-    from impl.projects.client_search.draft.judge import _LIVE_OPERATOR_DELIVERY_PROTOCOL
+    from impl.projects.client_search import judge as candidate_module
+    from impl.projects.client_search.judge import _LIVE_OPERATOR_DELIVERY_PROTOCOL
 
     spec = load_project("client_search")
     ((spec.verifier or {}).setdefault("authority", {}))["enabled_scopes"] = []
@@ -2039,7 +2039,7 @@ def test_authority_off_extras_do_not_force_inclusive_below_or_ban_lt():
 
 def test_stuffed_enhanced_rules_skip_merge_to_llm_false_bodies():
     """Stuffed extras are locator keys; merge_to_llm false bodies are not dumped."""
-    from impl.projects.client_search.draft.enhanced_rules_key_index import (
+    from impl.projects.client_search.enhanced_rules_key_index import (
         build_enhanced_rules_key_index,
         retrieve_enhanced_rules_for_fields,
     )
@@ -2068,11 +2068,11 @@ def test_field_navigation_search_does_not_consume_load_budget():
     A strong hit only stops retries of that same query, so a later constraint
     can still Search. Same-query retries with different kwargs are blocked.
     """
-    from impl.projects.client_search.draft.catalog import (
+    from impl.projects.client_search.catalog import (
         MAPPINGS_INDEX_KEY,
         STRONG_HIT_FLOOR,
     )
-    from impl.projects.client_search.draft.judge import (
+    from impl.projects.client_search.judge import (
         _FIELD_NAVIGATION_CALL_LIMIT,
         _JUDGE_TOOL_CALL_LIMIT,
         _build_judge_tools,

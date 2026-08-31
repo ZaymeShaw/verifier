@@ -27,7 +27,7 @@ from pydantic import Field
 from impl.core.context.errors import ContextValidationError
 from impl.core.context.runtime import ContextRun, ContextRuntime
 from impl.core.context.bootstrap import DEFAULT_CONTEXT_DATA_ROOT, build_context_runtime
-from impl.core.context.resolvers import CompositeContentResolver, FileContentResolver
+from impl.core.context.resolvers import CompositeContentResolver, standard_content_resolver
 from impl.core.context.tools import (
     GuardedContextTools,
     load_context_units_tool,
@@ -308,7 +308,7 @@ def _content_resolver(spec: Any) -> CompositeContentResolver:
         source_root = resolve_project_source_root(spec)
         if source_root not in roots:
             roots.append(source_root)
-    return CompositeContentResolver([FileContentResolver(roots)] if roots else [])
+    return standard_content_resolver(roots)
 
 
 def _build_context_runtime(
@@ -1394,6 +1394,9 @@ def _resolve_system_prompt(env: AuthorityEnvironment) -> str:
         "5. 对每份决定性资料识别其来源、业务定位、适用条件和上下游消费关系；\n"
         "6. 严格按资料定位判断证明力：normative_rule / external_fact > "
         "inlive_boundary（仅在项目已登记信任模型时）> current_behavior；"
+        "证明力档位随担保定：若 MaterialDecision 显式声明 warrant_tier（导航内容的 "
+        "proof_power 字段即最终档位），以该担保档位为准；未声明时按 conclusion_kind "
+        "缺省映射（两者不一致时以 proof_power 为准，不得自行升降档）。"
         "current_behavior 只说明系统现在如何做，永远不能单独裁决正式业务口径、正确映射或应然规则。"
         "尤其是问题包含‘应、正确、正式、业务语义’等规范性含义时，即使当前配置只有唯一映射/规则，"
         "也不能把‘当前唯一实现’升级为‘正式正确结论’；缺少 normative_rule/external_fact 时必须 unresolved。"
