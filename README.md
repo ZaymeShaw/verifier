@@ -177,7 +177,9 @@ bash run.sh cli live-run --project llm_probe --input '{
 
 case 信封字段：`body`（JSON 对象，必填）；`url`/`method`（POST/PUT/PATCH）/`headers`；
 `capability_ref` 或 `capability` 二选一必填（预设或内联口径）；`show_schema`（可选，
-描述期望输出结构，judge 据此校验）。`url` 和 `capability_ref` 也二选一必填。只允许非流式响应。
+描述期望输出结构，judge 据此校验）。`url` 和 `capability_ref` 也二选一必填。默认只允许非流式响应；
+接口是伪流式（SSE 但最后一帧是全量内容）时，在 capability 预设的响应模式里选「SSE 取最后一帧」
+（或信封加 `"response_mode": "sse_last_frame"`），verifier 取最后一个 data 帧评。帧是增量、要逐帧累加的真流式不支持。
 
 页面方式：经隧道打开 `http://localhost:18080`，在 live 页提交同样形状的信封，
 看 judge 结论和归因。

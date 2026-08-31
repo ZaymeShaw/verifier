@@ -20,6 +20,8 @@ NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_-]*$")
 PROJECT_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 MAX_CAPABILITY_CHARS = 20000
 ALLOWED_METHODS = ("POST", "PUT", "PATCH")
+# json：普通 JSON 响应。sse_last_frame：SSE 但最后一帧是全量内容（伪流式），取最后一帧评。
+ALLOWED_RESPONSE_MODES = ("json", "sse_last_frame")
 
 
 def store_path(project_id: str) -> Path:
@@ -70,6 +72,23 @@ def validate_entry(name: str, entry: Any) -> Dict[str, Any]:
             "method": method,
             "timeout_seconds": timeout,
         }
+        response_mode = str(service.get("response_mode") or "json").strip().lower()
+        if response_mode not in ALLOWED_RESPONSE_MODES:
+            raise ValueError(f"service.response_mode 只支持 {'/'.join(ALLOWED_RESPONSE_MODES)}")
+        if response_mode != "json":
+            clean["service"]["response_mode"] = response_mode
+        raw_headers = service.get("headers")
+        if raw_headers not in (None, "", {}):
+            if not isinstance(raw_headers, dict):
+                raise ValueError("service.headers 必须是对象")
+            headers = {}
+            for key, value in raw_headers.items():
+                name = str(key).strip()
+                if not name:
+                    raise ValueError("service.headers 的键不能为空")
+                headers[name] = str(value)
+            if headers:
+                clean["service"]["headers"] = headers
     mock_body = entry.get("mock_body")
     if mock_body not in (None, "", {}):
         if not isinstance(mock_body, dict):

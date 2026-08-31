@@ -15,7 +15,7 @@
 你日常只做三件事：建隧道、在页面上配 API（可顺带传资料）、评测。
 部署、judge、服务器密钥、往机器上加公钥，都不是你的事。
 
-本章整条流程**专指 `llm_probe` 项目**（远程评测的主路径）。`llm_probe` 适用于**任意单轮、非流式的 HTTP JSON API 评测**：不管接口做什么业务，给出请求体和能力描述就能当黑盒评；不支持多轮对话和流式/SSE 接口。
+本章整条流程**专指 `llm_probe` 项目**（远程评测的主路径）。`llm_probe` 适用于**任意单轮 HTTP JSON API 评测**：不管接口做什么业务，给出请求体和能力描述就能当黑盒评。默认非流式；接口是**伪流式**（SSE 但最后一帧是全量内容）时，在 capability 预设的响应模式里选「SSE 取最后一帧」即可。不支持多轮对话，也不支持帧是增量、要逐帧累加的真流式。
 页面里其他项目（client_search、QA 等）是内置业务项目，各有自己的字段合同，不适用本章的填法。
 
 ## 开通一次（每人一次，不是每次评测）
@@ -79,7 +79,8 @@ ssh -N -o ServerAliveInterval=30 \
 2. **探测端点 service.url**：**必须写评测机视角**  
    `http://127.0.0.1:15001/你的接口路径`  
    （`15001` 换成你的隧道口；**不要**写成你本机的 `8000`。）  
-   method 一般 `POST`，超时按接口耗时留足（例如 60～120 秒）。
+   method 一般 `POST`，超时按接口耗时留足（例如 60～120 秒）。  
+   响应模式默认「非流式 JSON」；接口回 SSE 但**最后一帧是全量内容**（伪流式）时选「SSE 取最后一帧」。帧是增量、要逐帧累加的真流式不支持。
 3. **能力描述**（judge 轴1）：用用户视角写这个接口办成什么事、交付物被谁怎么用、什么算办成。几行即可，不要写「输出某种 JSON 结构」。
 4. **能力边界**（选填，轴2）：能做什么 / 不能做什么，陈述句。不填则轴2会「说不清」。
 5. **mock_body**（选填）：造 case 时的请求体模板，用 `{query}` 占位。
@@ -199,7 +200,7 @@ ssh -N -o ServerAliveInterval=30 \
 
 verifier 与隧道口都只绑 loopback，**服务器没有对公网暴露的 HTTP 端口**，因此现阶段不给 verifier 加页面鉴权。
 
-评测主路径是 **`llm_probe`**：任意非流式 HTTP JSON 接口，按 capability 描述 + 可选资料做 judge。前端默认项目已是 `llm_probe`。内置业务项目若也要从本机打到评测机，端口习惯是：
+评测主路径是 **`llm_probe`**：任意单轮 HTTP JSON 接口（非流式，或声明了 last-frame 的伪流式 SSE），按 capability 描述 + 可选资料做 judge。前端默认项目已是 `llm_probe`。内置业务项目若也要从本机打到评测机，端口习惯是：
 
 | 本机服务 | 本机端口 | 评测机隧道口 |
 |---|---|---|
@@ -307,7 +308,7 @@ sudo chmod 600 ~eval-tunnel/.ssh/authorized_keys
 
 ## 更新代码
 
-服务器上 `impl/data/`（case 池、capability 预设、资料库、context 记录）和 `.env` **重新部署时必须排除**，否则会盖掉用户资料和服务器专属配置。槽位声明在 `impl/projects/<id>/materials.yaml`，随代码走。
+`impl/data/` 里的资料（capability 预设、自由资料、mock、case 池）大约数 MB，**随代码一起部署**。评测机上的探测 URL（`1500X`）部署脚本会写回，不会被本机的 `8000` 盖掉。仍排除：`.env`、本地评测痕迹 `context_store` / `context_runtime`。槽位声明在 `impl/projects/<id>/materials.yaml`，随代码走。rsync 不用 `--delete`，评测机上多出来的文件会留着。
 
 ```bash
 scripts/deploy_verifier.sh root@154.9.252.35            # 部署到 /opt/verifier 并重启
@@ -315,8 +316,8 @@ scripts/deploy_verifier.sh root@154.9.252.35 /opt/verifier --dry-run
 scripts/deploy_verifier.sh root@154.9.252.35 --no-restart
 ```
 
-脚本排除报告与笔记、调查循环历史（`.state`）、`.DS_Store` / `__pycache__` 等。
-`.agents` / `.claude` / `.codex` / `.github`，以及 `search-test-case` / `demand` / `hooks` / `agents` / 仓库根 `data/` **会同步**。
+脚本排除 `.env`、本地评测痕迹 `impl/data/context_store` / `context_runtime`、报告与笔记、调查循环历史（`.state`）、`.DS_Store` / `__pycache__` 等。
+`impl/data` 里的资料、以及 `.agents` / `.claude` / `.codex` / `.github`、`search-test-case` / `demand` / `hooks` / `agents` / 仓库根 `data/` **会同步**。
 `--dry-run` 按 checksum 比较，不因 git checkout 的 mtime 列出整包。
 排除项已锚定仓库根：不锚定的 `--exclude experiments` 会误伤调查包里的 `experiments/`。
 
@@ -351,7 +352,7 @@ Windows 上跑部署/同步脚本请用 WSL（依赖 bash/rsync/ssh）。
 |---|---|---|
 | 日常评测 | 起本机 API；隧道；资料页配 capability；Live / 总结页跑 | 无（不碰公钥） |
 | 首次开通 | 生成本机密钥（若无）；把 `.pub` 发给管理员；说本机 API 端口 | 追加 `authorized_keys`；分配 1500X；把隧道口告诉用户 |
-| 更新评测代码 | 无 | `scripts/deploy_verifier.sh`（排除 impl/data 和 .env） |
+| 更新评测代码 | 无 | `scripts/deploy_verifier.sh`（含 impl/data 资料；排除 .env 和 context 痕迹） |
 | 业务源码更新后刷新调查资料 | 说一声即可 | baseline → drift → increment → materialize → sync |
 
 备份：改版前原文在 `docs/bak/2026-08-31-external-eval-deployment.md`。

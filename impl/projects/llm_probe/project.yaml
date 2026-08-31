@@ -28,7 +28,8 @@ runtime:
       source: application.md, live.py, and live_schema.py
     start_run: each case supplies url or capability_ref; verifier does not start the
       probed service
-    boundary: only the non-streaming HTTP response string is in scope; streaming and
+    boundary: non-streaming HTTP response string is in scope; declared sse_last_frame
+      pseudo-streams are evaluated on the final data frame; incremental streaming and
       downstream systems are out of scope
   interaction:
     mode: single_turn
@@ -59,6 +60,7 @@ runtime:
     - client_search
     - policy_search
     - marketting-planning-intent
+    - dashscope-qa
   services:
     primary:
       base_url: http://127.0.0.1:9
@@ -84,6 +86,7 @@ verifier:
     - client_search
     - policy_search
     - marketting-planning-intent
+    - dashscope-qa
   judge:
     boundary:
       document: judge_boundary.md

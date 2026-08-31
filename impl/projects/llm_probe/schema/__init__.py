@@ -17,6 +17,8 @@ class LlmProbeRequest:
     capability: str = ""
     boundary: str = ""
     show_schema: Any = None
+    # json（默认，非流式）/ sse_last_frame（伪流式：最后一帧全量，取最后一帧评）
+    response_mode: str = ""
 
 
 @dataclass

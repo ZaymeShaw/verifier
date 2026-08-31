@@ -62,6 +62,10 @@
         <input id="serviceUrl" placeholder="http://127.0.0.1:15001/api/..." />
         <select id="serviceMethod"><option>POST</option><option>PUT</option><option>PATCH</option></select>
         <input id="serviceTimeout" type="number" placeholder="超时秒数，默认 60" />
+        <select id="serviceResponseMode">
+          <option value="json">非流式 JSON（默认）</option>
+          <option value="sse_last_frame">SSE 取最后一帧（仅限最后一帧是全量内容的伪流式；逐帧增量的接口不适用）</option>
+        </select>
       </div>
       <label>mock_body 请求模板（可选，JSON；{query} 为造 case 时的占位符）</label>
       <textarea id="mockBody" style="min-height:160px" placeholder='{"user_text": "{query}"}'></textarea>
@@ -505,6 +509,7 @@ function selectCap(name){
   document.getElementById('serviceUrl').value=service.url||'';
   document.getElementById('serviceMethod').value=(service.method||'POST').toUpperCase();
   document.getElementById('serviceTimeout').value=service.timeout_seconds||'';
+  document.getElementById('serviceResponseMode').value=service.response_mode||'json';
   document.getElementById('mockBody').value=entry.mock_body?JSON.stringify(entry.mock_body,null,2):'';
   document.getElementById('deleteBtn').style.display='inline-block';
   validateRefs();
@@ -521,6 +526,7 @@ function newCap(){
   document.getElementById('serviceUrl').value='';
   document.getElementById('serviceMethod').value='POST';
   document.getElementById('serviceTimeout').value='';
+  document.getElementById('serviceResponseMode').value='json';
   document.getElementById('mockBody').value='';
   document.getElementById('deleteBtn').style.display='none';
   validateRefs();
@@ -540,6 +546,8 @@ async function saveCap(){
     entry.service={url:url,method:document.getElementById('serviceMethod').value};
     const timeout=document.getElementById('serviceTimeout').value;
     if(timeout){entry.service.timeout_seconds=Number(timeout);}
+    const responseMode=document.getElementById('serviceResponseMode').value;
+    if(responseMode&&responseMode!=='json'){entry.service.response_mode=responseMode;}
   }
   const mockText=document.getElementById('mockBody').value.trim();
   if(mockText){

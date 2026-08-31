@@ -155,7 +155,7 @@ bash run.sh cli materialize --project <id> --role {attribute,judge,mock} [--appl
 - Default is dry-run (hash check, no writes). `--apply` writes one free material per `business_source` evidence plus an index. Production-sourced ids are `{role}-{ref_id}` + `{role}-investigation-snapshot`; candidate-sourced ids are `{role}-draft-{ref_id}` + `{role}-draft-investigation-snapshot`, so both exports coexist without overwriting each other. Provenance is `{source: investigation, execution: local, source_revision, source_sha256, package_source}`.
 - Snapshots are **reference / free materials**. They must not fill a slot whose `roles` is non-empty — concatenated business yaml would blow the 30k judge binding budget. `--slot ID` is allowed only for an undeclared id or a slot with empty `roles`.
 - Remote eval reads the inlined body via the materials page / `{material://…}`; it does not open business files. Copying `impl/data/<project>/materials/<id>/` preserves investigation provenance. Re-pasting the same text through `/api/material/upload` becomes `user_upload`.
-- Do not rsync the whole `impl/data` tree on deploy (that would wipe the eval host's materials). Copy only the materialized directories — `scripts/sync_materials.sh` does exactly that (`--ids` / `--from-materialize-json` / `--all-free`), and `materialize --apply --push user@host[:/path]` runs it automatically for the ids just written.
+- `scripts/deploy_verifier.sh` 会同步 `impl/data` 下的资料（不含 `context_store` / `context_runtime`），且不用 `--delete`，评测机上多出来的文件会留着。只推某几份资料时仍用 `scripts/sync_materials.sh`（`--ids` / `--from-materialize-json` / `--all-free`）；`materialize --apply --push user@host[:/path]` 会自动跑它。
 
 V2 (`source_bind` / `investigate_http`) and V3 (queryable) are not part of this runtime.
 

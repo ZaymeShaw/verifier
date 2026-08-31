@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import copy
 import json
+import time
 import urllib.error
 import urllib.request
 import uuid
@@ -16,6 +17,10 @@ from .schema import LiveExchange, now_iso
 
 
 _SENSITIVE_HEADERS = {"authorization", "cookie", "set-cookie", "x-api-key", "api-key"}
+
+# sse_last_frame 有界读取上限：伪流式一帧全量远小于此；真流式会先撞上限而不是挂死。
+SSE_MAX_BYTES = 4_000_000
+_SSE_READ_CHUNK = 65_536
 
 
 def _redact_headers(headers: Dict[str, Any] | None) -> Dict[str, Any]:
@@ -60,6 +65,55 @@ class LiveForbiddenContentTypeError(RuntimeError):
     def __init__(self, content_type: str):
         self.content_type = str(content_type)
         super().__init__(f"forbidden content-type: {self.content_type}")
+
+
+class LiveSseReadError(RuntimeError):
+    """声明了 sse_last_frame 但流读取超限或没有数据帧。"""
+
+
+def _read_bounded(response: Any, timeout: float, max_bytes: int) -> bytes:
+    """按字节与总时长上限读流；真流式（持续吐帧不结束）会撞上限报错而不是挂死。"""
+    started = time.monotonic()
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = response.read(_SSE_READ_CHUNK)
+        if not chunk:
+            return b"".join(chunks)
+        chunks.append(chunk)
+        total += len(chunk)
+        if total > max_bytes:
+            raise LiveSseReadError(
+                f"sse_last_frame 流超过 {max_bytes} 字节仍未结束；该接口更像增量流式，不适用最后一帧模式"
+            )
+        if time.monotonic() - started > float(timeout):
+            raise LiveSseReadError(
+                f"sse_last_frame 流超过 {timeout} 秒仍未结束；该接口更像增量流式，不适用最后一帧模式"
+            )
+
+
+def parse_sse_last_frame(text: str) -> Any:
+    """SSE 文本取最后一个数据帧并 JSON 解析。
+
+    帧以空行分隔；每帧内多条 `data:` 行按 SSE 规范以换行拼接；
+    注释行（`:` 开头）与 `[DONE]` 哨兵跳过。没有数据帧则报错。
+    """
+    last_payload: Optional[str] = None
+    for frame in text.replace("\r\n", "\n").replace("\r", "\n").split("\n\n"):
+        data_lines: list[str] = []
+        for line in frame.split("\n"):
+            if line == "data":
+                data_lines.append("")
+            elif line.startswith("data:"):
+                value = line[5:]
+                data_lines.append(value[1:] if value.startswith(" ") else value)
+        payload = "\n".join(data_lines).strip()
+        if not payload or payload == "[DONE]":
+            continue
+        last_payload = payload
+    if last_payload is None:
+        raise LiveSseReadError("sse_last_frame 响应里没有可用的 data 帧")
+    return _decode_body(last_payload.encode("utf-8"))
 
 
 class LiveHTTPStatusError(urllib.error.URLError):
@@ -148,6 +202,7 @@ class LiveTransport:
         carries_live_request: bool = False,
         contributes_raw_response: bool = False,
         forbid_content_types: Optional[Iterable[str]] = None,
+        sse_last_frame: bool = False,
     ) -> LiveResponseView:
         if self._sealed:
             raise RuntimeError("LiveTransport is sealed")
@@ -162,6 +217,7 @@ class LiveTransport:
         response_payload: Any = None
         error: Optional[str] = None
         rejected_content_type: Optional[str] = None
+        sse_read_error: Optional[str] = None
         forbidden_markers = [str(marker).lower() for marker in (forbid_content_types or ()) if str(marker).strip()]
         try:
             request = urllib.request.Request(url, data=body, headers=actual_headers, method=method)
@@ -172,7 +228,15 @@ class LiveTransport:
                     (str(value).lower() for key, value in response_headers.items() if str(key).lower() == "content-type"),
                     "",
                 )
-                if any(marker in content_type for marker in forbidden_markers):
+                if sse_last_frame and "text/event-stream" in content_type:
+                    # 声明了伪流式（最后一帧全量）：有界读完整个流，取最后一个 data 帧当响应。
+                    try:
+                        raw = _read_bounded(response, timeout, SSE_MAX_BYTES)
+                        response_payload = parse_sse_last_frame(raw.decode("utf-8", errors="replace"))
+                    except LiveSseReadError as exc:
+                        sse_read_error = str(exc)
+                        error = sse_read_error
+                elif any(marker in content_type for marker in forbidden_markers):
                     # 在读取 body 之前拒绝流式/禁用类型，避免挂在无限 SSE 流上。
                     rejected_content_type = content_type
                     error = f"forbidden content-type (rejected before body read): {content_type}"
@@ -206,6 +270,8 @@ class LiveTransport:
         view = LiveResponseView(exchange_id, status_code, copy.deepcopy(response_payload), error)
         if rejected_content_type is not None:
             raise LiveForbiddenContentTypeError(rejected_content_type)
+        if sse_read_error is not None:
+            raise LiveSseReadError(sse_read_error)
         if error:
             if status_code is not None:
                 raise LiveHTTPStatusError(status_code, response_payload)
@@ -224,7 +290,7 @@ def declared_wire_body(request: Any) -> Any:
     nested = request.get("body")
     if not isinstance(nested, dict):
         return request
-    markers = ("url", "method", "headers", "capability_ref", "capability", "show_schema")
+    markers = ("url", "method", "headers", "capability_ref", "capability", "show_schema", "response_mode")
     if any(key in request for key in markers):
         return nested
     return request

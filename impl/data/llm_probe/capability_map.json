@@ -43,41 +43,69 @@
       "url": "http://127.0.0.1:9006/api/v1/marketing-planning/intent-recognition"
     }
   },
-  "policy_search": {
-    "boundary": "支持：把自然语言保单筛选意图解析为查询语法树的过滤条件。\n不支持：下游保单列表检索与结果集处理。",
-    "capability": "用户拿它办的事：用自然语言筛出正好符合条件的那批保单。\n交付物是可执行的查询语法树（过滤条件组合），由下游保单检索执行；判断达成必须按语法树执行后命中的保单集合是否恰好等于用户意图来推演，不看树的形状。\n语义等价的表达算办成；条件互斥、放大、缩小、编造未表达条件、丢失已表达条件都算没办成。",
-    "mock_body": {
-      "action_scenario": "policySearch",
-      "app_scenario": "policy_search_parse",
-      "application_setting": null,
-      "extra_input_params": {
-        "agent_args": null,
-        "args": {
-          "contexts": []
+    "policy_search": {
+        "boundary": "支持：把自然语言保单筛选意图解析为查询语法树的过滤条件。\n不支持：下游保单列表检索与结果集处理。",
+        "capability": "用户拿它办的事：用自然语言筛出正好符合条件的那批保单。\n交付物是可执行的查询语法树（过滤条件组合），由下游保单检索执行；判断达成必须按语法树执行后命中的保单集合是否恰好等于用户意图来推演，不看树的形状。\n语义等价的表达算办成；条件互斥、放大、缩小、编造未表达条件、丢失已表达条件都算没办成。",
+        "mock_body": {
+            "action_scenario": "policySearch",
+            "app_scenario": "policy_search_parse",
+            "application_setting": null,
+            "extra_input_params": {
+                "agent_args": null,
+                "args": {
+                    "contexts": []
+                },
+                "policySearchParseArgs": {
+                    "agentCode": "A12345678",
+                    "currentTime": "2026-08-06 10:30:00",
+                    "query": "{query}"
+                }
+            },
+            "history": [],
+            "org_id": "verifier-org",
+            "org_name": "verifier",
+            "scenario": null,
+            "session_id": "mock_session_dyn",
+            "source": "verifier",
+            "token": "",
+            "trace_id": "mock_trace_dyn",
+            "ts": 1785983400000,
+            "user_action": "write",
+            "user_id": "verifier-user",
+            "user_text": ""
         },
-        "policySearchParseArgs": {
-          "agentCode": "A12345678",
-          "currentTime": "2026-08-06 10:30:00",
-          "query": "{query}"
+        "service": {
+            "method": "POST",
+            "timeout_seconds": 120.0,
+            "url": "http://127.0.0.1:8050/api/v1/policy-search/policy-search-parse"
         }
-      },
-      "history": [],
-      "org_id": "verifier-org",
-      "org_name": "verifier",
-      "scenario": null,
-      "session_id": "mock_session_dyn",
-      "source": "verifier",
-      "token": "",
-      "trace_id": "mock_trace_dyn",
-      "ts": 1785983400000,
-      "user_action": "write",
-      "user_id": "verifier-user",
-      "user_text": ""
     },
-    "service": {
-      "method": "POST",
-      "timeout_seconds": 120.0,
-      "url": "http://127.0.0.1:8050/api/v1/policy-search/policy-search-parse"
+    "dashscope-qa": {
+        "capability": "用户拿它办的事：问一个事实型问题，得到一句准确、可直接引用的中文答案。\n交付物是答案文本（output.choices[0].message.content），被提问者直接阅读使用；答案事实正确、直接回应所问即算办成。答非所问、事实错误、编造都算没办成。",
+        "mock_body": {
+            "model": "qwen-turbo",
+            "input": {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": "{query}"
+                    }
+                ]
+            },
+            "parameters": {
+                "result_format": "message",
+                "incremental_output": false
+            }
+        },
+        "service": {
+            "method": "POST",
+            "timeout_seconds": 60.0,
+            "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
+            "response_mode": "sse_last_frame",
+            "headers": {
+                "Authorization": "Bearer ${BAILIAN_API_KEY}",
+                "X-DashScope-SSE": "enable"
+            }
+        }
     }
-  }
 }

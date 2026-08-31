@@ -5,8 +5,9 @@ from typing import Any, Dict, Optional
 
 from impl.core.judge_protocol import ProjectJudge
 from impl.core.live_transport import _redact_headers
-from impl.core.schema import JudgeResult, RunTrace, normalize_judge_result, to_dict
+from impl.core.schema import JudgeResult, RunTrace, normalize_judge_result, to_dict, trace_application_boundary
 from impl.projects.llm_probe.capability import resolve_capability
+from impl.projects.llm_probe.live import application_boundary_for
 
 
 def _request_payload(trace: RunTrace) -> Dict[str, Any]:
@@ -89,10 +90,8 @@ class LlmProbeJudge(ProjectJudge):
                 },
                 "output_text": output_text,
                 "output_text_parsed": output_text_parsed,
-                "application_boundary": {
-                    "scope": "non_streaming_http_llm_probe",
-                    "streaming": False,
-                },
+                "application_boundary": trace_application_boundary(trace)
+                or application_boundary_for(str(request.get("response_mode") or "json")),
             }),
         }
 
