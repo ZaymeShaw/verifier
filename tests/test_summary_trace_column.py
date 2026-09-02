@@ -143,7 +143,11 @@ def test_frontend_requires_vnext_mock_case_transport_shape():
     end = source.index("\nfunction ", start + 1)
     normalizer = source[start:end]
 
-    assert "'id','project_id','scenario','intent','live_request','output','reference'" in normalizer
+    # intent 与后端 parse_mock_case 口径一致：可选（缺失/null 均合法），不在必填列表中。
+    assert "'id','project_id','scenario','live_request','output','reference'" in normalizer
+    assert "'intent'" not in normalizer.split("const required=")[1].split("\n")[0]
+    assert "item.intent===undefined?null:item.intent" in normalizer
+    assert "intent 必须是对象或 null" in normalizer
     assert "不是 VNext MockCase" in normalizer
 
 

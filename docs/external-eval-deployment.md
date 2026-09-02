@@ -152,7 +152,7 @@ ssh -N -o ServerAliveInterval=30 \
 
 - **`live_request` 就是这条 case 实际要发给你 API 的那次 HTTP 调用**：`body` 是你接口的请求体（字段照你接口的真实入参写，不是 verifier 的格式）；`capability_ref` 指向你建的预设，端点和能力口径都从预设来。也可以不建预设，直接在 `live_request` 里写 `url` / `method` / `capability`。
 - 在 `llm_probe` 下，其余字段是信封样板：`id` 每条唯一；`project_id` 固定 `llm_probe`；`scenario` 建议填预设名（只影响页面按场景筛选）；`intent` / `output` / `reference` 固定 `null`。
-- 七个字段都要在，少一个导入会报「不是 VNext MockCase」。
+- `id` / `project_id` / `scenario` / `live_request` / `output` / `reference` 六个字段必须都在，少一个导入会报「不是 VNext MockCase」；`intent` 可选，不写或写 `null` 都行，写了必须是对象。导入失败时状态栏会直接显示是第几条、缺什么。
 
 准备数据集时通常就是：把上面模板复制 N 份，每份换 `id` 和 `body` 里的问句。
 

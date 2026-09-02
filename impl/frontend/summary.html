@@ -305,9 +305,12 @@ function caseView(item){const run=runForCase(item);if(!run){return item;}const g
 function inputReference(item){return item.reference || null;}
 function caseReference(item){return item.frontend_view?.reference_panel?.reference || inputReference(item) || item.judge?.expected || null;}
 function normalizeCase(item,index,source){
-  const required=['id','project_id','scenario','intent','live_request','output','reference'];
-  if(!item || typeof item!=='object' || required.some(key=>!Object.prototype.hasOwnProperty.call(item,key)) || typeof item.intent!=='object' || typeof item.live_request!=='object'){throw new Error('第 '+(index+1)+' 条不是 VNext MockCase；请先迁移为 id/project_id/scenario/intent/live_request/output/reference。');}
-  return sanitizeCaseResult({...item,selected:item.selected!==false,status:item.status||'pending',source:item.source||source});
+  // 与后端 parse_mock_case 口径一致：intent 可选（缺失/null 均合法），存在时必须是对象。
+  const required=['id','project_id','scenario','live_request','output','reference'];
+  if(!item || typeof item!=='object' || required.some(key=>!Object.prototype.hasOwnProperty.call(item,key)) || typeof item.live_request!=='object' || item.live_request===null){throw new Error('第 '+(index+1)+' 条不是 VNext MockCase；请先迁移为 id/project_id/scenario/live_request/output/reference（intent 可选）。');}
+  const intent=item.intent===undefined?null:item.intent;
+  if(intent!==null && (typeof intent!=='object' || Array.isArray(intent))){throw new Error('第 '+(index+1)+' 条的 intent 必须是对象或 null。');}
+  return sanitizeCaseResult({...item,intent,selected:item.selected!==false,status:item.status||'pending',source:item.source||source});
 }
 async function buildMockCases(){const data=await post('/api/mock_cases',{project:project(),count:1});caseResults={};casePool=(data.cases||[]).map((x,index)=>normalizeCase(x,index,'project_mock_agent'));resetCasePoolFilters();saveCasePool();setStatus('已加载 1 条项目 Mock 用例。');}
 async function loadMockDatasets(){
@@ -320,13 +323,30 @@ async function loadMockDatasets(){
   show('batch',{mock_datasets:mockDatasets,dataset_count:mockDatasets.length,case_count:casePool.length});
   setStatus('已加载 '+mockDatasets.length+' 批 Mock 数据集，共 '+casePool.length+' 条，可直接选择后批量运行。');
 }
-function importCasePool(){const inputs=JSON.parse(document.getElementById('casePoolText').value);safeSetSessionJson(scopedKey('casePoolText'),document.getElementById('casePoolText').value);casePool=(Array.isArray(inputs)?inputs:(inputs.cases||[])).map((item,index)=>normalizeCase(item,index,'uploaded_or_manual'));resetCasePoolFilters();saveCasePool();setStatus('已导入候选用例。');}
+function importCasePool(){
+  try{
+    const inputs=JSON.parse(document.getElementById('casePoolText').value);
+    safeSetSessionJson(scopedKey('casePoolText'),document.getElementById('casePoolText').value);
+    casePool=(Array.isArray(inputs)?inputs:(inputs.cases||[])).map((item,index)=>normalizeCase(item,index,'uploaded_or_manual'));
+    resetCasePoolFilters();saveCasePool();setStatus('已导入候选用例：'+casePool.length+' 条。');
+    return true;
+  }catch(err){
+    setStatus('导入失败：'+(err&&err.message?err.message:String(err)));
+    return false;
+  }
+}
 async function importCasePoolFile(file){
   if(!file){return;}
-  const text=await file.text();
-  document.getElementById('casePoolText').value=text;
-  importCasePool();
-  setStatus('已从文件导入自定义数据集：'+file.name);
+  const fileInput=document.getElementById('casePoolFile');
+  try{
+    const text=await file.text();
+    document.getElementById('casePoolText').value=text;
+    if(importCasePool()){setStatus('已从文件导入自定义数据集：'+file.name+'，共 '+casePool.length+' 条。');}
+  }catch(err){
+    setStatus('读取文件失败：'+(err&&err.message?err.message:String(err)));
+  }finally{
+    if(fileInput){fileInput.value='';}
+  }
 }
 function exportSelectedCases(){document.getElementById('casePoolText').value=JSON.stringify(casePool.filter(x=>x.selected).map(transportCase),null,2);setStatus('已生成已选择用例 JSON。');}
 function clearCasePool(){casePool=[];caseResults={};latestCluster=null;sessionStorage.removeItem(scopedKey('activeBatch'));saveCasePool();renderClusterSummary(null);show('batch',{});setStatus('已清空用例池。');}
