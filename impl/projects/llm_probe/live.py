@@ -85,7 +85,6 @@ def resolve_http(request: Dict[str, Any], spec: ProjectSpec) -> tuple[str, str, 
         timeout = float(service.get("timeout_seconds") or timeout)
         if not response_mode:
             response_mode = str(service.get("response_mode") or "").strip().lower()
-    headers = _merge_headers(request, service)
     response_mode = response_mode or "json"
     if response_mode not in ALLOWED_RESPONSE_MODES:
         raise ValueError(f"llm_probe response_mode 只支持 {'/'.join(ALLOWED_RESPONSE_MODES)}，收到 {response_mode}")
@@ -93,6 +92,7 @@ def resolve_http(request: Dict[str, Any], spec: ProjectSpec) -> tuple[str, str, 
         raise ValueError("llm_probe request 需要 url 或 capability_ref")
     if not method:
         method = str(primary["method"]).upper()
+    headers = _merge_headers(request, service)
     scheme = urlsplit(url).scheme.lower()
     if scheme not in {"http", "https"}:
         raise ValueError(f"llm_probe 只允许 http/https URL，收到 scheme {scheme or '(空)'}")

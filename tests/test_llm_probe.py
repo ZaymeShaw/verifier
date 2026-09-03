@@ -543,7 +543,29 @@ def test_capability_store_validates_response_mode():
     assert headed["service"]["headers"]["Authorization"] == "Bearer ${BAILIAN_API_KEY}"
 
 
-def test_application_boundary_reflects_response_mode():
+def test_project_default_timeout_is_180():
+    spec = load_project("llm_probe")
+    assert float(spec.require_service("primary")["timeout_seconds"]) == 180.0
+
+
+def test_resolve_http_streaming_keeps_primary_timeout_when_service_omits_it(monkeypatch):
+    mapping = {
+        "stream-no-timeout": {
+            "capability": "echo",
+            "service": {"url": "http://127.0.0.1:9/sse", "response_mode": "sse_last_frame"},
+        }
+    }
+    monkeypatch.setattr(
+        "impl.projects.llm_probe.capability.load_capability_map",
+        lambda: mapping,
+    )
+    spec = load_project("llm_probe")
+    *_rest, timeout, response_mode = resolve_http(
+        {"body": {"q": 1}, "capability_ref": "stream-no-timeout"},
+        spec,
+    )
+    assert response_mode == "sse_last_frame"
+    assert timeout == 180.0
     from impl.projects.llm_probe.live import application_boundary_for
 
     assert application_boundary_for("json") == {

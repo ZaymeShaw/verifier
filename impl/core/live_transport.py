@@ -19,7 +19,7 @@ from .schema import LiveExchange, now_iso
 _SENSITIVE_HEADERS = {"authorization", "cookie", "set-cookie", "x-api-key", "api-key"}
 
 # sse_last_frame 有界读取上限：伪流式一帧全量远小于此；真流式会先撞上限而不是挂死。
-SSE_MAX_BYTES = 4_000_000
+SSE_MAX_BYTES = 10_000_000
 _SSE_READ_CHUNK = 65_536
 
 
