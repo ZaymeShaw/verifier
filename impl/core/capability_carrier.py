@@ -39,6 +39,9 @@ RECOG_MISSING_VALUE = "missing_value"
 RECOG_MISSING_OPERATOR = "missing_operator"
 RECOG_UNMAPPED = "unmapped"
 RECOG_BOUNDARY_STATEMENT = "boundary_statement"
+# 做不了的另两类依据（spec/alg/capability_carrier.md §2.1）：业务方登记的责任范围原文；信息源查实本来没有的查询回执。
+RECOG_RESPONSIBILITY = "responsibility_registration"
+RECOG_SOURCE_ABSENT = "source_absent"
 
 # 信任档位（spec/math-abstract/judge.md §6）：档位随"谁担保/担保多强"定，
 # 不由内容类型单独决定。定位序保留为典型担保强度的缺省映射。
@@ -673,6 +676,8 @@ _CANNOT_RECOGNITIONS = {
     RECOG_MISSING_OPERATOR,
     RECOG_UNMAPPED,
     RECOG_BOUNDARY_STATEMENT,
+    RECOG_RESPONSIBILITY,
+    RECOG_SOURCE_ABSENT,
 }
 
 

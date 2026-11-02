@@ -1,0 +1,136 @@
+{
+ "meta": {
+  "elapsed": 53,
+  "prompt_tokens": 2989,
+  "completion_tokens": 11631,
+  "reasoning_tokens": 9604
+ },
+ "attempt": 1,
+ "result": {
+  "instance": "上下文管理（传递）部件，本次运行，实例：assemble、gate、to_agent/agent、agent_bridge、finalize、delivered_output",
+  "items": [
+   {
+    "id": "R1",
+    "type": "守恒",
+    "statement": "assemble 传给 agent_input 的 t1.user 文本必须逐字保留用户原话，包括“我名下”“姓平”“12月份生日”“女性”“按客户号升序”“先列出供选择”“确定后再查选中客户的详细资料和保单状态”。",
+    "basis": "用户原话；冻结期望 E 的 list_female_clients_surname_ping_born_in_december、query_selected_client_detail_info、query_selected_client_policy_status"
+   },
+   {
+    "id": "R2",
+    "type": "推出",
+    "statement": "assemble 在 agent_input 中必须标明或保持本轮是首轮且无历史，不得为“我名下”补入任何客户经理身份或历史对话。",
+    "basis": "用户原话标注“首轮，无历史”；模型调用1 content“轮次没有明确给出客户经理身份”"
+   },
+   {
+    "id": "R3",
+    "type": "推出",
+    "statement": "组装或 agent_input 对任务的表示必须保持冻结期望 E 中三项意图的触发条件：list 项总是执行，detail 与 policy 项仅在确定选中客户后执行。",
+    "basis": "冻结期望 E 条件“总是”“确定选中客户后”"
+   },
+   {
+    "id": "R4",
+    "type": "守恒",
+    "statement": "gate 对模型调用1至模型调用5 的每个 tool_call 必须保留 id、function.name、arguments 原样，并按调用顺序路由到对应工具，不得合并或改写。",
+    "basis": "模型调用1至模型调用5 的 tool_calls 中 id、function.name、arguments；传递链 gate"
+   },
+   {
+    "id": "R5",
+    "type": "守恒",
+    "statement": "agent_bridge 必须将 tools/0、tools/1、tools/2 的 customer_search 返回分别关联到前三次 customer_search 调用，保留 status=AMBIGUOUS、message 和 gaps。",
+    "basis": "tools/0、tools/1、tools/2 返回；模型调用1至模型调用3 的 customer_search tool_calls"
+   },
+   {
+    "id": "R6",
+    "type": "守恒",
+    "statement": "agent_bridge 必须将 tools/3 的 customer_search 返回关联到第四次 customer_search 调用，保留 code=BUDGET、message、control.reason=no_progress、control.action=finish_with_evidence。",
+    "basis": "tools/3 返回；模型调用4 的 customer_search tool_call"
+   },
+   {
+    "id": "R7",
+    "type": "守恒",
+    "statement": "agent_bridge 必须将 tools/4 的 ask_clarify 返回关联到第五个 tool_call，保留 status=NEEDS_CLARIFICATION、hint 和三个候选选项。",
+    "basis": "tools/4 返回；模型调用5 的 ask_clarify tool_call"
+   },
+   {
+    "id": "R8",
+    "type": "推出",
+    "statement": "历史或缓存中不得把 tools/0 至 tools/3 的 customer_search 返回当作已执行的客户查询结果或候选客户缓存，因为其 message 明确“尚未执行客户查询”。",
+    "basis": "tools/0 至 tools/3 的 message；tools/3 的 code=BUDGET"
+   },
+   {
+    "id": "R9",
+    "type": "守恒",
+    "statement": "若组装下一轮或收尾上下文，历史应保留模型调用1至模型调用5 的 assistant content、各自 tool_calls 以及 tools/0 至 tools/4 返回的配对关系，不得删除或改写配对。",
+    "basis": "传递链 agent→agent_bridge；模型调用1至模型调用5 与工具返回顺序"
+   },
+   {
+    "id": "R10",
+    "type": "推出",
+    "statement": "finalize 前必须接收 tools/3 的 control.action=finish_with_evidence，并据此在交付中基于已有证据收尾、明确未确认部分，不再换措辞或换工具重复查询。",
+    "basis": "tools/3 的 message 与 control 字段；冻结规则“请基于已有证据回答并明确未确认部分”"
+   },
+   {
+    "id": "R11",
+    "type": "推出",
+    "statement": "finalize 与 delivered_output 的交付必须完整包含未确认项：未执行客户查询、未获得候选列表、排序未执行、“姓平”筛选未解析、“我名下”归属未确认。",
+    "basis": "模型调用5 content；tools/0 至 tools/2 的 message 和 gaps；tools/4 的 hint"
+   },
+   {
+    "id": "R12",
+    "type": "推出",
+    "statement": "finalize 与 delivered_output 必须交付向用户请求更明确信息的澄清问题及其候选选项，不得省略。",
+    "basis": "模型调用5 的 ask_clarify question/options；tools/4 的 hint 与候选"
+   },
+   {
+    "id": "R13",
+    "type": "守恒",
+    "statement": "交付不得包含任何客户号升序列表、选中客户详细资料或保单状态，因为输入中 tools/0 至 tools/4 没有返回任何客户记录且没有选中客户。",
+    "basis": "tools/0 至 tools/4 返回；冻结期望 E 中 detail 与 policy 项的条件“确定选中客户后”"
+   },
+   {
+    "id": "R14",
+    "type": "推出",
+    "statement": "交付必须保持用户原话的任务顺序和条件：先列出候选供选择，确定选中后才查详细资料和保单状态；当前输入未确定选中客户，不得触发后两项。",
+    "basis": "用户原话；冻结期望 E 条件“总是”“确定选中客户后”"
+   },
+   {
+    "id": "R15",
+    "type": "外部真值",
+    "statement": "符合“我名下、姓平、12月份生日、女性”的客户集合及其按客户号升序排列必须查客户数据库才能确定，本次输入没有给出任何客户记录。",
+    "basis": "用户原话；冻结期望 E 的 list 项；tools/0 至 tools/3 均未执行客户查询"
+   },
+   {
+    "id": "R16",
+    "type": "外部真值",
+    "statement": "“我名下”对应的客户经理或业务员身份必须由外部归属数据确定，本次输入首轮无历史且未提供该身份。",
+    "basis": "用户原话“我名下”；用户原话标注“首轮，无历史”"
+   },
+   {
+    "id": "R17",
+    "type": "外部真值",
+    "statement": "customer_search 是否能可靠解析“姓平”姓氏筛选、12月份生日和客户号排序，需查工具实际能力或真实执行结果，本次返回只表明未可靠解析。",
+    "basis": "tools/0 至 tools/2 的 message“未能可靠解析”；模型调用2至模型调用4 的尝试"
+   },
+   {
+    "id": "R18",
+    "type": "推出",
+    "statement": "交付若对查询结果作表述，只能限定为“未执行或未确认”，不得把 tools/0 至 tools/2 的 AMBIGUOUS 或 tools/3 的 BUDGET 等价为“没有符合条件客户”。",
+    "basis": "tools/0 至 tools/3 的 status 与 message；模型调用5 content"
+   },
+   {
+    "id": "R19",
+    "type": "守恒",
+    "statement": "工具返回中的 projection 元数据，包括 incomplete=false、omitted_items=0、excerpted_values=0，也应随对应返回传递，以表明该返回未被截断。",
+    "basis": "tools/0 至 tools/4 的 projection 字段"
+   }
+  ],
+  "not_covered": [
+   "下游实际收到的字符串、顺序或字段结构未在输入材料中给出，因此无法核对实际传递是否发生。",
+   "最终交付渠道要求的格式、字段名、是否允许附加推理文本，输入未写明。",
+   "模型调用1至模型调用5 的 assistant content 是否应完整保留还是可摘要，业务规则未写明。",
+   "customer_search 工具对姓氏、生日月份、排序的真实支持能力和实际数据库结果，需外部查证。",
+   "“我名下”对应的实际客户经理身份及归属数据，需外部查证。",
+   "后续用户选择候选后，detail 与 policy 两个查询的输入组装规则，本次输入未进入该分支，未覆盖。"
+  ]
+ }
+}

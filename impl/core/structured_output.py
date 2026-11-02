@@ -18,6 +18,16 @@
 - **可缺失字段**（旧描述符 `?`）：`field(default=None)` 且不放 required —— 字段可以不出现在 JSON 里
 - **nullable 字段**（旧描述符 `|null`）：`Optional[str]` 但仍在 required 里 —— 字段必须在，值可以是 None
 
+## 多选一（tagged union）与显式非空
+
+- 多选一：字段注解写 `Union[A, B, C]`（每个分支都是 dataclass，可再包 Optional）。各分支必须有同名、
+  且取值互不相交的 `Literal[...]` 字段作为区分字段（例如 `outcome`）。schema 生成 `anyOf`，校验时按区分字段
+  的取值选定分支，再按该分支逐字段校验。区分字段找不到或取值相交，构建 schema 时直接抛错。
+  这是静态结构：同一份代码永远生成同一份 schema，不依赖单次调用的材料。
+- 固定格式：字符串字段 `metadata={"pattern": r"^C[0-9]+$"}`，schema 写入 `pattern`，校验按 `re.search`，嵌套层级同样生效。
+- 显式非空：字段 `metadata={"nonempty": True}`。字符串要求含非空白字符，数组至少一项，对象至少一个键；
+  schema 与校验同时生效，嵌套层级也生效。未声明的字段行为不变。
+
 ## 嵌套 dataclass 硬约束
 
 嵌套层级里只能包含可序列化内容：基本类型（str/int/float/bool）、list、dict、嵌套 dataclass。
@@ -29,6 +39,7 @@ import dataclasses
 import json
 import re
 import sys
+import types
 import typing
 from collections.abc import Sequence as ABCSequence
 from typing import Any, Dict, List, Literal, Optional, Type, Union, get_args, get_origin, get_type_hints
@@ -76,6 +87,45 @@ def _strip_optional(tp: Any) -> tuple[Any, bool]:
     return (tp, False)
 
 
+def tagged_union(tp: Any) -> Optional[tuple[list, bool]]:
+    """Union[A, B, ...]（可带 None）且每个非空分支都是 dataclass → (分支列表, 是否可为空)；否则 None。"""
+    origin = get_origin(tp)
+    if origin is not Union and origin is not getattr(types, "UnionType", None):
+        return None
+    args = get_args(tp)
+    branches = [a for a in args if a is not type(None)]
+    if len(branches) >= 2 and all(_is_dataclass_type(a) for a in branches):
+        return branches, len(branches) < len(args)
+    return None
+
+
+def union_discriminator(branches: list) -> tuple[str, Dict[Any, Type]]:
+    """找多选一的区分字段：所有分支都把它声明为 Literal，且取值两两不相交。
+
+    返回 (字段名, {取值: 分支})。按第一个分支的字段顺序取第一个满足条件的字段，结果确定。
+    """
+    literals: List[Dict[str, tuple]] = []
+    for branch in branches:
+        hints = get_type_hints(branch)
+        literals.append({n: get_args(t) for n, t in hints.items() if get_origin(t) is Literal})
+    for name in literals[0]:
+        if not all(name in lit for lit in literals):
+            continue
+        mapping: Dict[Any, Type] = {}
+        clash = False
+        for branch, lit in zip(branches, literals):
+            for value in lit[name]:
+                if value in mapping:
+                    clash = True
+                mapping[value] = branch
+        if not clash:
+            return name, mapping
+    raise ValueError(
+        "多选一 " + " | ".join(b.__name__ for b in branches)
+        + " 找不到区分字段：每个分支都要有同名的 Literal 字段，且取值互不相交"
+    )
+
+
 def _resolve_annotation(tp: Any, dc_type: Type) -> Any:
     """Resolve one raw dataclass annotation to a runtime type.
 
@@ -119,6 +169,19 @@ def _type_to_schema(tp: Any, _defs: dict, _seen: set) -> Dict[str, Any]:
 
     _defs 收集嵌套 dataclass 的 schema（用于 $defs），_seen 防递归循环。
     """
+    union = tagged_union(tp)
+    if union is not None:
+        branches, union_nullable = union
+        union_discriminator(branches)  # 构建期就检查区分字段，缺失直接抛错
+        refs: List[Dict[str, Any]] = []
+        for branch in branches:
+            if branch.__name__ not in _defs:
+                _defs[branch.__name__] = _dataclass_to_schema(branch, _defs, _seen, include_defs=False)
+            refs.append({"$ref": f"#/$defs/{branch.__name__}"})
+        if union_nullable:
+            refs.append({"type": "null"})
+        return {"anyOf": refs}
+
     tp, nullable = _strip_optional(tp)
 
     # 基本类型
@@ -218,6 +281,21 @@ def _type_to_schema(tp: Any, _defs: dict, _seen: set) -> Dict[str, Any]:
     return {}
 
 
+def _apply_nonempty(prop: Dict[str, Any], dc_type: Type, name: str) -> None:
+    """显式非空：字符串含非空白字符，数组至少一项，对象至少一个键。"""
+    kind = prop.get("type")
+    kinds = kind if isinstance(kind, list) else [kind]
+    if "string" in kinds:
+        prop["minLength"] = 1
+        prop["pattern"] = r"\S"
+    elif "array" in kinds:
+        prop["minItems"] = 1
+    elif "object" in kinds:
+        prop["minProperties"] = 1
+    else:
+        raise ValueError(f"{dc_type.__name__}.{name}: nonempty 只适用于 str / list / dict")
+
+
 def _dataclass_to_schema(dc_type: Type, _defs: Optional[dict] = None, _seen: Optional[set] = None, *, include_defs: bool = True) -> Dict[str, Any]:
     """从 dataclass 类型提取 JSON Schema。
 
@@ -264,6 +342,21 @@ def _dataclass_to_schema(dc_type: Type, _defs: Optional[dict] = None, _seen: Opt
     for name, tp in hints.items():
         properties[name] = _type_to_schema(tp, _defs, _seen)
         f = dc_fields.get(name)
+        # Some required strings encode absence with "" (for example an
+        # unmatched event ID). Keep them required, but express that value in
+        # the same schema sent to the model and native tool API.
+        if f is not None and f.metadata.get("allow_empty") is True:
+            if tp is not str:
+                raise ValueError(f"{dc_type.__name__}.{name}: allow_empty only applies to str")
+            properties[name]["minLength"] = 0
+        if f is not None and f.metadata.get("nonempty") is True:
+            _apply_nonempty(properties[name], dc_type, name)
+        if f is not None and f.metadata.get("pattern"):
+            if tp is not str:
+                raise ValueError(f"{dc_type.__name__}.{name}: pattern only applies to str")
+            properties[name]["pattern"] = f.metadata["pattern"]  # explicit format replaces the generic non-blank pattern
+        if f is not None and "description" in f.metadata:
+            properties[name]["description"] = f.metadata["description"]
         if f is None:
             required.append(name)
             continue
@@ -408,6 +501,18 @@ def dataclass_to_json_schema(schema_cls: Type, *, description: str = "") -> Dict
 # prompt 文案渲染
 # ------------------------------------------------------------------
 
+def _has_branching(node: Any) -> bool:
+    """schema 里是否有至少两个 $ref 分支的 anyOf（多选一）；可为空的单分支 anyOf 不算。"""
+    if isinstance(node, dict):
+        branches = node.get("anyOf")
+        if isinstance(branches, list) and sum(1 for b in branches if isinstance(b, dict) and "$ref" in b) >= 2:
+            return True
+        return any(_has_branching(v) for v in node.values())
+    if isinstance(node, list):
+        return any(_has_branching(v) for v in node)
+    return False
+
+
 def render_output_constraint(spec: StructuredOutputSpec) -> str:
     """生成 prompt 段落：JSON Schema + 每个字段的语义 + 必须非空标记。
 
@@ -437,6 +542,8 @@ def render_output_constraint(spec: StructuredOutputSpec) -> str:
     if nonempty:
         lines.append(f"- 以下字段必须非空（空字符串/空数组/空对象/None 均视为不合规，会被阻断）：{sorted(nonempty)}")
     lines.append("- `additionalProperties: false`：禁止输出 schema 未定义的字段。")
+    if _has_branching(schema):
+        lines.append("- `anyOf` 的各分支由枚举字段的取值区分：必须选定且只选一个分支，只填该分支定义的字段。")
     lines.append("- 禁止把 schema 里的类型描述符（如 \"string\"）原样当作内容填进去——每个字段必须填入真实内容。")
 
     # 递归展开嵌套子字段约束（spec/schema.md：Expected 子结构约束）

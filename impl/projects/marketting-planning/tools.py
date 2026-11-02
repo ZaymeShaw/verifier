@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from impl.core.schema import ProjectSpec
 from impl.core.tools_protocol import ProjectTools
 
 

@@ -5,6 +5,22 @@
   const TRUNCATION_MARKER = '[已因 Excel 单元格 32767 字符上限截断]';
   const MIME_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   const SHEET_NAME = '用例池候选区';
+  // 第二张 sheet：一行一件事（live / 生产 judge / 生产轴2 / 每个扩展轴的每一条 item），理由全文和耗时都在这里。
+  const DETAIL_SHEET_NAME = '扩展轴明细';
+  const DETAIL_COLUMNS = [
+    {header: 'case_id', key: 'caseId', width: 28},
+    {header: 'scenario', key: 'scenario', width: 20},
+    {header: '阶段/轴', key: 'stage', width: 20},
+    {header: 'status', key: 'status', width: 12},
+    {header: 'verdict', key: 'verdict', width: 16},
+    {header: '对象（断言/期望）', key: 'subject', width: 40},
+    {header: '理由', key: 'reason', width: 80},
+    {header: '引用', key: 'citations', width: 48},
+    {header: '模型', key: 'model', width: 22},
+    {header: 'llm_calls', key: 'llmCalls', width: 10},
+    {header: 'tool_calls', key: 'toolCalls', width: 10},
+    {header: '秒', key: 'seconds', width: 8},
+  ];
   const COLUMNS = [
     {header: 'ID', key: 'id', width: 24},
     {header: '来源', key: 'source', width: 20},
@@ -20,6 +36,8 @@
     {header: 'Attribute JSON', key: 'attributeJson', width: 54},
     {header: 'Trace 摘要', key: 'traceSummary', width: 54},
     {header: '裁决', key: 'carrierPlacement', width: 42},
+    // 每轴一行 `[轴id:值×n]` 令牌；Excel 筛选「包含 truthfulness:refuted」即可定位。理由在「扩展轴明细」sheet。
+    {header: '扩展轴结论', key: 'evalAxes', width: 40},
   ];
 
   function lastColumnLetter(count) {
@@ -152,20 +170,9 @@
     return library;
   }
 
-  function createWorkbook(rows, excelJsOverride) {
-    if (!Array.isArray(rows)) {
-      throw new Error('导出数据必须是数组');
-    }
-    const ExcelJS = requireExcelJS(excelJsOverride);
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Verifier';
-    workbook.created = new Date();
-
-    const worksheet = workbook.addWorksheet(SHEET_NAME, {
-      views: [{state: 'frozen', ySplit: 1}],
-    });
-    worksheet.columns = COLUMNS.map(column => ({...column}));
-    worksheet.autoFilter = {from: 'A1', to: lastColumnLetter(COLUMNS.length) + '1'};
+  function fillSheet(worksheet, columns, rows, rowHeight) {
+    worksheet.columns = columns.map(column => ({...column}));
+    worksheet.autoFilter = {from: 'A1', to: lastColumnLetter(columns.length) + '1'};
 
     const header = worksheet.getRow(1);
     header.height = 24;
@@ -175,15 +182,36 @@
 
     rows.forEach(item => {
       const rowData = {};
-      COLUMNS.forEach(column => {
-        rowData[column.key] = cellText(item && item[column.key]);
+      columns.forEach(column => {
+        const value = item && item[column.key];
+        rowData[column.key] = typeof value === 'number' ? value : cellText(value);
       });
       const row = worksheet.addRow(rowData);
-      row.height = 60;
+      if (rowHeight) {
+        row.height = rowHeight;
+      }
       row.eachCell({includeEmpty: true}, cell => {
         cell.alignment = {vertical: 'top', horizontal: 'left', wrapText: true};
       });
     });
+  }
+
+  function createWorkbook(rows, excelJsOverride, detailRows) {
+    if (!Array.isArray(rows)) {
+      throw new Error('导出数据必须是数组');
+    }
+    if (detailRows !== undefined && !Array.isArray(detailRows)) {
+      throw new Error('扩展轴明细必须是数组');
+    }
+    const ExcelJS = requireExcelJS(excelJsOverride);
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Verifier';
+    workbook.created = new Date();
+
+    fillSheet(workbook.addWorksheet(SHEET_NAME, {views: [{state: 'frozen', ySplit: 1}]}), COLUMNS, rows, 60);
+    if (detailRows && detailRows.length) {
+      fillSheet(workbook.addWorksheet(DETAIL_SHEET_NAME, {views: [{state: 'frozen', ySplit: 1}]}), DETAIL_COLUMNS, detailRows, 0);
+    }
 
     return workbook;
   }
@@ -192,7 +220,7 @@
     const settings = options || {};
     const rows = settings.rows || [];
     const exportedAt = settings.exportedAt || new Date();
-    const workbook = createWorkbook(rows, settings.ExcelJS);
+    const workbook = createWorkbook(rows, settings.ExcelJS, settings.detailRows);
     const buffer = await workbook.xlsx.writeBuffer();
     const BlobType = settings.Blob || global.Blob;
     const URLType = settings.URL || global.URL;
@@ -220,6 +248,8 @@
 
   global.CasePoolExporter = Object.freeze({
     COLUMNS,
+    DETAIL_COLUMNS,
+    DETAIL_SHEET_NAME,
     MAX_EXCEL_CELL_LENGTH,
     TRUNCATION_MARKER,
     cellText,

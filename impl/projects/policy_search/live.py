@@ -5,7 +5,7 @@ import urllib.error
 from typing import Any, Dict
 from urllib.parse import urljoin
 
-from impl.core.live_protocol import LiveServiceUnavailableError, MultiTurnInteractiveLive, RealServiceLive
+from impl.core.live_protocol import LiveServiceUnavailableError, RealServiceLive
 from impl.core.live_transport import LiveHTTPStatusError, LiveTransport
 
 
@@ -15,7 +15,7 @@ def _single_response(raw_response: list[Any]) -> Dict[str, Any]:
     return dict(raw_response[0])
 
 
-class PolicySearchLive(RealServiceLive, MultiTurnInteractiveLive):
+class PolicySearchLive(RealServiceLive):
     """通过受控 transport 调用 policy-search。"""
 
     def deliver_real(self, request: Any, transport: LiveTransport) -> LiveTransport:

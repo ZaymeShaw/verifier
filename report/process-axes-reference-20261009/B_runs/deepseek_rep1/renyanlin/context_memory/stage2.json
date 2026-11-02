@@ -1,0 +1,196 @@
+{
+ "meta": {
+  "elapsed": 56,
+  "prompt_tokens": 26840,
+  "completion_tokens": 13439,
+  "reasoning_tokens": 11457
+ },
+ "attempt": 1,
+ "result": {
+  "results": [
+   {
+    "id": "整轮.R1",
+    "verdict": "met",
+    "observation": "agent_input 中包含 [当前用户问题] P260922000005855是谁的保单？投保人和被保人分别是谁？当前状态呢？，保单号未截断或改写；run.input 同文。",
+    "refs": [
+     "turn1/records/run/step_results/2/steps/0",
+     "turn1/records/run"
+    ]
+   },
+   {
+    "id": "整轮.R2",
+    "verdict": "met",
+    "observation": "模型调用1 exact_request.messages 仅 system 和当前用户问题；模型调用2 exact_request.messages 仅 system、当前用户问题、assistant tool_call、tool 返回；未见历史对话或旧保单信息，from_history 均为 false。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/1",
+     "turn1/records/traces/0/tree/0/spans/3/spans/3",
+     "turn1/records/run/step_executor_runs/0/messages/1"
+    ]
+   },
+   {
+    "id": "整轮.R3",
+    "verdict": "met",
+    "observation": "agent_input 的当前用户问题中保单号为 P260922000005855，未被替换或丢失。",
+    "refs": [
+     "turn1/records/run/step_results/2/steps/0"
+    ]
+   },
+   {
+    "id": "整轮.R4",
+    "verdict": "met",
+    "observation": "messages/1 tool_calls[0].function.name=policy_detail，arguments.polno=P260922000005855，fields 为投保人姓名/被保人姓名/保单状态，compact=true；tools/0.arguments 一致。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/1",
+     "turn1/records/run/step_executor_runs/0/tools/0"
+    ]
+   },
+   {
+    "id": "整轮.R5",
+    "verdict": "met",
+    "observation": "tools/0 facts -002=任言琳、-003=任言琳、-005=交费有效；finalize 和 delivered_output 的 answer 分别列出投保人任言琳、被保人任言琳、保单状态交费有效，并携带对应 fact_refs。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_results/3",
+     "turn1.delivered_output"
+    ]
+   },
+   {
+    "id": "整轮.R6",
+    "verdict": "met",
+    "observation": "delivered_output.answer 包含“投保人:任言琳”，覆盖 exp_p260922000005855_applicant。",
+    "refs": [
+     "turn1.delivered_output"
+    ]
+   },
+   {
+    "id": "整轮.R7",
+    "verdict": "met",
+    "observation": "delivered_output.answer 包含“被保人:任言琳”，覆盖 exp_p260922000005855_insured。",
+    "refs": [
+     "turn1.delivered_output"
+    ]
+   },
+   {
+    "id": "整轮.R8",
+    "verdict": "met",
+    "observation": "delivered_output.answer 包含“保单状态:交费有效”，覆盖 exp_p260922000005855_current_status。",
+    "refs": [
+     "turn1.delivered_output"
+    ]
+   },
+   {
+    "id": "整轮.R9",
+    "verdict": "met",
+    "observation": "delivered_output 同时给出投保人任言琳和被保人任言琳，未遗漏一方。",
+    "refs": [
+     "turn1.delivered_output"
+    ]
+   },
+   {
+    "id": "整轮.R10",
+    "verdict": "met",
+    "observation": "delivered_output 未保留“投被保关系为本人”表述；不存在与工具返回 app_ins_relationship_desc=本人 不一致的保留。",
+    "refs": [
+     "turn1.delivered_output",
+     "turn1/records/run/step_executor_runs/0/tools/0"
+    ]
+   },
+   {
+    "id": "整轮.R11",
+    "verdict": "met",
+    "observation": "delivered_output.fact_refs 引用 -002/-003/-005，均可在本次 tools/0 facts 中追溯，source_call_id 为 CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01。",
+    "refs": [
+     "turn1.delivered_output",
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_results/2/steps/2"
+    ]
+   },
+   {
+    "id": "整轮.R12",
+    "verdict": "not_met",
+    "observation": "模型调用2 JSON 为 gaps=[]、needs_user_input=false；但 agent_bridge 将 gaps 改为“部分内容未能在本轮证据中对应，请结合原始资料核实。”、status=PARTIAL，finalize/delivered_output 继续携带该 gaps 和 completeness=partial，未保留 gaps=[]。未生成澄清问题，但未保留无需追问状态。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3",
+     "turn1/records/run/step_results/2/steps/2",
+     "turn1/records/run/step_results/3",
+     "turn1.delivered_output"
+    ]
+   },
+   {
+    "id": "整轮.R13",
+    "verdict": "met",
+    "observation": "delivered_output.output_text.answer 为用户可读自然语言答案，不只是内部 JSON answer_draft/fact_refs/gaps/needs_user_input/task_updates。",
+    "refs": [
+     "turn1.delivered_output"
+    ]
+   },
+   {
+    "id": "整轮.R14",
+    "verdict": "met",
+    "observation": "tools/0 和 messages/2 保留 records[0]/[1] 均 polno=P260922000005855，模型调用2也按同一保单两个险种表述；未发现误判为两张不同保单。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/messages/2",
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   },
+   {
+    "id": "整轮.R15",
+    "verdict": "met",
+    "observation": "finalize/delivered_output 未提及险种数量或主附险信息；工具返回 records 两行口径为 total=2、主险平安安佑福（惠享版）定期重大疾病保险、附加险平安附加（2026）定期寿险。",
+    "refs": [
+     "turn1.delivered_output",
+     "turn1/records/run/step_executor_runs/0/tools/0"
+    ]
+   },
+   {
+    "id": "整轮.R16",
+    "verdict": "met",
+    "observation": "工具返回 field_descriptions 中 total 险种行总数、records[] 不可跨行汇总、空值不等于零或否等说明随完整工具结果传入模型调用2；下游答案未涉及金额/空值，未发现误读。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2",
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1.delivered_output"
+    ]
+   },
+   {
+    "id": "整轮.R17",
+    "verdict": "met",
+    "observation": "模型调用2 content 的核心结论（投保人/被保人均为任言琳、当前状态交费有效）被 finalize 采用，delivered_output 保留为投保人任言琳、被保人任言琳、保单状态交费有效；未改成相反或空，但省略了“投被保关系为本人”。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3",
+     "turn1.delivered_output"
+    ]
+   },
+   {
+    "id": "整轮.R18",
+    "verdict": "cannot_check",
+    "observation": "案卷只有 policy_detail 工具返回 facts，未提供独立核心系统/数据库查证；因此无法判断外部真值。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0"
+    ]
+   }
+  ],
+  "problems": [
+   {
+    "phenomenon": "agent_bridge 将模型调用2输出的 gaps=[] 改写为“部分内容未能在本轮证据中对应，请结合原始资料核实。”并将 status 置为 PARTIAL；finalize/delivered_output 继承该 gaps 和 completeness=partial，尽管模型调用2的 needs_user_input=false、gaps=[]，且三个用户问题均有对应 fact_refs。",
+    "violates": [
+     "整轮.R12"
+    ],
+    "attribution": "本轴",
+    "impact": "no",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3",
+     "turn1/records/run/step_results/2/steps/2",
+     "turn1/records/run/step_results/3",
+     "turn1.delivered_output"
+    ]
+   }
+  ],
+  "extra_observations": [
+   "agent_bridge 只把 -002/-003/-005 三个 facts 传给 finalize，未保留工具返回 records 两行和 field_descriptions；但最终交付未提及金额/险种，未观察到下游误读。",
+   "delivered_output 的 completeness=partial 与模型调用2 gaps=[] 不一致，gaps/limitations 文案相同。",
+   "最终答案未保留模型调用2中的“投被保关系为本人”及险种信息，但用户未问关系/险种，R10/R15 条件未触发。"
+  ]
+ }
+}

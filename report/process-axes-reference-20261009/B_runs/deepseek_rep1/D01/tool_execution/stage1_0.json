@@ -1,0 +1,101 @@
+{
+ "meta": {
+  "elapsed": 82,
+  "prompt_tokens": 1412,
+  "completion_tokens": 16379,
+  "reasoning_tokens": 14677
+ },
+ "attempt": 1,
+ "result": {
+  "instance": "工具执行（执行）本次运行中已发出的 tools/0–tools/4 调用",
+  "items": [
+   {
+    "id": "R1",
+    "type": "推出",
+    "statement": "tools/0 的 customer_search 返回应是该参数对应的客户搜索页记录；因为 query 中的‘姓平/平姓’、‘女性’、‘12月份生日/生日在12月’分别属于工具说明支持按姓名、性别、生日筛选的范围，不能返回 AMBIGUOUS，若客户数据无匹配则应是零命中结果。",
+    "basis": "工具说明‘按姓名、...性别、生日...定位、筛选客户’；‘不支持...排序及未登记字段’不适用于 tools/0 的 query 条件；tools/0 参数。"
+   },
+   {
+    "id": "R2",
+    "type": "守恒",
+    "statement": "tools/0 返回的每条客户记录应包含请求字段中的姓名、生日、性别、客户号，不得丢失或改写这些字段。",
+    "basis": "tools/0 参数 fields 为 [‘姓名’,‘生日’,‘性别’,‘客户号’]；工具说明‘已返回字段直接按 data 作答’。"
+   },
+   {
+    "id": "R3",
+    "type": "推出",
+    "statement": "tools/1、tools/2、tools/3 的 customer_search 返回应分别是其各自 query 对应的客户搜索页记录；这些 query 同样只含姓平/平姓、女性、12月生日等受支持条件，不能整条返回 AMBIGUOUS。",
+    "basis": "工具说明支持姓名、性别、生日；tools/1–3 参数；‘任一条件不支持时整条不查询，返回 AMBIGUOUS’所指的不支持条件未出现在这些 query 中。"
+   },
+   {
+    "id": "R4",
+    "type": "守恒",
+    "statement": "tools/1、tools/2、tools/3 返回的每条客户记录应包含请求字段中的姓名、生日、性别、客户号、客户中心ID。",
+    "basis": "tools/1–3 参数 fields；工具说明‘已返回字段直接按 data 作答’。"
+   },
+   {
+    "id": "R5",
+    "type": "推出",
+    "statement": "tools/1、tools/2、tools/3 返回的客户中心ID字段应是 clientMainId（兼容 client_main_id、idicm_clientno），不得用寿险客户号 clientNo 冒充客户中心ID。",
+    "basis": "工具说明‘data.records[].clientMainId...即客户中心ID，寿险客户号 clientNo 不是’；tools/1–3 请求字段‘客户中心ID’。"
+   },
+   {
+    "id": "R6",
+    "type": "推出",
+    "statement": "tools/0–tools/3 返回中若提供 data.total，它必须是符合该次 query 条件的客户总数，而不是当前页记录数或展示条数。",
+    "basis": "工具说明‘data.total 为符合查询条件的客户总数，不是当前页记录数或展示条数’。"
+   },
+   {
+    "id": "R7",
+    "type": "推出",
+    "statement": "tools/0–tools/3 的 customer_search 返回不因本部件而保证按客户号升序，因为工具说明明确不支持排序且已发出参数未含排序；期望 E 的‘按客户号升序’需由后续环节基于返回的客户号处理。",
+    "basis": "期望 E 的 list_female_clients_surname_ping_born_in_december‘按客户号升序’；工具说明‘不支持...排序’；tools/0–3 参数无排序条件。"
+   },
+   {
+    "id": "R8",
+    "type": "推出",
+    "statement": "tools/0–tools/3 的参数均未包含‘我名下/归属客户范围’条件，因此其返回不能声称已完成期望 E 中‘名下’的筛选，执行部件也不得自行添加该条件。",
+    "basis": "期望 E 的 list_female_clients_surname_ping_born_in_december‘名下’；tools/0–3 参数 query 只有姓平/平姓、女性、12月生日；工具说明‘不得删条件扩大范围’。"
+   },
+   {
+    "id": "R9",
+    "type": "推出",
+    "statement": "tools/4 的 ask_clarify 返回应是澄清结果 NEEDS_CLARIFICATION（若按工具说明连续开放澄清达上限则返回 ERROR 并转人工），表示本轮结束并登记挂起。",
+    "basis": "工具说明‘返回 NEEDS_CLARIFICATION 后本轮结束；连续开放澄清达上限时返回 ERROR 并转人工’；tools/4 调用 ask_clarify。"
+   },
+   {
+    "id": "R10",
+    "type": "守恒",
+    "statement": "tools/4 的返回必须对应其参数中的 question 和 options（澄清问题/选项），不得返回 customer_search 的客户记录。",
+    "basis": "tools/4 参数 question/options；工具说明 ask_clarify‘须单独调用’。"
+   },
+   {
+    "id": "R11",
+    "type": "守恒",
+    "statement": "本次运行已发出的调用中没有 query_selected_client_detail_info 或 query_selected_client_policy_status，因此在确定选中客户前，执行输出不应包含这两个工具的返回。",
+    "basis": "已发出调用列表仅有 customer_search 和 ask_clarify；期望 E 第2、3条条件‘确定选中客户后’。"
+   },
+   {
+    "id": "R12",
+    "type": "外部真值",
+    "statement": "tools/0–tools/3 返回的实际客户记录集合、每条记录的姓名/生日/性别/客户号/客户中心ID 是否与客户数据库中满足‘姓平或平姓、女性、12月生日’的客户一致，必须独立查客户数据库才能核对。",
+    "basis": "输入只给调用参数，未给客户数据；工具说明返回匹配客户搜索页记录。"
+   },
+   {
+    "id": "R13",
+    "type": "外部真值",
+    "statement": "tools/4 返回是 NEEDS_CLARIFICATION 还是连续开放澄清达上限后的 ERROR，取决于系统实际的连续开放澄清计数，必须查运行状态才能核对。",
+    "basis": "工具说明‘连续开放澄清达上限时返回 ERROR’；输入未给计数。"
+   }
+  ],
+  "not_covered": [
+   "输入未提供工具执行时限的具体数值或超时规则，无法写出可核对的时限约束。",
+   "输入未提供 customer_search 返回的完整数据结构/字段描述（除工具说明片段），无法核对 data.records 之外的分页、field_descriptions 等细节。",
+   "输入未提供客户数据库内容，无法判断实际匹配客户、数量、客户号顺序。",
+   "输入未提供 ask_clarify 的连续开放澄清计数和历史轮次，无法确定应为 NEEDS_CLARIFICATION 还是 ERROR。",
+   "输入未提供前四次 customer_search 的返回，无法判断第4次 ask_clarify 是否违反‘本轮已取得可回答事实后不得调用’。",
+   "期望 E 的‘确定选中客户后’查询详细资料与保单状态未在已发出调用中出现，未覆盖该阶段执行返回。",
+   "参数未包含‘我名下’条件，期望 E 的‘名下’筛选未被本次调用覆盖，属于上游或后续澄清事项。"
+  ]
+ }
+}

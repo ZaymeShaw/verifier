@@ -1,0 +1,506 @@
+{
+ "renyanlin": {
+  "intent_understanding": [
+   {
+    "id": "I1",
+    "type": "推出",
+    "statement": "对象 = 保单 P260922000005855，号码原样保留，不改写不补全。",
+    "basis": "U，SP:保单号",
+    "tainted": false
+   },
+   {
+    "id": "I2",
+    "type": "推出",
+    "statement": "三个问题都保留：谁的保单（投保人/被保人）、投保人、被保人、当前状态；「谁的保单」没有被丢掉。",
+    "basis": "U，E",
+    "tainted": false
+   },
+   {
+    "id": "I3",
+    "type": "守恒",
+    "statement": "不添加用户没说的约束（时间范围、险种过滤、其他保单）。",
+    "basis": "U",
+    "tainted": false
+   },
+   {
+    "id": "I4",
+    "type": "推出",
+    "statement": "无历史、无指代、无歧义，不应触发澄清。",
+    "basis": "U，SP:澄清条件",
+    "tainted": false
+   },
+   {
+    "id": "I5",
+    "type": "推出",
+    "statement": "用户措辞映射到工具字段时，覆盖「投保人、被保人、保单状态」，不多不少。",
+    "basis": "SP:可传 fields，TD",
+    "tainted": false
+   }
+  ],
+  "planning_routing": [
+   {
+    "id": "P1",
+    "type": "推出",
+    "statement": "走单智能体取数路径（to_agent），取数工具 = policy_detail（已有完整保单号）。",
+    "basis": "WF，SP:工具分工，TD:适用",
+    "tainted": false
+   },
+   {
+    "id": "P2",
+    "type": "推出",
+    "statement": "一次 policy_detail 即可覆盖三个问题；不需要 policy_search、客户类工具或知识类工具。",
+    "basis": "TD，E",
+    "tainted": false
+   },
+   {
+    "id": "P3",
+    "type": "推出",
+    "statement": "取数返回后据结果作答，证据足够时不重复同参调用。",
+    "basis": "SP:证据已足够不再检索",
+    "tainted": false
+   },
+   {
+    "id": "P4",
+    "type": "推出",
+    "statement": "调用总数在预算内（工具 ≤12、同工具 ≤4、约 598 秒）。",
+    "basis": "SP",
+    "tainted": false
+   },
+   {
+    "id": "P5",
+    "type": "推出",
+    "statement": "以结论先行的答复收尾，未确认项进 gaps；不声称已挂起任务。",
+    "basis": "SP",
+    "tainted": false
+   },
+   {
+    "id": "P6",
+    "type": "守恒",
+    "statement": "工作流按定义顺序执行（assemble → gate → 条件分支 → finalize），gate 选中的分支与输入一致（有保单号的取数问题 → to_agent）。",
+    "basis": "WF",
+    "tainted": false
+   }
+  ],
+  "tool_execution": [
+   {
+    "id": "T1",
+    "type": "推出",
+    "statement": "调用无报错、无超时地完成。",
+    "basis": "",
+    "tainted": false
+   },
+   {
+    "id": "T2",
+    "type": "守恒",
+    "statement": "返回的保单就是请求的保单（data.records 的保单号 = P260922000005855），没有把别的保单标成目标。",
+    "basis": "TD:读结果",
+    "tainted": false
+   },
+   {
+    "id": "T3",
+    "type": "推出",
+    "statement": "请求的信息（投保人、被保人、保单状态）要么出现在 data.records，要么在 execution 里明确说明未返回；PARTIAL / EMPTY 的含义按工具说明使用。",
+    "basis": "TD",
+    "tainted": false
+   },
+   {
+    "id": "T4",
+    "type": "守恒",
+    "statement": "返回自洽：data.records 里已有值的字段，execution/gaps 不得声称\"未返回\"；同一保单多行字段冲突要披露。",
+    "basis": "TD:多行冲突不能合成保单级结论",
+    "tainted": true
+   },
+   {
+    "id": "T5",
+    "type": "推出",
+    "statement": "返回结构符合工具说明（data.records 险种记录、field_descriptions、projection.incomplete）。",
+    "basis": "TD",
+    "tainted": false
+   },
+   {
+    "id": "T6",
+    "type": "推出",
+    "statement": "耗时在适用时限内（本案没有配置时限 → 无法核）。",
+    "basis": "",
+    "tainted": false
+   }
+  ],
+  "knowledge_data": [
+   {
+    "id": "K1",
+    "type": "外部真值",
+    "statement": "保单 P260922000005855 在库里存在。",
+    "basis": "",
+    "tainted": false
+   },
+   {
+    "id": "K2",
+    "type": "外部真值",
+    "statement": "返回的投保人、被保人、保单状态与库里一致。",
+    "basis": "",
+    "tainted": false
+   },
+   {
+    "id": "K3",
+    "type": "推出",
+    "statement": "多行（主险/附加险）时，保单级字段（投保人、被保人、状态）在各行一致；不一致要暴露而不是合并。",
+    "basis": "TD",
+    "tainted": false
+   }
+  ],
+  "model_capability": [
+   {
+    "id": "M1",
+    "type": "推出",
+    "statement": "决策 = 调用 policy_detail，不直接作答、不先澄清。",
+    "basis": "SP，TD",
+    "tainted": false
+   },
+   {
+    "id": "M2",
+    "type": "推出",
+    "statement": "参数：polno 原样；fields 覆盖三项；不带多余参数。",
+    "basis": "SP，TD",
+    "tainted": false
+   },
+   {
+    "id": "M3",
+    "type": "守恒",
+    "statement": "取数前不陈述任何业务事实。",
+    "basis": "SP:L3",
+    "tainted": false
+   },
+   {
+    "id": "M4",
+    "type": "守恒",
+    "statement": "答案中的投保人、被保人、状态都来自工具返回；不编造、不心算。",
+    "basis": "SP:L3 L4",
+    "tainted": false
+   },
+   {
+    "id": "M5",
+    "type": "推出",
+    "statement": "输出契约：JSON；answer_draft 为首字段、结论先行；fact_refs 只填真实 fact_id；gaps；needs_user_input；claims 的 subject_id/field/fact_id 逐字复制自工具 facts；answer_draft 不自填姓名、状态等业务值。",
+    "basis": "SP:输出 JSON、业务回答契约",
+    "tainted": false
+   },
+   {
+    "id": "M6",
+    "type": "推出",
+    "statement": "三个问题都有回应；工具返回里的限制与缺口须披露。",
+    "basis": "SP:L6，E",
+    "tainted": false
+   },
+   {
+    "id": "M7",
+    "type": "推出",
+    "statement": "无内部词（工具返回/EMPTY/BUDGET）与来源转述（根据资料/检索到）。",
+    "basis": "SP",
+    "tainted": false
+   }
+  ],
+  "context_memory": [
+   {
+    "id": "C1",
+    "type": "守恒",
+    "statement": "用户原话完整进入调用 1 的输入。",
+    "basis": "",
+    "tainted": false
+   },
+   {
+    "id": "C2",
+    "type": "守恒",
+    "statement": "工具返回正文完整、无截断、无改写地进入调用 2 的输入（tool 消息 = 工具结果）。",
+    "basis": "",
+    "tainted": false
+   },
+   {
+    "id": "C3",
+    "type": "守恒",
+    "statement": "调用 2 的草稿经 agent_bridge → finalize → delivered_output：事实（姓名、状态）与限制/gaps 不丢不改。",
+    "basis": "",
+    "tainted": true
+   },
+   {
+    "id": "C4",
+    "type": "守恒",
+    "statement": "执行余量提示与实际用量一致。",
+    "basis": "",
+    "tainted": false
+   },
+   {
+    "id": "C5",
+    "type": "推出",
+    "statement": "首轮不注入历史。",
+    "basis": "",
+    "tainted": false
+   }
+  ]
+ },
+ "D01": {
+  "intent_understanding": [
+   {
+    "id": "I1",
+    "type": "推出",
+    "statement": "对象 = 客户；筛选条件：归属我名下、姓氏 = 平、性别 = 女、生日月份 = 12。",
+    "basis": "U，E1",
+    "tainted": false
+   },
+   {
+    "id": "I2",
+    "type": "推出",
+    "statement": "「按客户号升序」作为排序要求保留，不能静默消失；若系统/工具不支持排序，应表现为一个待处理的限制。",
+    "basis": "U，E1，TD",
+    "tainted": false
+   },
+   {
+    "id": "I3",
+    "type": "推出",
+    "statement": "「列出让我选，确定后再查」是分阶段意图：本阶段只列候选；详情与保单状态是选定后的条件步骤。",
+    "basis": "U，E2，E3",
+    "tainted": false
+   },
+   {
+    "id": "I4",
+    "type": "推出",
+    "statement": "E2、E3 都保留，且带「确定选中后」的条件。",
+    "basis": "E",
+    "tainted": false
+   },
+   {
+    "id": "I5",
+    "type": "推出",
+    "statement": "「姓平」理解为姓氏是平，不是名字叫\"姓平\"；「我名下」是归属约束。",
+    "basis": "U",
+    "tainted": false
+   },
+   {
+    "id": "I6",
+    "type": "守恒",
+    "statement": "不添加用户没说的条件（年龄、地区、等级），月份不被改成日或季节。",
+    "basis": "U",
+    "tainted": false
+   },
+   {
+    "id": "I7",
+    "type": "推出",
+    "statement": "条件已足够表达首步查询，取数前不需要澄清。",
+    "basis": "U，SP",
+    "tainted": false
+   }
+  ],
+  "planning_routing": [
+   {
+    "id": "P1",
+    "type": "推出",
+    "statement": "走 to_agent，首步 = customer_search（定位/筛选客户）。",
+    "basis": "WF，SP:工具分工",
+    "tainted": false
+   },
+   {
+    "id": "P2",
+    "type": "推出",
+    "statement": "排序是工具不支持项：首次调用前就要识别并决定怎么处理（不带排序去查、查回后再说明或排序、或告知用户），不能把不支持条件原样塞进查询。",
+    "basis": "TD，E1",
+    "tainted": false
+   },
+   {
+    "id": "P3",
+    "type": "推出",
+    "statement": "E2、E3 是选定后的步骤：用户选定前不得调用 customer_detail / 保单类工具；首步完成后以「列出供选、等用户选择」收尾。",
+    "basis": "E，SP",
+    "tainted": false
+   },
+   {
+    "id": "P4",
+    "type": "推出",
+    "statement": "若 customer_search 返回 AMBIGUOUS（= 某条件不被支持），不得换措辞重试同一意图（系统提示词明令不得改写同一问题、重复调用已失败来源）；应按工具说明做一次合法调整，或据实收尾/澄清。",
+    "basis": "SP，TD",
+    "tainted": true
+   },
+   {
+    "id": "P5",
+    "type": "推出",
+    "statement": "预算内（工具 ≤12、同工具 ≤4、约 598 秒）；接近上限前停止取数，用已有证据收尾。",
+    "basis": "SP",
+    "tainted": false
+   },
+   {
+    "id": "P6",
+    "type": "推出",
+    "statement": "无可答事实且缺关键信息时才 ask_clarify，且单独调用。",
+    "basis": "SP，TD",
+    "tainted": false
+   },
+   {
+    "id": "P7",
+    "type": "推出",
+    "statement": "收尾要给用户一个可行动的结果（候选清单，或清楚说明哪里做不了、需要用户怎么做）。",
+    "basis": "",
+    "tainted": false
+   }
+  ],
+  "tool_execution": [
+   {
+    "id": "T1",
+    "type": "推出",
+    "statement": "无报错、无超时地完成。",
+    "basis": "",
+    "tainted": false
+   },
+   {
+    "id": "T2",
+    "type": "推出",
+    "statement": "参数里所有条件都在支持范围内时，应返回匹配客户的搜索页记录或 EMPTY（total=0）；含不支持条件时，按工具合约整条不查询、返回 AMBIGUOUS 并说明——这是合约行为，不是故障。核对点：该次 query 里到底有没有不支持条件。",
+    "basis": "TD",
+    "tainted": false
+   },
+   {
+    "id": "T3",
+    "type": "守恒",
+    "statement": "返回的客户满足 query 的条件（女、生日 12 月、姓平）。",
+    "basis": "TD:读结果",
+    "tainted": false
+   },
+   {
+    "id": "T4",
+    "type": "推出",
+    "statement": "fields 请求项（姓名、生日、性别、客户号、客户中心ID）出现在 records，或 execution 说明未返回。",
+    "basis": "TD",
+    "tainted": false
+   },
+   {
+    "id": "T5",
+    "type": "推出",
+    "statement": "耗时在适用时限内（未配置 → 无法核）。",
+    "basis": "",
+    "tainted": false
+   },
+   {
+    "id": "T6",
+    "type": "推出",
+    "statement": "返回 NEEDS_CLARIFICATION 并登记挂起任务。",
+    "basis": "TD",
+    "tainted": false
+   }
+  ],
+  "knowledge_data": [
+   {
+    "id": "K1",
+    "type": "外部真值",
+    "statement": "名下姓平、12 月生日的女性客户是否存在、有几位（仅当查询被正确执行时才对数据源说话）。",
+    "basis": "",
+    "tainted": false
+   },
+   {
+    "id": "K2",
+    "type": "外部真值",
+    "statement": "返回的候选是满足条件的全体（不漏）。",
+    "basis": "",
+    "tainted": false
+   },
+   {
+    "id": "K3",
+    "type": "推出",
+    "statement": "数据源语义：EMPTY = 确实无记录；AMBIGUOUS ≠ 零命中。",
+    "basis": "TD",
+    "tainted": false
+   }
+  ],
+  "model_capability": [
+   {
+    "id": "M1",
+    "type": "推出",
+    "statement": "决策 = 调用 customer_search，不先澄清、不直接作答。",
+    "basis": "SP",
+    "tainted": false
+   },
+   {
+    "id": "M2",
+    "type": "推出",
+    "statement": "query 覆盖姓平、女、12 月三个条件，不夹带工具不支持项（排序），不加用户没说的条件。",
+    "basis": "TD，U",
+    "tainted": false
+   },
+   {
+    "id": "M3",
+    "type": "推出",
+    "statement": "fields 含用户要看的列（至少客户号、姓名），可带客户中心ID 便于后续详情。",
+    "basis": "U，TD",
+    "tainted": false
+   },
+   {
+    "id": "M4",
+    "type": "守恒",
+    "statement": "取数前不陈述业务事实。",
+    "basis": "SP:L3",
+    "tainted": false
+   },
+   {
+    "id": "M5",
+    "type": "推出",
+    "statement": "读懂上一次返回：若是 AMBIGUOUS，含义是\"某条件不被支持\"，不是零命中；不改写重试。",
+    "basis": "SP，TD",
+    "tainted": true
+   },
+   {
+    "id": "M6",
+    "type": "守恒",
+    "statement": "不把 AMBIGUOUS 当成\"没有这样的客户\"来陈述。",
+    "basis": "SP:L3",
+    "tainted": false
+   },
+   {
+    "id": "M7",
+    "type": "推出",
+    "statement": "ask_clarify 的问题与选项要对用户有用，且与已知限制一致（不要求用户提供他本不必提供的信息）。",
+    "basis": "",
+    "tainted": false
+   }
+  ],
+  "context_memory": [
+   {
+    "id": "C1",
+    "type": "守恒",
+    "statement": "用户原话（含排序、两阶段意图）完整进入调用 1 的输入。",
+    "basis": "",
+    "tainted": false
+   },
+   {
+    "id": "C2",
+    "type": "守恒",
+    "statement": "每次工具返回（错误码、说明文字、execution/gaps）完整进入下一次模型输入，不丢\"AMBIGUOUS 的含义\"。",
+    "basis": "",
+    "tainted": false
+   },
+   {
+    "id": "C3",
+    "type": "守恒",
+    "statement": "模型每次工具调用的参数在工具侧原样执行。",
+    "basis": "",
+    "tainted": false
+   },
+   {
+    "id": "C4",
+    "type": "守恒",
+    "statement": "执行余量提示随调用递减，且与实际用量一致。",
+    "basis": "",
+    "tainted": false
+   },
+   {
+    "id": "C5",
+    "type": "守恒",
+    "statement": "终止时 ask_clarify 的问题与选项，原样进入交付与会话挂起账本。",
+    "basis": "",
+    "tainted": false
+   },
+   {
+    "id": "C6",
+    "type": "推出",
+    "statement": "首轮不注入历史。",
+    "basis": "",
+    "tainted": false
+   }
+  ]
+ }
+}

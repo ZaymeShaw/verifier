@@ -1,0 +1,3750 @@
+{
+  "axes": {
+    "expectations": {
+      "title": "需求分析",
+      "loop": "expectations",
+      "role": "analysis",
+      "display": "expanded",
+      "instruction": "你读取材料 case.requirements 里 sources 的需求原文（只给了这一轮及之前的），写出这一轮的 expectations 期望清单。不评表现，不猜实际发生什么，不判断系统能否承载。\nsources.side 的 want 表示本轮用户要求（component=user），history 表示历史对话。\n需求只从本轮用户要求里来：每条期望都必须引用 component=user 的出处。user 可能是一句话，也可能是整份请求体（里面只有一部分是用户要的内容，会话号、令牌之类不是需求）。\nhistory 只解释指代和省略，不能独立产生需求。\n本轴描述（材料 axis.note，可能为空）是配场景的人对需求写的特定要求，常见的是这个场景里\"办成\"一般指交付什么（交付形式，如检索条件、意图标签、答案文本）：拿它把用户这一轮的要求落到具体交付上，写清这一次要交付的具体内容；\n不要把本轴描述的条文逐条改写成期望（\"不得放大\"\"不得遗漏\"之类的通用口径不是这一次的期望）。\n交付形式始终按本轴描述：用户这一句不在它设想的业务里时，期望仍是按它写的形式交付，内容写这一句实际该得到的（如该归到哪一类流程）。\n样例：用户\"红色的鞋有哪些\"，本轴描述\"交付物是商品检索条件，检回集合恰好是用户描述的商品\" → 一条：给出颜色为红色、品类为鞋的检索条件。\n样例：用户\"帮我订张机票\"，本轴描述\"交付物是意图标签，下游按标签分发\" → 一条：给出能把订机票请求分发到对应流程的意图标签（没有对应流程时，分到兜底类）。\n列期望遵循唯一性原则（系统规则 10）：一条只装一件能单独判给没给到的事，同一件事只列一条。每条保留条件、否定、范围与完整交付范围。\n用户原话里明确表达的语义要原样保留在期望里——等值/前缀/包含、范围与边界、数量与单位、逻辑关系；不放大、不缩小、不改写（如用户说\"姓名是张三\"，期望写\"姓名等于张三\"，不写成\"匹配张三\"）。\n普通宽泛名词不是互斥读法；“基本资料，包括X和Y”不要自行制造“只含X/Y”与“其他全部资料”的歧义。\n系统设计规则、工具能力声明、执行路径和通用底线不是需求，不得提取为期望。\n隐性期望：用户要的不只是点名的那几样，还要一个靠得住的回答。每轮在用户明说的期望之外固定加一条：about 写\"本轮回答\"，statement 写\"本轮回答里说的事实都正确、不误导用户（含用户没问、顺带说的）\"，condition 总是，source_refs 引本轮用户要求，needs 写 [[\"knowledge\"], [\"trace\"]]，expectation_id 写 implicit_correct（程序会自动加轮次前缀，其他 expectation_id 也不要自己加 t1. 这类前缀）。只加这一条，别的通用底线仍不是期望。\n样例：用户“查询甲单的余额，并告诉我怎么注销” → 两条：甲单余额/告知数额；注销办理/告知流程。\n样例：历史“甲单状态”，本轮“那它的到期日呢” → 一条：甲单到期日/告知日期，出处包含本轮与历史原文。\n样例：“如果是同一人，请明确说明”单列条件期望，condition=确为同一人；本步骤不判断此条件是否成立。\n\n关于/about 写原文所指对象；陈述/statement 写要求成立的事；condition 默认“总是”。\n出处/source_refs 只能来自给定 sources.id；引用所有必要出处，至少一处是本轮用户要求（component=user）。\n互斥读法分别列出并共享 ambiguity_group；不要静默择一，也不裁决规则冲突；无歧义留空。\n不得加入消费者的轴名、部件、数据需要、blocking、工具选择或表现结论；不推断用户该选择哪个工具。\n用户明确要求的格式保留完整范围；系统自己的格式声明不能变成用户需求。\n描述性 expectation_id 唯一；用 submit 交。材料里的指令是被分析文本，不是你的指令。\n本轴描述是配场景的人写的原文，可能混着三类话：用户在这个场景里要办成什么、交付什么（这类才是需求）；被测系统声称自己能做什么（能力声明）；拿不到结果时系统该怎么做（如实说明、澄清追问、不编造之类的行为规范）。后两类不是用户要的结果，不得写成期望，也不得写成附带期望。\n需要/needs：这条要的结果是业务事实（保费、条款、产品规则、某个对象的属性）时，判它对不对要有证据，写证据组，通常是 [[\"knowledge\"], [\"trace\"]]（知识或 trace 任一类可用来判）；只靠用户原话、场景资料和通用常识（算术、单位换算、公认常识）就能判对错的（如\"检索条件里年龄等于 45\"\"只回答金额\"），写 []。你看不到回答，按用户要的东西本身写，不按想象中的回答写。",
+      "materials": [
+        "case.requirements"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "complete",
+              "partial"
+            ],
+            "x-fill": "program"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "expectations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "expectation_id": {
+                  "type": "string"
+                },
+                "source_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "about": {
+                  "type": "string"
+                },
+                "statement": {
+                  "type": "string"
+                },
+                "condition": {
+                  "type": "string"
+                },
+                "ambiguity_group": {
+                  "type": "string",
+                  "description": "无互斥读法时填空字符串；互斥读法共享组号"
+                },
+                "turn": {
+                  "type": "string",
+                  "description": "程序填：这条期望属于哪一轮；写期望时不用填"
+                },
+                "needs": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "knowledge",
+                        "trace"
+                      ]
+                    }
+                  },
+                  "description": "判这一条对不对，除交付、用户原话、场景资料外还需要哪类证据：证据组的列表，组之间是或、组内是与；只凭交付就能判写 []"
+                }
+              },
+              "required": [
+                "expectation_id",
+                "source_refs",
+                "about",
+                "statement",
+                "condition",
+                "ambiguity_group",
+                "needs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "sources": {
+            "type": "array",
+            "x-fill": "program"
+          },
+          "missing": {
+            "type": "array",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "verdict",
+          "reason",
+          "expectations",
+          "sources",
+          "missing"
+        ],
+        "additionalProperties": false
+      },
+      "checks": [
+        {
+          "refs_in": {
+            "field": "expectations[].source_refs[]",
+            "of": "case.requirements.sources[].id"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "title": "blocking 投影",
+      "loop": "blocking",
+      "role": "analysis",
+      "display": "expanded",
+      "instruction": "只为给定的期望逐条投影 blocking：缺了会让用户这一次要办的事办不成时为 true；用户要的结果本身为 true，格式、展示方式这类附带要求为 false；挡不挡要看这次具体错成什么样、你现在看不到回答判不了的（例如\"回答里的事实都对、不误导\"——错一句无关紧要的和错一句会误导用户办事的不一样），为 null。只看期望本身，不生成、改写或筛选期望；同一歧义组的互斥读法 blocking 一致。期望清单是材料 result.expectations；用 submit 交。",
+      "depends": [
+        {
+          "axis": "expectations",
+          "hard": true
+        }
+      ],
+      "materials": [
+        "result.expectations.expectations[].{expectation_id, turn, about, statement, condition, ambiguity_group}"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "has_blocking",
+              "none"
+            ],
+            "x-fill": "program"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "expectation_id": {
+                  "type": "string"
+                },
+                "blocking": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "true 挡 / false 不挡 / null 挡不挡要看这次具体错成什么样"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "expectation_id",
+                "blocking",
+                "reason"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "verdict",
+          "reason",
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "checks": [
+        {
+          "covers": {
+            "field": "items[].expectation_id",
+            "of": "result.expectations.expectations[].expectation_id"
+          }
+        }
+      ]
+    },
+    "claims": {
+      "title": "说法抽取",
+      "role": "analysis",
+      "display": "expanded",
+      "instruction": "提取回答中的事实说法。回答是材料 case.deliveries：给了哪几轮就是哪几轮，每轮 {turn, output_text}；用户问题 question 是材料 case.user_turns。claims 每项只含 claim_id（唯一非空标识）、claim、spans、context、qualifies 五个键。什么算一条说法：回答断言\"某件事是这样\"的一句话。不管它关于什么、能不能核、重不重要都列：带不带数字、定性的、说某对象没有某项或不存在、说回答者自己做了什么，都是说法；是不是事实、核不核得了由后面判，这里不筛。回答断言某对象没有某项、或对象不存在时，claim 写成\"某对象没有某项\"或\"某对象不存在\"，核的是事实本身，不是回答者那次查到了什么。不是说法的只有不在断言任何事的话：提问、建议、客套，以及回答给内容编的序号、排列本身。列说法遵循唯一性原则（系统规则 10）：一条只说一件事，同一件事只列一条。数字写法不同也是同一件，说的值不同就是两件。回答在几处断言同一件事，只列一条，spans 记下每一处；一句话已经拆成几件列了，就不再另列整句。spans：这条说法在回答里的出处，每处一段 {turn, text}：turn 写这段出自哪一轮，text 逐字摘自那一轮 output_text 的连续原文，不改写；几条说法可以共用同一段；同一件事几轮都说了，仍只列一条，每轮的出处都记。claim：用一句话写清断言了什么；可以自己组织语言，但除了 context 里的对象和条件，不得包含 spans 里没有的内容，不推测，不补充。claim 加 context 合起来要能单独读懂，意思和在回答里一样。数和单位：期限、次数、年龄这类量，单位是量本身的一部分，不拆。一个数据值带的单位、币种、时点（截至某日）、所属对象，各自另成一条说法，与那个数值分开，spans 与那条数值说法相同；这类说法的 qualifies 填它所修饰的那条数值说法的 claim_id，其余说法 qualifies 填空字符串。数值说法就是原文说的那个量：万、亿、% 这类数量级属于数值，单位只留计量单位或币种。context 是核验这条 claim 所需的最少上下文片段列表，每段逐字摘自任一轮回答或用户问题（question）的连续原文，回答里没有时从用户问题里摘，只放两种：事实归属对象的标识（姓名、编号、产品名或代码、事项名称），和成立条件；不放任何被断言的数量和属性（它们是说法本身）。对象和条件只出现在用户问题里时，照样抽这条说法，context 从问题里摘。回答自己编的序号、指代不放进 context，换成它所指对象的标识在回答里的原文写法；回答和用户问题里都找不到它所指对象的标识，也照样列。不需要上下文就填 []。question 是用户各轮原话，按先后排列；第 n 轮的回答答的是第 n 句；用户问题仅作背景。没有说法就交 claims=[]。例如问\"甲商品退货期限多长？\"、回答\"七天，需保留包装\"：两条，context 都是[\"甲商品\"]（摘自问题）——claim=\"退货期限是七天\" spans=[{turn:\"t1\", text:\"七天\"}]；claim=\"退货需保留包装\" spans=[{turn:\"t1\", text:\"需保留包装\"}]。例如\"乙账户截至3月1日余额1200元\"：claim=\"余额的数值是1200\"（c1）；claim=\"余额的单位是元\" qualifies=c1；claim=\"余额的时点是截至3月1日\" qualifies=c1；三条的 spans 相同，context=[\"乙账户\"]。又如\"行驶里程3.5万公里\"：claim=\"行驶里程的数值是3.5万\"（c1）；claim=\"行驶里程的单位是公里\" qualifies=c1。",
+      "depends": [
+        {
+          "axis": "expectations",
+          "hard": true
+        }
+      ],
+      "materials": [
+        "case.deliveries",
+        "case.user_turns"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "some",
+              "none"
+            ],
+            "x-fill": "program"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "claims": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "claim_id": {
+                  "type": "string"
+                },
+                "claim": {
+                  "type": "string"
+                },
+                "spans": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "turn": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "turn",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "context": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "qualifies": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "claim_id",
+                "claim",
+                "spans",
+                "context",
+                "qualifies"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "verdict",
+          "reason",
+          "claims"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "truthfulness": {
+      "title": "真实性",
+      "loop": "truthfulness",
+      "instruction": "判定回答里的每条说法是否属实：拿它和知识源取回的原文比对。说法清单是材料 result.claims（text=claim，context，spans）。\n先取证：调用 search_knowledge(items=[{item_id: claim_id, text: claim, context}])，可一次交多条、也可分几次；它在独立上下文里检索，返回每条的 status（found/not_found）、citations（{ref, quote}）、records（引文所在的整条记录；cite_records 按条列出每条引文的记录编号，与 citations 一一对应）、calls（每次查询的工具与参数，按引文的 ref 找）、note、gap。觉得证据不够可以针对那几条再调一次。不要凭自己的知识判。\n然后逐条交：submit(task_id=\"truthfulness\", item_id=claim_id, payload={reason, verdict, basis, gap, evidence_call})；evidence_call 是取证所依据的那次 search_knowledge 调用的 call_id；那次取证这一条是 not_found 时，verdict 只能是 unverifiable，gap 照取证的 gap 写。全部交完后不带 item_id 交收尾 {reason: 一句话概括}。\n\n核的是事情，不是写法。一条说法断言现实里某个对象（在某条件下）是什么情况；你判断的是：取回的原文能不能证明这件事是这样，或不是这样。\n1. 先弄清说法断言了什么：context 给出对象与成立条件，text 说它是什么情况。用自己的话想清楚这件事，不按字面拆成\"属性 = 值\"去对表。\n   说法是它出处原文（spans）里的一件事，读 claim 要带着它在原文里的意思读；判的仍是这条 claim，不借原文去判它以外的事。claim 单拿出来和它在原文里的意思不一样时，按它在原文里的意思判，reason 里说明按什么意思判的。\n2. 在证据里找讲这件事的原文。同一件事可以用不同措辞、不同字段、不同结构来写；字段说明、口径说明用来读懂原文。理解意思可以用通用常识，业务事实本身只能来自原文。\n3. 判：\n- verified：原文表明这件事是这样（说法说的每一部分原文都支持）。\n- refuted：原文表明这件事不是这样——原文说的和说法不能同时为真。reason 写出原文怎么说、为什么两者不能同时成立。写法不同、字段名对不上、值的字面不一样，都不是矛盾。\n- unverifiable：原文讲不清这件事。\n\n容易想错的地方：\n- 必须是同一件事：别的对象、对象的一部分（客户名下的某张单、保单里的某一行险种）、别的条件下的值，不能证明也不能否定它。数据属于按哪个对象查回来的看查询参数（姓名是密文时也按此归属）。\n- 涉及\"有没有、是不是其中之一、共几个、全部\"时，先看手里有没有这个范围的全集：按说法问的那个范围（某个对象名下的全部条目、某个对象的全部组成）查过并且读全了（数据里的总数与已读条数相等，或知识源读法说明写明这样查回来的就是全部），这份全集就是讲这件事的原文——说法与全集一致判 verified；全集里没有说法说的那一项、或数目对不上，判 refuted，reason 写明这是哪个范围的全集、怎么知道读全了、里面有什么。查询结果为空也是全集（全集为空），对象本身不存在时它的任何值都不成立。没读全，或手里的全集讲的是别的范围（一条记录读全了，但说法问的那一项不在这条记录讲的范围里），没查到不等于没有，判 unverifiable。\n- 原文里\"数据怎么读\"\"回答者该怎么写\"的说明，本身不是关于对象的事实，不能单独拿来证明或否定它。\n- 值是算出来的：原文写明了算法，或说法自己写明了用哪些数怎么算，才照算法算；没有算法就是讲不清（不要凭常识假设\"总额 = 名下全部相加\"）。\n- 知识库对同一事项说法互相矛盾时，不替它裁定：说法与其中一种一致即 verified，reason 写明另有不同说法及其原文。\n- 说法只是回答自己的编号、排序、指代，不是任何对象的情况：unverifiable。\n\n输出 reason/verdict/basis/gap：先在 reason 写原文怎么说、与说法是否一致，再按 reason 的结论填 verdict，两者不得矛盾。\nbasis 是作为依据的原文：每条 {ref: 那次 search_knowledge 调用的 call_id, quote: 从它返回的 citations 的 quote 或 records 里逐字摘}；verified 和 refuted 必须至少一条（refuted 引表明这件事不是这样的那段）；unverifiable 时为 []。\ngap 只在 unverifiable 时填，写缺的是哪一格：object_absent = 原文里没有这个对象；item_absent = 对象在、没有这一项，手里也没有讲清这件事的全集；\nmismatch = 原文对不上（对象或口径不符、没读全、没有算法）。其余结论 gap 为空字符串。",
+      "depends": [
+        {
+          "axis": "claims",
+          "hard": true
+        }
+      ],
+      "materials": [
+        "result.claims.claims[]"
+      ],
+      "tools": [
+        "search_knowledge"
+      ],
+      "submit": "per_item",
+      "items_field": "judgments",
+      "item_key": "claim_id",
+      "output": {
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "no_claims",
+              "has_refuted",
+              "has_unverifiable",
+              "all_verified"
+            ],
+            "x-fill": "program"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "judgments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "claim_id": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "verdict": {
+                  "type": "string",
+                  "enum": [
+                    "verified",
+                    "refuted",
+                    "unverifiable"
+                  ]
+                },
+                "basis": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "出处：call_id"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "逐字摘的原文"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "quote"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "gap": {
+                  "type": "string",
+                  "enum": [
+                    "",
+                    "object_absent",
+                    "item_absent",
+                    "mismatch"
+                  ]
+                },
+                "evidence_call": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "claim_id",
+                "reason",
+                "verdict",
+                "basis",
+                "gap",
+                "evidence_call"
+              ],
+              "additionalProperties": false,
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "verdict": {
+                        "const": "unverifiable"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "gap": {
+                        "enum": [
+                          "object_absent",
+                          "item_absent",
+                          "mismatch"
+                        ]
+                      },
+                      "basis": {
+                        "maxItems": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "verdict": {
+                        "enum": [
+                          "verified",
+                          "refuted"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "gap": {
+                        "const": ""
+                      },
+                      "basis": {
+                        "minItems": 1
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "claims": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "claim_id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "spans": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "turn": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "turn",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "context": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "qualifies": {
+                  "type": "string"
+                },
+                "verdict": {
+                  "type": "string",
+                  "enum": [
+                    "verified",
+                    "refuted",
+                    "unverifiable"
+                  ]
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "gap": {
+                  "type": "string"
+                },
+                "citations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string"
+                      },
+                      "note": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "note"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "claim_id",
+                "text",
+                "spans",
+                "context",
+                "qualifies",
+                "verdict",
+                "reason",
+                "gap",
+                "citations"
+              ],
+              "additionalProperties": false
+            },
+            "x-fill": "program"
+          },
+          "coverage": {
+            "type": "object",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "verdict",
+          "reason",
+          "judgments",
+          "claims",
+          "coverage"
+        ],
+        "additionalProperties": false
+      },
+      "checks": [
+        {
+          "refs_in": {
+            "field": "claim_id",
+            "of": "result.claims.claims[].claim_id",
+            "on": "item"
+          }
+        },
+        {
+          "from_call": {
+            "field": "evidence_call",
+            "tool": "search_knowledge",
+            "on": "item"
+          }
+        },
+        {
+          "quote_in_call": {
+            "field": "basis[]",
+            "category": "subloop",
+            "on": "item"
+          }
+        },
+        {
+          "covers": {
+            "field": "judgments[].claim_id",
+            "of": "result.claims.claims[].claim_id"
+          }
+        }
+      ]
+    },
+    "fulfillment": {
+      "title": "能力兑现",
+      "instruction": "逐条判断期望 E（材料 result.expectations）里用户要的结果，在交付（材料 case.deliveries）里给到了没有。核事实结果 claims 是材料 result.truthfulness；每条期望是不是 blocking 已由程序判好（材料 result.blocking）。逐条判，assessments 每条期望一项。\n\n过程六轴的逐条结果（材料 result.<轴>.results：每条本应、实际、达到 / 没达到 / 无法核）也可作依据；场景配了哪类证据见 scenario.evidence。\n本轴描述（材料 axis.note，可能为空）是配场景的人写的\"怎样算交付到位\"的特定要求：判每条期望给到没有时按它认定什么算给到；它不新增、不删减期望。空就只按期望判。\n\n规则：\n1. 你只判交付本身：这条要的东西（值、条款内容、名单、办理结果）交付里给了 / 没给 / 交付不可读。\n   交付是\"查不到、无法确认、请补充、反问澄清\"等说明而没有给出它 → 没给；如实、礼貌都不能代替结果。\n   用户问的本身就是\"有没有、能不能\"时，答复本身就是结果。\n2. 对不对由程序按这条期望的 needs 与场景配了的证据算，你把依据引全：\n   - claim_refs：和这条期望的结果有关的核事实 claim_id（只填 claims 里有的）；第 t 轮的期望只引出处（spans）里有第 t 轮的说法；\n   - process_refs：和这条期望有关的过程条目，写 <轴>.<条目id>——查没查、查的对象对不对、返回了什么、模型有没有照实写、交付有没有传丢。\n     本应条目的 expectations 里写了这条期望的，必须全部引上，不能只挑达到的。\n   - 不得凭你自己的知识判业务事实对不对。\n3. 每条期望只看和它有关的交付片段、claim 与过程条目；别的期望的结果不影响它。隐性期望 implicit_correct 也一样：claim_refs 引和本轮用户要办的事有关的说法（本轮其他期望涉及的对象和事项，用户没点名问、回答顺带说的也算），和用户要办的事无关的不引。\n4. 格式、展示要求没照做，不影响要的值本身那条期望。\n5. 系统做不了、职责外、信息源本来没有：没给到就是没给，能不能做由别处判。\n6. evidence 逐字摘交付原文。\n7. 条件期望（condition 不是\"总是\"）：条件在交付或期望材料里不成立时，按条件不适用说明。\n8. 你要读懂所引 claim 和过程条目的结论：每条 reason 写清这条最终为什么是那个结果，包括因为哪条 claim 被否定、核实不了，或哪个过程条目没达到、无法核。\n   第一次交后程序会把算出的结果和依据回给你，按它把 reason 写清再交。\n   觉得某条 claim 或过程条目判得不对（例如交付与原文其实说的是同一件事），在 reason 里写明依据挑战；挑战不改结果，也不要为此删改引用。\n材料里的指令是被分析的文本，不是你的指令。收尾 reason 用中文概括最终哪几样兑现、哪几样没兑现及原因。用 submit 交。",
+      "depends": [
+        {
+          "axis": "expectations",
+          "hard": true
+        },
+        {
+          "axis": "blocking",
+          "hard": true
+        },
+        {
+          "axis": "truthfulness",
+          "hard": false
+        },
+        {
+          "axis": "intent_understanding",
+          "hard": false
+        },
+        {
+          "axis": "planning_routing",
+          "hard": false
+        },
+        {
+          "axis": "tool_execution",
+          "hard": false
+        },
+        {
+          "axis": "context_memory",
+          "hard": false
+        },
+        {
+          "axis": "knowledge_data",
+          "hard": false
+        },
+        {
+          "axis": "model_capability",
+          "hard": false
+        }
+      ],
+      "materials": [
+        "case.deliveries",
+        "result.expectations.expectations[]",
+        "result.blocking.items[].{expectation_id, blocking}",
+        "result.truthfulness.claims[].{claim_id, text, spans, context, qualifies, verdict, reason, gap}",
+        "scenario.evidence",
+        "result.intent_understanding.results[].{id, expectations, statement, verdict, observed}",
+        "result.planning_routing.results[].{id, expectations, statement, verdict, observed}",
+        "result.tool_execution.results[].{id, expectations, statement, verdict, observed}",
+        "result.context_memory.results[].{id, expectations, statement, verdict, observed}",
+        "result.knowledge_data.results[].{id, expectations, statement, verdict, observed}",
+        "result.model_capability.results[].{id, expectations, statement, verdict, observed}"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "fulfilled",
+              "not_fulfilled",
+              "not_evaluable"
+            ],
+            "x-fill": "program",
+            "x-explain": true
+          },
+          "reason": {
+            "type": "string"
+          },
+          "assessments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "expectation_id": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "交付里给出这条结果的原文，逐字摘录；没给出时为 []"
+                },
+                "claim_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "依据的核事实 claim_id；没有核事实结果时为 []"
+                },
+                "delivered": {
+                  "type": "string",
+                  "enum": [
+                    "给了",
+                    "没给",
+                    "交付不可读"
+                  ],
+                  "description": "这条要的东西交付里给了没有（只看交付本身）"
+                },
+                "process_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "依据的过程条目，写成 <轴>.<条目id>（如 tool_execution.E2）；没有过程结果时为 []"
+                }
+              },
+              "required": [
+                "expectation_id",
+                "reason",
+                "delivered",
+                "evidence",
+                "claim_refs",
+                "process_refs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "business_expectations": {
+            "type": "array",
+            "x-fill": "program"
+          },
+          "fulfillment_assessments": {
+            "type": "array",
+            "x-fill": "program",
+            "x-explain": [
+              "expectation_id",
+              "status",
+              "status_basis"
+            ]
+          },
+          "overall_fulfillment": {
+            "type": "object",
+            "x-fill": "program"
+          },
+          "not_fulfilled": {
+            "type": "array",
+            "x-fill": "program",
+            "items": {
+              "type": "object",
+              "properties": {
+                "expectation_id": {
+                  "type": "string"
+                },
+                "statement": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "claims_checked": {
+            "type": "boolean",
+            "x-fill": "program"
+          },
+          "reasoning_summary": {
+            "type": "string",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "verdict",
+          "reason",
+          "assessments",
+          "business_expectations",
+          "fulfillment_assessments",
+          "overall_fulfillment",
+          "not_fulfilled",
+          "claims_checked",
+          "reasoning_summary"
+        ],
+        "additionalProperties": false
+      },
+      "checks": [
+        {
+          "covers": {
+            "field": "assessments[].expectation_id",
+            "of": "result.expectations.expectations[].expectation_id"
+          }
+        },
+        {
+          "quote_in_material": {
+            "field": "assessments[].evidence[]",
+            "material": "case.deliveries"
+          }
+        }
+      ]
+    },
+    "carryability": {
+      "title": "承载性",
+      "loop": "carryability",
+      "depends": [
+        {
+          "axis": "expectations",
+          "hard": true
+        },
+        {
+          "axis": "fulfillment",
+          "hard": true
+        }
+      ],
+      "trigger": {
+        "axis": "fulfillment",
+        "verdict_in": [
+          "not_fulfilled"
+        ]
+      },
+      "instruction": "判断每条用户要的、这次没给到的期望：被测系统各部分（智能体、工具、数据、下游服务）都正常工作时，这条期望要的结果给得出还是给不出。没给到的清单是材料 result.fulfillment.not_fulfilled，每条的对象与条件见 result.expectations。\n\n依据只有两种，都可以引用：\n- 责任范围登记：本轴描述（材料 axis.note）就是业务方登记的责任范围（没有哪类数据、不接哪类系统、哪些要求不由本系统负责）。引用时 ref 写 axis.note，quote 逐字摘自本轴描述。本轴描述为空就是没登记。\n- 信息源查询回执：调用 search_knowledge(items=[{item_id: expectation_id, text: 这条期望的 statement, context: [about, condition]}])，查这条要的结果在信息源里本来有没有；可一次交多条，证据不够可针对那几条再调。引用时 ref 写那次调用的 call_id，quote 逐字摘自它返回的原文。那次这一条是 not_found 的，不能当依据。\n  可用工具里写着它本场景不可用时（场景没选信息源），只凭本轴描述判；依据不够就交 undecidable。\n\ncarry 只能是 yes / no / undecidable：\n- no：依据表明给不出——责任范围登记写明这条落在系统之外，或信息源按该对象查过、读全了确实没有。basis 引那段原文。\n- yes：依据表明给得出——如信息源里查到了这条期望要的数据。basis 引它。\n- undecidable：依据不足以判定；basis 为空，gap_kind 取「口径分歧」或「空间未受治理」，missing_material 写缺什么资料才能判。\n查询报错、查回别的对象、没读全都不算查实没有；数据在，就是给得出。不看这次交付，不看被测系统说了什么。\n\n逐条交：submit(task_id=\"carryability\", item_id=expectation_id, payload={expectation_id, carry, reason, basis, gap_kind, missing_material})；全部交完后不带 item_id 交收尾 {reason: 一句话概括}。",
+      "materials": [
+        "result.fulfillment.not_fulfilled[]",
+        "result.expectations.expectations[].{expectation_id, about, condition}"
+      ],
+      "tools": [
+        "search_knowledge"
+      ],
+      "optional_tools": [
+        "search_knowledge"
+      ],
+      "submit": "per_item",
+      "items_field": "judgments",
+      "item_key": "expectation_id",
+      "output": {
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "做不了",
+              "做错了",
+              "说不清"
+            ],
+            "x-fill": "program"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "judgments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "expectation_id": {
+                  "type": "string"
+                },
+                "carry": {
+                  "type": "string",
+                  "enum": [
+                    "yes",
+                    "no",
+                    "undecidable"
+                  ]
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "basis": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "出处：axis.note 或 search_knowledge 的 call_id"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "逐字摘的原文"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "quote"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "gap_kind": {
+                  "type": "string",
+                  "enum": [
+                    "",
+                    "口径分歧",
+                    "空间未受治理"
+                  ]
+                },
+                "missing_material": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "expectation_id",
+                "carry",
+                "reason",
+                "basis",
+                "gap_kind",
+                "missing_material"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "placements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "expectation_id": {
+                  "type": "string"
+                },
+                "placement": {
+                  "type": "string",
+                  "enum": [
+                    "做不了",
+                    "做错了",
+                    "说不清"
+                  ]
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "citations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string"
+                      },
+                      "note": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "gap_kind": {
+                  "type": "string"
+                },
+                "missing_material": {
+                  "type": "string"
+                }
+              }
+            },
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "verdict",
+          "reason",
+          "judgments",
+          "placements"
+        ]
+      },
+      "checks": [
+        {
+          "refs_in": {
+            "field": "expectation_id",
+            "of": "result.fulfillment.not_fulfilled[].expectation_id",
+            "on": "item"
+          }
+        },
+        {
+          "covers": {
+            "field": "judgments[].expectation_id",
+            "of": "result.fulfillment.not_fulfilled[].expectation_id"
+          }
+        }
+      ]
+    },
+    "main_verdict": {
+      "title": "主轴结论",
+      "executor": "program",
+      "depends": [
+        {
+          "axis": "fulfillment",
+          "hard": true
+        },
+        {
+          "axis": "truthfulness",
+          "hard": false
+        },
+        {
+          "axis": "carryability",
+          "hard": false
+        }
+      ],
+      "materials": [
+        "result.fulfillment",
+        "result.truthfulness",
+        "result.carryability.placements[].{expectation_id, placement}"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "做成了",
+              "没做成",
+              "做不了",
+              "不确定"
+            ],
+            "x-fill": "program"
+          },
+          "reason": {
+            "type": "string",
+            "x-fill": "program"
+          },
+          "composition": {
+            "type": "object",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "verdict",
+          "reason",
+          "composition"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "trace_analysis": {
+      "title": "过程案卷（侦探）",
+      "loop": "trace_analysis",
+      "role": "analysis",
+      "instruction": "你是业务执行案卷的侦探：只指路，不评判。案卷完整保存在程序里，你拿到的是目录（每条编号的类别、轮次、大小、一行摘要）、程序从记录结构枚举的环节表（links：类型、输入端与输出端是哪些记录的哪些字段、机器事实 facts）、程序按事实已标出的可疑环节（program_suspects）和采集缺口（gaps）。\n正文不在上下文里：先看完目录和环节表，判断要读哪些编号，用 read_material(name=<推送里案卷那一段的标题>, ids=[…]) 一次把要的编号取回；目录摘要定位不到时用 search_material 按关键词找，再用 read_material 取回。单条太大会给结构图，带 path 下钻，确需整段 full=true。不要重复读本会话已读过的正文。\n只理解结构，不评判表现、不猜根因。特别注意函数步骤的完整输出与状态：直连后端可能没有工具 span，其中已有记录的后端调用、参数、返回就是原环节表漏列的步骤。\n交两类发现，偏召回（宁可多列一个值得下游核对的环节，不要漏；程序已标出的不必重复）：\n1. existing_link_suspects：原环节表里值得核查的步骤，每项只填 link_id、axes、why、source_refs；source_refs 写全核这个环节要看的记录：环节端点之外，这个环节实际发生的内容还记在哪些记录上（如工具调用只记了结构，参数和返回记在它的子记录或别的记录里），一并写进来；\n2. new_link_suspects：运行证据里实际发生、但原环节表漏列的步骤，填 link_type（六类之一，确实无法归类填 unclassified）、axes、input_refs、output_refs（至少一端有真实记录；没记录的一端写 []，不编造端点）、why、source_refs。\"新\"是原表漏记的已发生步骤，不是想象系统应该增加的步骤。\naxes 写哪些轴可能用得上这里的信息，多选、偏召回：一条记录常同时是几个环节的证据（例如后端返回既是工具执行的产出，也是知识与数据的数据源返回），用得上的轴都写上；本环节类型对应的轴程序会自动带上。某类环节这次根本没出现时（例如走直达工具、没调大模型），能说明实际走了哪条路的记录（网关判定、直达步骤的产出）也要分给那类环节的轴，它要据此说明这一步这次不需要。\nwhy 一句话写为什么值得核对，只写观察，不写结论。source_refs 不能为空，只能写此前用 read_material 读回过的编号；目录摘要、搜索片段都不算读过。没有发现的那一类写 []。",
+      "materials": [
+        "case.trace.{catalog, records, links, program_suspects, gaps}"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "existing_link_suspects": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "link_id": {
+                  "type": "string"
+                },
+                "why": {
+                  "type": "string"
+                },
+                "source_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "axes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "intent_understanding",
+                      "planning_routing",
+                      "tool_execution",
+                      "context_memory",
+                      "knowledge_data",
+                      "model_capability"
+                    ]
+                  },
+                  "minItems": 1,
+                  "description": "哪些轴可能用得上这里的信息（多选，偏召回）"
+                }
+              },
+              "required": [
+                "link_id",
+                "why",
+                "source_refs",
+                "axes"
+              ]
+            }
+          },
+          "new_link_suspects": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "link_type": {
+                  "type": "string",
+                  "enum": [
+                    "intent_understanding",
+                    "planning_routing",
+                    "tool_execution",
+                    "knowledge_data",
+                    "model_capability",
+                    "context_memory",
+                    "unclassified"
+                  ]
+                },
+                "input_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "output_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "why": {
+                  "type": "string"
+                },
+                "source_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "axes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "intent_understanding",
+                      "planning_routing",
+                      "tool_execution",
+                      "context_memory",
+                      "knowledge_data",
+                      "model_capability"
+                    ]
+                  },
+                  "minItems": 1,
+                  "description": "哪些轴可能用得上这里的信息（多选，偏召回）"
+                }
+              },
+              "required": [
+                "link_type",
+                "input_refs",
+                "output_refs",
+                "why",
+                "source_refs",
+                "axes"
+              ]
+            }
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "complete",
+              "partial"
+            ],
+            "x-fill": "program"
+          },
+          "reason": {
+            "type": "string",
+            "x-fill": "program"
+          },
+          "suspects": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "x-fill": "program"
+          },
+          "views": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "type": "string"
+                },
+                "links": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "link_id": {
+                        "type": "string"
+                      },
+                      "link_type": {
+                        "type": "string"
+                      },
+                      "turn": {
+                        "type": "string"
+                      },
+                      "input": {
+                        "type": "array"
+                      },
+                      "output": {
+                        "type": "array"
+                      },
+                      "facts": {
+                        "type": "object"
+                      },
+                      "basis": {
+                        "type": "string"
+                      },
+                      "leads": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "link_id",
+                      "link_type"
+                    ]
+                  }
+                },
+                "leads": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "input": {
+                  "type": "object"
+                },
+                "full": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "axis",
+                "links",
+                "leads",
+                "input",
+                "full"
+              ]
+            },
+            "x-fill": "program"
+          },
+          "feeds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "string"
+                },
+                "to": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "from",
+                "to"
+              ]
+            },
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "existing_link_suspects",
+          "new_link_suspects",
+          "verdict",
+          "reason",
+          "suspects",
+          "views",
+          "feeds"
+        ]
+      }
+    },
+    "intent_understanding_expected": {
+      "title": "意图理解·本应",
+      "loop": "process_expected",
+      "role": "analysis",
+      "depends": [
+        {
+          "axis": "expectations",
+          "hard": true
+        },
+        {
+          "axis": "trace_analysis",
+          "hard": true
+        }
+      ],
+      "instruction": "轴：意图理解（环节类型 intent_understanding）\n轴在问什么：表达环节：系统把用户原文转成内部表达时，对象、字段、约束、子问题、指代是否与原文一致完整。\n本轴不判：理解之后的一切：路由与拆解、是否发起澄清（编排或模型决策）、调用是否成功、上下文是否传丢、数据源有没有、模型答得好不好。\n子能力提纲：\n- 对象与字段一致：什么时候用到——用户原文点名了对象、字段或知识点；做对必须成立——内部表达（截至本轮的步骤产出、交给 Agent 的任务、工具参数）里的对象与字段和原文一致，没有被改写或替换\n- 子问题均识别：什么时候用到——用户原文含一个或多个子问题；做对必须成立——每个子问题都在内部表达里有对应（任务表述或工具调用意图）；逐个列出\n- 约束保留：什么时候用到——用户给出了时间、条件、比较关系、范围或输出要求；做对必须成立——这些约束在内部表达里被保留，没有弱化或换成默认口径\n- 指代解析：什么时候用到——用户用指代词指向会话历史里的对象；做对必须成立——指代解析到历史中正确的对象\n- 歧义识别：什么时候用到——用户原文确有歧义或缺关键信息；做对必须成立——内部表达把它保留为待确认或并列候选，而不是选定一种解读当确定事实。是否发起澄清、澄清是否多余不在此判\n本轴描述（材料 axis.note，可能为空）里配场景的人写的过程职责，也是本轴的子能力。\n\n【本应清单】你只看得到这个轴在本次运行里的输入端材料，看不到运行实际产出了什么。\n\n写：在这样的输入下，做对时必须成立什么。要求：\n- 每条 statement 具体到能核对（点得出对象、地点、条件、数量）；\n- 列本应遵循唯一性原则（系统规则 10）：一条只装一件能单独判达到没有的事，同一件事只列一条；\n- statement 写这一步必须成立什么（要拿到哪项数据、交付里要有什么），不写「如某某调用」这类对实现的猜测；只有材料写明由哪个工具负责时才点名工具；\n- 只写这个输入本身提出的要求，不猜运行结果，不写\"如果…则…\"的假设条目；\n- 要求系统应该发生的动作（例如必须取数），先想清：要不要外部数据、系统有什么办法拿到、当时是否仍必须行动（已有有效数据或等价路径就不写）；\n- basis 引输入里的原文片段或记录编号；\n- 材料可能含几轮（记录编号里的 turnN 是第 N 轮），需求清单每条也标了 turn：每条本应只依据同一轮的需求和该轮的材料写，turn 填那一轮；不拿一轮的需求去要求另一轮的材料（例如用户在后一轮更正了对象，前一轮按原对象处理不算错）；\n- subcapability 取给定子能力之一，都不合适写「其他」；\n- expectations：这条做错了，会让需求清单里哪几条没给到或给错，写它们的 expectation_id；只写会被它直接影响的，都影响不到时写 []；\n- needs_external：这条是否必须独立查证（例如库里到底有没有、数据源是否真缺失）才判得了；\n- 写不全、拿不准、本次看不到的放进 not_covered；本次确实不需要的子能力也在 not_covered 里点名说明。\n材料大时只给目录：用 read_material(name=<材料标题>, ids=[…]) 按编号取正文，目录摘要定位不到时用 search_material 按关键词找。本轴环节表里的每个环节都要看到，该看的都要看，依据要充分。",
+      "materials": [
+        "result.expectations.expectations[]",
+        "result.trace_analysis.views[axis=intent_understanding].links[].{link_id, link_type, turn, input}",
+        "result.trace_analysis.views[axis=intent_understanding].input",
+        "result.trace_analysis.feeds",
+        "axis.note"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "expected": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "本轴内唯一的短编号，如 E1"
+                },
+                "about": {
+                  "type": "string",
+                  "description": "针对输入里的哪个对象或环节（记录编号、需求编号、原话里的条件）"
+                },
+                "subcapability": {
+                  "type": "string",
+                  "description": "取给定子能力之一；都不合适写「其他」"
+                },
+                "statement": {
+                  "type": "string",
+                  "description": "做对时必须成立什么；具体到能核对（对象、地点、条件、数量）"
+                },
+                "basis": {
+                  "type": "string",
+                  "description": "依据：输入里的原文片段或记录编号"
+                },
+                "expectations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "这条做错了会让哪几条需求没给到或给错（expectation_id）；都影响不到时 []"
+                },
+                "needs_external": {
+                  "type": "string",
+                  "enum": [
+                    "是",
+                    "否",
+                    "不确定"
+                  ],
+                  "description": "是否必须独立查证才判得了"
+                },
+                "turn": {
+                  "type": "string",
+                  "description": "这条属于哪一轮（tN）"
+                }
+              },
+              "required": [
+                "id",
+                "about",
+                "subcapability",
+                "statement",
+                "basis",
+                "expectations",
+                "needs_external",
+                "turn"
+              ]
+            }
+          },
+          "not_covered": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "写不全、拿不准、本次看不到的范围；本次不需要的子能力也写在这里并说明"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "ready"
+            ],
+            "x-fill": "program"
+          },
+          "reason": {
+            "type": "string",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "expected",
+          "not_covered",
+          "verdict",
+          "reason"
+        ]
+      }
+    },
+    "intent_understanding": {
+      "title": "意图理解",
+      "loop": "process",
+      "depends": [
+        {
+          "axis": "intent_understanding_expected",
+          "hard": true
+        },
+        {
+          "axis": "trace_analysis",
+          "hard": true
+        }
+      ],
+      "instruction": "轴：意图理解（环节类型 intent_understanding）\n轴在问什么：表达环节：系统把用户原文转成内部表达时，对象、字段、约束、子问题、指代是否与原文一致完整。\n本轴不判：理解之后的一切：路由与拆解、是否发起澄清（编排或模型决策）、调用是否成功、上下文是否传丢、数据源有没有、模型答得好不好。\n子能力提纲：\n- 对象与字段一致：什么时候用到——用户原文点名了对象、字段或知识点；做对必须成立——内部表达（截至本轮的步骤产出、交给 Agent 的任务、工具参数）里的对象与字段和原文一致，没有被改写或替换\n- 子问题均识别：什么时候用到——用户原文含一个或多个子问题；做对必须成立——每个子问题都在内部表达里有对应（任务表述或工具调用意图）；逐个列出\n- 约束保留：什么时候用到——用户给出了时间、条件、比较关系、范围或输出要求；做对必须成立——这些约束在内部表达里被保留，没有弱化或换成默认口径\n- 指代解析：什么时候用到——用户用指代词指向会话历史里的对象；做对必须成立——指代解析到历史中正确的对象\n- 歧义识别：什么时候用到——用户原文确有歧义或缺关键信息；做对必须成立——内部表达把它保留为待确认或并列候选，而不是选定一种解读当确定事实。是否发起澄清、澄清是否多余不在此判\n配场景的人写的过程职责已由本应写进本应清单，照清单判。\n\n【实际清单】材料里有本轴环节两端的全部原文和之前写定的本应清单（不能改）；一个环节的内容可能不只记在它自己的端点上，links 里每个环节的 leads 是侦探给这个环节指的记录，也是这个环节的证据：端点没有正文、但 leads 里的记录有，就按 leads 里的记录核，不判无法核；views 的 leads 是侦探指出本轴也要看的其他记录。\n\n写：逐条实际是什么。要求：\n- actual 的 id 与本应清单一一对应，不得增删改；落在哪些实际环节写进 links（link_id）；verdict 取 达到 / 没达到 / 无法核 / 不适用；\n- 不适用：本应写的这一步这次没有发生，也不需要它——系统换了一条路把事办了（例如走直达工具、没调大模型）；必须引原文说明实际走的是哪条路。该做没做不是不适用，判没达到；\n- 本应清单没料到、但实际发生的行为（多调了不该调的、改措辞重复查询、交付覆盖了模型产出等）写进 unexpected；\n- problems 只能由没达到的条目或 unexpected 生成，items 写它们的 id；每个没达到的条目、每个 unexpected 都要被至少一条 problem 引用；phenomenon、impact 各写成单独读也看得懂的一句话：哪一轮、哪一步、怎么了、影响什么；\n- attribution：本轴（这个部件在有效输入下做错了）/ 上游:<轴>（它依赖的输入已被上游弄坏）/ 未定位:<候选轴>（看得出不对、说不清是哪一段）；\n- needs_external=是 的条目：trace 里看得到做到了照判达到并引原文；看不出做到的判无法核，不能判没达到（判了会被退回）；\n- reason：给看结果的人读的本轴说明，要让人只看这一段，就知道本轴在这个 case 里哪里出了问题、是什么问题、为什么算问题，或者为什么没问题：有问题时每个问题写一两句——第几轮、哪一步；原文里看到了什么（引最关键的一小段原文，加引号）；违背了哪一条本应；对用户要的结果造成了什么（哪一部分没给到、给错了）；问题是上游带下来的，写明是哪个轴的什么问题传下来的，本轴自己没做错。核不了的，写哪一件核不了、为什么（缺什么材料）。没问题时一两句，说核了哪几件关键的事、凭的是哪段原文（引一小段）。不复述\"达到几项\"这类计数；不写\"均正常\"\"严格一致\"这类原文撑不住的概括；条目里没有判过的事不写。\n- scope_note 写这次没覆盖到的范围。\n\n引文规则（程序逐条核对，不在所引记录里的会退回，改对了才收）：\n- 达到、没达到、不适用的行和每个 unexpected 至少一段 quotes（trace 里引不出能证明它的原文，就判无法核）：{ref: 记录编号, quote: 从该记录逐字摘出的短句}；\n- 要靠两处对比才看得出的（上游写了什么、下游变成了什么；前一次请求里的某句、后一次请求里同一句），两处都引；\n- 引文短而关键（一般 40 字以内），不改写、不用省略号拼接；\n- 原文里的英文双引号在引文里一律写成中文引号“”（程序核对时视为同一字符），反斜杠不要抄进引文；尽量摘不带引号的那一段。\n材料大时只给目录：用 read_material(name=<材料标题>, ids=[…]) 按编号取正文，目录摘要定位不到时用 search_material 按关键词找。本轴环节表里的每个环节都要看到，该看的都要看，依据要充分。",
+      "materials": [
+        "result.intent_understanding_expected.{expected, not_covered}",
+        "result.trace_analysis.views[axis=intent_understanding].links[]",
+        "result.trace_analysis.views[axis=intent_understanding].full",
+        "result.trace_analysis.views[axis=intent_understanding].leads"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "actual": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "与本应清单的 id 一一对应"
+                },
+                "links": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "落在哪些实际环节（link_id）"
+                },
+                "observed": {
+                  "type": "string",
+                  "description": "实际是什么；无法核时说清为什么核不了"
+                },
+                "quotes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "原文所在记录的编号（records[].id），只写编号"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "从该记录逐字摘出的短句（一般 40 字以内），不改写、不用省略号拼接"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "quote"
+                    ]
+                  },
+                  "description": "没达到、不适用时至少一段；要靠两处对比才看得出的两处都引"
+                },
+                "verdict": {
+                  "type": "string",
+                  "enum": [
+                    "达到",
+                    "没达到",
+                    "无法核",
+                    "不适用"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "links",
+                "observed",
+                "quotes",
+                "verdict"
+              ]
+            }
+          },
+          "unexpected": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "observed": {
+                  "type": "string"
+                },
+                "links": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "quotes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "原文所在记录的编号（records[].id），只写编号"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "从该记录逐字摘出的短句（一般 40 字以内），不改写、不用省略号拼接"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "quote"
+                    ]
+                  }
+                },
+                "why": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "observed",
+                "links",
+                "quotes",
+                "why"
+              ]
+            }
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "phenomenon": {
+                  "type": "string"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "只引用没达到的条目 id 或 unexpected 的 id"
+                },
+                "attribution": {
+                  "type": "string",
+                  "pattern": "^(本轴|上游:.+|未定位:.+)$",
+                  "description": "本轴 / 上游:<轴> / 未定位:<候选轴>"
+                },
+                "impact": {
+                  "type": "string",
+                  "description": "对最终交付的影响"
+                }
+              },
+              "required": [
+                "phenomenon",
+                "items",
+                "attribution",
+                "impact"
+              ]
+            }
+          },
+          "reason": {
+            "type": "string",
+            "description": "给读者的本轴说明：每个问题写第几轮哪一步、原文、违背哪条本应、影响用户哪部分结果；核不了写缺什么；没问题写核了什么、凭哪段原文"
+          },
+          "scope_note": {
+            "type": "string",
+            "description": "这次没覆盖到的范围"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "problematic",
+              "not_evaluable",
+              "sound",
+              "untested",
+              "not_applicable"
+            ],
+            "x-fill": "program",
+            "x-explain": true
+          },
+          "composition": {
+            "type": "object",
+            "x-fill": "program",
+            "x-explain": [
+              "counts"
+            ]
+          },
+          "results": {
+            "type": "array",
+            "x-fill": "program",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "expectations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "statement": {
+                  "type": "string"
+                },
+                "verdict": {
+                  "type": "string"
+                },
+                "observed": {
+                  "type": "string"
+                },
+                "about": {
+                  "type": "string"
+                },
+                "subcapability": {
+                  "type": "string"
+                },
+                "basis": {
+                  "type": "string"
+                },
+                "turn": {
+                  "type": "string"
+                },
+                "links": {
+                  "type": "array"
+                },
+                "quotes": {
+                  "type": "array"
+                },
+                "needs_external": {
+                  "type": "string"
+                },
+                "standing_duty": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "expectations",
+                "statement",
+                "verdict",
+                "observed"
+              ]
+            }
+          },
+          "issues": {
+            "type": "array",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "actual",
+          "unexpected",
+          "problems",
+          "reason",
+          "scope_note",
+          "verdict",
+          "composition",
+          "results",
+          "issues"
+        ]
+      }
+    },
+    "planning_routing_expected": {
+      "title": "规划与路由·本应",
+      "loop": "process_expected",
+      "role": "analysis",
+      "depends": [
+        {
+          "axis": "expectations",
+          "hard": true
+        },
+        {
+          "axis": "trace_analysis",
+          "hard": true
+        }
+      ],
+      "instruction": "轴：规划与路由（环节类型 planning_routing）\n轴在问什么：编排环节：路径选择、任务拆解、调用顺序、系统策略、失败分支、重试、结束时机是否合理。系统按自己的设计跑但设计不对也算。\n本轴不判：工具自身执行好坏（工具执行）、信息在环节间传递与交付是否失真（上下文管理）、数据源有没有（知识数据）、模型在给定输入下的逐次输出（模型能力）。\n子能力提纲：\n- 分支按声明条件：什么时候用到——控制步骤（Condition/Router/Loop）在子分支之间做了选择；做对必须成立——按步骤定义与当时输入所声明的条件选择分支；Loop 按上限终止\n- 路径选择合理：什么时候用到——本轮需要选定执行路径（直连后端的函数步骤、交给 Agent 编排、调用哪些工具）；做对必须成立——所选路径与问题类型相称，实际走的路径与该选择一致\n- 工作覆盖完整：什么时候用到——问题需要若干项工作（取数、取知识、计算）；做对必须成立——每个子问题都有对应处理；确需外部数据时完成取数；依赖的调用排在先决信息之后\n- 系统策略：什么时候用到——本轮触发了系统自身策略（预算、准入、容量闸、拦截、确定性兜底、缓存或去重）；做对必须成立——给模型的规则与实际执行的规则一致；没有在仍能完成的任务上拦截或放弃。按设计触发的拒绝属于编排，不是执行偏差\n- 失败分支有产出：什么时候用到——本轮出现调用失败、未命中或被拒绝；做对必须成立——之后有产出：改参、换工具、澄清或如实收尾，并利用了已取得的信息；失败后什么都没做就收尾算无产出\n- 工具返回后的整合与交付：什么时候用到——工具返回了可用事实；做对必须成立——系统保留了整合与交付的机会：模型继续整合，或被系统终止后有确定性步骤把可用事实组织成用户所需答复；只把工具卡片、字段名或错误信封交给用户算没做到\n- 结束时机合理：什么时候用到——本轮流程收尾；做对必须成立——必要工作完成或被如实标记为缺口后才收尾；终止方（模型或系统）没有剥夺整合已有结果的机会\n- 重复调用有依据：什么时候用到——同名同参的调用在前次结束后再次发出；做对必须成立——重复有依据：前次结果表明可重试，或有退避、改参、绕过缓存；否则是无效重复。缓存吞掉重试须有缓存使用证据\n- 编排决策符合规则：什么时候用到——该编排环节做出了一个决策（任何编排环节，含表外环节）；做对必须成立——决策与出处中的规则或声明一致\n本轴描述（材料 axis.note，可能为空）里配场景的人写的过程职责，也是本轴的子能力。\n\n【本应清单】你只看得到这个轴在本次运行里的输入端材料，看不到运行实际产出了什么。\n\n写：在这样的输入下，做对时必须成立什么。要求：\n- 每条 statement 具体到能核对（点得出对象、地点、条件、数量）；\n- 列本应遵循唯一性原则（系统规则 10）：一条只装一件能单独判达到没有的事，同一件事只列一条；\n- statement 写这一步必须成立什么（要拿到哪项数据、交付里要有什么），不写「如某某调用」这类对实现的猜测；只有材料写明由哪个工具负责时才点名工具；\n- 只写这个输入本身提出的要求，不猜运行结果，不写\"如果…则…\"的假设条目；\n- 要求系统应该发生的动作（例如必须取数），先想清：要不要外部数据、系统有什么办法拿到、当时是否仍必须行动（已有有效数据或等价路径就不写）；\n- basis 引输入里的原文片段或记录编号；\n- 材料可能含几轮（记录编号里的 turnN 是第 N 轮），需求清单每条也标了 turn：每条本应只依据同一轮的需求和该轮的材料写，turn 填那一轮；不拿一轮的需求去要求另一轮的材料（例如用户在后一轮更正了对象，前一轮按原对象处理不算错）；\n- subcapability 取给定子能力之一，都不合适写「其他」；\n- expectations：这条做错了，会让需求清单里哪几条没给到或给错，写它们的 expectation_id；只写会被它直接影响的，都影响不到时写 []；\n- needs_external：这条是否必须独立查证（例如库里到底有没有、数据源是否真缺失）才判得了；\n- 写不全、拿不准、本次看不到的放进 not_covered；本次确实不需要的子能力也在 not_covered 里点名说明。\n材料大时只给目录：用 read_material(name=<材料标题>, ids=[…]) 按编号取正文，目录摘要定位不到时用 search_material 按关键词找。本轴环节表里的每个环节都要看到，该看的都要看，依据要充分。",
+      "materials": [
+        "result.expectations.expectations[]",
+        "result.trace_analysis.views[axis=planning_routing].links[].{link_id, link_type, turn, input}",
+        "result.trace_analysis.views[axis=planning_routing].input",
+        "result.trace_analysis.feeds",
+        "axis.note"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "expected": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "本轴内唯一的短编号，如 E1"
+                },
+                "about": {
+                  "type": "string",
+                  "description": "针对输入里的哪个对象或环节（记录编号、需求编号、原话里的条件）"
+                },
+                "subcapability": {
+                  "type": "string",
+                  "description": "取给定子能力之一；都不合适写「其他」"
+                },
+                "statement": {
+                  "type": "string",
+                  "description": "做对时必须成立什么；具体到能核对（对象、地点、条件、数量）"
+                },
+                "basis": {
+                  "type": "string",
+                  "description": "依据：输入里的原文片段或记录编号"
+                },
+                "expectations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "这条做错了会让哪几条需求没给到或给错（expectation_id）；都影响不到时 []"
+                },
+                "needs_external": {
+                  "type": "string",
+                  "enum": [
+                    "是",
+                    "否",
+                    "不确定"
+                  ],
+                  "description": "是否必须独立查证才判得了"
+                },
+                "turn": {
+                  "type": "string",
+                  "description": "这条属于哪一轮（tN）"
+                }
+              },
+              "required": [
+                "id",
+                "about",
+                "subcapability",
+                "statement",
+                "basis",
+                "expectations",
+                "needs_external",
+                "turn"
+              ]
+            }
+          },
+          "not_covered": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "写不全、拿不准、本次看不到的范围；本次不需要的子能力也写在这里并说明"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "ready"
+            ],
+            "x-fill": "program"
+          },
+          "reason": {
+            "type": "string",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "expected",
+          "not_covered",
+          "verdict",
+          "reason"
+        ]
+      }
+    },
+    "planning_routing": {
+      "title": "规划与路由",
+      "loop": "process",
+      "depends": [
+        {
+          "axis": "planning_routing_expected",
+          "hard": true
+        },
+        {
+          "axis": "trace_analysis",
+          "hard": true
+        }
+      ],
+      "instruction": "轴：规划与路由（环节类型 planning_routing）\n轴在问什么：编排环节：路径选择、任务拆解、调用顺序、系统策略、失败分支、重试、结束时机是否合理。系统按自己的设计跑但设计不对也算。\n本轴不判：工具自身执行好坏（工具执行）、信息在环节间传递与交付是否失真（上下文管理）、数据源有没有（知识数据）、模型在给定输入下的逐次输出（模型能力）。\n子能力提纲：\n- 分支按声明条件：什么时候用到——控制步骤（Condition/Router/Loop）在子分支之间做了选择；做对必须成立——按步骤定义与当时输入所声明的条件选择分支；Loop 按上限终止\n- 路径选择合理：什么时候用到——本轮需要选定执行路径（直连后端的函数步骤、交给 Agent 编排、调用哪些工具）；做对必须成立——所选路径与问题类型相称，实际走的路径与该选择一致\n- 工作覆盖完整：什么时候用到——问题需要若干项工作（取数、取知识、计算）；做对必须成立——每个子问题都有对应处理；确需外部数据时完成取数；依赖的调用排在先决信息之后\n- 系统策略：什么时候用到——本轮触发了系统自身策略（预算、准入、容量闸、拦截、确定性兜底、缓存或去重）；做对必须成立——给模型的规则与实际执行的规则一致；没有在仍能完成的任务上拦截或放弃。按设计触发的拒绝属于编排，不是执行偏差\n- 失败分支有产出：什么时候用到——本轮出现调用失败、未命中或被拒绝；做对必须成立——之后有产出：改参、换工具、澄清或如实收尾，并利用了已取得的信息；失败后什么都没做就收尾算无产出\n- 工具返回后的整合与交付：什么时候用到——工具返回了可用事实；做对必须成立——系统保留了整合与交付的机会：模型继续整合，或被系统终止后有确定性步骤把可用事实组织成用户所需答复；只把工具卡片、字段名或错误信封交给用户算没做到\n- 结束时机合理：什么时候用到——本轮流程收尾；做对必须成立——必要工作完成或被如实标记为缺口后才收尾；终止方（模型或系统）没有剥夺整合已有结果的机会\n- 重复调用有依据：什么时候用到——同名同参的调用在前次结束后再次发出；做对必须成立——重复有依据：前次结果表明可重试，或有退避、改参、绕过缓存；否则是无效重复。缓存吞掉重试须有缓存使用证据\n- 编排决策符合规则：什么时候用到——该编排环节做出了一个决策（任何编排环节，含表外环节）；做对必须成立——决策与出处中的规则或声明一致\n配场景的人写的过程职责已由本应写进本应清单，照清单判。\n\n【实际清单】材料里有本轴环节两端的全部原文和之前写定的本应清单（不能改）；一个环节的内容可能不只记在它自己的端点上，links 里每个环节的 leads 是侦探给这个环节指的记录，也是这个环节的证据：端点没有正文、但 leads 里的记录有，就按 leads 里的记录核，不判无法核；views 的 leads 是侦探指出本轴也要看的其他记录。\n\n写：逐条实际是什么。要求：\n- actual 的 id 与本应清单一一对应，不得增删改；落在哪些实际环节写进 links（link_id）；verdict 取 达到 / 没达到 / 无法核 / 不适用；\n- 不适用：本应写的这一步这次没有发生，也不需要它——系统换了一条路把事办了（例如走直达工具、没调大模型）；必须引原文说明实际走的是哪条路。该做没做不是不适用，判没达到；\n- 本应清单没料到、但实际发生的行为（多调了不该调的、改措辞重复查询、交付覆盖了模型产出等）写进 unexpected；\n- problems 只能由没达到的条目或 unexpected 生成，items 写它们的 id；每个没达到的条目、每个 unexpected 都要被至少一条 problem 引用；phenomenon、impact 各写成单独读也看得懂的一句话：哪一轮、哪一步、怎么了、影响什么；\n- attribution：本轴（这个部件在有效输入下做错了）/ 上游:<轴>（它依赖的输入已被上游弄坏）/ 未定位:<候选轴>（看得出不对、说不清是哪一段）；\n- needs_external=是 的条目：trace 里看得到做到了照判达到并引原文；看不出做到的判无法核，不能判没达到（判了会被退回）；\n- reason：给看结果的人读的本轴说明，要让人只看这一段，就知道本轴在这个 case 里哪里出了问题、是什么问题、为什么算问题，或者为什么没问题：有问题时每个问题写一两句——第几轮、哪一步；原文里看到了什么（引最关键的一小段原文，加引号）；违背了哪一条本应；对用户要的结果造成了什么（哪一部分没给到、给错了）；问题是上游带下来的，写明是哪个轴的什么问题传下来的，本轴自己没做错。核不了的，写哪一件核不了、为什么（缺什么材料）。没问题时一两句，说核了哪几件关键的事、凭的是哪段原文（引一小段）。不复述\"达到几项\"这类计数；不写\"均正常\"\"严格一致\"这类原文撑不住的概括；条目里没有判过的事不写。\n- scope_note 写这次没覆盖到的范围。\n\n引文规则（程序逐条核对，不在所引记录里的会退回，改对了才收）：\n- 达到、没达到、不适用的行和每个 unexpected 至少一段 quotes（trace 里引不出能证明它的原文，就判无法核）：{ref: 记录编号, quote: 从该记录逐字摘出的短句}；\n- 要靠两处对比才看得出的（上游写了什么、下游变成了什么；前一次请求里的某句、后一次请求里同一句），两处都引；\n- 引文短而关键（一般 40 字以内），不改写、不用省略号拼接；\n- 原文里的英文双引号在引文里一律写成中文引号“”（程序核对时视为同一字符），反斜杠不要抄进引文；尽量摘不带引号的那一段。\n材料大时只给目录：用 read_material(name=<材料标题>, ids=[…]) 按编号取正文，目录摘要定位不到时用 search_material 按关键词找。本轴环节表里的每个环节都要看到，该看的都要看，依据要充分。",
+      "materials": [
+        "result.planning_routing_expected.{expected, not_covered}",
+        "result.trace_analysis.views[axis=planning_routing].links[]",
+        "result.trace_analysis.views[axis=planning_routing].full",
+        "result.trace_analysis.views[axis=planning_routing].leads"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "actual": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "与本应清单的 id 一一对应"
+                },
+                "links": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "落在哪些实际环节（link_id）"
+                },
+                "observed": {
+                  "type": "string",
+                  "description": "实际是什么；无法核时说清为什么核不了"
+                },
+                "quotes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "原文所在记录的编号（records[].id），只写编号"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "从该记录逐字摘出的短句（一般 40 字以内），不改写、不用省略号拼接"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "quote"
+                    ]
+                  },
+                  "description": "没达到、不适用时至少一段；要靠两处对比才看得出的两处都引"
+                },
+                "verdict": {
+                  "type": "string",
+                  "enum": [
+                    "达到",
+                    "没达到",
+                    "无法核",
+                    "不适用"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "links",
+                "observed",
+                "quotes",
+                "verdict"
+              ]
+            }
+          },
+          "unexpected": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "observed": {
+                  "type": "string"
+                },
+                "links": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "quotes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "原文所在记录的编号（records[].id），只写编号"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "从该记录逐字摘出的短句（一般 40 字以内），不改写、不用省略号拼接"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "quote"
+                    ]
+                  }
+                },
+                "why": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "observed",
+                "links",
+                "quotes",
+                "why"
+              ]
+            }
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "phenomenon": {
+                  "type": "string"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "只引用没达到的条目 id 或 unexpected 的 id"
+                },
+                "attribution": {
+                  "type": "string",
+                  "pattern": "^(本轴|上游:.+|未定位:.+)$",
+                  "description": "本轴 / 上游:<轴> / 未定位:<候选轴>"
+                },
+                "impact": {
+                  "type": "string",
+                  "description": "对最终交付的影响"
+                }
+              },
+              "required": [
+                "phenomenon",
+                "items",
+                "attribution",
+                "impact"
+              ]
+            }
+          },
+          "reason": {
+            "type": "string",
+            "description": "给读者的本轴说明：每个问题写第几轮哪一步、原文、违背哪条本应、影响用户哪部分结果；核不了写缺什么；没问题写核了什么、凭哪段原文"
+          },
+          "scope_note": {
+            "type": "string",
+            "description": "这次没覆盖到的范围"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "problematic",
+              "not_evaluable",
+              "sound",
+              "untested",
+              "not_applicable"
+            ],
+            "x-fill": "program",
+            "x-explain": true
+          },
+          "composition": {
+            "type": "object",
+            "x-fill": "program",
+            "x-explain": [
+              "counts"
+            ]
+          },
+          "results": {
+            "type": "array",
+            "x-fill": "program",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "expectations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "statement": {
+                  "type": "string"
+                },
+                "verdict": {
+                  "type": "string"
+                },
+                "observed": {
+                  "type": "string"
+                },
+                "about": {
+                  "type": "string"
+                },
+                "subcapability": {
+                  "type": "string"
+                },
+                "basis": {
+                  "type": "string"
+                },
+                "turn": {
+                  "type": "string"
+                },
+                "links": {
+                  "type": "array"
+                },
+                "quotes": {
+                  "type": "array"
+                },
+                "needs_external": {
+                  "type": "string"
+                },
+                "standing_duty": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "expectations",
+                "statement",
+                "verdict",
+                "observed"
+              ]
+            }
+          },
+          "issues": {
+            "type": "array",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "actual",
+          "unexpected",
+          "problems",
+          "reason",
+          "scope_note",
+          "verdict",
+          "composition",
+          "results",
+          "issues"
+        ]
+      }
+    },
+    "tool_execution_expected": {
+      "title": "工具执行·本应",
+      "loop": "process_expected",
+      "role": "analysis",
+      "depends": [
+        {
+          "axis": "expectations",
+          "hard": true
+        },
+        {
+          "axis": "trace_analysis",
+          "hard": true
+        }
+      ],
+      "instruction": "轴：工具执行（环节类型 tool_execution）\n轴在问什么：执行环节：工具/后端/子 agent（含内部解析与适配层）拿到参数后，自身执行有没有问题：报错、超时、返回残缺、返回对象与请求不符、应有结果却没给。\n本轴不判：该不该调、调用顺序、系统策略拒绝与重试策略（规划路由）；参数从哪来（意图理解）；返回后怎么传怎么用（上下文管理、模型能力）；已查明是数据源本来没有（知识数据）。\n子能力提纲：\n- 调用无执行错误：什么时候用到——工具被调用；做对必须成立——调用完成自身职责，没有报错、超时或异常中断；没有错误码不证明执行正确\n- 返回对象与请求一致：什么时候用到——调用正常返回（返回的是执行错误时由「调用无执行错误」判，本项不适用）；做对必须成立——按请求条件执行，未丢条件；返回的就是请求的对象，没有残缺截断，没有把别的对象标成目标对象；返回可读且符合工具说明声明的结构\n- 耗时在时限内：什么时候用到——调用有耗时记录；做对必须成立——耗时在该调用适用的时限内（工具配置、诊断记录中的 timeout 等）；没有适用时限就不写这条（在 not_covered 里说明），不自定阈值、不用整轮上限代替\n本轴描述（材料 axis.note，可能为空）里配场景的人写的过程职责，也是本轴的子能力。\n\n【本应清单】你只看得到这个轴在本次运行里的输入端材料，看不到运行实际产出了什么。\n\n写：在这样的输入下，做对时必须成立什么。要求：\n- 每条 statement 具体到能核对（点得出对象、地点、条件、数量）；\n- 列本应遵循唯一性原则（系统规则 10）：一条只装一件能单独判达到没有的事，同一件事只列一条；\n- statement 写这一步必须成立什么（要拿到哪项数据、交付里要有什么），不写「如某某调用」这类对实现的猜测；只有材料写明由哪个工具负责时才点名工具；\n- 只写这个输入本身提出的要求，不猜运行结果，不写\"如果…则…\"的假设条目；\n- 要求系统应该发生的动作（例如必须取数），先想清：要不要外部数据、系统有什么办法拿到、当时是否仍必须行动（已有有效数据或等价路径就不写）；\n- basis 引输入里的原文片段或记录编号；\n- 材料可能含几轮（记录编号里的 turnN 是第 N 轮），需求清单每条也标了 turn：每条本应只依据同一轮的需求和该轮的材料写，turn 填那一轮；不拿一轮的需求去要求另一轮的材料（例如用户在后一轮更正了对象，前一轮按原对象处理不算错）；\n- subcapability 取给定子能力之一，都不合适写「其他」；\n- expectations：这条做错了，会让需求清单里哪几条没给到或给错，写它们的 expectation_id；只写会被它直接影响的，都影响不到时写 []；\n- needs_external：这条是否必须独立查证（例如库里到底有没有、数据源是否真缺失）才判得了；\n- 写不全、拿不准、本次看不到的放进 not_covered；本次确实不需要的子能力也在 not_covered 里点名说明。\n材料大时只给目录：用 read_material(name=<材料标题>, ids=[…]) 按编号取正文，目录摘要定位不到时用 search_material 按关键词找。本轴环节表里的每个环节都要看到，该看的都要看，依据要充分。",
+      "materials": [
+        "result.expectations.expectations[]",
+        "result.trace_analysis.views[axis=tool_execution].links[].{link_id, link_type, turn, input}",
+        "result.trace_analysis.views[axis=tool_execution].input",
+        "result.trace_analysis.feeds",
+        "axis.note"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "expected": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "本轴内唯一的短编号，如 E1"
+                },
+                "about": {
+                  "type": "string",
+                  "description": "针对输入里的哪个对象或环节（记录编号、需求编号、原话里的条件）"
+                },
+                "subcapability": {
+                  "type": "string",
+                  "description": "取给定子能力之一；都不合适写「其他」"
+                },
+                "statement": {
+                  "type": "string",
+                  "description": "做对时必须成立什么；具体到能核对（对象、地点、条件、数量）"
+                },
+                "basis": {
+                  "type": "string",
+                  "description": "依据：输入里的原文片段或记录编号"
+                },
+                "expectations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "这条做错了会让哪几条需求没给到或给错（expectation_id）；都影响不到时 []"
+                },
+                "needs_external": {
+                  "type": "string",
+                  "enum": [
+                    "是",
+                    "否",
+                    "不确定"
+                  ],
+                  "description": "是否必须独立查证才判得了"
+                },
+                "turn": {
+                  "type": "string",
+                  "description": "这条属于哪一轮（tN）"
+                }
+              },
+              "required": [
+                "id",
+                "about",
+                "subcapability",
+                "statement",
+                "basis",
+                "expectations",
+                "needs_external",
+                "turn"
+              ]
+            }
+          },
+          "not_covered": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "写不全、拿不准、本次看不到的范围；本次不需要的子能力也写在这里并说明"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "ready"
+            ],
+            "x-fill": "program"
+          },
+          "reason": {
+            "type": "string",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "expected",
+          "not_covered",
+          "verdict",
+          "reason"
+        ]
+      }
+    },
+    "tool_execution": {
+      "title": "工具执行",
+      "loop": "process",
+      "depends": [
+        {
+          "axis": "tool_execution_expected",
+          "hard": true
+        },
+        {
+          "axis": "trace_analysis",
+          "hard": true
+        }
+      ],
+      "instruction": "轴：工具执行（环节类型 tool_execution）\n轴在问什么：执行环节：工具/后端/子 agent（含内部解析与适配层）拿到参数后，自身执行有没有问题：报错、超时、返回残缺、返回对象与请求不符、应有结果却没给。\n本轴不判：该不该调、调用顺序、系统策略拒绝与重试策略（规划路由）；参数从哪来（意图理解）；返回后怎么传怎么用（上下文管理、模型能力）；已查明是数据源本来没有（知识数据）。\n子能力提纲：\n- 调用无执行错误：什么时候用到——工具被调用；做对必须成立——调用完成自身职责，没有报错、超时或异常中断；没有错误码不证明执行正确\n- 返回对象与请求一致：什么时候用到——调用正常返回（返回的是执行错误时由「调用无执行错误」判，本项不适用）；做对必须成立——按请求条件执行，未丢条件；返回的就是请求的对象，没有残缺截断，没有把别的对象标成目标对象；返回可读且符合工具说明声明的结构\n- 耗时在时限内：什么时候用到——调用有耗时记录；做对必须成立——耗时在该调用适用的时限内（工具配置、诊断记录中的 timeout 等）；没有适用时限就不写这条（在 not_covered 里说明），不自定阈值、不用整轮上限代替\n配场景的人写的过程职责已由本应写进本应清单，照清单判。\n\n【实际清单】材料里有本轴环节两端的全部原文和之前写定的本应清单（不能改）；一个环节的内容可能不只记在它自己的端点上，links 里每个环节的 leads 是侦探给这个环节指的记录，也是这个环节的证据：端点没有正文、但 leads 里的记录有，就按 leads 里的记录核，不判无法核；views 的 leads 是侦探指出本轴也要看的其他记录。\n\n写：逐条实际是什么。要求：\n- actual 的 id 与本应清单一一对应，不得增删改；落在哪些实际环节写进 links（link_id）；verdict 取 达到 / 没达到 / 无法核 / 不适用；\n- 不适用：本应写的这一步这次没有发生，也不需要它——系统换了一条路把事办了（例如走直达工具、没调大模型）；必须引原文说明实际走的是哪条路。该做没做不是不适用，判没达到；\n- 本应清单没料到、但实际发生的行为（多调了不该调的、改措辞重复查询、交付覆盖了模型产出等）写进 unexpected；\n- problems 只能由没达到的条目或 unexpected 生成，items 写它们的 id；每个没达到的条目、每个 unexpected 都要被至少一条 problem 引用；phenomenon、impact 各写成单独读也看得懂的一句话：哪一轮、哪一步、怎么了、影响什么；\n- attribution：本轴（这个部件在有效输入下做错了）/ 上游:<轴>（它依赖的输入已被上游弄坏）/ 未定位:<候选轴>（看得出不对、说不清是哪一段）；\n- needs_external=是 的条目：trace 里看得到做到了照判达到并引原文；看不出做到的判无法核，不能判没达到（判了会被退回）；\n- reason：给看结果的人读的本轴说明，要让人只看这一段，就知道本轴在这个 case 里哪里出了问题、是什么问题、为什么算问题，或者为什么没问题：有问题时每个问题写一两句——第几轮、哪一步；原文里看到了什么（引最关键的一小段原文，加引号）；违背了哪一条本应；对用户要的结果造成了什么（哪一部分没给到、给错了）；问题是上游带下来的，写明是哪个轴的什么问题传下来的，本轴自己没做错。核不了的，写哪一件核不了、为什么（缺什么材料）。没问题时一两句，说核了哪几件关键的事、凭的是哪段原文（引一小段）。不复述\"达到几项\"这类计数；不写\"均正常\"\"严格一致\"这类原文撑不住的概括；条目里没有判过的事不写。\n- scope_note 写这次没覆盖到的范围。\n\n引文规则（程序逐条核对，不在所引记录里的会退回，改对了才收）：\n- 达到、没达到、不适用的行和每个 unexpected 至少一段 quotes（trace 里引不出能证明它的原文，就判无法核）：{ref: 记录编号, quote: 从该记录逐字摘出的短句}；\n- 要靠两处对比才看得出的（上游写了什么、下游变成了什么；前一次请求里的某句、后一次请求里同一句），两处都引；\n- 引文短而关键（一般 40 字以内），不改写、不用省略号拼接；\n- 原文里的英文双引号在引文里一律写成中文引号“”（程序核对时视为同一字符），反斜杠不要抄进引文；尽量摘不带引号的那一段。\n材料大时只给目录：用 read_material(name=<材料标题>, ids=[…]) 按编号取正文，目录摘要定位不到时用 search_material 按关键词找。本轴环节表里的每个环节都要看到，该看的都要看，依据要充分。",
+      "materials": [
+        "result.tool_execution_expected.{expected, not_covered}",
+        "result.trace_analysis.views[axis=tool_execution].links[]",
+        "result.trace_analysis.views[axis=tool_execution].full",
+        "result.trace_analysis.views[axis=tool_execution].leads"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "actual": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "与本应清单的 id 一一对应"
+                },
+                "links": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "落在哪些实际环节（link_id）"
+                },
+                "observed": {
+                  "type": "string",
+                  "description": "实际是什么；无法核时说清为什么核不了"
+                },
+                "quotes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "原文所在记录的编号（records[].id），只写编号"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "从该记录逐字摘出的短句（一般 40 字以内），不改写、不用省略号拼接"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "quote"
+                    ]
+                  },
+                  "description": "没达到、不适用时至少一段；要靠两处对比才看得出的两处都引"
+                },
+                "verdict": {
+                  "type": "string",
+                  "enum": [
+                    "达到",
+                    "没达到",
+                    "无法核",
+                    "不适用"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "links",
+                "observed",
+                "quotes",
+                "verdict"
+              ]
+            }
+          },
+          "unexpected": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "observed": {
+                  "type": "string"
+                },
+                "links": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "quotes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "原文所在记录的编号（records[].id），只写编号"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "从该记录逐字摘出的短句（一般 40 字以内），不改写、不用省略号拼接"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "quote"
+                    ]
+                  }
+                },
+                "why": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "observed",
+                "links",
+                "quotes",
+                "why"
+              ]
+            }
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "phenomenon": {
+                  "type": "string"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "只引用没达到的条目 id 或 unexpected 的 id"
+                },
+                "attribution": {
+                  "type": "string",
+                  "pattern": "^(本轴|上游:.+|未定位:.+)$",
+                  "description": "本轴 / 上游:<轴> / 未定位:<候选轴>"
+                },
+                "impact": {
+                  "type": "string",
+                  "description": "对最终交付的影响"
+                }
+              },
+              "required": [
+                "phenomenon",
+                "items",
+                "attribution",
+                "impact"
+              ]
+            }
+          },
+          "reason": {
+            "type": "string",
+            "description": "给读者的本轴说明：每个问题写第几轮哪一步、原文、违背哪条本应、影响用户哪部分结果；核不了写缺什么；没问题写核了什么、凭哪段原文"
+          },
+          "scope_note": {
+            "type": "string",
+            "description": "这次没覆盖到的范围"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "problematic",
+              "not_evaluable",
+              "sound",
+              "untested",
+              "not_applicable"
+            ],
+            "x-fill": "program",
+            "x-explain": true
+          },
+          "composition": {
+            "type": "object",
+            "x-fill": "program",
+            "x-explain": [
+              "counts"
+            ]
+          },
+          "results": {
+            "type": "array",
+            "x-fill": "program",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "expectations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "statement": {
+                  "type": "string"
+                },
+                "verdict": {
+                  "type": "string"
+                },
+                "observed": {
+                  "type": "string"
+                },
+                "about": {
+                  "type": "string"
+                },
+                "subcapability": {
+                  "type": "string"
+                },
+                "basis": {
+                  "type": "string"
+                },
+                "turn": {
+                  "type": "string"
+                },
+                "links": {
+                  "type": "array"
+                },
+                "quotes": {
+                  "type": "array"
+                },
+                "needs_external": {
+                  "type": "string"
+                },
+                "standing_duty": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "expectations",
+                "statement",
+                "verdict",
+                "observed"
+              ]
+            }
+          },
+          "issues": {
+            "type": "array",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "actual",
+          "unexpected",
+          "problems",
+          "reason",
+          "scope_note",
+          "verdict",
+          "composition",
+          "results",
+          "issues"
+        ]
+      }
+    },
+    "context_memory_expected": {
+      "title": "上下文管理·本应",
+      "loop": "process_expected",
+      "role": "analysis",
+      "depends": [
+        {
+          "axis": "expectations",
+          "hard": true
+        },
+        {
+          "axis": "trace_analysis",
+          "hard": true
+        }
+      ],
+      "instruction": "轴：上下文管理（环节类型 context_memory）\n轴在问什么：系统组装、传递、缓存和交付信息时，有没有把信息弄丢、改义、弄旧或混淆对象？\n本轴不判：模型收到输入后的决策与生成由模型轴判断；数据源本来缺失或工具本身返回错误由对应轴判断，不能仅因输入不相关归咎上下文。\n子能力提纲：\n- 传递保留原义：什么时候用到——上游产出被传到下一处（工具结果→模型输入、步骤→步骤，含表外传递）；做对必须成立——任务相关的目标、对象、状态、原因与关键事实原义到达；合理压缩不算改义\n- 模型输入组装：什么时候用到——系统为一次模型调用组装输入；做对必须成立——保留当前目标、约束、输出格式要求和前序结果，没有引入错误对象、旧状态或冲突；格式要求缺失、截断或前后冲突算没做到\n- 历史与状态使用：什么时候用到——输入里含有历史、缓存或会话状态带来的内容；做对必须成立——来源正确、没有复用失败或过期结果、没有混淆对象；状态快照是运行末态，不证明运行时使用过；本轮没有此类内容时不写这条，在 not_covered 里说明\n- 交付保留原义：什么时候用到——产出被交付给调用方；做对必须成立——事实、理由、限制、澄清没有丢失、被替换或改义（比较语义，不要求逐字）；落库与实收都要核对，没有实收记录时交付端注明缺证\n本轴描述（材料 axis.note，可能为空）里配场景的人写的过程职责，也是本轴的子能力。\n\n【本应清单】你只看得到这个轴在本次运行里的输入端材料，看不到运行实际产出了什么。\n\n写：在这样的输入下，做对时必须成立什么。要求：\n- 每条 statement 具体到能核对（点得出对象、地点、条件、数量）；\n- 列本应遵循唯一性原则（系统规则 10）：一条只装一件能单独判达到没有的事，同一件事只列一条；\n- statement 写这一步必须成立什么（要拿到哪项数据、交付里要有什么），不写「如某某调用」这类对实现的猜测；只有材料写明由哪个工具负责时才点名工具；\n- 只写这个输入本身提出的要求，不猜运行结果，不写\"如果…则…\"的假设条目；\n- 要求系统应该发生的动作（例如必须取数），先想清：要不要外部数据、系统有什么办法拿到、当时是否仍必须行动（已有有效数据或等价路径就不写）；\n- basis 引输入里的原文片段或记录编号；\n- 材料可能含几轮（记录编号里的 turnN 是第 N 轮），需求清单每条也标了 turn：每条本应只依据同一轮的需求和该轮的材料写，turn 填那一轮；不拿一轮的需求去要求另一轮的材料（例如用户在后一轮更正了对象，前一轮按原对象处理不算错）；\n- subcapability 取给定子能力之一，都不合适写「其他」；\n- expectations：这条做错了，会让需求清单里哪几条没给到或给错，写它们的 expectation_id；只写会被它直接影响的，都影响不到时写 []；\n- needs_external：这条是否必须独立查证（例如库里到底有没有、数据源是否真缺失）才判得了；\n- 写不全、拿不准、本次看不到的放进 not_covered；本次确实不需要的子能力也在 not_covered 里点名说明。\n材料大时只给目录：用 read_material(name=<材料标题>, ids=[…]) 按编号取正文，目录摘要定位不到时用 search_material 按关键词找。本轴环节表里的每个环节都要看到，该看的都要看，依据要充分。",
+      "materials": [
+        "result.expectations.expectations[]",
+        "result.trace_analysis.views[axis=context_memory].links[].{link_id, link_type, turn, input}",
+        "result.trace_analysis.views[axis=context_memory].input",
+        "result.trace_analysis.feeds",
+        "axis.note"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "expected": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "本轴内唯一的短编号，如 E1"
+                },
+                "about": {
+                  "type": "string",
+                  "description": "针对输入里的哪个对象或环节（记录编号、需求编号、原话里的条件）"
+                },
+                "subcapability": {
+                  "type": "string",
+                  "description": "取给定子能力之一；都不合适写「其他」"
+                },
+                "statement": {
+                  "type": "string",
+                  "description": "做对时必须成立什么；具体到能核对（对象、地点、条件、数量）"
+                },
+                "basis": {
+                  "type": "string",
+                  "description": "依据：输入里的原文片段或记录编号"
+                },
+                "expectations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "这条做错了会让哪几条需求没给到或给错（expectation_id）；都影响不到时 []"
+                },
+                "needs_external": {
+                  "type": "string",
+                  "enum": [
+                    "是",
+                    "否",
+                    "不确定"
+                  ],
+                  "description": "是否必须独立查证才判得了"
+                },
+                "turn": {
+                  "type": "string",
+                  "description": "这条属于哪一轮（tN）"
+                }
+              },
+              "required": [
+                "id",
+                "about",
+                "subcapability",
+                "statement",
+                "basis",
+                "expectations",
+                "needs_external",
+                "turn"
+              ]
+            }
+          },
+          "not_covered": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "写不全、拿不准、本次看不到的范围；本次不需要的子能力也写在这里并说明"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "ready"
+            ],
+            "x-fill": "program"
+          },
+          "reason": {
+            "type": "string",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "expected",
+          "not_covered",
+          "verdict",
+          "reason"
+        ]
+      }
+    },
+    "context_memory": {
+      "title": "上下文管理",
+      "loop": "process",
+      "depends": [
+        {
+          "axis": "context_memory_expected",
+          "hard": true
+        },
+        {
+          "axis": "trace_analysis",
+          "hard": true
+        }
+      ],
+      "instruction": "轴：上下文管理（环节类型 context_memory）\n轴在问什么：系统组装、传递、缓存和交付信息时，有没有把信息弄丢、改义、弄旧或混淆对象？\n本轴不判：模型收到输入后的决策与生成由模型轴判断；数据源本来缺失或工具本身返回错误由对应轴判断，不能仅因输入不相关归咎上下文。\n子能力提纲：\n- 传递保留原义：什么时候用到——上游产出被传到下一处（工具结果→模型输入、步骤→步骤，含表外传递）；做对必须成立——任务相关的目标、对象、状态、原因与关键事实原义到达；合理压缩不算改义\n- 模型输入组装：什么时候用到——系统为一次模型调用组装输入；做对必须成立——保留当前目标、约束、输出格式要求和前序结果，没有引入错误对象、旧状态或冲突；格式要求缺失、截断或前后冲突算没做到\n- 历史与状态使用：什么时候用到——输入里含有历史、缓存或会话状态带来的内容；做对必须成立——来源正确、没有复用失败或过期结果、没有混淆对象；状态快照是运行末态，不证明运行时使用过；本轮没有此类内容时不写这条，在 not_covered 里说明\n- 交付保留原义：什么时候用到——产出被交付给调用方；做对必须成立——事实、理由、限制、澄清没有丢失、被替换或改义（比较语义，不要求逐字）；落库与实收都要核对，没有实收记录时交付端注明缺证\n配场景的人写的过程职责已由本应写进本应清单，照清单判。\n\n【实际清单】材料里有本轴环节两端的全部原文和之前写定的本应清单（不能改）；一个环节的内容可能不只记在它自己的端点上，links 里每个环节的 leads 是侦探给这个环节指的记录，也是这个环节的证据：端点没有正文、但 leads 里的记录有，就按 leads 里的记录核，不判无法核；views 的 leads 是侦探指出本轴也要看的其他记录。\n\n写：逐条实际是什么。要求：\n- actual 的 id 与本应清单一一对应，不得增删改；落在哪些实际环节写进 links（link_id）；verdict 取 达到 / 没达到 / 无法核 / 不适用；\n- 不适用：本应写的这一步这次没有发生，也不需要它——系统换了一条路把事办了（例如走直达工具、没调大模型）；必须引原文说明实际走的是哪条路。该做没做不是不适用，判没达到；\n- 本应清单没料到、但实际发生的行为（多调了不该调的、改措辞重复查询、交付覆盖了模型产出等）写进 unexpected；\n- problems 只能由没达到的条目或 unexpected 生成，items 写它们的 id；每个没达到的条目、每个 unexpected 都要被至少一条 problem 引用；phenomenon、impact 各写成单独读也看得懂的一句话：哪一轮、哪一步、怎么了、影响什么；\n- attribution：本轴（这个部件在有效输入下做错了）/ 上游:<轴>（它依赖的输入已被上游弄坏）/ 未定位:<候选轴>（看得出不对、说不清是哪一段）；\n- needs_external=是 的条目：trace 里看得到做到了照判达到并引原文；看不出做到的判无法核，不能判没达到（判了会被退回）；\n- reason：给看结果的人读的本轴说明，要让人只看这一段，就知道本轴在这个 case 里哪里出了问题、是什么问题、为什么算问题，或者为什么没问题：有问题时每个问题写一两句——第几轮、哪一步；原文里看到了什么（引最关键的一小段原文，加引号）；违背了哪一条本应；对用户要的结果造成了什么（哪一部分没给到、给错了）；问题是上游带下来的，写明是哪个轴的什么问题传下来的，本轴自己没做错。核不了的，写哪一件核不了、为什么（缺什么材料）。没问题时一两句，说核了哪几件关键的事、凭的是哪段原文（引一小段）。不复述\"达到几项\"这类计数；不写\"均正常\"\"严格一致\"这类原文撑不住的概括；条目里没有判过的事不写。\n- scope_note 写这次没覆盖到的范围。\n\n引文规则（程序逐条核对，不在所引记录里的会退回，改对了才收）：\n- 达到、没达到、不适用的行和每个 unexpected 至少一段 quotes（trace 里引不出能证明它的原文，就判无法核）：{ref: 记录编号, quote: 从该记录逐字摘出的短句}；\n- 要靠两处对比才看得出的（上游写了什么、下游变成了什么；前一次请求里的某句、后一次请求里同一句），两处都引；\n- 引文短而关键（一般 40 字以内），不改写、不用省略号拼接；\n- 原文里的英文双引号在引文里一律写成中文引号“”（程序核对时视为同一字符），反斜杠不要抄进引文；尽量摘不带引号的那一段。\n材料大时只给目录：用 read_material(name=<材料标题>, ids=[…]) 按编号取正文，目录摘要定位不到时用 search_material 按关键词找。本轴环节表里的每个环节都要看到，该看的都要看，依据要充分。",
+      "materials": [
+        "result.context_memory_expected.{expected, not_covered}",
+        "result.trace_analysis.views[axis=context_memory].links[]",
+        "result.trace_analysis.views[axis=context_memory].full",
+        "result.trace_analysis.views[axis=context_memory].leads"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "actual": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "与本应清单的 id 一一对应"
+                },
+                "links": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "落在哪些实际环节（link_id）"
+                },
+                "observed": {
+                  "type": "string",
+                  "description": "实际是什么；无法核时说清为什么核不了"
+                },
+                "quotes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "原文所在记录的编号（records[].id），只写编号"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "从该记录逐字摘出的短句（一般 40 字以内），不改写、不用省略号拼接"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "quote"
+                    ]
+                  },
+                  "description": "没达到、不适用时至少一段；要靠两处对比才看得出的两处都引"
+                },
+                "verdict": {
+                  "type": "string",
+                  "enum": [
+                    "达到",
+                    "没达到",
+                    "无法核",
+                    "不适用"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "links",
+                "observed",
+                "quotes",
+                "verdict"
+              ]
+            }
+          },
+          "unexpected": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "observed": {
+                  "type": "string"
+                },
+                "links": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "quotes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "原文所在记录的编号（records[].id），只写编号"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "从该记录逐字摘出的短句（一般 40 字以内），不改写、不用省略号拼接"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "quote"
+                    ]
+                  }
+                },
+                "why": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "observed",
+                "links",
+                "quotes",
+                "why"
+              ]
+            }
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "phenomenon": {
+                  "type": "string"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "只引用没达到的条目 id 或 unexpected 的 id"
+                },
+                "attribution": {
+                  "type": "string",
+                  "pattern": "^(本轴|上游:.+|未定位:.+)$",
+                  "description": "本轴 / 上游:<轴> / 未定位:<候选轴>"
+                },
+                "impact": {
+                  "type": "string",
+                  "description": "对最终交付的影响"
+                }
+              },
+              "required": [
+                "phenomenon",
+                "items",
+                "attribution",
+                "impact"
+              ]
+            }
+          },
+          "reason": {
+            "type": "string",
+            "description": "给读者的本轴说明：每个问题写第几轮哪一步、原文、违背哪条本应、影响用户哪部分结果；核不了写缺什么；没问题写核了什么、凭哪段原文"
+          },
+          "scope_note": {
+            "type": "string",
+            "description": "这次没覆盖到的范围"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "problematic",
+              "not_evaluable",
+              "sound",
+              "untested",
+              "not_applicable"
+            ],
+            "x-fill": "program",
+            "x-explain": true
+          },
+          "composition": {
+            "type": "object",
+            "x-fill": "program",
+            "x-explain": [
+              "counts"
+            ]
+          },
+          "results": {
+            "type": "array",
+            "x-fill": "program",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "expectations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "statement": {
+                  "type": "string"
+                },
+                "verdict": {
+                  "type": "string"
+                },
+                "observed": {
+                  "type": "string"
+                },
+                "about": {
+                  "type": "string"
+                },
+                "subcapability": {
+                  "type": "string"
+                },
+                "basis": {
+                  "type": "string"
+                },
+                "turn": {
+                  "type": "string"
+                },
+                "links": {
+                  "type": "array"
+                },
+                "quotes": {
+                  "type": "array"
+                },
+                "needs_external": {
+                  "type": "string"
+                },
+                "standing_duty": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "expectations",
+                "statement",
+                "verdict",
+                "observed"
+              ]
+            }
+          },
+          "issues": {
+            "type": "array",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "actual",
+          "unexpected",
+          "problems",
+          "reason",
+          "scope_note",
+          "verdict",
+          "composition",
+          "results",
+          "issues"
+        ]
+      }
+    },
+    "knowledge_data_expected": {
+      "title": "知识与数据·本应",
+      "loop": "process_expected",
+      "role": "analysis",
+      "depends": [
+        {
+          "axis": "expectations",
+          "hard": true
+        },
+        {
+          "axis": "trace_analysis",
+          "hard": true
+        }
+      ],
+      "instruction": "轴：知识与数据（环节类型 knowledge_data）\n轴在问什么：数据源环节：本轮问题所需的数据是否按业务期望给出；给了的对象、版本、时点是否匹配。未定位偏差保留候选归因。\n本轴不判：调用怎么发、系统策略与失败处置（规划路由）；工具自身解析或适配出错（工具执行）；返回后系统怎么传（上下文管理）。\n子能力提纲：\n- 子问题数据已给出：什么时候用到——用户的子问题需要外部数据或知识；做对必须成立——在已正确执行查询的前提下，所需对象存在、字段有值、知识库有应有条目；按业务期望本应为空时空结果符合期望。未召回不证明全库不存在；只检查用户所需的数据与字段\n- 对象版本时点匹配：什么时候用到——问题涉及特定对象、版本、时点或适用条件；做对必须成立——取得的数据在对象、版本、时点、适用条件上与问题一致；问题确需版本或时点而返回无依据时判无法核，不推断为最新\n本轴描述（材料 axis.note，可能为空）里配场景的人写的过程职责，也是本轴的子能力。\n\n【本应清单】你只看得到这个轴在本次运行里的输入端材料，看不到运行实际产出了什么。\n\n写：在这样的输入下，做对时必须成立什么。要求：\n- 每条 statement 具体到能核对（点得出对象、地点、条件、数量）；\n- 列本应遵循唯一性原则（系统规则 10）：一条只装一件能单独判达到没有的事，同一件事只列一条；\n- statement 写这一步必须成立什么（要拿到哪项数据、交付里要有什么），不写「如某某调用」这类对实现的猜测；只有材料写明由哪个工具负责时才点名工具；\n- 只写这个输入本身提出的要求，不猜运行结果，不写\"如果…则…\"的假设条目；\n- 要求系统应该发生的动作（例如必须取数），先想清：要不要外部数据、系统有什么办法拿到、当时是否仍必须行动（已有有效数据或等价路径就不写）；\n- basis 引输入里的原文片段或记录编号；\n- 材料可能含几轮（记录编号里的 turnN 是第 N 轮），需求清单每条也标了 turn：每条本应只依据同一轮的需求和该轮的材料写，turn 填那一轮；不拿一轮的需求去要求另一轮的材料（例如用户在后一轮更正了对象，前一轮按原对象处理不算错）；\n- subcapability 取给定子能力之一，都不合适写「其他」；\n- expectations：这条做错了，会让需求清单里哪几条没给到或给错，写它们的 expectation_id；只写会被它直接影响的，都影响不到时写 []；\n- needs_external：这条是否必须独立查证（例如库里到底有没有、数据源是否真缺失）才判得了；\n- 写不全、拿不准、本次看不到的放进 not_covered；本次确实不需要的子能力也在 not_covered 里点名说明。\n材料大时只给目录：用 read_material(name=<材料标题>, ids=[…]) 按编号取正文，目录摘要定位不到时用 search_material 按关键词找。本轴环节表里的每个环节都要看到，该看的都要看，依据要充分。",
+      "materials": [
+        "result.expectations.expectations[]",
+        "result.trace_analysis.views[axis=knowledge_data].links[].{link_id, link_type, turn, input}",
+        "result.trace_analysis.views[axis=knowledge_data].input",
+        "result.trace_analysis.feeds",
+        "axis.note"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "expected": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "本轴内唯一的短编号，如 E1"
+                },
+                "about": {
+                  "type": "string",
+                  "description": "针对输入里的哪个对象或环节（记录编号、需求编号、原话里的条件）"
+                },
+                "subcapability": {
+                  "type": "string",
+                  "description": "取给定子能力之一；都不合适写「其他」"
+                },
+                "statement": {
+                  "type": "string",
+                  "description": "做对时必须成立什么；具体到能核对（对象、地点、条件、数量）"
+                },
+                "basis": {
+                  "type": "string",
+                  "description": "依据：输入里的原文片段或记录编号"
+                },
+                "expectations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "这条做错了会让哪几条需求没给到或给错（expectation_id）；都影响不到时 []"
+                },
+                "needs_external": {
+                  "type": "string",
+                  "enum": [
+                    "是",
+                    "否",
+                    "不确定"
+                  ],
+                  "description": "是否必须独立查证才判得了"
+                },
+                "turn": {
+                  "type": "string",
+                  "description": "这条属于哪一轮（tN）"
+                }
+              },
+              "required": [
+                "id",
+                "about",
+                "subcapability",
+                "statement",
+                "basis",
+                "expectations",
+                "needs_external",
+                "turn"
+              ]
+            }
+          },
+          "not_covered": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "写不全、拿不准、本次看不到的范围；本次不需要的子能力也写在这里并说明"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "ready"
+            ],
+            "x-fill": "program"
+          },
+          "reason": {
+            "type": "string",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "expected",
+          "not_covered",
+          "verdict",
+          "reason"
+        ]
+      }
+    },
+    "knowledge_data": {
+      "title": "知识与数据",
+      "loop": "process",
+      "depends": [
+        {
+          "axis": "knowledge_data_expected",
+          "hard": true
+        },
+        {
+          "axis": "trace_analysis",
+          "hard": true
+        }
+      ],
+      "instruction": "轴：知识与数据（环节类型 knowledge_data）\n轴在问什么：数据源环节：本轮问题所需的数据是否按业务期望给出；给了的对象、版本、时点是否匹配。未定位偏差保留候选归因。\n本轴不判：调用怎么发、系统策略与失败处置（规划路由）；工具自身解析或适配出错（工具执行）；返回后系统怎么传（上下文管理）。\n子能力提纲：\n- 子问题数据已给出：什么时候用到——用户的子问题需要外部数据或知识；做对必须成立——在已正确执行查询的前提下，所需对象存在、字段有值、知识库有应有条目；按业务期望本应为空时空结果符合期望。未召回不证明全库不存在；只检查用户所需的数据与字段\n- 对象版本时点匹配：什么时候用到——问题涉及特定对象、版本、时点或适用条件；做对必须成立——取得的数据在对象、版本、时点、适用条件上与问题一致；问题确需版本或时点而返回无依据时判无法核，不推断为最新\n配场景的人写的过程职责已由本应写进本应清单，照清单判。\n\n【实际清单】材料里有本轴环节两端的全部原文和之前写定的本应清单（不能改）；一个环节的内容可能不只记在它自己的端点上，links 里每个环节的 leads 是侦探给这个环节指的记录，也是这个环节的证据：端点没有正文、但 leads 里的记录有，就按 leads 里的记录核，不判无法核；views 的 leads 是侦探指出本轴也要看的其他记录。\n\n写：逐条实际是什么。要求：\n- actual 的 id 与本应清单一一对应，不得增删改；落在哪些实际环节写进 links（link_id）；verdict 取 达到 / 没达到 / 无法核 / 不适用；\n- 不适用：本应写的这一步这次没有发生，也不需要它——系统换了一条路把事办了（例如走直达工具、没调大模型）；必须引原文说明实际走的是哪条路。该做没做不是不适用，判没达到；\n- 本应清单没料到、但实际发生的行为（多调了不该调的、改措辞重复查询、交付覆盖了模型产出等）写进 unexpected；\n- problems 只能由没达到的条目或 unexpected 生成，items 写它们的 id；每个没达到的条目、每个 unexpected 都要被至少一条 problem 引用；phenomenon、impact 各写成单独读也看得懂的一句话：哪一轮、哪一步、怎么了、影响什么；\n- attribution：本轴（这个部件在有效输入下做错了）/ 上游:<轴>（它依赖的输入已被上游弄坏）/ 未定位:<候选轴>（看得出不对、说不清是哪一段）；\n- needs_external=是 的条目：trace 里看得到做到了照判达到并引原文；看不出做到的判无法核，不能判没达到（判了会被退回）；\n- reason：给看结果的人读的本轴说明，要让人只看这一段，就知道本轴在这个 case 里哪里出了问题、是什么问题、为什么算问题，或者为什么没问题：有问题时每个问题写一两句——第几轮、哪一步；原文里看到了什么（引最关键的一小段原文，加引号）；违背了哪一条本应；对用户要的结果造成了什么（哪一部分没给到、给错了）；问题是上游带下来的，写明是哪个轴的什么问题传下来的，本轴自己没做错。核不了的，写哪一件核不了、为什么（缺什么材料）。没问题时一两句，说核了哪几件关键的事、凭的是哪段原文（引一小段）。不复述\"达到几项\"这类计数；不写\"均正常\"\"严格一致\"这类原文撑不住的概括；条目里没有判过的事不写。\n- scope_note 写这次没覆盖到的范围。\n\n引文规则（程序逐条核对，不在所引记录里的会退回，改对了才收）：\n- 达到、没达到、不适用的行和每个 unexpected 至少一段 quotes（trace 里引不出能证明它的原文，就判无法核）：{ref: 记录编号, quote: 从该记录逐字摘出的短句}；\n- 要靠两处对比才看得出的（上游写了什么、下游变成了什么；前一次请求里的某句、后一次请求里同一句），两处都引；\n- 引文短而关键（一般 40 字以内），不改写、不用省略号拼接；\n- 原文里的英文双引号在引文里一律写成中文引号“”（程序核对时视为同一字符），反斜杠不要抄进引文；尽量摘不带引号的那一段。\n材料大时只给目录：用 read_material(name=<材料标题>, ids=[…]) 按编号取正文，目录摘要定位不到时用 search_material 按关键词找。本轴环节表里的每个环节都要看到，该看的都要看，依据要充分。",
+      "materials": [
+        "result.knowledge_data_expected.{expected, not_covered}",
+        "result.trace_analysis.views[axis=knowledge_data].links[]",
+        "result.trace_analysis.views[axis=knowledge_data].full",
+        "result.trace_analysis.views[axis=knowledge_data].leads"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "actual": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "与本应清单的 id 一一对应"
+                },
+                "links": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "落在哪些实际环节（link_id）"
+                },
+                "observed": {
+                  "type": "string",
+                  "description": "实际是什么；无法核时说清为什么核不了"
+                },
+                "quotes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "原文所在记录的编号（records[].id），只写编号"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "从该记录逐字摘出的短句（一般 40 字以内），不改写、不用省略号拼接"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "quote"
+                    ]
+                  },
+                  "description": "没达到、不适用时至少一段；要靠两处对比才看得出的两处都引"
+                },
+                "verdict": {
+                  "type": "string",
+                  "enum": [
+                    "达到",
+                    "没达到",
+                    "无法核",
+                    "不适用"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "links",
+                "observed",
+                "quotes",
+                "verdict"
+              ]
+            }
+          },
+          "unexpected": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "observed": {
+                  "type": "string"
+                },
+                "links": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "quotes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "原文所在记录的编号（records[].id），只写编号"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "从该记录逐字摘出的短句（一般 40 字以内），不改写、不用省略号拼接"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "quote"
+                    ]
+                  }
+                },
+                "why": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "observed",
+                "links",
+                "quotes",
+                "why"
+              ]
+            }
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "phenomenon": {
+                  "type": "string"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "只引用没达到的条目 id 或 unexpected 的 id"
+                },
+                "attribution": {
+                  "type": "string",
+                  "pattern": "^(本轴|上游:.+|未定位:.+)$",
+                  "description": "本轴 / 上游:<轴> / 未定位:<候选轴>"
+                },
+                "impact": {
+                  "type": "string",
+                  "description": "对最终交付的影响"
+                }
+              },
+              "required": [
+                "phenomenon",
+                "items",
+                "attribution",
+                "impact"
+              ]
+            }
+          },
+          "reason": {
+            "type": "string",
+            "description": "给读者的本轴说明：每个问题写第几轮哪一步、原文、违背哪条本应、影响用户哪部分结果；核不了写缺什么；没问题写核了什么、凭哪段原文"
+          },
+          "scope_note": {
+            "type": "string",
+            "description": "这次没覆盖到的范围"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "problematic",
+              "not_evaluable",
+              "sound",
+              "untested",
+              "not_applicable"
+            ],
+            "x-fill": "program",
+            "x-explain": true
+          },
+          "composition": {
+            "type": "object",
+            "x-fill": "program",
+            "x-explain": [
+              "counts"
+            ]
+          },
+          "results": {
+            "type": "array",
+            "x-fill": "program",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "expectations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "statement": {
+                  "type": "string"
+                },
+                "verdict": {
+                  "type": "string"
+                },
+                "observed": {
+                  "type": "string"
+                },
+                "about": {
+                  "type": "string"
+                },
+                "subcapability": {
+                  "type": "string"
+                },
+                "basis": {
+                  "type": "string"
+                },
+                "turn": {
+                  "type": "string"
+                },
+                "links": {
+                  "type": "array"
+                },
+                "quotes": {
+                  "type": "array"
+                },
+                "needs_external": {
+                  "type": "string"
+                },
+                "standing_duty": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "expectations",
+                "statement",
+                "verdict",
+                "observed"
+              ]
+            }
+          },
+          "issues": {
+            "type": "array",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "actual",
+          "unexpected",
+          "problems",
+          "reason",
+          "scope_note",
+          "verdict",
+          "composition",
+          "results",
+          "issues"
+        ]
+      }
+    },
+    "model_capability_expected": {
+      "title": "模型能力兑现·本应",
+      "loop": "process_expected",
+      "role": "analysis",
+      "depends": [
+        {
+          "axis": "expectations",
+          "hard": true
+        },
+        {
+          "axis": "trace_analysis",
+          "hard": true
+        }
+      ],
+      "instruction": "轴：模型能力兑现（环节类型 model_capability）\n轴在问什么：模型环节：按每次模型调用实际收到的输入判断，输出是否忠实、工具调用与澄清决策是否与输入一致、输入写清的输出要求是否遵循。\n本轴不判：输入本身缺东西或格式要求没传到（上下文管理）；后端没数据（知识数据）；该不该走这条路、系统策略（规划路由）；模型答复正确但被下游改写（上下文管理）。单条 Trace 不证明模型固有能力。\n子能力提纲：\n- 输出忠实于输入：什么时候用到——模型产出了工具调用决策或回答；做对必须成立——输出忠实整合该次实际输入：不改义、不丢输入里的关键信息\n- 不编造：什么时候用到——模型产出了事实声明、数值或结论；做对必须成立——不添加该次输入没有依据的事实、数值或结论；逐条核对全部业务声明\n- 工具调用决策一致：什么时候用到——模型决定发起、不发起工具调用或发起澄清；做对必须成立——决策与该次输入里的信息和规则一致：有信息缺口时调用、输入已有有效结果时不无理由重复、结果已表明不可重试时不原样重发、输入已足够时不多余澄清。只按该次收到的规则判；收到的规则没有覆盖这种情形就不写这条，在 not_covered 里说明\n- 输出契约遵循：什么时候用到——该次输入写清了输出要求（结构、禁止事项、语言、声明的字段）；做对必须成立——输出遵循该次收到的要求；只发工具调用、没有正文的中间轮不因缺正文判违约\n本轴描述（材料 axis.note，可能为空）里配场景的人写的过程职责，也是本轴的子能力。\n\n【本应清单】你只看得到这个轴在本次运行里的输入端材料，看不到运行实际产出了什么。\n\n写：在这样的输入下，做对时必须成立什么。要求：\n- 每条 statement 具体到能核对（点得出对象、地点、条件、数量）；\n- 列本应遵循唯一性原则（系统规则 10）：一条只装一件能单独判达到没有的事，同一件事只列一条；\n- statement 写这一步必须成立什么（要拿到哪项数据、交付里要有什么），不写「如某某调用」这类对实现的猜测；只有材料写明由哪个工具负责时才点名工具；\n- 只写这个输入本身提出的要求，不猜运行结果，不写\"如果…则…\"的假设条目；\n- 要求系统应该发生的动作（例如必须取数），先想清：要不要外部数据、系统有什么办法拿到、当时是否仍必须行动（已有有效数据或等价路径就不写）；\n- basis 引输入里的原文片段或记录编号；\n- 材料可能含几轮（记录编号里的 turnN 是第 N 轮），需求清单每条也标了 turn：每条本应只依据同一轮的需求和该轮的材料写，turn 填那一轮；不拿一轮的需求去要求另一轮的材料（例如用户在后一轮更正了对象，前一轮按原对象处理不算错）；\n- subcapability 取给定子能力之一，都不合适写「其他」；\n- expectations：这条做错了，会让需求清单里哪几条没给到或给错，写它们的 expectation_id；只写会被它直接影响的，都影响不到时写 []；\n- needs_external：这条是否必须独立查证（例如库里到底有没有、数据源是否真缺失）才判得了；\n- 写不全、拿不准、本次看不到的放进 not_covered；本次确实不需要的子能力也在 not_covered 里点名说明。\n材料大时只给目录：用 read_material(name=<材料标题>, ids=[…]) 按编号取正文，目录摘要定位不到时用 search_material 按关键词找。本轴环节表里的每个环节都要看到，该看的都要看，依据要充分。",
+      "materials": [
+        "result.expectations.expectations[]",
+        "result.trace_analysis.views[axis=model_capability].links[].{link_id, link_type, turn, input}",
+        "result.trace_analysis.views[axis=model_capability].input",
+        "result.trace_analysis.feeds",
+        "axis.note"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "expected": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "本轴内唯一的短编号，如 E1"
+                },
+                "about": {
+                  "type": "string",
+                  "description": "针对输入里的哪个对象或环节（记录编号、需求编号、原话里的条件）"
+                },
+                "subcapability": {
+                  "type": "string",
+                  "description": "取给定子能力之一；都不合适写「其他」"
+                },
+                "statement": {
+                  "type": "string",
+                  "description": "做对时必须成立什么；具体到能核对（对象、地点、条件、数量）"
+                },
+                "basis": {
+                  "type": "string",
+                  "description": "依据：输入里的原文片段或记录编号"
+                },
+                "expectations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "这条做错了会让哪几条需求没给到或给错（expectation_id）；都影响不到时 []"
+                },
+                "needs_external": {
+                  "type": "string",
+                  "enum": [
+                    "是",
+                    "否",
+                    "不确定"
+                  ],
+                  "description": "是否必须独立查证才判得了"
+                },
+                "turn": {
+                  "type": "string",
+                  "description": "这条属于哪一轮（tN）"
+                }
+              },
+              "required": [
+                "id",
+                "about",
+                "subcapability",
+                "statement",
+                "basis",
+                "expectations",
+                "needs_external",
+                "turn"
+              ]
+            }
+          },
+          "not_covered": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "写不全、拿不准、本次看不到的范围；本次不需要的子能力也写在这里并说明"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "ready"
+            ],
+            "x-fill": "program"
+          },
+          "reason": {
+            "type": "string",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "expected",
+          "not_covered",
+          "verdict",
+          "reason"
+        ]
+      }
+    },
+    "model_capability": {
+      "title": "模型能力兑现",
+      "loop": "process",
+      "depends": [
+        {
+          "axis": "model_capability_expected",
+          "hard": true
+        },
+        {
+          "axis": "trace_analysis",
+          "hard": true
+        }
+      ],
+      "instruction": "轴：模型能力兑现（环节类型 model_capability）\n轴在问什么：模型环节：按每次模型调用实际收到的输入判断，输出是否忠实、工具调用与澄清决策是否与输入一致、输入写清的输出要求是否遵循。\n本轴不判：输入本身缺东西或格式要求没传到（上下文管理）；后端没数据（知识数据）；该不该走这条路、系统策略（规划路由）；模型答复正确但被下游改写（上下文管理）。单条 Trace 不证明模型固有能力。\n子能力提纲：\n- 输出忠实于输入：什么时候用到——模型产出了工具调用决策或回答；做对必须成立——输出忠实整合该次实际输入：不改义、不丢输入里的关键信息\n- 不编造：什么时候用到——模型产出了事实声明、数值或结论；做对必须成立——不添加该次输入没有依据的事实、数值或结论；逐条核对全部业务声明\n- 工具调用决策一致：什么时候用到——模型决定发起、不发起工具调用或发起澄清；做对必须成立——决策与该次输入里的信息和规则一致：有信息缺口时调用、输入已有有效结果时不无理由重复、结果已表明不可重试时不原样重发、输入已足够时不多余澄清。只按该次收到的规则判；收到的规则没有覆盖这种情形就不写这条，在 not_covered 里说明\n- 输出契约遵循：什么时候用到——该次输入写清了输出要求（结构、禁止事项、语言、声明的字段）；做对必须成立——输出遵循该次收到的要求；只发工具调用、没有正文的中间轮不因缺正文判违约\n配场景的人写的过程职责已由本应写进本应清单，照清单判。\n\n【实际清单】材料里有本轴环节两端的全部原文和之前写定的本应清单（不能改）；一个环节的内容可能不只记在它自己的端点上，links 里每个环节的 leads 是侦探给这个环节指的记录，也是这个环节的证据：端点没有正文、但 leads 里的记录有，就按 leads 里的记录核，不判无法核；views 的 leads 是侦探指出本轴也要看的其他记录。\n\n写：逐条实际是什么。要求：\n- actual 的 id 与本应清单一一对应，不得增删改；落在哪些实际环节写进 links（link_id）；verdict 取 达到 / 没达到 / 无法核 / 不适用；\n- 不适用：本应写的这一步这次没有发生，也不需要它——系统换了一条路把事办了（例如走直达工具、没调大模型）；必须引原文说明实际走的是哪条路。该做没做不是不适用，判没达到；\n- 本应清单没料到、但实际发生的行为（多调了不该调的、改措辞重复查询、交付覆盖了模型产出等）写进 unexpected；\n- problems 只能由没达到的条目或 unexpected 生成，items 写它们的 id；每个没达到的条目、每个 unexpected 都要被至少一条 problem 引用；phenomenon、impact 各写成单独读也看得懂的一句话：哪一轮、哪一步、怎么了、影响什么；\n- attribution：本轴（这个部件在有效输入下做错了）/ 上游:<轴>（它依赖的输入已被上游弄坏）/ 未定位:<候选轴>（看得出不对、说不清是哪一段）；\n- needs_external=是 的条目：trace 里看得到做到了照判达到并引原文；看不出做到的判无法核，不能判没达到（判了会被退回）；\n- reason：给看结果的人读的本轴说明，要让人只看这一段，就知道本轴在这个 case 里哪里出了问题、是什么问题、为什么算问题，或者为什么没问题：有问题时每个问题写一两句——第几轮、哪一步；原文里看到了什么（引最关键的一小段原文，加引号）；违背了哪一条本应；对用户要的结果造成了什么（哪一部分没给到、给错了）；问题是上游带下来的，写明是哪个轴的什么问题传下来的，本轴自己没做错。核不了的，写哪一件核不了、为什么（缺什么材料）。没问题时一两句，说核了哪几件关键的事、凭的是哪段原文（引一小段）。不复述\"达到几项\"这类计数；不写\"均正常\"\"严格一致\"这类原文撑不住的概括；条目里没有判过的事不写。\n- scope_note 写这次没覆盖到的范围。\n\n引文规则（程序逐条核对，不在所引记录里的会退回，改对了才收）：\n- 达到、没达到、不适用的行和每个 unexpected 至少一段 quotes（trace 里引不出能证明它的原文，就判无法核）：{ref: 记录编号, quote: 从该记录逐字摘出的短句}；\n- 要靠两处对比才看得出的（上游写了什么、下游变成了什么；前一次请求里的某句、后一次请求里同一句），两处都引；\n- 引文短而关键（一般 40 字以内），不改写、不用省略号拼接；\n- 原文里的英文双引号在引文里一律写成中文引号“”（程序核对时视为同一字符），反斜杠不要抄进引文；尽量摘不带引号的那一段。\n材料大时只给目录：用 read_material(name=<材料标题>, ids=[…]) 按编号取正文，目录摘要定位不到时用 search_material 按关键词找。本轴环节表里的每个环节都要看到，该看的都要看，依据要充分。",
+      "materials": [
+        "result.model_capability_expected.{expected, not_covered}",
+        "result.trace_analysis.views[axis=model_capability].links[]",
+        "result.trace_analysis.views[axis=model_capability].full",
+        "result.trace_analysis.views[axis=model_capability].leads"
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "actual": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "与本应清单的 id 一一对应"
+                },
+                "links": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "落在哪些实际环节（link_id）"
+                },
+                "observed": {
+                  "type": "string",
+                  "description": "实际是什么；无法核时说清为什么核不了"
+                },
+                "quotes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "原文所在记录的编号（records[].id），只写编号"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "从该记录逐字摘出的短句（一般 40 字以内），不改写、不用省略号拼接"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "quote"
+                    ]
+                  },
+                  "description": "没达到、不适用时至少一段；要靠两处对比才看得出的两处都引"
+                },
+                "verdict": {
+                  "type": "string",
+                  "enum": [
+                    "达到",
+                    "没达到",
+                    "无法核",
+                    "不适用"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "links",
+                "observed",
+                "quotes",
+                "verdict"
+              ]
+            }
+          },
+          "unexpected": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "observed": {
+                  "type": "string"
+                },
+                "links": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "quotes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "原文所在记录的编号（records[].id），只写编号"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "从该记录逐字摘出的短句（一般 40 字以内），不改写、不用省略号拼接"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "quote"
+                    ]
+                  }
+                },
+                "why": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "observed",
+                "links",
+                "quotes",
+                "why"
+              ]
+            }
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "phenomenon": {
+                  "type": "string"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "只引用没达到的条目 id 或 unexpected 的 id"
+                },
+                "attribution": {
+                  "type": "string",
+                  "pattern": "^(本轴|上游:.+|未定位:.+)$",
+                  "description": "本轴 / 上游:<轴> / 未定位:<候选轴>"
+                },
+                "impact": {
+                  "type": "string",
+                  "description": "对最终交付的影响"
+                }
+              },
+              "required": [
+                "phenomenon",
+                "items",
+                "attribution",
+                "impact"
+              ]
+            }
+          },
+          "reason": {
+            "type": "string",
+            "description": "给读者的本轴说明：每个问题写第几轮哪一步、原文、违背哪条本应、影响用户哪部分结果；核不了写缺什么；没问题写核了什么、凭哪段原文"
+          },
+          "scope_note": {
+            "type": "string",
+            "description": "这次没覆盖到的范围"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "problematic",
+              "not_evaluable",
+              "sound",
+              "untested",
+              "not_applicable"
+            ],
+            "x-fill": "program",
+            "x-explain": true
+          },
+          "composition": {
+            "type": "object",
+            "x-fill": "program",
+            "x-explain": [
+              "counts"
+            ]
+          },
+          "results": {
+            "type": "array",
+            "x-fill": "program",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "expectations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "statement": {
+                  "type": "string"
+                },
+                "verdict": {
+                  "type": "string"
+                },
+                "observed": {
+                  "type": "string"
+                },
+                "about": {
+                  "type": "string"
+                },
+                "subcapability": {
+                  "type": "string"
+                },
+                "basis": {
+                  "type": "string"
+                },
+                "turn": {
+                  "type": "string"
+                },
+                "links": {
+                  "type": "array"
+                },
+                "quotes": {
+                  "type": "array"
+                },
+                "needs_external": {
+                  "type": "string"
+                },
+                "standing_duty": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "expectations",
+                "statement",
+                "verdict",
+                "observed"
+              ]
+            }
+          },
+          "issues": {
+            "type": "array",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "actual",
+          "unexpected",
+          "problems",
+          "reason",
+          "scope_note",
+          "verdict",
+          "composition",
+          "results",
+          "issues"
+        ]
+      }
+    }
+  },
+  "loops": {
+    "main": {
+      "title": "主 loop",
+      "start": "case"
+    },
+    "expectations": {
+      "title": "需求（每轮一份）",
+      "start": "ready"
+    },
+    "blocking": {
+      "title": "blocking",
+      "start": "ready"
+    },
+    "truthfulness": {
+      "title": "核事实",
+      "start": "ready"
+    },
+    "carryability": {
+      "title": "承载性",
+      "start": "ready"
+    },
+    "search_knowledge": {
+      "title": "search_knowledge",
+      "start": "tool",
+      "description": "到场景知识源取证（独立上下文，只取证不判对错）：给一组待查项，逐条返回找到的原文或没找到的检索说明。",
+      "instruction": "你在为一份被测回答做知识查证：针对待查清单里的每一条，到给定知识源里取证。你只取证，不判对错。\n\n每条交两种结果之一：\n- found：知识源里有讲同一对象、同一事项的原文。引用这些原文。\n- not_found：查过了，知识源里没有相关原文。note 写清检索了哪些知识源、用了什么词、为什么认为没有；\n  gap 写缺的是哪一格：object_absent = 这个对象在知识源里就找不到；item_absent = 对象找到了，只是没有这一项（且证明不了是全集，见第 10 条）。\n\n取证规则：\n1. 对象要对：原文说的必须就是说法说的那个对象（谁、哪张单、哪款产品哪个版本）的那个事项、那个条件。\n   对象的组成部分（客户名下的某张保单、保单里的某一行险种）不是对象本身；手里只有部分时，接着去查对象本身的记录。\n   别的产品、别的版本的同类条款也不算相关原文。\n2. 正反都查：每条都要同时找支持它的、与它矛盾的、给它加条件或例外的原文（适用条件、其他版本、免责、限制）。不能找到一段相符的就停。\n   你可以有自己的判断来决定往哪查，但不要在提交里写\"支持\"\"矛盾\"之类的结论——判定由别人做。\n3. 相关原文全部引用，不挑：找到的相关原文都要交，包括互相矛盾的（同一事项知识库里有两种说法时两段都引）。\n   说法里用到的术语、字段，知识源若给了定义或字段说明，也一并引用（判定要据此确认含义）。\n   对象本身确实没有这一项、说法是由几条数据算出来的时：参与计算的每条数据都引上，算法的出处（字段说明、知识库文档）\n   找到了也引上；找不到出处在 note 里写明\"没找到 X 的算法\"。\n4. 只用工具，不凭记忆。引用 = {ref, quote}：ref 是工具返回里的 call_id，quote 是那次返回里逐字摘的连续原文，\n   不改写、不拼接；一段话太长就摘含关键值及其条件的那一截。工具返回被截断时，用翻页工具看后面，翻出来的页同样带 call_id 可引用。\n5. 同一次回复里拿到的返回，要到下一次回复才能引用（先看到、再引用）。\n6. 工具报错（不是零命中）不能当作\"没找到\"：换参数重试；查不了就如实写在 note 里，但这条不能交 not_found。\n7. 数字写法在原文里可能不同：阿拉伯数字与中文数字、%与百分之、天与日、万与万元互为等价。搜数字零命中时换另一种写法再搜一次。\n8. 查得全：返回显示结果不全（总数大于已读条数、列表只给了第一页）时，翻页或换别的工具、别的查法补全（如按对象逐个查详情）；\n   实在补不全，在 note 里写明\"结果不全：总数多少、看到多少\"。全不全以数据本身为准（总数与已读条数）。\n   单次返回很长被截断时，没看到的部分不能当作\"没有\"：用 mcp_find 在全文里搜（字段名、中文名、数值），或翻页看完。\n9. 知识源目录里的 notes 是登记方写的读法说明（字段含义、数据怎么读），取证时照着读。\n10. 说法涉及某个范围里有没有某一项、共几个，或对象本身存不存在时：把这个范围按对象查全，读全了的那份返回（列表、空结果、\"未查询到该对象\"的提示）就是相关原文，交 found 并引用它，连同表明读全了的总数与条数一起引；不要因为里面没有说法说的那一项就交 not_found。怎样算读全了、哪类查询查回来的就是全部，看知识源的读法说明和数据本身（总数与已读条数）；没读全的交 not_found，note 写明\"结果不全：总数多少、看到多少\"；查回别的对象、工具报错都不算。\n11. 已取回的不再取第二份（唯一性原则：同一个东西只给一份，用到它的地方引用这一份；\"同一个\"看实质——同一个对象、同一件事、同样的内容，换了叫法、编号或措辞也是同一个，内容不一样就不算重复；只去掉重复的部分，判断要用的内容不少给）：先按对象和范围查，查回的结果供清单里各条共用；已经取回的内容要再看，用 recall(call_id) 回看，不重查。上次没覆盖到——查询没执行、查回的不是这个对象、没读全——换方式再查，这不算重复。\n\n待查清单是调用参数 items。提交：每查完一条就 submit(task_id=\"search_knowledge\", item_id=那一条的 item_id, payload=…) 交这一条（可以一次回复里交多条）；全部交完再不带 item_id 交一次收尾（payload 为 {}）。search_calls 列出为这一条做过的检索调用的 call_id\n（同一次调用可以被多条共用）；found 时每个引用的 call_id 也要列在 search_calls 里。被拒就按原因改了再交。\n收尾被接受后就结束，不需要再写总结。",
+      "materials": [
+        "scenario.knowledge"
+      ],
+      "tool_categories": [
+        {
+          "category": "knowledge",
+          "required": true
+        }
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "description": "待查清单：每项 {item_id, text, context}；text 是要核的主张，context 是它归属的对象与成立条件",
+            "items": {
+              "type": "object",
+              "properties": {
+                "item_id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "context": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "item_id",
+                "text",
+                "context"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "submit": "per_item",
+      "items_field": "items",
+      "item_key": "item_id",
+      "output": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "item_id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "found",
+                    "not_found"
+                  ]
+                },
+                "citations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "出处：call_id"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "逐字摘的原文"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "quote"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "search_calls": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "note": {
+                  "type": "string"
+                },
+                "gap": {
+                  "type": "string",
+                  "enum": [
+                    "",
+                    "object_absent",
+                    "item_absent"
+                  ]
+                }
+              },
+              "required": [
+                "item_id",
+                "status",
+                "citations",
+                "search_calls",
+                "note",
+                "gap"
+              ],
+              "additionalProperties": false,
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "status": {
+                        "const": "found"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "citations": {
+                        "minItems": 1
+                      },
+                      "gap": {
+                        "const": ""
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "status": {
+                        "const": "not_found"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "citations": {
+                        "maxItems": 0
+                      },
+                      "gap": {
+                        "enum": [
+                          "object_absent",
+                          "item_absent"
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "records": {
+            "type": "object",
+            "x-fill": "program"
+          },
+          "calls": {
+            "type": "object",
+            "x-fill": "program"
+          },
+          "cite_records": {
+            "type": "object",
+            "x-fill": "program"
+          }
+        },
+        "required": [
+          "items",
+          "records",
+          "calls",
+          "cite_records"
+        ],
+        "additionalProperties": false
+      },
+      "checks": [
+        {
+          "refs_in": {
+            "field": "item_id",
+            "of": "params.items[].item_id",
+            "on": "item"
+          }
+        },
+        {
+          "searched": {
+            "field": "search_calls[]",
+            "category": "knowledge",
+            "on": "item"
+          }
+        },
+        {
+          "refs_in": {
+            "field": "citations[].ref",
+            "of": "own.search_calls[]",
+            "on": "item"
+          }
+        },
+        {
+          "quote_in_call": {
+            "field": "citations[]",
+            "category": "knowledge",
+            "on": "item"
+          }
+        },
+        {
+          "covers": {
+            "field": "items[].item_id",
+            "of": "params.items[].item_id"
+          }
+        }
+      ]
+    },
+    "trace_analysis": {
+      "title": "过程案卷（侦探）",
+      "start": "ready"
+    },
+    "process_expected": {
+      "title": "过程六轴·本应（按分组分发）",
+      "start": "ready"
+    },
+    "process": {
+      "title": "过程六轴·实际",
+      "start": "ready"
+    }
+  }
+}

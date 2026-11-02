@@ -17,6 +17,15 @@ ROLE_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 SUPPORTED_LLM_PROVIDERS = frozenset({"deepseek"})
 SUPPORTED_LLM_PROTOCOLS = frozenset({"openai_compatible"})
 SUPPORTED_EMBEDDING_PROVIDERS = frozenset({"bailian"})
+# 扩展评估轴的模型策略（spec/adapter/axe-v4.md D12）：
+# any        按公共路由回退，哪个端点可用就用哪个（与生产 judge 一致）；
+# same_model 只允许与角色策略同名模型的端点（中转站可不同），同模型都不可用则该轴 failed，不换模型顶替。
+SUPPORTED_EVAL_AXES_MODEL_POLICIES = frozenset({"any", "same_model"})
+DEFAULT_EVAL_AXES_MODEL_POLICY = "any"
+# axis loop 的全局预算与上下文上限（spec/alg/axis_loop.md §9、§10）：主 loop 与各子 loop 共用一份计数。
+DEFAULT_AXIS_LOOP = {"loop_llm_calls": 160, "loop_tool_calls": 400, "loop_seconds": 1500,
+                     "loop_context_limit_tokens": 200_000, "loop_archive_ratio": 0.8,
+                     "loop_material_inline_chars": 20_000}
 
 
 class ConfigError(ValueError):
@@ -201,6 +210,10 @@ class LlmFallback:
     base_url: str
     model: str
     api_key: str
+    # 端点可接受的 prompt 字符上限；None = 未声明（不作预检过滤）。
+    max_prompt_chars: Optional[int] = None
+    # 端点能否真正执行 tool calls；默认全开，只做减法（见 LlmEndpoint.tool_calls）。
+    tool_calls: bool = True
 
 
 @dataclass(frozen=True)
@@ -223,6 +236,13 @@ class LlmConfig:
     capabilities: LlmCapabilities
     role_policies: Mapping[str, LlmRolePolicyOverride] = field(default_factory=dict)
     fallbacks: Sequence[LlmFallback] = field(default_factory=tuple)
+    # 流式取回：中转站前面的网关（ALB 60s / Cloudflare 100s）看的是两次收包间隔，
+    # 非流式要等整段生成完才回第一个字节，大 prompt 必撞超时；流式 prefill 一结束就开始收包。
+    stream: bool = True
+    # 主端点可接受的 prompt 字符上限；None = 未声明（不作预检过滤）。
+    max_prompt_chars: Optional[int] = None
+    # 主端点能否真正执行 tool calls；默认全开，只做减法。
+    tool_calls: bool = True
 
     def policy_for(self, role: str) -> LlmRolePolicy:
         override = self.role_policies.get(str(role or ""), LlmRolePolicyOverride())
@@ -298,6 +318,18 @@ class AttributeConfig:
 
 
 @dataclass(frozen=True)
+class EvalAxesConfig:
+    # 只影响扩展评估轴（impl/projects/<id>/eval_axes），不影响生产 judge / 裁决的模型路由。
+    model_policy: str
+    loop_llm_calls: int = DEFAULT_AXIS_LOOP["loop_llm_calls"]
+    loop_tool_calls: int = DEFAULT_AXIS_LOOP["loop_tool_calls"]
+    loop_seconds: int = DEFAULT_AXIS_LOOP["loop_seconds"]
+    loop_context_limit_tokens: int = DEFAULT_AXIS_LOOP["loop_context_limit_tokens"]
+    loop_archive_ratio: float = DEFAULT_AXIS_LOOP["loop_archive_ratio"]
+    loop_material_inline_chars: int = DEFAULT_AXIS_LOOP["loop_material_inline_chars"]
+
+
+@dataclass(frozen=True)
 class RuntimeConfig:
     schema_version: int
     python: PythonConfig
@@ -310,6 +342,7 @@ class RuntimeConfig:
     context: ContextConfig
     judge: JudgeConfig
     attribute: AttributeConfig
+    eval_axes: EvalAxesConfig
     environment: EnvironmentRegistry
     sources: Mapping[str, ConfigValueSource]
     warnings: tuple[str, ...] = ()
@@ -357,6 +390,8 @@ class RuntimeConfig:
                 "temperature": self.llm.temperature,
                 "reasoning_effort": self.llm.reasoning_effort,
                 "request_timeout_seconds": self.llm.request_timeout_seconds,
+                "stream": self.llm.stream,
+                "max_prompt_chars": self.llm.max_prompt_chars,
                 "capabilities": {
                     "json_mode": self.llm.capabilities.json_mode,
                     "tool_calls": self.llm.capabilities.tool_calls,
@@ -410,6 +445,8 @@ class RuntimeConfig:
                     "judge_reasoning_chars": self.attribute.compaction.judge_reasoning_chars,
                 },
             },
+            "eval_axes": {"model_policy": self.eval_axes.model_policy,
+                          **{key: getattr(self.eval_axes, key) for key in DEFAULT_AXIS_LOOP}},
             "sources": {
                 path: {"kind": source.kind, "name": source.name, "secret": source.secret}
                 for path, source in sorted(self.sources.items())
@@ -436,6 +473,7 @@ class ParsedRuntimeConfig:
     context: ContextConfig
     judge: JudgeConfig
     attribute: AttributeConfig
+    eval_axes: EvalAxesConfig
     environment: EnvironmentRegistry
 
 
@@ -478,7 +516,7 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
     root = _mapping(data, "config")
     _reject_unknown(
         root,
-        {"schema_version", "python", "server", "uat", "browser", "llm", "embedding", "execution", "context", "judge", "attribute", "environment"},
+        {"schema_version", "python", "server", "uat", "browser", "llm", "embedding", "execution", "context", "judge", "attribute", "eval_axes", "environment"},
         "",
     )
     schema_version = _integer(_required(root, "schema_version", ""), "schema_version", minimum=1, maximum=1)
@@ -521,6 +559,9 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
             "temperature",
             "reasoning_effort",
             "request_timeout_seconds",
+            "stream",
+            "max_prompt_chars",
+            "tool_calls",
             "capabilities",
             "role_policies",
         },
@@ -553,6 +594,13 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
             "llm.request_timeout_seconds",
             minimum=0.001,
         ),
+        stream=_boolean(llm_data.get("stream", True), "llm.stream"),
+        max_prompt_chars=(
+            _integer(llm_data["max_prompt_chars"], "llm.max_prompt_chars", minimum=1)
+            if llm_data.get("max_prompt_chars") is not None
+            else None
+        ),
+        tool_calls=_boolean(llm_data.get("tool_calls", True), "llm.tool_calls"),
         capabilities=LlmCapabilities(
             json_mode=_boolean(_required(capability_data, "json_mode", "llm.capabilities"), "llm.capabilities.json_mode"),
             tool_calls=_boolean(_required(capability_data, "tool_calls", "llm.capabilities"), "llm.capabilities.tool_calls"),
@@ -678,6 +726,25 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
         }),
     )
 
+    # 节可缺省（默认 any）：它只管扩展评估轴，已有部署的 config.yaml 不必为此改动。
+    eval_axes_data = _mapping(root.get("eval_axes") or {}, "eval_axes")
+    _reject_unknown(eval_axes_data, {"model_policy", *DEFAULT_AXIS_LOOP}, "eval_axes")
+    loop_limits = {key: _integer(eval_axes_data.get(key, default), f"eval_axes.{key}", minimum=1)
+                   for key, default in DEFAULT_AXIS_LOOP.items() if key != "loop_archive_ratio"}
+    ratio = _number(eval_axes_data.get("loop_archive_ratio", DEFAULT_AXIS_LOOP["loop_archive_ratio"]),
+                    "eval_axes.loop_archive_ratio")
+    if not 0 < ratio <= 1:
+        raise ConfigError("invalid field eval_axes.loop_archive_ratio: expected 0 < ratio <= 1")
+    eval_axes = EvalAxesConfig(
+        model_policy=_choice(
+            eval_axes_data.get("model_policy", DEFAULT_EVAL_AXES_MODEL_POLICY),
+            "eval_axes.model_policy",
+            SUPPORTED_EVAL_AXES_MODEL_POLICIES,
+        ),
+        loop_archive_ratio=ratio,
+        **loop_limits,
+    )
+
     environment = _parse_environment(_required(root, "environment", ""))
     _validate_bindings(environment)
     return ParsedRuntimeConfig(
@@ -691,6 +758,7 @@ def parse_runtime_document(data: Mapping[str, Any]) -> ParsedRuntimeConfig:
         execution=execution,
         context=context,
         judge=judge,
+        eval_axes=eval_axes,
         attribute=attribute,
         environment=environment,
     )
@@ -797,13 +865,21 @@ def _validate_bindings(environment: EnvironmentRegistry) -> None:
         "llm.api_key",
         "llm.temperature",
         "llm.reasoning_effort",
+        "llm.request_timeout_seconds",
+        "llm.stream",
+        "llm.max_prompt_chars",
+        "llm.tool_calls",
         "llm.role_policies.live_stub.model",
         "llm.fallback_1.base_url",
         "llm.fallback_1.model",
         "llm.fallback_1.api_key",
+        "llm.fallback_1.max_prompt_chars",
+        "llm.fallback_1.tool_calls",
         "llm.fallback_2.base_url",
         "llm.fallback_2.model",
         "llm.fallback_2.api_key",
+        "llm.fallback_2.max_prompt_chars",
+        "llm.fallback_2.tool_calls",
         "embedding.provider",
         "embedding.enabled",
         "embedding.model",
@@ -813,6 +889,7 @@ def _validate_bindings(environment: EnvironmentRegistry) -> None:
         "embedding.trust_env_proxy",
         "context.data_root",
         "context.store_root",
+        "eval_axes.model_policy",
     }
     seen_bindings: set[str] = set()
     supported_types = {"string", "integer", "number", "boolean", "path", "url"}

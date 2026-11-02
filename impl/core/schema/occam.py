@@ -16,6 +16,7 @@ SCHEMA_FIELD_ROLES = {
             "fallbacks", "scenario", "interaction_mode", "session_id", "created_at",
             "turn_records", "final_output_turn", "completion_status", "ready", "mock_intent",
             "interaction_controller_status", "interaction_controller_error",
+            "intent_history", "diverged_at_turn",
         ],
         "derived_alias": [
             "input", "normalized_request", "raw_response", "extracted_output",
@@ -50,10 +51,12 @@ SCHEMA_FIELD_ROLES = {
         "view_only": ["id", "input", "scenario", "output_summary", "reference_summary", "status",
                       "execution_status", "execution_error", "interaction_controller_status",
                       "interaction_controller_error", "execution_mode", "output_source", "score", "fulfillment_status",
+                      "carrier_placement", "eval_axes_summary", "stage_timings",
                       "judge_summary", "attribution_summary", "check_summary", "fallback_summary",
                       "needs_human_review", "quality_flags", "check_passed", "issue_count",
                       "fallback_count", "divergence_stage", "root_cause_summary",
-                      "created_at", "stop_reason", "interaction_mode", "conversation_summary",
+                      "created_at", "stop_reason", "stop_attribution", "driver_health",
+                      "interaction_mode", "conversation_summary",
                       "conversation_detail", "trace_id"],
     },
     "CasePoolTable": {
@@ -83,7 +86,7 @@ PUBLIC_SCHEMA_FIELDS.update({
         "status", "error", "fallbacks", "interaction_mode", "session_id", "created_at",
         "conversation_transcript", "conversation_summary", "turn_records", "final_output_turn",
         "completion_status", "interaction_controller_status", "interaction_controller_error",
-        "stop_reason", "turn_index",
+        "stop_reason", "turn_index", "intent_history", "diverged_at_turn",
     ],
     "LiveMultiTurnState": [
         "session_id", "turn_index", "transcript", "accumulated_fields",
@@ -109,7 +112,7 @@ PUBLIC_SCHEMA_FIELDS.update({
     "MockCasesResponse": None,
     "MockDatasetsResponse": None,
     "MockBuildResponse": None,
-    "MockCase": ["id", "project_id", "scenario", "intent", "live_request", "output", "reference"],
+    "MockCase": ["id", "project_id", "scenario", "intent", "live_request", "output", "reference", "seed"],
     "RunChainResponse": None,
     "CasePoolsResponse": None,
     "CasePoolSaveResponse": None,
@@ -266,6 +269,8 @@ def _to_public_dict(value: Any, seen: set[int], *, request_container: bool = Fal
                     "live_request": dict(value.live_request or {}),
                     "output": value.output,
                     "reference": value.reference,
+                    # transcript 级 seed（spec/mock/protocol.md 4.10）；None 即 level=request。
+                    "seed": _to_protocol_fact(value.seed, seen) if value.seed is not None else None,
                 }
             public_fields = PUBLIC_SCHEMA_FIELDS.get(schema_name)
             field_names = [item.name for item in fields(value)] if public_fields is None else public_fields

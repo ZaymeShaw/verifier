@@ -1,0 +1,80 @@
+{
+ "meta": {
+  "elapsed": 52,
+  "prompt_tokens": 3352,
+  "completion_tokens": 10599,
+  "reasoning_tokens": 9535
+ },
+ "attempt": 1,
+ "result": {
+  "instance": "模型能力（模型）第3次调用",
+  "items": [
+   {
+    "id": "R1",
+    "type": "推出",
+    "statement": "第3次调用的输出应继续触发一次 customer_search 取数，而不是直接收尾或仅要求用户继续，因为筛选客户子任务仍未完成且工具预算仍允许继续。",
+    "basis": "system 规则“仍有未取证子任务且预算足够时继续执行，不得仅以‘请回复继续’提前结束”；当前剩余12次工具调用，customer_search 已用2次（上限4次）。"
+   },
+   {
+    "id": "R2",
+    "type": "推出",
+    "statement": "若继续调用 customer_search，query 必须覆盖用户给出的筛选条件：女性、姓平、生日月份为12月，并明确按客户号升序排序；“我名下”归属须由当前用户上下文限定或在 query 中体现。",
+    "basis": "用户原话“我名下姓平、12月份生日的女性客户，按客户号升序列出来”；E 的 list_female_clients_surname_ping_born_in_december。"
+   },
+   {
+    "id": "R3",
+    "type": "推出",
+    "statement": "若继续调用 customer_search，应使用工具返回提示的可解析条件词（如性别、生日月份、姓名等）组织 query，避免沿用前两次被判定为无法可靠解析的写法。",
+    "basis": "工具返回 execution.message“可使用客户姓名、完整客户号、手机号、性别、生日月份等条件”；前两次 execution.status 为 AMBIGUOUS。"
+   },
+   {
+    "id": "R4",
+    "type": "推出",
+    "statement": "若继续调用 customer_search，fields 至少应请求姓名、生日、性别、客户号，以便按客户号升序展示候选供用户选择。",
+    "basis": "用户原话“按客户号升序列出来让我选”；E 的 list_female_clients_surname_ping_born_in_december。"
+   },
+   {
+    "id": "R5",
+    "type": "推出",
+    "statement": "第3次调用不得调用 customer_detail 或保单状态查询工具，因为尚未确定选中客户，也没有可用的客户中心ID。",
+    "basis": "E 的 query_selected_client_detail_info 与 query_selected_client_policy_status 均以“确定选中客户后”为条件；system 规则“需先取得 ID、名称归属或候选选择的调用必须串行”。"
+   },
+   {
+    "id": "R6",
+    "type": "推出",
+    "statement": "第3次调用不得调用 present_customer_search_card，因为本轮完整目标还包含确定后查询详细资料和保单状态，且当前没有已成功返回的候选清单。",
+    "basis": "system 规则“仅当本轮完整目标是客户/保单清单且卡片足以答复时，单独调用零参数 present_customer_search_card”；用户原话“确定后再查选中客户的详细资料和保单状态”。"
+   },
+   {
+    "id": "R7",
+    "type": "守恒",
+    "statement": "前两次 customer_search 的 AMBIGUOUS 只能被表述为筛选条件未解析、查询尚未执行，不得被当作空结果或“没有符合条件的客户”。",
+    "basis": "工具返回 execution.message“尚未执行客户查询”；system 规则“未筛选、未取全、冲突、缺失或失败须披露；null/空值不等于零或否”。"
+   },
+   {
+    "id": "R8",
+    "type": "推出",
+    "statement": "第3次调用输出不得编造或列出任何客户姓名、客户号、生日、性别、保单状态等业务值。",
+    "basis": "system L3“不编造”；system 规则“没有可用 data 或事实时，不用 hint、候选目录或常识补业务结论”。"
+   },
+   {
+    "id": "R9",
+    "type": "推出",
+    "statement": "如果第3次调用选择以最终 JSON 收尾，answer_draft 必须是首字段且只写业务用户可读正文，fact_refs 必须为空数组，gaps 应披露客户筛选尚未执行，且不得出现工具名或 AMBIGUOUS 等内部词。",
+    "basis": "system 输出契约“answer_draft:string 必须是首字段”“fact_refs:string[] 仅填工具返回 facts 的 fact_id”“answer_draft 与 gaps 只写业务用户可读正文”；本轮工具未返回 facts。"
+   },
+   {
+    "id": "R10",
+    "type": "外部真值",
+    "statement": "当前用户名下是否存在姓平、12月生日、女性客户及其按客户号升序的列表，只能由 customer_search 成功返回的业务数据确定；仅凭本次运行记录无法推出。",
+    "basis": "工具分工“客户：定位、筛选、计数 → customer_search”；业务值需以工具返回 facts 为准。"
+   }
+  ],
+  "not_covered": [
+   "未覆盖第3次调用实际会采用的具体 query 字符串和最终是否成功解析。",
+   "未覆盖“我”在系统上下文中是否已由登录态或权限上下文确定为某一客户经理，因此无法判断是否需要就归属身份补充澄清。",
+   "未覆盖若 customer_search 再次 AMBIGUOUS 后应如何最终收尾的具体正文措辞。",
+   "未覆盖具体客户数据本身是否存在，属于外部真值，运行记录无法给出。"
+  ]
+ }
+}

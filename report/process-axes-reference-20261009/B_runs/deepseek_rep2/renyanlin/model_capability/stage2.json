@@ -1,0 +1,277 @@
+{
+ "meta": {
+  "elapsed": 84,
+  "prompt_tokens": 27649,
+  "completion_tokens": 18959,
+  "reasoning_tokens": 16586
+ },
+ "attempt": 1,
+ "result": {
+  "results": [
+   {
+    "id": "模型调用1.R1",
+    "verdict": "met",
+    "observation": "首次模型调用参数保留 polno=P260922000005855，fields=[投保人姓名,被保人姓名,保单状态]，未改写为其他保单或字段。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/1",
+     "turn1/records/run/step_executor_runs/0/tools/0"
+    ]
+   },
+   {
+    "id": "模型调用1.R2",
+    "verdict": "met",
+    "observation": "首个模型调用仅发出工具调用，未在取得 facts 前输出具体投保人/被保人/状态值。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/1",
+     "turn1/records/traces/0/tree/0/spans/3/spans/1"
+    ]
+   },
+   {
+    "id": "模型调用1.R3",
+    "verdict": "not_met",
+    "observation": "实际调用 policy_detail，未调用清单要求的 run_policy_field_lookup。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/1",
+     "turn1/records/run/step_executor_runs/0/tools/0"
+    ]
+   },
+   {
+    "id": "模型调用1.R4",
+    "verdict": "not_met",
+    "observation": "实际是单次 policy_detail 调用，参数含保单号并覆盖三项 fields，但并非 run_policy_field_lookup；按清单字面未满足。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/1"
+    ]
+   },
+   {
+    "id": "模型调用1.R5",
+    "verdict": "met",
+    "observation": "未调用 ask_clarify；用户已提供完整保单号和三项查询目标。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/1"
+    ]
+   },
+   {
+    "id": "模型调用1.R6",
+    "verdict": "met",
+    "observation": "仅 policy_detail 单工具调用，未与 ask_clarify、present_* 或 run_* 流程工具并行。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/1"
+    ]
+   },
+   {
+    "id": "模型调用1.R7",
+    "verdict": "met",
+    "observation": "policy_detail 返回 SUCCESS，projection.incomplete=false，未出现缺失、未识别或冲突需在模型调用1披露。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2"
+    ]
+   },
+   {
+    "id": "模型调用1.R8",
+    "verdict": "met",
+    "observation": "三项业务值由本轮 policy_detail facts -002/-003/-005 确定；模型调用1未凭输入猜测。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2",
+     "turn1/records/run/step_executor_runs/0/tools/0"
+    ]
+   },
+   {
+    "id": "模型调用2.R1",
+    "verdict": "not_met",
+    "observation": "模型调用2输出为自由文本加末尾 JSON，整体不是纯 JSON 对象；JSON 内 answer_draft 虽为首字段。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R2",
+    "verdict": "met",
+    "observation": "answer_draft 保留投保人任言琳，fact_refs 含 -002。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3",
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002"
+    ]
+   },
+   {
+    "id": "模型调用2.R3",
+    "verdict": "met",
+    "observation": "answer_draft 保留被保人任言琳，fact_refs 含 -003。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3",
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003"
+    ]
+   },
+   {
+    "id": "模型调用2.R4",
+    "verdict": "met",
+    "observation": "answer_draft 保留状态交费有效，fact_refs 含 -005。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3",
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005"
+    ]
+   },
+   {
+    "id": "模型调用2.R5",
+    "verdict": "not_met",
+    "observation": "模型调用2 JSON 中无 claims 数组，未声明三项 subject_id/field/fact_id。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R6",
+    "verdict": "met",
+    "observation": "fact_refs 仅含本轮三项正确 fact_id，未猜造 ID。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R7",
+    "verdict": "not_met",
+    "observation": "answer_draft 自行填写任言琳、交费有效等业务值，未通过 claims 引用 facts 由服务端渲染。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R8",
+    "verdict": "met",
+    "observation": "JSON 中 needs_user_input=false，且 facts 覆盖三项。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R9",
+    "verdict": "met",
+    "observation": "未调用 ask_clarify，也未再次澄清投保人、被保人或状态。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R10",
+    "verdict": "met",
+    "observation": "自由文本称“该保单包含两个险种”，未把 total=2 说成两张保单。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3",
+     "turn1/records/run/step_executor_runs/0/tools/0"
+    ]
+   },
+   {
+    "id": "模型调用2.R11",
+    "verdict": "met",
+    "observation": "未添加受益人、持有人、手机号、其他保单号等未提供角色或个人信息；额外产品/关系内容来自本轮工具 data，但其引用问题见 R15。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R12",
+    "verdict": "met",
+    "observation": "模型调用2 JSON gaps=[]，未把三项已确认事实列为缺口。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R13",
+    "verdict": "met",
+    "observation": "answer_draft 与 gaps 未出现“工具返回”“接口返回”“EMPTY/BUDGET”等内部词。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R14",
+    "verdict": "met",
+    "observation": "task_updates=[]，未声称已挂起或后续续跑。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R15",
+    "verdict": "not_met",
+    "observation": "自由文本用保单号引出两个险种、主/附加险名称、投被保关系、两项险种状态等，但 fact_refs 仅 -002/-003/-005，未覆盖这些结论。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R16",
+    "verdict": "met",
+    "observation": "无 derived，也无金额或数量计算。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   }
+  ],
+  "problems": [
+   {
+    "phenomenon": "首次模型调用实际调用 policy_detail，未调用清单要求的 run_policy_field_lookup；参数虽含 P260922000005855 并覆盖三项 fields。",
+    "violates": [
+     "模型调用1.R3",
+     "模型调用1.R4"
+    ],
+    "attribution": "本轴",
+    "impact": "yes",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/1",
+     "turn1/records/run/step_executor_runs/0/tools/0"
+    ]
+   },
+   {
+    "phenomenon": "第二次模型输出在 JSON 对象前附带自由文本业务回答，整体不是纯 JSON 对象；嵌在末尾的 JSON 虽以 answer_draft 开头，但不满足 JSON-only 输出契约。",
+    "violates": [
+     "模型调用2.R1"
+    ],
+    "attribution": "本轴",
+    "impact": "yes",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   },
+   {
+    "phenomenon": "第二次模型 JSON 缺少 claims 数组，未按 subject_id/field/fact_id 声明 applicant_name、insured_name、pol_status_desc 三项。",
+    "violates": [
+     "模型调用2.R5"
+    ],
+    "attribution": "本轴",
+    "impact": "yes",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   },
+   {
+    "phenomenon": "第二次模型 answer_draft 自行写入任言琳、交费有效等业务值，未通过 claims 引用 facts 由服务端渲染。",
+    "violates": [
+     "模型调用2.R7"
+    ],
+    "attribution": "本轴",
+    "impact": "yes",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   },
+   {
+    "phenomenon": "第二次模型自由文本用保单号 P260922000005855 引出两个险种、主/附加险名称、投被保关系、两项险种状态等结论，但这些结论未在 fact_refs/claims 中引用。",
+    "violates": [
+     "模型调用2.R15"
+    ],
+    "attribution": "本轴",
+    "impact": "unknown",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3"
+    ]
+   }
+  ],
+  "extra_observations": [
+   "最终交付 turn1.delivered_output 的 gaps/limitations 含“部分内容未能在本轮证据中对应，请结合原始资料核实。”，而本轮 facts -002/-003/-005 已覆盖投保人、被保人、状态三项；该 gap 不在模型调用2 JSON（gaps:[]）中，疑似由 agent_bridge/finalize 引入，未计入模型结果。",
+   "模型调用2 自由文本中的两个险种/投被保关系等越界内容在最终交付中被裁剪，最终用户可见答案只含保单号、投保人、被保人、状态。",
+   "policy_detail 返回 total=2 及两条 records；模型正确表述为“该保单包含两个险种”，未误称两张保单。"
+  ]
+ }
+}

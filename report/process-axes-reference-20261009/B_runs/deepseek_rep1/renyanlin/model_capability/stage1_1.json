@@ -1,0 +1,98 @@
+{
+ "meta": {
+  "elapsed": 46,
+  "prompt_tokens": 5043,
+  "completion_tokens": 9050,
+  "reasoning_tokens": 7365
+ },
+ "attempt": 1,
+ "result": {
+  "instance": "模型能力（模型）第2次调用：P260922000005855 保单查询",
+  "items": [
+   {
+    "id": "R1",
+    "type": "推出",
+    "statement": "输出必须是首字段为 answer_draft 的 JSON 对象，且 answer_draft 为字符串、结论先行。",
+    "basis": "系统输出契约原文：“输出 JSON：answer_draft:string 必须是首字段、结论先行”。"
+   },
+   {
+    "id": "R2",
+    "type": "守恒",
+    "statement": "输出必须通过 claims 为所问三个字段各给一条记录：subject_id 为 P260922000005855，applicant_name 用 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002，insured_name 用 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003，pol_status_desc 用 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005。",
+    "basis": "业务回答契约要求 claims:[{subject_id,field,fact_id}] 三项逐字复制本轮工具 facts；本轮 facts 列表含这些 predicate 与 fact_id。"
+   },
+   {
+    "id": "R3",
+    "type": "守恒",
+    "statement": "fact_refs 只能填本轮工具 facts 中存在的 fact_id；针对所问三字段，应引用 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005，不得猜造其他 ID。",
+    "basis": "系统输出契约：“fact_refs:string[] 仅填工具返回 facts 的 fact_id，禁止猜造 ID”；本轮 facts 列表。"
+   },
+   {
+    "id": "R4",
+    "type": "守恒",
+    "statement": "答案结论必须与 facts 一致：投保人是任言琳，被保人是任言琳，当前保单状态是交费有效。",
+    "basis": "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005；冻结期望 exp_p260922000005855_applicant、exp_p260922000005855_insured、exp_p260922000005855_current_status。"
+   },
+   {
+    "id": "R5",
+    "type": "推出",
+    "statement": "不得把本次返回的两条险种记录表述成两张保单或两个保单号；两条记录的 polno 均为 P260922000005855，total 只是险种行总数。",
+    "basis": "tool field_descriptions 中 total：“险种行总数，不是保单张数”；records 两条记录 polno 相同。"
+   },
+   {
+    "id": "R6",
+    "type": "推出",
+    "statement": "当前状态须采用 pol_status_desc 值“交费有效”（对应 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005），不得改用未在 facts 中生成 fact_id 的 is_valid_pol 值“有效”来回答当前状态。",
+    "basis": "本轮 facts 仅含 pol_status_desc 对应 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005；业务契约要求状态等值由 claims 按 fact_id 渲染，若无对应 fact_id 不猜编号。"
+   },
+   {
+    "id": "R7",
+    "type": "推出",
+    "statement": "不要在 answer_draft 或 gaps 中自行填写金额、数量、日期、状态、客户或被保人姓名；这些值应由 claims 按 fact_id 交给服务端确定性渲染。",
+    "basis": "业务回答契约原文：“不要在 answer_draft/gaps 自行填写金额、数量、日期、状态、客户或被保人姓名”。"
+   },
+   {
+    "id": "R8",
+    "type": "推出",
+    "statement": "needs_user_input 必须为 false，本轮不等待用户补充，也不得再调用 ask_clarify 或再发起工具调用。",
+    "basis": "系统规则：“已有可答事实时不得再调用ask_clarify，应先回答已确认部分”；本轮 facts 已含所问三字段。"
+   },
+   {
+    "id": "R9",
+    "type": "推出",
+    "statement": "gaps 应为空或仅列本轮确实未确认且影响所问字段的缺口；对本轮三个所问字段不得列缺口，因为 facts 已返回且 projection.incomplete=false。",
+    "basis": "本轮 facts 列表含所问三字段；projection.incomplete 为 false；冻结期望三项条件均为“总是”。"
+   },
+   {
+    "id": "R10",
+    "type": "推出",
+    "statement": "task_updates 只能写说明，不得登记或声称已挂起任务；没有活动任务时不得声称后续会续跑。",
+    "basis": "系统原文：“task_updates 只是输出说明，不会登记任务”；“只有当前 Ledger 中确实存在活动任务，才可声称已挂起或后续续跑”。"
+   },
+   {
+    "id": "R11",
+    "type": "推出",
+    "statement": "answer_draft 与 gaps 不得出现“工具返回”“接口返回”、EMPTY/BUDGET 等内部词，也不得使用“根据资料”“条款显示”“检索到”等来源转述或“我认为”“很抱歉”等过程话。",
+    "basis": "系统输出契约：“answer_draft 与 gaps 只写业务用户可读正文；不得出现‘工具返回’、‘接口返回’、EMPTY/BUDGET 等内部词，也不用‘根据资料’‘条款显示’‘检索到’等来源转述”；“不用‘我认为’‘很抱歉’‘分析如下’等过程话”。"
+   },
+   {
+    "id": "R12",
+    "type": "守恒",
+    "statement": "不得输出无本轮 facts 支撑的新业务结论；对保费、保额、生效日期、投被保关系、权益等未问且未生成对应 fact_id 的字段，不应作为对用户问题的回答结论添加。",
+    "basis": "L3 不编造：“答案只依据可信工具的业务 data 或事实”；业务契约：“若模型视图没有对应 fact_id，不猜编号、不重查，列明未确认项”；user 问题仅问投保人、被保人、当前状态。"
+   },
+   {
+    "id": "R13",
+    "type": "外部真值",
+    "statement": "P260922000005855 在真实数据库中是否确实属于任言琳、状态是否确实为交费有效，不能仅凭本次运行记录判定，需独立查证；模型输出只能做到与本轮工具 facts 一致。",
+    "basis": "外部真值定义：数据库真实值需独立查证；本轮 facts 的来源未在输入中附带独立核验。"
+   }
+  ],
+  "not_covered": [
+   "未覆盖实际输出的具体措辞是否足够用户友好，只能核对其事实值、引用和契约字段。",
+   "未覆盖模型是否应显式说明投保人与被保人为同一人；输入 data 中有 app_ins_relationship_desc=本人且双方 clientno 相同，但本轮 facts 未生成对应 fact_id，冻结期望也未要求。",
+   "未覆盖 claims 中 field 是否必须逐字使用 applicant_name、insured_name、pol_status_desc，还是允许中文别名；系统要求逐字复制 facts，但未展示最终字段渲染示例。",
+   "未覆盖实际输出是否包含产品名等已核实但未问及的信息是否会被判违规；本条仅按冻结期望和业务契约要求所问三字段不得缺失、不得改写。"
+  ]
+ }
+}

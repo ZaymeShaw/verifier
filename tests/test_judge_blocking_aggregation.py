@@ -111,6 +111,7 @@ def test_reprompt_contains_only_previous_values_needed_for_repair() -> None:
         def complete_json(self, system, user, **kwargs):
             captured["system"] = system
             captured["user"] = user
+            captured["kwargs"] = kwargs
             return {"ok": True}
 
     previous = {"business_expectations": [{"expectation_id": "core-goal", "blocking": True}]}
@@ -128,6 +129,8 @@ def test_reprompt_contains_only_previous_values_needed_for_repair() -> None:
     assert "上次完整输出" not in captured["user"]
     assert '"expectation_id": "core-goal"' in captured["user"]
     assert "不要复述上次输出" in captured["user"]
+    # reprompt 只需按错误路径修字段，不应再花 high 的推理预算。
+    assert captured["kwargs"]["reasoning_effort"] == "low"
 
 
 @pytest.mark.parametrize("failure_marker", ["llm_call_failed", "llm_output_validation_failed"])

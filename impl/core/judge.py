@@ -8,7 +8,7 @@ from .config import get_runtime_config
 from .project_loader import load_project_document
 from .schema import BusinessExpectation, FulfillmentAssessment, GapItem, JudgeLLMOutput, JudgeReferenceOutput, JudgeResult, ProjectSpec, RunTrace, _non_empty_reference, normalize_business_expectation, normalize_fulfillment_assessment, normalize_gap_item, normalize_judge_result, to_dict, trace_application_boundary, trace_conversation_summary, trace_conversation_transcript, trace_execution_trace, trace_extracted_output, trace_input, trace_normalized_request, trace_raw_response, trace_stop_reason, trace_turn_records
 from .structured_output import StructuredOutputSpec
-from .summary import summary_from_fulfillment
+from .summary import BUSINESS_CALL_FAILED, summary_from_fulfillment
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,17 @@ def _compact_raw_response_for_judge(raw_response: Any) -> Any:
     return raw_response
 
 
+# provider 原始快照属于证据仓库（案卷与过程轴由 eval_axes 直接读 RunTrace 构建），
+# 不属于 judge payload；judge 只看案卷和轴结论。实测该快照占 judge prompt 体积约 72%。
+_JUDGE_EXCLUDED_PROJECT_FIELDS = frozenset({"business_trace"})
+
+
+def _judge_project_fields(value: Any) -> Any:
+    if not isinstance(value, dict):
+        return value
+    return {key: item for key, item in value.items() if key not in _JUDGE_EXCLUDED_PROJECT_FIELDS}
+
+
 def _judge_turn_view(turn: Any) -> Dict[str, Any]:
     """Project one trace turn into judge evidence without transport-private raw payloads."""
     if not isinstance(turn, dict):
@@ -76,7 +87,10 @@ def _judge_turn_view(turn: Any) -> Dict[str, Any]:
         "application_boundary",
         "project_fields",
     )
-    return {key: turn.get(key) for key in allowed if key in turn}
+    view = {key: turn.get(key) for key in allowed if key in turn}
+    if "project_fields" in view:
+        view["project_fields"] = _judge_project_fields(view["project_fields"])
+    return view
 
 
 def build_judge_evidence_view(trace: RunTrace) -> Dict[str, Any]:
@@ -210,6 +224,26 @@ def finalize_judge_result(result: JudgeResult) -> JudgeResult:
     normalized.overall_fulfillment = overall
     normalized.summary = summary_from_fulfillment(to_dict(normalized))
     return normalized
+
+
+def business_call_failure_result(trace: RunTrace, reason: str) -> JudgeResult:
+    """被测系统已响应但以非 2xx 拒绝：用户拿不到答复就是没办成，程序直接判 not_fulfilled，不交给模型。
+
+    走同一条 blocking 期望派生，不另开整体状态的特例；失败原文进 actual_evidence，前端和导出直接可见。
+    """
+    expectation_id = "被测系统返回答复"
+    return finalize_judge_result(JudgeResult(
+        trace_id=trace.trace_id,
+        project_id=trace.project_id,
+        business_expectations=[BusinessExpectation(
+            expectation_id=expectation_id, blocking=True,
+            expected_outcome="被测系统对本次请求返回 2xx 响应并给出答复")],
+        fulfillment_assessments=[FulfillmentAssessment(
+            expectation_id=expectation_id, status="not_fulfilled",
+            actual_evidence=[reason[:2000]], downstream_impact="用户拿不到答复")],
+        reasoning_summary="被测系统调用失败：" + reason[:500],
+        evidence=[BUSINESS_CALL_FAILED],
+    ))
 
 
 def _dict_value(value: Any) -> Dict[str, Any]:
@@ -369,13 +403,6 @@ def judge_trace(
             }
             excluded_segments.extend(excluded)
         governance_config["excluded_segments"] = excluded_segments
-
-    if not user_intent and project_judge_context:
-        user_intent = project_judge_context.get("user_intent") or (
-            project_judge_context.get("intent_frame", {}).get("user_intent")
-            if isinstance(project_judge_context.get("intent_frame"), dict)
-            else None
-        )
 
     system = (
         "你是通用评估系统的 judge agent。\n\n"
@@ -625,7 +652,14 @@ def _reprompt_judge(
             ),
             reprompt=True,
         )
-    return client.complete_json(system, reprompt_user, trace_id=trace_id, output_spec=output_spec)
+    # reprompt 是窄修复任务（只按错误路径改字段），不需要 high 的推理预算。
+    return client.complete_json(
+        system,
+        reprompt_user,
+        trace_id=trace_id,
+        output_spec=output_spec,
+        reasoning_effort="low",
+    )
 
 
 def _build_judge_output_spec(has_actual: bool, project_id: str = "", has_reference: bool = False) -> StructuredOutputSpec:

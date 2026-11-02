@@ -86,7 +86,9 @@ class JudgeBusinessExpectationOutput:
     expected_outcome: str = ""
     required_capabilities: List[str] = field(default_factory=list)
     acceptance_criteria: List[Any] = field(default_factory=list)
-    boundary: Dict[str, Any] = field(default_factory=dict)
+    # boundary 是 write-only 的能力边界备注（运行时无读者）；模型对空表述会写 null，
+    # 按非 Optional 的 Dict 判定就会整段阻断重跑。允许 null，运行时归一为 {}。
+    boundary: Optional[Dict[str, Any]] = None
     priority: str = "normal"
 
 

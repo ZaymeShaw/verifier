@@ -14,13 +14,6 @@ def _query_from_trace(trace: RunTrace) -> str:
     return str(args.get("query") or "")
 
 
-def _intent_from_trace(trace: RunTrace) -> str:
-    intent = trace.mock_intent
-    if isinstance(intent, dict):
-        return str(intent.get("user_intent") or "")
-    return str(getattr(intent, "user_intent", "") or "")
-
-
 def _query_from_request(request: Any) -> str:
     if not isinstance(request, dict):
         return ""
@@ -89,7 +82,7 @@ class PolicySearchJudge(ProjectJudge):
             dimensions.extend(["turn_resolution", "clarification_slot_recovery", "new_query_isolation"])
         return {
             "project_type": "natural_language_to_policy_filter_tree",
-            "user_intent": _intent_from_trace(trace) or _query_from_trace(trace),
+            "user_intent": _query_from_trace(trace),
             "application_boundary": trace.application_boundary or {},
             "system_prompt_extras": extras,
             "user_prompt_extras": {
@@ -116,7 +109,7 @@ class PolicySearchJudge(ProjectJudge):
         return {
             "project_id": self.spec.project_id,
             "downstream_consumer": "policy query execution service",
-            "user_goal": _intent_from_trace(trace) or query,
+            "user_goal": query,
             "request_candidates": request_candidates,
             "output_semantics": "an executable policy filter tree or an explicit safe UNSUPPORTED decision",
         }

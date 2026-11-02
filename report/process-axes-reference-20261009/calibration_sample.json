@@ -1,0 +1,114 @@
+[
+ {
+  "n": 1,
+  "case": "renyanlin",
+  "axis": "context_memory",
+  "B1": "tools/0 返回中 facts F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002 applicant_name=任言琳、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003 insured_name=任言琳、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005 pol_status_desc=交费有效 必须传递到 finalize/delivered_output 可核对的答案中，不得丢失或改写。",
+  "B2": "在模型调用2之前，上下文必须包含工具返回的 facts 中 applicant_name=任言琳（F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002）、insured_name=任言琳（F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003）、pol_status_desc=交费有效（F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005），以支持模型调用2的 fact_refs。",
+  "my_verdict": "equivalent"
+ },
+ {
+  "n": 2,
+  "case": "D01",
+  "axis": "model_capability",
+  "B1": "gaps 必须以业务用户可读方式包含“筛选条件或排序未能可靠解析，尚未执行客户查询”这一未确认项。",
+  "B2": "gaps 应列出未确认项：未取得符合“名下、姓平、12月份生日、女性、按客户号升序”的客户列表。",
+  "my_verdict": "not_equivalent"
+ },
+ {
+  "n": 3,
+  "case": "renyanlin",
+  "axis": "knowledge_data",
+  "B1": "第0次调用使用的查询保单号 P260922000005855 与用户本轮提供的保单号一致，属于本轮用户提供因而可查的保单号。",
+  "B2": "第0次调用 tools/0 使用完整保单号 P260922000005855，符合 policy_detail 的适用条件“已有完整保单号（P/HP/GP 开头加字母数字，如 P002）”，正确执行应直接查询该保单详情记录，而不是返回尾号候选或改用 policy_search/run_policy_field_lookup。",
+  "my_verdict": "not_equivalent"
+ },
+ {
+  "n": 4,
+  "case": "renyanlin",
+  "axis": "context_memory",
+  "B1": "模型调用2 content 中“保单P260922000005855的投保人和被保人均为任言琳（投被保关系为本人），当前状态为交费有效”的结论若被 finalize 采用，必须原义到达 delivered_output，不得改成相反或空。",
+  "B2": "模型调用2的最终 content 必须按原义传到 finalize 和 delivered_output，包括 answer_draft 中“投保人为任言琳、被保人同为任言琳、当前保单状态为交费有效”、fact_refs 三个 ID、gaps=[]、needs_user_input=false、task_updates=[]。",
+  "my_verdict": "not_equivalent"
+ },
+ {
+  "n": 5,
+  "case": "D01",
+  "axis": "tool_execution",
+  "B1": "本次运行已发出的调用中没有 query_selected_client_detail_info 或 query_selected_client_policy_status，因此在确定选中客户前，执行输出不应包含这两个工具的返回。",
+  "B2": "tools/4 的返回不应包含或替代选中客户的详细资料、保单状态查询结果；期望 E 中这两项以“确定选中客户后”为条件，而已发出的调用中没有对应工具调用。",
+  "my_verdict": "equivalent"
+ },
+ {
+  "n": 6,
+  "case": "renyanlin",
+  "axis": "intent_understanding",
+  "B1": "输出表达只能使用用户本轮提供或会话已确认的保单号 P260922000005855，不得改查其他保单或客户来补缺。",
+  "B2": "内部表达须原样保留完整保单号 P260922000005855 作为本轮唯一查询对象，不得截断、补写或改写成客户名、手机号或其他保单号。",
+  "my_verdict": "not_equivalent"
+ },
+ {
+  "n": 7,
+  "case": "renyanlin",
+  "axis": "planning_routing",
+  "B1": "在 gate 后应选择 to_capability 分支并执行 run_capability，用工具取该保单业务数据，而不是走纯 direct 或 agent 分支。",
+  "B2": "应选择 to_direct 分支，而不是 to_capability 或 to_agent，因为用户已提供完整保单号 P260922000005855，且本轮可用工具 policy_detail 明确适用于“已有完整保单号”的详情查询。",
+  "my_verdict": "not_equivalent"
+ },
+ {
+  "n": 8,
+  "case": "D01",
+  "axis": "model_capability",
+  "B1": "输出必须在 gaps 中保留或披露“筛选条件或排序未能可靠解析，尚未执行客户查询”这一未确认项。",
+  "B2": "若本轮最终收尾且不再调用工具，输出 JSON 的 fact_refs 必须为空数组，gaps 必须包含“筛选条件或排序未能可靠解析，尚未执行客户查询”的业务可读表述，且不得猜造 fact_id 或客户数据。",
+  "my_verdict": "equivalent"
+ },
+ {
+  "n": 9,
+  "case": "D01",
+  "axis": "planning_routing",
+  "B1": "调用序列应先调用 customer_search 一次，查询条件写全“当前用户名下、姓平、12月份生日、女性”；ask_clarify 不得与该调用并行。",
+  "B2": "首轮应先调用 customer_search 做候选定位，不得在没有客户中心ID或用户确认选中客户时直接调用客户详情或保单状态查询。",
+  "my_verdict": "not_equivalent"
+ },
+ {
+  "n": 10,
+  "case": "renyanlin",
+  "axis": "planning_routing",
+  "B1": "不应改用 product_knowledge、benefit_info、general_qa 等知识检索来回答投保人、被保人或当前状态，因为这些属于保单详情业务数据而非产品条款、权益或一般办理流程。",
+  "B2": "若 policy_detail 返回 EMPTY，应据实收尾说明无记录或未确认，不得猜测投保人、被保人或当前状态，也不得改用其他工具绕过该专用工具边界。",
+  "my_verdict": "not_equivalent"
+ },
+ {
+  "n": 11,
+  "case": "renyanlin",
+  "axis": "context_memory",
+  "B1": "交付给调用方的 delivered_output 应至少包含用户可读的最终答案，而不是只交付内部 JSON answer_draft/fact_refs/gaps/needs_user_input/task_updates。",
+  "B2": "最终交付给调用方的输出必须告知 P260922000005855 的投保人为任言琳。",
+  "my_verdict": "not_equivalent"
+ },
+ {
+  "n": 12,
+  "case": "D01",
+  "axis": "planning_routing",
+  "B1": "本轮关键实体和范围已由用户给出，且若 customer_search 返回候选即已有可答事实，不应调用 ask_clarify；ask_clarify 只能单独调用并用于关键目标或实体不明确的情形。",
+  "B2": "首轮已有候选事实时不应调用 ask_clarify；应先把候选作为已确认部分回答，把详情/保单状态列入未完成项。",
+  "my_verdict": "equivalent"
+ },
+ {
+  "n": 13,
+  "case": "renyanlin",
+  "axis": "planning_routing",
+  "B1": "路由应把本轮目标识别为对保单 P260922000005855 的三个并列字段查询：投保人、被保人、当前状态，不能只处理其中一个或改写成保单清单查询。",
+  "B2": "最终输出应覆盖 E 中的三个业务字段——投保人、被保人、当前状态；不得只答其中一项而遗漏其他两项，除非相应工具结果缺失并已列入 gaps。",
+  "my_verdict": "not_equivalent"
+ },
+ {
+  "n": 14,
+  "case": "D01",
+  "axis": "model_capability",
+  "B1": "本次输出的 answer_draft 必须作为首字段，结论先行地说明本轮无法按“我名下姓平、12月份生日、女性”完成客户筛选，并等待用户补充可解析的筛选信息或确认名下范围。",
+  "B2": "answer_draft 必须是首字段、结论先行；gaps 应列未确认项；needs_user_input 应表示本轮是否等待用户；task_updates 只写说明。",
+  "my_verdict": "not_equivalent"
+ }
+]

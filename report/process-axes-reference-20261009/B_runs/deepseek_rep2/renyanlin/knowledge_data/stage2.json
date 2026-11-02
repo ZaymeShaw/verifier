@@ -1,0 +1,149 @@
+{
+ "meta": {
+  "elapsed": 63,
+  "prompt_tokens": 26310,
+  "completion_tokens": 13392,
+  "reasoning_tokens": 11330
+ },
+ "attempt": 2,
+ "result": {
+  "results": [
+   {
+    "id": "整轮.R1",
+    "verdict": "met",
+    "observation": "第0次工具调用为 policy_detail，参数 polno=\"P260922000005855\"，未返回尾号候选，也未改用 policy_search/run_policy_field_lookup。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/messages/1.tool_calls[0]"
+    ]
+   },
+   {
+    "id": "整轮.R2",
+    "verdict": "met",
+    "observation": "调用 fields 为[\"投保人姓名\",\"被保人姓名\",\"保单状态\"]；返回 records 含 applicant_name、insurant_name、pol_status_desc，并生成对应 facts F-...-002、F-...-003、F-...-005。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0.arguments",
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.data.records",
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002",
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003",
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005"
+    ]
+   },
+   {
+    "id": "整轮.R3",
+    "verdict": "met",
+    "observation": "field_descriptions 明确 applicant_name=投保人姓名明文、insurant_name=被保人姓名明文、pol_status_desc=保单状态；records/facts 与最终答案均按该含义对应，未互换。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.field_descriptions",
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002",
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003",
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005"
+    ]
+   },
+   {
+    "id": "整轮.R4",
+    "verdict": "met",
+    "observation": "知识数据返回 data.records 两条险种记录并附 field_descriptions；total=2 说明是险种行总数；两行请求字段一致，未触发多行冲突时合成保单级结论的问题。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.data.records",
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.data.total",
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.field_descriptions"
+    ]
+   },
+   {
+    "id": "整轮.R5",
+    "verdict": "met",
+    "observation": "知识数据返回正常有数据：execution.status=SUCCESS，data.total=2，projection.incomplete=false、omitted_items=0、excerpted_values=0；notes 说明精简省略不代表缺失，所问字段均存在。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.execution.status",
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.execution.notes",
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.projection"
+    ]
+   },
+   {
+    "id": "整轮.R6",
+    "verdict": "met",
+    "observation": "数据源实际返回 total=2 且有两条 records，未进入“无记录”场景，因此不存在把空字段当作 PARTIAL 的问题；EMPTY 分支未被触发。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.data.total",
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.data.records"
+    ]
+   },
+   {
+    "id": "整轮.R7",
+    "verdict": "met",
+    "observation": "两条 records 的 polno 均为 P260922000005855，facts 的 subject_id 也均为 P260922000005855，与查询保单号一致，未改写或混入其他保单号。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.data.records[0].polno",
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.data.records[1].polno",
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-001"
+    ]
+   },
+   {
+    "id": "整轮.R8",
+    "verdict": "met",
+    "observation": "请求字段的源记录值为 applicant_name=任言琳、insurant_name=任言琳、pol_status_desc=交费有效；facts 未改写这些值，projection 显示未省略/未截取。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.data.records",
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002",
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003",
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005",
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.projection"
+    ]
+   },
+   {
+    "id": "整轮.R9",
+    "verdict": "cannot_check",
+    "observation": "本次 policy_detail 返回了记录，但清单要求独立查证数据源中是否真实存在；案卷没有独立于该工具调用的真值来源，无法确认外部真值。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.data.total",
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.data.records"
+    ]
+   },
+   {
+    "id": "整轮.R10",
+    "verdict": "cannot_check",
+    "observation": "本次运行记录中 applicant_name=任言琳，但清单要求独立查证其具体值并与 exp_p260922000005855_applicant 一致；案卷无独立真值来源，无法确认。",
+    "refs": [
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002",
+     "exp_p260922000005855_applicant"
+    ]
+   },
+   {
+    "id": "整轮.R11",
+    "verdict": "cannot_check",
+    "observation": "本次运行记录中 insurant_name=任言琳，但清单要求独立查证其具体值并与 exp_p260922000005855_insured 一致；案卷无独立真值来源，无法确认。",
+    "refs": [
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003",
+     "exp_p260922000005855_insured"
+    ]
+   },
+   {
+    "id": "整轮.R12",
+    "verdict": "cannot_check",
+    "observation": "本次运行记录中 pol_status_desc=交费有效，但清单要求独立查证其具体值并与 exp_p260922000005855_current_status 一致；案卷无独立真值来源，无法确认。",
+    "refs": [
+     "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005",
+     "exp_p260922000005855_current_status"
+    ]
+   },
+   {
+    "id": "整轮.R13",
+    "verdict": "cannot_check",
+    "observation": "知识数据返回两条险种记录，且两行中 applicant_name、insurant_name、pol_status_desc 一致；但清单要求独立查证具体值及是否冲突，案卷无独立真值来源，无法确认外部一致性/冲突。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.data.total",
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.data.records[0]",
+     "turn1/records/run/step_executor_runs/0/messages/2.content.result.data.records[1]"
+    ]
+   }
+  ],
+  "problems": [],
+  "extra_observations": [
+   "下游 agent_bridge 输出 status=PARTIAL，finalize completeness=partial，gaps=“部分内容未能在本轮证据中对应，请结合原始资料核实。”；但知识数据轴返回 execution.status=SUCCESS、projection.incomplete=false，且三个请求字段均有 records/facts。若按本轴核对，该 PARTIAL 更像下游证据引用/呈现问题。",
+   "知识数据 facts 的 sources 均为 []，agent_bridge 中对应 facts 的 evidence_refs 也为 []；fact_id 可用于 fact_refs，但缺少直接来源链接。",
+   "data.total=2 表示两条险种行（主险/附加险），不是两张保单；两行中请求字段一致，因此未触发“多行字段冲突时不能合成保单级结论”。",
+   "最终交付输出未展开两条险种记录，只给保单级三字段；用户问题未要求险种行，但若按 R4 严格解释最终呈现，可能需要下游按 data.records 的险种记录呈现。"
+  ]
+ }
+}

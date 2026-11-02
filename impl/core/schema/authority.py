@@ -7,7 +7,7 @@ AuthorityRequest / AuthorityClaim / AuthorityResolution；AuthorityEnvironment
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 
 AuthorityDecisionStatus = Literal["resolved", "unresolved"]
@@ -49,7 +49,7 @@ class AuthorityRequest:
     """
 
     decision_question: str
-    claim: AuthorityClaim | None = None
+    claim: Optional[AuthorityClaim] = None
 
 
 @dataclass(frozen=True)
@@ -76,4 +76,4 @@ class AuthorityResolution:
     reason: str
     basis_evidence_ref_ids: tuple[str, ...] = ()
     required_evidence: tuple[str, ...] = ()
-    independent_resolution: AuthorityIndependentResolution | None = None
+    independent_resolution: Optional[AuthorityIndependentResolution] = None

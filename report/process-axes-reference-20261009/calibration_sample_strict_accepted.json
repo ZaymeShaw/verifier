@@ -1,0 +1,82 @@
+[
+ {
+  "n": 1,
+  "case": "D01",
+  "axis": "tool_execution",
+  "B1": "tools/4 的 ask_clarify 返回应是澄清结果 NEEDS_CLARIFICATION（若按工具说明连续开放澄清达上限则返回 ERROR 并转人工），表示本轮结束并登记挂起。",
+  "B2": "tools/4 的返回必须是 ask_clarify 的允许终态：未达连续开放澄清上限时返回 NEEDS_CLARIFICATION 并结束本轮，达到上限时返回 ERROR 并转人工；不能返回客户搜索页、详细资料或保单状态。",
+  "my_verdict": "equivalent"
+ },
+ {
+  "n": 2,
+  "case": "D01",
+  "axis": "model_capability",
+  "B1": "前两次 customer_search 的 AMBIGUOUS 只能被表述为筛选条件未解析、查询尚未执行，不得被当作空结果或“没有符合条件的客户”。",
+  "B2": "若输出中提及前两次 customer_search 的结果，必须保留“筛选条件或排序未能可靠解析，尚未执行客户查询”的事实，不得表述为已执行、无匹配或列表为空。",
+  "my_verdict": "equivalent"
+ },
+ {
+  "n": 3,
+  "case": "D01",
+  "axis": "knowledge_data",
+  "B1": "第1–3次返回的「客户中心ID」必须来自 data.records[].clientMainId（兼容 client_main_id、idicm_clientno），不得用寿险客户号 clientNo 冒充。",
+  "B2": "第1-3次调用请求 fields 含“客户中心ID”，数据源返回的记录应包含客户中心ID（clientMainId，兼容 client_main_id、idicm_clientno），而不是仅返回业务客户号。",
+  "my_verdict": "partial"
+ },
+ {
+  "n": 4,
+  "case": "D01",
+  "axis": "model_capability",
+  "B1": "本轮输出若需等待用户从候选中选择，needs_user_input 应为 true。",
+  "B2": "若在取得候选列表后收尾，应把本轮标记为等待用户选择，不应在用户确认前继续查询选中客户详情或保单状态。",
+  "my_verdict": "not_equivalent"
+ },
+ {
+  "n": 5,
+  "case": "D01",
+  "axis": "model_capability",
+  "B1": "本次输出的 gaps 必须包含“筛选条件或排序未能可靠解析，尚未执行客户查询”这一未确认项。",
+  "B2": "正确输出应披露客户筛选未执行、筛选条件或排序未可靠解析，因此尚未产出可供选择的客户列表。",
+  "my_verdict": "equivalent"
+ },
+ {
+  "n": 6,
+  "case": "renyanlin",
+  "axis": "tool_execution",
+  "B1": "返回内容应足以支持告知 exp_p260922000005855_applicant、exp_p260922000005855_current_status、exp_p260922000005855_insured 所需的投保人、被保人和当前状态信息，或明确说明相应信息不可得。",
+  "B2": "返回必须足以支持回答 exp_p260922000005855_applicant、exp_p260922000005855_insured、exp_p260922000005855_current_status 三项所问：即能从中确定或明确缺失 P260922000005855 的投保人、被保人和当前状态。",
+  "my_verdict": "equivalent"
+ },
+ {
+  "n": 7,
+  "case": "renyanlin",
+  "axis": "tool_execution",
+  "B1": "若返回为 PARTIAL，必须表示完整保单号 P260922000005855 已命中但所问字段缺失；若返回为 EMPTY，必须表示确实无记录，二者不能混用。",
+  "B2": "若查询确实无记录，返回必须体现为 EMPTY 或等价无记录状态；若已命中但所问字段缺失，必须体现为 PARTIAL 或等价缺失状态。",
+  "my_verdict": "equivalent"
+ },
+ {
+  "n": 8,
+  "case": "D01",
+  "axis": "knowledge_data",
+  "B1": "第0–3次返回若含 data.total，其值必须是符合「姓平、女性、12月生日」条件的客户总数，不是当前页记录数或展示条数。",
+  "B2": "若第0-3次调用返回 data.total，该字段必须表示符合相应查询条件的客户总数，而不是当前页记录数或展示条数。",
+  "my_verdict": "equivalent"
+ },
+ {
+  "n": 9,
+  "case": "D01",
+  "axis": "model_capability",
+  "B1": "本次输出不得在未获得候选选择或客户中心 ID 前调用 customer_detail 或保单状态查询来补缺。",
+  "B2": "本轮不应调用 customer_detail 或保单状态查询工具，因为还没有用户确认选中的客户。",
+  "my_verdict": "equivalent"
+ },
+ {
+  "n": 10,
+  "case": "D01",
+  "axis": "model_capability",
+  "B1": "本次输出不得对任何选中客户的详细资料或保单状态给出结论、状态描述或承诺。",
+  "B2": "选中客户的详细资料和保单状态必须等选中后用客户/保单业务数据查证；当前未选中，不能给出。",
+  "my_verdict": "equivalent"
+ }
+]

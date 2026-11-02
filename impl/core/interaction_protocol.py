@@ -85,6 +85,10 @@ def normalize_case_interaction(project_id: str, case: Dict[str, Any] | SingleTur
     elif isinstance(raw_case.get("turns"), list):
         mode = "static_turns"
         normalized_interaction = {"mode": mode, "turns": list(raw_case.get("turns") or [])}
+    elif _transcript_seed(raw_case):
+        # spec/mock/protocol.md 5.2：transcript 级 seed 由 ReplayDriver 多轮重放。
+        mode = "interactive_intent"
+        normalized_interaction = {"mode": mode, "seed_level": "transcript"}
     elif _project_interactive_scenario(project_id, scenario):
         mode = "interactive_intent"
         normalized_interaction = {"mode": mode}
@@ -113,6 +117,12 @@ def normalize_case_interaction(project_id: str, case: Dict[str, Any] | SingleTur
         adapter_payload=adapter_payload,
         policy=dict((normalized_interaction.get("policy") or {}) if isinstance(normalized_interaction.get("policy"), dict) else {}),
     )
+
+
+def _transcript_seed(raw_case: Dict[str, Any]) -> bool:
+    metadata = raw_case.get("metadata") if isinstance(raw_case.get("metadata"), dict) else {}
+    seed = metadata.get("seed") if isinstance(metadata.get("seed"), dict) else {}
+    return str(seed.get("level") or "") == "transcript"
 
 
 def _project_interactive_scenario(project_id: str, scenario: str) -> bool:

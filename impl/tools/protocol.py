@@ -81,12 +81,14 @@ class VerifiableTool:
     - parameters：入参定义，直接对齐 agno/OpenAI function calling 格式，不自己发明
     - execute_fn：真正能跑的函数；由 Agno 按 parameters 以关键字参数方式调用
     - tool 内部怎么拿 trace/spec 是实现细节（可闭包持有），不由协议规定
+    - concurrent：只读、不调模型、要等外部 I/O 的 tool 标 True，模型一次回复里的这类调用由 tool loop 同时执行
     """
     tool_id: str
     description: str
     applicable_scenario: str = "general"
     parameters: Dict[str, Any] = field(default_factory=dict)
     execute_fn: Optional[Callable[..., ToolResult]] = None
+    concurrent: bool = False
 
 
 @dataclass

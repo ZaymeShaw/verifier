@@ -22,6 +22,7 @@ _TERMINAL_JUDGE_FAILURE_EVIDENCE = frozenset({
 })
 EXECUTION_FAILURE_MARKERS = _TERMINAL_JUDGE_FAILURE_EVIDENCE | frozenset({
     "batch_case_failed",
+    "evaluation_execution_failed",
 })
 
 

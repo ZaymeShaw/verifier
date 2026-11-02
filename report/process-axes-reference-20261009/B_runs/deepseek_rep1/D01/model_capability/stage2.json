@@ -1,0 +1,684 @@
+{
+ "meta": {
+  "elapsed": 119,
+  "prompt_tokens": 55338,
+  "completion_tokens": 27164,
+  "reasoning_tokens": 20986
+ },
+ "attempt": 1,
+ "result": {
+  "results": [
+   {
+    "id": "模型调用1.R1",
+    "verdict": "met",
+    "observation": "首轮已识别目标为查找名下姓平、12月份生日女性客户，并调用 customer_search；未进入详情或保单状态查询。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/1",
+     "turn1/records/run/step_executor_runs/0/tools/0"
+    ]
+   },
+   {
+    "id": "模型调用1.R2",
+    "verdict": "met",
+    "observation": "本轮完整目标还包含“确定后”查详情和保单状态，不是仅客户清单卡片可答复；未调用 present_customer_search_card。",
+    "refs": [
+     "t1.user",
+     "turn1/records/run/step_executor_runs/0/tools/0"
+    ]
+   },
+   {
+    "id": "模型调用1.R3",
+    "verdict": "met",
+    "observation": "未调用 present_policy_search_card。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/tools/1",
+     "turn1/records/run/step_executor_runs/0/tools/2",
+     "turn1/records/run/step_executor_runs/0/tools/3"
+    ]
+   },
+   {
+    "id": "模型调用1.R4",
+    "verdict": "not_met",
+    "observation": "首次 customer_search 的 query 为“姓平、12月份生日、女性的客户”，未体现“我名下”，也未体现“按客户号升序”；后续查询同样未完整保留。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/tools/1",
+     "turn1/records/run/step_executor_runs/0/tools/2"
+    ]
+   },
+   {
+    "id": "模型调用1.R5",
+    "verdict": "met",
+    "observation": "各次查询未添加地区、年龄、险种、保单状态、会员等级等用户未给出的筛选条件。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/tools/1",
+     "turn1/records/run/step_executor_runs/0/tools/2",
+     "turn1/records/run/step_executor_runs/0/tools/3"
+    ]
+   },
+   {
+    "id": "模型调用1.R6",
+    "verdict": "met",
+    "observation": "全程未调用 customer_detail 或保单状态工具，也未输出选中客户的详细资料或保单状态。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/tools/1",
+     "turn1/records/run/step_executor_runs/0/tools/2",
+     "turn1/records/run/step_executor_runs/0/tools/3",
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用1.R7",
+    "verdict": "met",
+    "observation": "最终进入澄清等待，agent_bridge 输出 needs_user_input=true；虽因筛选未执行而非因候选选择等待。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/4"
+    ]
+   },
+   {
+    "id": "模型调用1.R8",
+    "verdict": "not_met",
+    "observation": "最终 gaps 只为“本轮已停止继续查询，以下答复仅依据已取得的资料；未完成部分仍需补充核实”，未列出未确定选中客户导致详细资料和保单状态未查询。",
+    "refs": [
+     "turn1/records/run/step_results/3",
+     "turn1/records/traces/0/tree/0/spans/4"
+    ]
+   },
+   {
+    "id": "模型调用1.R9",
+    "verdict": "met",
+    "observation": "最终 fact_refs=[]，未猜造客户号、姓名、生日、性别等业务值。",
+    "refs": [
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用1.R10",
+    "verdict": "not_met",
+    "observation": "最终交付输出不是 answer_draft 首字段的 JSON；交付对象使用 answer 字段，agent_bridge 的 answer_draft 为 null。",
+    "refs": [
+     "turn1.delivered_output",
+     "turn1/records/traces/0/tree/0/spans/4"
+    ]
+   },
+   {
+    "id": "模型调用1.R11",
+    "verdict": "met",
+    "observation": "客户筛选走了 customer_search；未把姓名、手机号或寿险客户号当作客户中心ID传入详情或保单号工具。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/tools/1",
+     "turn1/records/run/step_executor_runs/0/tools/2"
+    ]
+   },
+   {
+    "id": "模型调用1.R12",
+    "verdict": "met",
+    "observation": "未调用 product_knowledge、benefit_info、general_qa 等知识检索工具。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/tools/4"
+    ]
+   },
+   {
+    "id": "模型调用1.R13",
+    "verdict": "met",
+    "observation": "未执行写操作或代办。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/tools/4"
+    ]
+   },
+   {
+    "id": "模型调用1.R14",
+    "verdict": "cannot_check",
+    "observation": "三次 customer_search 均未执行，案卷没有客户库真值，无法判断当前用户名下是否存在符合条件客户及按客户号升序列表。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/tools/1",
+     "turn1/records/run/step_executor_runs/0/tools/2"
+    ]
+   },
+   {
+    "id": "模型调用1.R15",
+    "verdict": "met",
+    "observation": "未选中客户，未查询或输出选中客户详细资料和保单状态具体值，符合等待选中条件。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/tools/1",
+     "turn1/records/run/step_executor_runs/0/tools/2",
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R1",
+    "verdict": "met",
+    "observation": "该次为工具调用而非最终回答，未触发“若为最终回答则 answer_draft 首字段”的条件；最终交付的 JSON 契约问题另见对应项。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R2",
+    "verdict": "met",
+    "observation": "第二次输出未给出任何具体客户姓名、客户号、生日或性别，只重试查询。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/3",
+     "turn1/records/run/step_executor_runs/0/messages/4"
+    ]
+   },
+   {
+    "id": "模型调用2.R3",
+    "verdict": "met",
+    "observation": "未出现 fact_refs 或任何 fact_id；本轮工具无 facts。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/3",
+     "turn1/records/run/step_executor_runs/0/tools/1"
+    ]
+   },
+   {
+    "id": "模型调用2.R4",
+    "verdict": "not_met",
+    "observation": "第二次输出没有 gaps 字段，也未在用户可见文本保留“筛选条件或排序未能可靠解析，尚未执行客户查询”。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/3",
+     "turn1/records/run/step_executor_runs/0/tools/0"
+    ]
+   },
+   {
+    "id": "模型调用2.R5",
+    "verdict": "met",
+    "observation": "第二次不是最终回答；后续最终进入澄清时 needs_user_input=true。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/3",
+     "turn1/records/traces/0/tree/0/spans/4"
+    ]
+   },
+   {
+    "id": "模型调用2.R6",
+    "verdict": "met",
+    "observation": "第二次不是最终回答，未形成 answer_draft/gaps；最终用户可见正文未出现内部词。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/3",
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R7",
+    "verdict": "met",
+    "observation": "第二次输出未声称已查询选中客户的详细资料或保单状态。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R8",
+    "verdict": "met",
+    "observation": "第二次未调用 present_customer_search_card 或 present_policy_search_card。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R9",
+    "verdict": "met",
+    "observation": "继续调用 customer_search 时使用 query“姓名姓平开头的女性客户且生日在12月”，包含姓名、性别、生日月份线索，且未与 ask_clarify/present/run 并行。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R10",
+    "verdict": "met",
+    "observation": "未原样重复第一次“姓平、12月份生日、女性的客户”，改写为“姓名姓平开头的女性客户且生日在12月”。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/tools/1"
+    ]
+   },
+   {
+    "id": "模型调用2.R11",
+    "verdict": "cannot_check",
+    "observation": "工具未执行查询，案卷无法判断是否存在符合“姓平、12月份生日、女性”的客户。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/1"
+    ]
+   },
+   {
+    "id": "模型调用2.R12",
+    "verdict": "met",
+    "observation": "第二次不是最终回答，无 claims；最终交付也没有 claims 条目。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/3",
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R13",
+    "verdict": "met",
+    "observation": "第二次未声称已登记澄清或已挂起后续任务。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/3"
+    ]
+   },
+   {
+    "id": "模型调用2.R14",
+    "verdict": "met",
+    "observation": "第二次未要求用户补充；后续澄清要求提供具体姓名、客户号、手机号或确认归属，未让用户重报生日月份或性别。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/3",
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用3.R1",
+    "verdict": "met",
+    "observation": "第三次模型输出继续调用 customer_search，query 为“平姓女性客户，生日12月”。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/5",
+     "turn1/records/run/step_executor_runs/0/tools/2"
+    ]
+   },
+   {
+    "id": "模型调用3.R2",
+    "verdict": "not_met",
+    "observation": "query 未包含“我名下”，也未明确按客户号升序排序；仅包含平姓、女性、生日12月。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/5",
+     "turn1/records/run/step_executor_runs/0/tools/2"
+    ]
+   },
+   {
+    "id": "模型调用3.R3",
+    "verdict": "not_met",
+    "observation": "仍沿用“平姓”等不可靠写法，再次返回 AMBIGUOUS，未改用工具提示的可解析条件组织 query。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/2"
+    ]
+   },
+   {
+    "id": "模型调用3.R4",
+    "verdict": "met",
+    "observation": "fields 包含姓名、生日、性别、客户号、客户中心ID，覆盖展示候选所需字段。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/2"
+    ]
+   },
+   {
+    "id": "模型调用3.R5",
+    "verdict": "met",
+    "observation": "未调用 customer_detail 或保单状态查询工具。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/2"
+    ]
+   },
+   {
+    "id": "模型调用3.R6",
+    "verdict": "met",
+    "observation": "未调用 present_customer_search_card。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/2"
+    ]
+   },
+   {
+    "id": "模型调用3.R7",
+    "verdict": "met",
+    "observation": "输出只说明 AMBIGUOUS/未解析，未把未执行查询表述为空结果或没有符合条件的客户。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/5",
+     "turn1/records/run/step_executor_runs/0/tools/2"
+    ]
+   },
+   {
+    "id": "模型调用3.R8",
+    "verdict": "met",
+    "observation": "未编造或列出客户姓名、客户号、生日、性别、保单状态等业务值。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/5"
+    ]
+   },
+   {
+    "id": "模型调用3.R9",
+    "verdict": "met",
+    "observation": "第三次未选择最终 JSON 收尾，而是继续 customer_search；该条件未触发。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/5"
+    ]
+   },
+   {
+    "id": "模型调用3.R10",
+    "verdict": "cannot_check",
+    "observation": "customer_search 未成功返回业务数据，仅凭案卷无法推出当前用户名下是否存在符合条件客户及升序列表。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/2"
+    ]
+   },
+   {
+    "id": "模型调用4.R1",
+    "verdict": "not_met",
+    "observation": "第四次模型输出未给出 answer_draft/最终 JSON，而是再次调用 customer_search。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/7",
+     "turn1/records/run/step_executor_runs/0/tools/3"
+    ]
+   },
+   {
+    "id": "模型调用4.R2",
+    "verdict": "met",
+    "observation": "第四次输出未编造或列出客户姓名、客户号、生日、性别或候选清单。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/7"
+    ]
+   },
+   {
+    "id": "模型调用4.R3",
+    "verdict": "not_met",
+    "observation": "第四次未形成最终 JSON，不存在 fact_refs 空数组字段；后续 finalize 的 fact_refs=[] 不等于本次输出满足。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/7"
+    ]
+   },
+   {
+    "id": "模型调用4.R4",
+    "verdict": "not_met",
+    "observation": "第四次输出无 gaps 字段，未包含“筛选条件或排序未能可靠解析，尚未执行客户查询”。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/7"
+    ]
+   },
+   {
+    "id": "模型调用4.R5",
+    "verdict": "not_met",
+    "observation": "第四次输出无 gaps，未说明未选中客户导致详细资料和保单状态未查询。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/7"
+    ]
+   },
+   {
+    "id": "模型调用4.R6",
+    "verdict": "not_met",
+    "observation": "第四次输出无 needs_user_input，且直接再次调用工具。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/7"
+    ]
+   },
+   {
+    "id": "模型调用4.R7",
+    "verdict": "not_met",
+    "observation": "在三次 AMBIGUOUS 后仍再次调用 customer_search，query 为“筛选客户：性别为女，生日月份为12月，姓平”。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/7",
+     "turn1/records/run/step_executor_runs/0/tools/3"
+    ]
+   },
+   {
+    "id": "模型调用4.R8",
+    "verdict": "not_met",
+    "observation": "本次调用工具但调用的是 customer_search，不是仅 ask_clarify 或直接输出等待用户。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/7"
+    ]
+   },
+   {
+    "id": "模型调用4.R9",
+    "verdict": "met",
+    "observation": "本次无最终 answer_draft/gaps；最终用户可见正文和 gaps 未出现“工具返回”“接口返回”“AMBIGUOUS”“BUDGET”“EMPTY”等内部词。",
+    "refs": [
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用4.R10",
+    "verdict": "met",
+    "observation": "未对任何选中客户的详细资料或保单状态给出结论、状态描述或承诺。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/7"
+    ]
+   },
+   {
+    "id": "模型调用4.R11",
+    "verdict": "met",
+    "observation": "未声称已按客户号升序列出候选，也未声称不存在符合条件的客户。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/7"
+    ]
+   },
+   {
+    "id": "模型调用4.R12",
+    "verdict": "met",
+    "observation": "未在未获得候选选择或客户中心ID前调用 customer_detail 或保单状态查询。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/7"
+    ]
+   },
+   {
+    "id": "模型调用4.R13",
+    "verdict": "met",
+    "observation": "未声称已挂起或后续续跑；task_updates 未出现虚假登记。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/7",
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用4.R14",
+    "verdict": "cannot_check",
+    "observation": "当前用户身份及客户库中是否存在符合“我名下、姓平、12月份生日、女性”的客户均需独立查证；三次customer_search未执行，无法确认。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/tools/1",
+     "turn1/records/run/step_executor_runs/0/tools/2"
+    ]
+   },
+   {
+    "id": "模型调用5.R1",
+    "verdict": "not_met",
+    "observation": "第五次模型输出为 ask_clarify 工具调用，不是 answer_draft 首字段的 JSON；最终交付也无 answer_draft。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/9",
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用5.R2",
+    "verdict": "met",
+    "observation": "ask_clarify/final 无 facts 或 fact_id；最终 fact_refs=[]。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/3/spans/9",
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用5.R3",
+    "verdict": "not_met",
+    "observation": "最终 gaps 未包含“筛选条件或排序未能可靠解析，尚未执行客户查询”；ask_clarify 参数也没有 gaps。",
+    "refs": [
+     "turn1/records/run/step_results/3",
+     "turn1/records/run/step_executor_runs/0/tools/4"
+    ]
+   },
+   {
+    "id": "模型调用5.R4",
+    "verdict": "not_met",
+    "observation": "最终 gaps 未说明尚未取得“名下姓平、12月份生日、女性、按客户号升序”的候选客户列表，因此无法进入用户选择。",
+    "refs": [
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用5.R5",
+    "verdict": "met",
+    "observation": "未执行、调用或声称已查询选中客户的详细资料和保单状态。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/tools/1",
+     "turn1/records/run/step_executor_runs/0/tools/2",
+     "turn1/records/run/step_executor_runs/0/tools/3"
+    ]
+   },
+   {
+    "id": "模型调用5.R6",
+    "verdict": "met",
+    "observation": "answer_draft/gaps/task_updates 未编造客户姓名、客户号、生日、性别或候选列表。",
+    "refs": [
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用5.R7",
+    "verdict": "met",
+    "observation": "未把未执行客户查询表述为“没有符合条件的客户”或“客户不存在”。",
+    "refs": [
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用5.R8",
+    "verdict": "met",
+    "observation": "最终用户可见 answer/gaps 未出现“工具返回”“接口返回”“AMBIGUOUS”“BUDGET”“EMPTY”等内部词。",
+    "refs": [
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用5.R9",
+    "verdict": "met",
+    "observation": "task_updates 无；输出未声称不存在的挂起。实际 ask_clarify 后 Ledger 登记 T-001 WAITING_USER，不属于虚构。",
+    "refs": [
+     "turn1/records/run/step_results/3",
+     "turn1/records/session"
+    ]
+   },
+   {
+    "id": "模型调用5.R10",
+    "verdict": "met",
+    "observation": "未再调用 customer_search，改为 ask_clarify。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/4"
+    ]
+   },
+   {
+    "id": "模型调用5.R11",
+    "verdict": "met",
+    "observation": "agent_bridge needs_user_input=true，最终提问等待用户；gaps 未与该状态矛盾。",
+    "refs": [
+     "turn1/records/traces/0/tree/0/spans/4",
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用5.R12",
+    "verdict": "not_met",
+    "observation": "最终澄清复述/选项未保留“按客户号升序”，并提议“放宽条件，按12月出生的女性客户先查”，会去掉“姓平”约束和排序要求。",
+    "refs": [
+     "turn1/records/run/step_results/3"
+    ]
+   },
+   {
+    "id": "模型调用5.R13",
+    "verdict": "cannot_check",
+    "observation": "客户库中是否存在符合“名下姓平、12月份生日、女性、按客户号升序”的客户集合及具体内容，仅凭本次运行记录无法确认。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/tools/1",
+     "turn1/records/run/step_executor_runs/0/tools/2"
+    ]
+   },
+   {
+    "id": "模型调用5.R14",
+    "verdict": "met",
+    "observation": "未编造“我名下”对应的具体业务员或客户经理身份，要求用户确认归属。",
+    "refs": [
+     "turn1/records/run/step_results/3"
+    ]
+   }
+  ],
+  "problems": [
+   {
+    "phenomenon": "客户筛选 query 未完整保留用户条件：三次 customer_search 分别使用“姓平、12月份生日、女性的客户”“姓名姓平开头的女性客户且生日在12月”“平姓女性客户，生日12月”，均未体现“我名下”和“按客户号升序”，并继续使用无法可靠解析的“姓平/平姓”写法，连续 AMBIGUOUS，未取得候选列表。",
+    "violates": [
+     "模型调用1.R4",
+     "模型调用3.R2",
+     "模型调用3.R3"
+    ],
+    "attribution": "本轴",
+    "impact": "yes",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/tools/1",
+     "turn1/records/run/step_executor_runs/0/tools/2"
+    ]
+   },
+   {
+    "phenomenon": "在三次 customer_search 均 AMBIGUOUS 后，第四次仍改写条件再次调用 customer_search，未按 no_progress/finish_with_evidence 收尾，触发 BUDGET 拒绝。",
+    "violates": [
+     "模型调用4.R7",
+     "模型调用4.R8"
+    ],
+    "attribution": "本轴",
+    "impact": "yes",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/8",
+     "turn1/records/run/step_executor_runs/0/tools/3"
+    ]
+   },
+   {
+    "phenomenon": "最终 gaps 只写“本轮已停止继续查询，以下答复仅依据已取得的资料；未完成部分仍需补充核实”，未披露“筛选条件或排序未能可靠解析，尚未执行客户查询”，也未披露“未选中客户，因此详细资料和保单状态未查询”。",
+    "violates": [
+     "模型调用1.R8",
+     "模型调用2.R4",
+     "模型调用4.R4",
+     "模型调用4.R5",
+     "模型调用5.R3",
+     "模型调用5.R4"
+    ],
+    "attribution": "本轴",
+    "impact": "yes",
+    "refs": [
+     "turn1/records/run/step_results/3",
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_executor_runs/0/tools/1",
+     "turn1/records/run/step_executor_runs/0/tools/2"
+    ]
+   },
+   {
+    "phenomenon": "最终交付未遵循 answer_draft 首字段的 JSON 契约：交付对象使用 answer 字段，agent_bridge 的 answer_draft 为 null，第五次模型输出为 ask_clarify 工具调用而非最终 JSON。",
+    "violates": [
+     "模型调用1.R10",
+     "模型调用2.R1",
+     "模型调用3.R9",
+     "模型调用4.R1",
+     "模型调用5.R1"
+    ],
+    "attribution": "本轴",
+    "impact": "yes",
+    "refs": [
+     "turn1.delivered_output",
+     "turn1/records/traces/0/tree/0/spans/3/spans/9",
+     "turn1/records/traces/0/tree/0/spans/4"
+    ]
+   },
+   {
+    "phenomenon": "最终澄清复述/选项未完整保持用户条件：答案未提“按客户号升序”，选项“放宽条件，按12月出生的女性客户先查”会去掉“姓平”约束和排序要求。",
+    "violates": [
+     "模型调用5.R12"
+    ],
+    "attribution": "本轴",
+    "impact": "yes",
+    "refs": [
+     "turn1/records/run/step_results/3"
+    ]
+   }
+  ],
+  "extra_observations": [
+   "customer_search 工具说明明确不支持排序；用户要求按客户号升序，模型未说明排序需在结果返回后完成，也未把排序作为独立缺口披露。",
+   "ask_clarify 后 Ledger 确实登记 T-001 WAITING_USER，因此输出没有虚构挂起；但最终 gaps 仍未承接工具 execution.gaps。",
+   "模型内部推理多次出现 AMBIGUOUS、BUDGET、no_progress、finish_with_evidence 等内部词，但最终用户可见正文未出现这些词。",
+   "三次 AMBIGUOUS 表示客户查询尚未执行，不是空结果；案卷无法判断客户库中是否存在符合条件客户。",
+   "未调用 present_customer_search_card、present_policy_search_card、customer_detail、保单状态查询、RAG 工具或写操作，这些方面基本符合预期。"
+  ]
+ }
+}

@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>探索页</title>
+  <style>
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f6f8fb;color:#172033}header{background:linear-gradient(135deg,#0f172a,#7c2d12);color:white;padding:24px 32px}header p{margin:6px 0 0;opacity:.85}main{max-width:1600px;margin:0 auto;padding:20px}.panel,.card{background:white;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:16px;margin-bottom:16px}.toolbar,.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.layout{display:grid;grid-template-columns:400px minmax(0,1fr);gap:16px;align-items:start}label{display:block;font-weight:700;margin:12px 0 6px}input,textarea,select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px}input[type="checkbox"]{width:auto}textarea{min-height:80px}button,a.button{background:#2563eb;color:white;border:0;border-radius:9px;padding:10px 13px;font-weight:700;text-decoration:none;cursor:pointer}button.secondary{background:#e2e8f0;color:#172033}button:disabled{opacity:.55;cursor:not-allowed}.muted{color:#64748b}.pill{display:inline-block;white-space:nowrap;border-radius:999px;background:#e2e8f0;color:#334155;font-size:12px;font-weight:700;padding:2px 8px}.pill.ok{background:#dcfce7;color:#166534}.pill.bad{background:#fee2e2;color:#991b1b}.pill.warn{background:#fef3c7;color:#92400e}.pill.info{background:#dbeafe;color:#1e40af}.check-row{display:flex;gap:12px;flex-wrap:wrap;font-weight:400}.check-row label{display:flex;gap:6px;align-items:center;margin:0;font-weight:400}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.run-item{border:1px solid #e5e7eb;border-radius:10px;background:#f8fafc;padding:10px;margin-top:8px;cursor:pointer}.run-item.active{border-color:#2563eb;background:#eff6ff}.run-item b{display:block;margin-bottom:4px}table{width:100%;min-width:1480px;border-collapse:collapse;background:white}th,td{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left;vertical-align:top;font-size:13px;word-break:break-word}td code{font-size:12px;white-space:nowrap}th{background:#f8fafc;position:sticky;top:0}.table-wrap{max-height:460px;overflow:auto;border:1px solid #e5e7eb;border-radius:12px}pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px;max-height:420px;overflow:auto;font-size:12px}details>summary{cursor:pointer;font-weight:700}.kv{margin:3px 0}.turn{border:1px solid #cbd5e1;border-left:4px solid #7c2d12;border-radius:8px;padding:8px;margin-top:7px}.turn .side{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}.turn .msg{padding:7px;border-radius:7px;background:#f1f5f9}.turn .msg.ai{background:#ffedd5}.hint{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px;margin-top:10px;font-size:13px}.hint code{background:#fff;padding:1px 5px;border-radius:5px}@media(max-width:1000px){.layout,.grid3,.turn .side{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header><h1>探索页</h1><p>给 harness 指方向，看它跑出来的会话批次与发现台账。评测系统不做 mock：这里只有方向、预算、会话、台账与 judge。</p></header>
+<main>
+  <section class="panel toolbar">
+    <a class="button secondary" href="summary.html">归因总结</a>
+    <a class="button secondary" href="live.html">Live 请求</a>
+    <label class="row" style="margin:0;font-weight:700">Project <select id="project" style="width:auto;min-width:200px" onchange="switchProject()"></select></label>
+    <span id="status" class="muted"></span>
+  </section>
+  <div class="layout">
+    <aside>
+      <section class="panel">
+        <h2 style="margin-top:0">探索方向</h2>
+        <p class="muted" style="margin-top:-6px">harness 把它当参考，不是任务下发（spec/mock/protocol.md 5.1）。</p>
+        <label>批次 run_id</label><input id="runId" placeholder="explore-20260910-01" />
+        <label>覆盖目标场景（逗号分隔）</label><input id="coverageTargets" placeholder="clarification_reply, boundary_amount" />
+        <label>关注点</label><textarea id="focus" placeholder="例如：保额/保费边界值、多轮澄清后 live 是否丢上下文、用户中途改主意"></textarea>
+        <label>策略偏好</label>
+        <div class="check-row" id="strategyHints"></div>
+        <label>探索总预算</label>
+        <div class="grid3">
+          <input id="budgetSessions" type="number" min="1" placeholder="会话数" />
+          <input id="budgetTokens" type="number" min="1" placeholder="tokens" />
+          <input id="budgetWall" type="number" min="1" placeholder="墙钟 ms" />
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button onclick="saveDirection()">保存方向</button>
+          <button class="secondary" onclick="newRunId()">新 run_id</button>
+        </div>
+        <div id="launchHint" class="hint" style="display:none"></div>
+      </section>
+      <section class="panel">
+        <h2 style="margin-top:0">探索批次</h2>
+        <div class="row"><button class="secondary" onclick="refreshRuns()">刷新</button></div>
+        <div id="runList"><div class="muted">暂无批次。</div></div>
+      </section>
+    </aside>
+    <section>
+      <div id="runDetail" class="panel"><div class="muted">选择左侧一个批次查看会话与台账。</div></div>
+    </section>
+  </div>
+</main>
+<script>
+const STRATEGIES=['persona','scripted','adaptive-replay','boundary','drift'];
+const STRATEGY_TEXT={persona:'persona：以特定用户画像自然对话',scripted:'scripted：按预写剧本逐句',
+  'adaptive-replay':'adaptive-replay：拿 transcript seed 起手，live 变了就改台词','boundary':'boundary：边界值/极端输入','drift':'drift：中途改目标'};
+let runs=[];let currentRunId=null;let currentRun=null;let ledgerFilter='all';
+async function post(path, body){
+  const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json();
+  if(!res.ok || data.error){throw new Error(data.error || ('HTTP '+res.status));}
+  return data;
+}
+function project(){return document.getElementById('project').value;}
+function escapeHtml(text){return String(text??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function setStatus(text){document.getElementById('status').textContent=text;}
+function pill(text,cls){return '<span class="pill '+(cls||'')+'">'+escapeHtml(text)+'</span>';}
+function verdictPill(v){if(!v){return pill('未 judge','');}return pill(v,v==='fulfilled'?'ok':(v==='not_fulfilled'?'bad':'warn'));}
+function categoryPill(c){return pill(c,c==='live_defect'?'bad':(c==='judge_calibration'?'warn':'info'));}
+function newRunId(){const d=new Date();const pad=n=>String(n).padStart(2,'0');document.getElementById('runId').value='explore-'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'-'+pad(d.getHours())+pad(d.getMinutes());}
+function renderStrategyHints(){document.getElementById('strategyHints').innerHTML=STRATEGIES.map(s=>'<label><input type="checkbox" value="'+s+'" /> '+escapeHtml(STRATEGY_TEXT[s])+'</label>').join('');}
+function readDirection(){
+  const targets=document.getElementById('coverageTargets').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const hints=[...document.querySelectorAll('#strategyHints input:checked')].map(x=>x.value);
+  const budget={};
+  const s=parseInt(document.getElementById('budgetSessions').value,10);if(s>0){budget.sessions=s;}
+  const t=parseInt(document.getElementById('budgetTokens').value,10);if(t>0){budget.tokens=t;}
+  const w=parseInt(document.getElementById('budgetWall').value,10);if(w>0){budget.wall_clock_ms=w;}
+  return {coverage_targets:targets,focus:document.getElementById('focus').value.trim(),strategy_hints:hints,budget};
+}
+async function saveDirection(){
+  const runId=document.getElementById('runId').value.trim();
+  if(!runId){setStatus('先填 run_id。');return;}
+  try{
+    await post('/api/exploration/save',{project:project(),run_id:runId,direction:readDirection()});
+    setStatus('已保存方向：'+runId);
+    const hint=document.getElementById('launchHint');
+    hint.style.display='block';
+    hint.innerHTML='<b>启动 harness</b><div class="muted">在任意 agent 进程里加载 <code>.claude/skills/harness</code> skill，并告诉它：</div><pre>探索 '+escapeHtml(project())+'，run_id='+escapeHtml(runId)+'，服务 '+escapeHtml(location.origin)+'</pre><div class="muted">它会先执行 <code>python -m impl.harness_cli --server '+escapeHtml(location.origin)+' exploration get '+escapeHtml(project())+' '+escapeHtml(runId)+'</code> 领取方向。</div>';
+    await refreshRuns();
+    await selectRun(runId);
+  }catch(e){setStatus('保存失败：'+e.message);}
+}
+async function refreshRuns(){
+  const data=await post('/api/exploration/list',{project:project()});
+  runs=data.runs||[];
+  const el=document.getElementById('runList');
+  if(!runs.length){el.innerHTML='<div class="muted">暂无批次。</div>';return;}
+  el.innerHTML=runs.map(run=>{
+    const cats=run.ledger_by_category||{};
+    const catText=Object.keys(cats).length?Object.entries(cats).map(([k,v])=>categoryPill(k+' '+v)).join(' '):'<span class="muted">台账空</span>';
+    return '<div class="run-item'+(run.run_id===currentRunId?' active':'')+'" onclick="selectRun(\''+escapeHtml(run.run_id)+'\')"><b>'+escapeHtml(run.run_id)+'</b><div class="muted">'+escapeHtml(run.created_at||'')+' · 会话 '+escapeHtml(run.session_count||0)+(run.report?' · 已交报告':' · 探索中')+'</div><div style="margin-top:4px">'+catText+'</div></div>';
+  }).join('');
+}
+async function selectRun(runId){
+  currentRunId=runId;
+  currentRun=await post('/api/exploration/get',{project:project(),run_id:runId});
+  await refreshRuns();
+  renderRunDetail();
+}
+function renderDirection(d){
+  d=d||{};
+  return '<div class="kv"><b>覆盖目标：</b>'+((d.coverage_targets||[]).map(x=>pill(x,'info')).join(' ')||'<span class="muted">未指定</span>')+'</div>'
+    +'<div class="kv"><b>关注点：</b>'+escapeHtml(d.focus||'-')+'</div>'
+    +'<div class="kv"><b>策略偏好：</b>'+((d.strategy_hints||[]).map(x=>pill(x)).join(' ')||'<span class="muted">由 harness 自定</span>')+'</div>'
+    +'<div class="kv"><b>预算：</b>'+escapeHtml(JSON.stringify(d.budget||{}))+'</div>';
+}
+function renderReport(r){
+  if(!r){return '<div class="muted">harness 尚未交报告。</div>';}
+  const cov=Object.entries(r.coverage||{}).map(([k,v])=>pill(k+' ×'+v,'info')).join(' ');
+  return '<div class="kv"><b>会话数：</b>'+escapeHtml(r.sessions)+'　<b>预算使用：</b>'+escapeHtml(JSON.stringify(r.budget_usage||{}))+'</div><div class="kv"><b>覆盖：</b>'+(cov||'-')+'</div><div class="kv"><b>备注：</b>'+escapeHtml(r.notes||'-')+'</div>';
+}
+function renderSessions(items){
+  if(!items.length){return '<div class="muted">该批次还没有导出的会话。</div>';}
+  const rows=items.map(s=>{
+    const health=s.driver_health||{};
+    const intents=(s.intent_history||[]).map(h=>escapeHtml(h.user_intent)+' <span class="muted">('+escapeHtml(h.source)+')</span>').join('<br>')||'<span class="muted">未声明</span>';
+    return '<tr><td><code>'+escapeHtml(s.session_id)+'</code><div class="muted">'+escapeHtml(s.closed_at||'')+'</div></td><td>'+escapeHtml(s.scenario||'-')+(s.protocol_fuzz?' '+pill('protocol_fuzz','info'):'')+'</td><td>'+escapeHtml(s.turns??'-')+'</td><td>'+escapeHtml(s.stop_reason||'-')+'<div class="muted">'+escapeHtml(s.completion_status||'')+' · '+escapeHtml(health.attribution||health.status||'')+'</div></td><td>'+intents+'</td><td>'+verdictPill(s.judge_verdict)+(s.judge_summary?'<div class="muted">'+escapeHtml(typeof s.judge_summary==='string'?s.judge_summary:(s.judge_summary.reason||JSON.stringify(s.judge_summary)))+'</div>':'')+'</td><td><div class="row"><button class="secondary" id="judge-'+escapeHtml(s.session_id)+'" onclick="runJudge(\''+escapeHtml(s.session_id)+'\')">'+(s.judge_verdict?'重判':'Judge')+'</button><button class="secondary" onclick="showSession(\''+escapeHtml(s.session_id)+'\')">Trace</button></div></td></tr>';
+  }).join('');
+  return '<div class="table-wrap"><table><thead><tr><th>会话</th><th>场景</th><th>轮数</th><th>停止 / 完成度</th><th>declare_intent</th><th>judge</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+function renderLedger(ledger){
+  const records=(ledger&&ledger.records)||[];
+  const by=(ledger&&ledger.by_category)||{};
+  const tabs=['all','live_defect','judge_calibration','protocol_fuzz'].map(c=>'<button class="'+(ledgerFilter===c?'':'secondary')+'" onclick="setLedgerFilter(\''+c+'\')">'+escapeHtml(c==='all'?'全部 '+records.length:c+' '+(by[c]||0))+'</button>').join('');
+  const shown=records.filter(r=>ledgerFilter==='all'||r.category===ledgerFilter);
+  const rows=shown.map(r=>'<tr><td><code>'+escapeHtml(r.signature)+'</code></td><td>'+categoryPill(r.category)+'</td><td>'+escapeHtml(r.realism)+'</td><td>'+verdictPill(r.harness_verdict)+' / '+verdictPill(r.judge_verdict)+'</td><td>'+escapeHtml(r.trigger_summary||'-')+(r.notes?'<div class="muted">'+escapeHtml(r.notes)+'</div>':'')+'</td><td><code>'+escapeHtml(r.session_id||'')+'</code>'+((r.duplicate_sessions||[]).length?'<div class="muted">重复命中 ×'+r.duplicate_sessions.length+'</div>':'')+'</td></tr>').join('');
+  return '<div class="row" style="margin-bottom:8px">'+tabs+'</div>'+(shown.length?'<div class="table-wrap"><table><thead><tr><th>签名</th><th>类别</th><th>真实性</th><th>harness / judge</th><th>触发摘要</th><th>会话</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="muted">无记录。</div>');
+}
+function setLedgerFilter(c){ledgerFilter=c;renderRunDetail();}
+function renderRunDetail(){
+  const el=document.getElementById('runDetail');
+  if(!currentRun){el.innerHTML='<div class="muted">选择左侧一个批次查看会话与台账。</div>';return;}
+  el.innerHTML='<h2 style="margin-top:0">批次 '+escapeHtml(currentRun.run_id)+'</h2>'
+    +'<div class="card"><b>探索方向</b>'+renderDirection(currentRun.direction)+'</div>'
+    +'<div class="card"><b>探索报告</b>'+renderReport(currentRun.report)+'</div>'
+    +'<div class="card"><b>会话</b>（'+escapeHtml((currentRun.sessions||[]).length)+'）<div class="muted" style="margin-bottom:8px">每场会话 close 后自动导出多轮 RunTrace + transcript seed，seed 已进用例池，可在归因总结页加载重放。</div>'+renderSessions(currentRun.sessions||[])+'</div>'
+    +'<div class="card"><b>发现台账</b><div class="muted" style="margin-bottom:8px">harness 与 judge 一致 → live_defect；不一致 → judge_calibration（校准样本，不计 live 缺陷）。</div>'+renderLedger(currentRun.ledger)+'</div>'
+    +'<div id="sessionView"></div>';
+}
+async function runJudge(sessionId){
+  const btn=document.getElementById('judge-'+sessionId);
+  if(btn){btn.disabled=true;btn.textContent='judge 中…';}
+  setStatus('judge '+sessionId+' 运行中（真实 LLM，可能数分钟）');
+  try{await post('/api/session/judge',{project:project(),session_id:sessionId});setStatus('judge 完成：'+sessionId);}
+  catch(e){setStatus('judge 失败：'+e.message);}
+  await selectRun(currentRunId);
+}
+async function showSession(sessionId){
+  const data=await post('/api/session/get',{project:project(),session_id:sessionId});
+  const turns=(((data.seed_case||{}).seed||{}).turns||[]).map((t,i)=>{
+    const msg=t.message||{};const text=msg.type==='text'?msg.text:(msg.type==='action'?msg.name+' '+JSON.stringify(msg.params||{}):'[request] '+JSON.stringify(msg.payload||{}).slice(0,200));
+    return '<div class="turn"><b>第 '+(i+1)+' 轮</b> '+pill(t.status||'-',t.status==='succeeded'?'ok':'bad')+'<div class="side"><div class="msg"><b>用户</b><div>'+escapeHtml(text)+'</div></div><div class="msg ai"><b>live</b><div>'+escapeHtml(t.assistant||JSON.stringify(t.extracted_output||{}).slice(0,600))+'</div></div></div></div>';
+  }).join('');
+  document.getElementById('sessionView').innerHTML='<div class="card"><b>会话 '+escapeHtml(sessionId)+'</b><div class="muted">stop_reason='+escapeHtml(data.stop_reason)+' · completion='+escapeHtml(data.completion_status)+' · candidate_file='+escapeHtml(data.candidate_file||'')+'</div>'+turns+'<details style="margin-top:8px"><summary>完整导出 JSON（RunTrace + seed_case + judge）</summary><pre>'+escapeHtml(JSON.stringify(data,null,2))+'</pre></details></div>';
+  document.getElementById('sessionView').scrollIntoView({behavior:'smooth'});
+}
+async function switchProject(){currentRunId=null;currentRun=null;document.getElementById('launchHint').style.display='none';await refreshRuns();renderRunDetail();}
+async function initProjects(){
+  const res=await fetch('/projects');const data=await res.json();
+  const projects=data.projects||[];
+  document.getElementById('project').innerHTML=projects.map(p=>'<option value="'+escapeHtml(p)+'">'+escapeHtml(p)+'</option>').join('');
+  if(projects.includes('policy_search')){document.getElementById('project').value='policy_search';}
+  renderStrategyHints();newRunId();await switchProject();
+}
+initProjects();
+</script>
+</body>
+</html>

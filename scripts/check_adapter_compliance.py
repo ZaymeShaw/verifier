@@ -5,9 +5,10 @@
 1. adapter 只做加载和暴露，不应包含业务方法
 2. 应该只有访问器 + _load_* 方法
 3. 不应出现业务方法名（build_*、normalize_*、get_verifiable_tools 等）
+4. 多轮项目的 SessionTranslator 满足 spec/mock/protocol.md 6.2 三道约束（往返、禁 LLM、确定性）
 
 Usage:
-    python scripts/check_adapter_compliance.py [--project PROJECT_ID]
+    python scripts/check_adapter_compliance.py [--project PROJECT_ID] [--static-only]
 """
 from __future__ import annotations
 
@@ -15,7 +16,7 @@ import argparse
 import ast
 import sys
 from pathlib import Path
-from typing import List, Tuple
+from typing import Any, List, Tuple
 
 # 允许的方法名（访问器 + _load_* + 属性）
 ALLOWED_METHODS = frozenset({
@@ -105,6 +106,94 @@ class AdapterChecker(ast.NodeVisitor):
                 ))
 
 
+def _strip_volatile(value: Any, volatile: frozenset[str]) -> Any:
+    if isinstance(value, dict):
+        return {k: _strip_volatile(v, volatile) for k, v in value.items() if k not in volatile}
+    if isinstance(value, list):
+        return [_strip_volatile(item, volatile) for item in value]
+    return value
+
+
+def check_session_translator(project_id: str) -> List[Tuple[int, str, str]]:
+    """spec/mock/protocol.md 6.2 三道自动约束：往返不变式、禁 LLM、确定性。
+
+    实现了 SessionTranslator 的项目必须受约束。
+    运行期检查，行号统一为 0。
+    """
+    from unittest.mock import patch
+
+    from impl.core.project_loader import load_adapter, load_project
+    from impl.core.session import SessionState, SessionTranslator, UserMessage
+    from scripts.trace_canonicalize import VOLATILE_FIELDS
+
+    spec = load_project(project_id)
+    mock = load_adapter(spec).mock()
+    if not isinstance(mock, SessionTranslator):
+        return []
+
+    violations: List[Tuple[int, str, str]] = []
+    volatile = frozenset(VOLATILE_FIELDS.get(project_id, []))
+    samples = [
+        UserMessage(type="text", text="保额不低于50万的保单"),
+        UserMessage(type="text", text="  带空格 和 English 123  "),
+    ]
+    session_id = "compliance-session"
+    empty_state = SessionState(session_id=session_id, turn_index=1, transcript=[], last_request=None)
+
+    def llm_forbidden(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("request_from_user_message must not call the LLM client")
+
+    with patch("impl.core.llm_client.LlmClient.__init__", llm_forbidden), patch(
+        "impl.core.llm_client.LlmClient.complete_json", llm_forbidden, create=True
+    ), patch("impl.core.llm_client.LlmClient.complete", llm_forbidden, create=True):
+        for message in samples:
+            try:
+                first = mock.request_from_user_message(message, empty_state)
+            except AssertionError as exc:
+                violations.append((0, "request_from_user_message", f"禁 LLM 约束违反：{exc}"))
+                return violations
+            except Exception as exc:
+                violations.append((0, "request_from_user_message", f"首轮翻译失败：{exc}"))
+                return violations
+            back = mock.user_message_from_request(first)
+            if back.identity() != message.identity():
+                violations.append((0, "user_message_from_request", f"往返不变式违反：{message.identity()} → {back.identity()}"))
+            again = mock.request_from_user_message(message, empty_state)
+            if _strip_volatile(first, volatile) != _strip_volatile(again, volatile):
+                violations.append((0, "request_from_user_message", "确定性违反：同 (message, state) 两次结果不同"))
+
+            # 带历史的第二轮
+            state = SessionState(
+                session_id=session_id,
+                turn_index=2,
+                transcript=[
+                    {"role": "user", "content": message.text, "request": first},
+                    {"role": "assistant", "content": "stage=clarify", "extracted_output": {"stage": "clarify", "message": "请补充条件"}},
+                ],
+                last_request=first,
+            )
+            follow = UserMessage(type="text", text="50万以上")
+            try:
+                second = mock.request_from_user_message(follow, state)
+            except AssertionError as exc:
+                violations.append((0, "request_from_user_message", f"禁 LLM 约束违反（第二轮）：{exc}"))
+                continue
+            except Exception as exc:
+                violations.append((0, "request_from_user_message", f"第二轮翻译失败：{exc}"))
+                continue
+            if mock.user_message_from_request(second).identity() != follow.identity():
+                violations.append((0, "user_message_from_request", "往返不变式违反（第二轮）"))
+            if _strip_volatile(second, volatile) != _strip_volatile(mock.request_from_user_message(follow, state), volatile):
+                violations.append((0, "request_from_user_message", "确定性违反（第二轮）"))
+            checker = getattr(getattr(mock, "live_schema", None), "check", None)
+            if checker is not None and hasattr(checker, "request_errors"):
+                for label, request in (("首轮", first), ("第二轮", second)):
+                    errors = checker.request_errors(request)
+                    if errors:
+                        violations.append((0, "request_from_user_message", f"{label}请求体不符合 REQUEST_SCHEMA：{errors}"))
+    return violations
+
+
 def check_adapter(project_id: str) -> List[Tuple[int, str, str]]:
     """检查指定项目的 adapter.py"""
     adapter_path = Path(f"impl/projects/{project_id}/adapter.py")
@@ -129,6 +218,7 @@ def check_adapter(project_id: str) -> List[Tuple[int, str, str]]:
 def main():
     parser = argparse.ArgumentParser(description="检查 adapter 合规性")
     parser.add_argument("--project", help="检查指定项目，默认检查所有项目")
+    parser.add_argument("--static-only", action="store_true", help="只做 adapter.py 静态检查，跳过 protocol.md 6.2 运行期约束")
     args = parser.parse_args()
 
     # 获取所有项目
@@ -141,6 +231,8 @@ def main():
     all_violations = {}
     for project_id in projects:
         violations = check_adapter(project_id)
+        if not args.static_only:
+            violations = violations + check_session_translator(project_id)
         if violations:
             all_violations[project_id] = violations
 

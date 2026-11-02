@@ -1,0 +1,47 @@
+### smoke-policy-detail-renyanlin  run=fb5fda5628174ef6967116bd4ecca493 desc=None
+expectations=3 records=22
+
+## expectations
+- exp_p260922000005855_applicant: 告知保单P260922000005855的投保人是谁 | cond=总是
+- exp_p260922000005855_current_status: 告知保单P260922000005855的当前状态 | cond=总是
+- exp_p260922000005855_insured: 告知保单P260922000005855的被保人是谁 | cond=总是
+
+## workflow definitions
+  [turn1/records/definitions/0/data] [{"name": "assemble", "type": "Step"}, {"name": "gate", "type": "Step"}, {"name": "to_direct", "type": "Condition", "steps": [{"name": "direct", "type": "Step"}]}, {"name": "to_capability", "type": "Condition", "steps": [{"name": "run_capability", "type": "Step"}]}, {"name": "to_agent", "type": "Condition", "steps": [{"name": "agent_input", "type": "Step"}, {"name": "agent", "type": "Step"}, {"name": "agent_bridge", "type": "Step"}]}, {"name": "finalize", "type": "Step"}, {"name": "present_agentos", "type": "Step"}]
+
+## tool calls (in order)
+  [turn1/records/raw_runs/0/run_data/step_executor_runs/0/tools/0] name=None args=null
+      result=null err=null
+  [turn1/records/run/step_executor_runs/0/tools/0] name=policy_detail args={"polno": "P260922000005855", "fields": ["投保人姓名", "被保人姓名", "保单状态"], "compact": true}
+      result={"result":{"data":{"pageNo":1,"pageSize":20,"total":2,"records":[{"polno":"P260922000005855","agg_paid_prem":216.7,"app_ins_relationship_desc":"本人","applicant_clientno":"C92200002345","applicant_idicm_clientno":"8CA7C517B3B61FFE92D92CE76274A639","applicant_name":"任言琳","brno":"0","insur_term":"30","insurant_clientno":"C92200002345","insurant_idicm_clientno":"8CA7C517B3B61FFE92D92CE76274A639","insurant_name":"任言琳","insure_date":"2026-09-04","is_valid_pol":"有效","main_subsidiary_risks_flag":"主险","matu_date":"2056-09-07","pay_to_day":"2026-10-07","plan_abbr_name":"安佑惠享定期","plan_code":"1813","plan_full_name":"平安安佑福（惠享版）定期重大疾病保险","pol_effective_date_term":"2026-09-07","pol_product_name":"平安安佑福（惠享版）...<+4019> err=false
+
+## model calls
+  [turn1/records/traces/0/tree/0/spans/3/spans/1] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 598 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+P260922000005855是谁的保单？投保人和被保人分别是谁？当前状态呢？
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "tool_calls": [{"id": "call_97f05db7bbad4413b05caff3", "type": "function", "function": {"name": "policy_detail", "arguments": "{\"polno\": \"P260922000005855\", \"fields\": [\"\u6295\u4fdd\u4eba\u59d3\u540d\", \"\u88ab\u4fdd\u4eba\u59d3\u540d\", \"\u4fdd\u5355\u72b6\u6001\"], \"compact\": true}"}}]}]}
+  [turn1/records/traces/0/tree/0/spans/3/spans/3] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 598 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+P260922000005855是谁的保单？投保人和被保人分别是谁？当前状态呢？
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "content": "\u4fdd\u5355P260922000005855\u7684\u6295\u4fdd\u4eba\u548c\u88ab\u4fdd\u4eba\u5747\u4e3a**\u4efb\u8a00\u7433**\uff08\u6295\u88ab\u4fdd\u5173\u7cfb\u4e3a\u672c\u4eba\uff09\uff0c\u5f53\u524d\u72b6\u6001\u4e3a**\u4ea4\u8d39\u6709\u6548**\u3002\n\n\u8be5\u4fdd\u5355\u5305\u542b\u4e24\u4e2a\u9669\u79cd\uff1a\n- \u4e3b\u9669\uff1a\u5e73\u5b89\u5b89\u4f51\u798f\uff08\u60e0\u4eab\u7248\uff09\u5b9a\u671f\u91cd\u5927\u75be\u75c5\u4fdd\u9669\n- \u9644\u52a0\u9669\uff1a\u5e73\u5b89\u9644\u52a0\uff082026\uff09\u5b9a\u671f\u5bff\u9669\n\n\u4e24\u9879\u9669\u79cd\u72b6\u6001\u5747\u4e3a\u4ea4\u8d39\u6709\u6548\uff0c\u6709\u6548\u3002\n\n{\"answer_draft\":\"\u4fdd\u5355P260922000005855\u7684\u6295\u4fdd\u4eba\u4e3a\u4efb\u8a00\u7433\uff0c\u88ab\u4fdd\u4eba\u540c\u4e3a\u4efb\u8a00\u7433\uff08\u6295\u88ab\u4fdd\u5173\u7cfb\u4e3a\u672c\u4eba\uff09\u3002\u5f53\u524d\u4fdd\u5355\u72b6\u6001\u4e3a\u4ea4\u8d39\u6709\u6548\u3002\",\"fact_refs\":[\"F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002\",\"F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003\",\"F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005\"],\"gaps\":[],\"needs_user_input\":false,\"task_updates\":[]}"}]}
+
+## delivered / gaps
+  [turn1.delivered_output] {"output_text": "{\"answer\": \"保单 P260922000005855:\\n· 投保人:任言琳\\n· 被保人:任言琳\\n· 保单状态:交费有效\", \"status\": null, \"fact_refs\": [\"F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002\", \"F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003\", \"F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005\"], \"sources\": [], \"gaps\": [\"部分内容未能在本轮证据中对应，请结合原始资料核实。\"], \"assumptions\": [], \"trace_id\": null, \"followup_actions\": [], \"handoff_status\": \"none\", \"checks\": null, \"structured\": null, \"completeness\": \"partial\", \"limitations\": [\"部分内容未能在本轮证据中对应，请结合原始资料核实。\"]}"}
+  gap turn1.gap.state_transitions: {"id": "turn1.gap.state_transitions", "status": "unsupported", "reason": "此 provider 不把 run/session 末态重建为逐次状态变化"}
+  gap turn1.gap.raw_backend_http: {"id": "turn1.gap.raw_backend_http", "status": "unsupported", "reason": "Agno 工具结果可能已经过业务适配，不保证原始下游 HTTP 请求响应"}
+  gap turn1.gap.source_documents: {"id": "turn1.gap.source_documents", "status": "unsupported", "reason": "仅提供已记录 references 和工具正文；不自动访问外部文档或推断版本"}
+  gap turn1.gap.history: {"id": "turn1.gap.history", "status": "empty", "count": 0, "excluded_unordered_runs": 0, "ordered_by_trace_timestamps": 0, "reason": "仅保存同 session 已终止且确定早于本轮的 run：优先用根 trace 的微秒级 start/end 定序，否则要求 created_at + duration + 1秒精度余量早于本轮 created_at；缺时间、重叠和不明顺序的 run 不纳入。历史状态仍是运行末态，不是逐次状态快照。"}
+
+## trace_analysis structure (recorded)
+  workflow_steps=null
+  suspects=null

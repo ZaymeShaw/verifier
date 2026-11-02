@@ -35,6 +35,10 @@ class TraceTableRow:
     score: Optional[float] = None
     fulfillment_status: str = ""
     carrier_placement: str = ""
+    # 扩展评估轴（试验）：每轴一条 {axis_id, title, status, verdict, text, items[]}；预设没启用框时为空。
+    eval_axes_summary: List[Dict[str, Any]] = field(default_factory=list)
+    # 一个 case 各阶段墙钟毫秒：live_ms / judge_ms / carrier_ms / eval_axes_ms；哪段慢一眼看见，不用翻 context store。
+    stage_timings: Dict[str, int] = field(default_factory=dict)
     judge_summary: Dict[str, Any] = field(default_factory=dict)
     attribution_summary: Dict[str, Any] = field(default_factory=dict)
     check_summary: Dict[str, Any] = field(default_factory=dict)
@@ -48,6 +52,10 @@ class TraceTableRow:
     root_cause_summary: str = ""
     created_at: str = ""
     stop_reason: str = ""
+    # spec/mock/protocol.md 4.7/4.9：stop_reason 归责组与派生的用户方健康度。
+    # 只有 attribution 为 user / live 的行计入 live 质量指标。
+    stop_attribution: str = ""
+    driver_health: Dict[str, Any] = field(default_factory=dict)
     interaction_mode: str = "single_turn"
     conversation_summary: Dict[str, Any] = field(default_factory=dict)
     conversation_detail: Optional[List[ConversationTurn]] = None

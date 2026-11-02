@@ -27,6 +27,9 @@ CMD="${1:-help}"
 shift || true
 
 case "$CMD" in
+    tracing)
+        exec "$PYTHON_BIN" scripts/tracing.py "$@"
+        ;;
     server)
         "$PYTHON_BIN" -m impl.core.runtime_preflight
         exec "$PYTHON_BIN" -m impl.server "$@"
@@ -59,7 +62,12 @@ case "$CMD" in
 verifier 统一入口（自动从 config.yaml 读取正确的 python 解释器）
 
 用法：
-  bash run.sh server [--port PORT]     启动 verifier 服务
+  bash run.sh server [--port PORT]     启动 verifier 服务（直连 .env 上游）
+  bash run.sh tracing <command>       中转 up/down/status/show/run；报告 runs/report；清理 cleanup
+  bash run.sh tracing run server      经本地中转启动服务，保留原始 .env
+  bash run.sh tracing runs --port 8022 列出该端口实例的采集批次
+  bash run.sh tracing report --port 8022 --open  导出本实例最近一次执行 HTML
+  bash run.sh tracing report --port 8022 --project llm_probe --open  导出当前用例池（含补跑）
   bash run.sh uat [--port PORT]        启动 UAT 服务
   bash run.sh check1                   跑 checklist check1
   bash run.sh api-check                跑 api-check

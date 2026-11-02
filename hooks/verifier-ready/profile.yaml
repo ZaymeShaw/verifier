@@ -1,0 +1,27 @@
+live:
+  port: 8029
+  cases:
+    - llm-probe-insurance-real-smoke-policy-list-fuyunping
+    - llm-probe-insurance-real-smoke-customer-profile-fuyunping
+    - llm-probe-insurance-real-smoke-neg-unknown-policy
+    - llm-probe-insurance-real-smoke-multi-policy-anjinning
+  concurrency: 4
+  wall_clock_s: 5400
+  poll_s: 5
+hard_checks:
+  case_eval_s: 900
+  latency_p95_s: 180
+  latency_max_s: 400
+  baseline_growth: 1.1
+hook:
+  max_blocks: 6
+reviewer:
+  spawn: pi
+  model: dashscope/qwen3.8-flash
+  parallel: 4
+  timeout_s: 7200
+  agent_dir: null
+  commands:
+    pi: [pi, -p, --mode, json, --no-session, --no-skills, --no-context-files, --no-prompt-templates, --no-extensions, --model, '{model}', --tools, 'read,bash,grep,find,ls', --append-system-prompt, '{system_prompt_file}', '{task}']
+    claude: [claude, -p, --output-format, json, --no-session-persistence, --model, '{model}', --append-system-prompt, '{system_prompt}', --add-dir, '{repo}', --allowedTools, 'Read,Grep,Glob,Bash(rg:*),Bash(python3:*),Bash(cat:*),Bash(ls:*)', '{task}']
+    codex: [codex, exec, -s, read-only, -C, '{repo}', --skip-git-repo-check, -m, '{model}', -o, '{stdout_file}', '{task_with_system_prompt}']

@@ -1,0 +1,74 @@
+[
+  {
+    "category": "live_defect",
+    "created_at": "2026-09-10T01:40:55Z",
+    "harness_verdict": "not_fulfilled",
+    "judge_verdict": "not_fulfilled",
+    "notes": "",
+    "realism": "high",
+    "run_id": "gate3",
+    "session_id": "harness-policy_search-82669356b2f7",
+    "signature": "contextual_amount_followup:not_fulfilled",
+    "trigger_summary": "先说“保额的保单”再补“50万以上”，第二轮被判 UNSUPPORTED"
+  },
+  {
+    "category": "live_defect",
+    "created_at": "2026-09-10T02:38:59Z",
+    "harness_verdict": "not_fulfilled",
+    "judge_verdict": "not_fulfilled",
+    "notes": "judge 签名：第二轮短答继承未闭合年缴保费字段。若用户第二轮就停，下游按错误字段查询且状态是 SUCCESS。",
+    "realism": "high",
+    "run_id": "explore-20260910-01",
+    "session_id": "harness-policy_search-fa1935c5b00a",
+    "signature": "clarification_reply:number_only_followup_loses_field",
+    "trigger_summary": "我说'年缴保费高一点的'，它说不支持；我补'一万以上吧'，它给了首期保费/期缴保费的 OR 条件，把'年缴'丢了；我纠正一句才对。"
+  },
+  {
+    "category": "live_defect",
+    "created_at": "2026-09-10T02:38:59Z",
+    "harness_verdict": "not_fulfilled",
+    "judge_verdict": "not_fulfilled",
+    "notes": "judge 签名：改主意短答应替换保额门槛。与 clarification_reply:number_only_followup_loses_field 机制疑似同源：只含数字的后续轮不继承上一轮字段，默认落到保费字段。",
+    "realism": "high",
+    "run_id": "explore-20260910-01",
+    "session_id": "harness-policy_search-ddbfef5b278e",
+    "signature": "drift:threshold_update_loses_field",
+    "trigger_summary": "先查'保额50万以上'成功；我说'算了，50万太高了，30万以上就行'，它返回保费字段 OR 30万，把保额丢了。"
+  },
+  {
+    "category": "live_defect",
+    "created_at": "2026-09-10T02:38:59Z",
+    "harness_verdict": "not_fulfilled",
+    "judge_verdict": "not_fulfilled",
+    "notes": "judge 签名：保额短答澄清应安全恢复。短句纠正在多轮语境里被当成独立查询。",
+    "realism": "high",
+    "run_id": "explore-20260910-01",
+    "session_id": "harness-policy_search-ddbfef5b278e",
+    "signature": "drift:short_restatement_unsupported",
+    "trigger_summary": "接上一条，我说'是保额30万以上'纠正它，它直接说未能识别；要说完整的'保额30万以上的保单'才行。"
+  },
+  {
+    "category": "judge_calibration",
+    "created_at": "2026-09-10T02:38:59Z",
+    "harness_verdict": "not_fulfilled",
+    "judge_verdict": "fulfilled",
+    "notes": "judge 认为安全拒绝即满足；作为用户我认为该追问字段。judge 校准样本：判定'澄清提示是否可补槽'的口径。",
+    "realism": "high",
+    "run_id": "explore-20260910-01",
+    "session_id": "harness-policy_search-1478f783da3b",
+    "signature": "clarification:generic_unsupported_message_no_slot_prompt",
+    "trigger_summary": "我说'五十万以上的保单'，它只回'当前查询条件暂不支持'，没问我五十万是保额还是保费；我自己猜着补了字段。"
+  },
+  {
+    "category": "judge_calibration",
+    "created_at": "2026-09-10T02:41:13Z",
+    "harness_verdict": "not_fulfilled",
+    "judge_verdict": "fulfilled",
+    "notes": "两次 judge 输入完全相同（同一导出 trace），结论相反；导出文件里现存的是后写入的 fulfilled。作为用户我认为中间两轮已经足以让我放弃，应 not_fulfilled。校准方向：多轮 trace 中'最终轮正确'能否覆盖'中间轮返回错误的可执行结果'，judge 需要明确口径并稳定。",
+    "realism": "high",
+    "run_id": "explore-20260910-01",
+    "session_id": "harness-policy_search-ddbfef5b278e",
+    "signature": "drift:judge_unstable_final_turn_recovery",
+    "trigger_summary": "同一场改主意会话（第2轮给错字段、第3轮说未识别、第4轮完整重述才对）被 judge 判了两次：一次 not_fulfilled（阻断在第2轮错误 SUCCESS），一次 fulfilled（只看第4轮最终结果）。"
+  }
+]

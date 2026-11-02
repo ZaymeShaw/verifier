@@ -17,15 +17,14 @@
     <select id="project" onchange="switchProject()"></select>
     <label>Input JSON</label>
     <textarea id="input">{"query":"45岁女性保费10万以上"}</textarea>
-    <label>User Intent（可选，传给 judge agent）</label>
-    <textarea id="expected" placeholder="可留空；填写后用于 judge 当前 RunTrace。"></textarea>
     <div class="row">
       <button onclick="liveRun()">请求业务服务</button>
       <button class="secondary" onclick="runJudge()">请求 Judge</button>
       <button class="secondary" onclick="runAttribute()">请求 Attribute</button>
       <button class="secondary" onclick="runChain()">统一全链路</button>
+      <button class="secondary" id="evalAxesBtn" onclick="runEvalAxes()" style="display:none">扩展评估轴</button>
     </div>
-    <div class="hint">按顺序执行单步按钮会复用当前页面保存的 lastTrace / lastJudge。</div>
+    <div class="hint">按顺序执行单步按钮会复用当前页面保存的 lastTrace / lastJudge。「扩展评估轴」对同一个 lastTrace 单独再跑一遍资料页预设里配置的框。无 trace 预设启用了「能力兑现」框时，请求 Judge / 全链路的主结论就是它的结论。</div>
     <div id="status" class="muted" style="margin-top:12px">等待请求。</div>
   </section>
 
@@ -59,6 +58,15 @@
         <pre id="attributeRaw">{}</pre>
       </div>
     </details>
+    <details id="evalAxesStep" class="card step" style="display:none">
+      <summary><h2 id="evalAxesTitle">扩展评估轴</h2><span id="evalAxesBadgeInPanel" class="badge">未运行</span></summary>
+      <div class="step-body">
+        <div class="hint" style="margin-bottom:8px">新链路：按资料页该预设「扩展评估轴」里启用的框，对上面同一个 trace 各判一遍。与左侧 Judge 面板（生产轴1/轴2）并排对照，互不影响。</div>
+        <div id="evalAxesHuman" class="empty">尚未运行扩展评估轴。</div>
+        <div class="raw-title">Raw JSON</div>
+        <pre id="evalAxesRaw">{}</pre>
+      </div>
+    </details>
   </section>
 </main>
 <script>
@@ -75,6 +83,8 @@ let currentJudge = null;
 let currentAttribute = null;
 let currentCluster = null;
 let currentView = null;
+let currentEvalAxes = null;   // 扩展评估轴试验结果（新链路），与 judge/attribute 独立
+const EVAL_AXES_PROJECTS = ['llm_probe', 'llm_probe_loop'];
 function readSession(key){
   const text=sessionStorage.getItem(key);
   return text ? JSON.parse(text) : null;
@@ -86,15 +96,20 @@ async function post(path, body){
   return data;
 }
 function project(){return document.getElementById('project').value}
-function loadScopedState(){currentTrace=readSession(scopedKey('lastTrace'));currentJudge=readSession(scopedKey('lastJudge'));currentAttribute=readSession(scopedKey('lastAttribute'));currentCluster=readSession(scopedKey('lastCluster'));currentView=readSession(scopedKey('lastView'));
+function clearEvalAxes(){currentEvalAxes=null;sessionStorage.removeItem(scopedKey('lastEvalAxes'));}
+function loadScopedState(){currentTrace=readSession(scopedKey('lastTrace'));currentJudge=readSession(scopedKey('lastJudge'));currentAttribute=readSession(scopedKey('lastAttribute'));currentCluster=readSession(scopedKey('lastCluster'));currentView=readSession(scopedKey('lastView'));currentEvalAxes=readSession(scopedKey('lastEvalAxes'));
   if(currentTrace && !traceMatchesCurrentInput(currentTrace)){
     currentTrace=null;currentJudge=null;currentAttribute=null;currentCluster=null;currentView=null;
-    sessionStorage.removeItem(scopedKey('lastTrace'));sessionStorage.removeItem(scopedKey('lastJudge'));sessionStorage.removeItem(scopedKey('lastAttribute'));sessionStorage.removeItem(scopedKey('lastCluster'));sessionStorage.removeItem(scopedKey('lastView'));sessionStorage.removeItem(scopedKey('lastView'));
+    sessionStorage.removeItem(scopedKey('lastTrace'));sessionStorage.removeItem(scopedKey('lastJudge'));sessionStorage.removeItem(scopedKey('lastAttribute'));sessionStorage.removeItem(scopedKey('lastCluster'));sessionStorage.removeItem(scopedKey('lastView'));
+    clearEvalAxes();
   }
 }
 function switchProject(){
   const savedInput=sessionStorage.getItem(scopedKey('input'));
   document.getElementById('input').value=savedInput || JSON.stringify(defaultInputs[project()] || {}, null, 2);
+  const evalAxesOn=EVAL_AXES_PROJECTS.includes(project());
+  document.getElementById('evalAxesBtn').style.display=evalAxesOn?'inline-block':'none';
+  document.getElementById('evalAxesStep').style.display=evalAxesOn?'block':'none';
   loadScopedState();renderAll();
 }
 async function initProjects(){
@@ -107,7 +122,6 @@ async function initProjects(){
 }
 function payload(){sessionStorage.setItem(scopedKey('input'),document.getElementById('input').value);return {project:project(),input:JSON.parse(document.getElementById('input').value)}}
 function traceMatchesCurrentInput(trace){return !!trace && trace.project_id===project() && JSON.stringify(trace.input || {})===JSON.stringify(payload().input)}
-function expectedIntent(){return document.getElementById('expected').value.trim()}
 function requireValue(value, name){if(!value){throw new Error('缺少 '+name+'，请先执行前一步。')}return value}
 async function refreshFrontendView(){
   if(!currentTrace && !currentJudge && !currentAttribute){currentView=null;sessionStorage.removeItem(scopedKey('lastView'));return null;}
@@ -219,7 +233,7 @@ function renderFulfillment(judge){
   const byId={};
   assessments.forEach(item=>{byId[item.expectation_id || '']=item;});
   const rows=expectations.map(exp=>{const assessment=byId[exp.expectation_id || ''] || {};return '<tr><td>'+escapeHtml(exp.expectation_id || '')+'</td><td>'+escapeHtml(exp.expected_outcome || '')+'</td><td>'+escapeHtml((exp.required_capabilities || []).join(', '))+'</td><td>'+escapeHtml(assessment.status || '-')+'</td><td>'+escapeHtml(exp.blocking?'是':'否')+'</td></tr>';}).join('');
-  return '<details class="inline-details" open><summary>业务预期达成矩阵（'+expectations.length+'项）</summary>'+
+  return '<details class="inline-details" open><summary>业务预期达成矩阵（'+expectations.length+'项）</summary>'+mainAxisSourceLine(judge)+
     '<div class="kv"><b>Overall Fulfillment：</b>'+escapeHtml(JSON.stringify(judge.overall_fulfillment || {}))+'</div>'+
     '<table style="width:100%;border-collapse:collapse"><thead><tr><th>Expectation</th><th>Expected Outcome</th><th>Capabilities</th><th>Status</th><th>Blocking</th></tr></thead><tbody>'+(rows || '<tr><td colspan="5" class="muted">无 fulfillment assessments</td></tr>')+'</tbody></table></details>';
 }
@@ -229,8 +243,14 @@ function renderAttributionFindings(attribute){
   return '<details class="inline-details" open><summary>已确认归因（'+findings.length+'项）</summary>'+
     '<table style="width:100%;border-collapse:collapse"><thead><tr><th>Finding</th><th>影响的 Expectations</th><th>结论</th><th>证据数</th></tr></thead><tbody>'+(rows || '<tr><td colspan="4" class="muted">尚无通过证据审查的 finding</td></tr>')+'</tbody></table></details>';
 }
+function mainAxisSourceLine(judge){const src=(judge.evidence || []).find(e=>e && typeof e==='object' && e.kind==='main_axis_source');return src?'<div class="kv"><b>来源：</b>扩展评估轴 · 能力兑现（主轴）</div>':'';}
 function fulfillmentStatusFromJudge(judge){const fulfillment=fulfillmentPanel();return fulfillment.overall_fulfillment?.status || judge?.display_status || judge?.overall_fulfillment?.status || '';}
-function fulfillmentBadgeState(status){return status==='fulfilled'?'ok':(status==='not_fulfilled'?'bad':(status==='not_evaluable'?'warn':''));}
+function fulfillmentBadgeState(status){
+  if(status==='fulfilled'||status==='sound'||status==='consistent'||status==='pass'){return 'ok';}
+  if(status==='not_fulfilled'||status==='problematic'||status==='coverage_gap'||status==='fail'){return 'bad';}
+  if(status==='not_evaluable'||status==='insufficient_evidence'||status==='not_applicable'||status==='contract_missing'){return 'warn';}
+  return '';
+}
 function carrierPanel(){return currentView?.capability_carrier_panel || {};}
 function carrierBadgeState(placement){return placement==='做错了'?'bad':(placement==='说不清'?'warn':'');}
 function renderCitation(cite){
@@ -239,11 +259,11 @@ function renderCitation(cite){
   const note=cite.note ? '：'+cite.note : '';
   return '<div class="kv" style="margin-left:14px">↳ '+escapeHtml(source+ref+note)+'</div>';
 }
-function renderCarrier(){
-  const report=carrierPanel();
+function renderCarrier(){return renderCarrierReport(carrierPanel(), '轴2承载性判定');}
+function renderCarrierReport(report, title){
   if(!report || !Object.keys(report).length){return '';}
   if(report.applicable===false){
-    return '<details class="inline-details"><summary>轴2承载性判定（不适用：轴1为 '+escapeHtml(report.axis1_status || '-')+'）</summary></details>';
+    return '<details class="inline-details"><summary>'+escapeHtml(title)+'（不适用：轴1为 '+escapeHtml(report.axis1_status || '-')+'）</summary></details>';
   }
   const placements=report.placements || [];
   const errors=report.errors || [];
@@ -257,8 +277,134 @@ function renderCarrier(){
       '<div class="kv">'+escapeHtml(item.reason || '')+'</div>'+missing+cites+trail+'</div>';
   }).join('');
   const errorRows=errors.map(item=>'<div class="kv"><b>'+escapeHtml(item.expectation_id || '')+'</b> 归位失败：'+escapeHtml(item.reason || '')+(item.last_error ? ' · '+escapeHtml(item.last_error) : '')+'</div>').join('');
-  return '<details class="inline-details" open><summary>轴2承载性判定（'+placements.length+'项归位'+(errors.length ? '，'+errors.length+'项失败' : '')+'）</summary>'+
+  return '<details class="inline-details" open><summary>'+escapeHtml(title)+'（'+placements.length+'项归位'+(errors.length ? '，'+errors.length+'项失败' : '')+'）</summary>'+
     '<div style="padding:0 12px 10px">'+(items || '<div class="kv muted">无未达成期望需要归位。</div>')+errorRows+'</div></details>';
+}
+// ---- 扩展评估轴（试验，新链路）----
+function axisStatusState(status){return status==='succeeded'?'ok':(status==='failed'?'bad':(status==='not_applicable'||status==='blocked'?'warn':''));}
+function axisTriggerText(result){
+  const decision=result.trigger_decision || {};
+  if(result.status==='disabled'){return '未启用。';}
+  if(decision.depend_on_satisfied===false){
+    return '上游未成功：'+Object.entries(decision.upstream || {}).map(([k,v])=>k+'='+v).join('，')+'。';
+  }
+  const matched=decision.trigger_when_matched;
+  if(matched && typeof matched==='object'){
+    return '筛选：'+matched.axis+' 的结论为 '+escapeHtml(matched.verdict ?? 'null')+'，'+(matched.matched?'命中':'未命中')+' ['+(matched.verdict_in || []).join('/')+']。';
+  }
+  return '';
+}
+function renderAxisResult(result, axisType){
+  const title=(axisType && axisType.title ? axisType.title+' ' : '')+result.type_id;
+  const head='<div class="kv"><b>'+escapeHtml(title)+'</b> <span class="badge '+axisStatusState(result.status)+'">'+escapeHtml(result.status)+'</span>'+
+    (result.verdict ? ' → <span class="badge '+fulfillmentBadgeState(result.verdict)+'">'+escapeHtml(result.verdict)+'</span>'+(result.verdict_description?' <span class="muted">'+escapeHtml(result.verdict_description)+'</span>':'') : '')+'</div>';
+  const trigger=axisTriggerText(result);
+  const summaryText=(result.summary && result.summary.text && result.status==='succeeded') ? '<div class="kv"><b>解释：</b>'+escapeHtml(result.summary.text)+'</div>' : '';
+  const usage=result.usage || {};
+  const usageText=Object.keys(usage).length ? '<div class="kv muted">调用：'+escapeHtml(usage.llm_calls ?? '-')+' 次模型'+(usage.llm_model?'（'+escapeHtml(usage.llm_model)+(usage.llm_endpoint?' @ '+escapeHtml(usage.llm_endpoint):'')+'）':'')+' · '+escapeHtml(usage.tool_calls ?? '-')+' 次工具 · '+escapeHtml(usage.elapsed_ms ?? '-')+' ms'+(usage.model_policy?' · 模型策略 '+escapeHtml(usage.model_policy):'')+' · 记录 '+escapeHtml(result.execution_trace_ref || '')+'</div>' : '';
+  const error=result.error ? '<div class="kv"><b>失败原因：</b>'+escapeHtml(result.error)+'</div>' : '';
+  let body='';
+  const output=result.output;
+  if(output){
+    if(result.type_id==='fulfillment'){
+      body=(output.reasoning_summary?'<div class="kv"><b>原因：</b>'+escapeHtml(output.reasoning_summary)+'</div>':'')+renderFulfillment(output);
+    }else if(result.type_id==='carryability'){
+      body=renderCarrierReport(output, '承载性归位');
+    }else if(output.assessment && Array.isArray(output.results)){
+      body=renderProcessAxis(output);
+    }else{
+      body=collapsedJson('output', output);
+    }
+  }
+  const inputs=Object.keys(result.inputs_used || {}).length ? '<div class="kv muted">读了什么：'+escapeHtml(Object.values(result.inputs_used).join('；'))+'</div>' : '';
+  return '<div style="border-top:1px solid #e5e7eb;padding-top:10px;margin-top:10px">'+head+(trigger?'<div class="kv muted">'+trigger+'</div>':'')+error+summaryText+body+inputs+usageText+'</div>';
+}
+// 过程轴（本应 / 实际）：每条本应一行，没达到与无法核在前；问题、意外、未覆盖范围另列。
+function renderProcessAxis(output){
+  const a=output.assessment || {};
+  const rule=a.verdict_rule?'<div class="kv muted">汇总规则：'+escapeHtml(a.verdict_rule)+(a.scope_note?' · '+escapeHtml(a.scope_note):'')+'</div>':'';
+  const counts=(a.composition&&a.composition.counts)||{};
+  const parts=Object.keys(counts).length?'<div class="kv muted">组成：'+escapeHtml(Object.entries(counts).map(([k,v])=>k+' '+v).join('、'))+'</div>':'';
+  const rank={'没达到':0,'无法核':1,'达到':2};
+  const state={'没达到':'bad','无法核':'warn','达到':'ok'};
+  const quoteLines=quotes=>(quotes||[]).map(q=>'<div class="kv muted" style="margin-left:14px">引文 · '+escapeHtml(q.ref)+'：「'+escapeHtml(q.quote)+'」</div>').join('');
+  const results=(output.results||[]).slice().sort((x,y)=>(rank[x.verdict]??3)-(rank[y.verdict]??3));
+  const rows=results.map(r=>{
+    const text=r.verdict==='达到'?escapeHtml(r.observed||''):('本应：'+escapeHtml(r.statement||'')+'（依据：'+escapeHtml(r.basis||'')+'）；实际：'+escapeHtml(r.observed||''));
+    return '<div class="kv"><span class="badge '+(state[r.verdict]||'')+'">'+escapeHtml(r.verdict||'')+'</span> <b>'+escapeHtml(r.subcapability||'')+'</b> <span class="muted">@ '+escapeHtml(r.about||'')+'</span> '+text+quoteLines(r.quotes)+'</div>';
+  }).join('');
+  const unexpected=(output.unexpected||[]).map(u=>'<div class="kv"><b>意外</b> '+escapeHtml(u.observed||'')+'（'+escapeHtml(u.why||'')+'）'+quoteLines(u.quotes)+'</div>').join('');
+  const issues=(output.issues||[]).map(i=>'<div class="kv"><b>'+escapeHtml(i.problem_id)+'</b> '+escapeHtml(i.phenomenon||'')+'<div class="kv muted" style="margin-left:14px">归因：'+escapeHtml(i.attribution_detail||'')+'；影响：'+escapeHtml(i.impact||'')+'</div></div>').join('');
+  const gaps=(a.gaps||[]).length?'<div class="kv"><b>未覆盖的范围：</b>'+escapeHtml(a.gaps.join('；'))+'</div>':'';
+  return selectionText(output)+rule+parts
+    +'<details class="inline-details" open><summary>问题（'+(output.issues||[]).length+'）</summary><div style="padding:0 12px 10px">'+issues+'</div></details>'
+    +'<details class="inline-details"><summary>本应 / 实际（'+results.length+'）</summary><div style="padding:0 12px 10px">'+rows+'</div></details>'
+    +(unexpected?'<details class="inline-details" open><summary>意外（'+(output.unexpected||[]).length+'）</summary><div style="padding:0 12px 10px">'+unexpected+'</div></details>':'')
+    +gaps+collapsedJson('output', output);
+}
+// 分析轴为本轴选了哪些编号、为什么；超出预算未纳入的单独列明。
+function selectionText(output){
+  const selection=(output&&output.selection)||{};
+  const refs=selection.refs||[];
+  const view=(output&&output.view)||{};
+  if(!refs.length&&!view.chars){return '';}
+  const why=(selection.why||[]).map(w=>'<div class="kv muted" style="margin-left:14px">'+escapeHtml(w)+'</div>').join('');
+  const excluded=(view.excluded||[]).filter(e=>e.ref);
+  const note=excluded.length?'<div class="kv" style="color:#92400e">未纳入 '+excluded.length+' 条（超本轴视图预算或案卷无此编号），需要时须按缺证处理</div>':'';
+  return '<details class="inline-details"><summary>分析轴选给本轴的材料（'+refs.length+' 条，'+(view.chars||0)+' 字符）</summary><div style="padding:0 12px 10px">'+why+'<div class="kv muted" style="margin-left:14px">'+escapeHtml(refs.join('  '))+'</div>'+note+'</div></details>';
+}
+function renderEvalAxes(data){
+  showRaw('evalAxesRaw', data);
+  const human=document.getElementById('evalAxesHuman');
+  const title=document.getElementById('evalAxesTitle');
+  if(!data){setBadge('evalAxesBadgeInPanel','未运行','');if(title){title.textContent='扩展评估轴';}human.innerHTML='<div class="empty">尚未运行扩展评估轴。</div>';return;}
+  const results=data.results || [];
+  const types={};(data.types || []).forEach(t=>{types[t.type_id]=t;});
+  const traceEval=results.some(r=>r.type_id==='trace_analysis');
+  const mainAxis=!traceEval&&results.some(r=>r.type_id==='fulfillment'&&r.status!=='disabled');
+  if(title){title.textContent=traceEval?'过程证据（支撑主裁决）':(mainAxis?'评估轴（能力兑现即主结论）':'扩展评估轴');}
+  const failed=results.filter(r=>r.status==='failed').length;
+  const ran=results.filter(r=>r.status==='succeeded').length;
+  setBadge('evalAxesBadgeInPanel', ran+' 轴完成'+(failed?'，'+failed+' 失败':''), failed?'bad':(ran?'ok':'warn'));
+  const warnings=(data.warnings || []).map(w=>'<div class="kv" style="color:#92400e">⚠ '+escapeHtml(w)+'</div>').join('');
+  const header='<div class="kv"><b>场景：</b>'+escapeHtml(data.scenario_id || '-')+' · <b>run：</b>'+escapeHtml(data.run_id || '')+'</div>';
+  const guide=traceEval?'<div class="hint">开关打开时，过程链在主 Judge 之前执行；页面主状态只以主裁决为准，以下是它的证据与逐轴结论。</div>':(mainAxis?'<div class="hint">「能力兑现」是本预设的主轴，主结论取它；知识查证 / 真实性是它的依赖，任一失败整条判执行失败。</div>':'');
+  if(!results.length){human.innerHTML=header+warnings+'<div class="kv muted">该预设没有配置扩展评估轴。到资料页 → capability 预设 → 「扩展评估轴」添加。</div>';return;}
+  human.innerHTML=header+renderMainVerdict(data.main_verdict)+guide+warnings+results.map(r=>renderAxisResult(r, types[r.type_id])).join('');
+}
+// 主轴最终结论（后端 M 函数已合成）：结论 + 组成，哪几样给到、哪些被事实挡下、能不能做分没分清（demand/main_axis.md §4.3）。
+function renderMainVerdict(main){
+  if(!main||!main.verdict){return '';}
+  const state={'做成了':'ok','没做成':'bad','做不了':'warn','不确定':'warn'}[main.verdict]||'';
+  const c=main.composition||{};
+  const items=(c.items||[]).map(i=>'<tr><td>'+escapeHtml(i.expectation_id||'')+'</td><td>'+escapeHtml(i.status||'')+(i.placement?' · '+escapeHtml(i.placement):'')+'</td><td>'+(i.blocking===null?'待定':i.blocking?'blocking':'')+'</td><td>'+escapeHtml((i.claim_refs||[]).join('、'))+'</td></tr>').join('');
+  const flags=[(c.blocked_by_claims||[]).length?'挡下结论的事实：'+c.blocked_by_claims.join('、'):'', c.capability_undetermined?'能不能做没区分':'', c.claims_checked===false?'事实属实未核':''].filter(Boolean);
+  return '<div class="kv"><b>主轴结论：</b><span class="badge '+state+'">'+escapeHtml(main.verdict)+'</span> <span class="muted">'+escapeHtml(main.basis||'')+'</span></div>'+
+    (flags.length?'<div class="kv muted">'+escapeHtml(flags.join(' · '))+'</div>':'')+
+    (items?'<table class="axes-items"><thead><tr><th>期望</th><th>给到没有 · 能不能做</th><th></th><th>依据事实</th></tr></thead><tbody>'+items+'</tbody></table>':'');
+}
+let evalAxesTypesCache=null;
+async function evalAxesTypes(){
+  if(evalAxesTypesCache){return evalAxesTypesCache;}
+  try{evalAxesTypesCache=(await post('/api/eval_axes/types',{project:project()})).types || [];}catch(e){evalAxesTypesCache=[];}
+  return evalAxesTypesCache;
+}
+async function runEvalAxes(){
+  document.getElementById('status').textContent='扩展轴试验运行中...';
+  try{
+    if(!traceMatchesCurrentInput(currentTrace)){
+      clearCurrentRun();
+      currentTrace = await post('/api/live_run', payload());
+      sessionStorage.setItem(scopedKey('lastTrace'), JSON.stringify(currentTrace));
+      renderAll();
+    }
+    const data=await post('/api/eval_axes/run', {project:project(),trace:requireValue(currentTrace,'lastTrace')});
+    data.types=await evalAxesTypes();
+    currentEvalAxes=data;sessionStorage.setItem(scopedKey('lastEvalAxes'), JSON.stringify(data));
+    document.getElementById('evalAxesStep').open=true;
+    renderEvalAxes(currentEvalAxes);
+    document.getElementById('status').textContent='过程评测完成。页面主状态以主 Judge 裁决为准；逐轴证据见下方「过程证据」。';
+  }catch(err){document.getElementById('status').textContent='扩展轴试验失败：'+err.message}
 }
 function renderJudge(judge){
   const panel=judgePanel();
@@ -289,10 +435,11 @@ function renderAttribute(attribute){
   document.getElementById('attributeHuman').innerHTML =
     '<div class="kv"><b>归因总结：</b>'+escapeHtml(summaryText || '暂无归因总结')+'</div>'+renderAttributionFindings({...panel, findings})+renderStateMachine(currentTrace, judgePanel(), panel);
 }
-function renderAll(){renderTrace(currentTrace);renderJudge(currentJudge);renderAttribute(currentAttribute)}
+function renderAll(){renderTrace(currentTrace);renderJudge(currentJudge);renderAttribute(currentAttribute);renderEvalAxes(currentEvalAxes)}
 function clearCurrentRun(){
   currentTrace=null;currentJudge=null;currentAttribute=null;currentCluster=null;currentView=null;
   sessionStorage.removeItem(scopedKey('lastTrace'));sessionStorage.removeItem(scopedKey('lastJudge'));sessionStorage.removeItem(scopedKey('lastAttribute'));sessionStorage.removeItem(scopedKey('lastCluster'));sessionStorage.removeItem(scopedKey('lastView'));sessionStorage.removeItem(scopedKey('lastChain'));
+  clearEvalAxes();
   renderAll();
 }
 async function liveRun(){
@@ -315,10 +462,9 @@ async function runJudge(){
     if(!traceMatchesCurrentInput(currentTrace)){
       currentTrace = await post('/api/live_run', payload());
       sessionStorage.setItem(scopedKey('lastTrace'), JSON.stringify(currentTrace));
+      clearEvalAxes();   // trace 换了，旧的扩展轴结果不再对应
     }
     const body={project:project(),trace:requireValue(currentTrace,'lastTrace')};
-    const expected=expectedIntent();
-    if(expected){body.user_intent=expected;}
     const data=await post('/api/judge', body);
     currentJudge=data;currentAttribute=null;
     sessionStorage.setItem(scopedKey('lastJudge'), JSON.stringify(data));sessionStorage.removeItem(scopedKey('lastAttribute'));
@@ -342,8 +488,6 @@ async function runChain(){
   document.getElementById('status').textContent='全链路运行中...';
   try{
     const body=payload();
-    const expected=expectedIntent();
-    if(expected){body.user_intent=expected;}
     const data = await post('/api/run_chain', body);
     currentTrace=data.trace;currentJudge=data.judge;currentAttribute=data.attribute;currentCluster=data.cluster;currentView=data.frontend_view || null;
     sessionStorage.setItem(scopedKey('lastTrace'), JSON.stringify(currentTrace));

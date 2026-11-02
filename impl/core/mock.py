@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Dict, Any, List, Optional
 
-from impl.core.schema import MockCase, MockIntentOutput, ProjectSpec, SingleTurnCase, MultiTurnCase
+from impl.core.schema import MockCase, MockIntentOutput, ProjectSpec, SingleTurnCase
 from impl.core.mock_agent import MockAgent, build_spec_from_project
 
 
@@ -132,15 +132,13 @@ def build_mock_case(spec: ProjectSpec, case_data: Dict[str, Any]) -> "MockCase":
     MockBuildResult → MockCase 的映射：
       case_id          → id
       scenario         → scenario
-      user_intent      → intent.user_intent
-      query            → intent.query（_map_intent_result 新增字段，step2 不覆盖）
-      user_context     → intent.user_context
+      私有 user_intent/query/user_context 只用于 Driver 构造 live_request，不持久化
       input            → live_request（纯 REQUEST_SCHEMA 形状）
       output           → output
       reference        → reference
       metadata[pid]    → project_id（兜底用 spec.project_id）
     """
-    from .schema import MockCase, MockIntentOutput
+    from .schema import MockCase
     result = case_data.get("_result")
     if not result:
         # 无 _result 时从 case_data 字段构建（兼容旧调用方）
@@ -149,13 +147,7 @@ def build_mock_case(spec: ProjectSpec, case_data: Dict[str, Any]) -> "MockCase":
             id=str(case_data.get("id") or case_data.get("case_id") or f"mock-{spec.project_id}-{case_data.get('scenario', 'default')}"),
             project_id=str(case_data.get("project_id") or getattr(spec, "project_id", "") or case_data.get("metadata", {}).get("project_id", "")),
             scenario=str(case_data.get("scenario", "")),
-            intent=MockIntentOutput(
-                user_intent=str(case_data.get("user_intent") or ""),
-                query=str(inp.get("query") or case_data.get("user_intent") or ""),
-                user_context=dict(case_data.get("user_context") or case_data.get("metadata", {}).get("user_context", {})),
-                system_understanding=str(case_data.get("system_understanding") or case_data.get("metadata", {}).get("system_understanding", "")),
-                scenario=str(case_data.get("scenario") or ""),
-            ),
+            intent=None,
             live_request=inp,
             output=case_data.get("output"),
             reference=case_data.get("reference"),
@@ -166,13 +158,7 @@ def build_mock_case(spec: ProjectSpec, case_data: Dict[str, Any]) -> "MockCase":
         id=result.case_id,
         project_id=meta.get("project_id", spec.project_id),
         scenario=result.scenario or case_data.get("scenario", ""),
-        intent=MockIntentOutput(
-            user_intent=result.user_intent or "",
-            query=result.query or str((result.input or {}).get("query", "")),
-            user_context=dict(result.user_context or {}),
-            system_understanding=str(meta.get("system_understanding") or ""),
-            scenario=result.scenario or case_data.get("scenario", ""),
-        ),
+        intent=None,
         live_request=dict(result.input or {}),
         output=result.output,
         reference=result.reference,
@@ -192,7 +178,7 @@ def mock_case_to_single_turn(mc: "MockCase") -> SingleTurnCase:
       MockCase.project_id      → SingleTurnCase.metadata["project_id"]
       MockCase.intent.user_context → SingleTurnCase.metadata["user_context"]
     """
-    from .schema import MockCase, MockIntentOutput
+    from .schema import MockCase
     if not isinstance(mc, MockCase):
         raise TypeError(f"mock_case_to_single_turn 期望 MockCase，实际 {type(mc).__name__}")
 
@@ -210,6 +196,8 @@ def mock_case_to_single_turn(mc: "MockCase") -> SingleTurnCase:
             "system_understanding": mc.intent.system_understanding,
             "scenario": mc.intent.scenario,
         }
+    if isinstance(mc.seed, dict):
+        metadata["seed"] = dict(mc.seed)
 
     return SingleTurnCase(
         id=mc.id,
@@ -235,7 +223,7 @@ def parse_mock_case(value: Any, *, project_id: str = "") -> MockCase:
         missing = sorted(required.difference(value))
         if missing:
             raise ValueError(f"MockCase 缺少字段: {', '.join(missing)}")
-        unknown = sorted(set(value).difference(required | {"intent"}))
+        unknown = sorted(set(value).difference(required | {"intent", "seed"}))
         if unknown:
             raise ValueError(f"MockCase 包含未知字段: {', '.join(unknown)}")
         intent = value.get("intent")
@@ -244,6 +232,9 @@ def parse_mock_case(value: Any, *, project_id: str = "") -> MockCase:
         live_request = value.get("live_request")
         if not isinstance(live_request, dict):
             raise ValueError("MockCase.live_request 必须是对象")
+        seed = value.get("seed")
+        if seed is not None and not isinstance(seed, dict):
+            raise ValueError("MockCase.seed 必须是对象或 null")
         case = MockCase(
             id=str(value.get("id") or ""),
             project_id=str(value.get("project_id") or ""),
@@ -258,6 +249,7 @@ def parse_mock_case(value: Any, *, project_id: str = "") -> MockCase:
             live_request=dict(live_request),
             output=value.get("output"),
             reference=value.get("reference"),
+            seed=dict(seed) if isinstance(seed, dict) else None,
         )
     else:
         raise TypeError(f"MockCase 必须是对象，实际 {type(value).__name__}")
@@ -271,24 +263,17 @@ def parse_mock_case(value: Any, *, project_id: str = "") -> MockCase:
 
 
 def single_turn_to_mock_case(stc: SingleTurnCase, project_id: str) -> "MockCase":
-    """SingleTurnCase → MockCase（旧数据迁移 / 向前兼容）。
-
-    SingleTurnCase 转 MockCase 时需补 project_id（SingleTurnCase 无顶层 project_id）。
-    意图层退化：intent.query 从 input.query 或 user_intent 推断。
-    """
-    from .schema import MockCase, MockIntentOutput
+    """SingleTurnCase → MockCase；只固化可见请求，不转存运行时私有意图。"""
+    from .schema import MockCase
     inp = dict(stc.input or {})
     meta = dict(stc.metadata or {})
     return MockCase(
         id=stc.id,
         project_id=project_id or meta.get("project_id", ""),
         scenario=stc.scenario,
-        intent=MockIntentOutput(
-            user_intent=stc.user_intent,
-            query=str(inp.get("query") or stc.user_intent or ""),
-            user_context=dict(meta.get("user_context", {})),
-        ),
+        intent=None,
         live_request=inp,
         output=stc.output,
         reference=stc.reference,
+        seed=dict(meta["seed"]) if isinstance(meta.get("seed"), dict) else None,
     )

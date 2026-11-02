@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 import time
 import urllib.error
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-from impl.core.live_protocol import LiveServiceUnavailableError, MultiTurnInteractiveLive, RealServiceLive
+from impl.core.live_protocol import LiveServiceUnavailableError, RealServiceLive
 from impl.core.live_transport import LiveTransport
 from impl.core.schema import ExecutionTraceEvent, LiveRequest, MultiTurnCase, ProjectSpec, SingleTurnCase
 
@@ -566,10 +566,10 @@ def _infer_scenario(input_data: Dict[str, Any], turns: List[Dict[str, Any]]) -> 
     return "execution_planning"
 
 
-class MarketingPlanningLive(RealServiceLive, MultiTurnInteractiveLive):
+class MarketingPlanningLive(RealServiceLive):
     """marketting-planning 项目 Live 实现。
 
-    继承 RealServiceLive（投递模式=真实服务）+ MultiTurnInteractiveLive（交互模式=多轮）。
+    继承 RealServiceLive（投递模式=真实服务）。
     多轮主循环现在在 execute_live 内部（spec 第十一节 2），不再通过独立的 deliver_multi_turn。
     """
 

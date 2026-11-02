@@ -22,6 +22,9 @@ llm:
   temperature: 0
   reasoning_effort: high
   request_timeout_seconds: 600
+  # 流式取回。中转站前面的网关（ALB 默认 60s、Cloudflare 100s）超时看的是两次收包间隔，
+  # 非流式要等整段生成完才回第一个字节，大 prompt 必撞 504；流式 prefill 一结束就持续收包。
+  stream: true
   capabilities:
     json_mode: true
     tool_calls: true
@@ -48,7 +51,7 @@ execution:
 context:
   data_root: verifier://impl/data/context_runtime
   store_root: verifier://impl/data/context_store
-  max_records_per_project: 200
+  max_records_per_project: 500
   candidate_limit: 20
   load_limit: 8
   content_char_budget: 100000
@@ -57,6 +60,14 @@ context:
 
 judge:
   raw_response_max_chars: 4000
+
+# 扩展评估轴（spec/adapter/axe-v4.md）的模型策略，只影响扩展轴，不影响生产 judge / 裁决：
+#   any        按公共 LLM 路由回退，哪个端点可用就用哪个
+#   same_model 只允许与角色策略同名模型的端点（中转站可不同）；同模型都不可用则该轴 failed，不换模型顶替
+# 可用 .env 的 EVAL_AXES_MODEL_POLICY 覆盖。
+# 知识源（ES 等）不在这里：各业务系统各自独立，按名字登记在 impl/data/<project>/knowledge_sources.json。
+eval_axes:
+  model_policy: any
 
 attribute:
   tool_call_limit: 8
@@ -136,6 +147,20 @@ environment:
       secret: false
       description: 临时覆盖公共 LLM model
 
+    LLM_REQUEST_TIMEOUT_SECONDS:
+      bind: llm.request_timeout_seconds
+      type: number
+      required: false
+      secret: false
+      description: 临时覆盖单次 LLM 请求的超时秒数（yaml 默认 600）。对照跑批在自己进程里把它压短，挂起的请求不用等满 10 分钟才切端点
+
+    LLM_STREAM:
+      bind: llm.stream
+      type: boolean
+      required: false
+      secret: false
+      description: 是否流式取回 LLM 回复（默认 true）。false 退回非流式，只在排查中转站不支持 SSE 时用
+
     LLM_BASE_URL:
       bind: llm.base_url
       type: url
@@ -178,6 +203,20 @@ environment:
       secret: true
       description: 备用 LLM 端点 1 的 API Key
 
+    LLM_FALLBACK_1_MAX_PROMPT_CHARS:
+      bind: llm.fallback_1.max_prompt_chars
+      type: integer
+      required: false
+      secret: false
+      description: 备用 LLM 端点 1 可接受的 prompt 字符上限；不填则不做预检过滤
+
+    LLM_FALLBACK_1_TOOL_CALLS:
+      bind: llm.fallback_1.tool_calls
+      type: boolean
+      required: false
+      secret: false
+      description: 备用 LLM 端点 1 能否真正执行工具调用；默认 true，不支持就填 false（带工具的请求不再发给它）
+
     LLM_FALLBACK_2_BASE_URL:
       bind: llm.fallback_2.base_url
       type: url
@@ -198,6 +237,34 @@ environment:
       required: false
       secret: true
       description: 备用 LLM 端点 2 的 API Key
+
+    LLM_FALLBACK_2_MAX_PROMPT_CHARS:
+      bind: llm.fallback_2.max_prompt_chars
+      type: integer
+      required: false
+      secret: false
+      description: 备用 LLM 端点 2 可接受的 prompt 字符上限；不填则不做预检过滤
+
+    LLM_FALLBACK_2_TOOL_CALLS:
+      bind: llm.fallback_2.tool_calls
+      type: boolean
+      required: false
+      secret: false
+      description: 备用 LLM 端点 2 能否真正执行工具调用；默认 true
+
+    LLM_MAX_PROMPT_CHARS:
+      bind: llm.max_prompt_chars
+      type: integer
+      required: false
+      secret: false
+      description: 主端点可接受的 prompt 字符上限；不填则不做预检过滤
+
+    LLM_TOOL_CALLS:
+      bind: llm.tool_calls
+      type: boolean
+      required: false
+      secret: false
+      description: 主端点能否真正执行工具调用；默认 true，不支持就填 false
 
     BAILIAN_API_KEY:
       bind: embedding.api_key
@@ -243,3 +310,11 @@ environment:
       required: false
       secret: false
       description: LLM context 记录存储目录
+
+    EVAL_AXES_MODEL_POLICY:
+      bind: eval_axes.model_policy
+      type: string
+      required: false
+      secret: false
+      description: 扩展评估轴的模型策略：any=按路由回退能用哪个端点用哪个；same_model=只允许与角色策略同名模型的端点（中转站可不同），同模型都不可用则该轴 failed。只影响扩展评估轴，不影响生产 judge/裁决
+

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from ..llm_tracing import submit_with_context
 from dataclasses import replace
 from itertools import combinations
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
@@ -432,7 +433,8 @@ class ContextRuntime:
 
         records = [entries[unit_id]["record"] for unit_id in normalized_ids]
         with ThreadPoolExecutor(max_workers=min(4, len(records))) as executor:
-            contents = list(executor.map(self._resolve_content, records))
+            futures = [submit_with_context(executor, self._resolve_content, record) for record in records]
+            contents = [future.result() for future in futures]
         total_chars = sum(len(content) for content in contents)
         if total_chars > policy.content_char_budget:
             raise ContextBudgetError(

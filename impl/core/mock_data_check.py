@@ -17,6 +17,8 @@
 """
 from __future__ import annotations
 
+from .instances import data_root
+
 import dataclasses
 import importlib
 import json
@@ -87,14 +89,14 @@ class CheckReport:
 # ── 1. Fixture 数据检查 ──
 
 def check_fixture_file_exists(project_id: str) -> CheckItem:
-    path = IMPL_ROOT / "data" / project_id / "mock_cases.json"
+    path = data_root(IMPL_ROOT.parent) / project_id / "mock_cases.json"
     if path.exists():
         return CheckItem("fixture_file_exists", True, str(path))
     return CheckItem("fixture_file_exists", False, f"missing: {path}")
 
 
 def check_fixture_is_valid_json(project_id: str) -> CheckItem:
-    path = IMPL_ROOT / "data" / project_id / "mock_cases.json"
+    path = data_root(IMPL_ROOT.parent) / project_id / "mock_cases.json"
     try:
         with open(path, encoding='utf-8') as f:
             data = json.load(f)
@@ -107,7 +109,7 @@ def check_fixture_is_valid_json(project_id: str) -> CheckItem:
 
 def check_fixture_mockcase_format(project_id: str) -> CheckItem:
     """检查所有 case 是否都是 MockCase 格式（intent + live_request）。"""
-    path = IMPL_ROOT / "data" / project_id / "mock_cases.json"
+    path = data_root(IMPL_ROOT.parent) / project_id / "mock_cases.json"
     with open(path, encoding='utf-8') as f:
         cases = json.load(f)
     bad = []
@@ -121,7 +123,7 @@ def check_fixture_mockcase_format(project_id: str) -> CheckItem:
 
 def check_fixture_no_legacy_fields(project_id: str) -> CheckItem:
     """检查是否还有旧格式字段（input, source, status, metadata 在顶层）。"""
-    path = IMPL_ROOT / "data" / project_id / "mock_cases.json"
+    path = data_root(IMPL_ROOT.parent) / project_id / "mock_cases.json"
     with open(path, encoding='utf-8') as f:
         cases = json.load(f)
     legacy_keys = {"input", "source", "status", "table_row", "expected_intent", "user_context"}
@@ -137,7 +139,7 @@ def check_fixture_no_legacy_fields(project_id: str) -> CheckItem:
 
 def check_fixture_schema_validation(project_id: str) -> CheckItem:
     """live_schema.check_all() 校验所有 fixture case。"""
-    path = IMPL_ROOT / "data" / project_id / "mock_cases.json"
+    path = data_root(IMPL_ROOT.parent) / project_id / "mock_cases.json"
     with open(path, encoding='utf-8') as f:
         cases = json.load(f)
     ls = load_live_schema(project_id)
@@ -152,7 +154,7 @@ def check_fixture_schema_validation(project_id: str) -> CheckItem:
 
 def check_fixture_normalize_roundtrip(project_id: str) -> CheckItem:
     """MockCase → normalize_mock_case → SingleTurnCase → MockCase 往返一致。"""
-    path = IMPL_ROOT / "data" / project_id / "mock_cases.json"
+    path = data_root(IMPL_ROOT.parent) / project_id / "mock_cases.json"
     with open(path, encoding='utf-8') as f:
         cases = json.load(f)
     errors = []
@@ -173,7 +175,7 @@ def check_fixture_normalize_roundtrip(project_id: str) -> CheckItem:
 
 def check_fixture_scenario_coverage(project_id: str) -> CheckItem:
     """检查 fixture 场景覆盖是否与 ProjectSpec 场景目录对齐。"""
-    path = IMPL_ROOT / "data" / project_id / "mock_cases.json"
+    path = data_root(IMPL_ROOT.parent) / project_id / "mock_cases.json"
     with open(path, encoding='utf-8') as f:
         cases = json.load(f)
     defined = set(load_project(project_id).scenarios)
@@ -279,7 +281,7 @@ def check_live_schema_dataclass_export(project_id: str) -> CheckItem:
 def check_live_schema_fields_match_fixture(project_id: str) -> CheckItem:
     """fixture 的 live_request 字段是 REQUEST_SCHEMA 字段的子集（不额外）。"""
     import dataclasses
-    path = IMPL_ROOT / "data" / project_id / "mock_cases.json"
+    path = data_root(IMPL_ROOT.parent) / project_id / "mock_cases.json"
     with open(path, encoding='utf-8') as f:
         cases = json.load(f)
     ls = load_live_schema(project_id)
@@ -297,7 +299,7 @@ def check_live_schema_fields_match_fixture(project_id: str) -> CheckItem:
 
 def check_mockcase_intent_consistency(project_id: str) -> CheckItem:
     """fixture 的 intent 层字段一致（user_intent/query 至少有一个非空）。"""
-    path = IMPL_ROOT / "data" / project_id / "mock_cases.json"
+    path = data_root(IMPL_ROOT.parent) / project_id / "mock_cases.json"
     with open(path, encoding='utf-8') as f:
         cases = json.load(f)
     issues = []
@@ -315,7 +317,7 @@ def check_mockcase_intent_consistency(project_id: str) -> CheckItem:
 
 def check_mockcase_ready_protocol(project_id: str) -> CheckItem:
     """ready 协议一致性：output/reference 按声明存在。"""
-    path = IMPL_ROOT / "data" / project_id / "mock_cases.json"
+    path = data_root(IMPL_ROOT.parent) / project_id / "mock_cases.json"
     with open(path, encoding='utf-8') as f:
         cases = json.load(f)
     ready = set(load_project(project_id).ready)
@@ -421,7 +423,7 @@ def check_fixture_id_uniqueness(project_id: str = "") -> CheckItem:
     seen: Dict[str, str] = {}
     duplicates: List[str] = []
     for pid in project_ids:
-        path = IMPL_ROOT / "data" / pid / "mock_cases.json"
+        path = data_root(IMPL_ROOT.parent) / pid / "mock_cases.json"
         if not path.exists():
             continue
         with open(path, encoding='utf-8') as f:
@@ -454,7 +456,7 @@ def check_fixture_required_fields_present(project_id: str) -> CheckItem:
         return CheckItem("fixture_required_fields_present", False, "REQUEST_SCHEMA not a dataclass")
     required = {f.name for f in dataclasses.fields(req_cls) if _is_required_field(f)}
 
-    path = IMPL_ROOT / "data" / project_id / "mock_cases.json"
+    path = data_root(IMPL_ROOT.parent) / project_id / "mock_cases.json"
     with open(path, encoding='utf-8') as f:
         cases = json.load(f)
     issues = []

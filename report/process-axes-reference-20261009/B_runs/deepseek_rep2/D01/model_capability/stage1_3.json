@@ -1,0 +1,111 @@
+{
+ "meta": {
+  "elapsed": 58,
+  "prompt_tokens": 3746,
+  "completion_tokens": 10941,
+  "reasoning_tokens": 9440
+ },
+ "attempt": 1,
+ "result": {
+  "instance": "第4次模型调用（三次 customer_search 返回 AMBIGUOUS 后）",
+  "items": [
+   {
+    "id": "R1",
+    "type": "推出",
+    "statement": "本轮只应处理“列出名下姓平、12月份生日的女性客户并按客户号升序供用户选择”这一子任务，不应在本轮查询选中客户的详细资料或保单状态。",
+    "basis": "冻结期望E：query_selected_client_detail_info/query_selected_client_policy_status 条件均为“确定选中客户后”；用户原话“确定后再查选中客户的详细资料和保单状态”。"
+   },
+   {
+    "id": "R2",
+    "type": "守恒",
+    "statement": "待查条件在输出中必须保持为“名下（当前用户归属）”“姓平”“12月份生日”“女性”“按客户号升序”，不得改写成其他姓氏、性别、生日月份或排序。",
+    "basis": "用户原话“我名下姓平、12月份生日的女性客户，按客户号升序列出来”；冻结期望E：list_female_clients_surname_ping_born_in_december 条件“总是”。"
+   },
+   {
+    "id": "R3",
+    "type": "推出",
+    "statement": "不得将三次 customer_search 的 AMBIGUOUS 返回解释为“没有符合条件的客户”，也不得据此给出任何客户数量、姓名、客户号或列表。",
+    "basis": "工具返回 execution.status=AMBIGUOUS、message“尚未执行客户查询”、gaps“筛选条件或排序未能可靠解析”；系统规则“null/空值不等于零或否”“未筛选、缺失须披露”。"
+   },
+   {
+    "id": "R4",
+    "type": "推出",
+    "statement": "正确输出应披露客户筛选未执行、筛选条件或排序未可靠解析，因此尚未产出可供选择的客户列表。",
+    "basis": "工具返回 execution.message 与 gaps；系统规则“execution 中未筛选、未取全、冲突、缺失或失败须披露”“gaps:string[] 列未确认项”。"
+   },
+   {
+    "id": "R5",
+    "type": "推出",
+    "statement": "在连续三次同一 customer_search 均返回 AMBIGUOUS 后，不应继续原样重复或反复改写同一失败查询去猜条件。",
+    "basis": "系统规则“不得反复猜别名、改写同一问题或重复调用已失败来源”；三次工具返回 status=AMBIGUOUS。"
+   },
+   {
+    "id": "R6",
+    "type": "推出",
+    "statement": "若仍无法解析筛选条件或缺少“我名下”的归属/关键实体，正确输出应单独调用 ask_clarify 请求用户补充可用的客户姓名、完整客户号、性别、生日月份或确认归属，且 ask_clarify 不得与任何其他工具并行。",
+    "basis": "系统规则“无可答事实且缺关键实体时才澄清”“ask_clarify、两个 present_*_search_card 和 run_* 流程工具不能与任何其他工具并行”；工具返回提示可使用客户姓名、完整客户号、手机号、性别、生日月份等条件。"
+   },
+   {
+    "id": "R7",
+    "type": "推出",
+    "statement": "本轮不应调用 customer_detail 或保单状态查询工具，因为还没有用户确认选中的客户。",
+    "basis": "冻结期望E：query_selected_client_detail_info/query_selected_client_policy_status 条件“确定选中客户后”；系统工具分工“已有客户中心ID要画像 → customer_detail”；用户原话“确定后再查”。"
+   },
+   {
+    "id": "R8",
+    "type": "推出",
+    "statement": "fact_refs 只能填写本轮工具返回 facts 中的 fact_id；本次 customer_search 返回中没有 facts，因此输出中不得填写任何 fact_id 或猜测 ID。",
+    "basis": "输出契约“fact_refs:string[] 仅填工具返回 facts 的 fact_id，禁止猜造 ID”；工具返回无 facts。"
+   },
+   {
+    "id": "R9",
+    "type": "推出",
+    "statement": "answer_draft 必须是首字段、结论先行；gaps 应列未确认项；needs_user_input 应表示本轮是否等待用户；task_updates 只写说明。",
+    "basis": "system 输出 JSON 契约“answer_draft:string 必须是首字段”“gaps:string[] 列未确认项”“needs_user_input:boolean 表示本轮是否等待用户”“task_updates:string[] 只写说明”。"
+   },
+   {
+    "id": "R10",
+    "type": "推出",
+    "statement": "不得用 present_customer_search_card 单独结束本轮，因为当前用户原话还包含选择后查询详情和保单状态，完整目标不止客户清单，且当前没有可用候选卡片。",
+    "basis": "系统规则“仅当本轮完整目标是客户/保单清单且卡片足以答复时，单独调用零参数present_customer_search_card”“还需回答字段、详情、数量、解释、比较、推荐或其他子任务……用普通搜索”。"
+   },
+   {
+    "id": "R11",
+    "type": "外部真值",
+    "statement": "当前用户名下是否存在姓平、12月份生日的女性客户，以及其按客户号升序的列表，必须由客户业务数据库查证；仅凭本次输入和 AMBIGUOUS 工具返回无法确定。",
+    "basis": "用户原话与冻结期望E：list_female_clients_surname_ping_born_in_december；工具返回未执行客户查询。"
+   },
+   {
+    "id": "R12",
+    "type": "外部真值",
+    "statement": "选中客户的详细资料和保单状态必须等选中后用客户/保单业务数据查证；当前未选中，不能给出。",
+    "basis": "冻结期望E：query_selected_client_detail_info/query_selected_client_policy_status 条件“确定选中客户后”。"
+   },
+   {
+    "id": "R13",
+    "type": "推出",
+    "statement": "不得用 general_qa、常识、候选目录或旧实时数据冒充客户筛选结果。",
+    "basis": "系统规则“不得用通用问答绕过专用工具的领域边界、实体确认或权限限制”“没有适用来源时据实收尾”；工具分工“客户：定位、筛选、计数 → customer_search”。"
+   },
+   {
+    "id": "R14",
+    "type": "推出",
+    "statement": "同工具最多4次，当前 customer_search 已用3次，剩余1次；若继续调用 customer_search，应避免重复已失败查询。",
+    "basis": "系统规则“同工具最多4次”“不得反复猜别名、改写同一问题或重复调用已失败来源”。"
+   },
+   {
+    "id": "R15",
+    "type": "推出",
+    "statement": "若无法产出候选且需要用户补充可解析条件或确认归属，needs_user_input 应为 true。",
+    "basis": "输出契约“needs_user_input:boolean 表示本轮是否等待用户”；用户要求列出候选供其选择但当前无候选。"
+   }
+  ],
+  "not_covered": [
+   "无法仅凭输入确定“我名下”对应的具体客户经理/用户身份及其权限范围。",
+   "无法确定客户业务数据库中实际是否存在符合条件客户及客户号升序结果，需外部查证。",
+   "无法确定工具 AMBIGUOUS 的具体触发项是姓氏、生日月份、排序还是归属中的哪一项，工具返回未细分。",
+   "无法确定本轮最终应选择 ask_clarify 还是普通回答收尾的具体文本，只要满足所列约束即可。",
+   "第5次及后续调用输出不在本对象覆盖范围内。"
+  ]
+ }
+}

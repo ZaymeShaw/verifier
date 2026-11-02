@@ -432,13 +432,6 @@ def judge_trace(
             excluded_segments.extend(excluded)
         governance_config["excluded_segments"] = excluded_segments
 
-    if not user_intent and project_judge_context:
-        user_intent = project_judge_context.get("user_intent") or (
-            project_judge_context.get("intent_frame", {}).get("user_intent")
-            if isinstance(project_judge_context.get("intent_frame"), dict)
-            else None
-        )
-
     system = (
         "你是通用评估系统的 judge agent。\n\n"
         "## 核心原则\n"
@@ -808,12 +801,14 @@ def _reprompt_judge(
             ),
             reprompt=True,
         )
+    # reprompt 是窄修复任务（只按错误路径改字段），不需要 high 的推理预算。
     return client.complete_json(
         system,
         reprompt_user,
         trace_id=trace_id,
         output_spec=output_spec,
         stage="judge-reprompt",
+        reasoning_effort="low",
     )
 
 

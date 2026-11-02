@@ -1,0 +1,238 @@
+{
+ "meta": {
+  "elapsed": 84,
+  "prompt_tokens": 26892,
+  "completion_tokens": 19578,
+  "reasoning_tokens": 17165
+ },
+ "attempt": 1,
+ "result": {
+  "results": [
+   {
+    "id": "整轮.R1",
+    "verdict": "not_met",
+    "observation": "gate 输出 action=AGENT，随后 to_agent 条件走了 if 分支；没有走 to_direct。用户已提供完整保单号 P260922000005855，且 policy_detail 适用。",
+    "refs": [
+     "turn1/records/run/step_results/1 output.action=AGENT",
+     "turn1/records/run/step_results/2 output=Condition to_agent completed with 3 results (if branch)",
+     "t1.user P260922000005855是谁的保单？投保人和被保人分别是谁？当前状态呢？"
+    ]
+   },
+   {
+    "id": "整轮.R2",
+    "verdict": "not_met",
+    "observation": "记录步骤为 assemble→gate→to_agent→agent_input→agent→agent_bridge→finalize；没有 to_direct/direct 步骤。policy_detail 由 agent 调用一次，参数 polno=P260922000005855。",
+    "refs": [
+     "turn1/records/run/step_results/0",
+     "turn1/records/run/step_results/1",
+     "turn1/records/run/step_results/2",
+     "turn1/records/run/step_results/3",
+     "turn1/records/run/step_executor_runs/0/messages/1"
+    ]
+   },
+   {
+    "id": "整轮.R3",
+    "verdict": "met",
+    "observation": "案卷中没有 ask_clarify 调用；唯一工具调用为 policy_detail。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/1 tool_calls=policy_detail",
+     "turn1/records/run/step_executor_runs/0/tools/0 name=policy_detail"
+    ]
+   },
+   {
+    "id": "整轮.R4",
+    "verdict": "met",
+    "observation": "没有 present_policy_search_card 或 present_customer_search_card 调用；最终走 finalize 输出。",
+    "refs": [
+     "turn1/records/run/step_results/3 name=finalize",
+     "turn1/records/run/step_executor_runs/0/tools/0 name=policy_detail"
+    ]
+   },
+   {
+    "id": "整轮.R5",
+    "verdict": "met",
+    "observation": "只发起一次 policy_detail 调用，无并行调用，无额外工具调用。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/1",
+     "turn1/records/run/step_executor_runs/0/tools/0"
+    ]
+   },
+   {
+    "id": "整轮.R6",
+    "verdict": "not_met",
+    "observation": "policy_detail 返回 records 且包含 applicant_name/insurant_name/pol_status_desc，但 agent 输出 JSON 只有 answer_draft/fact_refs/gaps/needs_user_input，没有按字段生成 claims；agent_bridge 也只输出 facts，没有 claims。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3 content JSON",
+     "turn1/records/run/step_results/2/steps/2 output facts",
+     "turn1/records/run/step_executor_runs/0/messages/2 facts F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002/003/005"
+    ]
+   },
+   {
+    "id": "整轮.R7",
+    "verdict": "met",
+    "observation": "工具执行 status=SUCCESS，返回三个字段；agent_bridge 标 PARTIAL 但使用了返回字段，且未重复调用 policy_detail。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2 execution.status=SUCCESS",
+     "turn1/records/run/step_results/2/steps/2 output.status=PARTIAL",
+     "turn1/records/run/step_executor_runs/0/messages/1 one call"
+    ]
+   },
+   {
+    "id": "整轮.R8",
+    "verdict": "met",
+    "observation": "未触发 EMPTY；工具返回有 data.records。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2 data.records total=2"
+    ]
+   },
+   {
+    "id": "整轮.R9",
+    "verdict": "met",
+    "observation": "未触发 DENIED/OVERLOADED/wait_batch/失败；工具执行 SUCCESS。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2 execution.status=SUCCESS"
+    ]
+   },
+   {
+    "id": "整轮.R10",
+    "verdict": "met",
+    "observation": "两行险种记录的 applicant_name、insurant_name、pol_status_desc 一致，未出现同字段冲突合成。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2 records[0]/[1]"
+    ]
+   },
+   {
+    "id": "整轮.R11",
+    "verdict": "met",
+    "observation": "输出使用 plan_full_name/pol_product_name 的标准全称，未把 plan_code 当产品名。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3 content=平安安佑福（惠享版）定期重大疾病保险",
+     "turn1/records/run/step_executor_runs/0/messages/2 plan_code=1813/1815"
+    ]
+   },
+   {
+    "id": "整轮.R12",
+    "verdict": "met",
+    "observation": "agent 输出 JSON 包含 answer_draft、fact_refs、gaps、needs_user_input=false。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3 content JSON"
+    ]
+   },
+   {
+    "id": "整轮.R13",
+    "verdict": "met",
+    "observation": "最终输出保留 P260922000005855，未替换。",
+    "refs": [
+     "turn1/records/run/step_results/3 output.answer=保单 P260922000005855...",
+     "turn1.delivered_output output.answer=保单 P260922000005855..."
+    ]
+   },
+   {
+    "id": "整轮.R14",
+    "verdict": "met",
+    "observation": "最终输出覆盖投保人、被保人、保单状态三项。",
+    "refs": [
+     "turn1/records/run/step_results/3 output.answer=保单 P260922000005855: 投保人:任言琳 被保人:任言琳 保单状态:交费有效"
+    ]
+   },
+   {
+    "id": "整轮.R15",
+    "verdict": "met",
+    "observation": "最终输出未加入工具未返回的业务结论；额外提及的两个险种名称来自工具返回的 plan_full_name。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3 content=主险/附加险...",
+     "turn1/records/run/step_executor_runs/0/messages/2 records plan_full_name"
+    ]
+   },
+   {
+    "id": "整轮.R16",
+    "verdict": "met",
+    "observation": "投保人/被保人/状态均来自 policy_detail 的 facts。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/2 facts F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002/003/005"
+    ]
+   },
+   {
+    "id": "整轮.R17",
+    "verdict": "met",
+    "observation": "唯一工具调用为只读 policy_detail，无写操作。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0 name=policy_detail"
+    ]
+   },
+   {
+    "id": "整轮.R18",
+    "verdict": "met",
+    "observation": "仅 1 次 policy_detail 调用，低于 12 次工具/4 次同工具上限。",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/tools/0",
+     "turn1/records/run/step_results/2/steps/0 output=剩余...12 次工具调用..."
+    ]
+   },
+   {
+    "id": "整轮.R19",
+    "verdict": "met",
+    "observation": "最终输出未提及金额，未涉及币种/时点。",
+    "refs": [
+     "turn1/records/run/step_results/3 output.answer"
+    ]
+   },
+   {
+    "id": "整轮.R20",
+    "verdict": "not_met",
+    "observation": "gaps 和 limitations 出现“部分内容未能在本轮证据中对应，请结合原始资料核实。”其中“本轮证据”属内部/过程词。",
+    "refs": [
+     "turn1/records/run/step_results/3 output.gaps",
+     "turn1/records/run/step_results/2/steps/2 output.gaps"
+    ]
+   }
+  ],
+  "problems": [
+   {
+    "phenomenon": "路由分支选择错误：gate 输出 action=AGENT，随后走 to_agent 分支，而不是 to_direct；因此步骤序列缺少 direct，policy_detail 由 agent 调用而非 direct。",
+    "violates": [
+     "整轮.R1",
+     "整轮.R2"
+    ],
+    "attribution": "本轴",
+    "impact": "yes",
+    "refs": [
+     "turn1/records/run/step_results/1 output.action=AGENT",
+     "turn1/records/run/step_results/2 output=Condition to_agent completed with 3 results (if branch)",
+     "turn1/records/run/step_executor_runs/0/messages/1 tool_calls=policy_detail"
+    ]
+   },
+   {
+    "phenomenon": "policy_detail 已返回 applicant_name/insurant_name/pol_status_desc，但 agent 输出 JSON 只有 answer_draft/fact_refs/gaps/needs_user_input，没有按字段生成 claims；agent_bridge 也只输出 facts，没有 claims。",
+    "violates": [
+     "整轮.R6"
+    ],
+    "attribution": "未定位:agent/输出契约",
+    "impact": "yes",
+    "refs": [
+     "turn1/records/run/step_executor_runs/0/messages/3 content JSON",
+     "turn1/records/run/step_results/2/steps/2 output facts",
+     "turn1/records/run/step_executor_runs/0/messages/2 facts F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002/003/005"
+    ]
+   },
+   {
+    "phenomenon": "最终 gaps/limitations 含“部分内容未能在本轮证据中对应，请结合原始资料核实。”该文本使用内部词“本轮证据”，违反 answer_draft/gaps 不得出现内部词的要求。",
+    "violates": [
+     "整轮.R20"
+    ],
+    "attribution": "未定位:收尾/finalize",
+    "impact": "yes",
+    "refs": [
+     "turn1/records/run/step_results/3 output.gaps",
+     "turn1/records/run/step_results/2/steps/2 output.gaps"
+    ]
+   }
+  ],
+  "extra_observations": [
+   "最终输出额外提及两个险种名称（主险平安安佑福（惠享版）定期重大疾病保险、附加险平安附加（2026）定期寿险），虽来自工具返回的 plan_full_name，但非用户所问。",
+   "gate 的 reason 仅说明启用的检查 ['G-2','G-3','G-4a','G-4b'] 均未命中，未解释为何未命中 to_direct。",
+   "案卷 step_results 记录止于 finalize，未记录 present_agentos 步骤。",
+   "agent_bridge 将 status 标为 PARTIAL，但底层 policy_detail execution.status=SUCCESS 且三个所问字段齐全；最终仍产生通用缺口提示并标记 completeness=partial。"
+  ]
+ }
+}

@@ -1,0 +1,165 @@
+{
+ "items": [
+  {
+   "id": "模型调用1.R1",
+   "type": "推出",
+   "statement": "本次输出应把目标识别为查询保单号 P260922000005855 的投保人、被保人和当前状态，而不是澄清或扩展问题。",
+   "basis": "用户原话与当前用户问题；冻结期望 exp_p260922000005855_applicant、exp_p260922000005855_insured、exp_p260922000005855_current_status。"
+  },
+  {
+   "id": "模型调用1.R2",
+   "type": "推出",
+   "statement": "本次输出不应调用 ask_clarify，因为输入已给出明确保单号 P260922000005855，且没有缺少关键实体。",
+   "basis": "系统规则“无可答事实且缺关键实体时才澄清”；用户问题已含保单号。"
+  },
+  {
+   "id": "模型调用1.R3",
+   "type": "推出",
+   "statement": "本次输出应发起保单字段查询工具 run_policy_field_lookup 的调用，并在 query 或 fields 中覆盖 P260922000005855、投保人、被保人、当前状态这些关注点。",
+   "basis": "系统规则“run_policy_field_lookup 在 query 写全关注点”；工具分工；冻结期望三项。"
+  },
+  {
+   "id": "模型调用1.R4",
+   "type": "推出",
+   "statement": "该次 run_policy_field_lookup 调用不得与其他工具并行或串行混调，因为 run_* 流程工具不能与任何其他工具并行。",
+   "basis": "系统规则“ask_clarify、两个 present_*_search_card 和 run_* 流程工具不能与任何其他工具并行”。"
+  },
+  {
+   "id": "模型调用1.R5",
+   "type": "推出",
+   "statement": "本次输出不得直接写出 P260922000005855 的投保人、被保人或当前状态的具体值，因为本次输入尚未包含任何工具返回的业务 data 或 facts。",
+   "basis": "L3 不编造；输出契约“fact_refs 仅填工具返回 facts 的 fact_id”；系统规则“先理解本轮目标、实体与字段，再调用工具”。"
+  },
+  {
+   "id": "模型调用1.R6",
+   "type": "推出",
+   "statement": "本次输出不得用 present_policy_search_card 或 present_customer_search_card 替代详情查询，因为用户要的是字段详情而非仅客户或保单清单。",
+   "basis": "系统规则“仅当本轮完整目标是客户/保单清单且卡片足以答复时……还需回答字段……时，用普通搜索”。"
+  },
+  {
+   "id": "模型调用1.R7",
+   "type": "推出",
+   "statement": "本次输出不得调用 product_knowledge、benefit_info 或 general_qa 来获取该保单的投保人、被保人和当前状态，因为这些来源不负责具体保单字段数据。",
+   "basis": "工具分工；L3 只依据可信工具的业务 data 或事实。"
+  },
+  {
+   "id": "模型调用1.R8",
+   "type": "守恒",
+   "statement": "保单号 P260922000005855 必须在查询和后续回答中逐字保留，不得改写、省略或泛化。",
+   "basis": "用户原话与当前用户问题中的实体字符串；守恒要求下游不得丢失或改写上游产出。"
+  },
+  {
+   "id": "模型调用1.R9",
+   "type": "守恒",
+   "statement": "用户所问的投保人、被保人、当前状态三个字段不得在输出目标中丢失；“是谁的保单”应按已列期望拆到投保人/被保人分别陈述，不合并成未经工具确认的归属人。",
+   "basis": "冻结期望三项；L3“多实体分开陈述，防止张冠李戴”；用户原话。"
+  },
+  {
+   "id": "模型调用1.R10",
+   "type": "守恒",
+   "statement": "本次输出不得新增用户未询问且输入未提供的其他保单事实，如保费、保额、生效日期、产品名称等。",
+   "basis": "守恒要求不凭空多出；用户问题只问投保人、被保人、当前状态。"
+  },
+  {
+   "id": "模型调用1.R11",
+   "type": "外部真值",
+   "statement": "P260922000005855 的投保人、被保人、当前状态的具体值必须由权威业务 data 或工具 facts 提供；仅凭本次输入无法核验其正确值。",
+   "basis": "L3；输出契约 fact_refs 只能来自工具 facts；外部真值性质。"
+  },
+  {
+   "id": "模型调用1.R12",
+   "type": "推出",
+   "statement": "本次输出若走最终 JSON 契约，则 answer_draft 必须是首字段、结论先行，fact_refs 只能填本轮工具返回 facts 的 fact_id，gaps 列未确认项，needs_user_input 表示本轮是否等待用户。",
+   "basis": "系统输出 JSON 契约原文。"
+  },
+  {
+   "id": "模型调用2.R1",
+   "type": "推出",
+   "statement": "输出必须是首字段为 answer_draft 的 JSON 对象，且 answer_draft 为字符串、结论先行。",
+   "basis": "系统输出契约原文：“输出 JSON：answer_draft:string 必须是首字段、结论先行”。"
+  },
+  {
+   "id": "模型调用2.R2",
+   "type": "守恒",
+   "statement": "输出必须通过 claims 为所问三个字段各给一条记录：subject_id 为 P260922000005855，applicant_name 用 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002，insured_name 用 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003，pol_status_desc 用 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005。",
+   "basis": "业务回答契约要求 claims:[{subject_id,field,fact_id}] 三项逐字复制本轮工具 facts；本轮 facts 列表含这些 predicate 与 fact_id。"
+  },
+  {
+   "id": "模型调用2.R3",
+   "type": "守恒",
+   "statement": "fact_refs 只能填本轮工具 facts 中存在的 fact_id；针对所问三字段，应引用 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005，不得猜造其他 ID。",
+   "basis": "系统输出契约：“fact_refs:string[] 仅填工具返回 facts 的 fact_id，禁止猜造 ID”；本轮 facts 列表。"
+  },
+  {
+   "id": "模型调用2.R4",
+   "type": "守恒",
+   "statement": "答案结论必须与 facts 一致：投保人是任言琳，被保人是任言琳，当前保单状态是交费有效。",
+   "basis": "F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005；冻结期望 exp_p260922000005855_applicant、exp_p260922000005855_insured、exp_p260922000005855_current_status。"
+  },
+  {
+   "id": "模型调用2.R5",
+   "type": "推出",
+   "statement": "不得把本次返回的两条险种记录表述成两张保单或两个保单号；两条记录的 polno 均为 P260922000005855，total 只是险种行总数。",
+   "basis": "tool field_descriptions 中 total：“险种行总数，不是保单张数”；records 两条记录 polno 相同。"
+  },
+  {
+   "id": "模型调用2.R6",
+   "type": "推出",
+   "statement": "当前状态须采用 pol_status_desc 值“交费有效”（对应 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005），不得改用未在 facts 中生成 fact_id 的 is_valid_pol 值“有效”来回答当前状态。",
+   "basis": "本轮 facts 仅含 pol_status_desc 对应 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005；业务契约要求状态等值由 claims 按 fact_id 渲染，若无对应 fact_id 不猜编号。"
+  },
+  {
+   "id": "模型调用2.R7",
+   "type": "推出",
+   "statement": "不要在 answer_draft 或 gaps 中自行填写金额、数量、日期、状态、客户或被保人姓名；这些值应由 claims 按 fact_id 交给服务端确定性渲染。",
+   "basis": "业务回答契约原文：“不要在 answer_draft/gaps 自行填写金额、数量、日期、状态、客户或被保人姓名”。"
+  },
+  {
+   "id": "模型调用2.R8",
+   "type": "推出",
+   "statement": "needs_user_input 必须为 false，本轮不等待用户补充，也不得再调用 ask_clarify 或再发起工具调用。",
+   "basis": "系统规则：“已有可答事实时不得再调用ask_clarify，应先回答已确认部分”；本轮 facts 已含所问三字段。"
+  },
+  {
+   "id": "模型调用2.R9",
+   "type": "推出",
+   "statement": "gaps 应为空或仅列本轮确实未确认且影响所问字段的缺口；对本轮三个所问字段不得列缺口，因为 facts 已返回且 projection.incomplete=false。",
+   "basis": "本轮 facts 列表含所问三字段；projection.incomplete 为 false；冻结期望三项条件均为“总是”。"
+  },
+  {
+   "id": "模型调用2.R10",
+   "type": "推出",
+   "statement": "task_updates 只能写说明，不得登记或声称已挂起任务；没有活动任务时不得声称后续会续跑。",
+   "basis": "系统原文：“task_updates 只是输出说明，不会登记任务”；“只有当前 Ledger 中确实存在活动任务，才可声称已挂起或后续续跑”。"
+  },
+  {
+   "id": "模型调用2.R11",
+   "type": "推出",
+   "statement": "answer_draft 与 gaps 不得出现“工具返回”“接口返回”、EMPTY/BUDGET 等内部词，也不得使用“根据资料”“条款显示”“检索到”等来源转述或“我认为”“很抱歉”等过程话。",
+   "basis": "系统输出契约：“answer_draft 与 gaps 只写业务用户可读正文；不得出现‘工具返回’、‘接口返回’、EMPTY/BUDGET 等内部词，也不用‘根据资料’‘条款显示’‘检索到’等来源转述”；“不用‘我认为’‘很抱歉’‘分析如下’等过程话”。"
+  },
+  {
+   "id": "模型调用2.R12",
+   "type": "守恒",
+   "statement": "不得输出无本轮 facts 支撑的新业务结论；对保费、保额、生效日期、投被保关系、权益等未问且未生成对应 fact_id 的字段，不应作为对用户问题的回答结论添加。",
+   "basis": "L3 不编造：“答案只依据可信工具的业务 data 或事实”；业务契约：“若模型视图没有对应 fact_id，不猜编号、不重查，列明未确认项”；user 问题仅问投保人、被保人、当前状态。"
+  },
+  {
+   "id": "模型调用2.R13",
+   "type": "外部真值",
+   "statement": "P260922000005855 在真实数据库中是否确实属于任言琳、状态是否确实为交费有效，不能仅凭本次运行记录判定，需独立查证；模型输出只能做到与本轮工具 facts 一致。",
+   "basis": "外部真值定义：数据库真实值需独立查证；本轮 facts 的来源未在输入中附带独立核验。"
+  }
+ ],
+ "not_covered": [
+  "run_policy_field_lookup 的完整工具 schema、参数名及本次应传 fields 还是仅 query 在输入中未给出，无法逐字核验。",
+  "run_policy_field_lookup 一次调用能否返回全部三项，以及实际返回的 fact_id 和值，未在本次输入中提供。",
+  "P260922000005855 的真实投保人、被保人、当前状态值属于外部真值，未在输入中给出。",
+  "“是谁的保单”是否还需额外区分保单所有人、投保人与被保人，冻结期望只列了投保人和被保人，未给出“所有人”字段，无法据此核验。",
+  "若本次调用后还有第2次模型调用，最终答案的具体文本、claims 编排和 gaps 内容无法由本次输入确定。",
+  "未覆盖实际输出的具体措辞是否足够用户友好，只能核对其事实值、引用和契约字段。",
+  "未覆盖模型是否应显式说明投保人与被保人为同一人；输入 data 中有 app_ins_relationship_desc=本人且双方 clientno 相同，但本轮 facts 未生成对应 fact_id，冻结期望也未要求。",
+  "未覆盖 claims 中 field 是否必须逐字使用 applicant_name、insured_name、pol_status_desc，还是允许中文别名；系统要求逐字复制 facts，但未展示最终字段渲染示例。",
+  "未覆盖实际输出是否包含产品名等已核实但未问及的信息是否会被判违规；本条仅按冻结期望和业务契约要求所问三字段不得缺失、不得改写。"
+ ]
+}

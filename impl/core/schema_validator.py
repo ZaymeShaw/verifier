@@ -13,10 +13,11 @@ SchemaValidator 是唯一的通用校验类，不关心业务场景。
 from __future__ import annotations
 
 import dataclasses
+import re
 from collections.abc import Sequence as ABCSequence
 from typing import Any, Dict, List, Literal, Optional, get_args, get_origin, get_type_hints
 
-from .structured_output import StructuredOutputSpec
+from .structured_output import StructuredOutputSpec, tagged_union, union_discriminator
 
 
 # ------------------------------------------------------------------
@@ -58,6 +59,12 @@ def _match_type(value: Any, tp: Any) -> tuple[bool, str]:
         if any(candidate is type(None) for candidate in args):
             return True, ""
         return False, f"期望非 null 的 {tp!r}，实际 NoneType"
+
+    # 多选一：这里只确认是 object；分支由区分字段决定，在 SchemaValidator 里逐字段校验。
+    if tagged_union(tp) is not None:
+        if not isinstance(value, dict):
+            return False, f"期望 object（多选一结构），实际 {type(value).__name__}"
+        return True, ""
 
     # Literal 同时约束类型和值；类型也必须精确匹配，避免 True 满足 Literal[1]。
     if origin is Literal:
@@ -132,6 +139,21 @@ def _match_type(value: Any, tp: Any) -> tuple[bool, str]:
     return True, ""
 
 
+def _unwrap_optional(tp: Any) -> Any:
+    """Optional[X] → X（仅当去掉 None 后只剩一个分支）；多分支 Union 原样返回。"""
+    if tagged_union(tp) is not None:
+        return tp
+    args = get_args(tp)
+    non_none = [a for a in args if a is not type(None)]
+    if args and len(non_none) == 1 and len(non_none) < len(args):
+        return non_none[0]
+    return tp
+
+
+def _is_structured(tp: Any) -> bool:
+    return dataclasses.is_dataclass(tp) or tagged_union(tp) is not None
+
+
 # ------------------------------------------------------------------
 # 非空判定
 # ------------------------------------------------------------------
@@ -195,10 +217,19 @@ class SchemaValidator:
                 if name not in data:
                     errors.append(f"必填字段缺失：{name}")
 
-        # 校验 required_nonempty 非空
-        for name in self._spec.required_nonempty:
+        # 校验 required_nonempty 非空，以及字段上显式声明 nonempty 的（嵌套层级同样适用）
+        declared = [f.name for f in dataclasses.fields(self._spec.model) if f.metadata.get("nonempty") is True] \
+            if dataclasses.is_dataclass(self._spec.model) else []
+        for name in dict.fromkeys([*self._spec.required_nonempty, *declared]):
             if name in data and _is_empty(data[name]):
                 errors.append(f"字段必须非空但产出为空：{name}")
+        # 固定格式：声明了 pattern 的字符串字段（嵌套层级同样适用）
+        if dataclasses.is_dataclass(self._spec.model):
+            for f in dataclasses.fields(self._spec.model):
+                pattern = f.metadata.get("pattern")
+                value = data.get(f.name)
+                if pattern and isinstance(value, str) and not re.search(pattern, value):
+                    errors.append(f"字段格式不符：{f.name}={value[:60]!r}，须匹配 {pattern}")
 
         # 校验字段类型
         type_hints = self._get_type_hints()
@@ -238,23 +269,35 @@ class SchemaValidator:
     def _validate_nested_dataclass_value(self, name: str, value: Any, tp: Any, *, strict: bool, allow_extra: bool) -> list[str]:
         if value is None:
             return []
+        tp = _unwrap_optional(tp)
         origin = get_origin(tp)
         args = get_args(tp)
-        if origin in (list, tuple, ABCSequence) and args and dataclasses.is_dataclass(args[0]):
+        if origin in (list, tuple, ABCSequence) and args and _is_structured(_unwrap_optional(args[0])):
             if not isinstance(value, list):
                 return []
-            sub_validator = SchemaValidator(StructuredOutputSpec.from_dataclass(args[0]))
             errors: list[str] = []
             for index, item in enumerate(value):
-                if not isinstance(item, dict):
-                    continue
-                for err in sub_validator.validate(item, strict=strict, allow_extra=allow_extra):
-                    errors.append(f"{name}.[{index}].{err}")
+                errors.extend(self._validate_item(f"{name}.[{index}]", item, args[0], strict=strict, allow_extra=allow_extra))
             return errors
-        if dataclasses.is_dataclass(tp) and isinstance(value, dict):
-            sub_validator = SchemaValidator(StructuredOutputSpec.from_dataclass(tp))
-            return [f"{name}.{err}" for err in sub_validator.validate(value, strict=strict, allow_extra=allow_extra)]
+        if _is_structured(tp):
+            return self._validate_item(name, value, tp, strict=strict, allow_extra=allow_extra)
         return []
+
+    def _validate_item(self, label: str, value: Any, tp: Any, *, strict: bool, allow_extra: bool) -> list[str]:
+        """校验一个 dataclass 或多选一结构的取值；类型不对的交给 _match_type 报，这里不重复。"""
+        if value is None or not isinstance(value, dict):
+            return []
+        tp = _unwrap_optional(tp)
+        union = tagged_union(tp)
+        if union is not None:
+            field_name, mapping = union_discriminator(union[0])
+            tag = value.get(field_name)
+            branch = next((b for k, b in mapping.items() if type(k) is type(tag) and k == tag), None)
+            if branch is None:
+                return [f"{label}.{field_name}：期望 {list(mapping)!r} 之一，实际 {tag!r}"]
+            tp = branch
+        sub_validator = SchemaValidator(StructuredOutputSpec.from_dataclass(tp))
+        return [f"{label}.{err}" for err in sub_validator.validate(value, strict=strict, allow_extra=allow_extra)]
 
     def _collect_required(self) -> list[str]:
         """收集 required 字段：dataclass 推断 + required_nonempty 显式声明。"""

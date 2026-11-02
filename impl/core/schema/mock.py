@@ -189,3 +189,9 @@ class MockCase:
     # ── ready 协议层 ──
     output: Optional[Dict[str, Any]] = None
     reference: Optional[Dict[str, Any]] = None
+
+    # ── seed 层级（spec/mock/protocol.md 3 / 4.10 / 5.2）──
+    # None 等价于 level=request（live_request 即 seed）。transcript 级由 Session 导出：
+    # {level: transcript, mode: replay, turns: [{turn_index, message, request, extracted_output}],
+    #  intent_history, stop_reason, protocol_fuzz, prefix, prefix_mode}
+    seed: Optional[Dict[str, Any]] = None

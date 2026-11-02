@@ -1,0 +1,72 @@
+### smoke-customer-profile-fuyunping  run=fb5fda5628174ef6967116bd4ecca493 desc=None
+expectations=2 records=33
+
+## expectations
+- exp_customer_fuyunping_birth_date: 告知客户伏云平的出生年月 | cond=总是
+- exp_customer_fuyunping_gender: 告知客户伏云平的性别 | cond=总是
+
+## workflow definitions
+  [turn1/records/definitions/0/data] [{"name": "assemble", "type": "Step"}, {"name": "gate", "type": "Step"}, {"name": "to_direct", "type": "Condition", "steps": [{"name": "direct", "type": "Step"}]}, {"name": "to_capability", "type": "Condition", "steps": [{"name": "run_capability", "type": "Step"}]}, {"name": "to_agent", "type": "Condition", "steps": [{"name": "agent_input", "type": "Step"}, {"name": "agent", "type": "Step"}, {"name": "agent_bridge", "type": "Step"}]}, {"name": "finalize", "type": "Step"}, {"name": "present_agentos", "type": "Step"}]
+
+## tool calls (in order)
+  [turn1/records/raw_runs/0/run_data/step_executor_runs/0/tools/0] name=None args=null
+      result=null err=null
+  [turn1/records/raw_runs/0/run_data/step_executor_runs/0/tools/1] name=None args=null
+      result=null err=null
+  [turn1/records/raw_runs/0/run_data/step_executor_runs/0/tools/2] name=None args=null
+      result=null err=null
+  [turn1/records/run/step_executor_runs/0/tools/0] name=customer_search args={"query": "伏云平", "fields": ["姓名", "性别", "生日"], "compact": true}
+      result={"result":{"data":{"pageNo":1,"pageSize":100,"total":1,"records":[{"clientMainId":"4F2873B056FB6AA0544DAD134E5441D9","clientSex":"女","clientName":"伏云平","familyInfo":null}]},"field_descriptions":{"pageNo":"当前页码","pageSize":"服务页容量","total":"符合查询条件的客户总数，不是当前页记录数或展示条数","records":"本次返回的搜索记录","records[]":{"$description":"单条搜索记录；空值不等于零或否；金额未注明单位、币种或时点时不推断","clientMainId":"客户中心客户id；当前客户在客户中心的唯一标识，用于关联搜客户结果、客户详情及相关客户信息。准客和已成单客户均可有此 ID；与仅寿险成交客户可能具有的寿险系统客户号区分，按标识字符串保留原值。","clientSex":"性别；客户本人的性别，用于性别筛选或画像，本接口返回中文“男”“女”。与详情接口中 M=男、F=女属于同一业务含义但表示不同；不表示家庭成员、投保人或被保人的性别。；取值：男、女","clientName":"客户姓名；客户本人自然人姓名的明文，用于姓名展示或姓名匹配；不表示家庭成员姓名，也不表示客户作为投保人、被保人等保单角色的专用姓名字段，不用于公司、机构、地址或产品名称查询。","familyInfo":"家庭信息列表；客户已记录的...<+596> err=false
+  [turn1/records/run/step_executor_runs/0/tools/1] name=customer_detail args={"customer_id": "4F2873B056FB6AA0544DAD134E5441D9", "customer_ids": [], "compact": true, "fields": ["性别", "生日"]}
+      result=本次工具调用失败，未能获取相关信息，请稍后再试。已有其他相关证据时照常回答；若没有可用事实，answer_draft 写为“本次工具调用失败，未能获取相关信息，请稍后再试。”，fact_refs 保持为空；不要推测结果、解释为没有数据或追加业务结论；本轮不要以相同参数重试同一工具。 err=true
+  [turn1/records/run/step_executor_runs/0/tools/2] name=customer_detail args={"customer_id": "4F2873B056FB6AA0544DAD134E5441D9", "customer_ids": [], "compact": true, "fields": ["性别", "生日", "clientbirthday"]}
+      result=本次工具调用失败，未能获取相关信息，请稍后再试。已有其他相关证据时照常回答；若没有可用事实，answer_draft 写为“本次工具调用失败，未能获取相关信息，请稍后再试。”，fact_refs 保持为空；不要推测结果、解释为没有数据或追加业务结论；本轮不要以相同参数重试同一工具。 err=true
+
+## model calls
+  [turn1/records/traces/0/tree/0/spans/3/spans/1] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 597 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+帮我查一下客户伏云平的基本资料，性别和出生年月是什么？
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "tool_calls": [{"id": "call_0ce3b65198ca4d07887d611f", "type": "function", "function": {"name": "customer_search", "arguments": "{\"query\": \"\u4f0f\u4e91\u5e73\", \"fields\": [\"\u59d3\u540d\", \"\u6027\u522b\", \"\u751f\u65e5\"], \"compact\": true}"}}]}]}
+  [turn1/records/traces/0/tree/0/spans/3/spans/3] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 597 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+帮我查一下客户伏云平的基本资料，性别和出生年月是什么？
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "content": "\u5ba2\u6237\u641c\u7d22\u8fd4\u56de\u4e86\u5ba2\u6237\u4e2d\u5fc3ID\u548c\u6027\u522b\uff0c\u4f46\u672a\u5305\u542b\u751f\u65e5\u5b57\u6bb5\u3002\u6211\u9700\u8981\u7528\u5ba2\u6237\u4e2d\u5fc3ID\u67e5\u8be2\u8be6\u60c5\u83b7\u53d6\u51fa\u751f\u5e74\u6708", "tool_calls": [{"id": "call_f17cbb1bdd1648c2a58034e0", "type": "function", "function": {"name": "customer_detail", "arguments": "{\"customer_id\": \"4F2873B056FB6AA0544DAD134E5441D9\", \"customer_ids\": [], \"compact\": true, \"fields\": [\"\u6027\u522b\", \"\u751f\u65e5\"]}"}}]}]}
+  [turn1/records/traces/0/tree/0/spans/3/spans/5] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 597 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+帮我查一下客户伏云平的基本资料，性别和出生年月是什么？
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "tool_calls": [{"id": "call_3d682764f41a46bbb76303a5", "type": "function", "function": {"name": "customer_detail", "arguments": "{\"customer_id\": \"4F2873B056FB6AA0544DAD134E5441D9\", \"customer_ids\": [], \"compact\": true, \"fields\": [\"\u6027\u522b\", \"\u751f\u65e5\", \"clientbirthday\"]}"}}]}]}
+  [turn1/records/traces/0/tree/0/spans/3/spans/7] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 597 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+帮我查一下客户伏云平的基本资料，性别和出生年月是什么？
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "content": "customer_detail \u8c03\u7528\u5931\u8d25\u3002\u4e0d\u8fc7 customer_search \u5df2\u8fd4\u56de\u4e86\u5ba2\u6237\u7684\u6027\u522b\u3002\u8ba9\u6211\u57fa\u4e8e\u5df2\u83b7\u53d6\u7684\u4fe1\u606f\u4f5c\u7b54\uff0c\u51fa\u751f\u5e74\u6708\u672a\u786e\u8ba4\u3002\n\n\u4ece customer_search \u7ed3\u679c\u4e2d\uff0c\u6211\u6709 fact\uff1aclientMainId=4F2873B056FB6AA0544DAD134E5441D9\uff0cclientSex=\u5973\uff0cclientName=\u4f0f\u4e91\u5e73\u3002\n\n\u4f46\u6ca1\u6709\u83b7\u53d6\u5230\u751f\u65e5\u5b57\u6bb5\u3002\u51fa\u751f\u5e74\u4efd\u6708\u672a\u80fd\u786e\u8ba4\uff0c\u9700\u5199\u5165 gaps\u3002\n\n```json\n{\n  \"answer_draft\": \"\u5ba2\u6237\u4f0f\u4e91\u5e73\u7684\u6027\u522b\u4e3a\u5973\u3002\u51fa\u751f\u5e74\u6708\u672a\u80fd\u5728\u672c\u8f6e\u786e\u8ba4\u3002\",\n  \"fact_refs\": [\"...fact_id...\"],\n  \"gaps\": [\"\u5ba2\u6237\u7684\u51fa\u751f\u5e74\u6708\u672a\u786e\u8ba4\uff0ccustomer_detail \u67e5\u8be2\u5931\u8d25\"],\n  \"needs_user_input\": false,\n  \"task_updates\": []\n}\n```\n\n\u4e0d\u8fc7\u6211\u9700\u8981\u67e5\u770b\u5de5\u5177\u8fd4\u56de\u4e2d\u7684 fact_id\u3002customer_search \u8fd4\u56de\u4e2d\u6ca1\u6709\u663e\u5f0f\u7684 fact_id\uff0c\u4f46 fact_refs \u5e94\u586b\u5165\u4e8b\u5b9e id\u3002\u641c\u7d22\u7ed3\u679c\u4f3c\u4e4e\u672a\u63d0\u4f9b\u4e8b\u5b9e ID\u3002\u8ba9\u6211\u91cd\u65b0\u68c0\u67e5\u8fd4\u56de\u7ed3\u6784\u3002\n\n\u8fd4\u56de\u7684 result.json \u4e2d\u6ca1\u6709\u663e\u5f0f fact...<+1429>
+
+## delivered / gaps
+  [turn1.delivered_output] {"output_text": "{\"answer\": \"客户伏云平的性别为女。\\n\\n出生年月未能在本轮确认。\\n\\n客户 伏云平:\\n· 客户摘要:伏云平·女·33岁·手机19909224628\", \"status\": null, \"fact_refs\": [\"F-CALL-TR-5ea9e97db11d4430a189e935506c809d-01-001\"], \"sources\": [], \"gaps\": [\"部分内容未能在本轮证据中对应，请结合原始资料核实。\", \"客户的出生年月未确认，customer_detail 查询失败\"], \"assumptions\": [], \"trace_id\": null, \"followup_actions\": [], \"handoff_status\": \"none\", \"checks\": null, \"structured\": null, \"completeness\": \"partial\", \"limitations\": [\"部分内容未能在本轮证据中对应，请结合原始资料核实。\"]}"}
+  gap turn1.gap.state_transitions: {"id": "turn1.gap.state_transitions", "status": "unsupported", "reason": "此 provider 不把 run/session 末态重建为逐次状态变化"}
+  gap turn1.gap.raw_backend_http: {"id": "turn1.gap.raw_backend_http", "status": "unsupported", "reason": "Agno 工具结果可能已经过业务适配，不保证原始下游 HTTP 请求响应"}
+  gap turn1.gap.source_documents: {"id": "turn1.gap.source_documents", "status": "unsupported", "reason": "仅提供已记录 references 和工具正文；不自动访问外部文档或推断版本"}
+  gap turn1.gap.history: {"id": "turn1.gap.history", "status": "empty", "count": 0, "excluded_unordered_runs": 0, "ordered_by_trace_timestamps": 0, "reason": "仅保存同 session 已终止且确定早于本轮的 run：优先用根 trace 的微秒级 start/end 定序，否则要求 created_at + duration + 1秒精度余量早于本轮 created_at；缺时间、重叠和不明顺序的 run 不纳入。历史状态仍是运行末态，不是逐次状态快照。"}
+
+## trace_analysis structure (recorded)
+  workflow_steps=null
+  suspects=null

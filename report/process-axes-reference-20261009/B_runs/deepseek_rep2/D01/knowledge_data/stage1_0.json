@@ -1,0 +1,98 @@
+{
+ "meta": {
+  "elapsed": 68,
+  "prompt_tokens": 1421,
+  "completion_tokens": 14340,
+  "reasoning_tokens": 12864
+ },
+ "attempt": 1,
+ "result": {
+  "instance": "知识数据（数据源）—customer_search 第0-3次调用",
+  "items": [
+   {
+    "id": "R1",
+    "type": "推出",
+    "statement": "第0-3次调用均为 customer_search，数据源应返回与各 query 条件匹配的搜索页记录，而不是澄清问题或保单/详情数据。",
+    "basis": "第0-3次调用工具名 customer_search；工具说明“按自然语言条件查找客户，返回匹配客户的搜索页记录”；“不用于：目标是保单本身 → policy_search；已有客户中心ID要完整画像 → customer_detail”。"
+   },
+   {
+    "id": "R2",
+    "type": "守恒",
+    "statement": "第0-3次调用输出中的每条客户记录必须同时满足 query 中明确列出的全部条件——女性、姓平、生日月份为12月——不得混入任一条件不满足的记录，也不得删除任一条件扩大范围。",
+    "basis": "第0-3次调用 query；工具说明“不得删条件扩大范围”。"
+   },
+   {
+    "id": "R3",
+    "type": "推出",
+    "statement": "第0-3次调用 query 均未包含“我名下”或等价归属条件，因此数据源输出只能基于 query 中出现的条件，不能声称已按冻结期望 list_female_clients_surname_ping_born_in_december 的“名下”要求过滤。",
+    "basis": "第0-3次调用 query；冻结期望 list_female_clients_surname_ping_born_in_december 含“名下”。"
+   },
+   {
+    "id": "R4",
+    "type": "推出",
+    "statement": "第0-3次调用 query 均未包含排序要求，且 customer_search 不支持排序；因此数据源输出不应被要求已按客户号升序，冻结期望 list_female_clients_surname_ping_born_in_december 的升序要求需由数据源之外的步骤完成。",
+    "basis": "工具说明“不支持……排序”；第0-3次调用 query 无排序；冻结期望 list_female_clients_surname_ping_born_in_december 含“按客户号升序”。"
+   },
+   {
+    "id": "R5",
+    "type": "推出",
+    "statement": "第0-3次调用中“女性”“姓平”“生日在12月”分别落在 customer_search 适用条件（性别、姓名、生日）内，数据源不应仅因这些条件本身而返回 AMBIGUOUS。",
+    "basis": "工具说明“适用：按姓名、……、性别、生日……”；第0-3次调用 query。"
+   },
+   {
+    "id": "R6",
+    "type": "推出",
+    "statement": "若第0-3次调用解析出的条件包含 customer_search 不支持的条件（如排序、跨年生日区间、地址等），数据源应按规则整条不查询并返回 AMBIGUOUS，而不是删条件后返回零命中。",
+    "basis": "工具说明“任一条件不支持时整条不查询，返回 AMBIGUOUS……不得删条件扩大范围”。"
+   },
+   {
+    "id": "R7",
+    "type": "推出",
+    "statement": "第0次调用请求 fields 含“客户号”，数据源若返回该字段，应提供业务客户号（clientNo），不得用客户中心ID（clientMainId/client_main_id/idicm_clientno）充当业务客户号。",
+    "basis": "第0次调用 fields 含“客户号”；工具说明“寿险客户号 clientNo 不是”；“业务客户号是搜索条件，不等于内部标准标识 customer_id”。"
+   },
+   {
+    "id": "R8",
+    "type": "推出",
+    "statement": "第1-3次调用请求 fields 含“客户中心ID”，数据源返回的记录应包含客户中心ID（clientMainId，兼容 client_main_id、idicm_clientno），而不是仅返回业务客户号。",
+    "basis": "第1-3次调用 fields 含“客户中心ID”；工具说明“data.records[].clientMainId（兼容 client_main_id、idicm_clientno）即客户中心ID”。"
+   },
+   {
+    "id": "R9",
+    "type": "推出",
+    "statement": "第1-3次调用同时请求“客户号”和“客户中心ID”，数据源输出应区分业务客户号与客户中心ID，不得将两者混为同一字段或互相替代。",
+    "basis": "第1-3次调用 fields；工具说明“业务客户号是搜索条件，不等于内部标准标识 customer_id”；“寿险客户号 clientNo 不是”。"
+   },
+   {
+    "id": "R10",
+    "type": "推出",
+    "statement": "第0-3次调用在语义上等价于“女性、姓平、生日12月”的筛选，在相同数据状态下数据源应返回相同的匹配客户集合（字段差异除外）。",
+    "basis": "第0-3次调用 query；工具说明“按自然语言条件查找客户”。"
+   },
+   {
+    "id": "R11",
+    "type": "推出",
+    "statement": "若第0-3次调用返回 data.total，该字段必须表示符合相应查询条件的客户总数，而不是当前页记录数或展示条数。",
+    "basis": "工具说明“data.total 为符合查询条件的客户总数，不是当前页记录数或展示条数”。"
+   },
+   {
+    "id": "R12",
+    "type": "外部真值",
+    "statement": "数据库中是否存在、具体有哪些客户满足“女性、姓平、生日在12月”，以及第0-3次调用各自应返回哪些记录和 data.total 数值，属于外部真值，仅凭本次调用参数无法判定。",
+    "basis": "输入材料未给出 customer_search 返回；工具说明“返回匹配客户的搜索页记录”。"
+   },
+   {
+    "id": "R13",
+    "type": "推出",
+    "statement": "第1-3次调用若返回客户中心ID，不能据此推断客户已购保险；数据源输出本身也不应附带“已购保险”结论。",
+    "basis": "工具说明“准客和已成单客户都有客户中心ID，不代表已购保险”。"
+   }
+  ],
+  "not_covered": [
+   "第4次 ask_clarify 不属于知识数据（数据源）的输出；其是否由 customer_search 的 AMBIGUOUS/空结果触发、以及澄清问题是否正确，需要未给出的返回才能判断。",
+   "冻结期望 query_selected_client_detail_info 和 query_selected_client_policy_status 对应的数据源调用尚未发生（未确定选中客户），本件未覆盖。",
+   "未给出 customer_search 的实际返回，因此无法核对具体记录、排序、总数、字段映射是否与数据库一致。",
+   "“我名下”在 customer_search 中如何表达或是否受支持，工具说明未明确列出，且第0-3次调用 query 未包含，本件不覆盖其实现方式。"
+  ]
+ }
+}

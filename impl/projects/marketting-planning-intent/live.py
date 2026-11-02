@@ -122,10 +122,10 @@ def build_execution_trace(input_data: dict[str, Any], request: dict[str, Any], r
     ]
 
 
-from impl.core.live_protocol import LiveServiceUnavailableError, RealServiceLive, SingleTurnLive
+from impl.core.live_protocol import LiveServiceUnavailableError, RealServiceLive
 
 
-class MarketingIntentLive(RealServiceLive, SingleTurnLive):
+class MarketingIntentLive(RealServiceLive):
     """marketting-planning-intent 项目 Live 实现（新协议）。"""
 
     def __init__(self, spec: ProjectSpec):

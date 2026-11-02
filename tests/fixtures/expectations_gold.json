@@ -1,0 +1,101 @@
+{
+  "source": "spec/alg/expectations.md v2 §2, §4, §8; synthetic shortened policy IDs",
+  "use": "Human review and semantic regression reference. Preserve propositions, conditions, provenance, ambiguity and split. Protocol validation alone does not measure model quality. Design rules are tested separately through original source blocks, never through E.",
+  "cases": [
+    {
+      "id": "two_requests",
+      "material": {
+        "sources": [{"id": "u", "side": "want", "turn": "t1", "component": "user", "value": "请查询保单 P002 的现金价值，并告诉我犹豫期内退保怎么办理。", "scope": "request", "trace_refs": []}],
+        "missing": [], "sha256": "annotated-fixture"
+      },
+      "expected": {"expectations": [
+        {"expectation_id": "E1", "source_refs": ["u"], "about": "保单 P002 的现金价值", "statement": "告知其数额", "condition": "总是", "ambiguity_group": ""},
+        {"expectation_id": "E2", "source_refs": ["u"], "about": "犹豫期内退保的办理方式", "statement": "告知办理流程", "condition": "总是", "ambiguity_group": ""}
+      ]}
+    },
+    {
+      "id": "conditional_request",
+      "material": {
+        "sources": [{"id": "u", "side": "want", "turn": "t1", "component": "user", "value": "P079 的被保人和投保人分别是谁？如果是同一个人请明确说明。", "scope": "request", "trace_refs": []}],
+        "missing": [], "sha256": "annotated-fixture"
+      },
+      "expected": {"expectations": [
+        {"expectation_id": "E1", "source_refs": ["u"], "about": "P079 的被保人", "statement": "告知姓名", "condition": "总是", "ambiguity_group": ""},
+        {"expectation_id": "E2", "source_refs": ["u"], "about": "P079 的投保人", "statement": "告知姓名", "condition": "总是", "ambiguity_group": ""},
+        {"expectation_id": "E3", "source_refs": ["u"], "about": "最终回答", "statement": "明确说明两者为同一人", "condition": "被保人与投保人为同一人", "ambiguity_group": ""}
+      ]}
+    },
+    {
+      "id": "response_form",
+      "material": {
+        "sources": [{"id": "u", "side": "want", "turn": "t1", "component": "user", "value": "只回答被保人姓名，不要任何多余文字。保单号 P079。", "scope": "request", "trace_refs": []}],
+        "missing": [], "sha256": "annotated-fixture"
+      },
+      "expected": {"expectations": [
+        {"expectation_id": "E1", "source_refs": ["u"], "about": "P079 的被保人", "statement": "告知姓名", "condition": "总是", "ambiguity_group": ""},
+        {"expectation_id": "E2", "source_refs": ["u"], "about": "最终回答的形式", "statement": "只含姓名，无其他文字", "condition": "总是", "ambiguity_group": ""}
+      ]}
+    },
+    {
+      "id": "historical_reference",
+      "material": {
+        "sources": [
+          {"id": "h", "side": "history", "turn": "t1", "component": "history", "value": {"role": "user", "content": "P001 这张保单现在是什么状态"}, "scope": "request", "trace_refs": []},
+          {"id": "u", "side": "want", "turn": "t1", "component": "user", "value": "那它的缴费方式呢", "scope": "request", "trace_refs": []}
+        ],
+        "missing": [], "sha256": "annotated-fixture"
+      },
+      "expected": {"expectations": [
+        {"expectation_id": "E1", "source_refs": ["u", "h"], "about": "保单 P001 的缴费方式", "statement": "告知缴费方式", "condition": "总是", "ambiguity_group": ""}
+      ]}
+    },
+    {
+      "id": "historical_ellipsis",
+      "material": {
+        "sources": [
+          {"id": "h", "side": "history", "turn": "t1", "component": "history", "value": {"role": "user", "content": "帮我查一下被保人是谁。"}, "scope": "request", "trace_refs": []},
+          {"id": "u", "side": "want", "turn": "t1", "component": "user", "value": "P079", "scope": "request", "trace_refs": []}
+        ],
+        "missing": [], "sha256": "annotated-fixture"
+      },
+      "expected": {"expectations": [
+        {"expectation_id": "E1", "source_refs": ["u", "h"], "about": "P079 的被保人", "statement": "告知姓名", "condition": "总是", "ambiguity_group": ""}
+      ]}
+    },
+    {
+      "id": "mutually_exclusive_readings",
+      "material": {
+        "sources": [{"id": "u", "side": "want", "turn": "t1", "component": "user", "value": "P079 的保单状态肯定是有效的吧？确认一下就行，不用查了。", "scope": "request", "trace_refs": []}],
+        "missing": [], "sha256": "annotated-fixture"
+      },
+      "expected": {"expectations": [
+        {"expectation_id": "E1", "source_refs": ["u"], "about": "P079 的保单状态", "statement": "告知是否有效", "condition": "总是", "ambiguity_group": ""},
+        {"expectation_id": "E2", "source_refs": ["u"], "about": "最终回答的内容", "statement": "只确认用户的说法，不需要另行核实的事实", "condition": "总是", "ambiguity_group": "g1"},
+        {"expectation_id": "E3", "source_refs": ["u"], "about": "最终回答的内容", "statement": "告知经核实的状态（不用查了是客套）", "condition": "总是", "ambiguity_group": "g1"}
+      ]}
+    },
+    {
+      "id": "scenario_acceptance",
+      "material": {
+        "sources": [
+          {"id": "u", "side": "want", "turn": "t1", "component": "user", "value": "P079 的当前状态是什么？", "scope": "request", "trace_refs": []},
+          {"id": "c", "side": "want", "turn": "case", "component": "criterion", "value": "若状态无法确认，回答须保留不确定性，不得用历史状态替代当前状态。", "scope": "request", "trace_refs": []},
+          {"id": "b", "side": "background", "turn": "case", "component": "description", "value": "用户在办理保单业务前了解现状。", "scope": "request", "trace_refs": []}
+        ],
+        "missing": [], "sha256": "annotated-fixture"
+      },
+      "expected": {"expectations": [
+        {"expectation_id": "E1", "source_refs": ["u"], "about": "P079 的当前状态", "statement": "告知状态", "condition": "总是", "ambiguity_group": ""}
+      ]},
+      "note": "判准里\"若状态无法确认须保留不确定性\"是拿不到时怎么做的行为规范，不是期望（demand/expectations.md §2）；期望须落在用户原话上（spec/alg/expectations.md §2.2）"
+    },
+    {
+      "id": "background_only",
+      "material": {
+        "sources": [{"id": "b", "side": "background", "turn": "case", "component": "description", "value": "业务帮助用户理解保单相关信息。", "scope": "request", "trace_refs": []}],
+        "missing": [{"turn": "t1", "component": "user", "reason": "用户原文未独立记录"}], "sha256": "annotated-fixture"
+      },
+      "expected": {"expectations": []}
+    }
+  ]
+}

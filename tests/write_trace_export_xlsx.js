@@ -27,8 +27,9 @@ const exporter = sandbox.CasePoolExporter;
 if (typeof exporter.formatTraceShow !== "function") {
   throw new Error("formatTraceShow is not a function");
 }
-if (exporter.COLUMNS[exporter.COLUMNS.length - 1].key !== "carrierPlacement") {
-  throw new Error("裁决 is not the last export column");
+const lastKeys = exporter.COLUMNS.slice(-2).map((column) => column.key);
+if (lastKeys.join(",") !== "carrierPlacement,evalAxes") {
+  throw new Error("expected 裁决 then 扩展轴结论 as the last export columns, got " + lastKeys.join(","));
 }
 
 const show = {
@@ -86,9 +87,17 @@ const rows = [{
   attributionSummary: "尚未归因",
   attributeJson: null,
   traceSummary: exporter.formatTraceShow(show),
+  carrierPlacement: "",
+  evalAxes: "[truthfulness:refuted×1] [truthfulness:verified×1]\n[fulfillment:not_fulfilled]",
 }];
 
-exporter.createWorkbook(rows, sandbox.ExcelJS).xlsx.writeBuffer().then((buf) => {
+const detailRows = [
+  {caseId: "policy-search-rich-0003", scenario: "clarification_reply", stage: "live", status: "ok", verdict: "", subject: "", reason: "", citations: "", model: "", llmCalls: "", toolCalls: "", seconds: 6.2},
+  {caseId: "policy-search-rich-0003", scenario: "clarification_reply", stage: "生产·judge", status: "succeeded", verdict: "fulfilled", subject: "", reason: "条款一致", citations: "", model: "", llmCalls: "", toolCalls: "", seconds: 40.1},
+  {caseId: "policy-search-rich-0003", scenario: "clarification_reply", stage: "扩展·truthfulness", status: "succeeded", verdict: "refuted", subject: "犹豫期是二十天", reason: "知识库原文为十五日", citations: "es://clause_kb xx_hesitation#clause_text：本产品犹豫期为十五日", model: "deepseek", llmCalls: 3, toolCalls: 11, seconds: 60.4},
+];
+
+exporter.createWorkbook(rows, sandbox.ExcelJS, detailRows).xlsx.writeBuffer().then((buf) => {
   fs.writeFileSync(outPath, Buffer.from(buf));
 }).catch((err) => {
   console.error(err);

@@ -10,7 +10,6 @@ project:
   - cluster
   - check
   - scenario
-  - single_turn
   resources:
     documents:
       application: project://application.md
@@ -31,8 +30,8 @@ runtime:
     boundary: non-streaming HTTP response string is in scope; declared sse_last_frame
       pseudo-streams are evaluated on the final data frame; incremental streaming and
       downstream systems are out of scope
-  interaction:
-    mode: single_turn
+  session:
+    max_turns: 8
   ready: []
   adapter:
     request_construction:
@@ -61,6 +60,10 @@ runtime:
     - policy_search
     - marketting-planning-intent
     - dashscope-qa
+    - policy-clause-qa
+    - hr-handbook-qa
+    - insurance-agno-e2e
+    - insurance-llmtracing
   services:
     primary:
       base_url: http://127.0.0.1:9
@@ -83,10 +86,14 @@ verifier:
       - attribution
   scenarios:
     allowed:
+    - insurance-agno-e2e
+    - insurance-llmtracing
     - client_search
     - policy_search
     - marketting-planning-intent
     - dashscope-qa
+    - policy-clause-qa
+    - hr-handbook-qa
   judge:
     boundary:
       document: judge_boundary.md

@@ -15,7 +15,7 @@ class ContextRecord:
     trace_id: str
     project_id: str
     caller: str  # 开放字符串，非枚举："judge"|"attribute"|"live"|"cluster"|"check"|...
-    # 按 openai messages 协议存储完整消息列表
+    # 本次发给模型的输入消息；SDK 返回的完整会话另见 response.run_messages。
     messages: List[Dict[str, Any]] = field(default_factory=list)
     response: Any = None
     created_at: str = ""
@@ -27,6 +27,8 @@ class ContextRecord:
     # Full messages remain the replay source; governance stores hashes,
     # provenance metadata and gates rather than duplicating prompt text.
     governance: Dict[str, Any] = field(default_factory=dict)
+    # 同一次逻辑调用被重复落档的次数（重试会产生内容与结果完全相同的记录）。
+    retry_count: int = 0
 
 
 @dataclass
@@ -42,3 +44,7 @@ class ContextRecordSummary:
     created_at: str = ""
     error: Optional[str] = None
     governance_blocking: bool = False
+    # 同一逻辑调用被重复落档的次数（重试产生）。
+    retry_count: int = 0
+    # response.runtime.stage；ToolLoop 的段编码在里面（如 main:s2），L2 异常按 caller + stage 分组。
+    stage: str = ""

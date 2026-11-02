@@ -1,0 +1,66 @@
+{
+ "meta": {
+  "elapsed": 33,
+  "prompt_tokens": 2645,
+  "completion_tokens": 6698,
+  "reasoning_tokens": 5821
+ },
+ "attempt": 1,
+ "result": {
+  "instance": "模型能力（模型）第1次调用：输入为用户首轮询问保单 P260922000005855 的投保人、被保人、当前状态",
+  "items": [
+   {
+    "id": "R1",
+    "type": "守恒",
+    "statement": "输出必须保留用户给定的保单号 P260922000005855 以及投保人、被保人、当前状态三个查询点，不得遗漏或改写为其他保单、其他字段。",
+    "basis": "用户原话；系统提示“先理解本轮目标、实体与字段”"
+   },
+   {
+    "id": "R2",
+    "type": "推出",
+    "statement": "本次调用在未取得工具 facts 前，不得给出 P260922000005855 的投保人姓名、被保人姓名或当前状态的具体值。",
+    "basis": "系统 L3“不编造”；输出契约要求 claims 逐字复制工具 facts，fact_refs 禁止猜造 ID"
+   },
+   {
+    "id": "R3",
+    "type": "推出",
+    "statement": "应调用 run_policy_field_lookup（保单字段查询）来获取该保单的投保人、被保人和当前状态，而不是用 product_knowledge、general_qa、benefit_info、customer_search 或 present_policy_search_card 直接作答。",
+    "basis": "工具分工：run_policy_field_lookup 在 query 写全关注点；present_* 仅用于客户/保单清单且卡片足以答复；用户问的是保单字段详情"
+   },
+   {
+    "id": "R4",
+    "type": "推出",
+    "statement": "应在单次 run_policy_field_lookup 调用的 query（或 fields）中包含保单号 P260922000005855，并覆盖投保人、被保人、当前状态三个关注点，而不是拆成多次或只问一项。",
+    "basis": "用户原话；系统“用户措辞与字段名不一致时可传 fields……run_policy_field_lookup 在 query 写全关注点”"
+   },
+   {
+    "id": "R5",
+    "type": "推出",
+    "statement": "不得调用 ask_clarify 追问保单号或追问要查哪方面，因为用户已提供完整保单号和明确的三项查询目标。",
+    "basis": "系统“复合问题能答多少先答多少……无可答事实且缺关键实体时才澄清”；多轮实体补全不得再问“想了解哪方面”"
+   },
+   {
+    "id": "R6",
+    "type": "推出",
+    "statement": "该工具调用不应与 ask_clarify、present_customer_search_card、present_policy_search_card 或 run_* 流程工具并行；若需其他独立只读取证，也应遵循并行限制。",
+    "basis": "系统“ask_clarify、两个 present_*_search_card 和 run_* 流程工具不能与任何其他工具并行”"
+   },
+   {
+    "id": "R7",
+    "type": "推出",
+    "statement": "若工具返回缺失、未识别或冲突，输出应把未确认项列入 gaps 或披露局限，不得用常识补全，也不得把 null/空值直接说成“无”或“否”。",
+    "basis": "系统 L6 缺口须披露；execution 中未筛选、未取全、冲突、缺失或失败须披露；null/空值不等于零或否"
+   },
+   {
+    "id": "R8",
+    "type": "外部真值",
+    "statement": "P260922000005855 是否存在，及其投保人、被保人、当前状态的具体业务值，必须由本轮业务工具返回的 facts 独立确定；仅凭当前模型输入无法核验。",
+    "basis": "系统 L3 答案只依据可信工具的业务 data 或事实；输出契约 claims 必须逐字复制本轮工具 facts"
+   }
+  ],
+  "not_covered": [
+   "未覆盖本次工具调用返回后最终 answer_draft 的具体措辞与 claims 组装，因为当前输入没有工具 facts。",
+   "未覆盖具体工具 schema 中字段名、参数名和是否可一次性返回三项，因为输入材料未给出工具接口定义。"
+  ]
+ }
+}

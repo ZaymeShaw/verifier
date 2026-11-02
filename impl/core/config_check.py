@@ -308,6 +308,18 @@ def check_runtime_config_contract(
             "declared model context window is smaller than verifier's configured prompt budget",
             str(config_path),
         ))
+    if resolved.llm.max_prompt_chars is not None:
+        declared_prompt_budget = max(
+            resolved.attribute.finalization_prompt_char_budget,
+            resolved.attribute.review_prompt_char_budget,
+        )
+        if declared_prompt_budget > resolved.llm.max_prompt_chars:
+            report.add(ConfigCheckIssue(
+                "llm_prompt_budget_unservable",
+                "declared prompt budget exceeds the endpoint's max_prompt_chars; "
+                "the router would refuse to send it",
+                str(config_path),
+            ))
     if probe_llm:
         for issue in _probe_llm_capabilities(resolved):
             report.add(issue)

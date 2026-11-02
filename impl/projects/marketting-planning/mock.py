@@ -5,13 +5,14 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from impl.core.mock_protocol import MultiTurnInteractiveMock, ProjectMock
-from impl.core.schema import MockContinueDecision, MockIntentOutput, ProjectSpec, SingleTurnCase, MultiTurnCase
+from impl.core.schema import MockContinueDecision, MockIntentOutput, SingleTurnCase, MultiTurnCase
+from impl.core.session import SessionState, SessionTranslator, UserMessage
 
 
-class MarketingPlanningMock(MultiTurnInteractiveMock, ProjectMock):
+class MarketingPlanningMock(MultiTurnInteractiveMock, SessionTranslator, ProjectMock):
     """Marketing Planning 项目 Mock 实现。
 
     继承 MultiTurnInteractiveMock（交互模式=多轮）+ ProjectMock。
@@ -20,6 +21,38 @@ class MarketingPlanningMock(MultiTurnInteractiveMock, ProjectMock):
     spec/adapter/trace.md 行 92：build_next_request 签名
     (intent, accumulated) → REQUEST_SCHEMA。产出必须符合 live_schema.REQUEST_SCHEMA（MPApiRequest）。
     """
+
+    # spec/mock/protocol.md 6.4：原话槽位 user_text + agent_args.message.content；会话身份 session_id。
+    # 请求体虽有 history 字段，但业务侧从未定义其元素格式（所有样本均为 []），服务端按
+    # conversation_id 持状态；在格式被业务确认前不注入历史，避免发明 live 不认识的形状。
+    supports_history_injection = False
+
+    def request_from_user_message(self, message: UserMessage, state: SessionState) -> Dict[str, Any]:
+        if message.type != "text":
+            raise ValueError(f"marketting-planning has no structured user actions; got {message.type!r}")
+        session_id = state.session_id
+        return {
+            "session_id": session_id,
+            "trace_id": session_id,
+            "org_id": "eval-org",
+            "user_text": message.text,
+            "history": [],
+            "user_action": "send_message",
+            "action_scenario": "marketing_planning",
+            "user_id": "eval-user",
+            "ts": int(time.time()),
+            "token": "mock_token",
+            "app_scenario": "customer_service",
+            "docs_num": 5,
+            "source": "offline_task",
+            "extra_input_params": {
+                "agent_args": {"conversation_id": session_id, "message": {"content": message.text, "content_type": "text"}},
+                "args": {"extensions": {}, "contexts": []},
+            },
+        }
+
+    def user_message_from_request(self, request: Dict[str, Any]) -> UserMessage:
+        return UserMessage(type="text", text=self.extract_mock_message(request))
 
     def build_user_intent(self, scenario: str):
         """扮演用户产意图：委托 MockAgent.build_intent 并转 MockIntentOutput。"""
@@ -92,8 +125,6 @@ class MarketingPlanningMock(MultiTurnInteractiveMock, ProjectMock):
         from impl.core.mock_agent import MockAgent
         return MockAgent(self.spec).decide_next_action(intent, accumulated_output)
 
-    def safety_max_turns(self) -> int:
-        return 12
 
     def extract_mock_message(self, request: Dict[str, Any]) -> str:
         return str(request.get("user_text") or "") if isinstance(request, dict) else ""

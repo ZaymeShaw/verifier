@@ -33,13 +33,7 @@ class SinglePassJudgeExecution:
         trace: RunTrace,
         user_intent: Optional[str],
     ) -> JudgeResult:
-        from impl.core.judge import build_judge_evidence_view
-
-        context = judge.build_context(trace)
-        context = {
-            **(context or {}),
-            "judge_evidence": build_judge_evidence_view(trace),
-        }
+        context = dict(judge.build_context(trace) or {})
         context["intent_frame"] = judge.build_intent_frame(trace, context)
         judge._last_judge_context = context
         return judge._run_llm_judge(trace, context, user_intent)

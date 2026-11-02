@@ -13,6 +13,10 @@ from .path_contract import LogicalPathRef, PathContractError, PathResolver
 _PATH_FIELD = re.compile(
     r"(?:^|_)(?:path|root|location|file|directory|dir|run_report)$"
 )
+# 机器本地绝对路径的字符串扫描（redact_forbidden_paths 用）
+_MACHINE_PATH_TOKEN = re.compile(
+    r"(?:/Users|/home|/tmp|/private|/var|/opt|/srv|/work)/[^\s\"'\\]*"
+)
 _WINDOWS_ABSOLUTE = re.compile(r"^[A-Za-z]:[\\/]")
 
 
@@ -224,6 +228,31 @@ def _normalize_payload(value: Any, *, pointer: str, field_name: str = "") -> Any
         pointer,
         f"unsupported artifact value type {type(value).__name__}",
     )
+
+
+def redact_forbidden_paths(value: Any, *, field_name: str = "") -> Any:
+    """把路径契约会拒绝的内容换成占位符，供「必须落档但不能带本机路径」的记录类产物使用。
+
+    只隐去契约真会拒绝的部分（用同一套谓词，不另写一份口径，否则两边迟早跑偏）：
+    路径字段里的绝对路径、以及任何位置的独立机器绝对路径。相对引用（turn1/records/run）
+    和普通字符串原样保留。
+    """
+    if isinstance(value, Mapping):
+        return {
+            str(key): redact_forbidden_paths(item, field_name=str(key))
+            for key, item in value.items()
+        }
+    if isinstance(value, (list, tuple)):
+        return [redact_forbidden_paths(item, field_name=field_name) for item in value]
+    if isinstance(value, str):
+        text = _MACHINE_PATH_TOKEN.sub("<绝对路径已隐去>", value)
+        if _is_absolute_path(text) and (
+            _PATH_FIELD.search(field_name)
+            or (_is_machine_absolute_path(text) and _is_standalone_path(text))
+        ):
+            return "<绝对路径已隐去>"
+        return text
+    return value
 
 
 def _is_logical_path_ref(value: Mapping[str, Any]) -> bool:

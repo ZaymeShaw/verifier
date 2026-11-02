@@ -1,0 +1,124 @@
+{
+ "meta": {
+  "elapsed": 82,
+  "prompt_tokens": 3325,
+  "completion_tokens": 15159,
+  "reasoning_tokens": 13335
+ },
+ "attempt": 1,
+ "result": {
+  "instance": "规划路由（编排）— 用户首轮查找名下姓平12月生日女性客户并等待选择",
+  "items": [
+   {
+    "id": "R1",
+    "type": "守恒",
+    "statement": "规划必须保留用户原话中的全部筛选/范围条件和输出排序要求：当前用户“名下”、姓氏“平”、生日“12月份”、性别“女”、按客户号升序；不得丢失、改写为姓名等于“平”，也不得把客户号替换为客户中心ID。",
+    "basis": "用户原话‘我名下姓平、12月份生日的女性客户，按客户号升序列出来’；customer_search 说明‘业务客户号是搜索条件，不等于内部标准标识 customer_id’"
+   },
+   {
+    "id": "R2",
+    "type": "守恒",
+    "statement": "规划必须保留冻结期望 E 的三项：筛选女性平姓12月生日客户列表、确定选中后查详细资料、确定选中后查保单状态；后两项条件未满足时不得提前执行。",
+    "basis": "E：list_female_clients_surname_ping_born_in_december；query_selected_client_detail_info 条件‘确定选中客户后’；query_selected_client_policy_status 条件‘确定选中客户后’"
+   },
+   {
+    "id": "R3",
+    "type": "推出",
+    "statement": "本轮应拆成两个子任务：当前可执行的“筛选候选客户供选择”和依赖用户选择的“查选中客户详细资料与保单状态”；后者应保持待触发。",
+    "basis": "用户原话‘先找…让我选，确定后再查…’；E 中两项查询的条件均为‘确定选中客户后’"
+   },
+   {
+    "id": "R4",
+    "type": "推出",
+    "statement": "路径必须覆盖 customer_search 这一客户定位/筛选/计数的专用只读工具；不得用 agent 或通用问答绕过客户搜索的专用领域边界。",
+    "basis": "可用工具说明：客户定位、筛选、计数 → customer_search；系统提示‘不得用通用问答绕过专用工具的领域边界’"
+   },
+   {
+    "id": "R5",
+    "type": "推出",
+    "statement": "调用序列应先调用 customer_search 一次，查询条件写全“当前用户名下、姓平、12月份生日、女性”；ask_clarify 不得与该调用并行。",
+    "basis": "用户原话；系统提示‘ask_clarify…不能与任何其他工具并行’；‘仅把互不依赖的只读取证工具并行调用’"
+   },
+   {
+    "id": "R6",
+    "type": "推出",
+    "statement": "不应把“按客户号升序”作为 customer_search 支持的查询条件传入；若该排序要求工具无法满足，应在工具返回后处理或作为未确认项披露。",
+    "basis": "customer_search 说明‘不支持…排序…任一条件不支持时整条不查询，返回 AMBIGUOUS’"
+   },
+   {
+    "id": "R7",
+    "type": "推出",
+    "statement": "customer_search 返回候选记录后，应整合 data.records 作为候选供用户选择，并等待用户输入；不得在本轮调用查询选中客户详情或保单状态的工具。",
+    "basis": "用户原话‘让我选，确定后再查’；系统提示‘已有可答事实时不得再调用 ask_clarify’；E 条件‘确定选中客户后’"
+   },
+   {
+    "id": "R8",
+    "type": "推出",
+    "statement": "若 customer_search 返回 data.total，回答数量应引用 data.total，不能把当前页记录数当作符合条件总数；未取全或 projection.incomplete 须披露。",
+    "basis": "customer_search 说明‘data.total 为符合查询条件的客户总数，不是当前页记录数’；系统提示‘未筛选、未取全…须披露’"
+   },
+   {
+    "id": "R9",
+    "type": "推出",
+    "statement": "若返回候选未包含 clientNo、未取全或排序无法保证，不得声称已按客户号升序完整列出。",
+    "basis": "用户原话‘按客户号升序列出来’；customer_search 说明‘搜索页记录’且‘不支持…排序’；系统提示未取全须披露"
+   },
+   {
+    "id": "R10",
+    "type": "推出",
+    "statement": "若 customer_search 返回 AMBIGUOUS、EMPTY、失败或字段未识别，不得删条件扩大范围或猜测零命中，也不得反复重复同一已失败调用。",
+    "basis": "customer_search 说明‘AMBIGUOUS（不是零命中）…不得删条件扩大范围’；系统提示‘不得反复猜别名、改写同一问题或重复调用已失败来源’"
+   },
+   {
+    "id": "R11",
+    "type": "推出",
+    "statement": "重试与预算策略应遵守：总工具调用不超过12次，customer_search 不超过4次；DENIED 不重试或绕路，OVERLOADED 结束本轮；wait_batch 仅表示本批未执行，待本批结果返回后重新判断。",
+    "basis": "本轮执行余量；系统提示‘DENIED 不重试或绕路取数，OVERLOADED 结束本轮’；‘wait_batch 表示本批调用未执行…重新判断’"
+   },
+   {
+    "id": "R12",
+    "type": "推出",
+    "statement": "本轮关键实体和范围已由用户给出，且若 customer_search 返回候选即已有可答事实，不应调用 ask_clarify；ask_clarify 只能单独调用并用于关键目标或实体不明确的情形。",
+    "basis": "ask_clarify 说明‘须单独调用’；系统提示‘已有可答事实时不得再调用 ask_clarify’；用户原话已给出名下、平姓、12月生日、女性"
+   },
+   {
+    "id": "R13",
+    "type": "推出",
+    "statement": "收尾应在取得候选后以“候选列表供选择”为结论先行内容，needs_user_input 为 true，gaps 列出排序/未取全以及详情和保单状态待选中后查询；当前任务块为空时不得声称已挂起或后续续跑。",
+    "basis": "输出契约‘answer_draft 必须是首字段、结论先行’；系统提示‘只有当前 Ledger 中确实存在活动任务，才可声称已挂起’；任务块为空"
+   },
+   {
+    "id": "R14",
+    "type": "推出",
+    "statement": "若用户后续确认选中客户，后续调用只能用用户明确提供、候选或会话已确认的 ID 查详细资料和保单状态，不得改查其他客户或保单。",
+    "basis": "系统提示‘只能用用户明确提供、候选或会话已确认的 ID’；E 中两项查询条件为‘确定选中客户后’"
+   },
+   {
+    "id": "R15",
+    "type": "外部真值",
+    "statement": "候选客户是否存在、其客户号、生日、性别、名下归属、详细资料和保单状态均须由对应业务工具返回值确认，规划或收尾不得凭常识生成或外推。",
+    "basis": "系统提示 L3‘不编造：答案只依据可信工具的业务 data 或事实’；工具分工中客户与保单数据来自业务工具"
+   },
+   {
+    "id": "R16",
+    "type": "推出",
+    "statement": "输出事实引用应只使用本轮工具返回 facts 的 fact_id，禁止猜造；没有对应 fact_id 的业务值应列入未确认项。",
+    "basis": "输出契约‘fact_refs:string[] 仅填工具返回 facts 的 fact_id，禁止猜造 ID’；‘若模型视图没有对应 fact_id，不猜编号’"
+   },
+   {
+    "id": "R17",
+    "type": "推出",
+    "statement": "工作流收尾应经过 finalize/present_agentos，且不得用 to_capability/to_agent 分支替代已可覆盖的客户搜索专用工具调用。",
+    "basis": "工作流定义包含 finalize、present_agentos；可用工具 customer_search 覆盖客户筛选；系统提示不得绕过专用工具领域边界"
+   }
+  ],
+  "not_covered": [
+   "实际候选客户数量、客户号、生日、性别、排序结果和分页情况无法从本轮输入推出，需由 customer_search 返回或外部真值确认。",
+   "customer_search 对“我名下”和“12月份生日”的精确参数支持、是否返回 clientNo、分页与排序机制未在可用工具说明中完整给出。",
+   "选中客户后查询详细资料和保单状态的具体工具名、参数与调用顺序未在本次可用工具说明中给出。",
+   "是否应使用 present_customer_search_card 或 present_agentos 的具体展示形式未覆盖；present_customer_search_card 未在可用工具说明中列出。",
+   "工作流 gate 的具体判定条件和 to_direct/to_capability/to_agent 的精确选择阈值未给出，只能写必须覆盖 customer_search 且不得绕过专用工具。",
+   "实际运行是否触发 wait_batch、DENIED、OVERLOADED 等控制动作未知。"
+  ]
+ }
+}

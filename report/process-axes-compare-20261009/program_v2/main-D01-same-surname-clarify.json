@@ -1,0 +1,77 @@
+{
+  "tag": "main-D01-same-surname-clarify",
+  "entries": [
+    {
+      "check": "工具返回原样进入下一次模型输入",
+      "verdict": "达到",
+      "observed": "customer_search 的返回与 turn1/records/traces/0/tree/0/spans/3/spans/3 请求里 tool_call_id=call_4cf3a85b27b9477192f35f2d 的 tool 消息逐字一致",
+      "refs": [
+        "turn1/records/run/step_executor_runs/0/tools/0",
+        "turn1/records/traces/0/tree/0/spans/3/spans/3"
+      ],
+      "id": "v2-1"
+    },
+    {
+      "check": "工具返回原样进入下一次模型输入",
+      "verdict": "达到",
+      "observed": "customer_search 的返回与 turn1/records/traces/0/tree/0/spans/3/spans/5 请求里 tool_call_id=call_2b145579251b4a2ba6825be9 的 tool 消息逐字一致",
+      "refs": [
+        "turn1/records/run/step_executor_runs/0/tools/1",
+        "turn1/records/traces/0/tree/0/spans/3/spans/5"
+      ],
+      "id": "v2-2"
+    },
+    {
+      "check": "工具返回原样进入下一次模型输入",
+      "verdict": "达到",
+      "observed": "customer_search 的返回与 turn1/records/traces/0/tree/0/spans/3/spans/7 请求里 tool_call_id=call_0f67466b12a34fada8bd1864 的 tool 消息逐字一致",
+      "refs": [
+        "turn1/records/run/step_executor_runs/0/tools/2",
+        "turn1/records/traces/0/tree/0/spans/3/spans/7"
+      ],
+      "id": "v2-3"
+    },
+    {
+      "check": "工具返回原样进入下一次模型输入",
+      "verdict": "达到",
+      "observed": "customer_search 的返回与 turn1/records/traces/0/tree/0/spans/3/spans/9 请求里 tool_call_id=call_3fff637fc44c4d928fff4cd5 的 tool 消息逐字一致",
+      "refs": [
+        "turn1/records/run/step_executor_runs/0/tools/3",
+        "turn1/records/traces/0/tree/0/spans/3/spans/9"
+      ],
+      "id": "v2-4"
+    },
+    {
+      "check": "工具返回原样进入下一次模型输入",
+      "verdict": "无法核",
+      "observed": "ask_clarify（turn1/records/run/step_executor_runs/0/tools/4）之后没有任何模型请求带上它的返回（本轮可能在此结束）",
+      "refs": [
+        "turn1/records/run/step_executor_runs/0/tools/4"
+      ],
+      "id": "v2-5"
+    },
+    {
+      "check": "执行余量提示随用量更新",
+      "verdict": "没达到",
+      "observed": "5 次模型请求里的余量提示逐字相同（剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 598 秒。…），期间已发生 4 次模型调用、10 次工具调用",
+      "refs": [
+        "turn1/records/traces/0/tree/0/spans/3/spans/1",
+        "turn1/records/traces/0/tree/0/spans/3/spans/3",
+        "turn1/records/traces/0/tree/0/spans/3/spans/5",
+        "turn1/records/traces/0/tree/0/spans/3/spans/7",
+        "turn1/records/traces/0/tree/0/spans/3/spans/9"
+      ],
+      "id": "v2-6"
+    },
+    {
+      "check": "交付缺口说明有逐字出处",
+      "verdict": "没达到",
+      "observed": "交付带 1 条缺口说明在本轮任何模型产出、工具返回里都找不到逐字出处（completeness='partial'）：本轮已停止继续查询，以下答复仅依据已取得的资料；未完成部分仍需补充核实。",
+      "refs": [
+        "turn1.delivered_output",
+        "turn1/records/run/step_results/2/steps/2"
+      ],
+      "id": "v2-7"
+    }
+  ]
+}

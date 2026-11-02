@@ -92,7 +92,7 @@ def _mock_contract() -> dict:
 def _candidate_source(role: str) -> str:
     if role == "judge":
         return """from impl.core.judge_protocol import ProjectJudge\nclass DemoJudge(ProjectJudge):\n    def build_context(self, trace):\n        return {\"contract_consumed\": True}\n"""
-    return """from impl.core.mock_protocol import ProjectMock, SingleTurnMock\nfrom impl.core.schema import MockIntentOutput\nclass DemoMock(SingleTurnMock, ProjectMock):\n    def build_user_intent(self, scenario):\n        return MockIntentOutput(user_intent=\"筛选目标客户\", query=\"帮我筛选一些客户\", user_context={\"scenario\": scenario})\n    def build_initial_request(self, intent):\n        return {\"query\": intent.query}\n"""
+    return """from impl.core.mock_protocol import ProjectMock\nfrom impl.core.schema import MockIntentOutput\nclass DemoMock(ProjectMock):\n    def build_user_intent(self, scenario):\n        return MockIntentOutput(user_intent=\"筛选目标客户\", query=\"帮我筛选一些客户\", user_context={\"scenario\": scenario})\n    def build_initial_request(self, intent):\n        return {\"query\": intent.query}\n"""
 
 
 def _judge_boundary_sha256() -> str:

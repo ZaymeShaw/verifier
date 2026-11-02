@@ -52,7 +52,6 @@ def _portable_project_document() -> dict:
                 "start_run": "uploaded output; no service",
                 "boundary": "output evaluation only",
             },
-            "interaction": {"mode": "single_turn"},
             "ready": ["output"],
             "adapter": {
                 "request_construction": {"builder": "Adapter.build_request", "required_inputs": ["query"]},

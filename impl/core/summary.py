@@ -49,6 +49,12 @@ def aggregate_failure_dimensions(judge: dict) -> list[dict]:
     return dimensions
 
 
+BUSINESS_CALL_FAILED = "business_call_failed"
+# 展示状态：被测系统以非 2xx 报错。判定协议里仍是 not_fulfilled（用户没拿到答复），
+# 展示单列为 fail，免得读成"业务答得不好"；统计、筛选、导出都读这个字段。
+DISPLAY_FAIL = "fail"
+
+
 def summary_from_fulfillment(judge: dict) -> dict:
     """从 judge 结果中提取前端展示用的摘要。
 
@@ -56,6 +62,17 @@ def summary_from_fulfillment(judge: dict) -> dict:
     输出字段不变，前端兼容。
     """
     dimensions = aggregate_failure_dimensions(judge)
+    if BUSINESS_CALL_FAILED in (judge.get("evidence") or []):
+        detail = str(judge.get("reasoning_summary") or "").removeprefix("被测系统调用失败：")
+        return {
+            "reason": f"fail · 被测系统报错：{detail}",
+            "primary_failure_dimensions": dimensions,
+            "reason_source": BUSINESS_CALL_FAILED,
+            "fulfillment_status": DISPLAY_FAIL,
+            "assessment_count": len(judge.get("fulfillment_assessments") or []),
+            "blocking_count": 1,
+            "is_formal_attribution": False,
+        }
     reasoning_summary = judge.get("reasoning_summary") or ""
     overall = judge.get("overall_fulfillment") or {}
     fulfillment_status = overall.get("status") or ""

@@ -1,0 +1,129 @@
+{
+ "meta": {
+  "elapsed": 52,
+  "prompt_tokens": 3411,
+  "completion_tokens": 10650,
+  "reasoning_tokens": 8851
+ },
+ "attempt": 1,
+ "result": {
+  "instance": "上下文管理（传递）· P260922000005855 首轮运行",
+  "items": [
+   {
+    "id": "R1",
+    "type": "守恒",
+    "statement": "assemble 的上下文必须包含首轮用户原话全文“P260922000005855是谁的保单？投保人和被保人分别是谁？当前状态呢？”，不得截断或改写问题指向的保单号。",
+    "basis": "用户原话（首轮，无历史）"
+   },
+   {
+    "id": "R2",
+    "type": "推出",
+    "statement": "由于输入明确为首轮且无历史，assemble/gate/to_agent 不得向本次上下文注入任何历史对话或缓存中的旧保单信息。",
+    "basis": "用户原话（首轮，无历史）"
+   },
+   {
+    "id": "R3",
+    "type": "守恒",
+    "statement": "agent_input 中用于回答的保单号必须是 P260922000005855，不得被替换为其他保单号或丢失。",
+    "basis": "用户原话中的保单号"
+   },
+   {
+    "id": "R4",
+    "type": "守恒",
+    "statement": "模型调用1产生的 tool_call 传到工具执行时必须保持 function.name=policy_detail、arguments.polno=P260922000005855、arguments.fields 为“投保人姓名/被保人姓名/保单状态”、arguments.compact=true。",
+    "basis": "模型调用1输出"
+   },
+   {
+    "id": "R5",
+    "type": "守恒",
+    "statement": "tools/0 返回中 facts F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002 applicant_name=任言琳、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003 insured_name=任言琳、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005 pol_status_desc=交费有效 必须传递到 finalize/delivered_output 可核对的答案中，不得丢失或改写。",
+    "basis": "工具 tools/0 返回 facts"
+   },
+   {
+    "id": "R6",
+    "type": "推出",
+    "statement": "delivered_output 必须覆盖 exp_p260922000005855_applicant，告知保单 P260922000005855 的投保人；依据该 E 与工具返回 fact F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002，应告知为任言琳。",
+    "basis": "冻结期望 exp_p260922000005855_applicant + 工具返回 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002"
+   },
+   {
+    "id": "R7",
+    "type": "推出",
+    "statement": "delivered_output 必须覆盖 exp_p260922000005855_insured，告知保单 P260922000005855 的被保人；依据该 E 与工具返回 fact F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003，应告知为任言琳。",
+    "basis": "冻结期望 exp_p260922000005855_insured + 工具返回 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003"
+   },
+   {
+    "id": "R8",
+    "type": "推出",
+    "statement": "delivered_output 必须覆盖 exp_p260922000005855_current_status，告知保单 P260922000005855 的当前状态；依据该 E 与工具返回 fact F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005，应告知为交费有效。",
+    "basis": "冻结期望 exp_p260922000005855_current_status + 工具返回 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005"
+   },
+   {
+    "id": "R9",
+    "type": "推出",
+    "statement": "若 delivered_output 回答“是谁的保单”，必须同时体现投保人和被保人均为任言琳（或明确为同一人），不得只给出其中一个而遗漏另一个。",
+    "basis": "用户原话“投保人和被保人分别是谁” + 冻结期望 applicant/insured"
+   },
+   {
+    "id": "R10",
+    "type": "守恒",
+    "statement": "若 delivered_output 保留模型调用2中的“投被保关系为本人”，必须与工具返回 app_ins_relationship_desc=本人一致。",
+    "basis": "模型调用2输出 + 工具返回 records[].app_ins_relationship_desc"
+   },
+   {
+    "id": "R11",
+    "type": "守恒",
+    "statement": "若 finalize/delivered_output 携带 fact_refs，其中引用的 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002/-003/-005 必须能追溯到本次 policy_detail 工具返回的同一 facts，不得指向历史或缓存中的其他调用。",
+    "basis": "模型调用2输出 fact_refs + 工具返回 facts"
+   },
+   {
+    "id": "R12",
+    "type": "守恒",
+    "statement": "finalize 必须保留模型调用2中 needs_user_input=false、gaps=[] 所表达的不需追问用户状态，不得凭空生成用户未问的澄清问题。",
+    "basis": "模型调用2输出 JSON 的 needs_user_input/gaps"
+   },
+   {
+    "id": "R13",
+    "type": "推出",
+    "statement": "交付给调用方的 delivered_output 应至少包含用户可读的最终答案，而不是只交付内部 JSON answer_draft/fact_refs/gaps/needs_user_input/task_updates。",
+    "basis": "传递链 finalize→delivered_output；模型调用2输出包含自然语言 content 与内部 JSON"
+   },
+   {
+    "id": "R14",
+    "type": "守恒",
+    "statement": "组装/传递工具返回时必须保留 records 两行同属同一保单 P260922000005855 的事实，不得误判为两张不同保单或丢失其中一行。",
+    "basis": "工具返回 records[0].polno 与 records[1].polno 均为 P260922000005855"
+   },
+   {
+    "id": "R15",
+    "type": "推出",
+    "statement": "若最终提及险种数量或主附险信息，必须按工具返回 records 的两行险种口径表述：total=2 是险种行总数、不是保单张数；主险为平安安佑福（惠享版）定期重大疾病保险，附加险为平安附加（2026）定期寿险。",
+    "basis": "工具返回 field_descriptions total/records[] 与两条 records"
+   },
+   {
+    "id": "R16",
+    "type": "守恒",
+    "statement": "工具返回 field_descriptions 中“records[] 不可跨行直接汇总为保单总额”“空值不等于零或否”等口径必须随 records 传递，不得在组装时丢失导致下游误读。",
+    "basis": "工具返回 field_descriptions total/records[] 的说明"
+   },
+   {
+    "id": "R17",
+    "type": "守恒",
+    "statement": "模型调用2 content 中“保单P260922000005855的投保人和被保人均为任言琳（投被保关系为本人），当前状态为交费有效”的结论若被 finalize 采用，必须原义到达 delivered_output，不得改成相反或空。",
+    "basis": "模型调用2输出 content"
+   },
+   {
+    "id": "R18",
+    "type": "外部真值",
+    "statement": "P260922000005855 在保险核心系统中实际是否存在、其投保人/被保人是否确为任言琳、当前状态是否确为交费有效，需独立查证核心系统/数据库；运行记录中的工具返回 facts 只能作为传递来源，不能自身证明外部真值。",
+    "basis": "冻结期望要求告知真实信息；工具返回 facts 是上游记录"
+   }
+  ],
+  "not_covered": [
+   "看不到下游实际收到的上下文对象，无法核对 assemble/gate/agent_input/agent_bridge/finalize 每一阶段是否按字段级原样传递。",
+   "未提供系统提示词、工具 schema、finalize 的格式化规则，无法判断 delivered_output 是否应剥离内部 JSON，或是否应保留模型调用2中的额外险种详情。",
+   "未提供缓存实现、缓存键、历史存储读取规则，无法核对缓存命中来源和历史读取范围。",
+   "未提供 agent 内部完整消息数组及 tool_call_id 关联记录，无法核对工具调用与工具结果的具体配对和消息顺序。",
+   "外部真值需查核心系统，本次运行记录无法验证。"
+  ]
+ }
+}

@@ -4,11 +4,12 @@
 - 工具只读、逐调用出回执（receipt）、只准查传入范围内的资料；
 - locator 统一为行区间 ``L<start>-L<end>``——结构骨架条目也翻译成行区间，
   机械核验的底座不挑格式；
-- 格式处理器按格式触发（yaml / markdown / 行块兜底），只认格式不认项目；
+- 格式处理器按格式触发（python / yaml / markdown / 行块兜底），只认格式不认项目；
 - 没有结构化切片方案的格式诚实降级：行块地图 + 词法检索，outline 会明说。
 """
 from __future__ import annotations
 
+import ast
 import re
 from typing import Any, Callable, Dict, List, Mapping, Sequence
 
@@ -25,6 +26,9 @@ _LOCATOR = re.compile(r"^L(\d+)(?:-L(\d+))?$")
 _TOP_KEY = re.compile(r"^([A-Za-z_][\w.-]*):")
 _LIST_ID = re.compile(r"^(\s+)-\s+(?:id|name|field|key|slot_id)\s*:\s*(\S+)")
 _HEADING = re.compile(r"^(#{1,6})\s+(\S.*)$")
+# 大常量（dict 字面量）跨度超过单次精读上限时，按顶层 key 展开二级条目。
+_PY_CONST_SPLIT_LINES = MAX_READ_LINES
+_PY_DOC_LABEL_CHARS = 40
 
 
 def material_uri(project_id: str, material_id: str) -> str:
@@ -51,7 +55,22 @@ def _slice(lines: Sequence[str], start: int, end: int) -> str:
 # 格式处理器：识别 + 骨架。只认格式，不认项目（治理规则，见 materials.md）。
 
 
+def _parse_python(lines: Sequence[str]) -> ast.Module | None:
+    """能被解析且含 def/class/import 节点才算 Python 源码；排除偶然合法的纯字面量文本。"""
+    try:
+        tree = ast.parse("\n".join(lines))
+    except (SyntaxError, ValueError):
+        return None
+    structural = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Import, ast.ImportFrom)
+    if any(isinstance(node, structural) for node in tree.body):
+        return tree
+    return None
+
+
 def _detect_format(lines: Sequence[str]) -> str:
+    # Python 优先：`X: int = 1` 像 yaml 顶层键、`# 注释` 像 markdown 标题，必须先于形状匹配排除。
+    if _parse_python(lines) is not None:
+        return "python"
     for line in lines:
         if _TOP_KEY.match(line):
             return "yaml"
@@ -59,6 +78,80 @@ def _detect_format(lines: Sequence[str]) -> str:
         if _HEADING.match(line):
             return "markdown"
     return "text"
+
+
+def _py_assign_targets(node: ast.AST) -> str:
+    if isinstance(node, ast.Assign):
+        names = [t.id for t in node.targets if isinstance(t, ast.Name)]
+        return ", ".join(names)
+    if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+        return node.target.id
+    return ""
+
+
+def _py_doc_suffix(node: ast.AST) -> str:
+    if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        return ""
+    doc = ast.get_docstring(node) or ""
+    first = next((line.strip() for line in doc.splitlines() if line.strip()), "")
+    return f" — {first[:_PY_DOC_LABEL_CHARS]}" if first else ""
+
+
+def _py_dict_key_label(key: ast.AST | None) -> str:
+    if key is None:
+        return "**"
+    if isinstance(key, ast.Constant):
+        return repr(key.value)
+    if isinstance(key, ast.Name):
+        return key.id
+    return type(key).__name__
+
+
+def _py_const_entries(name: str, value: ast.AST, start: int, end: int) -> List[Dict[str, Any]]:
+    """dict 字面量超单次精读上限时按顶层 key 切二级条目，让模型能一步选中要读的段。"""
+    if not isinstance(value, ast.Dict) or end - start + 1 <= _PY_CONST_SPLIT_LINES:
+        return []
+    keyed = [(k, v) for k, v in zip(value.keys, value.values)]
+    entries: List[Dict[str, Any]] = []
+    for position, (key, item) in enumerate(keyed):
+        key_start = getattr(key, "lineno", None) or item.lineno
+        # 值的末行；到下一个 key 起始前一行为止，避免把下一项吞进来。
+        item_end = getattr(item, "end_lineno", None) or key_start
+        if position + 1 < len(keyed):
+            next_key, next_item = keyed[position + 1]
+            next_start = getattr(next_key, "lineno", None) or next_item.lineno
+            item_end = min(item_end, max(key_start, next_start - 1))
+        entries.append({"label": f"  {name}[{_py_dict_key_label(key)}]", "start": key_start, "end": item_end})
+    return entries
+
+
+def _python_outline(lines: Sequence[str]) -> List[Dict[str, Any]]:
+    """模块顶层 def/class/常量为一级条目，类方法与大 dict 常量的 key 为二级；行区间取自 AST。"""
+    tree = _parse_python(lines)
+    if tree is None:
+        return []
+    entries: List[Dict[str, Any]] = []
+    for node in tree.body:
+        end = getattr(node, "end_lineno", None) or node.lineno
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            entries.append({"label": f"def {node.name}{_py_doc_suffix(node)}", "start": node.lineno, "end": end})
+        elif isinstance(node, ast.ClassDef):
+            entries.append({"label": f"class {node.name}{_py_doc_suffix(node)}", "start": node.lineno, "end": end})
+            for member in node.body:
+                if isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    member_end = getattr(member, "end_lineno", None) or member.lineno
+                    entries.append({
+                        "label": f"  def {node.name}.{member.name}{_py_doc_suffix(member)}",
+                        "start": member.lineno,
+                        "end": member_end,
+                    })
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            name = _py_assign_targets(node)
+            if not name or node.value is None:
+                continue
+            entries.append({"label": f"const {name}", "start": node.lineno, "end": end})
+            entries.extend(_py_const_entries(name, node.value, node.lineno, end))
+    return entries
 
 
 def _yaml_outline(lines: Sequence[str]) -> List[Dict[str, Any]]:
@@ -117,7 +210,10 @@ def outline(project_id: str, material_id: str) -> Dict[str, Any]:
     lines = read_content(project_id, material_id).splitlines()
     detected = _detect_format(lines)
     note = ""
-    if detected == "yaml":
+    if detected == "python":
+        raw = _python_outline(lines)
+        note = "Python 源码：条目是顶层 def/class/常量（类方法、大 dict 常量的 key 为二级）。常量表可直接精读；函数体是实现而非声明，据其推断能力空间时注意默认分支与动态分发。"
+    elif detected == "yaml":
         raw = _yaml_outline(lines)
     elif detected == "markdown":
         raw = _markdown_outline(lines)

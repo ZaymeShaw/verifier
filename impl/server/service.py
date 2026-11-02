@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import subprocess
@@ -8,8 +9,19 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
-from ..core import capability_store, case_pool, context_store, materials_store, pipeline
+from ..core import (
+    capability_store,
+    case_pool,
+    context_store,
+    exploration_store,
+    findings_ledger,
+    materials_store,
+    pipeline,
+    run_store,
+    session_store,
+)
 from ..core.config import get_runtime_config
+from ..core.instances import INSTANCE_ENV
 from ..core.project_loader import list_projects
 from ..core.schema import (
     BatchRunResult,
@@ -96,8 +108,14 @@ def compact_run(run: Dict[str, Any]) -> Dict[str, Any]:
         "frontend_view": frontend_view,
         "error": run.get("error"),
     }
+    if run.get("llmtracing") is not None:
+        compact["llmtracing"] = run["llmtracing"]
     if run.get("capability_carrier") is not None:
         compact["capability_carrier"] = run.get("capability_carrier")
+    if run.get("eval_axes") is not None:
+        compact["eval_axes"] = run.get("eval_axes")
+    if run.get("stage_timings"):
+        compact["stage_timings"] = run.get("stage_timings")
     table_row = build_trace_table_row_from_run(compact)
     compact["table_row"] = to_dict(table_row)
     compact["status"] = table_row.status
@@ -118,7 +136,10 @@ def compact_batch_result(batch_result: Any, identities: list[Dict[str, Any]] | N
 
 
 def case_event(index: int, run: Dict[str, Any], identity: Dict[str, Any] | None = None) -> Dict[str, Any]:
-    compact = compact_run(run)
+    return case_event_from_compact(index, compact_run(run), identity)
+
+
+def case_event_from_compact(index: int, compact: Dict[str, Any], identity: Dict[str, Any] | None = None) -> Dict[str, Any]:
     table_row = compact.get("table_row") or {}
     judge_summary = table_row.get("judge_summary") or {}
     attribution_summary = table_row.get("attribution_summary") or {}
@@ -145,6 +166,7 @@ def health() -> Dict[str, Any]:
     return {
         "status": "ok",
         "pid": os.getpid(),
+        "instance_id": os.environ.get(INSTANCE_ENV),
         "started_at": datetime.fromtimestamp(SERVER_STARTED_AT, tz=timezone.utc).isoformat(),
         "config_hash": _config_hash(),
         "code_version": _git_commit(),
@@ -191,7 +213,6 @@ def _runtime_case_from_live_payload(data: Dict[str, Any]) -> SingleTurnCase:
     return SingleTurnCase(
         id="",
         input=dict(request),
-        user_intent=str(data.get("user_intent") or ""),
     )
 
 
@@ -312,17 +333,225 @@ def list_capabilities(data: Dict[str, Any]) -> Any:
 
 
 def save_capability(data: Dict[str, Any]) -> Any:
-    return capability_store.save_capability(
-        project_from(data), str(data.get("name") or ""), data.get("entry") or {}
-    )
+    project = project_from(data)
+    name = str(data.get("name") or "")
+    entry = capability_store.validate_entry(name, data.get("entry") or {})
+    checked = None
+    if project in EVAL_AXES_PROJECTS:
+        # llm_probe 只校验（返回 None）；llm_probe_loop 另返回不挡保存的警告，页面显示在保存结果里
+        checked = _project_module(project, "eval_axes.validate").validate_scenario_entry(entry, owner=name)
+    return {**capability_store.save_capability(project, name, entry), "warnings": list(checked.warnings) if checked else []}
 
 
 def delete_capability(data: Dict[str, Any]) -> Any:
     return capability_store.delete_capability(project_from(data), str(data.get("name") or ""))
 
 
+# 扩展评估轴：llm_probe（工作流路线）与 llm_probe_loop（axis loop 路线，spec/alg/axis_loop.md §2）。
+EVAL_AXES_PROJECTS = ("llm_probe", "llm_probe_loop")
+
+
+def _require_eval_axes_project(project: str) -> str:
+    if project not in EVAL_AXES_PROJECTS:
+        raise ValueError(f"扩展评估轴目前只支持项目 {', '.join(EVAL_AXES_PROJECTS)}，收到 {project!r}")
+    return project
+
+
+def _project_module(project: str, name: str):
+    return importlib.import_module(f"impl.projects.{project}.{name}")
+
+
+def eval_axes_types(data: Dict[str, Any]) -> Any:
+    project = _require_eval_axes_project(project_from(data))
+    return {"project_id": project, "types": _project_module(project, "eval_axes.registry").describe_axis_types()}
+
+
+def eval_axes_run(data: Dict[str, Any]) -> Any:
+    """试验入口：对页面上已有的同一个 trace 跑新链路，不落盘、不经过生产 judge。"""
+    project = _require_eval_axes_project(project_from(data))
+    trace = normalize_run_trace(data.get("trace"))
+    if trace is None:
+        raise ValueError("缺 trace：先发一次 live 得到 RunTrace，再运行扩展轴试验")
+    from ..core.project_loader import load_project
+
+    report = _project_module(project, "eval_axes").build_report(load_project(project), trace, run_id=str(data.get("run_id") or ""))
+    return {"project_id": project, **report}
+
+
+def business_trace_providers(data: Dict[str, Any]) -> Any:
+    project = _require_eval_axes_project(project_from(data))
+    return {"project_id": project, "providers": _project_module(project, "business_trace").provider_descriptions()}
+
+
+def business_trace_check(data: Dict[str, Any]) -> Any:
+    project = _require_eval_axes_project(project_from(data))
+    return {"project_id": project, **_project_module(project, "business_trace").check_connection(data.get("business_trace"))}
+
+
+def knowledge_sources(data: Dict[str, Any]) -> Any:
+    project = _require_eval_axes_project(project_from(data))
+    return {"project_id": project, **_project_module(project, "eval_axes.sources").list_sources()}
+
+
+def knowledge_source_save(data: Dict[str, Any]) -> Any:
+    project = _require_eval_axes_project(project_from(data))
+    return {"project_id": project, **_project_module(project, "eval_axes.sources").save_source(str(data.get("name") or ""), data.get("entry"))}
+
+
+def knowledge_source_delete(data: Dict[str, Any]) -> Any:
+    project = _require_eval_axes_project(project_from(data))
+    return {"project_id": project, **_project_module(project, "eval_axes.sources").delete_source(str(data.get("name") or ""))}
+
+
+def knowledge_source_check(data: Dict[str, Any]) -> Any:
+    project = _require_eval_axes_project(project_from(data))
+    return {"project_id": project, **_project_module(project, "eval_axes.sources").check_source(str(data.get("name") or ""))}
+
+
 def judge(data: Dict[str, Any]) -> Any:
-    return pipeline.judge(project_from(data), normalize_run_trace(data.get("trace")), data.get("user_intent"))
+    return pipeline.judge(project_from(data), normalize_run_trace(data.get("trace")))
+
+
+# --- Session 工具（spec/mock/protocol.md 5.1）---
+
+def session_open(data: Dict[str, Any]) -> Any:
+    return session_store.STORE.open(
+        project_from(data),
+        mode=str(data.get("mode") or "text"),
+        budget=data.get("budget") or {},
+        seed_prefix=data.get("seed_prefix") or [],
+        seed_mode=data.get("seed_mode"),
+        pool=str(data.get("pool") or ""),
+        run_id=str(data.get("run_id") or ""),
+        scenario=str(data.get("scenario") or ""),
+    )
+
+
+def session_send(data: Dict[str, Any]) -> Any:
+    return session_store.STORE.send(str(data.get("session_id") or ""), dict(data.get("message") or {}), tokens=int(data.get("tokens") or 0))
+
+
+def session_intent(data: Dict[str, Any]) -> Any:
+    return session_store.STORE.intent(
+        str(data.get("session_id") or ""),
+        user_intent=str(data.get("user_intent") or ""),
+        user_context=data.get("user_context") or {},
+        source=str(data.get("source") or "seeded"),
+    )
+
+
+def session_close(data: Dict[str, Any]) -> Any:
+    return session_store.STORE.close(str(data.get("session_id") or ""), str(data.get("stop_reason") or ""))
+
+
+def session_list(data: Dict[str, Any]) -> Any:
+    project = project_from(data)
+    payload = session_store.STORE.list(project or None)
+    if data.get("include_exports", True) and project:
+        payload["exports"] = session_store.STORE.list_exports(project, run_id=str(data.get("run_id") or ""))
+    return payload
+
+
+def session_get(data: Dict[str, Any]) -> Any:
+    return session_store.STORE.export_of(project_from(data), str(data.get("session_id") or ""))
+
+
+def _judge_signatures(judge_result: Any) -> List[str]:
+    """失败签名建议：blocking expectation_id + 失败状态（5.4）。"""
+    blocking = {
+        item.expectation_id for item in (judge_result.business_expectations or []) if getattr(item, "blocking", False)
+    }
+    signatures = []
+    for item in judge_result.fulfillment_assessments or []:
+        status = str(item.status or "").lower()
+        if status and status != "fulfilled" and (not blocking or item.expectation_id in blocking):
+            signatures.append(f"{item.expectation_id}:{status}")
+    return signatures
+
+
+def session_judge(data: Dict[str, Any]) -> Any:
+    """对已导出的会话 trace 跑 judge，并把结论写回导出文件。不阻断 harness。"""
+    project = project_from(data)
+    session_id = str(data.get("session_id") or "")
+    export = session_store.STORE.export_of(project, session_id)
+    trace = normalize_run_trace(export.get("trace"))
+    result = pipeline.judge(project, trace)
+    verdict = str((result.overall_fulfillment or {}).get("status") or "") or None
+    summary = str(result.reasoning_summary or "")
+    session_store.STORE.update_export(
+        project, session_id, judge=to_dict(result), judge_verdict=verdict, judge_summary=summary,
+    )
+    return {
+        "session_id": session_id,
+        "judge_verdict": verdict,
+        "diverged_at_turn": trace.diverged_at_turn if trace else None,
+        "signatures": _judge_signatures(result),
+        "reasoning_summary": summary,
+        "assessments": [
+            {"expectation_id": item.expectation_id, "status": item.status, "downstream_impact": item.downstream_impact}
+            for item in (result.fulfillment_assessments or [])
+        ],
+    }
+
+
+def ledger_add(data: Dict[str, Any]) -> Any:
+    return findings_ledger.add(
+        project_from(data),
+        signature=str(data.get("signature") or ""),
+        session_id=str(data.get("session_id") or ""),
+        trigger_summary=str(data.get("trigger_summary") or ""),
+        realism=str(data.get("realism") or "medium"),
+        harness_verdict=str(data.get("harness_verdict") or ""),
+        judge_verdict=data.get("judge_verdict"),
+        protocol_fuzz=bool(data.get("protocol_fuzz")),
+        run_id=str(data.get("run_id") or ""),
+        notes=str(data.get("notes") or ""),
+    )
+
+
+def ledger_query(data: Dict[str, Any]) -> Any:
+    return findings_ledger.query(
+        project_from(data),
+        category=data.get("category"),
+        signature=data.get("signature"),
+        session_id=data.get("session_id"),
+        run_id=data.get("run_id"),
+    )
+
+
+def exploration_save(data: Dict[str, Any]) -> Any:
+    return exploration_store.save_direction(project_from(data), str(data.get("run_id") or ""), data.get("direction"))
+
+
+def exploration_report(data: Dict[str, Any]) -> Any:
+    return exploration_store.save_report(project_from(data), str(data.get("run_id") or ""), data.get("report"))
+
+
+def exploration_get(data: Dict[str, Any]) -> Any:
+    """一个批次的全貌：方向 + 报告 + 该 run_id 下的会话导出摘要 + 台账。探索页与 harness 共用。"""
+    project = project_from(data)
+    run_id = str(data.get("run_id") or "")
+    record = exploration_store.get(project, run_id)
+    return {
+        **record,
+        "sessions": session_store.STORE.list_exports(project, run_id=run_id),
+        "ledger": findings_ledger.query(project, run_id=run_id),
+    }
+
+
+def exploration_list(data: Dict[str, Any]) -> Any:
+    project = project_from(data)
+    runs = exploration_store.list_runs(project)
+    exports = session_store.STORE.list_exports(project)
+    ledger = findings_ledger.query(project)["records"]
+    for run in runs:
+        run_id = run.get("run_id")
+        run["session_count"] = sum(1 for item in exports if item.get("run_id") == run_id)
+        run["ledger_by_category"] = {}
+        for item in ledger:
+            if item.get("run_id") == run_id:
+                run["ledger_by_category"][item["category"]] = run["ledger_by_category"].get(item["category"], 0) + 1
+    return {"project_id": project, "runs": runs}
 
 
 def attribute(data: Dict[str, Any]) -> Any:
@@ -350,7 +579,7 @@ def check(data: Dict[str, Any]) -> Any:
 
 def run_chain(data: Dict[str, Any]) -> RunChainResponse:
     runtime_case = _runtime_case_from_live_payload(data)
-    run = pipeline.run_chain(project_from(data), runtime_case, user_intent=data.get("user_intent"))
+    run = pipeline.run_chain(project_from(data), runtime_case)
     return RunChainResponse(
         trace=normalize_run_trace(run.get("trace")),
         judge=normalize_judge_result(run.get("judge")),
@@ -362,13 +591,56 @@ def run_chain(data: Dict[str, Any]) -> RunChainResponse:
     )
 
 
+def _workspace_response(project: str) -> Any:
+    from ..core.mock import parse_mock_case
+
+    data = run_store.STORE.load(project)
+    # 用例仍走 MockCase 边界，不能与运行元数据混成普通 dict 后丢掉 output/reference 的 null。
+    for entry in data["cases"]:
+        entry["case"] = parse_mock_case(entry["case"], project_id=project)
+    return data
+
+
+def run_workspace(data: Dict[str, Any]) -> Any:
+    return _workspace_response(project_from(data))
+
+
+def replace_run_workspace(data: Dict[str, Any]) -> Any:
+    from ..core.mock import parse_mock_case
+
+    project = project_from(data)
+    cases = [to_dict(parse_mock_case(case, project_id=project)) for case in data["cases"]]
+    run_store.STORE.replace(project, cases, data.get("source") or "uploaded_or_manual")
+    return _workspace_response(project)
+
+
+def clear_run_workspace(data: Dict[str, Any]) -> Any:
+    project = project_from(data)
+    run_store.STORE.clear(project, keep_cases=data["keep_cases"])
+    return _workspace_response(project)
+
+
+def attribute_run_workspace(data: Dict[str, Any]) -> Any:
+    project, key = project_from(data), data["request_key"]
+    run = run_store.STORE.get_run(project, key)
+    trace, judged = normalize_run_trace(run.get("trace")), normalize_judge_result(run.get("judge"))
+    if trace is None or judged is None:
+        raise ValueError("当前用例缺少 Trace/Judge，不能归因")
+    attr = pipeline.attribute(project, trace, judged, manual_override=True)
+    updated = {**run, "attribute": to_dict(attr)}
+    updated["frontend_view"] = to_dict(frontend_view({"project": project, **updated}))
+    updated["table_row"] = to_dict(build_trace_table_row_from_run(updated))
+    run_store.STORE.update_run(project, key, updated)
+    return updated
+
+
 def batch_run(data: Dict[str, Any]) -> BatchRunResult:
     from ..core.mock import parse_mock_case
 
     concurrency = data.get("concurrency")
     project = project_from(data)
     cases = [to_dict(parse_mock_case(case, project_id=project)) for case in (data.get("cases") or [])]
-    result = pipeline.batch_run(project, cases, user_intent=data.get("user_intent"), concurrency=concurrency)
+    result = pipeline.batch_run(project, cases, concurrency=concurrency)
     return BatchRunResult(
         project_id=result.project_id,
         total=result.total,

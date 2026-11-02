@@ -1,0 +1,45 @@
+### smoke-multi-policy-anjinning  run=fb5fda5628174ef6967116bd4ecca493 desc=None
+expectations=1 records=25
+
+## expectations
+- exp_list_anjinning_policies: 列出安锦宁名下的保单清单 | cond=总是
+
+## workflow definitions
+  [turn1/records/definitions/0/data] [{"name": "assemble", "type": "Step"}, {"name": "gate", "type": "Step"}, {"name": "to_direct", "type": "Condition", "steps": [{"name": "direct", "type": "Step"}]}, {"name": "to_capability", "type": "Condition", "steps": [{"name": "run_capability", "type": "Step"}]}, {"name": "to_agent", "type": "Condition", "steps": [{"name": "agent_input", "type": "Step"}, {"name": "agent", "type": "Step"}, {"name": "agent_bridge", "type": "Step"}]}, {"name": "finalize", "type": "Step"}, {"name": "present_agentos", "type": "Step"}]
+
+## tool calls (in order)
+  [turn1/records/raw_runs/0/run_data/step_executor_runs/0/tools/0] name=None args=null
+      result=null err=null
+  [turn1/records/run/step_executor_runs/0/tools/0] name=policy_search args={"query": "安锦宁名下的保单", "compact": true, "fields": ["保单状态", "投保人姓名", "被保人姓名", "年缴保费", "险种保额"]}
+      result={"result":{"data":{"pageNo":1,"pageSize":100,"total":8,"records":[{"polno":"P260922000000302","polProductName":"平安e生保（惠享版）长期医疗保险（费率可调）","applicantNameCipher":"zo0LGBCV11oIB3fjC3UWTqmHOFM6XABw==","insurantNameCipher":"zo0LGBCV11r6i5Js5h+hEGk2fmFdS67A==","polStatusDesc":"交费有效"},{"polno":"P260922000007857","polProductName":"平安e生保（惠享版）长期医疗保险（费率可调）","applicantNameCipher":"zo0LGBCV11r6i5Js5h+hEGk2fmFdS67A==","insurantNameCipher":"zo0LGBCV11r6i5Js5h+hEGk2fmFdS67A==","polStatusDesc":"交费有效"},{"polno":"P260922000007858","polProductName":"平安安佑福（惠享版）定期重大疾病保险","applicantNameCipher":"zo0LGBCV11r6i5Js5h+hEGk2fmFdS67A==","insurantNameCipher":"zo0LGBCV11r6i5Js5h+hEGk2fmFdS67A==","polStatusDesc":"交费有效"},{"pol...<+2448> err=false
+
+## model calls
+  [turn1/records/traces/0/tree/0/spans/3/spans/1] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 596 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+安锦宁名下有哪些保单？先列清单就行。
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "tool_calls": [{"id": "call_a66f0d6ea45c45cc909b09a7", "type": "function", "function": {"name": "policy_search", "arguments": "{\"query\": \"\u5b89\u9526\u5b81\u540d\u4e0b\u7684\u4fdd\u5355\", \"compact\": true, \"fields\": [\"\u4fdd\u5355\u72b6\u6001\", \"\u6295\u4fdd\u4eba\u59d3\u540d\", \"\u88ab\u4fdd\u4eba\u59d3\u540d\", \"\u5e74\u7f34\u4fdd\u8d39\", \"\u9669\u79cd\u4fdd\u989d\"]}"}}]}]}
+  [turn1/records/traces/0/tree/0/spans/3/spans/3] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 596 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+安锦宁名下有哪些保单？先列清单就行。
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "content": "\u5b89\u9526\u5b81\u540d\u4e0b\u5171\u67e5\u5230 **6 \u5f20\u4fdd\u5355**\uff0c\u6e05\u5355\u5982\u4e0b\uff1a\n\n| \u4fdd\u5355\u53f7 | \u4ea7\u54c1\u540d\u79f0 | \u4fdd\u5355\u72b6\u6001 |\n|--------|----------|----------|\n| P260922000000302 | \u5e73\u5b89e\u751f\u4fdd\uff08\u60e0\u4eab\u7248\uff09\u957f\u671f\u533b\u7597\u4fdd\u9669\uff08\u8d39\u7387\u53ef\u8c03\uff09 | \u4ea4\u8d39\u6709\u6548 |\n| P260922000007857 | \u5e73\u5b89e\u751f\u4fdd\uff08\u60e0\u4eab\u7248\uff09\u957f\u671f\u533b\u7597\u4fdd\u9669\uff08\u8d39\u7387\u53ef\u8c03\uff09 | \u4ea4\u8d39\u6709\u6548 |\n| P260922000007858 | \u5e73\u5b89\u5b89\u4f51\u798f\uff08\u60e0\u4eab\u7248\uff09\u5b9a\u671f\u91cd\u5927\u75be\u75c5\u4fdd\u9669 | \u4ea4\u8d39\u6709\u6548 |\n| P260922000007859 | \u5e73\u5b89\u5b89\u4f51\u798f\u91cd\u5927\u75be\u75c5\u4fdd\u9669 | \u4ea4\u8d39\u6709\u6548 |\n| P260922000007860 | \u5e73\u5b89\u5b89\u4f51\u798f\uff08\u60e0\u4eab\u7248\uff09\u5b9a\u671f\u91cd\u5927\u75be\u75c5\u4fdd\u9669 | \u505c\u6548 |\n| P260922000007861 | \u5e73\u5b89e\u751f\u4fdd\uff08\u52a0\u4eab\u7248\uff09\u533b\u7597\u4fdd\u9669 | \u5230\u671f\u7ec8\u6b62 |\n\n\u5176\u4e2d 4 \u5f20\u4e3a\u4ea4\u8d39\u6709\u6548\uff0c1 \u5f20\u505c\u6548\uff0c1 \u5f20\u5230\u671f\u7ec8\u6b62\u3002\u4e2a\u522b\u4fdd\u5355\u88ab\u4fdd\u4eba\u59d3\u540d\u672a\u80fd\u5b8c\u6574\u8fd4\u56de\uff0c\u5982\u9700\u6838\u5bf9\u53ef\u8fdb\u4e00\u6b65\u67e5\u8be2\u5355\u5f20\u4fdd\u5355\u8be6\u6...<+1329>
+
+## delivered / gaps
+  [turn1.delivered_output] {"output_text": "{\"answer\": \"1.\\n保单 P260922000000302:\\n· 保单摘要:平安e生保（惠享版）长期医疗保险（费率可调）·交费有效·2025-10-31投保\\n2.\\n保单 P260922000007857:\\n· 保单摘要:平安e生保（惠享版）长期医疗保险（费率可调）·交费有效·2026-05-30投保\\n3.\\n保单 P260922000007858:\\n· 保单摘要:平安安佑福（惠享版）定期重大疾病保险·交费有效·2026-04-03投保\\n4.\\n保单 P260922000007859:\\n· 保单摘要:平安安佑福重大疾病保险·交费有效·2026-01-09投保\\n5.\\n保单 P260922000007860:\\n· 保单摘要:平安安佑福（惠享版）定期重大疾病保险·停效·2026-01-27投保\", \"status\": null, \"fact_refs\": [\"F-CALL-TR-1c854dd8e53a4b979b3004aa2c310b2f-01-001\", \"F-CALL-TR-1c854dd8e53a4b979b3004aa2c310b2f-01-002\", \"F-CALL-TR-1c854dd8e53a4b979b3004aa2c310b2f-01-003\", \"F-CALL-TR-1c854dd8e53a4b979b3004aa2c310b2f-01-004\", \"F-CALL-TR-1c854dd8e53a4b979b3004aa2c310b2f-01-005\"], \"sources\": [], \"gaps\": [\"个别保单被保人姓名未完整返回，如需可进一步查询单张保单详情\"], \"assumptions\": [], \"trace_id\": null, \"followup_actions\": [], \"handoff_status\": \"none\", \"checks\": null, \"structured\": null, \"completeness\": \"partial\", \"limitations\": [\"个别保单被保人姓名未完整返回，如需可进一步查询单张保单详情\"]}"}
+  gap turn1.gap.state_transitions: {"id": "turn1.gap.state_transitions", "status": "unsupported", "reason": "此 provider 不把 run/session 末态重建为逐次状态变化"}
+  gap turn1.gap.raw_backend_http: {"id": "turn1.gap.raw_backend_http", "status": "unsupported", "reason": "Agno 工具结果可能已经过业务适配，不保证原始下游 HTTP 请求响应"}
+  gap turn1.gap.source_documents: {"id": "turn1.gap.source_documents", "status": "unsupported", "reason": "仅提供已记录 references 和工具正文；不自动访问外部文档或推断版本"}
+  gap turn1.gap.history: {"id": "turn1.gap.history", "status": "empty", "count": 0, "excluded_unordered_runs": 0, "ordered_by_trace_timestamps": 0, "reason": "仅保存同 session 已终止且确定早于本轮的 run：优先用根 trace 的微秒级 start/end 定序，否则要求 created_at + duration + 1秒精度余量早于本轮 created_at；缺时间、重叠和不明顺序的 run 不纳入。历史状态仍是运行末态，不是逐次状态快照。"}
+
+## trace_analysis structure (recorded)
+  workflow_steps=null
+  suspects=null

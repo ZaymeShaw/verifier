@@ -1,0 +1,576 @@
+{
+  "client_search": {
+    "axes": [
+      {
+        "type": "expectations",
+        "enabled": true,
+        "description": "用户拿它办的事：用一句自然语言，从客户库（Elasticsearch）里检回正好符合描述的那群客户。\n交付物是给 ES 执行的查询谓词集（字段×操作符×值+组合逻辑）；同一从表的多个条件作用于同一条成员记录。判断达成必须把条件当查询推演：执行后检回的集合恰好是用户描述的人群才算办成。\n语义等价的不同表达算办成；条件互斥致空集、语义放大、语义缩小、编造未表达的条件、丢失已表达的条件都算没办成。"
+      },
+      {
+        "type": "blocking",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "claims",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "fulfillment",
+        "enabled": true,
+        "description": "用户拿它办的事：用一句自然语言，从客户库（Elasticsearch）里检回正好符合描述的那群客户。\n交付物是给 ES 执行的查询谓词集（字段×操作符×值+组合逻辑）；同一从表的多个条件作用于同一条成员记录。判断达成必须把条件当查询推演：执行后检回的集合恰好是用户描述的人群才算办成。\n语义等价的不同表达算办成；条件互斥致空集、语义放大、语义缩小、编造未表达的条件、丢失已表达的条件都算没办成。"
+      },
+      {
+        "type": "main_verdict",
+        "enabled": true,
+        "description": ""
+      }
+    ],
+    "boundary": "能力空间以字段定义表为准（可搜字段、操作符、匹配模式、枚举值）：{material://llm_probe_loop/field_definitions_args}\n字段定义表之外的筛选维度不支持，应明确拒绝而不是编造条件。",
+    "capability": "用户拿它办的事：用一句自然语言，从客户库（Elasticsearch）里检回正好符合描述的那群客户。\n交付物是给 ES 执行的查询谓词集（字段×操作符×值+组合逻辑）；同一从表的多个条件作用于同一条成员记录。判断达成必须把条件当查询推演：执行后检回的集合恰好是用户描述的人群才算办成。\n语义等价的不同表达算办成；条件互斥致空集、语义放大、语义缩小、编造未表达的条件、丢失已表达的条件都算没办成。",
+    "mock_body": {
+      "session_id": "mock_session_dyn",
+      "source": "mock",
+      "trace_id": "mock_trace_dyn",
+      "user_id": "mock_user_001",
+      "user_text": "{query}"
+    },
+    "service": {
+      "method": "POST",
+      "timeout_seconds": 60.0,
+      "url": "http://127.0.0.1:8000/api/v1/client_search_query_parse_no_encipher"
+    }
+  },
+  "dashscope-qa": {
+    "capability": "用户拿它办的事：问一个事实型问题，得到一句准确、可直接引用的中文答案。\n交付物是答案文本（output.choices[0].message.content），被提问者直接阅读使用；答案事实正确、直接回应所问即算办成。答非所问、事实错误、编造都算没办成。",
+    "mock_body": {
+      "input": {
+        "messages": [
+          {
+            "content": "{query}",
+            "role": "user"
+          }
+        ]
+      },
+      "model": "qwen-turbo",
+      "parameters": {
+        "incremental_output": false,
+        "result_format": "message"
+      }
+    },
+    "service": {
+      "headers": {},
+      "method": "POST",
+      "response_mode": "json",
+      "timeout_seconds": 180.0,
+      "url": "http://127.0.0.1:18090/api/v1/services/aigc/text-generation/generation",
+      "start_hint": "被测目标是本机转发服务（只在实验时开）：先在 verifier 目录运行 python scripts/qa_target.py（默认 pi + agentrouter/deepseek-v4-flash；--backend dashscope 切回百炼）"
+    },
+    "axes": []
+  },
+  "hr-handbook-qa": {
+    "axes": [
+      {
+        "type": "expectations",
+        "enabled": true,
+        "description": "用户拿它办的事：问一个公司员工手册里的制度问题（年休假、试用期、加班、报销、考勤、离职等），得到一句依据制度条款、事实正确的中文答案。\n交付物是答案文本（output.choices[0].message.content），被提问者直接阅读使用；答案与制度事实一致、直接回应所问即算办成。答非所问、数字或期限说错、编造条款都算没办成。"
+      },
+      {
+        "type": "blocking",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "claims",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "truthfulness",
+        "enabled": true,
+        "description": "制度事实以员工手册知识库为准：{es://local-es/hr_handbook}。\n核验回答里关于公司制度（天数、期限、比例、金额、条件、是否允许）的每一条事实断言；知识库中没有对应条款的断言判无法核验，不要凭常识补全。"
+      },
+      {
+        "type": "fulfillment",
+        "enabled": true,
+        "description": "用户拿它办的事：问一个公司员工手册里的制度问题（年休假、试用期、加班、报销、考勤、离职等），得到一句依据制度条款、事实正确的中文答案。\n交付物是答案文本（output.choices[0].message.content），被提问者直接阅读使用；答案与制度事实一致、直接回应所问即算办成。答非所问、数字或期限说错、编造条款都算没办成。"
+      },
+      {
+        "type": "main_verdict",
+        "enabled": true,
+        "description": ""
+      }
+    ],
+    "capability": "用户拿它办的事：问一个公司员工手册里的制度问题（年休假、试用期、加班、报销、考勤、离职等），得到一句依据制度条款、事实正确的中文答案。\n交付物是答案文本（output.choices[0].message.content），被提问者直接阅读使用；答案与制度事实一致、直接回应所问即算办成。答非所问、数字或期限说错、编造条款都算没办成。",
+    "mock_body": {
+      "input": {
+        "messages": [
+          {
+            "content": "{query}",
+            "role": "user"
+          }
+        ]
+      },
+      "model": "qwen-turbo",
+      "parameters": {
+        "incremental_output": false,
+        "result_format": "message"
+      }
+    },
+    "service": {
+      "headers": {},
+      "method": "POST",
+      "response_mode": "json",
+      "timeout_seconds": 180.0,
+      "url": "http://127.0.0.1:18090/api/v1/services/aigc/text-generation/generation",
+      "start_hint": "被测目标是本机转发服务（只在实验时开）：先在 verifier 目录运行 python scripts/qa_target.py（默认 pi + agentrouter/deepseek-v4-flash；--backend dashscope 切回百炼）"
+    }
+  },
+  "marketting-planning-intent": {
+    "boundary": "支持：单轮营销规划问句的意图识别与必要槽位抽取。意图标签空间：1001=客户画像、1002=队伍画像、1003=达成路径规划、4001=其他。\n不支持：多轮规划过程；生成 SSE 卡片。",
+    "capability": "用户拿它办的事：说一句营销规划请求，被分发到正确的处理流程。\n交付物是意图标签+必要槽位，下游按标签路由、按槽位执行；判断达成必须按「照此标签和槽位分发能否正确承接这句请求」推演。\n意图标签：1001=客户画像、1002=队伍画像、1003=达成路径规划、4001=其他（不属于以上流程的请求，如闲聊、天气等域外问题）。\n标签选对且必要槽位完整准确才算办成；标签错路由、槽位缺失或值错都算没办成。",
+    "mock_body": {
+      "extra_input_params": {
+        "agent_args": {
+          "conversation_id": "mock_session_dyn",
+          "message": {
+            "content": "{query}",
+            "content_type": "text"
+          }
+        },
+        "args": {
+          "contexts": [],
+          "extensions": {}
+        }
+      },
+      "org_id": "default_org",
+      "session_id": "mock_session_dyn",
+      "trace_id": "mock_trace_dyn",
+      "user_text": "{query}"
+    },
+    "service": {
+      "method": "POST",
+      "timeout_seconds": 60.0,
+      "url": "http://127.0.0.1:9006/api/v1/marketing-planning/intent-recognition"
+    },
+    "axes": []
+  },
+  "policy-clause-qa": {
+    "axes": [
+      {
+        "type": "expectations",
+        "enabled": true,
+        "description": "用户拿它办的事：问一个保险产品条款问题（犹豫期、等待期、免赔额、投保年龄、给付比例等），得到一句依据条款、事实正确的中文答案。\n交付物是答案文本（output.choices[0].message.content），被提问者直接阅读使用；答案与条款事实一致、直接回应所问即算办成。答非所问、数字或期限说错、编造条款都算没办成。"
+      },
+      {
+        "type": "blocking",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "claims",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "truthfulness",
+        "enabled": true,
+        "description": "条款事实以知识库为准：{es://local-es/clause_kb}。\n核验回答里关于产品条款（期限、金额、比例、年龄、责任）的每一条事实断言；知识库中没有对应条款的断言判无法核验，不要凭常识补全。"
+      },
+      {
+        "type": "fulfillment",
+        "enabled": true,
+        "description": "用户拿它办的事：问一个保险产品条款问题（犹豫期、等待期、免赔额、投保年龄、给付比例等），得到一句依据条款、事实正确的中文答案。\n交付物是答案文本（output.choices[0].message.content），被提问者直接阅读使用；答案与条款事实一致、直接回应所问即算办成。答非所问、数字或期限说错、编造条款都算没办成。"
+      },
+      {
+        "type": "main_verdict",
+        "enabled": true,
+        "description": ""
+      }
+    ],
+    "capability": "用户拿它办的事：问一个保险产品条款问题（犹豫期、等待期、免赔额、投保年龄、给付比例等），得到一句依据条款、事实正确的中文答案。\n交付物是答案文本（output.choices[0].message.content），被提问者直接阅读使用；答案与条款事实一致、直接回应所问即算办成。答非所问、数字或期限说错、编造条款都算没办成。",
+    "mock_body": {
+      "input": {
+        "messages": [
+          {
+            "content": "{query}",
+            "role": "user"
+          }
+        ]
+      },
+      "model": "qwen-turbo",
+      "parameters": {
+        "incremental_output": false,
+        "result_format": "message"
+      }
+    },
+    "service": {
+      "headers": {},
+      "method": "POST",
+      "response_mode": "json",
+      "timeout_seconds": 180.0,
+      "url": "http://127.0.0.1:18090/api/v1/services/aigc/text-generation/generation",
+      "start_hint": "被测目标是本机转发服务（只在实验时开）：先在 verifier 目录运行 python scripts/qa_target.py（默认 pi + agentrouter/deepseek-v4-flash；--backend dashscope 切回百炼）"
+    }
+  },
+  "policy_search": {
+    "boundary": "支持：把自然语言保单筛选意图解析为查询语法树的过滤条件。\n不支持：下游保单列表检索与结果集处理。",
+    "capability": "用户拿它办的事：用自然语言筛出正好符合条件的那批保单。\n交付物是可执行的查询语法树（过滤条件组合），由下游保单检索执行；判断达成必须按语法树执行后命中的保单集合是否恰好等于用户意图来推演，不看树的形状。\n语义等价的表达算办成；条件互斥、放大、缩小、编造未表达条件、丢失已表达条件都算没办成。",
+    "mock_body": {
+      "action_scenario": "policySearch",
+      "app_scenario": "policy_search_parse",
+      "application_setting": null,
+      "extra_input_params": {
+        "agent_args": null,
+        "args": {
+          "contexts": []
+        },
+        "policySearchParseArgs": {
+          "agentCode": "A12345678",
+          "currentTime": "2026-08-06 10:30:00",
+          "query": "{query}"
+        }
+      },
+      "history": [],
+      "org_id": "verifier-org",
+      "org_name": "verifier",
+      "scenario": null,
+      "session_id": "mock_session_dyn",
+      "source": "verifier",
+      "token": "",
+      "trace_id": "mock_trace_dyn",
+      "ts": 1785983400000,
+      "user_action": "write",
+      "user_id": "verifier-user",
+      "user_text": ""
+    },
+    "service": {
+      "method": "POST",
+      "timeout_seconds": 120.0,
+      "url": "http://127.0.0.1:8050/api/v1/policy-search/policy-search-parse"
+    },
+    "axes": []
+  },
+  "verify-insurance-agno": {
+    "capability": "用户希望通过保险问答查询本人或授权范围内的保单数据、了解产品条款及业务办理方式。本场景只连接 insurance-qa-agent 的真实工具实例：服务启动时七个查询工具必须全部为 real，不接受 insurance-demo-v1 或其他 Mock 数据作为评测证据。支持保单信息查询、产品条款查询、一般保险规则咨询，以及这些查询的复合问题；信息缺失、真实下游不可用或对象不唯一时应如实说明缺口或澄清。默认动态请求使用合成测试身份，可验证无个人数据的知识问答和真实接口失败处理；需要命中个人保单时必须在 case 中显式提供经授权的测试工号、保单号及 empno/agentno。该 llm_probe 场景以单轮 case 为执行入口；验证多轮时须显式组织同 session 的前置请求与追问并保留两轮证据。",
+    "service": {
+      "method": "POST",
+      "timeout_seconds": 240.0,
+      "url": "http://127.0.0.1:18066/v1/chat"
+    },
+    "mock_body": {
+      "messages": [
+        {
+          "content": "{query}",
+          "role": "user"
+        }
+      ],
+      "session_id": "{session_id}",
+      "stream": false,
+      "user_id": "1050900009",
+      "empno": "1050900009",
+      "agentno": "1050900009"
+    },
+    "axes": [
+      {
+        "type": "expectations",
+        "enabled": true,
+        "description": "交付物为 /v1/chat JSON 中的 answer，以及与回答相关的 gaps、fact_refs、sources、followup_actions。"
+      },
+      {
+        "type": "blocking",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "claims",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "fulfillment",
+        "enabled": true,
+        "description": "逐项对照本次问题：对象、金额与单位、日期、产品版本、条件、比较关系及显式输出要求应准确，复合问题不能漏答；条件不足应具体说明缺口或澄清，不得猜保单或编造数值。只评价输入和输出能证明的能力兑现；接口成功、status=null 或存在 fact_refs 均不能单独证明答案正确。数值的外部真实性和内部过程另由有证据的过程轴核验，不能把单次测试数据当作普遍事实。服务失败提示不能判已完成查询。不得把信息咨询写成已实际办理退保等业务操作。"
+      },
+      {
+        "type": "carryability",
+        "enabled": true,
+        "description": "仅提供办理说明，不实际提交退保或保全申请。"
+      },
+      {
+        "type": "main_verdict",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "trace_analysis",
+        "enabled": true,
+        "description": "Agno 持久化消息可用于检查可见历史和状态，但 span 的输入输出可能脱敏，不能等同完整逐模型调用请求。"
+      },
+      {
+        "type": "intent_understanding_expected",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "intent_understanding",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "planning_routing_expected",
+        "enabled": true,
+        "description": "过程职责 retry_after_non_retryable（不可重试后拦住同参重发，2026-09-29 用户确认；适用子能力 planning_routing:repeat）：情形：前一次同名同参调用的结果已表明重试无效（例如结果正文声明不可重试），系统随后又原样发出同一调用。职责：编排应拦住这次同参重发，不把它交给工具执行。"
+      },
+      {
+        "type": "planning_routing",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "tool_execution_expected",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "tool_execution",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "context_memory_expected",
+        "enabled": true,
+        "description": "交付给调用方的 trace_id 字段，原值回显调用方请求里传的 trace_id（请求没传时为 null），不是系统内部的 TR- 追踪编号；内部 TR- 编号按设计不对外返回。交付里的 trace_id 与内部编号不同，不算丢失或改义。\n被测系统提示词里的「执行余量」（剩余几次模型调用、几次工具调用、多少秒）只是给模型的运行参考，本场景不评它：本应不写这一项，它更新没更新都不算问题。"
+      },
+      {
+        "type": "context_memory",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "knowledge_data_expected",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "knowledge_data",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "model_capability_expected",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "model_capability",
+        "enabled": true,
+        "description": ""
+      }
+    ],
+    "business_trace": {
+      "source": "agno-insurance",
+      "bindings": {
+        "business_trace_id": {
+          "pointer": "/trace_id",
+          "source": "response"
+        },
+        "session_id": {
+          "pointer": "/body/session_id",
+          "source": "request"
+        },
+        "user_id": {
+          "pointer": "/body/user_id",
+          "source": "request"
+        }
+      }
+    }
+  },
+  "verify-insurance-langfuse": {
+    "capability": "用户希望通过保险问答查询本人或授权范围内的保单数据、了解产品条款及业务办理方式。本场景只连接 insurance-qa-agent 的真实工具实例：服务启动时七个查询工具必须全部为 real，不接受 insurance-demo-v1 或其他 Mock 数据作为评测证据。支持保单信息查询、产品条款查询、一般保险规则咨询，以及这些查询的复合问题；信息缺失、真实下游不可用或对象不唯一时应如实说明缺口或澄清。默认动态请求使用合成测试身份，可验证无个人数据的知识问答和真实接口失败处理；需要命中个人保单时必须在 case 中显式提供经授权的测试工号、保单号及 empno/agentno。该 llm_probe 场景以单轮 case 为执行入口；验证多轮时须显式组织同 session 的前置请求与追问并保留两轮证据。",
+    "service": {
+      "method": "POST",
+      "timeout_seconds": 240.0,
+      "url": "http://127.0.0.1:18066/v1/chat"
+    },
+    "mock_body": {
+      "messages": [
+        {
+          "content": "{query}",
+          "role": "user"
+        }
+      ],
+      "session_id": "{session_id}",
+      "stream": false,
+      "user_id": "1050900009",
+      "empno": "1050900009",
+      "agentno": "1050900009",
+      "trace_id": "{request_id}"
+    },
+    "axes": [
+      {
+        "type": "expectations",
+        "enabled": true,
+        "description": "交付物为 /v1/chat JSON 中的 answer，以及与回答相关的 gaps、fact_refs、sources、followup_actions。"
+      },
+      {
+        "type": "blocking",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "claims",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "fulfillment",
+        "enabled": true,
+        "description": "逐项对照本次问题：对象、金额与单位、日期、产品版本、条件、比较关系及显式输出要求应准确，复合问题不能漏答；条件不足应具体说明缺口或澄清，不得猜保单或编造数值。只评价输入和输出能证明的能力兑现；接口成功、status=null 或存在 fact_refs 均不能单独证明答案正确。数值的外部真实性和内部过程另由有证据的过程轴核验，不能把单次测试数据当作普遍事实。服务失败提示不能判已完成查询。不得把信息咨询写成已实际办理退保等业务操作。"
+      },
+      {
+        "type": "carryability",
+        "enabled": true,
+        "description": "仅提供办理说明，不实际提交退保或保全申请。"
+      },
+      {
+        "type": "main_verdict",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "trace_analysis",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "intent_understanding_expected",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "intent_understanding",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "planning_routing_expected",
+        "enabled": true,
+        "description": "过程职责 retry_after_non_retryable（不可重试后拦住同参重发，2026-09-29 用户确认；适用子能力 planning_routing:repeat）：情形：前一次同名同参调用的结果已表明重试无效（例如结果正文声明不可重试），系统随后又原样发出同一调用。职责：编排应拦住这次同参重发，不把它交给工具执行。"
+      },
+      {
+        "type": "planning_routing",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "tool_execution_expected",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "tool_execution",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "context_memory_expected",
+        "enabled": true,
+        "description": "交付给调用方的 trace_id 字段，原值回显调用方请求里传的 trace_id（请求没传时为 null），不是系统内部的 TR- 追踪编号；内部 TR- 编号按设计不对外返回。交付里的 trace_id 与内部编号不同，不算丢失或改义。\n被测系统提示词里的「执行余量」（剩余几次模型调用、几次工具调用、多少秒）只是给模型的运行参考，本场景不评它：本应不写这一项，它更新没更新都不算问题。"
+      },
+      {
+        "type": "context_memory",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "knowledge_data_expected",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "knowledge_data",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "model_capability_expected",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "model_capability",
+        "enabled": true,
+        "description": ""
+      }
+    ],
+    "business_trace": {
+      "source": "langfuse-local",
+      "bindings": {
+        "business_trace_id": {
+          "source": "request",
+          "pointer": "/body/trace_id"
+        }
+      }
+    }
+  },
+  "verify-insurance-mcp": {
+    "capability": "用户希望通过保险问答查询本人或授权范围内的保单数据、了解产品条款及业务办理方式。本场景只连接 insurance-qa-agent 的真实工具实例：服务启动时七个查询工具必须全部为 real，不接受 insurance-demo-v1 或其他 Mock 数据作为评测证据。支持保单信息查询、产品条款查询、一般保险规则咨询，以及这些查询的复合问题；信息缺失、真实下游不可用或对象不唯一时应如实说明缺口或澄清。默认动态请求使用合成测试身份，可验证无个人数据的知识问答和真实接口失败处理；需要命中个人保单时必须在 case 中显式提供经授权的测试工号、保单号及 empno/agentno。该 llm_probe 场景以单轮 case 为执行入口；验证多轮时须显式组织同 session 的前置请求与追问并保留两轮证据。",
+    "service": {
+      "method": "POST",
+      "timeout_seconds": 240.0,
+      "url": "http://127.0.0.1:18066/v1/chat"
+    },
+    "mock_body": {
+      "messages": [
+        {
+          "content": "{query}",
+          "role": "user"
+        }
+      ],
+      "session_id": "{session_id}",
+      "stream": false,
+      "user_id": "1050900009",
+      "empno": "1050900009",
+      "agentno": "1050900009"
+    },
+    "axes": [
+      {
+        "type": "expectations",
+        "enabled": true,
+        "description": "交付物为 /v1/chat JSON 中的 answer，以及与回答相关的 gaps、fact_refs、sources、followup_actions。"
+      },
+      {
+        "type": "blocking",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "claims",
+        "enabled": true,
+        "description": ""
+      },
+      {
+        "type": "truthfulness",
+        "enabled": true,
+        "description": "业务事实以业务系统查询为准：{mcp://insurance-tools} 保险业务查询工具（保单、客户资料按当前坐席工号的授权范围查询；产品条款用 product_knowledge，办理流程等通用问答用 general_qa）。业务说明见 {material://llm_probe_loop/insurance-business}。\n核验回答里关于保单、客户、产品与业务规则的每一条事实断言；知识源中查不到对应依据的断言判无法核验，不要凭常识补全。"
+      },
+      {
+        "type": "fulfillment",
+        "enabled": true,
+        "description": "逐项对照本次问题：对象、金额与单位、日期、产品版本、条件、比较关系及显式输出要求应准确，复合问题不能漏答；条件不足应具体说明缺口或澄清，不得猜保单或编造数值。只评价输入和输出能证明的能力兑现；接口成功、status=null 或存在 fact_refs 均不能单独证明答案正确。数值的外部真实性和内部过程另由有证据的过程轴核验，不能把单次测试数据当作普遍事实。服务失败提示不能判已完成查询。不得把信息咨询写成已实际办理退保等业务操作。"
+      },
+      {
+        "type": "carryability",
+        "enabled": true,
+        "description": "仅提供办理说明，不实际提交退保或保全申请。"
+      },
+      {
+        "type": "main_verdict",
+        "enabled": true,
+        "description": ""
+      }
+    ]
+  }
+}

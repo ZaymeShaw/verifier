@@ -13,7 +13,7 @@ import urllib.error
 from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin
 
-from impl.core.live_protocol import LiveServiceUnavailableError, MultiTurnInteractiveLive, RealServiceLive
+from impl.core.live_protocol import LiveServiceUnavailableError, RealServiceLive
 from impl.core.live_transport import LiveTransport
 from impl.core.schema import (
     ExecutionTraceEvent,
@@ -409,10 +409,10 @@ def provided_output_raw(case: SingleTurnCase | MultiTurnCase, request: LiveReque
     return _attach_request({}, request.normalized_request)
 
 
-class DeerflowLive(RealServiceLive, MultiTurnInteractiveLive):
+class DeerflowLive(RealServiceLive):
     """deerflow 项目 Live 实现。
 
-    继承 RealServiceLive（投递模式=真实服务）+ MultiTurnInteractiveLive（交互模式=多轮）。
+    继承 RealServiceLive（投递模式=真实服务）。
     多轮主循环现在在 execute_live 内部（spec 第十一节 2），不再通过独立的 deliver_multi_turn。
     """
 

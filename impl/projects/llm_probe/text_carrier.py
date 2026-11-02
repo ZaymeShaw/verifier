@@ -30,7 +30,11 @@ from impl.core.capability_carrier import (
 
 _DEFAULT_RETRIES = 3
 _DEFAULT_RETRY_BACKOFF = (0.5, 1.5, 3.0)
-_TOOL_CALL_LIMIT = 8
+# 每次模型调用的工具预算。实测（tmp/hard_test_py_knowledge.py）：真实代码类资料需要
+# outline + 多轮换词 search + read 才能取证，8 次会被「换词试错」烧满后判预算耗尽；
+# 16 次约容纳 5~6 轮并发查询。被限流拒绝的调用也计入总数（core llm_client 口径），
+# 故上限需留出余量。
+_TOOL_CALL_LIMIT = 16
 
 CompleterFn = Callable[[str, str], Mapping[str, Any]]
 
@@ -59,7 +63,10 @@ _CARRIER_SYSTEM = """\
 - citations：每条引用必须可回指且会被机器核验——
   source 填资料 uri（material://项目/资料id）或 boundary（内联边界文本）；
   ref 填工具返回的行区间 locator（如 L43-L79，原样复制）或 boundary；
-  note 逐字摘自该位置的原文（机器会回读核验，改写即被打回）
+  note 逐字摘自 ref 所指位置的**文件文本**：核验比对的是资料文件的字节，
+  源码里的引号、反斜杠、转义序列（如 \n）都是文本的一部分，必须原样一起抄；
+  不要抄代码求值后的字符串值，也不要把相邻字符串字面量合并成一句；
+  改写即被打回。
 - gap_kind：carry=undecidable 时必填，取值「口径分歧」或「空间未受治理」
 - missing_material：carry=undecidable 时必填，说明缺什么资料才能判定
 - 不要编造能力边界描述中没有的信息；描述没说的就是说不清

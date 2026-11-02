@@ -12,8 +12,11 @@
 """
 from __future__ import annotations
 
+import json
+import math
 import threading
 import time
+from urllib.parse import quote, quote_plus
 from concurrent.futures import ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from typing import Callable, Collection, List, Optional
@@ -29,7 +32,8 @@ __all__ = [
 # 冷却期：端点被打入冷却后，至少等这么久才允许 probe。用户拍板 3 分钟。
 DEFAULT_COOLDOWN_SECONDS = 180.0
 DEFAULT_HEALTH_TTL_SECONDS = 180.0
-DEFAULT_PROBE_WAIT_SECONDS = 10.0
+# 探活等待：实测中转站回 5 个 token 要 5–20s，10s 会把活着的端点误判为不健康并打入冷却。
+DEFAULT_PROBE_WAIT_SECONDS = 45.0
 
 # 连续失败达到该阈值才真正把端点降级（避免单次抖动导致乒乓切换）。
 FAILURE_THRESHOLD = 2
@@ -43,6 +47,23 @@ class LlmEndpoint:
     base_url: str
     model: str
     api_key: str
+    # 该端点可接受的 prompt 字符上限；None = 未声明。
+    max_prompt_chars: Optional[int] = None
+    # 该端点能否真正执行 tool calls。默认 true（默认全开、只做减法）。
+    # 实测本地中转站（cursor 桥）不支持：它把工具调用拼成正文里的 ___TOOL_CALL___ 标记，
+    # 工具名还会被拼错（dossier_timeline → dossiersearch），用了工具的请求必然拿到废产出。
+    tool_calls: bool = True
+    temperature: float = 0
+
+    def serves(self, prompt_chars: int, *, needs_tools: bool = False) -> bool:
+        """声明了上限的端点只服务装得下的请求；未声明的不过滤。
+
+        带工具的请求不发给声明 ``tool_calls: false`` 的端点：发过去只是白花一次调用、
+        多等一个超时，还可能把废产出当模型结论。
+        """
+        if needs_tools and not self.tool_calls:
+            return False
+        return self.max_prompt_chars is None or prompt_chars <= self.max_prompt_chars
 
     def to_sdk_kwargs(self) -> dict:
         return {
@@ -59,12 +80,26 @@ class EndpointHealth:
     consecutive_failures: int = 0
     cooldown_until: float = 0.0
     last_health_at: float = 0.0
+    last_probe_error: str = ''
 
     def in_cooldown(self, now: float) -> bool:
         return self.cooldown_until > now
 
     def health_is_fresh(self, now: float, ttl_seconds: float) -> bool:
         return self.last_health_at > 0.0 and now - self.last_health_at < ttl_seconds
+
+
+def _redact_endpoint_keys(text: str, endpoints: List[LlmEndpoint]) -> str:
+    # SDK/供应商可能将凭证回显为原文、JSON 字符串或 URL 编码；先脱敏再截断。
+    secrets = set()
+    for endpoint in endpoints:
+        key = endpoint.api_key
+        if key:
+            secrets.update((key, json.dumps(key, ensure_ascii=True)[1:-1],
+                            json.dumps(key, ensure_ascii=False)[1:-1], quote(key, safe=''), quote_plus(key)))
+    for secret in sorted(secrets, key=len, reverse=True):
+        text = text.replace(secret, '[REDACTED]')
+    return text
 
 
 class LlmRouter:
@@ -128,6 +163,36 @@ class LlmRouter:
             now = time.monotonic()
             return [ep.name for ep in self._candidate_order(now)]
 
+    def unavailable_reason(self, *, exclude: Collection[str] = ()) -> str:
+        """返回已有探活证据与剩余冷却时间；只读，不重新调用供应商。"""
+        with self._lock:
+            now = time.monotonic()
+            details = []
+            for endpoint in self.endpoints:
+                if endpoint.name in exclude:
+                    continue
+                health = self._health[endpoint.name]
+                reason = health.last_probe_error or '未记录到具体探活错误'
+                remaining = max(0, math.ceil(health.cooldown_until - now))
+                state = f'连接冷却中，约 {remaining} 秒后允许再次尝试' if remaining else '当前请求无可选连接'
+                details.append(f'{endpoint.name}（{endpoint.model}）：{reason}；{state}')
+            return _redact_endpoint_keys('没有可用的模型连接。' + '；'.join(details), self.endpoints)
+
+    def retry_candidate(self, tried: Collection[str], *, prompt_chars: int = 0,
+                        needs_tools: bool = False) -> Optional[LlmEndpoint]:
+        """兜底重试：所有端点都试过之后，取「试过但未进冷却」中优先级最高的一个。
+
+        一次性瞬时故障不该直接杀掉整次请求（实测：可用端点只剩一个时，
+        「每端点每次请求只试一次」让单次抖动导致整轴失败）。
+        进了冷却的端点说明在连续失败，不再撞；同样不再发给装不下/不支持工具的端点。
+        调用方循环取，直到返回 None；因此每个未冷却端点每次请求最多被再试一次。"""
+        with self._lock:
+            now = time.monotonic()
+            for ep in self._candidate_order(now):
+                if ep.name in tried and ep.serves(prompt_chars, needs_tools=needs_tools):
+                    return ep
+        return None
+
     # ---- 成功/失败上报 ------------------------------------------------------
 
     def record_success(self, endpoint: LlmEndpoint) -> None:
@@ -136,6 +201,7 @@ class LlmRouter:
             health.consecutive_failures = 0
             health.cooldown_until = 0.0
             health.last_health_at = time.monotonic()
+            health.last_probe_error = ''
 
     def record_failure(self, endpoint: LlmEndpoint) -> None:
         with self._lock:
@@ -146,11 +212,12 @@ class LlmRouter:
                     time.monotonic() + self.cooldown_seconds
                 )
 
-    def _record_probe_result(self, endpoint: LlmEndpoint, ok: bool) -> None:
+    def _record_probe_result(self, endpoint: LlmEndpoint, ok: bool, error: str = '') -> None:
         now = time.monotonic()
         with self._lock:
             health = self._health[endpoint.name]
             health.last_health_at = now
+            health.last_probe_error = '' if ok else _redact_endpoint_keys(error, self.endpoints)[:2000]
             if ok:
                 health.consecutive_failures = 0
                 health.cooldown_until = 0.0
@@ -186,14 +253,22 @@ class LlmRouter:
         done, pending = wait(futures, timeout=self.probe_wait_seconds)
         for future in done:
             endpoint = futures[future]
+            error = '健康检查失败：探活未通过，未提供具体错误'
             try:
                 ok = bool(future.result())
-            except Exception:
+            except Exception as exc:
                 ok = False
-            self._record_probe_result(endpoint, ok)
+                causes = []
+                current = exc
+                for _ in range(3):
+                    causes.append(f'{type(current).__name__}: {current}')
+                    current = current.__cause__
+                    if current is None: break
+                error = '健康检查失败：' + '；'.join(causes)
+            self._record_probe_result(endpoint, ok, error)
         for future in pending:
             future.cancel()
-            self._record_probe_result(futures[future], False)
+            self._record_probe_result(futures[future], False, f'健康检查超时：{self.probe_wait_seconds:g} 秒内未完成（不是聚类请求超时）')
         executor.shutdown(wait=False, cancel_futures=True)
 
         with self._refresh_condition:

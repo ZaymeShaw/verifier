@@ -1,0 +1,161 @@
+{
+ "renyanlin": {
+  "context_memory": {
+   "units": 12,
+   "checks": 15,
+   "outcomes": {
+    "pass": 13,
+    "not_applicable": 2
+   },
+   "reason": "上下文在各步骤流转、模型输入组装及最终交付中均完整保留了用户目标与工具返回的关键业务事实，未发生信息丢失或改义。",
+   "problems": [],
+   "output_chars": 3562,
+   "latency_s": 84
+  },
+  "intent_understanding": {
+   "units": 20,
+   "checks": 35,
+   "outcomes": {
+    "pass": 23,
+    "not_applicable": 12
+   },
+   "reason": "系统准确将用户查询保单投保人、被保人及当前状态的意图转换为对应的工具调用参数，未发生对象篡改或子问题遗漏。",
+   "problems": [],
+   "output_chars": 6606,
+   "latency_s": 58
+  },
+  "planning_routing": {
+   "units": 10,
+   "checks": 11,
+   "outcomes": {
+    "pass": 10,
+    "not_applicable": 1
+   },
+   "reason": "本轮针对已给出完整保单号的投保人、被保人及保单状态查询，系统通过门控进入智能体编排分支并调用保单详情工具一次性完成全部外部事实取数，随后经二次模型调用与收尾步骤完成结果整合交付。除条件分支步骤缺少已核实的运行期分支条件定义外，其余编排路径选择、工作覆盖、系统预算策略执行、工具后整合及收尾时机均符合设计要求。",
+   "problems": [],
+   "output_chars": 9862,
+   "latency_s": 217
+  },
+  "tool_execution": {
+   "units": 9,
+   "checks": 14,
+   "outcomes": {
+    "pass": 14
+   },
+   "reason": "工具 policy_detail 成功调用并返回保单的投保人、被保人及当前状态数据，执行过程无报错且结果与请求参数匹配；单次调用耗时项缺少适用的时限契约。",
+   "problems": [],
+   "output_chars": 4606,
+   "latency_s": 61
+  },
+  "knowledge_data": {
+   "units": 8,
+   "checks": 6,
+   "outcomes": {
+    "pass": 6
+   },
+   "reason": "外部数据源成功返回了所查询保单的投保人、被保人和当前状态数据，字段完整且对象与时点均相符。",
+   "problems": [],
+   "output_chars": 3436,
+   "latency_s": 51
+  },
+  "model_capability": {
+   "units": 11,
+   "checks": 10,
+   "outcomes": {
+    "pass": 10
+   },
+   "reason": "模型在首轮准确调用工具查询保单详情，但在收尾作答时未遵循系统提示词规定的纯JSON格式输出及claims业务声明契约，违规输出了Markdown正文并在answer_draft中自行填充业务值。",
+   "problems": [
+    "模型在Span 3实际输出在JSON之前包含了多段Markdown自然语言描述，未能输出纯JSON且首字段并非answer_draft。",
+    "模型输出的JSON中完全未包含claims字段，且直接在answer_draft中自行填充了姓名“任言琳”与保单状态“交费有效”。"
+   ],
+   "output_chars": 4493,
+   "latency_s": 144
+  }
+ },
+ "D01": {
+  "context_memory": {
+   "units": 18,
+   "checks": 21,
+   "outcomes": {
+    "pass": 10,
+    "not_applicable": 9,
+    "insufficient_evidence": 2
+   },
+   "reason": "上下文在各工作流步骤和模型调用间传递完整，但用户首要期望的客户列表未交付且因上游未定责而归因未定位。",
+   "problems": [
+    "未交付名下姓平、12月份生日的女性客户列表供用户选择，最终交付为澄清卡片，未定位未交付的具体归因"
+   ],
+   "output_chars": 5204,
+   "latency_s": 196
+  },
+  "intent_understanding": {
+   "units": 20,
+   "checks": 35,
+   "outcomes": {
+    "fail": 27,
+    "not_applicable": 8
+   },
+   "reason": "系统在首个步骤产出与首批工具参数中遗漏了客户归属和排序约束，且未在内部表达中保留后续查询详细资料与保单状态的子任务。",
+   "problems": [
+    "内部表达在构建第一阶段客户查询意图时，遗漏了我名下的归属范围约束以及按客户号升序的排序与展示约束。",
+    "内部表达完全遗漏了用户提出的确定选中客户后查询详细资料的子问题、对象与时序触发约束。",
+    "内部表达完全遗漏了用户提出的确定选中客户后查询保单状态的子问题、对象与时序触发约束。"
+   ],
+   "output_chars": 8636,
+   "latency_s": 196
+  },
+  "planning_routing": {
+   "units": 11,
+   "checks": 11,
+   "outcomes": {
+    "pass": 2,
+    "input_invalid": 7,
+    "fail": 1,
+    "not_applicable": 1
+   },
+   "reason": "编排环节在面对客户搜索连续返回模糊错误时盲目改写重试，耗尽预算触发拦截，且在收到证据收尾指令后违规调用澄清工具挂起会话；期望未覆盖则主要受上游意图理解约束丢失所致。",
+   "problems": [
+    "工具 customer_search 连续返回 AMBIGUOUS 且未执行查询后，编排连续 3 次改写 query 重复调用已失败工具直至触发预算拦截，并在收到 finish_with_evidence 指令后转向调用 ask_clarify 发起澄清并挂起会话。"
+   ],
+   "output_chars": 5809,
+   "latency_s": 368
+  },
+  "tool_execution": {
+   "units": 21,
+   "checks": 22,
+   "outcomes": {
+    "pass": 11,
+    "input_invalid": 3,
+    "not_applicable": 8
+   },
+   "reason": "工具自身均完成调用并返回符合结构声明的响应；首个查询期望因上游意图理解丢失归属与排序约束致入参损坏，后续客户详情及保单状态查询因前置时序条件未触发本轮不适用。",
+   "problems": [],
+   "output_chars": 7472,
+   "latency_s": 302
+  },
+  "knowledge_data": {
+   "units": 8,
+   "checks": 6,
+   "outcomes": {
+    "input_invalid": 6
+   },
+   "reason": "本轮客户查询请求在上游意图表达中遗漏了归属范围与排序约束，且工具连续三次因条件未能解析而未执行实际客户查询、第四次被预算拦截，导致外部数据源未执行检索，后续依赖选定客户的详情与保单状态查询也因上游问题及前置客户未锁定而无法执行。",
+   "problems": [],
+   "output_chars": 3766,
+   "latency_s": 190
+  },
+  "model_capability": {
+   "units": 23,
+   "checks": 16,
+   "outcomes": {
+    "pass": 12,
+    "not_applicable": 4
+   },
+   "reason": "模型在各次调用中均忠实于输入意图发起工具检索，未编造事实；在工具连续模糊返回及预算拦截后按状态发起澄清，期望未达成主要归因于上游规划与工具受限。",
+   "problems": [],
+   "output_chars": 5382,
+   "latency_s": 220
+  }
+ }
+}

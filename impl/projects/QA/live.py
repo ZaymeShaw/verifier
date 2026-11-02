@@ -69,10 +69,10 @@ def build_execution_trace(input_data: Dict[str, Any], request: Dict[str, Any], r
     ]
 
 
-from impl.core.live_protocol import ProvidedOutputLive, SingleTurnLive
+from impl.core.live_protocol import ProvidedOutputLive
 
 
-class QALive(ProvidedOutputLive, SingleTurnLive):
+class QALive(ProvidedOutputLive):
     """QA 项目 Live 实现（新协议）：只读取 case 中的预制输出，不调用外部服务。
 
     复用模块级函数，扩展点签名统一使用 LiveRequest。

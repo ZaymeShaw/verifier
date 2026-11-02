@@ -91,14 +91,16 @@ const CasePoolExporter = context.globalThis.CasePoolExporter;
     )
 
 
-def test_exporter_adds_verdict_as_last_column():
+def test_exporter_puts_verdict_then_eval_axes_last():
     result = _eval_exporter("process.stdout.write(JSON.stringify(CasePoolExporter.COLUMNS));")
     assert result.returncode == 0, result.stderr
     columns = json.loads(result.stdout)
-    assert columns[-1]["header"] == "裁决"
-    assert columns[-1]["key"] == "carrierPlacement"
+    assert columns[-1]["header"] == "扩展轴结论"
+    assert columns[-1]["key"] == "evalAxes"
+    assert columns[-2]["header"] == "裁决"
+    assert columns[-2]["key"] == "carrierPlacement"
     keys = [column["key"] for column in columns]
-    assert keys[-2] == "traceSummary"
+    assert keys[-3] == "traceSummary"
 
 
 def test_format_trace_show_returns_no_trace_when_projection_missing():
@@ -151,12 +153,43 @@ def test_exporter_writes_xlsx_with_trace_summary_column(tmp_path):
     workbook = load_workbook(out, read_only=True, data_only=True)
     sheet = workbook.active
     headers = [cell.value for cell in next(sheet.iter_rows(min_row=1, max_row=1))]
-    assert headers[-1] == "裁决"
-    assert headers[-2] == "Trace 摘要"
+    assert headers[-1] == "扩展轴结论"
+    assert headers[-2] == "裁决"
+    assert headers[-3] == "Trace 摘要"
     values = [cell.value for cell in next(sheet.iter_rows(min_row=2, max_row=2))]
-    summary = values[-2]
+    summary = values[-3]
     assert "T1  succeeded  2475ms" in summary
     assert "T2  succeeded  26ms" in summary
     assert "输入: 50万以上" in summary
     assert "status: SUCCESS" in summary
+    # 主表结论格只有令牌：一轴一行，Excel「包含 truthfulness:refuted」即可筛；理由不在这里。
+    assert values[-1] == "[truthfulness:refuted×1] [truthfulness:verified×1]\n[fulfillment:not_fulfilled]"
+    # 第二张 sheet 一行一件事：生产阶段伪行 + 扩展轴逐条 item，理由全文、引用、耗时都在这里。
+    detail = workbook["扩展轴明细"]
+    detail_rows = [[cell.value for cell in row] for row in detail.iter_rows()]
+    assert detail_rows[0] == ["case_id", "scenario", "阶段/轴", "status", "verdict", "对象（断言/期望）", "理由", "引用", "模型", "llm_calls", "tool_calls", "秒"]
+    assert [row[2] for row in detail_rows[1:]] == ["live", "生产·judge", "扩展·truthfulness"]
+    assert detail_rows[3][4] == "refuted" and detail_rows[3][6] == "知识库原文为十五日"
+    assert detail_rows[3][9] == 3 and detail_rows[3][11] == 60.4
     workbook.close()
+
+
+def test_exporter_omits_detail_sheet_when_no_detail_rows():
+    fake_exceljs = (
+        "class Sheet{constructor(name){this.name=name;this.rows=[];}getRow(){return {eachCell(){}};}"
+        "addRow(d){const r={eachCell(){}};this.rows.push(d);return r;}}"
+        "class Workbook{constructor(){this.worksheets=[];}addWorksheet(name){const s=new Sheet(name);this.worksheets.push(s);return s;}}"
+        "const FakeExcelJS={Workbook};"
+    )
+    result = _eval_exporter(
+        fake_exceljs
+        + "const a=CasePoolExporter.createWorkbook([{id:'a'}], FakeExcelJS);"
+        "const b=CasePoolExporter.createWorkbook([{id:'a'}], FakeExcelJS, [{caseId:'a',stage:'live',seconds:1.5}]);"
+        "process.stdout.write(JSON.stringify([a.worksheets.map(w=>w.name), b.worksheets.map(w=>w.name), b.worksheets[1].rows[0].seconds]));"
+    )
+    assert result.returncode == 0, result.stderr
+    names_without, names_with, seconds = json.loads(result.stdout)
+    assert names_without == ["用例池候选区"]
+    assert names_with == ["用例池候选区", "扩展轴明细"]
+    # 数字列保持数字，Excel 里才能排序/求和，而不是被 cellText 变成字符串。
+    assert seconds == 1.5

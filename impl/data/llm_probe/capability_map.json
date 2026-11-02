@@ -1,5 +1,17 @@
 {
   "client_search": {
+    "axes": [
+      {
+        "description": "用户拿它办的事：用一句自然语言，从客户库（Elasticsearch）里检回正好符合描述的那群客户。\n交付物是给 ES 执行的查询谓词集（字段×操作符×值+组合逻辑）；同一从表的多个条件作用于同一条成员记录。判断达成必须把条件当查询推演：执行后检回的集合恰好是用户描述的人群才算办成。\n语义等价的不同表达算办成；条件互斥致空集、语义放大、语义缩小、编造未表达的条件、丢失已表达的条件都算没办成。",
+        "enabled": true,
+        "type": "fulfillment"
+      },
+      {
+        "description": "能力空间以字段定义表为准（可搜字段、操作符、匹配模式、枚举值）：{material://llm_probe/field_definitions_args}\n字段定义表之外的筛选维度不支持，应明确拒绝而不是编造条件。",
+        "enabled": true,
+        "type": "carryability"
+      }
+    ],
     "boundary": "能力空间以字段定义表为准（可搜字段、操作符、匹配模式、枚举值）：{material://llm_probe/field_definitions_args}\n字段定义表之外的筛选维度不支持，应明确拒绝而不是编造条件。",
     "capability": "用户拿它办的事：用一句自然语言，从客户库（Elasticsearch）里检回正好符合描述的那群客户。\n交付物是给 ES 执行的查询谓词集（字段×操作符×值+组合逻辑）；同一从表的多个条件作用于同一条成员记录。判断达成必须把条件当查询推演：执行后检回的集合恰好是用户描述的人群才算办成。\n语义等价的不同表达算办成；条件互斥致空集、语义放大、语义缩小、编造未表达的条件、丢失已表达的条件都算没办成。",
     "mock_body": {
@@ -15,9 +27,234 @@
       "url": "http://127.0.0.1:8000/api/v1/client_search_query_parse_no_encipher"
     }
   },
+  "dashscope-qa": {
+    "capability": "用户拿它办的事：问一个事实型问题，得到一句准确、可直接引用的中文答案。\n交付物是答案文本（output.choices[0].message.content），被提问者直接阅读使用；答案事实正确、直接回应所问即算办成。答非所问、事实错误、编造都算没办成。",
+    "mock_body": {
+      "input": {
+        "messages": [
+          {
+            "content": "{query}",
+            "role": "user"
+          }
+        ]
+      },
+      "model": "qwen-turbo",
+      "parameters": {
+        "incremental_output": false,
+        "result_format": "message"
+      }
+    },
+    "service": {
+      "headers": {},
+      "method": "POST",
+      "response_mode": "json",
+      "timeout_seconds": 180.0,
+      "url": "http://127.0.0.1:18090/api/v1/services/aigc/text-generation/generation",
+      "start_hint": "被测目标是本机转发服务（只在实验时开）：先在 verifier 目录运行 python scripts/qa_target.py（默认 pi + agentrouter/deepseek-v4-flash；--backend dashscope 切回百炼）"
+    }
+  },
+  "hr-handbook-qa": {
+    "axes": [
+      {
+        "type": "knowledge_evidence",
+        "enabled": true,
+        "description": "制度事实以员工手册知识库为准：{es://local-es/hr_handbook}。"
+      },
+      {
+        "description": "核验回答里关于公司制度（天数、期限、比例、金额、条件、是否允许）的每一条事实断言；知识库中没有对应条款的断言判无法核验，不要凭常识补全。",
+        "enabled": true,
+        "type": "truthfulness"
+      },
+      {
+        "description": "用户拿它办的事：问一个公司员工手册里的制度问题（年休假、试用期、加班、报销、考勤、离职等），得到一句依据制度条款、事实正确的中文答案。\n交付物是答案文本（output.choices[0].message.content），被提问者直接阅读使用；答案与制度事实一致、直接回应所问即算办成。答非所问、数字或期限说错、编造条款都算没办成。",
+        "enabled": true,
+        "type": "fulfillment"
+      }
+    ],
+    "capability": "用户拿它办的事：问一个公司员工手册里的制度问题（年休假、试用期、加班、报销、考勤、离职等），得到一句依据制度条款、事实正确的中文答案。\n交付物是答案文本（output.choices[0].message.content），被提问者直接阅读使用；答案与制度事实一致、直接回应所问即算办成。答非所问、数字或期限说错、编造条款都算没办成。",
+    "mock_body": {
+      "input": {
+        "messages": [
+          {
+            "content": "{query}",
+            "role": "user"
+          }
+        ]
+      },
+      "model": "qwen-turbo",
+      "parameters": {
+        "incremental_output": false,
+        "result_format": "message"
+      }
+    },
+    "service": {
+      "headers": {},
+      "method": "POST",
+      "response_mode": "json",
+      "timeout_seconds": 180.0,
+      "url": "http://127.0.0.1:18090/api/v1/services/aigc/text-generation/generation",
+      "start_hint": "被测目标是本机转发服务（只在实验时开）：先在 verifier 目录运行 python scripts/qa_target.py（默认 pi + agentrouter/deepseek-v4-flash；--backend dashscope 切回百炼）"
+    }
+  },
+  "insurance-agno-e2e": {
+    "axes": [
+      {
+        "enabled": true,
+        "type": "intent_understanding"
+      },
+      {
+        "enabled": true,
+        "type": "planning_routing"
+      },
+      {
+        "enabled": true,
+        "type": "tool_execution"
+      },
+      {
+        "enabled": true,
+        "type": "context_memory"
+      },
+      {
+        "enabled": true,
+        "type": "knowledge_data"
+      },
+      {
+        "enabled": true,
+        "type": "model_capability"
+      }
+    ],
+    "boundary": "本场景只连接 insurance-qa-agent 的真实工具实例：服务启动时七个查询工具必须全部为 real，不接受 insurance-demo-v1 或其他 Mock 数据作为评测证据。支持保单信息查询、产品条款查询、一般保险规则咨询，以及这些查询的复合问题；信息缺失、真实下游不可用或对象不唯一时应如实说明缺口或澄清。仅提供办理说明，不实际提交退保或保全申请。默认动态请求使用合成测试身份，可验证无个人数据的知识问答和真实接口失败处理；需要命中个人保单时必须在 case 中显式提供经授权的测试工号、保单号及 empno/agentno。Agno 持久化消息可用于检查可见历史和状态，但 span 的输入输出可能脱敏，不能等同完整逐模型调用请求。该 llm_probe 场景以单轮 case 为执行入口；验证多轮时须显式组织同 session 的前置请求与追问并保留两轮证据。",
+    "business_trace": {
+      "config": {
+        "base_url": "http://127.0.0.1:18062",
+        "bindings": {
+          "business_trace_id": {
+            "pointer": "/trace_id",
+            "source": "response"
+          },
+          "session_id": {
+            "pointer": "/body/session_id",
+            "source": "request"
+          },
+          "user_id": {
+            "pointer": "/body/user_id",
+            "source": "request"
+          }
+        },
+        "headers": {},
+        "poll_attempts": 5,
+        "poll_interval_seconds": 0.3,
+        "timeout_seconds": 30,
+        "sqlite_path": "/Users/xiaozijian/.insurance-qa-agent-real/runtime-real.db"
+      },
+      "provider": "agno"
+    },
+    "capability": "用户希望通过保险问答查询本人或授权范围内的保单数据、了解产品条款及业务办理方式。交付物为 /v1/chat JSON 中的 answer，以及与回答相关的 gaps、fact_refs、sources、followup_actions。逐项对照本次问题：对象、金额与单位、日期、产品版本、条件、比较关系及显式输出要求应准确，复合问题不能漏答；条件不足应具体说明缺口或澄清，不得猜保单或编造数值。只评价输入和输出能证明的能力兑现；接口成功、status=null 或存在 fact_refs 均不能单独证明答案正确。数值的外部真实性和内部过程另由有证据的过程轴核验，不能把单次测试数据当作普遍事实。服务失败提示不能判已完成查询。不得把信息咨询写成已实际办理退保等业务操作。",
+    "mock_body": {
+      "messages": [
+        {
+          "content": "{query}",
+          "role": "user"
+        }
+      ],
+      "session_id": "{session_id}",
+      "stream": false,
+      "user_id": "SYNTHETIC-LLM-PROBE",
+      "empno": "SYNTHETIC-LLM-PROBE",
+      "agentno": "SYNTHETIC-LLM-PROBE"
+    },
+    "service": {
+      "method": "POST",
+      "timeout_seconds": 240.0,
+      "url": "http://127.0.0.1:18062/v1/chat"
+    },
+    "process_obligations": [
+      {
+        "id": "retry_after_non_retryable",
+        "link_type": "planning_routing",
+        "applies_to": [
+          "planning_routing:repeat"
+        ],
+        "label": "不可重试后拦住同参重发",
+        "situation": "前一次同名同参调用的结果已表明重试无效（例如结果正文声明不可重试），系统随后又原样发出同一调用",
+        "duty": "编排应拦住这次同参重发，不把它交给工具执行",
+        "confirmed": "2026-09-29"
+      }
+    ]
+  },
+  "insurance-llmtracing": {
+    "axes": [
+      {
+        "enabled": true,
+        "type": "intent_understanding"
+      },
+      {
+        "enabled": true,
+        "type": "planning_routing"
+      },
+      {
+        "enabled": true,
+        "type": "tool_execution"
+      },
+      {
+        "enabled": true,
+        "type": "context_memory"
+      },
+      {
+        "enabled": true,
+        "type": "knowledge_data"
+      },
+      {
+        "enabled": true,
+        "type": "model_capability"
+      }
+    ],
+    "boundary": "本场景只连接 insurance-qa-agent 的真实工具实例：服务启动时七个查询工具必须全部为 real，不接受 insurance-demo-v1 或其他 Mock 数据作为评测证据。支持保单信息查询、产品条款查询、一般保险规则咨询，以及这些查询的复合问题；信息缺失、真实下游不可用或对象不唯一时应如实说明缺口或澄清。仅提供办理说明，不实际提交退保或保全申请。默认动态请求使用合成测试身份，可验证无个人数据的知识问答和真实接口失败处理；需要命中个人保单时必须在 case 中显式提供经授权的测试工号、保单号及 empno/agentno。过程证据来自 llmtracing 中转记录的模型协议流量：可见每次模型调用的完整请求消息、工具定义、响应与 tool_calls，工具执行本身只能从后续请求中的 tool 消息间接看到；业务内部状态、检索与 Agno 持久化内容不在本证据范围内。该 llm_probe 场景以单轮 case 为执行入口；验证多轮时须显式组织同 session 的前置请求与追问并保留两轮证据。",
+    "business_trace": {
+      "provider": "llmtracing",
+      "config": {
+        "log_path": "/Users/xiaozijian/WorkSpace/package/llmtracing/llm_gateway/logs/gateways/insurance_verifier_4202/llm_calls.jsonl",
+        "settle_timeout_seconds": 30,
+        "poll_interval_seconds": 1,
+        "quiet_seconds": 3
+      }
+    },
+    "capability": "用户希望通过保险问答查询本人或授权范围内的保单数据、了解产品条款及业务办理方式。交付物为 /v1/chat JSON 中的 answer，以及与回答相关的 gaps、fact_refs、sources、followup_actions。逐项对照本次问题：对象、金额与单位、日期、产品版本、条件、比较关系及显式输出要求应准确，复合问题不能漏答；条件不足应具体说明缺口或澄清，不得猜保单或编造数值。只评价输入和输出能证明的能力兑现；接口成功、status=null 或存在 fact_refs 均不能单独证明答案正确。数值的外部真实性和内部过程另由有证据的过程轴核验，不能把单次测试数据当作普遍事实。服务失败提示不能判已完成查询。不得把信息咨询写成已实际办理退保等业务操作。",
+    "mock_body": {
+      "messages": [
+        {
+          "content": "{query}",
+          "role": "user"
+        }
+      ],
+      "session_id": "{session_id}",
+      "stream": false,
+      "user_id": "SYNTHETIC-LLM-PROBE",
+      "empno": "SYNTHETIC-LLM-PROBE",
+      "agentno": "SYNTHETIC-LLM-PROBE"
+    },
+    "service": {
+      "method": "POST",
+      "timeout_seconds": 240.0,
+      "url": "http://127.0.0.1:18062/v1/chat"
+    },
+    "process_obligations": [
+      {
+        "id": "retry_after_non_retryable",
+        "link_type": "planning_routing",
+        "applies_to": [
+          "planning_routing:repeat"
+        ],
+        "label": "不可重试后拦住同参重发",
+        "situation": "前一次同名同参调用的结果已表明重试无效（例如结果正文声明不可重试），系统随后又原样发出同一调用",
+        "duty": "编排应拦住这次同参重发，不把它交给工具执行",
+        "confirmed": "2026-09-29"
+      }
+    ]
+  },
   "marketting-planning-intent": {
     "boundary": "支持：单轮营销规划问句的意图识别与必要槽位抽取。意图标签空间：1001=客户画像、1002=队伍画像、1003=达成路径规划、4001=其他。\n不支持：多轮规划过程；生成 SSE 卡片。",
-    "capability": "用户拿它办的事：说一句营销规划请求，被分发到正确的处理流程。\n交付物是意图标签+必要槽位，下游按标签路由、按槽位执行；判断达成必须按「照此标签和槽位分发能否正确承接这句请求」推演。\n标签选对且必要槽位完整准确才算办成；标签错路由、槽位缺失或值错都算没办成。",
+    "capability": "用户拿它办的事：说一句营销规划请求，被分发到正确的处理流程。\n交付物是意图标签+必要槽位，下游按标签路由、按槽位执行；判断达成必须按「照此标签和槽位分发能否正确承接这句请求」推演。\n意图标签：1001=客户画像、1002=队伍画像、1003=达成路径规划、4001=其他（不属于以上流程的请求，如闲聊、天气等域外问题）。\n标签选对且必要槽位完整准确才算办成；标签错路由、槽位缺失或值错都算没办成。",
     "mock_body": {
       "extra_input_params": {
         "agent_args": {
@@ -43,69 +280,84 @@
       "url": "http://127.0.0.1:9006/api/v1/marketing-planning/intent-recognition"
     }
   },
-    "policy_search": {
-        "boundary": "支持：把自然语言保单筛选意图解析为查询语法树的过滤条件。\n不支持：下游保单列表检索与结果集处理。",
-        "capability": "用户拿它办的事：用自然语言筛出正好符合条件的那批保单。\n交付物是可执行的查询语法树（过滤条件组合），由下游保单检索执行；判断达成必须按语法树执行后命中的保单集合是否恰好等于用户意图来推演，不看树的形状。\n语义等价的表达算办成；条件互斥、放大、缩小、编造未表达条件、丢失已表达条件都算没办成。",
-        "mock_body": {
-            "action_scenario": "policySearch",
-            "app_scenario": "policy_search_parse",
-            "application_setting": null,
-            "extra_input_params": {
-                "agent_args": null,
-                "args": {
-                    "contexts": []
-                },
-                "policySearchParseArgs": {
-                    "agentCode": "A12345678",
-                    "currentTime": "2026-08-06 10:30:00",
-                    "query": "{query}"
-                }
-            },
-            "history": [],
-            "org_id": "verifier-org",
-            "org_name": "verifier",
-            "scenario": null,
-            "session_id": "mock_session_dyn",
-            "source": "verifier",
-            "token": "",
-            "trace_id": "mock_trace_dyn",
-            "ts": 1785983400000,
-            "user_action": "write",
-            "user_id": "verifier-user",
-            "user_text": ""
-        },
-        "service": {
-            "method": "POST",
-            "timeout_seconds": 120.0,
-            "url": "http://127.0.0.1:8050/api/v1/policy-search/policy-search-parse"
-        }
+  "policy-clause-qa": {
+    "axes": [
+      {
+        "type": "knowledge_evidence",
+        "enabled": true,
+        "description": "条款事实以知识库为准：{es://local-es/clause_kb}。"
+      },
+      {
+        "description": "核验回答里关于产品条款（期限、金额、比例、年龄、责任）的每一条事实断言；知识库中没有对应条款的断言判无法核验，不要凭常识补全。",
+        "enabled": true,
+        "type": "truthfulness"
+      },
+      {
+        "description": "用户拿它办的事：问一个保险产品条款问题（犹豫期、等待期、免赔额、投保年龄、给付比例等），得到一句依据条款、事实正确的中文答案。\n交付物是答案文本（output.choices[0].message.content），被提问者直接阅读使用；答案与条款事实一致、直接回应所问即算办成。答非所问、数字或期限说错、编造条款都算没办成。",
+        "enabled": true,
+        "type": "fulfillment"
+      }
+    ],
+    "capability": "用户拿它办的事：问一个保险产品条款问题（犹豫期、等待期、免赔额、投保年龄、给付比例等），得到一句依据条款、事实正确的中文答案。\n交付物是答案文本（output.choices[0].message.content），被提问者直接阅读使用；答案与条款事实一致、直接回应所问即算办成。答非所问、数字或期限说错、编造条款都算没办成。",
+    "mock_body": {
+      "input": {
+        "messages": [
+          {
+            "content": "{query}",
+            "role": "user"
+          }
+        ]
+      },
+      "model": "qwen-turbo",
+      "parameters": {
+        "incremental_output": false,
+        "result_format": "message"
+      }
     },
-    "dashscope-qa": {
-        "capability": "用户拿它办的事：问一个事实型问题，得到一句准确、可直接引用的中文答案。\n交付物是答案文本（output.choices[0].message.content），被提问者直接阅读使用；答案事实正确、直接回应所问即算办成。答非所问、事实错误、编造都算没办成。",
-        "mock_body": {
-            "model": "qwen-turbo",
-            "input": {
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": "{query}"
-                    }
-                ]
-            },
-            "parameters": {
-                "result_format": "message",
-                "incremental_output": false
-            }
-        },
-        "service": {
-            "method": "POST",
-            "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
-            "response_mode": "sse_last_frame",
-            "timeout_seconds": 180.0,
-            "headers": {
-                "Authorization": "Bearer ${BAILIAN_API_KEY}",
-                "X-DashScope-SSE": "enable"
-            }
-        }
+    "service": {
+      "headers": {},
+      "method": "POST",
+      "response_mode": "json",
+      "timeout_seconds": 180.0,
+      "url": "http://127.0.0.1:18090/api/v1/services/aigc/text-generation/generation",
+      "start_hint": "被测目标是本机转发服务（只在实验时开）：先在 verifier 目录运行 python scripts/qa_target.py（默认 pi + agentrouter/deepseek-v4-flash；--backend dashscope 切回百炼）"
     }
+  },
+  "policy_search": {
+    "boundary": "支持：把自然语言保单筛选意图解析为查询语法树的过滤条件。\n不支持：下游保单列表检索与结果集处理。",
+    "capability": "用户拿它办的事：用自然语言筛出正好符合条件的那批保单。\n交付物是可执行的查询语法树（过滤条件组合），由下游保单检索执行；判断达成必须按语法树执行后命中的保单集合是否恰好等于用户意图来推演，不看树的形状。\n语义等价的表达算办成；条件互斥、放大、缩小、编造未表达条件、丢失已表达条件都算没办成。",
+    "mock_body": {
+      "action_scenario": "policySearch",
+      "app_scenario": "policy_search_parse",
+      "application_setting": null,
+      "extra_input_params": {
+        "agent_args": null,
+        "args": {
+          "contexts": []
+        },
+        "policySearchParseArgs": {
+          "agentCode": "A12345678",
+          "currentTime": "2026-08-06 10:30:00",
+          "query": "{query}"
+        }
+      },
+      "history": [],
+      "org_id": "verifier-org",
+      "org_name": "verifier",
+      "scenario": null,
+      "session_id": "mock_session_dyn",
+      "source": "verifier",
+      "token": "",
+      "trace_id": "mock_trace_dyn",
+      "ts": 1785983400000,
+      "user_action": "write",
+      "user_id": "verifier-user",
+      "user_text": ""
+    },
+    "service": {
+      "method": "POST",
+      "timeout_seconds": 120.0,
+      "url": "http://127.0.0.1:8050/api/v1/policy-search/policy-search-parse"
+    }
+  }
 }

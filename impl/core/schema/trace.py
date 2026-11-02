@@ -83,6 +83,10 @@ class RunTrace:
     interaction_controller_error: str = ""
     multi_turn_input: Optional[Dict[str, Any]] = None
     fallbacks: List[FallbackDecision] = field(default_factory=list)
+    # spec/mock/protocol.md 4.9：declare_intent 真值标签列表 [{turn_index, user_intent, user_context, source}]。
+    intent_history: List[Dict[str, Any]] = field(default_factory=list)
+    # spec/mock/protocol.md 5.3：回放时第一处与录制响应不一致的轮次；无分叉或非回放为 None。
+    diverged_at_turn: Optional[int] = None
 
 
 @dataclass

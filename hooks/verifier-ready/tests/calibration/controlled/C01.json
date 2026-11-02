@@ -1,0 +1,40 @@
+{
+  "case_id": "C01",
+  "execution_contract": "这是两个互相隔离、无会话历史、无共享内存的模型请求。每个调用只能读取自己 request 中的字段，无工具可取回材料。调用1与调用2分别服务于独立消费者，不允许合并请求。",
+  "calls": [
+    {
+      "request": {
+        "task": "输出 r1 的金额。",
+        "dossier_view": {
+          "records": [
+            {
+              "id": "r1",
+              "amount": 100,
+              "currency": "CNY"
+            }
+          ]
+        }
+      },
+      "response": {
+        "amount": 100
+      }
+    },
+    {
+      "request": {
+        "task": "输出 r1 的币种。",
+        "dossier_view": {
+          "records": [
+            {
+              "id": "r1",
+              "amount": 100,
+              "currency": "CNY"
+            }
+          ]
+        }
+      },
+      "response": {
+        "currency": "CNY"
+      }
+    }
+  ]
+}

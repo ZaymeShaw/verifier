@@ -1,0 +1,113 @@
+{
+ "items": [
+  {
+   "id": "整轮.R1",
+   "type": "守恒",
+   "statement": "组装给模型调用1的 agent_input 必须包含 t1.user 原话中的全部约束：我名下、姓平、12月份生日、女性、按客户号升序、先列出供选择、确定后再查详细资料和保单状态。",
+   "basis": "【用户原话】t1.user；【冻结的期望 E】前三个期望。"
+  },
+  {
+   "id": "整轮.R2",
+   "type": "推出",
+   "statement": "模型调用1的 agent_input 必须保持首轮无历史状态，不得注入任何先前会话、已选客户、客户详情或保单状态。",
+   "basis": "【用户原话】标注“首轮，无历史”。"
+  },
+  {
+   "id": "整轮.R3",
+   "type": "守恒",
+   "statement": "模型调用1-4产生的 customer_search 工具调用，进入下一次工具输入时必须保留各自的 function.name=customer_search 与 arguments 中的 query、compact、fields，不得改写或增删条件。",
+   "basis": "模型调用1-4输出的 tool_calls[0]。"
+  },
+  {
+   "id": "整轮.R4",
+   "type": "守恒",
+   "statement": "tools/0、tools/1、tools/2 返回的 AMBIGUOUS 结果，进入后续 agent_input 时必须保留 status=AMBIGUOUS、message、gaps，不得改写成查询成功或候选列表。",
+   "basis": "工具 tools/0-2 返回。"
+  },
+  {
+   "id": "整轮.R5",
+   "type": "推出",
+   "statement": "模型调用2的 agent_input 必须包含 tools/0 的 AMBIGUOUS 返回，以便按前次解析失败重试。",
+   "basis": "模型调用2输出称“条件解析模糊……重试”；工具 tools/0 返回。"
+  },
+  {
+   "id": "整轮.R6",
+   "type": "推出",
+   "statement": "模型调用3的 agent_input 必须同时包含 tools/0 与 tools/1 的 AMBIGUOUS 返回，且不能只保留其中一条。",
+   "basis": "模型调用3输出称“两个查询都返回 AMBIGUOUS”；工具 tools/0、tools/1 返回。"
+  },
+  {
+   "id": "整轮.R7",
+   "type": "推出",
+   "statement": "模型调用4的 agent_input 必须包含 tools/0、tools/1、tools/2 三次 AMBIGUOUS 返回，且不得将其表示为已获得候选客户。",
+   "basis": "模型调用4输出称“连续三次 AMBIGUOUS”；工具 tools/0-2 返回。"
+  },
+  {
+   "id": "整轮.R8",
+   "type": "守恒",
+   "statement": "tools/3 返回的 ERROR/BUDGET 对象，进入模型调用5或收尾输入时必须保留 code=BUDGET、control.reason=no_progress、control.action=finish_with_evidence，不得丢失或改为可继续查询。",
+   "basis": "工具 tools/3 返回。"
+  },
+  {
+   "id": "整轮.R9",
+   "type": "推出",
+   "statement": "模型调用5的 agent_input 必须包含 tools/3 的 BUDGET finish_with_evidence 控制动作，使收尾基于已有证据而非继续换措辞查询。",
+   "basis": "模型调用5输出称“工具返回 BUDGET 错误……控制动作是 finish_with_evidence”；工具 tools/3 返回。"
+  },
+  {
+   "id": "整轮.R10",
+   "type": "守恒",
+   "statement": "模型调用5产生的 ask_clarify 工具调用，进入 tools/4 输入时必须保留 function.name=ask_clarify 以及 arguments.question、arguments.options 的完整内容。",
+   "basis": "模型调用5输出的 tool_calls[0]。"
+  },
+  {
+   "id": "整轮.R11",
+   "type": "守恒",
+   "statement": "tools/4 返回的 NEEDS_CLARIFICATION 结果，进入 finalize 与最终 delivered_output 时必须保留 status=NEEDS_CLARIFICATION、hint 中的问题文本和候选选项，不得丢弃或被替换成候选客户列表。",
+   "basis": "工具 tools/4 返回；传递链 finalize→delivered_output。"
+  },
+  {
+   "id": "整轮.R12",
+   "type": "推出",
+   "statement": "最终 delivered_output 必须保留两阶段条件：未确定选中客户前只能交付候选选择或澄清请求，不得交付 query_selected_client_detail_info 或 query_selected_client_policy_status 的结果。",
+   "basis": "【用户原话】“确定后再查选中客户的详细资料和保单状态”；【冻结的期望 E】后两个期望条件均为“确定选中客户后”。"
+  },
+  {
+   "id": "整轮.R13",
+   "type": "守恒",
+   "statement": "最终 delivered_output 不得包含具体候选客户、客户详细资料或保单状态，因为上游 customer_search 均未执行成功且 tools/4 的 facts 为空。",
+   "basis": "工具 tools/0-3 显示 AMBIGUOUS/BUDGET 且未执行查询；tools/4 facts=[]。"
+  },
+  {
+   "id": "整轮.R14",
+   "type": "推出",
+   "statement": "最终 delivered_output 必须保留未确认缺口：客户查询未可靠解析且未执行；若交付候选列表，则必须按客户号升序，若未取得列表则必须明确该列表尚未产出。",
+   "basis": "【用户原话】按客户号升序；【冻结的期望 E】list_female_clients_surname_ping_born_in_december；工具 tools/0-3 未执行查询。"
+  },
+  {
+   "id": "整轮.R15",
+   "type": "守恒",
+   "statement": "组装或缓存中若出现任何客户列表、客户详情或保单状态，其来源必须能追溯到本次运行的上游产出；本次上游没有这些业务数据，下游不得凭空多出。",
+   "basis": "输入材料中无客户列表/详情/保单状态产出；首轮无历史。"
+  },
+  {
+   "id": "整轮.R16",
+   "type": "外部真值",
+   "statement": "是否存在“我名下姓平、12月份生日的女性客户”及其客户号升序列表，必须独立查证客户数据库/归属关系；本次运行记录只显示查询未执行，不足以判定为空或有。",
+   "basis": "工具 tools/0-3 均未执行查询，tools/4 facts=[]；输入未提供客户数据。"
+  },
+  {
+   "id": "整轮.R17",
+   "type": "外部真值",
+   "statement": "“我名下”对应的客户经理/业务员身份和归属范围必须独立确认；本次运行记录未提供该身份真值。",
+   "basis": "用户原话“我名下”；输入无身份上下文；模型调用1、5均提到该身份未明确。"
+  }
+ ],
+ "not_covered": [
+  "未看到上下文管理实际生成的 agent_input、finalize 输入和 delivered_output，因此无法核对这些约束是否实际满足。",
+  "未提供运行期缓存/历史存储内容，无法核对是否存在陈旧缓存注入或来源错误。",
+  "未提供客户数据库、客户经理归属关系或 ask_clarify 实际返回之外的外部数据，无法判定候选客户是否为空。",
+  "未提供 customer_search 对“姓平”姓氏筛选能力的独立规则，无法判定该筛选本应被工具支持与否。",
+  "未提供工具实际收到的 arguments 记录，除模型输出中的 tool_calls 外无法核对参数是否原样到达。"
+ ]
+}

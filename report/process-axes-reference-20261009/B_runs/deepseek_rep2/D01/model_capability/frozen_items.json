@@ -1,0 +1,424 @@
+{
+ "items": [
+  {
+   "id": "模型调用1.R1",
+   "type": "推出",
+   "statement": "本次输出应把本轮目标限定为先筛选当前用户名下姓平、12月份生日、女性客户并按客户号升序供用户选择，而不是直接进入选中客户详情或保单状态查询。",
+   "basis": "当前用户问题“先找一下我名下姓平、12月份生日的女性客户，按客户号升序列出来让我选，确定后再查……”；冻结期望 list_female_clients_surname_ping_born_in_december"
+  },
+  {
+   "id": "模型调用1.R2",
+   "type": "推出",
+   "statement": "本次输出应发起客户定位/筛选工具调用，且工具应为 customer_search。",
+   "basis": "system 工具分工“客户：定位、筛选、计数 → customer_search”；冻结期望 list_female_clients_surname_ping_born_in_december"
+  },
+  {
+   "id": "模型调用1.R3",
+   "type": "推出",
+   "statement": "该客户筛选调用的查询条件应同时覆盖“我名下”“姓氏为平”“出生月份为12月”“女性”四项，不得遗漏、放宽或替换其中任一项。",
+   "basis": "当前用户问题“我名下姓平、12月份生日的女性客户”；冻结期望 list_female_clients_surname_ping_born_in_december"
+  },
+  {
+   "id": "模型调用1.R4",
+   "type": "推出",
+   "statement": "该客户筛选调用应要求或保证候选结果按客户号升序排列供用户选择。",
+   "basis": "当前用户问题“按客户号升序列出来让我选”；冻结期望“按客户号升序列出供用户选择”"
+  },
+  {
+   "id": "模型调用1.R5",
+   "type": "推出",
+   "statement": "在用户从候选列表确认具体客户之前，本次输出不得调用或执行 query_selected_client_detail_info 与 query_selected_client_policy_status 对应的详情查询和保单状态查询。",
+   "basis": "冻结期望 query_selected_client_detail_info/query_selected_client_policy_status 条件“确定选中客户后”；当前用户问题“确定后再查”"
+  },
+  {
+   "id": "模型调用1.R6",
+   "type": "推出",
+   "statement": "本次输出不得调用 ask_clarify 向用户追问姓氏、生日月份、性别或选择哪类查询。",
+   "basis": "冻结期望 list_female_clients_surname_ping_born_in_december 标注“歧义组：无”；system“无可答事实且缺关键实体时才澄清”"
+  },
+  {
+   "id": "模型调用1.R7",
+   "type": "推出",
+   "statement": "本次输出不得调用 present_customer_search_card 作为唯一结束动作，因为本轮完整目标还包含选中后的详细资料和保单状态，不属于“仅客户/保单清单且卡片足以答复”。",
+   "basis": "system“仅当本轮完整目标是客户/保单清单且卡片足以答复时，单独调用零参数 present_customer_search_card……还需回答字段、详情……用普通搜索”；当前用户问题“确定后再查……”"
+  },
+  {
+   "id": "模型调用1.R8",
+   "type": "推出",
+   "statement": "若本次输出落到系统规定的 JSON 答复结构，answer_draft 必须为首字段，且不得在未取得客户筛选工具事实时于 answer_draft 中写具体客户号、姓名、生日或保单状态。",
+   "basis": "system“输出 JSON：answer_draft:string 必须是首字段、结论先行”；L3 不编造；业务值必须用 claims 声明"
+  },
+  {
+   "id": "模型调用1.R9",
+   "type": "推出",
+   "statement": "若本次输出落到系统规定的 JSON 答复结构，fact_refs 只能引用本轮工具返回 facts 的 fact_id；本次输入尚无工具 facts，因此不得填写任何猜测的 fact_id。",
+   "basis": "system“fact_refs:string[] 仅填工具返回 facts 的 fact_id，禁止猜造 ID”"
+  },
+  {
+   "id": "模型调用1.R10",
+   "type": "守恒",
+   "statement": "本次输出不得添加输入中没有的具体客户、客户号、生日月份、性别或保单信息。",
+   "basis": "L3 不编造；system“无 data 或事实时，不用 hint、候选目录或常识补业务结论”"
+  },
+  {
+   "id": "模型调用1.R11",
+   "type": "外部真值",
+   "statement": "当前用户名下是否存在符合“姓平、12月份生日、女性”条件的客户，以及其客户号及按客户号升序后的结果，只能靠客户查询工具/后端数据查证，输入本身不包含。",
+   "basis": "当前用户问题的筛选条件；冻结期望 list_female_clients_surname_ping_born_in_december；system“客户：定位、筛选、计数 → customer_search”"
+  },
+  {
+   "id": "模型调用1.R12",
+   "type": "推出",
+   "statement": "本次输出不得进行任何写操作、代办或引导直接办理。",
+   "basis": "L7“不做写操作：不代办，办理事项引导人工渠道”"
+  },
+  {
+   "id": "模型调用1.R13",
+   "type": "推出",
+   "statement": "若在取得候选列表后收尾，应把本轮标记为等待用户选择，不应在用户确认前继续查询选中客户详情或保单状态。",
+   "basis": "system“needs_user_input:boolean 表示本轮是否等待用户”；当前用户问题“列出来让我选，确定后再查”"
+  },
+  {
+   "id": "模型调用2.R1",
+   "type": "推出",
+   "statement": "正确输出应继续完成客户筛选子任务，而不是把本轮直接结束为最终业务答复，因为冻结期望 E 的 list_female_clients_surname_ping_born_in_december 条件为“总是”，且系统规则要求仍有未取证子任务且预算足够时继续执行。",
+   "basis": "E 的 list_female_clients_surname_ping_born_in_december 条件“总是”；系统规则“仍有未取证子任务且预算足够时继续执行”。"
+  },
+  {
+   "id": "模型调用2.R2",
+   "type": "推出",
+   "statement": "正确输出应再次调用 customer_search，并把条件写全为“当前用户名下、姓平、女性、12月份生日、按客户号升序”，以回应本次未解析筛选条件或排序的结果；不得原样重复上一次完全相同的 query。",
+   "basis": "输入中 customer_search 返回 execution.message“可使用客户姓名、完整客户号、手机号、性别、生日月份等条件”及 gaps“筛选条件或排序未能可靠解析”；用户原话“我名下姓平、12月份生日的女性客户，按客户号升序”。"
+  },
+  {
+   "id": "模型调用2.R3",
+   "type": "推出",
+   "statement": "若继续取数，正确输出只能串行调用 customer_search，不得同时或混调 customer_detail、保单状态查询、ask_clarify、present_customer_search_card、present_policy_search_card 或 run_* 流程工具。",
+   "basis": "系统规则“ask_clarify、两个 present_*_search_card 和 run_* 流程工具不能与任何其他工具并行”“需先取得 ID、名称归属或候选选择的调用必须串行”。"
+  },
+  {
+   "id": "模型调用2.R4",
+   "type": "推出",
+   "statement": "正确输出不得调用 customer_detail 或保单状态查询工具，因为冻结期望 E 中 query_selected_client_detail_info 与 query_selected_client_policy_status 的条件均为“确定选中客户后”，当前尚无候选或选中客户。",
+   "basis": "E 中两项条件“确定选中客户后”；用户原话“确定后再查选中客户的详细资料和保单状态”。"
+  },
+  {
+   "id": "模型调用2.R5",
+   "type": "守恒",
+   "statement": "正确输出不得声称已找到客户，不得列出任何客户号、姓名、生日、性别，也不得把“尚未执行客户查询”改写成“没有符合条件的客户”或“客户列表为空”。",
+   "basis": "输入中 customer_search 无 facts 且 execution.status=AMBIGUOUS；系统规则“null/空值不等于零或否”；输入 execution.gaps“尚未执行客户查询”。"
+  },
+  {
+   "id": "模型调用2.R6",
+   "type": "推出",
+   "statement": "正确输出不得用 present_customer_search_card 代替普通搜索，因为用户原话还要求确定后查选中客户的详细资料和保单状态，完整目标不只是客户清单。",
+   "basis": "系统规则“还需回答字段、详情、数量、解释、比较、推荐或其他子任务……时，用普通搜索”；用户原话“确定后再查选中客户的详细资料和保单状态”。"
+  },
+  {
+   "id": "模型调用2.R7",
+   "type": "推出",
+   "statement": "若本轮最终收尾且不再调用工具，输出 JSON 的 fact_refs 必须为空数组，gaps 必须包含“筛选条件或排序未能可靠解析，尚未执行客户查询”的业务可读表述，且不得猜造 fact_id 或客户数据。",
+   "basis": "系统输出契约“fact_refs:string[] 仅填工具返回 facts 的 fact_id，禁止猜造 ID”；输入 execution.gaps“筛选条件或排序未能可靠解析，尚未执行客户查询”。"
+  },
+  {
+   "id": "模型调用2.R8",
+   "type": "外部真值",
+   "statement": "实际是否存在“当前用户名下、姓平、12月份生日、女性”的客户，以及按客户号升序后的具体列表，必须查询客户数据库才能确认；仅凭本次输入无法给出。",
+   "basis": "输入中 customer_search 未执行且无业务 data；E 要求查找该类客户并排序。"
+  },
+  {
+   "id": "模型调用2.R9",
+   "type": "外部真值",
+   "statement": "用户“我”对应的客户经理或名下归属身份未在本轮输入中明确呈现；若系统未预置该身份，正确输出不能虚构该归属。",
+   "basis": "输入为首轮无历史，用户原话为“我名下”；系统未在可见输入中给出当前客户经理身份。"
+  },
+  {
+   "id": "模型调用3.R1",
+   "type": "推出",
+   "statement": "本轮输出必须继续处理冻结期望中的 list_female_clients_surname_ping_born_in_december，即查找“我名下姓平、12月份生日的女性客户，按客户号升序”，因为该期望条件为“总是”，且当前用户问题仍是该请求。",
+   "basis": "E 的 list_female_clients_surname_ping_born_in_december 条件为“总是；歧义组：无”；当前用户问题原文"
+  },
+  {
+   "id": "模型调用3.R2",
+   "type": "推出",
+   "statement": "本轮不得输出或声称已查询“选中客户的详细资料”或“保单状态”，因为 E 中 query_selected_client_detail_info 和 query_selected_client_policy_status 的条件均为“确定选中客户后”，而输入中尚无已选客户。",
+   "basis": "E 两条 query_* 条件=确定选中客户后；输入无选中客户结果"
+  },
+  {
+   "id": "模型调用3.R3",
+   "type": "守恒",
+   "statement": "若输出中提及前两次 customer_search 的结果，必须保留“筛选条件或排序未能可靠解析，尚未执行客户查询”的事实，不得表述为已执行、无匹配或列表为空。",
+   "basis": "两次 tool 返回 execution.status=AMBIGUOUS，message/gaps 原文“尚未执行客户查询”"
+  },
+  {
+   "id": "模型调用3.R4",
+   "type": "推出",
+   "statement": "若本轮继续调用 customer_search，不得原样重复前两次 query，而应依据工具返回提示把条件写成可解析的性别、生日月份、姓名或姓氏和排序条件，并覆盖“我名下、姓平、12月份生日、女性、客户号升序”。",
+   "basis": "system 规则“不得反复猜别名、改写同一问题或重复调用已失败来源”；tool 返回提示“可使用客户姓名、完整客户号、手机号、性别、生日月份等条件”；用户原话"
+  },
+  {
+   "id": "模型调用3.R5",
+   "type": "推出",
+   "statement": "本轮不得仅因两次解析失败就调用 present_customer_search_card 来呈现客户清单，因为用户完整目标还包含“确定后再查选中客户的详细资料和保单状态”，不属于“完整目标是客户/保单清单且卡片足以答复”。",
+   "basis": "system 规则“仅当本轮完整目标是客户/保单清单且卡片足以答复时…还需回答字段、详情…时，用普通搜索”；用户原话“确定后再查…”"
+  },
+  {
+   "id": "模型调用3.R6",
+   "type": "推出",
+   "statement": "本轮若仍无可答业务 data 或 facts，输出不得包含任何具体客户姓名、客户号、生日、性别或数量作为筛选结果，只能说明未确认或缺口。",
+   "basis": "system L3 不编造；两次 customer_search 均未返回业务 data/facts"
+  },
+  {
+   "id": "模型调用3.R7",
+   "type": "推出",
+   "statement": "若本轮决定向用户澄清，必须只在无可答事实且缺关键实体时发起，且 ask_clarify 不能与任何其他工具并行；不得把未登记或未发生的澄清说成已挂起。",
+   "basis": "system 规则“无可答事实且缺关键实体时才澄清”“ask_clarify…不能与任何其他工具并行”“被拒绝的 ask_clarify 不等于已登记澄清”"
+  },
+  {
+   "id": "模型调用3.R8",
+   "type": "推出",
+   "statement": "若本轮产出最终 JSON，必须满足输出契约：answer_draft 是首字段且结论先行，fact_refs 仅填工具 facts 的 fact_id，gaps 列未确认项，needs_user_input 表示是否等待用户，task_updates 只写说明。",
+   "basis": "system 输出 JSON 契约原文"
+  },
+  {
+   "id": "模型调用3.R9",
+   "type": "外部真值",
+   "statement": "“我名下是否存在姓平、12月份生日的女性客户及其按客户号升序的客户列表”只能由成功执行的客户查询业务 data 决定；当前输入未提供该真值，正确输出不能断言其存在或不存在。",
+   "basis": "输入无成功客户查询结果；E 依赖客户数据"
+  },
+  {
+   "id": "模型调用3.R10",
+   "type": "推出",
+   "statement": "在未获得候选客户及用户选择前，不得调用需要客户中心 ID 的后续详情或保单状态查询；这类调用必须串行等待候选选择。",
+   "basis": "system 规则“需先取得 ID、名称归属或候选选择的调用必须串行”；用户原话“确定后再查”"
+  },
+  {
+   "id": "模型调用3.R11",
+   "type": "守恒",
+   "statement": "若输出重述用户筛选条件，必须保留“姓平、12月份生日、女性、按客户号升序”这些条件，不得添加“只限某状态、某城市”等输入没有的限制，也不得改变排序。",
+   "basis": "用户原话；E 描述“查找名下姓平、12月份生日的女性客户，按客户号升序”"
+  },
+  {
+   "id": "模型调用3.R12",
+   "type": "推出",
+   "statement": "本轮不得把前两次 AMBIGUOUS 当作整轮失败而丢弃客户筛选子任务；在预算足够且存在可调整解析方式时，应继续完成该子任务或明确列出未确认项。",
+   "basis": "system 规则“部分工具失败不等于整轮失败”“仍有未取证子任务且预算足够时继续执行”"
+  },
+  {
+   "id": "模型调用3.R13",
+   "type": "推出",
+   "statement": "本轮不得用通用问答或知识检索代替 customer_search 来产出客户名单，因为客户定位、筛选、计数属于 customer_search 的专用职责。",
+   "basis": "system 工具分工“客户：定位、筛选、计数 → customer_search”；“不得用通用问答绕过专用工具的领域边界”"
+  },
+  {
+   "id": "模型调用3.R14",
+   "type": "推出",
+   "statement": "本轮在预算足够且客户筛选子任务未完成时，不得以“请回复继续”或空等待提前结束。",
+   "basis": "system 规则“仍有未取证子任务且预算足够时继续执行，不得仅以‘请回复继续’提前结束”"
+  },
+  {
+   "id": "模型调用4.R1",
+   "type": "推出",
+   "statement": "本轮只应处理“列出名下姓平、12月份生日的女性客户并按客户号升序供用户选择”这一子任务，不应在本轮查询选中客户的详细资料或保单状态。",
+   "basis": "冻结期望E：query_selected_client_detail_info/query_selected_client_policy_status 条件均为“确定选中客户后”；用户原话“确定后再查选中客户的详细资料和保单状态”。"
+  },
+  {
+   "id": "模型调用4.R2",
+   "type": "守恒",
+   "statement": "待查条件在输出中必须保持为“名下（当前用户归属）”“姓平”“12月份生日”“女性”“按客户号升序”，不得改写成其他姓氏、性别、生日月份或排序。",
+   "basis": "用户原话“我名下姓平、12月份生日的女性客户，按客户号升序列出来”；冻结期望E：list_female_clients_surname_ping_born_in_december 条件“总是”。"
+  },
+  {
+   "id": "模型调用4.R3",
+   "type": "推出",
+   "statement": "不得将三次 customer_search 的 AMBIGUOUS 返回解释为“没有符合条件的客户”，也不得据此给出任何客户数量、姓名、客户号或列表。",
+   "basis": "工具返回 execution.status=AMBIGUOUS、message“尚未执行客户查询”、gaps“筛选条件或排序未能可靠解析”；系统规则“null/空值不等于零或否”“未筛选、缺失须披露”。"
+  },
+  {
+   "id": "模型调用4.R4",
+   "type": "推出",
+   "statement": "正确输出应披露客户筛选未执行、筛选条件或排序未可靠解析，因此尚未产出可供选择的客户列表。",
+   "basis": "工具返回 execution.message 与 gaps；系统规则“execution 中未筛选、未取全、冲突、缺失或失败须披露”“gaps:string[] 列未确认项”。"
+  },
+  {
+   "id": "模型调用4.R5",
+   "type": "推出",
+   "statement": "在连续三次同一 customer_search 均返回 AMBIGUOUS 后，不应继续原样重复或反复改写同一失败查询去猜条件。",
+   "basis": "系统规则“不得反复猜别名、改写同一问题或重复调用已失败来源”；三次工具返回 status=AMBIGUOUS。"
+  },
+  {
+   "id": "模型调用4.R6",
+   "type": "推出",
+   "statement": "若仍无法解析筛选条件或缺少“我名下”的归属/关键实体，正确输出应单独调用 ask_clarify 请求用户补充可用的客户姓名、完整客户号、性别、生日月份或确认归属，且 ask_clarify 不得与任何其他工具并行。",
+   "basis": "系统规则“无可答事实且缺关键实体时才澄清”“ask_clarify、两个 present_*_search_card 和 run_* 流程工具不能与任何其他工具并行”；工具返回提示可使用客户姓名、完整客户号、手机号、性别、生日月份等条件。"
+  },
+  {
+   "id": "模型调用4.R7",
+   "type": "推出",
+   "statement": "本轮不应调用 customer_detail 或保单状态查询工具，因为还没有用户确认选中的客户。",
+   "basis": "冻结期望E：query_selected_client_detail_info/query_selected_client_policy_status 条件“确定选中客户后”；系统工具分工“已有客户中心ID要画像 → customer_detail”；用户原话“确定后再查”。"
+  },
+  {
+   "id": "模型调用4.R8",
+   "type": "推出",
+   "statement": "fact_refs 只能填写本轮工具返回 facts 中的 fact_id；本次 customer_search 返回中没有 facts，因此输出中不得填写任何 fact_id 或猜测 ID。",
+   "basis": "输出契约“fact_refs:string[] 仅填工具返回 facts 的 fact_id，禁止猜造 ID”；工具返回无 facts。"
+  },
+  {
+   "id": "模型调用4.R9",
+   "type": "推出",
+   "statement": "answer_draft 必须是首字段、结论先行；gaps 应列未确认项；needs_user_input 应表示本轮是否等待用户；task_updates 只写说明。",
+   "basis": "system 输出 JSON 契约“answer_draft:string 必须是首字段”“gaps:string[] 列未确认项”“needs_user_input:boolean 表示本轮是否等待用户”“task_updates:string[] 只写说明”。"
+  },
+  {
+   "id": "模型调用4.R10",
+   "type": "推出",
+   "statement": "不得用 present_customer_search_card 单独结束本轮，因为当前用户原话还包含选择后查询详情和保单状态，完整目标不止客户清单，且当前没有可用候选卡片。",
+   "basis": "系统规则“仅当本轮完整目标是客户/保单清单且卡片足以答复时，单独调用零参数present_customer_search_card”“还需回答字段、详情、数量、解释、比较、推荐或其他子任务……用普通搜索”。"
+  },
+  {
+   "id": "模型调用4.R11",
+   "type": "外部真值",
+   "statement": "当前用户名下是否存在姓平、12月份生日的女性客户，以及其按客户号升序的列表，必须由客户业务数据库查证；仅凭本次输入和 AMBIGUOUS 工具返回无法确定。",
+   "basis": "用户原话与冻结期望E：list_female_clients_surname_ping_born_in_december；工具返回未执行客户查询。"
+  },
+  {
+   "id": "模型调用4.R12",
+   "type": "外部真值",
+   "statement": "选中客户的详细资料和保单状态必须等选中后用客户/保单业务数据查证；当前未选中，不能给出。",
+   "basis": "冻结期望E：query_selected_client_detail_info/query_selected_client_policy_status 条件“确定选中客户后”。"
+  },
+  {
+   "id": "模型调用4.R13",
+   "type": "推出",
+   "statement": "不得用 general_qa、常识、候选目录或旧实时数据冒充客户筛选结果。",
+   "basis": "系统规则“不得用通用问答绕过专用工具的领域边界、实体确认或权限限制”“没有适用来源时据实收尾”；工具分工“客户：定位、筛选、计数 → customer_search”。"
+  },
+  {
+   "id": "模型调用4.R14",
+   "type": "推出",
+   "statement": "同工具最多4次，当前 customer_search 已用3次，剩余1次；若继续调用 customer_search，应避免重复已失败查询。",
+   "basis": "系统规则“同工具最多4次”“不得反复猜别名、改写同一问题或重复调用已失败来源”。"
+  },
+  {
+   "id": "模型调用4.R15",
+   "type": "推出",
+   "statement": "若无法产出候选且需要用户补充可解析条件或确认归属，needs_user_input 应为 true。",
+   "basis": "输出契约“needs_user_input:boolean 表示本轮是否等待用户”；用户要求列出候选供其选择但当前无候选。"
+  },
+  {
+   "id": "模型调用5.R1",
+   "type": "推出",
+   "statement": "最终输出必须是单个 JSON 对象，首字段为 answer_draft，并包含 fact_refs、gaps、needs_user_input、task_updates 字段。",
+   "basis": "system 规则“输出 JSON：answer_draft:string 必须是首字段…gaps:string[]…needs_user_input:boolean…task_updates:string[] 只写说明”。"
+  },
+  {
+   "id": "模型调用5.R2",
+   "type": "推出",
+   "statement": "answer_draft 应结论先行，说明本轮未取得“名下姓平、12月份生日的女性客户”候选列表，因此不能按客户号升序列出候选供用户选择。",
+   "basis": "E 中 list_female_clients_surname_ping_born_in_december；实际输入中三次 customer_search 返回 AMBIGUOUS、最后一次返回 BUDGET/no_progress；system 规则“结论先行”。"
+  },
+  {
+   "id": "模型调用5.R3",
+   "type": "守恒",
+   "statement": "不得把“查询未执行、无返回客户事实”改写成“没有符合条件的客户”或“该客户不存在”。",
+   "basis": "最后一次工具 execution 为 ERROR/BUDGET，message 为“本次工具未执行”；system 规则“null/空值不等于零或否”。"
+  },
+  {
+   "id": "模型调用5.R4",
+   "type": "推出",
+   "statement": "gaps 应列出未确认项：未取得符合“名下、姓平、12月份生日、女性、按客户号升序”的客户列表。",
+   "basis": "E 中 list_female_clients_surname_ping_born_in_december；实际输入中 customer_search 均未执行并提示筛选条件或排序未能可靠解析。"
+  },
+  {
+   "id": "模型调用5.R5",
+   "type": "推出",
+   "statement": "gaps 应列出未确认项：因尚未确定选中客户，未查询选中客户的详细资料。",
+   "basis": "E 中 query_selected_client_detail_info 的条件为“确定选中客户后”。"
+  },
+  {
+   "id": "模型调用5.R6",
+   "type": "推出",
+   "statement": "gaps 应列出未确认项：因尚未确定选中客户，未查询选中客户的保单状态。",
+   "basis": "E 中 query_selected_client_policy_status 的条件为“确定选中客户后”。"
+  },
+  {
+   "id": "模型调用5.R7",
+   "type": "推出",
+   "statement": "fact_refs 必须为空数组，不得填写任何自造或猜测的 fact_id。",
+   "basis": "system 规则“fact_refs:string[] 仅填工具返回 facts 的 fact_id，禁止猜造 ID”；实际输入中所有 customer_search 返回均无 facts。"
+  },
+  {
+   "id": "模型调用5.R8",
+   "type": "推出",
+   "statement": "不得继续调用 customer_search 或换措辞、换工具重复查询客户筛选。",
+   "basis": "最后一次工具 control.reason 为 no_progress、action 为 finish_with_evidence，message 为“不再换措辞或换工具重复查询”。"
+  },
+  {
+   "id": "模型调用5.R9",
+   "type": "推出",
+   "statement": "不得调用 customer_detail 或保单状态查询工具，因为尚无已确定的选中客户及其客户中心 ID。",
+   "basis": "E 中两个查询条件均为“确定选中客户后”；system 规则“已有客户中心ID要画像 → customer_detail”。"
+  },
+  {
+   "id": "模型调用5.R10",
+   "type": "推出",
+   "statement": "不得调用 present_customer_search_card 来呈现候选，因为本轮完整目标还包括后续详情和保单状态，且当前没有可呈现的候选结果。",
+   "basis": "system 规则“仅当本轮完整目标是客户/保单清单且卡片足以答复时…还需回答字段、详情…用普通搜索”；E 中后续两个子任务条件为确定选中客户后。"
+  },
+  {
+   "id": "模型调用5.R11",
+   "type": "推出",
+   "statement": "answer_draft 和 gaps 不得出现“工具返回”“接口返回”“EMPTY/BUDGET”等内部词或来源转述。",
+   "basis": "system 规则“answer_draft 与 gaps 只写业务用户可读正文；不得出现‘工具返回’、‘接口返回’、EMPTY/BUDGET 等内部词”。"
+  },
+  {
+   "id": "模型调用5.R12",
+   "type": "推出",
+   "statement": "task_updates 只能写说明，不得声称已登记挂起、已创建任务或后续会自动续跑。",
+   "basis": "system 规则“task_updates 只是输出说明，不会登记任务；只有当前 Ledger 中确实存在活动任务，才可声称已挂起或后续续跑”。"
+  },
+  {
+   "id": "模型调用5.R13",
+   "type": "外部真值",
+   "statement": "实际是否存在符合“名下、姓平、12月份生日、女性”的客户，及其客户号、详细资料、保单状态，必须查业务数据库才能知道；本次输入未提供可用 facts，正确输出不得给出这些具体业务值。",
+   "basis": "E 中三个期望均依赖客户查询与选中结果；业务回答契约要求 claims 三项逐字复制本轮工具 facts，而本轮工具未返回 facts。"
+  },
+  {
+   "id": "模型调用5.R14",
+   "type": "守恒",
+   "statement": "若在 answer_draft 或 gaps 中复述本轮任务，应保留用户已给出的条件“名下、姓平、12月份生日、女性、按客户号升序、确定后再查详情和保单状态”。",
+   "basis": "用户原话“我名下姓平、12月份生日的女性客户，按客户号升序列出来让我选，确定后再查选中客户的详细资料和保单状态”。"
+  },
+  {
+   "id": "模型调用5.R15",
+   "type": "推出",
+   "statement": "needs_user_input 应设为 true，因为用户尚未看到候选并作出选择，后续详情和保单状态仍以确定选中客户为前提。",
+   "basis": "用户原话“列出来让我选，确定后再查”；E 中 query_selected_client_detail_info 与 query_selected_client_policy_status 的条件均为“确定选中客户后”。"
+  }
+ ],
+ "not_covered": [
+  "未提供 customer_search 工具的具体参数 schema、字段名和排序参数，因此无法写出参数级调用格式。",
+  "未提供客户查询工具的实际返回格式和可用 fact_id，因此无法写出列表渲染字段或 fact_refs 具体值。",
+  "未提供当前用户身份及“我名下”的解析方式，无法判断是否还需额外认证信息。",
+  "实际是否存在符合条件客户、客户号具体值及排序结果属于外部真值，运行输入中不可见。",
+  "未说明第1次模型输出在框架中是否以工具调用消息还是 JSON 答复消息呈现，故对最终 JSON 首字段等契约仅能按条件陈述。",
+  "修正后的 customer_search 应使用的准确 query 字符串、参数名和 fields 取值。",
+  "系统是否已在会话、鉴权或隐藏上下文中预置“我”的客户经理身份。",
+  "若再次调用 customer_search 仍失败，正确收尾时 answer_draft 和 gaps 的逐字文本。",
+  "实际符合条件的客户记录、客户号升序结果，以及后续第3至第5次调用应如何选择候选并查询详情和保单状态。",
+  "若本轮选择继续取数，最终 answer_draft 是否需要以及何时输出 JSON 的准确字段取值。",
+  "未覆盖“我”的登录或客户经理身份是否在未展示的会话状态中已经提供；仅凭本次输入材料无法核验。",
+  "未覆盖 customer_search 对“姓平”“12月份生日”“名下”“按客户号升序”的内部字段解析规则及第三次调用后的返回结果，因此无法预先核对最终客户清单内容。",
+  "未覆盖本轮最终应优先继续调用 customer_search 还是 ask_clarify 的唯一路径；输入材料未给出工具底层解析能力与完整会话身份。",
+  "无法仅凭输入确定“我名下”对应的具体客户经理/用户身份及其权限范围。",
+  "无法确定客户业务数据库中实际是否存在符合条件客户及客户号升序结果，需外部查证。",
+  "无法确定工具 AMBIGUOUS 的具体触发项是姓氏、生日月份、排序还是归属中的哪一项，工具返回未细分。",
+  "无法确定本轮最终应选择 ask_clarify 还是普通回答收尾的具体文本，只要满足所列约束即可。",
+  "第5次及后续调用输出不在本对象覆盖范围内。",
+  "未覆盖 answer_draft 的具体最终文本，只列出该输出必须满足的约束。",
+  "未覆盖“我名下”的业务员身份是否已在会话上下文中提供；材料只显示本轮消息，无法唯一判断是否应把身份缺失列为独立 gap。",
+  "未覆盖实际数据库中是否存在符合条件的客户及其客户号、详细资料、保单状态，这些属于外部真值，需独立查证。",
+  "未覆盖当前 Ledger 中是否存在活动任务，因此只能约束 task_updates 不得声称登记或续跑。"
+ ]
+}

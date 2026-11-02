@@ -318,10 +318,11 @@ class ProjectMock(_MockProtocol):
     - intent_labels: 返回意图标签（默认从 ProjectSpec 取）
     - normalize_case: 归一化 Case（可补充项目特有字段）
 
-    多轮交互：通过继承 MultiTurnInteractiveMock mixin 声明并实现 build_next_request。
-      build_next_request(case, intent, accumulated_output) 协议层会先算好 intent 传入，
-      项目层直接基于 intent 和 accumulated_output 构造 request，不自己调 build_user_intent。
-    单轮：通过继承 SingleTurnMock mixin 实现 build_live_request，协议层同样先算好 intent 传入。
+
+    多轮交互：继承 MultiTurnInteractiveMock mixin，实现 infer_user_intent / decide_next_action /
+      build_next_request；无 transcript seed 时 PersonaDriver 逐轮调用它们扮演用户。
+      同时实现 SessionTranslator 提供 request_from_user_message / user_message_from_request。
+    单轮：只需实现 build_initial_request，Session + OneShotDriver 自动处理。
 
     case 承载约定（build_case_from_spec 已遵守，项目层不得覆盖）：
     - case.input 保持 REQUEST_SCHEMA 形状纯净，不混入 user_context。
@@ -337,7 +338,7 @@ class ProjectMock(_MockProtocol):
 
         spec 行 40：build_live_request 签名 (intent: MockIntentOutput) → REQUEST_SCHEMA。
         case 参数已删除（trace.md 第十一节 6：case 不进 live 层，协议层也不传 case 给 mock）。
-        单轮项目通常不覆盖。多轮项目通过 MultiTurnInteractiveMock 覆盖 build_next_request。
+        单轮项目通常不覆盖。
 
         仅用于 Intent 正向生成首轮 Request；execute_live 不调用此方法。
         """
@@ -362,58 +363,22 @@ class ProjectMock(_MockProtocol):
             self.live_schema = load_live_schema(spec.project_id)
 
 
-class SingleTurnMock(ABC):
-    """单轮交互模式 mixin。项目 Mock 通过组合继承声明单轮形态。
-
-    使用方式：
-        class XxxMock(SingleTurnMock, ProjectMock): ...
-
-    单轮 Mock 必须实现 build_live_request(case, intent)（@abstractmethod），
-    把协议层算好的意图翻译成单轮 request（REQUEST_SCHEMA 形状）。
-    项目层实现直接调用 MockAgent 工具函数即可。
-    Pipeline 通过 isinstance(mock, MultiTurnInteractiveMock) 判断是否支持多轮；
-    不继承 MultiTurnInteractiveMock 即视为单轮。
-    """
-
-    @abstractmethod
-    def build_initial_request(
-        self,
-        intent: MockIntentOutput,
-    ) -> Dict[str, Any]:
-        """扩展点：产单轮 request。单轮项目必须实现。
-
-        定位/目标：
-            把协议层算好的意图（intent: MockIntentOutput）翻译成单轮 request。
-            返回形状符合 live_schema.REQUEST_SCHEMA。
-            spec 行 40：build_live_request 签名 (intent: MockIntentOutput) → REQUEST_SCHEMA。
-            case 参数已删除（trace.md 第十一节 6：case 不进 live 层）。
-            协议层会先调 build_user_intent 得到 intent，再调 build_live_request，
-            项目层无需再调 build_user_intent。
-
-        参数：
-            intent: 协议层算好的意图层产出（user_intent / query / user_context / scenario）。
-        """
-        pass
-
-
 class MultiTurnInteractiveMock(ABC):
     """多轮交互模式 mixin。声明 Mock 支持 build_next_request + 多轮控制。
 
     使用方式：
-        class XxxMock(MultiTurnInteractiveMock, ProjectMock): ...
+        class XxxMock(MultiTurnInteractiveMock, SessionTranslator, ProjectMock): ...
 
     多轮 Mock 必须实现：
     - infer_user_intent(initial_request) -> MockIntentOutput
     - decide_next_action(intent, accumulated_output) -> MockContinueDecision
     - build_next_request(intent, accumulated_output) -> Dict
-    - safety_max_turns() -> int
 
-    多轮控制（max_turns/should_stop）是 mock 扮演用户的能力，由项目扩展层实现，
-    不放在 case 里。live 协议层 execute_live 的多轮分支通过 mock 拿控制信息。
+    最大轮数由 project.yaml runtime.session.max_turns 决定，不在 mock 里声明。
+    live 协议层 execute_live 在无 transcript seed 时用 PersonaDriver 逐轮调用这三个方法；
+    有 seed 时走 ReplayDriver，不经过 mock。
 
     build_user_intent 仍由 ProjectMock 提供（场景级意图，单轮/多轮通用）。
-    协议层会在调用 build_next_request 前先调 build_user_intent 算好 intent，
-    作为入参传给 build_next_request，项目层无需再调 build_user_intent。
     """
 
     @abstractmethod
@@ -438,23 +403,8 @@ class MultiTurnInteractiveMock(ABC):
     ) -> Dict[str, Any]:
         """扩展点：产多轮每轮 request。多轮项目必须实现。
 
-        定位/目标（spec/adapter/multiturn.md 第四节）：
-            把 intent + 标准化 accumulated_output 翻译成下一轮 request。
-            返回形状符合 live_schema.REQUEST_SCHEMA。
-            项目层直接基于 intent 和 accumulated_output 构造 request，不自己调 build_user_intent。
-
-        参数：
-            intent: 当前用户模型。
-            accumulated_output: 仅含各轮 live_request/extract_output/status/error 和控制字段。
-        """
-        pass
-
-    @abstractmethod
-    def safety_max_turns(self) -> int:
-        """扩展点：多轮主循环最大轮数。多轮项目必须实现。
-
-        定位/目标：
-            项目扩展层定义多轮交互的最大轮数。
-            live 协议层 execute_live 多轮分支通过此方法拿最大轮数，不读 case.interaction.policy。
+        把 intent + 标准化 accumulated_output 翻译成下一轮 request，
+        返回形状符合 live_schema.REQUEST_SCHEMA。
+        accumulated_output 仅含各轮 live_request/extract_output/status/error 和控制字段。
         """
         pass

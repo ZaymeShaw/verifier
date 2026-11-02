@@ -38,7 +38,7 @@ RUNTIME_MODES = {
     "existing_service_optional",
     "uploaded_output_evaluation",
 }
-INTERACTION_MODES = {"single_turn", "multi_turn"}
+
 HTTP_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
 READY_VALUES = {"output", "reference"}
 EXTRA_TYPES = {"string", "integer", "number", "boolean", "path", "url", "list", "mapping"}
@@ -255,22 +255,19 @@ def _parse_resources(value: Any, project_root: Path, path_warnings: list[str]) -
 
 def _parse_runtime(value: Any) -> dict[str, Any]:
     data = _mapping(value, "runtime")
-    _unknown(data, {"mode", "application", "local_deployment", "interaction", "ready", "services", "mock_cases", "adapter", "batch_persistence", "extra"}, "runtime")
+    _unknown(data, {"mode", "application", "local_deployment", "session", "ready", "services", "mock_cases", "adapter", "batch_persistence", "extra"}, "runtime")
     mode = _choice(_required(data, "mode", "runtime"), "runtime.mode", RUNTIME_MODES)
-    interaction_data = _mapping(_required(data, "interaction", "runtime"), "runtime.interaction")
-    _unknown(interaction_data, {"mode"}, "runtime.interaction")
-    interaction = {
-        "mode": _choice(
-            _required(interaction_data, "mode", "runtime.interaction"),
-            "runtime.interaction.mode",
-            INTERACTION_MODES,
-        )
-    }
+    session: dict[str, Any] = {}
+    if "session" in data:
+        session_data = _mapping(data["session"], "runtime.session")
+        _unknown(session_data, {"max_turns"}, "runtime.session")
+        if "max_turns" in session_data:
+            session["max_turns"] = int(session_data["max_turns"])
     ready = _string_list(_required(data, "ready", "runtime"), "runtime.ready")
     unknown_ready = sorted(set(ready) - READY_VALUES)
     if unknown_ready:
         raise ConfigError(f"invalid field runtime.ready: unsupported value {unknown_ready[0]!r}")
-    result: dict[str, Any] = {"mode": mode, "interaction": interaction, "ready": ready}
+    result: dict[str, Any] = {"mode": mode, "session": session, "ready": ready}
     if "application" in data:
         result["application"] = _parse_application_contract(data["application"])
     if "local_deployment" in data:
@@ -987,9 +984,9 @@ def _validate_project_contract(document: Mapping[str, Any], registry: Environmen
             "verifier.scenarios.interactive must be declared in "
             f"verifier.scenarios.allowed: {unknown_interactive[0]}"
         )
-    if interactive_scenarios and (runtime.get("interaction") or {}).get("mode") != "multi_turn":
+    if interactive_scenarios and int((runtime.get("session") or {}).get("max_turns") or 8) <= 1:
         raise ConfigError(
-            "verifier.scenarios.interactive requires runtime.interaction.mode multi_turn"
+            "verifier.scenarios.interactive requires runtime.session.max_turns > 1"
         )
     if declared_scenarios and not default_scenarios:
         raise ConfigError(

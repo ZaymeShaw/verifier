@@ -19,6 +19,8 @@ class LlmProbeRequest:
     show_schema: Any = None
     # json（默认，非流式）/ sse_last_frame（伪流式：最后一帧全量，取最后一帧评）
     response_mode: str = ""
+    # live 每次投递重新生成的业务 Trace 关联（写回供审计）；多轮沿用信封时会被下一次投递覆盖。
+    business_trace_association: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

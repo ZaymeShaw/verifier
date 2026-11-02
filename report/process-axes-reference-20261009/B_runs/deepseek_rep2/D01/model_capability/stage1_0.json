@@ -1,0 +1,99 @@
+{
+ "meta": {
+  "elapsed": 48,
+  "prompt_tokens": 2673,
+  "completion_tokens": 9268,
+  "reasoning_tokens": 7839
+ },
+ "attempt": 1,
+ "result": {
+  "instance": "模型能力（模型）第1次调用（共5次）",
+  "items": [
+   {
+    "id": "R1",
+    "type": "推出",
+    "statement": "本次输出应把本轮目标限定为先筛选当前用户名下姓平、12月份生日、女性客户并按客户号升序供用户选择，而不是直接进入选中客户详情或保单状态查询。",
+    "basis": "当前用户问题“先找一下我名下姓平、12月份生日的女性客户，按客户号升序列出来让我选，确定后再查……”；冻结期望 list_female_clients_surname_ping_born_in_december"
+   },
+   {
+    "id": "R2",
+    "type": "推出",
+    "statement": "本次输出应发起客户定位/筛选工具调用，且工具应为 customer_search。",
+    "basis": "system 工具分工“客户：定位、筛选、计数 → customer_search”；冻结期望 list_female_clients_surname_ping_born_in_december"
+   },
+   {
+    "id": "R3",
+    "type": "推出",
+    "statement": "该客户筛选调用的查询条件应同时覆盖“我名下”“姓氏为平”“出生月份为12月”“女性”四项，不得遗漏、放宽或替换其中任一项。",
+    "basis": "当前用户问题“我名下姓平、12月份生日的女性客户”；冻结期望 list_female_clients_surname_ping_born_in_december"
+   },
+   {
+    "id": "R4",
+    "type": "推出",
+    "statement": "该客户筛选调用应要求或保证候选结果按客户号升序排列供用户选择。",
+    "basis": "当前用户问题“按客户号升序列出来让我选”；冻结期望“按客户号升序列出供用户选择”"
+   },
+   {
+    "id": "R5",
+    "type": "推出",
+    "statement": "在用户从候选列表确认具体客户之前，本次输出不得调用或执行 query_selected_client_detail_info 与 query_selected_client_policy_status 对应的详情查询和保单状态查询。",
+    "basis": "冻结期望 query_selected_client_detail_info/query_selected_client_policy_status 条件“确定选中客户后”；当前用户问题“确定后再查”"
+   },
+   {
+    "id": "R6",
+    "type": "推出",
+    "statement": "本次输出不得调用 ask_clarify 向用户追问姓氏、生日月份、性别或选择哪类查询。",
+    "basis": "冻结期望 list_female_clients_surname_ping_born_in_december 标注“歧义组：无”；system“无可答事实且缺关键实体时才澄清”"
+   },
+   {
+    "id": "R7",
+    "type": "推出",
+    "statement": "本次输出不得调用 present_customer_search_card 作为唯一结束动作，因为本轮完整目标还包含选中后的详细资料和保单状态，不属于“仅客户/保单清单且卡片足以答复”。",
+    "basis": "system“仅当本轮完整目标是客户/保单清单且卡片足以答复时，单独调用零参数 present_customer_search_card……还需回答字段、详情……用普通搜索”；当前用户问题“确定后再查……”"
+   },
+   {
+    "id": "R8",
+    "type": "推出",
+    "statement": "若本次输出落到系统规定的 JSON 答复结构，answer_draft 必须为首字段，且不得在未取得客户筛选工具事实时于 answer_draft 中写具体客户号、姓名、生日或保单状态。",
+    "basis": "system“输出 JSON：answer_draft:string 必须是首字段、结论先行”；L3 不编造；业务值必须用 claims 声明"
+   },
+   {
+    "id": "R9",
+    "type": "推出",
+    "statement": "若本次输出落到系统规定的 JSON 答复结构，fact_refs 只能引用本轮工具返回 facts 的 fact_id；本次输入尚无工具 facts，因此不得填写任何猜测的 fact_id。",
+    "basis": "system“fact_refs:string[] 仅填工具返回 facts 的 fact_id，禁止猜造 ID”"
+   },
+   {
+    "id": "R10",
+    "type": "守恒",
+    "statement": "本次输出不得添加输入中没有的具体客户、客户号、生日月份、性别或保单信息。",
+    "basis": "L3 不编造；system“无 data 或事实时，不用 hint、候选目录或常识补业务结论”"
+   },
+   {
+    "id": "R11",
+    "type": "外部真值",
+    "statement": "当前用户名下是否存在符合“姓平、12月份生日、女性”条件的客户，以及其客户号及按客户号升序后的结果，只能靠客户查询工具/后端数据查证，输入本身不包含。",
+    "basis": "当前用户问题的筛选条件；冻结期望 list_female_clients_surname_ping_born_in_december；system“客户：定位、筛选、计数 → customer_search”"
+   },
+   {
+    "id": "R12",
+    "type": "推出",
+    "statement": "本次输出不得进行任何写操作、代办或引导直接办理。",
+    "basis": "L7“不做写操作：不代办，办理事项引导人工渠道”"
+   },
+   {
+    "id": "R13",
+    "type": "推出",
+    "statement": "若在取得候选列表后收尾，应把本轮标记为等待用户选择，不应在用户确认前继续查询选中客户详情或保单状态。",
+    "basis": "system“needs_user_input:boolean 表示本轮是否等待用户”；当前用户问题“列出来让我选，确定后再查”"
+   }
+  ],
+  "not_covered": [
+   "未提供 customer_search 工具的具体参数 schema、字段名和排序参数，因此无法写出参数级调用格式。",
+   "未提供客户查询工具的实际返回格式和可用 fact_id，因此无法写出列表渲染字段或 fact_refs 具体值。",
+   "未提供当前用户身份及“我名下”的解析方式，无法判断是否还需额外认证信息。",
+   "实际是否存在符合条件客户、客户号具体值及排序结果属于外部真值，运行输入中不可见。",
+   "未说明第1次模型输出在框架中是否以工具调用消息还是 JSON 答复消息呈现，故对最终 JSON 首字段等契约仅能按条件陈述。"
+  ]
+ }
+}

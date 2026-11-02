@@ -117,7 +117,7 @@ def test_complete_json_model_tool_messages_are_json_and_match_audit(monkeypatch)
         def __init__(self, **_kwargs):
             captured["tools"] = _kwargs.get("tools") or []
 
-        def run(self, _user):
+        def run(self, _user, **_run_kwargs):
             messages = []
             for i, tool in enumerate(captured["tools"]):
                 fn = tool.entrypoint if hasattr(tool, "entrypoint") else tool

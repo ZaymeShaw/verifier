@@ -1,0 +1,110 @@
+{
+ "meta": {
+  "elapsed": 41,
+  "prompt_tokens": 2673,
+  "completion_tokens": 8487,
+  "reasoning_tokens": 7041
+ },
+ "attempt": 1,
+ "result": {
+  "instance": "模型能力（模型）第1次调用（用户首轮客户筛选请求）",
+  "items": [
+   {
+    "id": "R1",
+    "type": "推出",
+    "statement": "本轮应识别目标为查找当前用户名下姓平、12月份生日、女性客户并按客户号升序列出候选，不直接进入详情或保单状态查询阶段。",
+    "basis": "用户原话“先找一下我名下姓平、12月份生日的女性客户，按客户号升序列出来让我选，确定后再查选中客户的详细资料和保单状态”；E 中 list_female_clients_surname_ping_born_in_december 条件“总是”，query_selected_client_detail_info 与 query_selected_client_policy_status 条件均为“确定选中客户后”。"
+   },
+   {
+    "id": "R2",
+    "type": "推出",
+    "statement": "若本轮完整目标仅为客户清单且卡片足以答复，应单独调用零参数 present_customer_search_card 并直接结束，不得与任何其他工具并行或串行混调。",
+    "basis": "system 规则“仅当本轮完整目标是客户/保单清单且卡片足以答复时，单独调用零参数present_customer_search_card 或 present_policy_search_card；两者互斥，读取本轮原始问题并直接结束”以及“不能与任何其他工具并行”。"
+   },
+   {
+    "id": "R3",
+    "type": "推出",
+    "statement": "不得调用 present_policy_search_card，因为本轮目标是客户候选清单而不是保单清单。",
+    "basis": "system 规则“present_customer_search_card 或 present_policy_search_card；两者互斥，读取本轮原始问题”；用户原话只要求列出客户。"
+   },
+   {
+    "id": "R4",
+    "type": "守恒",
+    "statement": "候选列表必须保留用户给出的全部筛选条件：当前用户名下、姓平、12月份生日、女性，并按客户号升序。",
+    "basis": "用户原话“我名下姓平、12月份生日的女性客户，按客户号升序列出来让我选”。"
+   },
+   {
+    "id": "R5",
+    "type": "守恒",
+    "statement": "不得添加用户未给出的筛选条件，例如地区、年龄、险种、保单状态、会员等级等，来缩小候选。",
+    "basis": "用户原话只列出“我名下、姓平、12月份生日、女性、按客户号升序”，未出现其他筛选条件。"
+   },
+   {
+    "id": "R6",
+    "type": "推出",
+    "statement": "在用户确定选中客户前，不得查询或输出该客户的详细资料和保单状态。",
+    "basis": "用户原话“确定后再查选中客户的详细资料和保单状态”；E 中 query_selected_client_detail_info 与 query_selected_client_policy_status 条件均为“确定选中客户后”。"
+   },
+   {
+    "id": "R7",
+    "type": "推出",
+    "statement": "本轮输出若需等待用户从候选中选择，needs_user_input 应为 true。",
+    "basis": "system 输出契约“needs_user_input:boolean 表示本轮是否等待用户”；用户原话“列出来让我选，确定后”。"
+   },
+   {
+    "id": "R8",
+    "type": "推出",
+    "statement": "gaps 应列出尚未确定选中客户，因此详细资料和保单状态未查询。",
+    "basis": "E 中 query_selected_client_detail_info 与 query_selected_client_policy_status 条件均为“确定选中客户后”；用户原话“确定后再查”。"
+   },
+   {
+    "id": "R9",
+    "type": "推出",
+    "statement": "在尚未取得客户搜索工具 facts 前，fact_refs 不得填写任何 fact_id，也不得猜造客户号、姓名、生日、性别等业务值。",
+    "basis": "system 输出契约“fact_refs:string[] 仅填工具返回 facts 的 fact_id，禁止猜造 ID”以及“不要在 answer_draft/gaps 自行填写金额、数量、日期、状态、客户或被保人姓名”。"
+   },
+   {
+    "id": "R10",
+    "type": "推出",
+    "statement": "最终 JSON 的 answer_draft 必须是首字段字符串且结论先行，其余字段为 fact_refs、gaps、needs_user_input、task_updates。",
+    "basis": "system 输出契约“输出 JSON：answer_draft:string 必须是首字段、结论先行；fact_refs:string[]...；gaps:string[]...；needs_user_input:boolean...；task_updates:string[]...”。"
+   },
+   {
+    "id": "R11",
+    "type": "推出",
+    "statement": "客户筛选应走客户定位、筛选、计数工具职责，不得把姓名、手机号、寿险客户号或自然语言当作客户中心ID传入客户详情或保单号工具。",
+    "basis": "system 工具分工“客户：定位、筛选、计数 → customer_search；已有客户中心ID要画像 → customer_detail”以及“姓名、手机号、寿险客户号都不是客户中心ID，自然语言不能传入 polno”。"
+   },
+   {
+    "id": "R12",
+    "type": "推出",
+    "statement": "本轮不涉及产品条款、权益或办理流程，不应调用 product_knowledge、benefit_info、general_qa 等知识检索工具。",
+    "basis": "system 工具分工“某产品的保险责任、等待期、犹豫期、责任免除、投保规则、理赔责任 → product_knowledge；不针对具体产品的办理流程...→ general_qa；权益或增值服务 → benefit_info”；用户问题只要求客户筛选。"
+   },
+   {
+    "id": "R13",
+    "type": "推出",
+    "statement": "不得进行任何写操作或代办，用户仅请求查询；如涉及办理应引导人工渠道。",
+    "basis": "system 七条红线 L7“不做写操作：不代办，办理事项引导人工渠道”。"
+   },
+   {
+    "id": "R14",
+    "type": "外部真值",
+    "statement": "当前用户名下是否存在符合姓平、12月份生日、女性条件的客户，以及具体客户号和按客户号升序后的列表，必须由客户业务系统查询确认，不能由本次输入推定。",
+    "basis": "输入材料没有客户业务数据；E 中 list_female_clients_surname_ping_born_in_december 要求“查找”并列出。"
+   },
+   {
+    "id": "R15",
+    "type": "外部真值",
+    "statement": "选中客户的详细资料和保单状态具体值必须等选中后由客户详情与保单状态工具查证，本次输入无法给出。",
+    "basis": "E 中 query_selected_client_detail_info、query_selected_client_policy_status 条件均为“确定选中客户后”；输入无相应数据。"
+   }
+  ],
+  "not_covered": [
+   "无法覆盖实际客户业务数据：输入中没有客户列表、客户号、生日、性别、保单状态等，无法核对具体客户是否存在或按客户号升序后的结果。",
+   "无法覆盖第2至第5次模型调用的输出，以及用户选择后查询详细资料和保单状态的实际结果。",
+   "无法覆盖 present_customer_search_card 或 customer_search 的实际工具返回、卡片渲染和权限结果。",
+   "无法覆盖当前用户身份与“我名下”的映射关系，该关系需业务系统确认。"
+  ]
+ }
+}

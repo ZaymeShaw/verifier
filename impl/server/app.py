@@ -51,6 +51,10 @@ def create_app() -> FastAPI:
     def materials_html() -> RedirectResponse:
         return RedirectResponse("/frontend/materials.html")
 
+    @app.get("/explore.html")
+    def explore_html() -> RedirectResponse:
+        return RedirectResponse("/frontend/explore.html")
+
     return app
 
 

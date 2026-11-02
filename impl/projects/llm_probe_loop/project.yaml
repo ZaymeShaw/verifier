@@ -1,0 +1,144 @@
+schema_version: 1
+project:
+  id: llm_probe_loop
+  name: 非流式 HTTP LLM 探针（axis loop 路线）
+  description: 用 curl 形状的非流式请求探测带 LLM 的接口，按能力描述和可选 show_schema 做 judge
+  capabilities:
+  - live_run
+  - judge
+  - attribute
+  - cluster
+  - check
+  - scenario
+  resources:
+    documents:
+      application: project://application.md
+      mock: project://mock.md
+      evaluation: project://evaluation.md
+      judge_boundary: project://judge_boundary.md
+      attribution: project://attribution.md
+      checklist: project://checklist.md
+      implementation_standard: project://implementation_standard.md
+runtime:
+  mode: existing_service_optional
+  application:
+    interface:
+      shape: curl envelope POST with native JSON body and stringified HTTP response
+      source: application.md, live.py, and live_schema.py
+    start_run: each case supplies url or capability_ref; verifier does not start the
+      probed service
+    boundary: non-streaming HTTP response string is in scope; declared sse_last_frame
+      pseudo-streams are evaluated on the final data frame; incremental streaming and
+      downstream systems are out of scope
+  session:
+    max_turns: 8
+  ready: []
+  adapter:
+    request_construction:
+      builder: LlmProbeLive.deliver_real reads url/method/headers from the envelope
+        and posts body
+      required_inputs:
+      - body
+    output_extraction:
+      extractor: LlmProbeLive.extract_output stringifies the HTTP response body
+      normalized_output: output_text
+    reference_handling:
+      source_priority:
+      - judge_generated
+      - missing
+      alignment: no gold output; judge compares output_text against capability and
+        optional show_schema
+  batch_persistence:
+    case_shape: id, selected, input, output, reference, metadata, scenario, source,
+      status, error
+    transient_results: do not persist full trace, judge, attribute, or frontend_view
+      as durable case-pool source data
+  mock_cases:
+    source: fixture
+    default_scenarios:
+    - client_search
+    - policy_search
+    - marketting-planning-intent
+    - dashscope-qa
+    - policy-clause-qa
+    - hr-handbook-qa
+    - insurance-agno-e2e
+    - insurance-llmtracing
+  services:
+    primary:
+      base_url: http://127.0.0.1:9
+      endpoint: /llm-probe
+      method: POST
+      timeout_seconds: 180
+verifier:
+  authority:
+    enabled_scopes: []   # 承载性是评测轴 carryability（spec/alg/axis_loop.md §12.3），不走判后的轴2工具
+  attribution:
+    enabled: false
+    trace:
+      document: attribution.md
+      trace_nodes:
+      - request_normalization
+      - http_call
+      - output_stringify
+      - judge
+      - attribution
+  scenarios:
+    allowed:
+    - insurance-agno-e2e
+    - insurance-llmtracing
+    - client_search
+    - policy_search
+    - marketting-planning-intent
+    - dashscope-qa
+    - policy-clause-qa
+    - hr-handbook-qa
+  judge:
+    boundary:
+      document: judge_boundary.md
+      gate: capability description and optional show_schema determine what in output_text
+        is evaluable
+  presentation:
+    frontend_view:
+      live: render curl envelope, stringified output, capability, and show_schema
+      summary: render the same durable case shape with compact judge summaries
+  check_rules:
+    core_forbidden_markers: []
+    evidence:
+      documents:
+      - application.md
+      - mock.md
+      - evaluation.md
+      - judge_boundary.md
+      - attribution.md
+      - checklist.md
+      tests: []
+  assets:
+  - asset_id: judge_evaluation
+    kind: context
+    enabled: true
+    roles:
+    - judge
+    production_path: project://evaluation.md
+  - asset_id: judge_boundary
+    kind: context
+    enabled: true
+    roles:
+    - judge
+    production_path: project://judge_boundary.md
+  - asset_id: mock_contract
+    kind: context
+    enabled: true
+    roles:
+    - mock
+    production_path: project://mock.md
+  - asset_id: mock_application
+    kind: context
+    enabled: true
+    roles:
+    - mock
+    production_path: project://application.md
+metadata:
+  initialized_from: route://project.yaml
+  source_revision: 685452104110842d31f0b4510cc41784ae9b8b15b0ae9399d899b5fc4a7ddf9e
+  accepted_proposal_sha256: 27e4345b74653561d90f452166048924bd40857a010b9a0e2dcb9b5581ae06e1

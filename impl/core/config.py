@@ -17,6 +17,8 @@ from .config_schema import (
     ContextConfig,
     EmbeddingConfig,
     EnvironmentVariableSpec,
+    DEFAULT_AXIS_LOOP,
+    EvalAxesConfig,
     ExecutionConfig,
     JudgeConfig,
     LlmCapabilities,
@@ -27,6 +29,7 @@ from .config_schema import (
     RuntimeConfig,
     ServerConfig,
     UatConfig,
+    SUPPORTED_EVAL_AXES_MODEL_POLICIES,
     SUPPORTED_LLM_PROVIDERS,
     SUPPORTED_LLM_PROTOCOLS,
     convert_environment_value,
@@ -110,6 +113,11 @@ def resolve_runtime_config(
         raise ConfigError(
             f"invalid resolved field llm.protocol: unsupported value {values['llm.protocol']!r}"
         )
+    if values["eval_axes.model_policy"] not in SUPPORTED_EVAL_AXES_MODEL_POLICIES:
+        raise ConfigError(
+            f"invalid resolved field eval_axes.model_policy: unsupported value "
+            f"{values['eval_axes.model_policy']!r}; expected one of {sorted(SUPPORTED_EVAL_AXES_MODEL_POLICIES)}"
+        )
     values["llm.base_url"] = openai_compatible_base_url(
         values["llm.base_url"],
         "llm.base_url",
@@ -152,6 +160,7 @@ def resolve_runtime_config(
             temperature=float(values["llm.temperature"]),
             reasoning_effort=str(values["llm.reasoning_effort"]),
             request_timeout_seconds=float(values["llm.request_timeout_seconds"]),
+            stream=bool(values["llm.stream"]),
             capabilities=LlmCapabilities(
                 json_mode=bool(values["llm.capabilities.json_mode"]),
                 tool_calls=bool(values["llm.capabilities.tool_calls"]),
@@ -206,6 +215,10 @@ def resolve_runtime_config(
                 judge_reasoning_chars=int(values["attribute.compaction.judge_reasoning_chars"]),
             ),
         ),
+        eval_axes=EvalAxesConfig(
+            model_policy=str(values["eval_axes.model_policy"]),
+            **{key: values[f"eval_axes.{key}"] for key in DEFAULT_AXIS_LOOP},
+        ),
         environment=parsed.environment,
         sources=MappingProxyType(dict(sources)),
         warnings=(),
@@ -225,11 +238,16 @@ def _resolve_llm_fallbacks(values: Mapping[str, Any]) -> tuple[LlmFallback, ...]
         api_key = str(values.get(f"llm.fallback_{index}.api_key") or "").strip()
         if not (base_url and model and api_key):
             continue
+        raw_capacity = values.get(f"llm.fallback_{index}.max_prompt_chars")
         resolved.append(
             LlmFallback(
                 base_url=openai_compatible_base_url(base_url, f"llm.fallback_{index}.base_url"),
                 model=model,
                 api_key=api_key,
+                max_prompt_chars=(
+                    int(raw_capacity) if str(raw_capacity or "").strip() else None
+                ),
+                tool_calls=bool(values.get(f"llm.fallback_{index}.tool_calls", True)),
             )
         )
     return tuple(resolved)
@@ -272,6 +290,7 @@ def _base_values(parsed: ParsedRuntimeConfig) -> dict[str, Any]:
         "llm.temperature": parsed.llm.temperature,
         "llm.reasoning_effort": parsed.llm.reasoning_effort,
         "llm.request_timeout_seconds": parsed.llm.request_timeout_seconds,
+        "llm.stream": parsed.llm.stream,
         "llm.role_policies.live_stub.model": _role_policy_default_model(parsed, "live_stub"),
         "llm.capabilities.json_mode": parsed.llm.capabilities.json_mode,
         "llm.capabilities.tool_calls": parsed.llm.capabilities.tool_calls,
@@ -296,6 +315,8 @@ def _base_values(parsed: ParsedRuntimeConfig) -> dict[str, Any]:
         "context.query_limit": parsed.context.query_limit,
         "context.top_k_per_query": parsed.context.top_k_per_query,
         "judge.raw_response_max_chars": parsed.judge.raw_response_max_chars,
+        "eval_axes.model_policy": parsed.eval_axes.model_policy,
+        **{f"eval_axes.{key}": getattr(parsed.eval_axes, key) for key in DEFAULT_AXIS_LOOP},
         "attribute.finalization_prompt_char_budget": parsed.attribute.finalization_prompt_char_budget,
         "attribute.review_prompt_char_budget": parsed.attribute.review_prompt_char_budget,
         "attribute.tool_call_limit": parsed.attribute.tool_call_limit,

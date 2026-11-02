@@ -73,7 +73,6 @@ def main(argv=None):
     p = sub.add_parser("judge")
     p.add_argument("--project", required=True)
     p.add_argument("--trace", required=True)
-    p.add_argument("--user-intent")
 
     p = sub.add_parser("attribute")
     p.add_argument("--project", required=True)
@@ -93,12 +92,10 @@ def main(argv=None):
     p = sub.add_parser("run-chain")
     p.add_argument("--project", required=True)
     p.add_argument("--input", required=True)
-    p.add_argument("--user-intent")
 
     p = sub.add_parser("batch-run")
     p.add_argument("--project", required=True)
     p.add_argument("--inputs", required=True)
-    p.add_argument("--user-intent")
     p.add_argument("--concurrency", type=int, default=None, help="并发数；默认读取 impl/config.yaml")
 
     p = sub.add_parser("draft-promote")
@@ -199,7 +196,7 @@ def main(argv=None):
         if not result.get("ok"):
             raise SystemExit(1)
     elif args.cmd == "judge":
-        emit(pipeline.judge(args.project, trace_from_json(load_json_arg(args.trace)), args.user_intent))
+        emit(pipeline.judge(args.project, trace_from_json(load_json_arg(args.trace))))
     elif args.cmd == "attribute":
         emit(pipeline.attribute(args.project, trace_from_json(load_json_arg(args.trace)), judge_from_json(load_json_arg(args.judge)), manual_override=True))
     elif args.cmd == "cluster":
@@ -219,15 +216,14 @@ def main(argv=None):
         _cli_check_request(args.project, chain_input)
         emit(run_chain(
             args.project,
-            SingleTurnCase(id="", input=dict(chain_input or {}), user_intent=str(args.user_intent or "")),
-            user_intent=args.user_intent,
+            SingleTurnCase(id="", input=dict(chain_input or {})),
         ))
     elif args.cmd == "batch-run":
         inputs = load_json_arg(args.inputs)
         if isinstance(inputs, list):
             for item in inputs:
                 _cli_check_request(args.project, item)
-        emit(pipeline.batch_run(args.project, inputs, user_intent=args.user_intent, concurrency=args.concurrency))
+        emit(pipeline.batch_run(args.project, inputs, concurrency=args.concurrency))
     elif args.cmd == "draft-promote":
         from .core.draft_promotion import apply_draft_promotion, plan_draft_promotion
         from .core.project_loader import load_project

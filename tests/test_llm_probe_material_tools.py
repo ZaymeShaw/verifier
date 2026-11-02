@@ -50,6 +50,115 @@ def test_outline_unknown_format_degrades_honestly(monkeypatch) -> None:
     assert result["entries"], "行块地图必须存在"
 
 
+_PY_SOURCE = '''"""模块文档：脚本里的知识。"""
+from __future__ import annotations
+
+import re
+
+MAX_SIZE: int = 60
+_RANGE_CAPABLE_OPERATORS = ("gt", "lt", "between")
+# 这行注释像 markdown 标题
+FIELD_DEFS = {
+''' + "".join(
+    f'    "{group}": {{\n' + "".join(f'        "f{group}_{i}": "desc",\n' for i in range(40)) + "    },\n"
+    for group in ("basicInfo", "familyInfo", "assetInfo", "riskInfo")
+) + '''}
+
+
+def match_rule(field: str, op: str) -> bool:
+    """判断字段是否支持该操作符。
+
+    第二段不进 label。
+    """
+    return op in _RANGE_CAPABLE_OPERATORS
+
+
+class Resolver:
+    """把输入解析为结构化条件。"""
+
+    def resolve(self, query: str) -> dict:
+        return {"q": query}
+
+    async def resolve_async(self, query: str) -> dict:
+        return self.resolve(query)
+'''
+
+
+def test_outline_python_is_detected_before_yaml_and_markdown(monkeypatch) -> None:
+    """`X: int = 1` 像 yaml 顶层键、`# 注释` 像 markdown 标题：Python 判别必须先于形状匹配。"""
+    import impl.projects.llm_probe.material_tools as mt
+
+    monkeypatch.setattr(mt, "read_content", lambda p, m: _PY_SOURCE)
+    result = mt.outline("llm_probe", "script")
+    assert result["format"] == "python"
+    assert "Python 源码" in result["note"]
+
+
+def test_outline_python_entries_follow_ast_line_ranges(monkeypatch) -> None:
+    import impl.projects.llm_probe.material_tools as mt
+
+    monkeypatch.setattr(mt, "read_content", lambda p, m: _PY_SOURCE)
+    result = mt.outline("llm_probe", "script")
+    by_label = {item["label"]: item for item in result["entries"]}
+    lines = _PY_SOURCE.splitlines()
+
+    assert "const MAX_SIZE" in by_label
+    assert "const _RANGE_CAPABLE_OPERATORS" in by_label
+    start, end = parse_locator(by_label["const _RANGE_CAPABLE_OPERATORS"]["locator"])
+    assert start == end and "_RANGE_CAPABLE_OPERATORS = " in lines[start - 1]
+
+    func = next(item for item in result["entries"] if item["label"].startswith("def match_rule"))
+    assert func["label"] == "def match_rule — 判断字段是否支持该操作符。"
+    start, end = parse_locator(func["locator"])
+    assert lines[start - 1].startswith("def match_rule")
+    assert lines[end - 1].strip() == "return op in _RANGE_CAPABLE_OPERATORS"
+
+    assert "class Resolver — 把输入解析为结构化条件。" in by_label
+    assert "  def Resolver.resolve" in by_label
+    assert "  def Resolver.resolve_async" in by_label
+    # import 与模块 docstring 不进菜单
+    assert not any(label.startswith(("import", "from")) for label in by_label)
+
+
+def test_outline_python_splits_large_dict_constant_by_key(monkeypatch) -> None:
+    """超过单次精读上限的 dict 常量按顶层 key 展开二级条目，每段可直接 material_read。"""
+    import impl.projects.llm_probe.material_tools as mt
+
+    monkeypatch.setattr(mt, "read_content", lambda p, m: _PY_SOURCE)
+    result = mt.outline("llm_probe", "script")
+    labels = [item["label"] for item in result["entries"]]
+    assert "const FIELD_DEFS" in labels
+    keys = [label for label in labels if label.startswith("  FIELD_DEFS[")]
+    assert keys == [
+        "  FIELD_DEFS['basicInfo']", "  FIELD_DEFS['familyInfo']",
+        "  FIELD_DEFS['assetInfo']", "  FIELD_DEFS['riskInfo']",
+    ]
+    lines = _PY_SOURCE.splitlines()
+    family = next(item for item in result["entries"] if item["label"] == "  FIELD_DEFS['familyInfo']")
+    start, end = parse_locator(family["locator"])
+    assert '"familyInfo": {' in lines[start - 1]
+    assert end - start + 1 <= mt.MAX_READ_LINES
+    segment = "\n".join(lines[start - 1:end])
+    assert "ffamilyInfo_0" in segment and "ffamilyInfo_39" in segment
+    assert "fassetInfo_0" not in segment
+    # 小常量（tuple）不切二级
+    assert not any(label.startswith("  _RANGE_CAPABLE_OPERATORS[") for label in labels)
+
+
+def test_outline_python_syntax_error_falls_back_to_shape_detection(monkeypatch) -> None:
+    import impl.projects.llm_probe.material_tools as mt
+
+    broken = "def broken(:\n    pass\n# 标题形状\nkey: value\n"
+    monkeypatch.setattr(mt, "read_content", lambda p, m: broken)
+    result = mt.outline("llm_probe", "script")
+    assert result["format"] != "python"
+
+
+def test_outline_yaml_and_markdown_fixtures_are_not_mistaken_for_python() -> None:
+    assert outline(*BIG)["format"] == "yaml"
+    assert outline(*SAMPLE)["format"] == "markdown"
+
+
 # ---------------------------------------------------------------------------
 # 词法检索 + 精读 + locator
 

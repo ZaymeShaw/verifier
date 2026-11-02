@@ -1,0 +1,34 @@
+{
+  "tag": "smoke-multi-policy-anjinning",
+  "entries": [
+    {
+      "check": "工具返回原样进入下一次模型输入",
+      "verdict": "达到",
+      "observed": "policy_search 的返回与 turn1/records/traces/0/tree/0/spans/3/spans/3 请求里 tool_call_id=call_a66f0d6ea45c45cc909b09a7 的 tool 消息逐字一致",
+      "refs": [
+        "turn1/records/run/step_executor_runs/0/tools/0",
+        "turn1/records/traces/0/tree/0/spans/3/spans/3"
+      ],
+      "id": "v2-1"
+    },
+    {
+      "check": "执行余量提示随用量更新",
+      "verdict": "没达到",
+      "observed": "2 次模型请求里的余量提示逐字相同（剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 596 秒。…），期间已发生 1 次模型调用、2 次工具调用",
+      "refs": [
+        "turn1/records/traces/0/tree/0/spans/3/spans/1",
+        "turn1/records/traces/0/tree/0/spans/3/spans/3"
+      ],
+      "id": "v2-2"
+    },
+    {
+      "check": "交付缺口说明有逐字出处",
+      "verdict": "达到",
+      "observed": "交付的 1 条缺口说明都能在模型产出或工具返回里找到逐字出处",
+      "refs": [
+        "turn1.delivered_output"
+      ],
+      "id": "v2-3"
+    }
+  ]
+}

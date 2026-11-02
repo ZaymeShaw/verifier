@@ -1,0 +1,103 @@
+### main-B01-meeting-prep-fuyunping  run=fb5fda5628174ef6967116bd4ecca493 desc=None
+expectations=3 records=45
+
+## expectations
+- exp_fuyunping_policies: 展示伏云平的已有保单 | cond=总是
+- exp_fuyunping_profile: 展示伏云平的资料 | cond=总是
+- exp_opening_questions: 基于伏云平的资料和已有保单，为明天见伏云平准备三个开场问题 | cond=总是
+
+## workflow definitions
+  [turn1/records/definitions/0/data] [{"name": "assemble", "type": "Step"}, {"name": "gate", "type": "Step"}, {"name": "to_direct", "type": "Condition", "steps": [{"name": "direct", "type": "Step"}]}, {"name": "to_capability", "type": "Condition", "steps": [{"name": "run_capability", "type": "Step"}]}, {"name": "to_agent", "type": "Condition", "steps": [{"name": "agent_input", "type": "Step"}, {"name": "agent", "type": "Step"}, {"name": "agent_bridge", "type": "Step"}]}, {"name": "finalize", "type": "Step"}, {"name": "present_agentos", "type": "Step"}]
+
+## tool calls (in order)
+  [turn1/records/raw_runs/0/run_data/step_executor_runs/0/tools/0] name=None args=null
+      result=null err=null
+  [turn1/records/raw_runs/0/run_data/step_executor_runs/0/tools/1] name=None args=null
+      result=null err=null
+  [turn1/records/raw_runs/0/run_data/step_executor_runs/0/tools/2] name=None args=null
+      result=null err=null
+  [turn1/records/raw_runs/0/run_data/step_executor_runs/0/tools/3] name=None args=null
+      result=null err=null
+  [turn1/records/raw_runs/0/run_data/step_executor_runs/0/tools/4] name=None args=null
+      result=null err=null
+  [turn1/records/raw_runs/0/run_data/step_executor_runs/0/tools/5] name=None args=null
+      result=null err=null
+  [turn1/records/run/step_executor_runs/0/tools/0] name=customer_search args={"query": "伏云平的客户资料", "compact": true, "fields": ["姓名", "手机号", "性别", "生日", "VIP", "客户等级"]}
+      result={"result":{"data":{"pageNo":1,"pageSize":100,"total":1,"records":[{"clientMainId":"4F2873B056FB6AA0544DAD134E5441D9","clientMobile":"19909224628","clientSex":"女","newValueLabel":"B类","vipType":null,"clientName":"伏云平","familyInfo":null}]},"field_descriptions":{"pageNo":"当前页码","pageSize":"服务页容量","total":"符合查询条件的客户总数，不是当前页记录数或展示条数","records":"本次返回的搜索记录","records[]":{"$description":"单条搜索记录；空值不等于零或否；金额未注明单位、币种或时点时不推断","clientMainId":"客户中心客户id；当前客户在客户中心的唯一标识，用于关联搜客户结果、客户详情及相关客户信息。准客和已成单客户均可有此 ID；与仅寿险成交客户可能具有的寿险系统客户号区分，按标识字符串保留原值。","clientMobile":"客户手机号；客户本人手机号的明文，用于识别客户联系方式或按完整号码、尾号查找客户。区别于保单中的投保人、被保人以及家庭成员手机号；按号码字符串保留原值。","clientSex":"性别；客户本人的性别，用于性别筛选或画像，本接口返回中文“男”“女”。与详情接口中 M=男、F=女属于同一业务含义但表示不同...<+1185> err=false
+  [turn1/records/run/step_executor_runs/0/tools/1] name=customer_detail args={"customer_id": "4F2873B056FB6AA0544DAD134E5441D9", "compact": true, "fields": ["姓名", "性别", "生日", "VIP", "客户等级", "会员"], "customer_ids": null}
+      result={"result":{"data":{"total":1,"records":[{"clientMainId":"4F2873B056FB6AA0544DAD134E5441D9","clientNo":"C92200004628","birthday":"1993-08-22 00:00:00","clientAge":"33","clientNameCipher":"zo0LGBCV11JmLo1S8iwd6uuU2FbNZgzA==","clientSex":"F","education":"05","eduDescription":"大学专科","mariDescription":"已婚","mariSts":"2","phoneNoCipher":"zo0LGBCV11cBAJTW91a5v8TWIKJ2Y1Jg==","newValueLabel":"B","vipType":"S2","annPremAmt":6300.0,"insnoSeqAmt":750000.0}]},"field_descriptions":{"total":"真实命中客户数","records":"客户记录；多命中仅基本候选，其余空值不表示无业务","records[]":{"$description":"客户详情 v5 最终值；多命中仅 ID、姓名、性别、年龄有效；空值不代表零或否","clientMainId":"客户中心客户id；当前客户在客户中心的客户标识，用于关联客户详情、动态、笔记及家庭成员信息。返回字符串，准客和已成单客户均可有此 ID；与寿险系统客户号 clientNo ...<+4481> err=false
+  [turn1/records/run/step_executor_runs/0/tools/2] name=policy_search args={"query": "伏云平名下的保单", "compact": true, "fields": ["保单号", "保单状态", "投保险种", "投保人姓名", "被保人姓名", "年缴保费", "险种保额", "累计已交保费", "累计赔付次数"]}
+      result={"result":{"data":{"pageNo":1,"pageSize":100,"total":2,"records":[{"polno":"P260922000011415","polProductName":"平安e生保（加享版）医疗保险","applicantNameCipher":"zo0LGBCV11JmLo1S8iwd6uuU2FbNZgzA==","insurantNameCipher":"zo0LGBCV11JmLo1S8iwd6uuU2FbNZgzA==","polStatusDesc":"到期终止","aggPayCnt":0},{"polno":"P260922000011416","polProductName":"平安安佑福重大疾病保险","applicantNameCipher":"zo0LGBCV11JmLo1S8iwd6uuU2FbNZgzA==","insurantNameCipher":"zo0LGBCV11JmLo1S8iwd6uuU2FbNZgzA==","polStatusDesc":"交费有效","aggPayCnt":0}]},"field_descriptions":{"pageNo":"当前页码","pageSize":"服务页容量","total":"接口报告的匹配结果条目总数；未确认保单张数及是否为险种粒度","records":"本次返回的搜索记录","records[]":{"$description":"单条搜索记录；空值不等于零或否；金额未注明单位、币种或时点时不推断","polno":"保单号；保险合同的...<+1244> err=false
+  [turn1/records/run/step_executor_runs/0/tools/3] name=entity_lookup args={"by": "name", "name": "平安安佑福"}
+      result={"result":{"status":"PARTIAL","facts":[],"gaps":["「平安安佑福」未精确命中词典词条,以下为包含它的候选名称(按长度升序)"],"hint":"输入可能不完整;候选可直接用于业务工具或向用户确认","error":null,"data":{"query":"平安安佑福","channel":"name","tier":"contains","candidates":["平安安佑福重大疾病保险","平安安佑福(全能版)重大疾病保险","平安安佑福(惠享版)定期重大疾病保险"],"version":"entity-dict-v1"}},"projection":{"incomplete":false,"omitted_items":0,"excerpted_values":0}} err=false
+  [turn1/records/run/step_executor_runs/0/tools/4] name=customer_detail args={"customer_id": "4F2873B056FB6AA0544DAD134E5441D9", "customer_ids": null, "compact": true, "fields": ["clientNo"]}
+      result={"result":{"data":{"total":1,"records":[{"clientMainId":"4F2873B056FB6AA0544DAD134E5441D9","clientNo":"C92200004628","birthday":"1993-08-22 00:00:00","clientAge":"33","clientNameCipher":"zo0LGBCV11JmLo1S8iwd6uuU2FbNZgzA==","clientSex":"F","education":"05","eduDescription":"大学专科","mariDescription":"已婚","mariSts":"2","phoneNoCipher":"zo0LGBCV11cBAJTW91a5v8TWIKJ2Y1Jg==","annPremAmt":6300.0,"insnoSeqAmt":750000.0}]},"field_descriptions":{"total":"真实命中客户数","records":"客户记录；多命中仅基本候选，其余空值不表示无业务","records[]":{"$description":"客户详情 v5 最终值；多命中仅 ID、姓名、性别、年龄有效；空值不代表零或否","clientMainId":"客户中心客户id；当前客户在客户中心的客户标识，用于关联客户详情、动态、笔记及家庭成员信息。返回字符串，准客和已成单客户均可有此 ID；与寿险系统客户号 clientNo 区分，不根据示例套用搜客户表的 ID 格式。","clientNo":...<+3280> err=false
+  [turn1/records/run/step_executor_runs/0/tools/5] name=product_knowledge args={"query": "平安安佑福重大疾病保险的保险责任是什么？"}
+      result={"result":{"status":"PARTIAL","facts":[{"fact_id":"F-CALL-TR-bccf44f35fad4a28ad7e8b4a2754a33e-05-004","subject_type":"product_document","subject_id":"product-document-04","predicate":"reference_content","typed_value":"# 寿险-平安爱满分（2026）两全保险-OCR原文**2.2 其他免责条款      5.2 您解除合同的手续及风险   7.7 本公司合同解除权的限制**\n[条款原文 | 平安爱满分（2026）两全保险 | 寿险]\n### 1.1 保险金额        4.3 保险金申请         7.2 合同成立与生效### 1.2 保险责任        4.4 保险金给付         7.3 投保范围### 1.3 保险期间        4.5 宣告死亡处理        7.4 年龄错误的处理\n   2.我们不保什么        5.如何退保              7.5 未成年人身故保险金限制### 2.1 责任免除        5.1 犹豫期           7.6 明确说明与如实告知### 2.2 其他免责条款      5.2 您解除合同的手续及风险   7.7 本公司合同解除权的限制\n   3.如何支付保险费       6.其他权益              7.8 未还款项[条款原文 | 平安爱满分（202...<+1000> err=false
+
+## model calls
+  [turn1/records/traces/0/tree/0/spans/3/spans/1] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 598 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+明天要见伏云平，先看看她的资料和已有保单，帮我准备三个开场问题。
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "content": "\u6211\u9700\u8981\u5148\u5b9a\u4f4d\u5ba2\u6237\"\u4f0f\u4e91\u5e73\"\uff0c\u83b7\u53d6\u5979\u7684\u8d44\u6599\u548c\u4fdd\u5355\u3002\n\n\u8ba9\u6211\u5148\u7528 customer_search \u5b9a\u4f4d\u8fd9\u4f4d\u5ba2\u6237", "tool_calls": [{"id": "call_efd404e2f4d44c118a66a866", "type": "function", "function": {"name": "customer_search", "arguments": "{\"query\": \"\u4f0f\u4e91\u5e73\u7684\u5ba2\u6237\u8d44\u6599\", \"compact\": true, \"fields\": [\"\u59d3\u540d\", \"\u624b\u673a\u53f7\", \"\u6027\u522b\", \"\u751f\u65e5\", \"VIP\", \"\u5ba2\u6237\u7b49\u7ea7\"]}"}}]}]}
+  [turn1/records/traces/0/tree/0/spans/3/spans/10] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 598 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+明天要见伏云平，先看看她的资料和已有保单，帮我准备三个开场问题。
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "content": "\u6211\u5df2\u6709\u5145\u5206\u7684\u5ba2\u6237\u8be6\u60c5\u548c\u4fdd\u5355\u4fe1\u606f\u3002\u73b0\u5728\u6574\u7406\u6700\u7ec8\u7b54\u590d\u5e76\u51c6\u5907\u4e09\u4e2a\u5f00\u573a\u95ee\u9898\u3002\n\n\u5ba2\u6237\u8be6\u60c5\uff1aB\u7c7b\u4ef7\u503c\u5ba2\u6237\u3001\u767d\u94f62\u3001\u5df2\u5a5a\u300130+\u5973\u6027\u3001\u4e13\u79d1\u3001\u5e74\u7f34\u4fdd\u8d396300\u3001\u603b\u4fdd\u989d75\u4e07\uff0c\u6709\u4e24\u5f20\u4fdd\u5355\uff1a\u4e00\u5f20\u533b\u7597\u9669\u5df2\u5230\u671f\u7ec8\u6b62\uff0c\u4e00\u5f20\u91cd\u75be\u9669\u4ea4\u8d39\u6709\u6548\u3002\n\n\u4e09\u4e2a\u5f00\u573a\u95ee\u9898\u57fa\u4e8e\u8fd9\u4e9b\u5df2\u786e\u8ba4\u4e8b\u5b9e\u6765\u8bbe\u8ba1\u3002\n\n", "tool_calls": [{"id": "call_3434ad3cad19444eba3236fa", "type": "function", "function": {"name": "product_knowledge", "arguments": "{\"query\": \"\u5e73\u5b89\u5b89\u4f51\u798f\u91cd\u5927\u75be\u75c5\u4fdd\u9669\u7684\u4fdd\u9669\u8d23\u4efb\u662f\u4ec0\u4e48\uff1f\"}"}}]}]}
+  [turn1/records/traces/0/tree/0/spans/3/spans/12] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 598 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+明天要见伏云平，先看看她的资料和已有保单，帮我准备三个开场问题。
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "content": "\u8fd9\u6b21 product_knowledge \u8fd4\u56de\u7684\u662f\"\u5e73\u5b89\u7231\u6ee1\u5206\uff082026\uff09\u4e24\u5168\u4fdd\u9669\"\u7684\u5185\u5bb9\uff0c\u660e\u663e\u4e0d\u662f\"\u5e73\u5b89\u5b89\u4f51\u798f\u91cd\u5927\u75be\u75c5\u4fdd\u9669\"\u7684\u4ea7\u54c1\uff0c\u6b63\u6587\u4e0e\u6240\u67e5\u4ea7\u54c1\u4e0d\u5bf9\u5e94\uff0c\u4e0d\u80fd\u4f5c\u4e3a\u5b89\u4f51\u798f\u7684\u8bc1\u636e\u3002\u56e0\u6b64\u6211\u65e0\u6cd5\u7528\u8be5\u7ed3\u679c\u8bf4\u660e\u5b89\u4f51\u798f\u7684\u5177\u4f53\u4fdd\u969c\u8d23\u4efb\u3002\u6211\u5148\u4e0d\u5c55\u5f00\u4ea7\u54c1\u6761\u6b3e\uff0c\u5df2\u5728\u4fdd\u5355\u5c42\u9762\u786e\u8ba4\u5176\"\u4ea4\u8d39\u6709\u6548\"\u72b6\u6001\u5373\u53ef\u3002\n\n\u6211\u5df2\u6536\u96c6\u5230\u5145\u5206\u4fe1\u606f\u6765\u56de\u7b54\u672c\u8f6e\u95ee\u9898\u3002\u6574\u7406\u6700\u7ec8\u7b54\u590d\u3002\n\nAnswer draft \u9700\u8981\u5305\u542b\u5ba2\u6237\u8d44\u6599\u3001\u4fdd\u5355\uff0c\u4ee5\u53ca\u4e09\u4e2a\u5f00\u573a\u95ee\u9898\u3002\u5f00\u573a\u95ee\u9898\u5c5e\u4e8e\u6211\u57fa\u4e8e\u4e8b\u5b9e\u7684\u5efa\u8bae\u6027\u8868\u8ff0\uff0c\u4e0d\u6d89\u53ca\u8c03\u7528\u5de5\u5177\uff0c\u4f46\u5e94\u5f15\u7528\u5df2\u786e\u8ba4\u7684\u4e8b\u5b9e\u3002\n\n\u8ba9\u6211\u7ec4\u7ec7\u4e1a\u52a1\u5951\u7ea6\u683c\u5f0f\u8f93\u51fa\u3002\n\n\u4f0f\u4e91\u5e73\u7684\u8d44\u6599\u548c\u4fdd\u5355\u5df2\u5c31\u7eea\uff0c\u57fa\u4e8e\u5df2\u786e\u8ba4\u4fe1\u606f\u6574\u7406\u5982\u4e0b\u...<+5544>
+  [turn1/records/traces/0/tree/0/spans/3/spans/3] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 598 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+明天要见伏云平，先看看她的资料和已有保单，帮我准备三个开场问题。
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "content": "\u627e\u5230\u4e86\u5ba2\u6237\"\u4f0f\u4e91\u5e73\"\uff0c\u5ba2\u6237\u4e2d\u5fc3ID\u662f 4F2873B056FB6AA0544DAD134E5441D9\u3002\u73b0\u5728\u9700\u8981\u67e5\u8be2\u5979\u7684\u8be6\u7ec6\u753b\u50cf\u548c\u4fdd\u5355\u3002\u8ba9\u6211\u5e76\u884c\u8c03\u7528 customer_detail \u548c policy_search\u3002\n\n", "tool_calls": [{"id": "call_faf6eef4ae9e41688cf4fefa", "type": "function", "function": {"name": "customer_detail", "arguments": "{\"customer_id\": \"4F2873B056FB6AA0544DAD134E5441D9\", \"compact\": true, \"fields\": [\"\u59d3\u540d\", \"\u6027\u522b\", \"\u751f\u65e5\", \"VIP\", \"\u5ba2\u6237\u7b49\u7ea7\", \"\u4f1a\u5458\"], \"customer_ids\": null}"}}, {"id": "call_f620467bb4a7446683724ef3", "type": "function", "function": {"name": "policy_search", "arguments": "{\"query\": \"\u4f0f\u4e91\u5e73\u540d\u4e0b\u7684\u4fdd\u5355\", \"compact\": true, \"fields\": [\"\u4fdd\u5355\u53f7\", \"\u4fdd\u5355\u72b6\u6001\", \"\u6295\u4fdd\u9669\u79cd\", \"\u6295\u4fdd\u4eba\u59d3\u540d\", \"\u88ab\u4fdd\u4eba\u59d3\u540d\", \"\u5e74\u7f34\u4fdd\u8d39\", \"\u9669\u79cd\u4fdd\u989d\", \"\u7d2f\u8ba1\u5df2\u4ea4\u4fdd\u8d39\", \"\u7d2f\u8ba1\u8d54\u4ed8\u6b21\u6570\"]}"}}]}]}
+  [turn1/records/traces/0/tree/0/spans/3/spans/6] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 598 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+明天要见伏云平，先看看她的资料和已有保单，帮我准备三个开场问题。
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "content": "\u6211\u5df2\u83b7\u53d6\u4f0f\u4e91\u5e73\u7684\u8d44\u6599\u548c\u4fdd\u5355\u4fe1\u606f\u3002\u73b0\u5728\u6574\u7406\u7ed3\u679c\u3002\n\n**\u4f0f\u4e91\u5e73\u5ba2\u6237\u8d44\u6599\uff1a**\n- \u6027\u522b\uff1a\u5973\uff08F\uff09\uff0c\u5e74\u9f8433\u5c81\uff0c\u751f\u65e5 1993-08-22\n- \u5b66\u5386\uff1a\u5927\u5b66\u4e13\u79d1\n- \u5a5a\u59fb\uff1a\u5df2\u5a5a\n- \u5ba2\u6237\u4ef7\u503c\u7b49\u7ea7\uff1aB\u7c7b\n- \u5bff\u9669VIP\uff1aS2\uff08\u767d\u94f62\uff09\n- \u624b\u673a\u53f7\uff1a19909224628\n- \u5e74\u7f34\u4fdd\u8d39\uff1a6300.0\n- \u603b\u4fdd\u989d\uff1a750000.0\n\n**\u4fdd\u5355\uff082\u5f20\uff09\uff1a**\n1. P260922000011415 - \u5e73\u5b89e\u751f\u4fdd\uff08\u52a0\u4eab\u7248\uff09\u533b\u7597\u4fdd\u9669 - \u5230\u671f\u7ec8\u6b62\uff0c\u7d2f\u8ba1\u8d54\u4ed80\u6b21\n2. P260922000011416 - \u5e73\u5b89\u5b89\u4f51\u798f\u91cd\u5927\u75be\u75c5\u4fdd\u9669 - \u4ea4\u8d39\u6709\u6548\uff0c\u7d2f\u8ba1\u8d54\u4ed80\u6b21\n\n\u73b0\u5728\u6574\u7406\u5f00\u573a\u95ee\u9898\u3002\u6211\u5df2\u6709\u8db3\u591f\u4fe1\u606f\u56de\u7b54\uff0c\u65e0\u9700\u989d\u5916\u53d6\u8bc1\u3002\u5f00\u573a\u95ee\u9898\u6211\u53ef\u4ee5\u57fa\u4e8e\u5979\u7684\u60c5\u51b5\uff08\u5df2\u5a5a\u3001\u4e13\u79d1\u3001B\u7c7b\u4ef7\u503c\u5ba2\u6237\u300131\u5c81\u5973\u6027\uff0c\u6709\u4e00\u4efd\u5df2\u5230\u671f\u7684\u533b\u7597\u9669\u548c\u4e00\u4efd\u6709\u6548\u7684\u91cd\u75be\u9669\uff09\u6765\u51c6\u5907\u3002\n\n\u621...<+658>
+  [turn1/records/traces/0/tree/0/spans/3/spans/8] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 598 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+明天要见伏云平，先看看她的资料和已有保单，帮我准备三个开场问题。
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "content": "\u6211\u5df2\u6709\u8db3\u591f\u6750\u6599\u6765\u51c6\u5907\u4f1a\u8c08\u8d44\u6599\u3002\u8ba9\u6211\u6574\u7406\u6700\u7ec8\u7b54\u590d\u3002\n\n\u5ba2\u6237\u4fdd\u5355\u4e2d\u6709\u4e00\u5f20\"\u5e73\u5b89\u5b89\u4f51\u798f\u91cd\u5927\u75be\u75c5\u4fdd\u9669\"\uff08\u4ea4\u8d39\u6709\u6548\uff09\uff0c\u6211\u53ef\u4ee5\u7b80\u8981\u63d0\u53ca\u8be5\u4ea7\u54c1\u7684\u4fdd\u969c\u65b9\u5411\u6765\u8f85\u52a9\u5f00\u573a\u95ee\u9898\uff0c\u4f46\u8fd9\u5c5e\u4e8e\u77e5\u8bc6\u68c0\u7d22\u3002\u4e3a\u907f\u514d\u8fc7\u5ea6\u53d6\u8bc1\uff0c\u6211\u57fa\u4e8e\u5df2\u6709\u4e8b\u5b9e\u6574\u7406\u5373\u53ef\u3002\u5f00\u573a\u95ee\u9898\u7684\u8bbe\u8ba1\u57fa\u4e8e\u5ba2\u6237\u753b\u50cf\uff08\u5df2\u5a5a\u300133\u5c81\u3001B\u7c7b\u4ef7\u503c\u5ba2\u6237\u3001\u4e13\u79d1\u3001\u73b0\u6709\u91cd\u75be\u548c\u533b\u7597\u9669\u4fdd\u969c\uff09\u5373\u53ef\uff0c\u4e0d\u9700\u8981\u989d\u5916\u53d6\u6761\u6b3e\u3002\n\n\u8ba9\u6211\u6574\u7406\u6700\u7ec8\u7b54\u590d\u3002\n\n\u7b54\uff1a\u4f0f\u4e91\u5e73\u8d44\u6599\u548c\u4fdd\u5355\u5df2\u5c31\u7eea\u3002\n\n**\u5ba2\u6237\u753b\u50cf**\n- \u6027\u522b\uff1a\u5973\uff0c33\u5c81\uff0c\u751f\u65e51993-08-22\n- \u5b66\u5386\uff1a\u5927\u5b66\u4e13\u79d1\uff1b\u5a5a\u59fb\uff1a\u5df2\u5a5a\n- \u5ba2\u6237\u4ef7\u503c\u7b49\u7ea7\uff1aB\u7c7b\uff1b\u5bff\u9669VIP\uff1a\u767d\u94f62\uff08S2\uff09\n- \u624b\u673a\u53f7\uff1a19909224628\n- \u5e74\u7f34\u4fdd\u8d39\uff1a6300.0\uff08\...<+2276>
+
+## delivered / gaps
+  [turn1.delivered_output] {"output_text": "{\"answer\": \"客户:\\n· 查询信息:大学专科\\n· 查询信息:已婚\\n· 查询信息:B\\n· 查询信息:S2\\n· 查询信息:6300.0\\n· 查询信息:750000.0\\n· 客户摘要:伏云平·女·33岁·手机19909224628\\n保单 P260922000011415:\\n· 保单摘要:平安e生保（加享版）医疗保险·到期终止·2025-09-07投保\\n保单 P260922000011416:\\n· 保单摘要:平安安佑福重大疾病保险·交费有效·2026-02-07投保\\n\\n参考原文（未确认，仅供参考）：\\n# 医疗险-平安e生保（悦享版）医疗保险-OCR原文\\n\\n**来源文件：product_meta.json**\\n[条款原文 | 平安e生保（悦享版）医疗保险 | 医疗险]\\n# 平安e生保（悦享版）医疗保险 OCR 原文\\n\\n<!-- PRODUCT_SOURCE_BEGIN: product_meta.json -->\\n\\n# 来源文件：product_meta.json\\n\\n路径：raw/sources/产品/医疗险/平安e生保（悦享版）医疗保险/product_meta.json\\n\\n---\\n\\n**确定性产品元数据映射**\\n[条款原文 | 平安e生保（悦享版）医疗保险 | 医疗险]\\naw/sources/产品/医疗险/平安e生保（悦享版）医疗保险/product_meta.json\\n\\n## 确定性产品元数据映射\\n\\n| 字段 | 值 |\\n|---|---|\\n| 险种代码 | 2650 |\\n| 险种名称 | 平安e生保（悦享版）医疗保险 |\\n| 销售状态 | 在售 |\\n| 销售渠道 | 个人代理、电话销售 |\\n| 开始使用时间 | 2025-11-30 |\\n| 产品类型 | 普通型 |\\n| 产品档次 | P1 |\\n| 备案号 | 平安人寿〔2025〕医疗保险188号 |\\n| 报备文件号 | 平保寿发〔2025〕503号 |\\n| 销售地区 | 00 |\\n\\n{ \\\"planCode\\\": \\\"2650\\\", \\\"actualPlanCode\\\": \\\"2650\\\", \\\"versionNo\\\": \\\"2650-1\\\", \\\"clauseName\\\": \\\"平安e生保（悦享版）医疗保险\\\", \\\"planSalesStatus\\\": \\\"在售\\\", \\\"planPlanType\\\": \\\"普通型\\\", \\\"planSalesChannel\\\": \\\"个人代理、电话销售\\\", \\\"seq\\\": \\\"1\\\", \\\"clauseContent\\\": \\\"1\\\", \\\"premAttachment\\\": \\\"1\\\", \\\"regionCode\\\": \\\"00\\\", \\\"recordList\\\": \\\"1\\\", \\\"actuaryInstruction\\\": \\\"1\\\", \\\"legalPerson\\\": \\\"1\\\", \\\"productInstruction\\\": \\\"1\\\", \\\"startDate\\\": \\\"2025-11-30\\\", \\\"reportPreparedFileCode\\\": \\\"平保寿发〔2025〕503号\\\", \\\"versionCount\\\": \\\"1\\\", \\\"sccode\\\": \\\"平安人寿〔2025〕医疗保险188号\\\", \\\"productLevel\\\": \\\"P1\\\"}\\n\\n<!-- PRODUCT_SOURCE_END: product_meta.json -->\\n\\n<!-- PRODUCT_SOURCE_BEGIN: E保险条款.pdf -->\\n\\n---\\n\\n**1.2 保障区域       4.如何支付保险费         8.2 合同成立与生效**\\n[条款原文 | 平安e生保（悦享版）医疗保险 | 医疗险]\\njson -->\\n\\n<!-- PRODUCT_SOURCE_BEGIN: E保险条款.pdf -->\\n\\n# 来源文件：E保险条款.pdf\\n\\n路径：raw/sources/产品/医疗险/平安e生保（悦享版）医疗保险/E保险条款.pdf平安人寿〔2025〕医疗保险 188 号\\n\\n…（节选）\\n[来源：知识资料]\", \"status\": null, \"fact_refs\": [\"F-CALL-TR-bccf44f35fad4a28ad7e8b4a2754a33e-02-017\", \"F-CALL-TR-bccf44f35fad4a28ad7e8b4a2754a33e-02-022\", \"F-CALL-TR-bccf44f35fad4a28ad7e8b4a2754a33e-02-056\", \"F-CALL-TR-bccf44f35fad4a28ad7e8b4a2754a33e-02-063\", \"F-CALL-TR-bccf44f35fad4a28ad7e8b4a2754a33e-02-071\", \"F-CALL-TR-bccf44f35fad4a28ad7e8b4a2754a33e-02-072\", \"F-CALL-TR-bccf44f35fad4a28ad7e8b4a2754a33e-01-001\", \"F-CALL-TR-bccf44f35f...<+721>
+  gap turn1.gap.state_transitions: {"id": "turn1.gap.state_transitions", "status": "unsupported", "reason": "此 provider 不把 run/session 末态重建为逐次状态变化"}
+  gap turn1.gap.raw_backend_http: {"id": "turn1.gap.raw_backend_http", "status": "unsupported", "reason": "Agno 工具结果可能已经过业务适配，不保证原始下游 HTTP 请求响应"}
+  gap turn1.gap.source_documents: {"id": "turn1.gap.source_documents", "status": "unsupported", "reason": "仅提供已记录 references 和工具正文；不自动访问外部文档或推断版本"}
+  gap turn1.gap.history: {"id": "turn1.gap.history", "status": "empty", "count": 0, "excluded_unordered_runs": 0, "ordered_by_trace_timestamps": 0, "reason": "仅保存同 session 已终止且确定早于本轮的 run：优先用根 trace 的微秒级 start/end 定序，否则要求 created_at + duration + 1秒精度余量早于本轮 created_at；缺时间、重叠和不明顺序的 run 不纳入。历史状态仍是运行末态，不是逐次状态快照。"}
+
+## trace_analysis structure (recorded)
+  workflow_steps=null
+  suspects=null

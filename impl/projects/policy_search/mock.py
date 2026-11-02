@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from impl.core.mock_protocol import MultiTurnInteractiveMock, ProjectMock
 from impl.core.schema import MockContinueDecision, MockIntentOutput
+from impl.core.session import SessionState, SessionTranslator, UserMessage
 from impl.projects.policy_search.rich_mock import MockDemand
 
 
@@ -83,7 +84,68 @@ def demand_template(demand: MockDemand) -> Dict[str, Any]:
     return template
 
 
-class PolicySearchMock(MultiTurnInteractiveMock, ProjectMock):
+def _contexts_from_transcript(transcript: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """state.transcript → extra_input_params.args.contexts。只搬运，不发明历史。"""
+    contexts: List[Dict[str, Any]] = []
+    for item in transcript:
+        role = str(item.get("role") or "")
+        if role == "user":
+            contexts.append({"role": "user", "content": str(item.get("content") or ""), "sub_agent": ""})
+        elif role == "assistant":
+            output = item.get("extracted_output") if isinstance(item.get("extracted_output"), dict) else {}
+            content = str(output.get("message") or item.get("content") or "")
+            contexts.append({"role": "assistant", "content": content, "sub_agent": "POLICY_SEARCH"})
+    return contexts
+
+
+class PolicySearchMock(MultiTurnInteractiveMock, SessionTranslator, ProjectMock):
+    # spec/mock/protocol.md 6.4：原话槽位 policySearchParseArgs.query；历史字段 args.contexts。
+    supports_history_injection = True
+
+    def request_from_user_message(self, message: UserMessage, state: SessionState) -> Dict[str, Any]:
+        if message.type != "text":
+            raise ValueError(f"policy_search has no structured user actions; got {message.type!r}")
+        base = dict(state.last_request or {})
+        if not base:
+            base = {
+                "session_id": state.session_id,
+                "trace_id": state.session_id,
+                "user_id": "verifier-user",
+                "org_id": "verifier-org",
+                "org_name": "verifier",
+                "ts": 1785983400000,
+                "token": "",
+                "app_scenario": "policy_search_parse",
+                "source": "verifier",
+                "user_text": "",
+                "history": [],
+                "user_action": "write",
+                "action_scenario": "policySearch",
+                "extra_input_params": {
+                    "policySearchParseArgs": {
+                        "currentTime": "2026-08-06 10:30:00",
+                        "agentCode": "A12345678",
+                    },
+                    "agent_args": None,
+                    "args": {"contexts": []},
+                },
+                "application_setting": None,
+                "scenario": None,
+            }
+        extra = dict(base.get("extra_input_params") or {})
+        parse_args = dict(extra.get("policySearchParseArgs") or {})
+        parse_args["query"] = message.text
+        extra["policySearchParseArgs"] = parse_args
+        extra["args"] = {"contexts": _contexts_from_transcript(state.transcript)}
+        request = dict(base)
+        request["session_id"] = state.session_id
+        request["trace_id"] = f"{state.session_id}-turn{state.turn_index}"
+        request["extra_input_params"] = extra
+        return request
+
+    def user_message_from_request(self, request: Dict[str, Any]) -> UserMessage:
+        return UserMessage(type="text", text=self.extract_mock_message(request))
+
     def build_user_intent_for_case(
         self,
         scenario: str,
@@ -231,5 +293,3 @@ class PolicySearchMock(MultiTurnInteractiveMock, ProjectMock):
         request["extra_input_params"] = extra
         return request
 
-    def safety_max_turns(self) -> int:
-        return 3

@@ -285,24 +285,7 @@ class TestMockProtocol:
                 pass
             BadMock2(spec=None)
 
-    def test_multi_turn_mock_must_implement_intent_inference(self):
-        from impl.core.mock_protocol import MultiTurnInteractiveMock
 
-        with pytest.raises(TypeError, match="infer_user_intent|abstract"):
-            class MissingInference(MultiTurnInteractiveMock, ProjectMock):
-                def build_user_intent(self, scenario):
-                    return {}
-
-                def decide_next_action(self, intent, accumulated_output):
-                    return None
-
-                def build_next_request(self, intent, accumulated_output=None):
-                    return {}
-
-                def safety_max_turns(self):
-                    return 12
-
-            MissingInference(spec=None)
 
     def test_intent_labels_optional(self):
         """intent_labels 是可选扩展点，不实现时返回空列表"""

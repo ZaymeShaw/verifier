@@ -6,14 +6,14 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from impl.core.mock_protocol import ProjectMock, SingleTurnMock
+from impl.core.mock_protocol import ProjectMock
 from impl.core.schema import ProjectSpec, RunTrace, SingleTurnCase, MultiTurnCase
 
 
-class QAMock(SingleTurnMock, ProjectMock):
+class QAMock(ProjectMock):
     """QA 项目 Mock 实现。
 
-    继承 SingleTurnMock（交互模式=单轮）+ ProjectMock。
+    继承 ProjectMock。
     实现 build_user_intent（场景级意图）+ build_live_request（单轮 request）。
     """
 

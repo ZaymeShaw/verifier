@@ -1,0 +1,76 @@
+### smoke-agg-paid-prem-fuyunping  run=fb5fda5628174ef6967116bd4ecca493 desc=None
+expectations=2 records=36
+
+## expectations
+- exp_each_policy_paid_premium: 分别告知伏云平每张保单的累计已交保费是多少 | cond=总是
+- exp_no_total_paid_premium: 不提供累计已交保费的合计数 | cond=总是
+
+## workflow definitions
+  [turn1/records/definitions/0/data] [{"name": "assemble", "type": "Step"}, {"name": "gate", "type": "Step"}, {"name": "to_direct", "type": "Condition", "steps": [{"name": "direct", "type": "Step"}]}, {"name": "to_capability", "type": "Condition", "steps": [{"name": "run_capability", "type": "Step"}]}, {"name": "to_agent", "type": "Condition", "steps": [{"name": "agent_input", "type": "Step"}, {"name": "agent", "type": "Step"}, {"name": "agent_bridge", "type": "Step"}]}, {"name": "finalize", "type": "Step"}, {"name": "present_agentos", "type": "Step"}]
+
+## tool calls (in order)
+  [turn1/records/raw_runs/0/run_data/step_executor_runs/0/tools/0] name=None args=null
+      result=null err=null
+  [turn1/records/raw_runs/0/run_data/step_executor_runs/0/tools/1] name=None args=null
+      result=null err=null
+  [turn1/records/raw_runs/0/run_data/step_executor_runs/0/tools/2] name=None args=null
+      result=null err=null
+  [turn1/records/raw_runs/0/run_data/step_executor_runs/0/tools/3] name=None args=null
+      result=null err=null
+  [turn1/records/run/step_executor_runs/0/tools/0] name=customer_search args={"query": "伏云平的客户", "compact": true, "fields": ["姓名"]}
+      result={"result":{"data":{"pageNo":1,"pageSize":100,"total":1,"records":[{"clientMainId":"4F2873B056FB6AA0544DAD134E5441D9","clientName":"伏云平"}]},"field_descriptions":{"pageNo":"当前页码","pageSize":"服务页容量","total":"符合查询条件的客户总数，不是当前页记录数或展示条数","records":"本次返回的搜索记录","records[]":{"$description":"单条搜索记录；空值不等于零或否；金额未注明单位、币种或时点时不推断","clientMainId":"客户中心客户id；当前客户在客户中心的唯一标识，用于关联搜客户结果、客户详情及相关客户信息。准客和已成单客户均可有此 ID；与仅寿险成交客户可能具有的寿险系统客户号区分，按标识字符串保留原值。","clientName":"客户姓名；客户本人自然人姓名的明文，用于姓名展示或姓名匹配；不表示家庭成员姓名，也不表示客户作为投保人、被保人等保单角色的专用姓名字段，不用于公司、机构、地址或产品名称查询。"}},"execution":{"status":"SUCCESS","notes":["精简视图省略非指定的 null 字段，明确请求的空值保留；省略和空值均不代表零、否或不存在。","total 是源页结果条数，不用展示行数代替。仅代表本次客户筛选的结果。"]}},"projection":{"incomplete":fals...<+42> err=false
+  [turn1/records/run/step_executor_runs/0/tools/1] name=policy_search args={"compact": true, "fields": ["累计已交保费", "保单状态", "险种保额"], "query": "伏云平的保单累计已交保费"}
+      result={"result":{"data":{"pageNo":1,"pageSize":100,"total":2,"records":[{"polno":"P260922000011415","polProductName":"平安e生保（加享版）医疗保险","polStatusDesc":"到期终止"},{"polno":"P260922000011416","polProductName":"平安安佑福重大疾病保险","polStatusDesc":"交费有效"}]},"field_descriptions":{"pageNo":"当前页码","pageSize":"服务页容量","total":"接口报告的匹配结果条目总数；未确认保单张数及是否为险种粒度","records":"本次返回的搜索记录","records[]":{"$description":"单条搜索记录；空值不等于零或否；金额未注明单位、币种或时点时不推断","polno":"保单号；保险合同的编号，用于定位和关联同一保单。同一保单号可对应多个主附险明细；险种明细须结合主附约编号和险种代码区分，不能仅按保单号认定明细唯一。","polProductName":"产品名称；保单对应的产品名称：寿险为主险名称，意健险为套餐名称，产险、养老险、健康险为产品名称。用于识别保单产品，区别于保单下各主附险明细的险种名称。；取值：见说明","polStatusDesc":"保单状态；保单当前所处的承保、缴费及合同效力状态，返回具体中文状态描述，如“交费有效”“停效”“退保”；与仅表示“有效/无效”的 isValidPol ...<+510> err=false
+  [turn1/records/run/step_executor_runs/0/tools/2] name=policy_detail args={"polno": "P260922000011415", "fields": ["累计已交保费", "险种保额", "保单状态", "投保人姓名", "被保人姓名"], "compact": true}
+      result={"result":{"data":{"pageNo":1,"pageSize":20,"total":1,"records":[{"polno":"P260922000011415","agg_paid_prem":1320.0,"app_ins_relationship_desc":"本人","applicant_clientno":"C92200004628","applicant_idicm_clientno":"4F2873B056FB6AA0544DAD134E5441D9","applicant_name":"伏云平","brno":"0","insur_term":"1","insurant_clientno":"C92200004628","insurant_idicm_clientno":"4F2873B056FB6AA0544DAD134E5441D9","insurant_name":"伏云平","insure_date":"2025-09-07","is_valid_pol":"无效","main_subsidiary_risks_flag":"主险","matu_date":"2026-09-10","plan_abbr_name":"e生保加享","plan_code":"595","plan_full_name":"平安e生保（加享版）医疗保险","pol_effective_date_term":"2025-09-10","pol_product_name":"平安e生保（加享版）医疗保险","pol_source":"寿险","pol_sta...<+6979> err=false
+  [turn1/records/run/step_executor_runs/0/tools/3] name=policy_detail args={"polno": "P260922000011416", "fields": ["累计已交保费", "险种保额", "保单状态", "投保人姓名", "被保人姓名"], "compact": true}
+      result={"result":{"data":{"pageNo":1,"pageSize":20,"total":1,"records":[{"polno":"P260922000011416","agg_paid_prem":6300.0,"app_ins_relationship_desc":"本人","applicant_clientno":"C92200004628","applicant_idicm_clientno":"4F2873B056FB6AA0544DAD134E5441D9","applicant_name":"伏云平","brno":"0","insur_term":"99","insurant_clientno":"C92200004628","insurant_idicm_clientno":"4F2873B056FB6AA0544DAD134E5441D9","insurant_name":"伏云平","insure_date":"2026-02-07","is_valid_pol":"有效","main_subsidiary_risks_flag":"主险","matu_date":"9999-12-31","pay_to_day":"2027-02-10","plan_abbr_name":"安佑福","plan_code":"1836","plan_full_name":"平安安佑福重大疾病保险","pol_effective_date_term":"2026-02-10","pol_product_name":"平安安佑福重大疾病保险","pol_s...<+6841> err=false
+
+## model calls
+  [turn1/records/traces/0/tree/0/spans/3/spans/1] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 598 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+帮我查下伏云平每张保单的累计已交保费分别是多少，别给我合计数。
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "content": "I'll search for the policies belonging to this customer.\n\n", "tool_calls": [{"id": "call_5f934677733b4c42aa137cab", "type": "function", "function": {"name": "customer_search", "arguments": "{\"query\": \"\u4f0f\u4e91\u5e73\u7684\u5ba2\u6237\", \"compact\": true, \"fields\": [\"\u59d3\u540d\"]}"}}]}]}
+  [turn1/records/traces/0/tree/0/spans/3/spans/3] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 598 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+帮我查下伏云平每张保单的累计已交保费分别是多少，别给我合计数。
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "content": "I found the customer. Now let me search for their policies.\n\n", "tool_calls": [{"id": "call_35428813675e41c49a5fbc9b", "type": "function", "function": {"name": "policy_search", "arguments": "{\"compact\": true, \"fields\": [\"\u7d2f\u8ba1\u5df2\u4ea4\u4fdd\u8d39\", \"\u4fdd\u5355\u72b6\u6001\", \"\u9669\u79cd\u4fdd\u989d\"], \"query\": \"\u4f0f\u4e91\u5e73\u7684\u4fdd\u5355\u7d2f\u8ba1\u5df2\u4ea4\u4fdd\u8d39\"}"}}]}]}
+  [turn1/records/traces/0/tree/0/spans/3/spans/5] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 598 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+帮我查下伏云平每张保单的累计已交保费分别是多少，别给我合计数。
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "content": "The policy search returned two policies but didn't provide the \"\u7d2f\u8ba1\u5df2\u4ea4\u4fdd\u8d39\" field (agg_paid_prem). I need to query the policy detail for each policy to get the cumulative premiums paid. Let me query both policies. Since they are independent, I'll call both in parallel", "tool_calls": [{"id": "call_9490257dbdc4485e986590b8", "type": "function", "function": {"name": "policy_detail", "arguments": "{\"polno\": \"P260922000011415\", \"fields\": [\"\u7d2f\u8ba1\u5df2\u4ea4\u4fdd\u8d39\", \"\u9669\u79cd\u4fdd\u989d\", \"\u4fdd\u5355\u72b6\u6001\", \"\u6295\u4fdd\u4eba\u59d3\u540d\", \"\u88ab\u4fdd\u4eba\u59d3\u540d\"], \"compact\": true}"}}, {"id": "call_82db5b5a53444da798385d11", "type": "function", "function": {"name": "policy_detail", "arguments": "{\"polno\": \"P260922000011416\", \"fields\": [\"\u7d2f\u8ba1\u5df2\u4ea4\u4fdd\u8d39\", \"\u9669\u79cd\u4fdd\u989d\", \"\u4fdd\u5355\u72b6\u6001\", \"\u6295\u4fdd\u4eba\u59d3\u540d\", \"\u88ab\u4fdd\u4eba\u59d3\u540d\"], \"compact\": true}"}}]}]}
+  [turn1/records/traces/0/tree/0/spans/3/spans/8] model=deepseek-v4-flash-0731 status=OK
+      last_user=
+
+[本轮执行余量]剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 598 秒。接近上限时停止取数，用已有工具结果回答；未完成部分写入 gaps，不得猜测。[/本轮执行余量]
+
+[当前用户问题]
+帮我查下伏云平每张保单的累计已交保费分别是多少，别给我合计数。
+[/当前用户问题]
+      output={"messages": [{"role": "assistant", "content": "I have the cumulative paid premiums for both policies.\n\n\u4f0f\u4e91\u5e73\u540d\u4e0b\u5171\u67e5\u8be2\u52302\u5f20\u4fdd\u5355\uff0c\u5404\u4fdd\u5355\u7d2f\u8ba1\u5df2\u4ea4\u4fdd\u8d39\uff08\u6309\u4fdd\u5355\u9010\u6761\u5217\u660e\uff0c\u4e0d\u505a\u5408\u8ba1\uff09\uff1a\n\n1. **\u5e73\u5b89e\u751f\u4fdd\uff08\u52a0\u4eab\u7248\uff09\u533b\u7597\u4fdd\u9669**\uff08\u4fdd\u5355\u53f7P260922000011415\uff09\uff1a\u7d2f\u8ba1\u5df2\u4ea4\u4fdd\u8d39 **1320**\u3002\u8be5\u4fdd\u5355\u72b6\u6001\u4e3a\u5230\u671f\u7ec8\u6b62\u3002\n2. **\u5e73\u5b89\u5b89\u4f51\u798f\u91cd\u5927\u75be\u75c5\u4fdd\u9669**\uff08\u4fdd\u5355\u53f7P260922000011416\uff09\uff1a\u7d2f\u8ba1\u5df2\u4ea4\u4fdd\u8d39 **6300**\u3002\u8be5\u4fdd\u5355\u72b6\u6001\u4e3a\u4ea4\u8d39\u6709\u6548\u3002\n\n\u6ce8\uff1a\u5e01\u79cd\u53ca\u4e1a\u52a1\u65f6\u70b9\u672a\u63d0\u4f9b\uff0c\u91d1\u989d\u6309\u539f\u503c\u5217\u793a\uff1b\u4e5f\u672a\u505a\u5408\u8ba1\u6c47\u603b\u3002\n\n```json\n{\n  \"answer_draft\": \"\u4f0f\u4e91\u5e73\u540d\u4e0b\u67e5\u8be2\u52302\u5f20\u4fdd\u5355\uff0c\u5404\u4fdd\u5355\u7d2f\u8ba1\u5df2\u4ea4\u4fdd\u8d39\u5217\u660e\u5982\u4e0b\uff08\u4e0d\u505a\u5408\u8ba1\uff09\uff1a1. \u5e73\u5b89e\u751f\u4fdd\uff08\u52a0\u4eab\u7248\uff09\u533b\u7597\u4fdd\u9669\uff08P260922000011415\uff09\uff0c\u4fdd\u5355\u72b6\u6001\u5230\u671f\u7ec8\u6b62\uff0c\u7d2f\u8ba1\u5df2\u4ea4\u4fdd\u8d391320\uff1b2. \u5e73\u5b89\u5b89\u4f51\u798f\u91cd\u59...<+475>
+
+## delivered / gaps
+  [turn1.delivered_output] {"output_text": "{\"answer\": \"保单 P260922000011416:\\n· 保费:6,300.00\\n保单 P260922000011415:\\n· 保费:0.00\\n客户 伏云平:\\n· 客户摘要:伏云平·女·33岁·手机19909224628\\n保单 P260922000011415:\\n· 保单摘要:平安e生保（加享版）医疗保险·到期终止·2025-09-07投保\\n保单 P260922000011416:\\n· 保单摘要:平安安佑福重大疾病保险·交费有效·2026-02-07投保\\n部分金额未提供币种，以上按原始字段值展示。\", \"status\": null, \"fact_refs\": [\"F-CALL-TR-f2ae32be3d864c0bb2b65ce1460423df-04-065\", \"F-CALL-TR-f2ae32be3d864c0bb2b65ce1460423df-03-063\", \"F-CALL-TR-f2ae32be3d864c0bb2b65ce1460423df-01-001\", \"F-CALL-TR-f2ae32be3d864c0bb2b65ce1460423df-02-001\", \"F-CALL-TR-f2ae32be3d864c0bb2b65ce1460423df-02-002\"], \"sources\": [], \"gaps\": [\"部分内容未能在本轮证据中对应，请结合原始资料核实。\", \"金额的币种与业务时点未提供\"], \"assumptions\": [], \"trace_id\": null, \"followup_actions\": [], \"handoff_status\": \"none\", \"checks\": null, \"structured\": null, \"completeness\": \"partial\", \"limitations\": [\"部分内容未能在本轮证据中对应，请结合原始资料核实。\", \"金额的币种与业务时点未提供\"]}"}
+  gap turn1.gap.state_transitions: {"id": "turn1.gap.state_transitions", "status": "unsupported", "reason": "此 provider 不把 run/session 末态重建为逐次状态变化"}
+  gap turn1.gap.raw_backend_http: {"id": "turn1.gap.raw_backend_http", "status": "unsupported", "reason": "Agno 工具结果可能已经过业务适配，不保证原始下游 HTTP 请求响应"}
+  gap turn1.gap.source_documents: {"id": "turn1.gap.source_documents", "status": "unsupported", "reason": "仅提供已记录 references 和工具正文；不自动访问外部文档或推断版本"}
+  gap turn1.gap.history: {"id": "turn1.gap.history", "status": "empty", "count": 0, "excluded_unordered_runs": 0, "ordered_by_trace_timestamps": 0, "reason": "仅保存同 session 已终止且确定早于本轮的 run：优先用根 trace 的微秒级 start/end 定序，否则要求 created_at + duration + 1秒精度余量早于本轮 created_at；缺时间、重叠和不明顺序的 run 不纳入。历史状态仍是运行末态，不是逐次状态快照。"}
+
+## trace_analysis structure (recorded)
+  workflow_steps=null
+  suspects=null

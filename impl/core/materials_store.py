@@ -9,6 +9,8 @@
 """
 from __future__ import annotations
 
+from .instances import data_root
+
 import hashlib
 import json
 import re
@@ -50,7 +52,7 @@ def _require_project(value: str) -> str:
 
 
 def materials_root(project_id: str) -> Path:
-    return ROOT / "data" / _require_project(project_id) / "materials"
+    return data_root(ROOT.parent) / _require_project(project_id) / "materials"
 
 
 def _material_dir(project_id: str, material_id: str) -> Path:

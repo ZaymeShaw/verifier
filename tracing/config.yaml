@@ -1,0 +1,13 @@
+# Paths are relative to the verifier repository root.
+llmtracing_root: ../../../../package/llmtracing
+relay_port_start: 4005  # first allocation; actual three ports persist in instances.json
+
+# Reused for each generated model route. Models/URLs/keys come from verifier's
+# ordinary resolved configuration (.env + impl/config.yaml + process overrides).
+# No model-name wildcard and no silent dropping of caller reasoning parameters.
+litellm_params:
+  drop_params: false
+  allowed_openai_params: [reasoning_effort]
+litellm_settings:
+  drop_params: false
+  callbacks: [custom_callbacks.proxy_handler_instance]

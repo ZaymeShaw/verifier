@@ -126,11 +126,11 @@
         <option value="prompt_size">Prompt 大小</option>
         <option value="elapsed_ms">耗时</option>
       </select>
-      <span class="muted">偏离同 caller 均值 >2σ 视为异常</span>
+      <span class="muted">偏离同 caller + stage 均值 >2σ 视为异常</span>
     </div>
     <table id="anomalyTable">
-      <thead><tr><th>时间</th><th>Caller</th><th>Trace ID</th><th>数值</th><th>同 caller 均值</th><th>偏离</th></tr></thead>
-      <tbody id="anomalyBody"><tr><td colspan="6" class="muted">加载中...</td></tr></tbody>
+      <thead><tr><th>时间</th><th>Caller</th><th>Stage</th><th>Trace ID</th><th>数值</th><th>同组均值</th><th>偏离</th></tr></thead>
+      <tbody id="anomalyBody"><tr><td colspan="7" class="muted">加载中...</td></tr></tbody>
     </table>
     <h3 style="margin-top:18px">错误模式聚类</h3>
     <div id="errorPatterns" class="muted">加载中...</div>
@@ -295,12 +295,17 @@ function renderL1Stats(data) {
   document.getElementById('budgetBars').innerHTML = bars.length ? bars.join('') : '<span class="muted">无预算配置</span>';
 }
 
-// L2 异常检测：偏离同 caller 均值 >2σ
+// L2 异常检测：偏离同 caller + stage 均值 >2σ。
+// 一个 ToolLoop 按段落多条记录，后段前缀更长；只按 caller 分组会把后段全标成异常。
 function renderAnomaly(data) {
   const dim = document.getElementById('anomalyDim').value;
-  const groups = statsByCaller(data);
+  const groups = {};
+  for (const r of data) {
+    const key = `${r.caller || '(unknown)'}\u0000${r.stage || ''}`;
+    (groups[key] = groups[key] || []).push(r);
+  }
   const anomalies = [];
-  for (const [caller, recs] of Object.entries(groups)) {
+  for (const recs of Object.values(groups)) {
     const vals = recs.map(r => r[dim] || 0);
     const m = mean(vals);
     const s = std(vals);
@@ -318,11 +323,12 @@ function renderAnomaly(data) {
   body.innerHTML = anomalies.length ? anomalies.map(r => `<tr onclick="loadTrace('${esc(r.project_id)}','${esc(r.trace_id)}')" style="cursor:pointer">
     <td>${esc(r.created_at || '-')}</td>
     <td><span class="pill">${esc(r.caller)}</span></td>
+    <td>${esc(r.stage || '-')}</td>
     <td>${esc(short(r.trace_id, 16))}</td>
     <td>${fmt(r[dim]||0)}</td>
     <td>${fmt(r._mean)}</td>
     <td>${r._delta>0?'+':''}${fmt(r._delta)}</td>
-  </tr>`).join('') : '<tr><td colspan="6" class="muted">无异常</td></tr>';
+  </tr>`).join('') : '<tr><td colspan="7" class="muted">无异常</td></tr>';
 }
 
 function renderErrorPatterns(data) {

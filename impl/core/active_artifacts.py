@@ -1020,8 +1020,84 @@ def _validate_mock_cases(context: ActiveArtifactContext, path: Path) -> None:
     _mock_cases_payload(context, path, _read_payload(context, path))
 
 
+def _session_export_payload(
+    _context: ActiveArtifactContext,
+    _path: Path,
+    payload: Any,
+) -> None:
+    """spec/mock/protocol.md 4.10：harness 会话导出 = 完整多轮 RunTrace + transcript seed case。"""
+    if not isinstance(payload, Mapping):
+        raise TypeError("session export must be an object")
+    for key in ("session_id", "project_id", "stop_reason", "trace", "seed_case"):
+        if key not in payload:
+            raise TypeError(f"session export missing {key!r}")
+    trace = payload.get("trace")
+    if not isinstance(trace, Mapping) or not isinstance(trace.get("turn_records"), list):
+        raise TypeError("session export trace must carry turn_records")
+    seed_case = payload.get("seed_case")
+    if not isinstance(seed_case, Mapping) or not isinstance(seed_case.get("seed"), Mapping):
+        raise TypeError("session export seed_case must carry a seed")
+
+
+def _validate_session_export(context: ActiveArtifactContext, path: Path) -> None:
+    _session_export_payload(context, path, _read_payload(context, path))
+
+
+def _findings_ledger_payload(
+    _context: ActiveArtifactContext,
+    _path: Path,
+    payload: Any,
+) -> None:
+    """spec/mock/protocol.md 5.4：发现台账是记录数组，signature 唯一。"""
+    if not isinstance(payload, list):
+        raise TypeError("findings ledger must be a list")
+    seen: set[str] = set()
+    for record in payload:
+        if not isinstance(record, Mapping) or not record.get("signature"):
+            raise TypeError("findings ledger record must carry a signature")
+        if record["signature"] in seen:
+            raise TypeError(f"duplicate ledger signature {record['signature']!r}")
+        seen.add(str(record["signature"]))
+        if record.get("category") not in ("live_defect", "judge_calibration", "protocol_fuzz"):
+            raise TypeError(f"ledger record {record['signature']!r} has invalid category")
+
+
+def _validate_findings_ledger(context: ActiveArtifactContext, path: Path) -> None:
+    _findings_ledger_payload(context, path, _read_payload(context, path))
+
+
+def _exploration_runs_payload(
+    _context: ActiveArtifactContext,
+    _path: Path,
+    payload: Any,
+) -> None:
+    """spec/mock/protocol.md 5.1：探索批次 = run_id 唯一的记录数组，各带 direction，report 可为 null。"""
+    if not isinstance(payload, list):
+        raise TypeError("exploration runs must be a list")
+    seen: set[str] = set()
+    for record in payload:
+        if not isinstance(record, Mapping) or not record.get("run_id"):
+            raise TypeError("exploration record must carry a run_id")
+        if record["run_id"] in seen:
+            raise TypeError(f"duplicate exploration run_id {record['run_id']!r}")
+        seen.add(str(record["run_id"]))
+        if not isinstance(record.get("direction"), Mapping):
+            raise TypeError(f"exploration {record['run_id']!r} must carry a direction object")
+        if record.get("report") is not None and not isinstance(record.get("report"), Mapping):
+            raise TypeError(f"exploration {record['run_id']!r} report must be an object or null")
+
+
+def _validate_exploration_runs(context: ActiveArtifactContext, path: Path) -> None:
+    _exploration_runs_payload(context, path, _read_payload(context, path))
+
+
 def _validate_context_record(context: ActiveArtifactContext, path: Path) -> None:
     _context_record_payload(context, path, _read_payload(context, path))
+
+
+def _runtime_data_base(context: ActiveArtifactContext) -> Path:
+    from .instances import data_root
+    return data_root(context.root, context.environ)
 
 
 def _context_store_base(context: ActiveArtifactContext) -> Path:
@@ -1290,41 +1366,69 @@ DEFAULT_ACTIVE_ARTIFACT_REGISTRY = ActiveArtifactRegistry(
         ActiveArtifactFamily(
             "case_pool_store",
             "derived_active",
-            "impl/data/case_pools.json",
+            "case_pools.json",
             _validate_case_pool_store,
             consumer_boundaries=("case pool API", "evaluation input selection"),
-            base=".",
+            base_resolver=_runtime_data_base,
             payload_validator=_case_pool_payload,
         ),
         ActiveArtifactFamily(
             "project_mock_cases",
             "derived_active",
-            "impl/data/*/mock_cases.json",
+            "*/mock_cases.json",
             _validate_mock_cases,
             consumer_boundaries=("MockCase loading", "evaluation input selection"),
-            base=".",
+            base_resolver=_runtime_data_base,
             payload_validator=_mock_cases_payload,
+        ),
+        ActiveArtifactFamily(
+            "session_export",
+            "derived_active",
+            "*/sessions/*.json",
+            _validate_session_export,
+            consumer_boundaries=("harness session tools", "exploration page", "judge tool"),
+            base_resolver=_runtime_data_base,
+            payload_validator=_session_export_payload,
+            owned_directory_patterns=("*/sessions",),
+        ),
+        ActiveArtifactFamily(
+            "findings_ledger",
+            "derived_active",
+            "*/ledger.json",
+            _validate_findings_ledger,
+            consumer_boundaries=("harness ledger tool", "exploration page"),
+            base_resolver=_runtime_data_base,
+            payload_validator=_findings_ledger_payload,
+        ),
+        ActiveArtifactFamily(
+            "exploration_runs",
+            "derived_active",
+            "*/explorations.json",
+            _validate_exploration_runs,
+            consumer_boundaries=("harness exploration tool", "exploration page"),
+            base_resolver=_runtime_data_base,
+            payload_validator=_exploration_runs_payload,
         ),
         ActiveArtifactFamily(
             "capability_map_store",
             "derived_active",
-            "impl/data/*/capability_map.json",
+            "*/capability_map.json",
             _validate_capability_map,
             consumer_boundaries=("capability preset resolution", "materials management API"),
-            base=".",
+            base_resolver=_runtime_data_base,
             payload_validator=_capability_map_payload,
         ),
         ActiveArtifactFamily(
             "materials_store",
             "derived_active",
-            "impl/data/*/materials/*/manifest.json",
+            "*/materials/*/manifest.json",
             _validate_material_manifest,
             consumer_boundaries=(
                 "materials slot binding", "materials management API", "material:// resolver",
             ),
-            base=".",
+            base_resolver=_runtime_data_base,
             payload_validator=_material_manifest_payload,
-            owned_directory_patterns=("impl/data/*/materials",),
+            owned_directory_patterns=("*/materials",),
         ),
         ActiveArtifactFamily(
             "context_record",

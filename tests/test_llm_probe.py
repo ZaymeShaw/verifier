@@ -6,7 +6,9 @@ import urllib.error
 
 import pytest
 
-from impl.core.live_protocol import LiveServiceUnavailableError, _is_service_unavailable
+from impl.core.live_protocol import (
+    LIVE_HTTP_ERROR, LIVE_PROTOCOL_ERROR, LIVE_SERVICE_UNAVAILABLE, LiveServiceUnavailableError, live_failure_type,
+)
 from impl.core.live_transport import LiveHTTPStatusError, LiveTransport
 from impl.core.mock_agent import load_live_schema
 from impl.core.project_loader import load_project
@@ -157,12 +159,12 @@ def test_http_status_error_raises_and_is_not_service_unavailable(monkeypatch):
 
 
 def test_http_status_error_is_classified_separately_from_unavailable():
-    assert _is_service_unavailable(LiveHTTPStatusError(500, {"error": "boom"})) is False
-    assert _is_service_unavailable(LiveHTTPStatusError(404, None)) is False
-    assert _is_service_unavailable(LiveServiceUnavailableError("target down")) is True
-    assert _is_service_unavailable(urllib.error.URLError("connection refused")) is True
-    assert _is_service_unavailable(TimeoutError("timed out")) is True
-    assert _is_service_unavailable(ValueError("schema error")) is False
+    assert live_failure_type(LiveHTTPStatusError(500, {"error": "boom"})) == LIVE_HTTP_ERROR
+    assert live_failure_type(LiveHTTPStatusError(404, None)) == LIVE_HTTP_ERROR
+    assert live_failure_type(LiveServiceUnavailableError("target down")) == LIVE_SERVICE_UNAVAILABLE
+    assert live_failure_type(urllib.error.URLError("connection refused")) == LIVE_SERVICE_UNAVAILABLE
+    assert live_failure_type(TimeoutError("timed out")) == LIVE_SERVICE_UNAVAILABLE
+    assert live_failure_type(ValueError("schema error")) == LIVE_PROTOCOL_ERROR
 
 
 def _probe_trace(request: dict, output_text: str = "ok") -> RunTrace:
@@ -187,7 +189,7 @@ SAMPLE_BODY_MARK = "姓名全值等值匹配"
 
 
 def test_judge_context_expands_sample_material_into_capability() -> None:
-    """轴1 喂给 judge 的 user_intent / extras.capability 必须是展开后的资料正文。"""
+    """能力正文只走 capability 字段，不能伪装成 user_intent。"""
     judge = LlmProbeJudge(load_project("llm_probe"))
     before = judge.build_context(_probe_trace({
         "body": {"user_text": "客户姓名是张伟的人"},
@@ -199,12 +201,53 @@ def test_judge_context_expands_sample_material_into_capability() -> None:
         "url": "http://127.0.0.1:8000/x",
         "capability": f"接收自然语言客户群体描述。匹配规则见 {SAMPLE_TOKEN}",
     }))
-    assert SAMPLE_BODY_MARK not in before["user_intent"]
+    assert "user_intent" not in before
     assert SAMPLE_BODY_MARK not in json.dumps(before["user_prompt_extras"], ensure_ascii=False)
-    assert SAMPLE_BODY_MARK in after["user_intent"]
     assert SAMPLE_BODY_MARK in after["user_prompt_extras"]["capability"]
     # 展开后的能力描述里应带正文，而不是只剩未解析记号
-    assert "--- material://llm_probe/client-search-match-rule ---" in after["user_intent"]
+    assert "--- material://llm_probe/client-search-match-rule ---" in after["user_prompt_extras"]["capability"]
+
+
+def test_normal_judge_prompt_excludes_private_mock_intent() -> None:
+    from impl.core.judge import judge_trace
+
+    captured = []
+
+    class FakeLlm:
+        def complete_json(self, _system, user, **_kwargs):
+            captured.append(json.loads(user))
+            return {
+                "business_expectations": [{
+                    "expectation_id": "回应可见问题",
+                    "blocking": True,
+                    "user_intent": "用户询问可见问题",
+                    "expected_outcome": "输出回应问题",
+                    "acceptance_criteria": ["输出可读"],
+                }],
+                "fulfillment_assessments": [{
+                    "expectation_id": "回应可见问题",
+                    "status": "fulfilled",
+                    "expected_evidence": ["输出应可读"],
+                    "actual_evidence": ["output_text=ok"],
+                }],
+                "reasoning_summary": "可见输出完成了可见请求",
+            }
+
+    trace = _probe_trace({
+        "body": {"question": "公开问题"},
+        "url": "http://127.0.0.1:9/llm-probe",
+        "capability": "回答问题",
+    })
+    trace.mock_intent = {"user_intent": "PRIVATE_EXPECTED_ANSWER"}
+    trace.intent_history = [{"user_intent": "PRIVATE_EXPECTED_ANSWER"}]
+    project_judge = LlmProbeJudge(load_project("llm_probe"))
+    context = project_judge.build_context(trace)
+    context["intent_frame"] = project_judge.build_intent_frame(trace, context)
+    judge_trace(project_judge.spec, trace, llm=FakeLlm(), project_judge_context=context)
+
+    payload = json.dumps(captured[0], ensure_ascii=False)
+    assert captured[0]["user_intent"] is None
+    assert "PRIVATE_EXPECTED_ANSWER" not in payload
 
 
 def test_judge_context_redacts_credential_headers():
@@ -342,7 +385,113 @@ def test_mock_cases_fixture_restores_regression_cases_and_passes_schema():
             "policy_search",
             "marketting-planning-intent",
             "dashscope-qa",
+            "policy-clause-qa",
+            "hr-handbook-qa",
+            "insurance-agno-e2e",
+            "insurance-llmtracing",
         }
+
+
+def test_insurance_agno_fixture_is_real_only_and_live_evaluated():
+    from pathlib import Path
+
+    root = Path(__file__).parents[1]
+    capabilities = json.loads((root / "impl/data/llm_probe/capability_map.json").read_text(encoding="utf-8"))
+    cases = json.loads((root / "impl/data/llm_probe/mock_cases.json").read_text(encoding="utf-8"))
+    preset = capabilities["insurance-agno-e2e"]
+    insurance_cases = [case for case in cases if case.get("scenario") == "insurance-agno-e2e"]
+
+    assert "必须全部为 real" in preset["boundary"]
+    assert preset["business_trace"]["provider"] == "agno"
+    assert [axis["type"] for axis in preset["axes"]] == [
+        "intent_understanding", "planning_routing", "tool_execution",
+        "context_memory", "knowledge_data", "model_capability",
+    ]  # 六轴；结果标准由主轴产 fulfillment_assessments，不再并列启用扩展 fulfillment 轴
+    assert "evaluation_standard" not in {axis["type"] for axis in preset["axes"]}
+    assert insurance_cases
+    assert all(case.get("output") is None and case.get("reference") is None for case in insurance_cases)
+    assert all(case["live_request"]["body"].get("empno") for case in insurance_cases)
+    assert all(case["live_request"]["body"].get("agentno") for case in insurance_cases)
+
+    authorized = next(
+        case for case in insurance_cases
+        if case["id"] == "llm-probe-insurance-real-policy-status-authorized"
+    )
+    assert authorized["live_request"]["body"]["user_id"] == "EMP000000"
+    assert authorized["live_request"]["body"]["empno"] == "EMP000000"
+    assert "intent" not in authorized
+    assert "P260000000000001" in authorized["live_request"]["body"]["messages"][0]["content"]
+
+    # 会话身份不写死：单轮用例留 "{session_id}" 占位符，发送时才落成新会话；
+    # 上下文类多轮用例是 transcript 级 seed，由 Session 分配会话身份并串行重放。
+    assert all(case["live_request"]["body"]["session_id"] == "{session_id}" for case in insurance_cases)
+    seeds = {case["id"]: case["seed"] for case in insurance_cases if case.get("seed")}
+    assert set(seeds) == {
+        "llm-probe-insurance-real-ctx-ref",
+        "llm-probe-insurance-real-ctx-ellipsis",
+        "llm-probe-insurance-real-ctx-cache",
+        "llm-probe-insurance-real-ctx-clarify",
+    }
+    assert all(seed["level"] == "transcript" and len(seed["turns"]) == 2 for seed in seeds.values())
+    assert not any("-t1-" in case["id"] or "-t2-" in case["id"] for case in insurance_cases)
+
+
+def test_single_turn_case_gets_fresh_business_session_each_delivery(monkeypatch):
+    sent = []
+
+    def fake_urlopen(request, timeout=0):
+        sent.append(json.loads(request.data.decode("utf-8")))
+        return _Response(b'{"answer": "ok"}')
+
+    monkeypatch.setattr("impl.core.live_transport.urllib.request.urlopen", fake_urlopen)
+    live = LlmProbeLive(load_project("llm_probe"))
+    template = {"session_id": "{session_id}", "user_id": "EMP000006", "messages": [{"role": "user", "content": "hi"}]}
+    first = {"body": dict(template), "capability_ref": "insurance-agno-e2e"}
+    second = {"body": dict(template), "capability_ref": "insurance-agno-e2e"}
+    live.deliver_real(first, LiveTransport())
+    live.deliver_real(second, LiveTransport())
+    assert sent[0]["session_id"].startswith("llm-probe-") and sent[1]["session_id"].startswith("llm-probe-")
+    assert sent[0]["session_id"] != sent[1]["session_id"]
+    # trace 里记录的是真正发出去的请求体。
+    assert first["body"]["session_id"] == sent[0]["session_id"]
+
+
+def test_transcript_seed_replays_serially_in_one_fresh_session(monkeypatch):
+    """多轮用例：同一新会话按序发送；接口约定由调用方带历史，第 n 轮带上此前各轮原话与实际答复。"""
+    from impl.core.interaction_protocol import normalize_case_interaction
+    from impl.core.mock import mock_case_to_single_turn, parse_mock_case
+    from impl.core.project_loader import load_adapter
+    from impl.core.trace import trace_from_live
+
+    sent = []
+
+    def fake_urlopen(request, timeout=0):
+        body = json.loads(request.data.decode("utf-8"))
+        sent.append(body)
+        return _Response(json.dumps({"answer": f"reply-{len(sent)}", "trace_id": f"t{len(sent)}"}).encode("utf-8"))
+
+    monkeypatch.setattr("impl.core.live_transport.urllib.request.urlopen", fake_urlopen)
+    cases = json.loads(
+        (__import__("pathlib").Path(__file__).parents[1] / "impl/data/llm_probe/mock_cases.json").read_text(encoding="utf-8")
+    )
+    case = next(item for item in cases if item["id"] == "llm-probe-insurance-real-main-E13-return-to-first-policy")
+    normalized = normalize_case_interaction("llm_probe", mock_case_to_single_turn(parse_mock_case(case)), 0)
+    assert normalized.mode == "interactive_intent"
+
+    trace = trace_from_live(load_adapter(load_project("llm_probe")).live(), normalized)
+    questions = ["P260922000005855和P260922000008708的状态分别是什么？", "先讲讲电子保单怎么找。", "回到刚才第一张，再看看累计已交保费。"]
+    assert [body["messages"] for body in sent] == [
+        [{"role": "user", "content": questions[0]}],
+        [{"role": "user", "content": questions[0]}, {"role": "assistant", "content": "reply-1"},
+         {"role": "user", "content": questions[1]}],
+        [{"role": "user", "content": questions[0]}, {"role": "assistant", "content": "reply-1"},
+         {"role": "user", "content": questions[1]}, {"role": "assistant", "content": "reply-2"},
+         {"role": "user", "content": questions[2]}],
+    ]
+    assert sent[0]["session_id"] == sent[1]["session_id"] == sent[2]["session_id"] == trace.session_id
+    assert trace.session_id.startswith("replay-llm-probe-insurance-real-main-E13-return-to-first-policy-")
+    assert len(trace.turn_records) == 3
+    assert trace.diverged_at_turn is None
 
 
 def test_streaming_response_is_rejected_before_body_read(monkeypatch):
@@ -612,3 +761,29 @@ def test_resolve_http_expands_capability_header_placeholders(monkeypatch):
     assert response_mode == "sse_last_frame"
     assert headers["Authorization"] == "Bearer sk-test-not-real"
     assert headers["X-DashScope-SSE"] == "enable"
+
+
+def test_history_keeps_failed_business_turns():
+    """业务层失败的轮也进历史：报错答复原样带上；没有 answer 字段时带整个返回体；空答复只留用户原话（接口不收空正文）。"""
+    from impl.core.session import SessionState, UserMessage
+
+    mock = LlmProbeMock(load_project("llm_probe"))
+    from impl.projects.llm_probe.capability import mock_body
+
+    first = {"body": mock_body("insurance-agno-e2e", "q1"), "method": "POST", "capability_ref": "insurance-agno-e2e"}
+    turns = [("q1", {"answer": "系统繁忙，请稍后再试", "status": "ERROR"}),
+             ("q2", {"error": {"code": "TIMEOUT"}}),
+             ("q3", {"answer": ""})]
+    transcript = []
+    for question, body in turns:
+        transcript += [{"role": "user", "content": question},
+                       {"role": "assistant", "content": "ok",
+                        "extracted_output": {"output_text": json.dumps(body, ensure_ascii=False)}}]
+    request = mock.request_from_user_message(UserMessage(type="text", text="q4"),
+                                             SessionState("s", 4, transcript, first))
+    assert request["body"]["messages"] == [
+        {"role": "user", "content": "q1"}, {"role": "assistant", "content": "系统繁忙，请稍后再试"},
+        {"role": "user", "content": "q2"}, {"role": "assistant", "content": '{"error": {"code": "TIMEOUT"}}'},
+        {"role": "user", "content": "q3"},
+        {"role": "user", "content": "q4"}]
+    assert mock.user_message_from_request(request).text == "q4"

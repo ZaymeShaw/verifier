@@ -91,6 +91,27 @@ def test_select_raises_when_all_endpoints_were_tried():
         router.select(exclude={"primary"})
 
 
+def test_retry_candidate_returns_tried_endpoint_that_is_not_cooling():
+    """兜底重试：试过但只是单次抖动的端点还能再试一次；连续失败进了冷却就不再撞。"""
+    router = LlmRouter(_eps(), cooldown_seconds=60)
+    router.record_failure(router.endpoints[0])
+    assert router.retry_candidate({"primary"}).name == "primary"
+    router.record_failure(router.endpoints[0])
+    assert router.retry_candidate({"primary"}) is None
+    assert router.retry_candidate({"fb2"}).name == "fb2"
+    assert router.retry_candidate({"primary", "fb1", "fb2"}).name == "fb1"
+
+
+def test_retry_candidate_skips_endpoints_that_cannot_serve_the_request():
+    """兜底也不能把带工具的请求发给声明不支持工具的端点。"""
+    router = LlmRouter([
+        LlmEndpoint(name="primary", base_url="https://primary/v1", model="m", api_key="k", tool_calls=False),
+        LlmEndpoint(name="fb1", base_url="https://fb1/v1", model="m", api_key="k"),
+    ])
+    assert router.retry_candidate({"primary", "fb1"}, needs_tools=True).name == "fb1"
+    assert router.retry_candidate({"primary"}, needs_tools=True) is None
+
+
 def test_refresh_health_probes_all_stale_endpoints_once():
     probed: list[str] = []
 

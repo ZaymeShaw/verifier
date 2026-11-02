@@ -9,7 +9,7 @@ from urllib.parse import urljoin
 import yaml as _yaml
 
 from impl.core.interaction_protocol import ready_from_spec
-from impl.core.live_protocol import RealServiceLive, SingleTurnLive
+from impl.core.live_protocol import RealServiceLive
 from impl.core.live_transport import LiveTransport
 from impl.core.schema import (
     ExecutionTraceEvent,
@@ -474,7 +474,7 @@ def strip_non_ready_fields(spec: ProjectSpec, case: Dict[str, Any]) -> Dict[str,
     return case
 
 
-class ClientSearchLive(RealServiceLive, SingleTurnLive):
+class ClientSearchLive(RealServiceLive):
     def __init__(self, spec: ProjectSpec):
         super().__init__(spec)
 

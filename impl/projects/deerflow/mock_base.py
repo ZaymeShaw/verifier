@@ -5,10 +5,36 @@ from typing import Any, Dict, Optional
 
 from impl.core.mock_protocol import MultiTurnInteractiveMock, ProjectMock
 from impl.core.schema import MockContinueDecision, MockIntentOutput, SingleTurnCase, MultiTurnCase
+from impl.core.session import SessionState, SessionTranslator, UserMessage
 
 
-class DeerflowMockBase(MultiTurnInteractiveMock, ProjectMock):
+class DeerflowMockBase(MultiTurnInteractiveMock, SessionTranslator, ProjectMock):
     """Common multi-turn request behavior; role variants only refine extensions."""
+
+    # spec/mock/protocol.md 6.4：原话槽位 input.messages[-1].content；会话身份 thread_id 由服务端持状态。
+    supports_history_injection = False
+
+    def request_from_user_message(self, message: UserMessage, state: SessionState) -> Dict[str, Any]:
+        if message.type != "text":
+            raise ValueError(f"deerflow has no structured user actions; got {message.type!r}")
+        thread_id = ""
+        for item in reversed(state.transcript):
+            if str(item.get("role") or "") != "assistant":
+                continue
+            output = item.get("extracted_output") if isinstance(item.get("extracted_output"), dict) else {}
+            thread_id = str((output.get("session_summary") or {}).get("thread_id") or "")
+            if thread_id:
+                break
+        if not thread_id and state.last_request:
+            configurable = ((state.last_request.get("config") or {}).get("configurable") or {})
+            thread_id = str(configurable.get("thread_id") or "")
+        return {
+            "input": {"messages": [{"role": "user", "content": message.text}]},
+            "config": {"configurable": {"thread_id": thread_id}},
+        }
+
+    def user_message_from_request(self, request: Dict[str, Any]) -> UserMessage:
+        return UserMessage(type="text", text=self.extract_mock_message(request))
 
     def build_user_intent(self, scenario: str):
         from impl.core.mock_agent import MockAgent, build_spec_from_project
@@ -95,8 +121,6 @@ class DeerflowMockBase(MultiTurnInteractiveMock, ProjectMock):
 
         return MockAgent(self.spec).decide_next_action(intent, accumulated_output)
 
-    def safety_max_turns(self) -> int:
-        return 12
 
     def extract_mock_message(self, request: Dict[str, Any]) -> str:
         messages = (

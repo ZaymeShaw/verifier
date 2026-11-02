@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from .interaction_protocol import ready_from_spec
 from .project_loader import load_project_document
 from .schema import MockBuildResult, MockBuildSpec, MockContinueDecision, MockIntentFidelityOutput, MockIntentOutput, MockNextTurnOutput, ProjectSpec
-from .structured_output import StructuredOutputSpec, FREE_TEXT_OUTPUT, FREE_DICT_OUTPUT, dataclass_to_json_schema
+from .structured_output import StructuredOutputSpec, FREE_DICT_OUTPUT, dataclass_to_json_schema
 
 if TYPE_CHECKING:
     from .llm_client import LlmClient

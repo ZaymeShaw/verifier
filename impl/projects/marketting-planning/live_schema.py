@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from impl.core.live_schema_check import LiveSchemaCheck
 from impl.core.structured_output import dataclass_to_json_schema
-from .schema import MPTurnOutput, MPNormalizedRequest, MPApiRequest
+from .schema import MPTurnOutput, MPApiRequest
 
 REQUIRED_INPUT_FIELDS = ["user_text", "session_id", "trace_id", "org_id"]
 

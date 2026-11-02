@@ -143,9 +143,9 @@ def test_project_loader_uses_draft_mock_protocol_when_enabled(tmp_path):
     draft_dir = tmp_path / "draft"
     draft_dir.mkdir()
     (draft_dir / "mock.py").write_text(
-        "from impl.core.mock_protocol import ProjectMock, SingleTurnMock\n"
+        "from impl.core.mock_protocol import ProjectMock\n"
         "from impl.core.schema import MockIntentOutput\n"
-        "class DraftMock(SingleTurnMock, ProjectMock):\n"
+        "class DraftMock(ProjectMock):\n"
         "    def build_user_intent(self, scenario):\n"
         "        return MockIntentOutput(user_intent='draft', query='draft')\n"
         "    def build_initial_request(self, intent):\n"
@@ -376,7 +376,7 @@ def test_pipeline_rejects_adapter_without_judge_protocol(monkeypatch):
     monkeypatch.setattr(pipeline, "ready_from_spec", lambda spec_arg: [])
 
     with pytest.raises(AttributeError):
-        pipeline.judge("demo", RunTrace(trace_id="trace-1", project_id="demo"), user_intent="intent")
+        pipeline.judge("demo", RunTrace(trace_id="trace-1", project_id="demo"))
 
 
 def test_pipeline_rejects_adapter_without_attribute_protocol(monkeypatch):

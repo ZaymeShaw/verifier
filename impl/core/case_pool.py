@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .instances import data_root
+
 import json
 import time
 from pathlib import Path
@@ -10,7 +12,7 @@ from .portable_artifact import write_active_artifact
 from .schema import to_dict
 
 ROOT = Path(__file__).resolve().parents[1]
-STORE_PATH = ROOT / "data" / "case_pools.json"
+STORE_PATH = data_root(ROOT.parent) / "case_pools.json"
 
 
 def _read_store() -> Dict[str, List[Dict[str, Any]]]:

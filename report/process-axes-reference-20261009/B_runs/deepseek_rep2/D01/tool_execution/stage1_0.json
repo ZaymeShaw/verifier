@@ -1,0 +1,87 @@
+{
+ "meta": {
+  "elapsed": 57,
+  "prompt_tokens": 1412,
+  "completion_tokens": 11184,
+  "reasoning_tokens": 9881
+ },
+ "attempt": 1,
+ "result": {
+  "instance": "工具执行（执行）本次运行：tools/0–tools/4",
+  "items": [
+   {
+    "id": "R1",
+    "type": "推出",
+    "statement": "tools/0–tools/3 的返回必须是对应 customer_search 调用的搜索页记录或 AMBIGUOUS 终态，不能是 ask_clarify、customer_detail 或 policy_search 的结果。",
+    "basis": "tools/0–tools/3 均为 customer_search；工具 customer_search 说明“按自然语言条件查找客户，返回匹配客户的搜索页记录”且“任一条件不支持时整条不查询，返回 AMBIGUOUS”。"
+   },
+   {
+    "id": "R2",
+    "type": "守恒",
+    "statement": "tools/0 的返回若成功，必须能对应到参数 fields 所请求的姓名、生日、性别、客户号，不得丢弃或改写这些请求字段的含义。",
+    "basis": "tools/0 参数 fields=[“姓名”,“生日”,“性别”,“客户号”]；工具说明“已返回字段直接按 data 作答，field_descriptions 给出字段含义”。"
+   },
+   {
+    "id": "R3",
+    "type": "守恒",
+    "statement": "tools/1–tools/3 的返回若成功，必须包含或可解析出参数 fields 请求的姓名、生日、性别、客户号、客户中心ID；其中客户中心ID 必须对应 data.records[].clientMainId（兼容 client_main_id、idicm_clientno），不得把寿险客户号 clientNo 当作客户中心ID。",
+    "basis": "tools/1–tools/3 参数 fields 含“客户中心ID”；工具说明“data.records[].clientMainId（兼容 client_main_id、idicm_clientno）即客户中心ID，寿险客户号 clientNo 不是”。"
+   },
+   {
+    "id": "R4",
+    "type": "推出",
+    "statement": "tools/0–tools/3 的返回必须对应参数中的完整条件“姓平、女性、12月份生日”，不得删除任一条件扩大范围；若任一条件不被工具支持，应返回 AMBIGUOUS，而不是零命中或空列表。",
+    "basis": "tools/0–tools/3 的 query 均含姓平、女性、12月生日；工具说明“任一条件不支持时整条不查询，返回 AMBIGUOUS（不是零命中），不得删条件扩大范围”。"
+   },
+   {
+    "id": "R5",
+    "type": "推出",
+    "statement": "tools/0–tools/3 的返回不得声称已按客户号升序排序或把排序作为已执行条件，因为已发出的这些调用参数没有排序要求，且工具说明明确不支持排序。",
+    "basis": "工具说明“不支持…排序”；tools/0–tools/3 参数中无排序字段或排序语句。"
+   },
+   {
+    "id": "R6",
+    "type": "推出",
+    "statement": "tools/0–tools/3 若成功，返回中的 data.total（如有）必须表示符合查询条件的客户总数，而不是当前页记录数或展示条数。",
+    "basis": "工具说明“data.total 为符合查询条件的客户总数，不是当前页记录数或展示条数”。"
+   },
+   {
+    "id": "R7",
+    "type": "推出",
+    "statement": "tools/4 的返回必须是 ask_clarify 的允许终态：未达连续开放澄清上限时返回 NEEDS_CLARIFICATION 并结束本轮，达到上限时返回 ERROR 并转人工；不能返回客户搜索页、详细资料或保单状态。",
+    "basis": "tools/4 调用 ask_clarify；工具说明“返回 NEEDS_CLARIFICATION 后本轮结束；连续开放澄清达上限时返回 ERROR 并转人工”。"
+   },
+   {
+    "id": "R8",
+    "type": "守恒",
+    "statement": "tools/4 的返回必须登记并呈现所发出的澄清问题“当前筛选条件未能执行查询。请问您能提供更明确的定位信息吗？…”及其 options，不得改写为其他问题或选项。",
+    "basis": "tools/4 参数 question/options；工具说明“向用户发起澄清，登记挂起并结束本轮”。"
+   },
+   {
+    "id": "R9",
+    "type": "推出",
+    "statement": "tools/4 的返回不应包含或替代选中客户的详细资料、保单状态查询结果；期望 E 中这两项以“确定选中客户后”为条件，而已发出的调用中没有对应工具调用。",
+    "basis": "冻结期望 E：query_selected_client_detail_info/query_selected_client_policy_status 条件为“确定选中客户后”；已发出调用列表仅有 customer_search 与 ask_clarify。"
+   },
+   {
+    "id": "R10",
+    "type": "外部真值",
+    "statement": "tools/0–tools/3 实际命中的客户记录、每条记录的姓名/生日/性别/客户号/客户中心ID 以及 data.total 数值，必须查实际数据库或运行记录才能核对，输入材料只给调用参数给不出。",
+    "basis": "输入材料没有客户数据；工具说明支持客户查询并返回 data.total/records。"
+   },
+   {
+    "id": "R11",
+    "type": "外部真值",
+    "statement": "tools/4 的返回终态（NEEDS_CLARIFICATION 或 ERROR 转人工）以及该调用是否本应发生，取决于连续开放澄清计数和此前 tools/0–tools/3 的实际返回内容；这些运行状态在输入材料中未给出。",
+    "basis": "工具说明“本轮已取得可回答的事实或正文后不得调用”和“连续开放澄清达上限时返回 ERROR”；输入未给前序返回。"
+   }
+  ],
+  "not_covered": [
+   "各工具执行的具体时限阈值未在输入材料中给出，无法核对“在时限内”。",
+   "customer_search 的 compact=true 返回结构、分页大小和分页格式未在输入材料中给出，无法进一步核对。",
+   "用户原话要求的“按客户号升序”没有出现在已发出的 customer_search 参数中，因此本部件单次执行是否应负责该排序无法由这些输入推出。",
+   "选中客户详细资料和保单状态查询没有对应已发出的调用，无法评估这两个期望项的返回内容。",
+   "工具说明未规定“本轮已取得可回答事实后仍调用 ask_clarify”时执行部件应返回的具体终态；需看运行记录中前序返回。"
+  ]
+ }
+}

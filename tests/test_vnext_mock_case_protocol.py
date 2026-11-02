@@ -8,15 +8,23 @@ from impl import cli
 from impl.core.mock import mock_case_to_single_turn, parse_mock_case
 from impl.core.schema import MockCase
 from impl.core.schema import to_public_dict
-from impl.core import case_pool
+from impl.core import case_pool, run_store
 from impl.server.service import case_event, compact_batch_result
-from impl.server.models import MockBuildIntentRequest, MockCasesRequest, MockDatasetsRequest
+from impl.server.models import (
+    BatchRunRequest,
+    JudgeRequest,
+    MockBuildIntentRequest,
+    MockCasesRequest,
+    MockDatasetsRequest,
+    RunChainRequest,
+)
 from impl.server import service
 from impl.server import batch_jobs
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FIELDS = {"id", "project_id", "scenario", "intent", "live_request", "output", "reference"}
+# seed：spec/mock/protocol.md 4.10 的 transcript 级种子；level=request 的 case 为 None，但公共边界始终带该键。
+FIELDS = {"id", "project_id", "scenario", "intent", "live_request", "output", "reference", "seed"}
 
 
 def _case():
@@ -48,6 +56,12 @@ def test_request_first_case_allows_intent_to_be_absent():
     assert parsed.intent is None
     assert mock_case_to_single_turn(parsed).input == {"user_text": "有子女的客户"}
     assert to_public_dict(parsed)["intent"] is None
+
+
+@pytest.mark.parametrize("model", [JudgeRequest, RunChainRequest, BatchRunRequest])
+def test_public_evaluation_requests_reject_private_user_intent(model):
+    with pytest.raises(Exception, match="user_intent"):
+        model.model_validate({"project": "client_search", "user_intent": "hidden expected answer"})
 
 
 def test_mock_intent_is_independent_from_live_request():
@@ -170,7 +184,7 @@ def test_save_mock_cases_preserves_request_first_intent_none(tmp_path):
     )
 
     saved = json.loads(target.read_text(encoding="utf-8"))
-    assert saved[0]["intent"] is None
+    assert "intent" not in saved[0]
 
 
 def test_save_mock_cases_migrates_legacy_runtime_case(tmp_path):
@@ -191,6 +205,7 @@ def test_save_mock_cases_migrates_legacy_runtime_case(tmp_path):
     assert saved[0]["id"] == "legacy-case"
     assert saved[0]["project_id"] == "client_search"
     assert saved[0]["live_request"] == {"user_text": "有子女的客户"}
+    assert "intent" not in saved[0]
 
 
 @pytest.mark.parametrize(
@@ -373,14 +388,16 @@ def test_batch_event_and_final_run_carry_same_request_identity():
     assert {key: final["runs"][0][key] for key in identity} == identity
 
 
-def test_batch_start_validates_before_creating_job():
-    before = set(batch_jobs.BATCH_JOBS)
+def test_batch_start_validates_before_creating_job(monkeypatch, tmp_path):
+    store = run_store.LatestRunStore(tmp_path / "latest.sqlite3")
+    monkeypatch.setattr(run_store, "STORE", store)
     with pytest.raises(ValueError, match="MockCase 缺少字段"):
         batch_jobs.start_batch({"project": "client_search", "cases": [{"id": "legacy", "input": {}}]})
-    assert set(batch_jobs.BATCH_JOBS) == before
+    assert not store.path.exists()
 
 
-def test_duplicate_case_ids_still_receive_distinct_request_keys(monkeypatch):
+def test_duplicate_case_ids_still_receive_distinct_request_keys(monkeypatch, tmp_path):
+    monkeypatch.setattr(run_store, "STORE", run_store.LatestRunStore(tmp_path / "latest.sqlite3"))
     class NoopThread:
         def __init__(self, *args, **kwargs):
             pass
@@ -394,7 +411,7 @@ def test_duplicate_case_ids_still_receive_distinct_request_keys(monkeypatch):
     started = batch_jobs.start_batch({"project": "client_search", "cases": [first, second]})
     assert [item["request_case_id"] for item in started["requests"]] == ["case-1", "case-1"]
     assert len({item["request_key"] for item in started["requests"]}) == 2
-    batch_jobs.BATCH_JOBS.pop(started["job_id"], None)
+    assert len(run_store.STORE.load("client_search")["cases"]) == 2
 
 
 def test_root_client_search_cases_are_vnext_mock_cases():
@@ -408,7 +425,8 @@ def test_root_client_search_cases_are_vnext_mock_cases():
         elif isinstance(value, dict):
             if "live_request" in value and "id" in value:
                 found += 1
-                assert set(value) == FIELDS
+                # 落盘 case 的 seed 键可省略（parse_mock_case 视为 None）；公共边界才强制带键。
+                assert set(value) in (FIELDS, FIELDS - {"seed"})
             else:
                 for item in value.values():
                     walk(item)

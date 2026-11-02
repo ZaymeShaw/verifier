@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import re
 from typing import Any
+from uuid import uuid4
 
 from impl.core.capability_store import load_capability_map as _load_store
 
@@ -75,6 +77,24 @@ def capability_service(ref: str) -> dict[str, Any]:
     return service
 
 
+def capability_business_trace(ref: str) -> dict[str, Any] | None:
+    """仅在场景启用了需要业务 Trace 的过程轴时返回 provider 信封。"""
+    entry = load_capability_map().get(ref)
+    value = entry.get("business_trace") if isinstance(entry, dict) else None
+    if not isinstance(value, dict):
+        return None
+    from impl.projects.llm_probe.eval_axes.registry import AXIS_TYPES
+
+    axes = entry.get("axes") if isinstance(entry.get("axes"), list) else []
+    enabled = any(
+        isinstance(axis, dict)
+        and axis.get("enabled") is True
+        and getattr(AXIS_TYPES.get(str(axis.get("type") or "")), "requires_business_trace", False)
+        for axis in axes
+    )
+    return dict(value) if enabled else None
+
+
 def default_capability_ref() -> str:
     mapping = load_capability_map()
     # 按 key 排序取默认项，避免依赖 YAML 键的书写顺序。
@@ -84,20 +104,100 @@ def default_capability_ref() -> str:
     raise ValueError("capability 预设为空，请先在资料管理页添加")
 
 
-def _fill_template(value: Any, query: str) -> Any:
+def _fill_template(value: Any, query: str, session_id: str) -> Any:
     if isinstance(value, str):
-        return value.replace("{query}", query)
+        # 单次替换，避免把用户 query 中的占位符当成模板再次展开。
+        return re.sub(r"\{(query|session_id)\}", lambda match: query if match[1] == "query" else session_id, value)
     if isinstance(value, dict):
-        return {key: _fill_template(item, query) for key, item in value.items()}
+        return {key: _fill_template(item, query, session_id) for key, item in value.items()}
     if isinstance(value, list):
-        return [_fill_template(item, query) for item in value]
+        return [_fill_template(item, query, session_id) for item in value]
     return value
 
 
-def mock_body(ref: str, query: str) -> dict[str, Any]:
-    """按 capability_map 中的 mock_body 模板生成目标项目可接受的请求 body。"""
+def _body_template(ref: str) -> dict[str, Any]:
     entry = load_capability_map().get(ref)
     template = entry.get("mock_body") if isinstance(entry, dict) else None
     if not isinstance(template, dict):
         raise ValueError(f"capability 预设 {ref} 没有 mock_body 模板，请在资料管理页补充")
-    return _fill_template(template, query)
+    return template
+
+
+def new_session_id() -> str:
+    return f"llm-probe-{uuid4().hex}"
+
+
+def mock_body(ref: str, query: str) -> dict[str, Any]:
+    """按 capability_map 中的 mock_body 模板生成目标项目可接受的请求 body。"""
+    return _fill_template(_body_template(ref), query, "{session_id}")
+
+
+def fresh_delivery_placeholders(body: Any) -> Any:
+    """发送前落定请求体里残留的占位符。
+
+    "{session_id}"：同一次投递里全部换成同一个新会话 id（生成用例时通常已落定，多轮靠它保持同一会话）。
+    "{request_id}"：每次投递都换成新的请求标识，生成用例时不落定；用于被测系统按调用方请求标识关联本轮 trace，
+    同一用例重跑或多轮的每一轮都不会撞号。
+    """
+    session_id = new_session_id()
+    request_id = f"llm-probe-req-{uuid4().hex}"
+
+    def fill(value: Any) -> Any:
+        if isinstance(value, str):
+            return session_id if value == "{session_id}" else request_id if value == "{request_id}" else value
+        if isinstance(value, dict):
+            return {key: fill(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [fill(item) for item in value]
+        return value
+
+    return fill(body)
+
+
+Slot = tuple[Any, ...]
+
+
+def template_slots(ref: str) -> dict[str, list[Slot]]:
+    """mock_body 模板里 `{query}` / `{session_id}` / `{request_id}` 占位符所在的路径。
+
+    会话翻译（SessionTranslator）用它把原话与会话身份确定性地写进请求体，
+    不需要知道每个被测接口的字段名。
+    """
+    slots: dict[str, list[Slot]] = {"query": [], "session_id": [], "request_id": []}
+
+    def walk(value: Any, path: Slot) -> None:
+        if isinstance(value, str):
+            if value == "{query}":
+                slots["query"].append(path)
+            elif value == "{session_id}":
+                slots["session_id"].append(path)
+            elif value == "{request_id}":
+                slots["request_id"].append(path)
+        elif isinstance(value, dict):
+            for key, item in value.items():
+                walk(item, path + (key,))
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                walk(item, path + (index,))
+
+    walk(_body_template(ref), ())
+    if not slots["query"]:
+        raise ValueError(f"capability 预设 {ref} 的 mock_body 模板没有 {{query}} 占位符")
+    return slots
+
+
+def slot_get(body: Any, path: Slot) -> Any:
+    for key in path:
+        if isinstance(body, dict):
+            body = body.get(key)
+        elif isinstance(body, list) and isinstance(key, int) and key < len(body):
+            body = body[key]
+        else:
+            return None
+    return body
+
+
+def slot_set(body: Any, path: Slot, value: Any) -> None:
+    for key in path[:-1]:
+        body = body[key]
+    body[path[-1]] = value

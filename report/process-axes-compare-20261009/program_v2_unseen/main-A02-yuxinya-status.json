@@ -1,0 +1,45 @@
+{
+  "tag": "main-A02-yuxinya-status",
+  "entries": [
+    {
+      "check": "工具返回原样进入下一次模型输入",
+      "verdict": "达到",
+      "observed": "policy_search 的返回与 turn1/records/traces/0/tree/0/spans/3/spans/4 请求里 tool_call_id=call_64509c95397548bf9c46945e 的 tool 消息逐字一致",
+      "refs": [
+        "turn1/records/run/step_executor_runs/0/tools/0",
+        "turn1/records/traces/0/tree/0/spans/3/spans/4"
+      ],
+      "id": "v2-1"
+    },
+    {
+      "check": "工具返回原样进入下一次模型输入",
+      "verdict": "达到",
+      "observed": "customer_search 的返回与 turn1/records/traces/0/tree/0/spans/3/spans/4 请求里 tool_call_id=call_7877cbcaeae147859c3b5452 的 tool 消息逐字一致",
+      "refs": [
+        "turn1/records/run/step_executor_runs/0/tools/1",
+        "turn1/records/traces/0/tree/0/spans/3/spans/4"
+      ],
+      "id": "v2-2"
+    },
+    {
+      "check": "执行余量提示随用量更新",
+      "verdict": "没达到",
+      "observed": "2 次模型请求里的余量提示逐字相同（剩余 10 次模型调用（含 2 次收尾预留）、12 次工具调用，约 598 秒。…），期间已发生 1 次模型调用、4 次工具调用",
+      "refs": [
+        "turn1/records/traces/0/tree/0/spans/3/spans/1",
+        "turn1/records/traces/0/tree/0/spans/3/spans/4"
+      ],
+      "id": "v2-3"
+    },
+    {
+      "check": "交付缺口说明有逐字出处",
+      "verdict": "没达到",
+      "observed": "交付带 1 条缺口说明在本轮任何模型产出、工具返回里都找不到逐字出处（completeness='partial'）：部分内容未能在本轮证据中对应，请结合原始资料核实。",
+      "refs": [
+        "turn1.delivered_output",
+        "turn1/records/run/step_results/2/steps/2"
+      ],
+      "id": "v2-4"
+    }
+  ]
+}

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from .llm_tracing import submit_with_context
 from typing import Any, Callable, Dict, Optional
 
 from .schema import GateDecision, SubagentResult, TraceExecutionContext, TraceStateRecord, TransitionDecision, judge_primary_signal, now_iso, to_dict
@@ -144,7 +145,7 @@ class TraceStateMachineRunner:
     def _execute_refs_parallel(self, context: TraceExecutionContext, executor_refs: list[Dict[str, Any]]) -> list[SubagentResult]:
         results = []
         with ThreadPoolExecutor(max_workers=max(1, len(executor_refs))) as executor:
-            futures = {executor.submit(self._execute_ref, context, reference): reference for reference in executor_refs}
+            futures = {submit_with_context(executor, self._execute_ref, context, reference): reference for reference in executor_refs}
             for future in as_completed(futures):
                 result = future.result()
                 results.append(result)

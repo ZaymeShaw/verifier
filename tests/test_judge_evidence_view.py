@@ -53,3 +53,31 @@ def test_judge_evidence_exposes_raw_response_only_for_incomplete_execution():
         "final_output",
         "successful_execution",
     }
+
+
+def test_judge_evidence_excludes_provider_raw_snapshot():
+    """provider 原始快照属于证据仓库（案卷/轴直接读 RunTrace），不得进入 judge payload。"""
+    trace = RunTrace(
+        trace_id="trace-3",
+        project_id="llm_probe",
+        case_id="case-1",
+        extracted_output={"answer": "done"},
+        status="ok",
+        completion_status="completed",
+        turn_records=[
+            {
+                "turn_index": 1,
+                "extracted_output": {"answer": "done"},
+                "project_fields": {
+                    "business_trace": {"turns": [{"raw_runs": ["x" * 5000]}]},
+                    "planning_summary": {"note": "kept"},
+                },
+            }
+        ],
+    )
+
+    evidence = build_judge_evidence_view(trace)
+
+    fields = evidence["turns"][0]["project_fields"]
+    assert "business_trace" not in fields
+    assert fields["planning_summary"] == {"note": "kept"}

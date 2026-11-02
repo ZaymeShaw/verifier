@@ -59,9 +59,10 @@ class ProjectSpec:
         return list(self.runtime.get("ready") or [])
 
     @property
-    def interaction_mode(self) -> str:
-        interaction = self.runtime.get("interaction") or {}
-        return str(interaction.get("mode") or "single_turn")
+    def session_max_turns(self) -> int:
+        """会话最大轮数。单轮项目设 1，多轮项目按需调整。缺省 8。"""
+        session = self.runtime.get("session") or {}
+        return int(session.get("max_turns") or 8)
 
     @property
     def runtime_mode(self) -> str:

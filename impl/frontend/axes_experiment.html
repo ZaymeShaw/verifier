@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>展示试验</title>
+<style>
+body{margin:0;background:#f3f5f9;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.loading-card{max-width:720px;margin:12vh auto;padding:26px;background:white;border:1px solid #dfe5ef;border-radius:14px}.loading-card h1{font-size:20px;margin:0 0 12px}.loading-card p{line-height:1.7;overflow-wrap:anywhere}.loading-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}.loading-actions a,.loading-actions button{border:1px solid #cbd5e1;border-radius:7px;padding:10px 14px;color:#334155;background:#f5f7fb;font:inherit;cursor:pointer;text-decoration:none}.loading-actions a.primary{color:white;background:#4263eb;border-color:#4263eb}[hidden]{display:none!important}.hint{color:#64748b;font-size:13px}@media(max-width:760px){.loading-card{margin:24px 12px;padding:20px}}
+</style></head>
+<body><section id="loading-card" class="loading-card"><h1 id="loading-title">正在打开展示试验</h1><p id="loading" role="status">正在读取候选区结果…</p><p id="recovery-note" class="hint"></p><div class="loading-actions" id="loading-actions" hidden><a id="open-current" class="primary" hidden>打开当前候选区</a><button id="retry-load" type="button">重新读取</button><a href="summary.html">返回用例池</a></div></section>
+<script src="axes_overview.js?v=20261001-labels-fixed100"></script>
+<script src="axes_experiment.js?v=20261003-task-progress"></script>
+<script>
+(async function(){
+  let scope=null,workspace=null;
+  document.getElementById('retry-load').addEventListener('click',()=>location.reload());
+  try {
+    // hash 是明确的筛选快照；?project= 是用户主动选择的“始终查看当前全部候选区”。
+    scope=location.hash
+      ? JSON.parse(decodeURIComponent(location.hash.slice(1)))
+      : {project:new URLSearchParams(location.search).get('project'),current:true};
+    if(!scope || typeof scope.project!=='string' || !scope.project.trim() ||
+      (!scope.current && (!Array.isArray(scope.selections) || !scope.selections.length ||
+        scope.selections.some(s=>!Number.isInteger(s.pool_index)||s.pool_index<0)))){
+      throw new Error('请从主页的“展示试验”入口打开，或在地址中提供 project');
+    }
+    async function post(path){
+      const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({project:scope.project})});
+      const data=await response.json();
+      if(!response.ok){throw new Error(data.error||('HTTP '+response.status));}
+      return data;
+    }
+    const loaded=await Promise.all([post('/api/run_workspace'),post('/api/eval_axes/types')]);
+    workspace=loaded[0];
+    const types=loaded[1];
+    if(scope.current){
+      scope.selections=(workspace.cases||[]).map((entry,pool_index)=>({pool_index,request_key:entry.request_key??null}));
+      if(!scope.selections.length){
+        const error=new Error('当前候选区为空，请返回用例池加载用例。');error.code='EMPTY_WORKSPACE';throw error;
+      }
+    }
+    const cases=AxesExperiment.fromWorkspace(workspace,scope.selections);
+    const batch=workspace.batch;
+    const html=AxesExperiment.renderPage(cases,types.types||[],{project:scope.project,apiBase:location.origin,
+      batchSnapshot:batch?{job_id:batch.job_id,status:batch.status,done:batch.done,total:batch.total}:null,generatedAt:new Date().toLocaleString()});
+    document.open();document.write(html);document.close();
+  } catch(error) {
+    document.getElementById('loading-title').textContent=error.code==='WORKSPACE_CHANGED'?'旧筛选已过期':error.code==='EMPTY_WORKSPACE'?'当前没有用例':'暂时无法读取页面';
+    document.getElementById('loading').textContent=error.message;
+    document.getElementById('loading-actions').hidden=false;
+    if(error.code==='WORKSPACE_CHANGED'){
+      const current=document.getElementById('open-current');
+      current.href='axes_experiment.html?project='+encodeURIComponent(scope.project);
+      current.hidden=false;
+      document.getElementById('recovery-note').textContent='可以打开当前候选区全部 '+(workspace.cases||[]).length+' 条记录，不沿用旧筛选。这只会读取最新数据，不重跑业务、不调用聚类模型。旧聚类若已失效，不会被套用到新结果。';
+    }else{
+      document.getElementById('recovery-note').textContent='本页没有清空后端数据。可以重新读取，或返回用例池查看当前结果。';
+    }
+  }
+})();
+</script></body></html>

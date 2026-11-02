@@ -7,14 +7,14 @@ from __future__ import annotations
 import time
 from typing import Any, Dict
 
-from impl.core.mock_protocol import ProjectMock, SingleTurnMock
+from impl.core.mock_protocol import ProjectMock
 from impl.core.schema import ProjectSpec, SingleTurnCase, MultiTurnCase
 
 
-class MarketingIntentMock(SingleTurnMock, ProjectMock):
+class MarketingIntentMock(ProjectMock):
     """Marketing Planning Intent 项目 Mock 实现。
 
-    继承 SingleTurnMock（交互模式=单轮）+ ProjectMock。
+    继承 ProjectMock。
     退出多轮签名，实现 build_user_intent + build_live_request。
     """
 

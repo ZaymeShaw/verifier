@@ -1,0 +1,115 @@
+{
+ "meta": {
+  "elapsed": 63,
+  "prompt_tokens": 5043,
+  "completion_tokens": 12938,
+  "reasoning_tokens": 11111
+ },
+ "attempt": 1,
+ "result": {
+  "instance": "模型能力（模型）—第2次调用",
+  "items": [
+   {
+    "id": "R1",
+    "type": "推出",
+    "statement": "输出必须是 JSON 对象，且 answer_draft 作为首字段、结论先行。",
+    "basis": "系统提示原文：'输出 JSON：answer_draft:string 必须是首字段、结论先行'。"
+   },
+   {
+    "id": "R2",
+    "type": "守恒",
+    "statement": "输出必须保留并告知 P260922000005855 的投保人为任言琳，依据本轮 fact F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002，不得改写或遗漏。",
+    "basis": "facts 中 subject_id=P260922000005855、predicate=applicant_name、typed_value=任言琳；期望 exp_p260922000005855_applicant。"
+   },
+   {
+    "id": "R3",
+    "type": "守恒",
+    "statement": "输出必须保留并告知 P260922000005855 的被保人为任言琳，依据本轮 fact F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003，不得改写或遗漏。",
+    "basis": "facts 中 subject_id=P260922000005855、predicate=insured_name、typed_value=任言琳；期望 exp_p260922000005855_insured。"
+   },
+   {
+    "id": "R4",
+    "type": "守恒",
+    "statement": "输出必须保留并告知 P260922000005855 的当前状态为“交费有效”，依据 fact F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005，不得改写成“有效”或省略为未知。",
+    "basis": "facts 中 predicate=pol_status_desc、typed_value=交费有效；field_descriptions 中 pol_status_desc='保单状态…取值…交费有效'；期望 exp_p260922000005855_current_status。"
+   },
+   {
+    "id": "R5",
+    "type": "推出",
+    "statement": "claims 必须包含对应上述三项的条目，subject_id 均为 P260922000005855，field 分别为 applicant_name、insured_name、pol_status_desc，fact_id 分别为 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005。",
+    "basis": "业务回答契约要求 claims:[{subject_id,field,fact_id}] 三项必须逐字复制本轮工具 facts。"
+   },
+   {
+    "id": "R6",
+    "type": "推出",
+    "statement": "fact_refs 只能填写本轮工具 facts 的 fact_id，且至少应包含 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005，禁止猜造 ID。",
+    "basis": "系统提示：'fact_refs:string[] 仅填工具返回 facts 的 fact_id，禁止猜造 ID'；facts 列表。"
+   },
+   {
+    "id": "R7",
+    "type": "推出",
+    "statement": "answer_draft 与 gaps 不得自行填写投保人姓名、被保人姓名、状态等业务值，这些值应通过 claims 引用 facts 由服务端渲染。",
+    "basis": "业务回答契约：'不要在 answer_draft/gaps 自行填写金额、数量、日期、状态、客户或被保人姓名…服务端会按 claims…渲染'。"
+   },
+   {
+    "id": "R8",
+    "type": "推出",
+    "statement": "needs_user_input 必须为 false，因为用户已提供保单号且三项询问均有对应 facts，无需等待用户补充。",
+    "basis": "系统提示：'已有可答事实时不得再调用ask_clarify'；facts 覆盖 exp_p260922000005855_applicant、exp_p260922000005855_insured、exp_p260922000005855_current_status。"
+   },
+   {
+    "id": "R9",
+    "type": "推出",
+    "statement": "不得调用 ask_clarify 或再次向用户澄清本保单的投保人、被保人、状态；已有事实覆盖全部三项。",
+    "basis": "系统提示：'已有可答事实时不得再调用ask_clarify，应先回答已确认部分'。"
+   },
+   {
+    "id": "R10",
+    "type": "推出",
+    "statement": "不得把 policy_detail 返回的 total=2 或两条 records 表述为两张保单，应视作同一保单号 P260922000005855 下的险种行记录。",
+    "basis": "field_descriptions：total='险种行总数，不是保单张数'；records[]='单条险种记录'。"
+   },
+   {
+    "id": "R11",
+    "type": "守恒",
+    "statement": "不得添加输入/facts 未提供的其他角色或个人信息，如受益人、持有人、手机号、其他保单号或未引用的客户信息。",
+    "basis": "facts 仅含 polno、applicant_name、insured_name、pol_product_name、pol_status_desc；任务要求'不添加输入没有的东西'。"
+   },
+   {
+    "id": "R12",
+    "type": "推出",
+    "statement": "gaps 只能列真实未确认项，不得把已由 F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-002、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-003、F-CALL-TR-a71bfd71a40847e98a3375b23b51b42c-01-005 覆盖的投保人、被保人、状态列为缺口。",
+    "basis": "系统提示：'gaps:string[] 列未确认项'；facts 已覆盖三项。"
+   },
+   {
+    "id": "R13",
+    "type": "推出",
+    "statement": "answer_draft 与 gaps 不得出现“工具返回”“接口返回”“EMPTY/BUDGET”等内部词，只写业务用户可读正文。",
+    "basis": "系统提示：'answer_draft 与 gaps 只写业务用户可读正文；不得出现…'。"
+   },
+   {
+    "id": "R14",
+    "type": "推出",
+    "statement": "task_updates 只写说明，不得声称已挂起或后续续跑，除非 Ledger 中确实存在活动任务。",
+    "basis": "系统提示：'task_updates:string[] 只写说明'、'只有当前 Ledger 中确实存在活动任务，才可声称已挂起或后续续跑'。"
+   },
+   {
+    "id": "R15",
+    "type": "推出",
+    "statement": "不得用保单号串联未经 claims/fact_refs 引用的结论；若用 P260922000005855 引出结论，该结论必须有对应 fact_id。",
+    "basis": "业务回答契约：'不要用保单号串联未经引用的结论'。"
+   },
+   {
+    "id": "R16",
+    "type": "推出",
+    "statement": "本轮无金额或数量计算需求，不得产生 derived 计算；若产生 derived，只能使用 monthly_average、sum、difference 且不得自行填值。",
+    "basis": "业务回答契约：derived 仅允许 monthly_average、sum、difference，不自行计算或填写值；用户问题未询问金额/数量。"
+   }
+  ],
+  "not_covered": [
+   "未独立查证业务数据库中该保单事实的真实性；仅依据本轮工具 facts 核对模型输出。",
+   "是否需要在 gaps 中额外披露保单状态的 as_of/业务时点，输入未明确；未列为必满足项。",
+   "未覆盖 answer_draft 的具体文案风格，只要求不自行填入业务值且由 claims/facts 支撑。"
+  ]
+ }
+}
