@@ -877,7 +877,7 @@ class LlmClient:
                     base_url=fb.base_url,
                     model=fb.model,
                     api_key=fb.api_key,
-                    temperature=self.temperature,
+                    temperature=self.temperature if fb.temperature is None else fb.temperature,
                     max_prompt_chars=getattr(fb, "max_prompt_chars", None),
                     tool_calls=bool(getattr(fb, "tool_calls", True)),
                 )
@@ -964,7 +964,7 @@ class LlmClient:
             "provider": self.provider,
             "api_key": endpoint.api_key if endpoint else self.api_key,
             "base_url": endpoint.base_url if endpoint else self.base_url,
-            "temperature": self.temperature,
+            "temperature": endpoint.temperature if endpoint else self.temperature,
             "timeout": self.request_timeout_seconds,
             # Some OpenAI-compatible gateways reject requests that identify as the
             # official OpenAI SDK (User-Agent + X-Stainless-* telemetry headers).

@@ -1,6 +1,5 @@
 """Persistent port bindings and exclusive ownership of verifier runtime data."""
 from contextlib import contextmanager
-import fcntl
 import json
 import os
 from pathlib import Path
@@ -8,6 +7,8 @@ import re
 import shutil
 import socket
 import uuid
+
+import portalocker
 
 ROOT = Path(__file__).resolve().parents[2]
 INSTANCE_ENV = 'VERIFIER_INSTANCE_ID'
@@ -66,7 +67,7 @@ def resolve_instance(port, *, repository_root=None, relay_start=None):
     runtime.mkdir(parents=True, exist_ok=True)
     registry = runtime / 'instances.json'
     with (runtime / 'instances.lock').open('a') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+        portalocker.lock(lock, portalocker.LOCK_EX)
         bindings = json.loads(registry.read_text()) if registry.exists() else {'ports': {}, 'instances': {}}
         key = str(port)
         if key not in bindings['ports']:
@@ -111,16 +112,15 @@ def instance_lock(instance, *, repository_root=None):
     path.mkdir(parents=True, exist_ok=True)
     with (path / 'server.lock').open('a+') as lock:
         try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            lock.seek(0)
-            raise ValueError(f"Instance {instance['id']} is already owned by {lock.read().strip() or 'another server'}")
+            portalocker.lock(lock, portalocker.LOCK_EX | portalocker.LOCK_NB)
+        except portalocker.LockException:
+            raise ValueError(f"Instance {instance['id']} is already owned by another server") from None
         lock.seek(0); lock.truncate()
         json.dump({'pid': os.getpid(), 'port': instance['port']}, lock); lock.flush()
         try:
             yield path
         finally:
-            fcntl.flock(lock, fcntl.LOCK_UN)
+            portalocker.unlock(lock)
 
 
 def activate(instance):
@@ -139,7 +139,7 @@ def rebind_port(old_port, new_port):
     if not 1 <= new_port <= 65535:
         raise ValueError('Invalid server port')
     with (runtime / 'instances.lock').open('a') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+        portalocker.lock(lock, portalocker.LOCK_EX)
         bindings = json.loads(registry.read_text())
         if str(new_port) in bindings['ports']:
             raise ValueError('Destination port already has a binding')

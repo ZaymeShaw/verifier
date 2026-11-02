@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-import fcntl
 import json
 import os
 from pathlib import Path
@@ -13,6 +12,8 @@ import subprocess
 import time
 from urllib.error import URLError
 from urllib.request import Request, urlopen
+
+import portalocker
 
 from collect import collect
 from common import ROOT, read_json, write_json
@@ -46,20 +47,20 @@ def _ownership(runtime):
     runtime.mkdir(parents=True, exist_ok=True)
     with (runtime / '.gate-live.lock').open('a') as lock:
         try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as exc:
+            portalocker.lock(lock, portalocker.LOCK_EX | portalocker.LOCK_NB)
+        except portalocker.LockException as exc:
             raise RuntimeError('Another gate owns this dedicated instance') from exc
         try:
             # The server acquires this existing ownership lock itself at launch.
             with (runtime / 'server.lock').open('a') as server:
                 try:
-                    fcntl.flock(server, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                except BlockingIOError as exc:
+                    portalocker.lock(server, portalocker.LOCK_EX | portalocker.LOCK_NB)
+                except portalocker.LockException as exc:
                     raise RuntimeError('Dedicated instance already has a server owner') from exc
-                fcntl.flock(server, fcntl.LOCK_UN)
+                portalocker.unlock(server)
             yield
         finally:
-            fcntl.flock(lock, fcntl.LOCK_UN)
+            portalocker.unlock(lock)
 
 
 def _seed(runtime):

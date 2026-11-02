@@ -5,11 +5,12 @@ import os
 import hashlib
 import json
 import tempfile
-import fcntl
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlsplit
+
+import portalocker
 
 from impl.core.config_bootstrap import parse_dotenv
 from impl.core.config_schema import LlmCapabilities, LlmConfig, openai_compatible_base_url
@@ -78,7 +79,7 @@ def _settings_lock(path):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(str(path) + '.lock', os.O_CREAT | os.O_RDWR, 0o600)
     with os.fdopen(fd, 'a') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+        portalocker.lock(lock, portalocker.LOCK_EX)
         yield
 
 

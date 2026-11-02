@@ -18,6 +18,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+import psutil
+
 
 class WorkspaceBusy(ValueError):
     pass
@@ -32,13 +34,7 @@ def _json(value: Any) -> str:
 
 
 def _alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-        return True
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
+    return psutil.pid_exists(pid)
 
 
 class LatestRunStore:

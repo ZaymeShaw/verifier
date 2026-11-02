@@ -1,0 +1,38 @@
+"""模型能力：模型环节 model_capability（一次模型调用的实际输入 → 该次输出）。义务只能出自该次输入。"""
+from .process_common import AxisSpec, Obligation, axis_type
+
+
+OBLIGATIONS = (
+    Obligation(
+        "output_faithful", "model_capability", "模型产出了工具调用决策或回答",
+        "输出忠实整合该次实际输入：不改义、不丢输入里的关键信息",
+        label="输出忠实于输入",
+    ),
+    Obligation(
+        "no_fabrication", "model_capability", "模型产出了事实声明、数值或结论",
+        "不添加该次输入没有依据的事实、数值或结论；逐条核对全部业务声明",
+        label="不编造",
+    ),
+    Obligation(
+        "tool_decision", "model_capability", "模型决定发起、不发起工具调用或发起澄清",
+        "决策与该次输入里的信息和规则一致：有信息缺口时调用、输入已有有效结果时不无理由重复、结果已表明不可重试时不原样重发、"
+        "输入已足够时不多余澄清。只按该次收到的规则判；收到的规则没有覆盖这种情形 → contract_missing",
+        source="trace", label="工具调用决策一致",
+    ),
+    Obligation(
+        "output_contract", "model_capability", "该次输入写清了输出要求（结构、禁止事项、语言、声明的字段）",
+        "输出遵循该次收到的要求；"
+        "只发工具调用、没有正文的中间轮不因缺正文判违约",
+        source="trace", label="输出契约遵循",
+    ),
+)
+
+SPEC = AxisSpec(
+    question="模型环节：按每次模型调用实际收到的输入判断，输出是否忠实、工具调用与澄清决策是否与输入一致、输入写清的输出要求是否遵循。",
+    excludes="输入本身缺东西或格式要求没传到（上下文管理）；后端没数据（知识数据）；该不该走这条路、系统策略（规划路由）；"
+             "模型答复正确但被下游改写（上下文管理）。单条 Trace 不证明模型固有能力。",
+    obligations=OBLIGATIONS,
+    requires="要逐次判断模型在它实际拿到的输入下做得对不对：需要每一次模型调用的输入（含系统提示词与工具定义）与该次输出，一次都不能少。",
+)
+
+AXIS_TYPE = axis_type("model_capability", "模型能力兑现", "模型在实际输入下输出是否忠实、决策是否一致、写清的契约是否遵循", SPEC)

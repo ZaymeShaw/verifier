@@ -65,6 +65,33 @@ def test_llm_clients_share_router_health_for_identical_endpoint_pool(tmp_path):
     assert different.llm_router is not first.llm_router
 
 
+def test_fallback_temperature_is_per_endpoint_and_defaults_to_primary(tmp_path):
+    (tmp_path / ".env").write_text(
+        "LLM_FALLBACK_1_BASE_URL=https://one.example.test/v1\nLLM_FALLBACK_1_MODEL=m1\nLLM_FALLBACK_1_API_KEY=k1\n"
+        "LLM_FALLBACK_1_TEMPERATURE=1\n"
+        "LLM_FALLBACK_2_BASE_URL=https://two.example.test/v1\nLLM_FALLBACK_2_MODEL=m2\nLLM_FALLBACK_2_API_KEY=k2\n",
+        encoding="utf-8",
+    )
+    resolved = _resolved(tmp_path, api_key="primary-key")
+    endpoints = {e.name: e for e in LlmClient(config=resolved.llm).llm_router.endpoints}
+
+    assert endpoints["fallback1"].temperature == 1.0
+    assert endpoints["fallback2"].temperature == endpoints["primary"].temperature == resolved.llm.temperature
+
+
+def test_built_model_sends_the_selected_endpoint_temperature(tmp_path, monkeypatch):
+    captured = {}
+    monkeypatch.setattr(llm_module, "OpenAILike", lambda **kwargs: captured.update(kwargs) or object())
+    resolved = _resolved(tmp_path, api_key="primary-key")
+    config = replace(resolved.llm, fallbacks=(
+        LlmFallback(base_url="https://fallback.example.test/v1", model="only-one", api_key="k", temperature=1.0),))
+    client = LlmClient(config=config)
+
+    client.build_model(endpoint=client.llm_router.endpoints[1])
+
+    assert captured["id"] == "only-one" and captured["temperature"] == 1.0
+
+
 def test_llm_role_policy_stays_explicit_when_public_model_changes(tmp_path):
     resolved = _resolved(tmp_path, api_key="test-key")
 

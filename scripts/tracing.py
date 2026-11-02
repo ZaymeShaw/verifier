@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 from contextlib import contextmanager
-import fcntl
 import importlib.util
 import json
 import os
@@ -15,6 +14,7 @@ import subprocess
 import sys
 
 import yaml
+import portalocker
 from html import escape
 import re
 
@@ -79,7 +79,7 @@ def write_private(path, data):
 def runtime_lock():
     RUNTIME.mkdir(parents=True, exist_ok=True)
     with (RUNTIME / '.launch.lock').open('a') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+        portalocker.lock(lock, portalocker.LOCK_EX)
         yield
 
 

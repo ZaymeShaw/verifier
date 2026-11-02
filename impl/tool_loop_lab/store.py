@@ -9,13 +9,13 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 
+import psutil
+
 from impl.core.instances import data_root
 
 
 def alive(pid):
-    try: os.kill(pid, 0); return True
-    except ProcessLookupError: return False
-    except PermissionError: return True
+    return psutil.pid_exists(pid)
 
 
 def dump(value):

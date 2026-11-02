@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import argparse
 from contextlib import contextmanager
-import fcntl
 import json
 import os
 from pathlib import Path
 import shutil
 import sys
 import uuid
+
+import portalocker
+import psutil
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -24,8 +26,8 @@ CURRENT = ROOT / 'report/verifier-ready/current/progress.json'
 def report_lock(out):
     with (Path(out) / '.gate.lock').open('a') as lock:
         try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as exc:
+            portalocker.lock(lock, portalocker.LOCK_EX | portalocker.LOCK_NB)
+        except portalocker.LockException as exc:
             raise ValueError('Another command is already writing this report') from exc
         yield
 
@@ -133,11 +135,8 @@ def status(out, profile, *, root=ROOT):
     if CURRENT.exists():
         state = read_json(CURRENT)
         if state['report'] == str(out) and state['phase'] in {'collecting', 'reviewing'}:
-            try:
-                os.kill(state['pid'], 0)
+            if psutil.pid_exists(state['pid']):
                 return {'status': 'running', 'gate': 'FAIL', 'release_allowed': False, 'progress': state}
-            except ProcessLookupError:
-                pass
     return verdict.compute(out, profile, root=root)
 
 

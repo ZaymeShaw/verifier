@@ -89,7 +89,7 @@ def test_losing_report_lock_does_not_change_owner_report_or_progress(captured, m
 
 
 def test_failure_is_recorded_before_report_lock_is_released(captured, monkeypatch):
-    import fcntl
+    import portalocker
     root, out, profile = captured
     monkeypatch.setattr(gate, 'CURRENT', root / 'report/current/progress.json')
     original = gate.save_run
@@ -97,8 +97,8 @@ def test_failure_is_recorded_before_report_lock_is_released(captured, monkeypatc
     def save_under_lock(*args, **fields):
         if fields.get('phase') == 'failed':
             with (out / '.gate.lock').open('a') as competitor:
-                with pytest.raises(BlockingIOError):
-                    fcntl.flock(competitor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                with pytest.raises(portalocker.LockException):
+                    portalocker.lock(competitor, portalocker.LOCK_EX | portalocker.LOCK_NB)
             checked.append(True)
         return original(*args, **fields)
     monkeypatch.setattr(gate, 'save_run', save_under_lock)

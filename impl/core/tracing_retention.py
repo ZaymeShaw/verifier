@@ -1,12 +1,13 @@
 """Verifier owns retention of its relay output; llmtracing remains unchanged."""
 from contextlib import contextmanager
-import fcntl
 import gzip
 import json
-import os
 from pathlib import Path
 import shutil
 import sqlite3
+
+import portalocker
+import psutil
 
 from .instances import data_root, tracing_root
 
@@ -16,15 +17,12 @@ def log_lock(runtime=None, *, exclusive=False):
     runtime = runtime or tracing_root()
     runtime.mkdir(parents=True, exist_ok=True)
     with (runtime / '.logs.lock').open('a') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH)
+        portalocker.lock(lock, portalocker.LOCK_EX if exclusive else portalocker.LOCK_SH)
         yield
 
 
 def _alive(pid):
-    try:
-        os.kill(pid, 0); return True
-    except ProcessLookupError:
-        return False
+    return psutil.pid_exists(pid)
 
 
 def workspace_trace_selection(database, project=None):

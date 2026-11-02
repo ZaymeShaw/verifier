@@ -214,6 +214,8 @@ class LlmFallback:
     max_prompt_chars: Optional[int] = None
     # 端点能否真正执行 tool calls；默认全开，只做减法（见 LlmEndpoint.tool_calls）。
     tool_calls: bool = True
+    # 端点自己的 temperature；None = 沿用主端点（有的模型只接受固定值，如只允许 1）。
+    temperature: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -875,11 +877,13 @@ def _validate_bindings(environment: EnvironmentRegistry) -> None:
         "llm.fallback_1.api_key",
         "llm.fallback_1.max_prompt_chars",
         "llm.fallback_1.tool_calls",
+        "llm.fallback_1.temperature",
         "llm.fallback_2.base_url",
         "llm.fallback_2.model",
         "llm.fallback_2.api_key",
         "llm.fallback_2.max_prompt_chars",
         "llm.fallback_2.tool_calls",
+        "llm.fallback_2.temperature",
         "embedding.provider",
         "embedding.enabled",
         "embedding.model",

@@ -239,6 +239,7 @@ def _resolve_llm_fallbacks(values: Mapping[str, Any]) -> tuple[LlmFallback, ...]
         if not (base_url and model and api_key):
             continue
         raw_capacity = values.get(f"llm.fallback_{index}.max_prompt_chars")
+        raw_temperature = values.get(f"llm.fallback_{index}.temperature")
         resolved.append(
             LlmFallback(
                 base_url=openai_compatible_base_url(base_url, f"llm.fallback_{index}.base_url"),
@@ -248,6 +249,7 @@ def _resolve_llm_fallbacks(values: Mapping[str, Any]) -> tuple[LlmFallback, ...]
                     int(raw_capacity) if str(raw_capacity or "").strip() else None
                 ),
                 tool_calls=bool(values.get(f"llm.fallback_{index}.tool_calls", True)),
+                temperature=None if raw_temperature is None else float(raw_temperature),
             )
         )
     return tuple(resolved)

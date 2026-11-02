@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import fcntl
 import os
 import subprocess
 import tempfile
@@ -10,6 +9,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any, Mapping
+
+import portalocker
 from urllib.parse import urljoin
 
 from .config_schema import ConfigError
@@ -45,7 +46,7 @@ def ensure_project_service(spec: ProjectSpec) -> None:
     lock_root.mkdir(mode=0o700, parents=True, exist_ok=True)
     lock_path = lock_root / f"{spec.project_id}.lock"
     with lock_path.open("a+", encoding="utf-8") as lock_file:
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        portalocker.lock(lock_file, portalocker.LOCK_EX)
         if _healthy(primary, health):
             return
         _start_and_wait(spec, primary, health)

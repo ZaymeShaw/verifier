@@ -217,6 +217,13 @@ environment:
       secret: false
       description: 备用 LLM 端点 1 能否真正执行工具调用；默认 true，不支持就填 false（带工具的请求不再发给它）
 
+    LLM_FALLBACK_1_TEMPERATURE:
+      bind: llm.fallback_1.temperature
+      type: number
+      required: false
+      secret: false
+      description: 备用 LLM 端点 1 的 temperature；不填沿用主端点（模型只接受固定值时填，如只允许 1 就填 1）
+
     LLM_FALLBACK_2_BASE_URL:
       bind: llm.fallback_2.base_url
       type: url
@@ -251,6 +258,13 @@ environment:
       required: false
       secret: false
       description: 备用 LLM 端点 2 能否真正执行工具调用；默认 true
+
+    LLM_FALLBACK_2_TEMPERATURE:
+      bind: llm.fallback_2.temperature
+      type: number
+      required: false
+      secret: false
+      description: 备用 LLM 端点 2 的 temperature；不填沿用主端点
 
     LLM_MAX_PROMPT_CHARS:
       bind: llm.max_prompt_chars
