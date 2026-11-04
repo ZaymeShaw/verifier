@@ -1,6 +1,7 @@
 """trace 源的本地 MCP server（spec/alg/axis_loop.md §8.2）：去 trace 平台把这一轮取回来，是信息源的事。
 
-跑完业务时由 live 层调 `collect`；登记页 / 场景页"测试连接"调 `check`（只用登记的连接，不涉及绑定）。
+跑完业务时由 live 层调 `collect`；登记页 / 场景页"测试连接"调 `check`（只用登记的连接，不涉及绑定）；
+按 trace 复评时调 `from_trace`（只有实现了这项能力的 provider 才有这个工具，spec/alg/trace-replay.md §3）。
 `collect`：连接配置取自全局登记（--source 指名），字段绑定由场景给；
 返回 provider 的原样快照（status / association / records / errors…）。采集本身失败也是一份 status=failed 的快照，
 如实存档；只有服务自己出错（登记不对、配置不合法）才 isError。
@@ -39,6 +40,11 @@ def build(source: str) -> FastMCP:
         return json.dumps(result, ensure_ascii=False, default=str)
 
     server.add_tool(collect, name="collect", description="取回这一轮的业务 trace 快照（按场景绑定关联到这一轮）。")
+    if hasattr(provider, "from_trace"):
+        def from_trace(trace_id: Annotated[str, Field(description="要复评的那一轮的 trace id")]) -> str:
+            return json.dumps(provider.from_trace(registered.config, trace_id), ensure_ascii=False, default=str)
+
+        server.add_tool(from_trace, name="from_trace", description="按 trace id 取回这一轮：快照、业务是否失败、本轮请求与交付及其来源。")
     server.add_tool(check, name="check", description="用登记的连接配置连一次 trace 平台，连不上就报错（登记页、场景页的测试连接用）。")
     return server
 

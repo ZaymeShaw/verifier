@@ -106,21 +106,27 @@ def _install(monkeypatch, rows):
     return calls
 
 
-def test_collect_uses_the_sent_trace_id_and_caller_parent_is_the_root(monkeypatch):
+def test_collect_uses_the_sent_trace_id(monkeypatch):
     calls = _install(monkeypatch, [_observation("root", PARENT), _observation("child", "root")])
     snap = langfuse.collect(config(), request={"business_trace_association": {"headers": {"traceparent": f"00-{TRACE_ID}-{PARENT}-01"}}}, response={})
     assert snap["status"] == "succeeded"
-    assert {k: snap["association"][k] for k in ("method", "trace_id", "parent_span_id")} == {
-        "method": "w3c", "trace_id": TRACE_ID, "parent_span_id": PARENT}
+    assert {k: snap["association"][k] for k in ("method", "trace_id")} == {"method": "w3c", "trace_id": TRACE_ID}
+    assert "parent_span_id" not in snap["association"]  # parent-id 只是格式要求带的一段，不记、不用
     assert "/traces" not in calls
-    hierarchy = langfuse.open_reader(snap).limitations["hierarchy"]
-    assert hierarchy["status"] == "available" and hierarchy["missing_parent_ids"] == []
 
 
-def test_other_missing_parents_still_make_hierarchy_partial(monkeypatch):
-    _install(monkeypatch, [_observation("root", "ffffffffffffffff")])
+# 认根只看 trace 本身（spec/alg/business-trace-langfuse.md §2.4），和是谁发起的无关
+@pytest.mark.parametrize("rows,expected", [
+    ([_observation("root", "any-outside-caller"), _observation("child", "root")], ("available", [])),  # 唯一顶层步骤，上一级在外
+    ([_observation("root", None), _observation("child", "root")], ("available", [])),                  # 普通根
+    ([_observation("root", None), _observation("lost", "gone-1")], ("partial", ["gone-1"])),           # 已有根，另有一步挂空
+    ([_observation("a", "gone-1"), _observation("b", "gone-2")], ("partial", ["gone-1", "gone-2"])),   # 顶层不唯一
+])
+def test_root_is_decided_by_the_trace_alone(monkeypatch, rows, expected):
+    _install(monkeypatch, rows)
     snap = langfuse.collect(config(), request={"business_trace_association": {"headers": {"traceparent": f"00-{TRACE_ID}-{PARENT}-01"}}}, response={})
-    assert langfuse.open_reader(snap).limitations["hierarchy"] == {"status": "partial", "missing_parent_ids": ["ffffffffffffffff"]}
+    hierarchy = langfuse.open_reader(snap).limitations["hierarchy"]
+    assert (hierarchy["status"], hierarchy["missing_parent_ids"]) == expected
 
 
 @pytest.mark.parametrize("request_record", [{}, {"business_trace_association": {"headers": {"traceparent": "not-w3c"}}},

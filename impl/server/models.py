@@ -69,6 +69,16 @@ class BusinessTraceCheckRequest(ApiRequest):
     business_trace: Optional[Dict[str, Any]] = None
 
 
+class FromTracePreviewRequest(ProjectRequest):
+    capability_ref: str
+    trace_id: str
+
+
+class FromTraceCalibrateRequest(ProjectRequest):
+    capability_ref: str
+    pool_indexes: Optional[List[int]] = None
+
+
 class KnowledgeSourcesRequest(ProjectRequest):
     pass
 

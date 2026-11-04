@@ -129,6 +129,16 @@ class LiveHTTPStatusError(urllib.error.URLError):
         return str(self.reason)
 
 
+class LiveRecordedFailure(LiveHTTPStatusError):
+    """业务已响应但失败，依据来自业务自己的记录（如 trace 根步骤的错误级别）而不是 HTTP 状态码；
+    与非 2xx 同属被测系统调用失败（spec/alg/trace-replay.md §5）。"""
+
+    def __init__(self, reason: str):
+        self.status_code = None
+        self.response = None
+        urllib.error.URLError.__init__(self, str(reason))
+
+
 class LiveTransport:
     """一轮 RealLive 独占的受控 transport；seal 后不可追加 Exchange。"""
 

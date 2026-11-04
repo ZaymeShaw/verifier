@@ -383,6 +383,23 @@ def business_trace_providers(data: Dict[str, Any]) -> Any:
     return {"project_id": project, "providers": _project_module(project, "business_trace").provider_descriptions()}
 
 
+def from_trace_preview(data: Dict[str, Any]) -> Any:
+    """试取复评：按 trace id 取一次这一轮，看取到什么（spec/alg/trace-replay.md §9）。"""
+    project = _require_eval_axes_project(project_from(data))
+    return {"project_id": project, **_project_module(project, "from_trace").preview(str(data["capability_ref"]), str(data["trace_id"]))}
+
+
+def from_trace_calibrate(data: Dict[str, Any]) -> Any:
+    """校准：候选区里本场景现场跑过的轮次，比较实收与按 trace 取回的（spec/alg/trace-replay.md §7）。pool_indexes 不给就用全部。"""
+    project = _require_eval_axes_project(project_from(data))
+    workspace = run_store.STORE.load(project)
+    wanted = set(data.get("pool_indexes") or [])
+    keys = {item["request_key"] for position, item in enumerate(workspace["cases"])
+            if item.get("request_key") and (not wanted or position in wanted)}
+    runs = [run for run in workspace["runs"] if run.get("request_key") in keys]
+    return {"project_id": project, **_project_module(project, "from_trace").calibrate(str(data["capability_ref"]), runs)}
+
+
 def business_trace_check(data: Dict[str, Any]) -> Any:
     project = _require_eval_axes_project(project_from(data))
     return {"project_id": project, **_project_module(project, "business_trace").check_connection(data.get("business_trace"))}

@@ -33,6 +33,8 @@ from .models import (
     BatchStartRequest,
     BatchStatusRequest,
     BusinessTraceCheckRequest,
+    FromTraceCalibrateRequest,
+    FromTracePreviewRequest,
     KnowledgeSourceNameRequest,
     KnowledgeSourceSaveRequest,
     KnowledgeSourcesRequest,
@@ -235,6 +237,16 @@ def business_trace_providers(payload: BusinessTraceProvidersRequest) -> JSONResp
 @router.post("/api/business_trace/check")
 def business_trace_check(payload: BusinessTraceCheckRequest) -> JSONResponse:
     return route(service.business_trace_check, payload)
+
+
+@router.post("/api/from_trace/preview")
+def from_trace_preview(payload: FromTracePreviewRequest) -> JSONResponse:
+    return route(service.from_trace_preview, payload)
+
+
+@router.post("/api/from_trace/calibrate")
+def from_trace_calibrate(payload: FromTraceCalibrateRequest) -> JSONResponse:
+    return route(service.from_trace_calibrate, payload)
 
 
 @router.post("/api/knowledge_sources")

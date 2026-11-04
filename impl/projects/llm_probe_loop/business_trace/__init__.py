@@ -43,6 +43,23 @@ def propagation_headers(value: Any) -> dict[str, str]:
     return dict(hook(selection["config"])) if hook else {}
 
 
+def supports_from_trace(value: Any) -> bool:
+    """场景选用的 trace 源能不能按 trace 复评：provider 实现了 from_trace 就能（spec/alg/trace-replay.md §3）。"""
+    return hasattr(_PROVIDERS[validate_selection(value)["type"]], "from_trace")
+
+
+def from_trace(value: Any, trace_id: str) -> dict[str, Any]:
+    """按 trace 复评：经 trace 源的本地 MCP 服务按 trace id 取回这一轮。服务本身出错时抛出，由投递层记运行失败。"""
+    from impl.projects.llm_probe_loop.eval_axes.sources.mcp_tools import call_tool
+
+    if not supports_from_trace(value):
+        raise ValueError(f"trace 源 {value['source']} 不支持按 trace 复评")
+    text, is_error = call_tool(trace_mcp_source(str(value["source"])), "from_trace", {"trace_id": str(trace_id)})
+    if is_error:
+        raise RuntimeError(f"trace 源报错：{text[:500]}")
+    return json.loads(text)
+
+
 def check_connection(value: Any) -> dict[str, Any]:
     """场景页"测试 Trace 连接"：选用写得对（登记存在、绑定合法），再经 trace 源的 MCP 服务连一次平台。"""
     validate_selection(value)
@@ -76,7 +93,7 @@ def trace_mcp_source(name: str):
         env[INSTANCE_ENV] = os.environ[INSTANCE_ENV]
     return McpSource(name=name, command=sys.executable,
                      args=("-m", "impl.projects.llm_probe_loop.mcp_servers.trace", "--source", name),
-                     env=tuple(sorted(env.items())), tools=("collect", "check"), timeout_seconds=COLLECT_SECONDS, max_chars=10**9)
+                     env=tuple(sorted(env.items())), tools=("collect", "check", "from_trace"), timeout_seconds=COLLECT_SECONDS, max_chars=10**9)
 
 
 def collect(value: Mapping[str, Any], *, request: Mapping[str, Any], response: Any) -> dict[str, Any]:
@@ -104,4 +121,4 @@ def open_reader(snapshot: Mapping[str, Any]):
 
 
 __all__ = ["check_connection", "check_source", "collect", "open_reader", "propagation_headers", "provider_descriptions",
-           "trace_mcp_source", "validate_selection"]
+           "from_trace", "supports_from_trace", "trace_mcp_source", "validate_selection"]

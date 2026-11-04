@@ -87,6 +87,12 @@
           <button class="secondary small" style="margin-top:0" onclick="checkBusinessTrace()">测试 Trace 连接与配置</button>
           <span class="hint" id="businessTraceHint"></span>
         </div>
+        <div class="row">
+          <input id="fromTraceId" placeholder="trace id：试取按 trace 复评会取到什么" style="flex:2" />
+          <button class="secondary small" style="margin-top:0" onclick="previewFromTrace()">试取复评</button>
+          <button class="secondary small" style="margin-top:0" onclick="calibrateFromTrace()" title="候选区里本场景现场跑过的轮次：实收 vs 按 trace 取回的">校准</button>
+        </div>
+        <pre class="hint" id="fromTraceResult" style="white-space:pre-wrap"></pre>
       </div>
       <label>mock_body 请求模板（可选，JSON；{query} 为问题，{session_id} 为每个新 case 独立生成的会话 ID）</label>
       <textarea id="mockBody" style="min-height:160px" placeholder='{"user_text": "{query}"}'></textarea>
@@ -723,6 +729,35 @@ async function checkBusinessTrace(){
     const result=await post('/api/business_trace/check',{project:project(),business_trace:businessTrace});
     setStatus('业务 Trace 连接成功：'+Object.entries(result).filter(([k])=>k!=='project_id').map(([k,v])=>k+'='+v).join(' · '));
   }catch(err){setStatus('业务 Trace 检查失败：'+err.message,true);}
+}
+async function previewFromTrace(){
+  const out=document.getElementById('fromTraceResult');
+  const ref=document.getElementById('name').value.trim();
+  const id=document.getElementById('fromTraceId').value.trim();
+  if(!ref||!id){out.textContent='先保存预设，并填一个 trace id。';return;}
+  out.textContent='取回中…';
+  try{
+    const r=await post('/api/from_trace/preview',{project:project(),capability_ref:ref,trace_id:id});
+    const from={root_observation:'根步骤',trace:'trace 级字段'}[r.delivered_from]||'-';
+    out.textContent=r.error?('取不到：'+r.error):r.failure?('业务这次失败：'+r.failure+'（按被测系统调用失败处理）\n用户原话：'+r.user_text)
+      :('用户原话：'+r.user_text+'\n历史：'+r.history_count+' 条\n交付取自：'+from+'\n交付：'+String(r.delivered||'').slice(0,800)
+        +'\n过程记录：'+r.observation_count+' 个步骤（采集 '+r.collection_status+'）');
+  }catch(err){out.textContent='试取失败：'+err.message;}
+}
+async function calibrateFromTrace(){
+  const out=document.getElementById('fromTraceResult');
+  const ref=document.getElementById('name').value.trim();
+  if(!ref){out.textContent='先保存预设。';return;}
+  out.textContent='校准中（逐轮按 trace 取回，轮数多时较慢）…';
+  try{
+    const r=await post('/api/from_trace/calibrate',{project:project(),capability_ref:ref});
+    const m=r.summary||{};
+    const fields=Object.entries(r.differing_fields||{}).map(([k,v])=>k+'×'+v).join('、')||'无';
+    const failed=(r.rows||[]).filter(x=>x.error).length;
+    out.textContent='本场景现场跑过的轮次：可比 '+m.turns+' 轮'+(failed?('，另有 '+failed+' 轮取不到'):'')
+      +'\n用户原话一致 '+m.user_text+'/'+m.turns+' · 历史条数一致 '+m.history+'/'+m.turns+' · 交付一致 '+m.delivered+'/'+m.turns
+      +'\n交付里对不上的字段：'+fields;
+  }catch(err){out.textContent='校准失败：'+err.message;}
 }
 function axisTypeInfo(t){
   if(!t){return '';}

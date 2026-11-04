@@ -10,8 +10,11 @@ from impl.core.capability_store import ALLOWED_RESPONSE_MODES
 from impl.core.config import ROOT
 from impl.core.config_bootstrap import effective_environment_snapshot
 from impl.core.live_protocol import LiveServiceUnavailableError, RealServiceLive
-from impl.core.live_transport import LiveForbiddenContentTypeError, LiveHTTPStatusError, LiveTransport
+from contextvars import ContextVar
+
+from impl.core.live_transport import LiveForbiddenContentTypeError, LiveHTTPStatusError, LiveRecordedFailure, LiveTransport
 from impl.core.schema import ExecutionTraceEvent, LiveRequest, ProjectSpec
+from impl.projects.llm_probe_loop import from_trace as from_trace_turn
 from impl.projects.llm_probe_loop.capability import (
     capability_business_trace,
     capability_service,
@@ -22,6 +25,8 @@ from impl.projects.llm_probe_loop.capability import (
 _ENV_PLACEHOLDER = re.compile(r"\$\{([A-Z][A-Z0-9_]*)\}")
 # 每次投递重新生成的业务 Trace 关联（schema 字段，写回请求记录供采集与审计）
 ASSOCIATION_KEY = "business_trace_association"
+# 按 trace 复评：投递时取回的快照交给同一次投递的 project_fields，不写进请求记录、不采第二遍
+_FROM_TRACE_SNAPSHOT: ContextVar[Any] = ContextVar("llm_probe_loop_from_trace_snapshot", default=None)
 
 
 def _expand_header_value(value: str) -> str:
@@ -148,6 +153,27 @@ class LlmProbeLive(RealServiceLive):
             payload[ASSOCIATION_KEY] = {"headers": sent}
         return {**headers, **sent}
 
+    def case_provides_output(self, request: Any) -> bool:
+        """带 from_trace 的 case 按 trace 复评：不调业务（spec/alg/trace-replay.md §2）。"""
+        return isinstance(request, dict) and bool(from_trace_turn.trace_id_of(request))
+
+    def deliver_provided(self, request: LiveRequest) -> Any:
+        """按 trace 复评：按 trace id 取回这一轮，拼成与现场同形的运行记录（spec/alg/trace-replay.md §4、§5）。"""
+        payload = request.normalized_request if isinstance(request.normalized_request, dict) else {}
+        got = from_trace_turn.take(payload)
+        failure = str(got.get("failure") or "")
+        if failure:
+            # 与现场非 2xx 同属被测系统调用失败
+            code = failure.removeprefix("HTTP ").strip()
+            raise LiveHTTPStatusError(int(code), None) if failure.startswith("HTTP ") and code.isdigit() else LiveRecordedFailure(failure)
+        if got.get("error"):
+            raise RuntimeError(f"按 trace 复评取不到这一轮：{got['error']}")
+        payload["body"] = from_trace_turn.request_body(got["request"])
+        payload[ASSOCIATION_KEY] = {"from_trace": {"trace_id": from_trace_turn.trace_id_of(payload),
+                                                   "delivered_from": got.get("delivered_from") or ""}}
+        _FROM_TRACE_SNAPSHOT.set(got.get("snapshot"))
+        return [got["delivered"]]
+
     def deliver_real(self, request: Any, transport: LiveTransport) -> LiveTransport:
         payload = request if isinstance(request, dict) else {}
         if isinstance(payload.get("body"), (dict, list)):
@@ -193,6 +219,10 @@ class LlmProbeLive(RealServiceLive):
     def application_boundary(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest) -> Dict[str, Any]:
         payload = request.normalized_request if isinstance(request, LiveRequest) else request
         payload = payload if isinstance(payload, dict) else {}
+        recorded = (payload.get(ASSOCIATION_KEY) or {}).get("from_trace") if isinstance(payload.get(ASSOCIATION_KEY), dict) else None
+        if recorded:
+            # 交付取自业务 trace 的记录，不是评测方实际收到的
+            return {"scope": "trace_record", "streaming": False, "delivered_from": recorded.get("delivered_from") or ""}
         return application_boundary_for(str(payload.get("response_mode") or "json"))
 
     def project_fields(self, raw_response: Any, extracted_output: Dict[str, Any], request: LiveRequest, application_boundary: Dict[str, Any]) -> Dict[str, Any]:
@@ -205,6 +235,12 @@ class LlmProbeLive(RealServiceLive):
         }
         ref = str(payload.get("capability_ref") or "").strip()
         trace_config = capability_business_trace(ref) if ref else None
+        if self.case_provides_output(payload):
+            snapshot = _FROM_TRACE_SNAPSHOT.get()
+            _FROM_TRACE_SNAPSHOT.set(None)
+            if trace_config and snapshot is not None:
+                fields["business_trace"] = snapshot
+            return fields
         if trace_config:
             from impl.projects.llm_probe_loop.business_trace import collect
 

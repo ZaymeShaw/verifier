@@ -84,6 +84,11 @@
             <button class="secondary" onclick="selectAllCases(true)">全选全部</button>
             <button class="secondary" onclick="selectAllCases(false)">取消全选</button>
             <select id="scenarioFilter" onchange="renderCasePool()"><option value="all">全部场景</option></select>
+            <select id="deliveryFilter" onchange="renderCasePool()" title="现场调用：评测方调业务；按 trace 复评：只给 trace id、不调业务（spec/alg/trace-replay.md）">
+              <option value="all">全部来源方式</option>
+              <option value="live">现场调用</option>
+              <option value="from_trace">按 trace 复评</option>
+            </select>
             <select id="caseFilter" onchange="renderCasePool()">
               <option value="all">全部达成状态</option>
               <option value="fulfilled">fulfilled</option>
@@ -207,7 +212,10 @@ function prettyParsedClone(value){
   return value;
 }
 function renderOutputCell(item){
-  if(item.output===null || item.output===undefined || item.output===''){return '<span class="muted">-</span>';}
+  const traced=item.live_request&&item.live_request.from_trace;
+  const note=traced?'<div class="muted">交付取自业务 trace 的记录（trace '+escapeHtml(String(traced.trace_id||''))+'），不是评测方实际收到的</div>':'';
+  if(item.output===null || item.output===undefined || item.output===''){return note || '<span class="muted">-</span>';}
+  if(note){return note+'<pre>'+escapeHtml(formatJsonCell(prettyParsedClone(item.output)))+'</pre>';}
   return '<pre>'+escapeHtml(formatJsonCell(prettyParsedClone(item.output)))+'</pre>';
 }
 function caseInputPayload(item){return item.trace?.input || item.live_request || null;}
@@ -441,6 +449,7 @@ function selectFilteredCases(){
 function caseFilterSignature(){
   return [
     document.getElementById('scenarioFilter')?.value||'all',
+    document.getElementById('deliveryFilter')?.value||'all',
     document.getElementById('caseFilter')?.value||'all',
     document.getElementById('runFilter')?.value||'all',
     document.getElementById('carrierFilter')?.value||'all',
@@ -544,6 +553,8 @@ function resetCasePoolFilters(){
   if(scenarioFilter){scenarioFilter.value='all';}
   if(runFilter){runFilter.value='all';}
   if(carrierFilter){carrierFilter.value='all';}
+  const deliveryFilter=document.getElementById('deliveryFilter');
+  if(deliveryFilter){deliveryFilter.value='all';}
   casePage=1;
 }
 function runModeLabel(item){const row=tableRow(item);const mode=row.execution_mode || item.execution_mode || '';const source=row.output_source || item.output_source || item.trace?.live_result?.output_source || '';return mode||source?(mode || '-')+(source?' / '+source:''):'-';}
@@ -704,6 +715,7 @@ function currentFilteredCaseViews(){
   const scenarioFilter=document.getElementById('scenarioFilter')?.value || 'all';
   const runFilter=document.getElementById('runFilter')?.value || 'all';
   const carrierFilter=document.getElementById('carrierFilter')?.value || 'all';
+  const deliveryFilter=document.getElementById('deliveryFilter')?.value || 'all';
   return casePool.map((item,poolIndex)=>({item,view:caseView(item),poolIndex})).filter(entry=>{
     const status=fulfillmentStatus(entry.view);
     const statusMatches=filter==='all' || (filter==='other' ? !['fulfilled','not_fulfilled','not_evaluable','fail'].includes(status) : status===filter);
@@ -711,7 +723,9 @@ function currentFilteredCaseViews(){
     const run=executionStatus(entry.item);
     const runMatches=runFilter==='all' || (runFilter==='ran' ? (run==='done'||run==='error') : run===runFilter);
     const carrierMatches=carrierFilterMatches(carrierPlacementText(entry.view), carrierFilter);
-    return statusMatches && scenarioMatches && runMatches && carrierMatches;
+    const traced=Boolean(entry.item.live_request && entry.item.live_request.from_trace);
+    const deliveryMatches=deliveryFilter==='all' || (deliveryFilter==='from_trace')===traced;
+    return statusMatches && scenarioMatches && runMatches && carrierMatches && deliveryMatches;
   });
 }
 function exportStatusText(item){

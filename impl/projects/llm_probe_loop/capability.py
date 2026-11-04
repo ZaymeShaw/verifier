@@ -52,6 +52,13 @@ def capability_service(ref: str) -> dict[str, Any]:
 TRACE_MATERIAL = "case.trace"
 
 
+def capability_business_trace_selection(ref: str) -> dict[str, Any] | None:
+    """场景选用的 trace 源 {source, bindings}，不论有没有轴读 case.trace。按 trace 复评靠它取回这一轮（spec/alg/trace-replay.md §2）。"""
+    entry = load_capability_map().get(ref)
+    value = entry.get("business_trace") if isinstance(entry, dict) else None
+    return dict(value) if isinstance(value, dict) and "source" in value else None
+
+
 def capability_business_trace(ref: str) -> dict[str, Any] | None:
     """场景选了 trace 源，且启用的轴里有轴的白名单选了 case.trace：返回场景的选用 {source, bindings}，跑业务时据此采集
     （spec/alg/axis_loop.md §8.2）。否则不采集。"""

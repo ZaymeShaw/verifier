@@ -247,6 +247,46 @@ pointer 用 JSON Pointer 写法：以 `/` 开头，一级一级往下写，数�
 
 ---
 
+## 8. 按 trace 复评（只给 trace id，不调业务）
+
+业务已经跑过的那一轮，只要 trace 记在支持复评的 trace 源里（目前是 Langfuse），就可以只给 trace id 来评，不再调用业务。需求见 `demand/trace_replay.md`，方案见 `spec/alg/trace-replay.md`。
+
+**场景不用另外配置。** 用现有场景就行，前提是它的业务 Trace 选了 Langfuse 信息源。
+
+**用例写法：** `live_request` 里只写场景名和 `from_trace`，不写 `body`。两者只能二选一。
+
+```json
+{"id": "from-trace-1", "project_id": "llm_probe_loop", "scenario": "verify-insurance-langfuse",
+ "live_request": {"capability_ref": "verify-insurance-langfuse", "from_trace": {"trace_id": "c8fe410b4a094a0698d8ebdee8b22db1"}},
+ "output": null, "reference": null}
+```
+
+这类用例和其他用例一样，放在数据集 `mock_cases.json` 里；"加载 Mock 数据集"会一起加载进来。在候选区先选场景，再把"来源方式"选成"按 trace 复评"，就只剩这类用例，接着点"选中当前筛选"就可以跑。
+
+**取数规则（不用配置）：**
+
+| 要什么 | 从哪里取 |
+|---|---|
+| 用户原话和历史 | 根步骤的 input，没有就取 trace 级 input。是对话消息数组的，最后一条 user 是本轮原话，前面的是历史；trace 里没记历史，就不管历史 |
+| 交付 | 根步骤的 output，没有就取 trace 级 output |
+| 业务有没有失败 | 根步骤有 `http.response.status_code` 的，非 2xx 算失败；没有状态码时，`level=ERROR` 算失败 |
+| 过程 | 按 trace id 采集，和现场一样 |
+
+**取不到时怎么样：**
+- 根步骤和 trace 级都没记请求或答复，比如根步骤只是 HTTP 自动插桩、内容只记在模型子步骤里：这条用例记运行失败，不出结论；
+- 根步骤不唯一：同样记运行失败。
+
+**接一个新业务之前，先在资料管理页的场景里点两个按钮：**
+
+| 按钮 | 做什么 |
+|---|---|
+| 试取复评 | 填一个 trace id，看会取到的原话、历史条数、交付、交付取自哪里、业务有没有失败。取不到时显示原因 |
+| 校准 | 拿候选区里本场景现场跑过的轮次，对比"评测方实际收到的"和"按 trace 取回的"，看这个业务的 trace 记录靠不靠得住 |
+
+**评出来的结论怎么读：** 复评评的是"业务记录的交付"，不是用户实际收到的。用例表的执行模式显示为 `provided`；交付旁边会写明"取自业务 trace 的记录"。业务记录时如果做过脱敏或改写，相应的说法会核不了。可以参考 Insurance 2026-11-03 的校准结果：用户原话 14/14 一致，交付 8/14 一致，有 6 轮被脱敏。
+
+---
+
 ## 附：实测样例（2026-11-02，8036）
 
 这次的新接口是 scratchpad 里的一个转接服务（端口 18067）。它对内转发真实业务 18066，业务本身没改。（下表是改成 W3C 之前按 metadata 关联跑的；现在转接服务会把 `traceparent` 原样传给 18066，场景绑定为 `{}`。）返回四帧：

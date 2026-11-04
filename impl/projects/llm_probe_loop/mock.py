@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 
 from impl.core.mock_protocol import ProjectMock
 from impl.core.session import SessionState, SessionTranslator, UserMessage
+from impl.projects.llm_probe_loop import from_trace as from_trace_turn
 from impl.projects.llm_probe_loop.capability import (
     default_capability_ref,
     load_capability_map,
@@ -77,6 +78,9 @@ class LlmProbeMock(SessionTranslator, ProjectMock):
         return envelope
 
     def user_message_from_request(self, request: Dict[str, Any]) -> UserMessage:
+        if from_trace_turn.trace_id_of(request):
+            # 按 trace 复评：用户原话取自 trace 记录的本轮请求（投递时共用这一次取回的结果）
+            return UserMessage(type="text", text=from_trace_turn.user_text(from_trace_turn.fetch(request).get("request")))
         ref = str(request.get("capability_ref") or "").strip() or default_capability_ref()
         body = request.get("body") if isinstance(request.get("body"), dict) else {}
         path = template_slots(ref)["query"][0]

@@ -365,6 +365,10 @@ def trace_from_live(
         if checker is not None and hasattr(checker, "request") and checker.request(delivery_request):
             initial_request = delivery_request
 
+    # 自带产出的 case（case_provides_output）不调业务，只有这一轮：按单轮组装
+    if live.case_provides_output(initial_request):
+        is_multi_turn = False
+
     # 构造 TraceContext
     ctx = TraceContext(
         project_id=spec.project_id,
@@ -430,7 +434,7 @@ def trace_from_context(
     else:
         # 单轮执行模式由协议能力和 ready 声明决定，不能因 provided 校验失败而伪装成 live_service。
         from .live_protocol import ProvidedOutputLive
-        if isinstance(live, ProvidedOutputLive) and "output" in ready_from_spec(spec):
+        if (isinstance(live, ProvidedOutputLive) and "output" in ready_from_spec(spec)) or live.case_provides_output(initial_request):
             execution_mode = "provided"
             output_source = "provided_output"
         else:

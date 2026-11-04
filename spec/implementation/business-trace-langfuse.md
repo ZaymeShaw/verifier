@@ -28,7 +28,7 @@
 
 ## 关联与采集
 
-1. `id`（W3C）方式从本次请求记录 `business_trace_association` 里的 `traceparent` 解出 trace-id 与 parent-id；`metadata.<key>` 方式从 request/response JSON Pointer 取非空标识。取不到记 `binding_missing`，不查。
+1. `id`（W3C）方式从本次请求记录 `business_trace_association` 里的 `traceparent` 解出 trace-id；`metadata.<key>` 方式从 request/response JSON Pointer 取非空标识。取不到记 `binding_missing`，不查。
 2. `id` 方式读取 `/api/public/traces/{trace-id}`；metadata 模式分页检索，必须唯一匹配，且详情再次验证 ID。
    无匹配等待异步入库；多匹配直接失败。分页不完整不能宣称唯一。
 3. 读取 trace、分页 observation 清单以及每条 observation 详情。v3.184.1 的 v1 observation
@@ -170,8 +170,8 @@ Insurance 场景按请求 `body.trace_id` 关联，写死的值重跑会在 Lang
 | 生成 | `langfuse.py` 新增 `prepare(config)` | `id` 模式返回 `{"traceparent": "00-<uuid4 32位>-<16位随机>-01"}`，`metadata` 模式返回 `{}`。trace-id 用 `uuid4().hex`；parent-id 用 `secrets.token_hex(8)`，全 0 就重取 |
 | 分发 | `business_trace/__init__.py` 新增 `propagation_headers(selection)` | 先 `validate_selection`，再调对应 provider 的 `prepare`；没有 `prepare` 的 provider（agno）返回 `{}` |
 | 投递 | `live.py` `LlmProbeLive._propagate`（`deliver_real` 在 `resolve_http` 之后调用） | 每次投递先清掉请求记录里上一次的 `business_trace_association`（schema 已有字段），场景配了 trace 就取 `propagation_headers`。合并后的请求头（case + service）里已有同名头（不分大小写）就报错拒绝执行；否则合并进发出的请求头，并记 `business_trace_association = {headers: {traceparent}}`。不写进 case 的 `headers`，多轮沿用信封时下一轮覆盖（照 `llm_probe` 的做法） |
-| 采集 | `langfuse._bound` / `collect` | `id` 模式从 `request["business_trace_association"]["headers"]["traceparent"]` 按 W3C 格式解析 trace-id 和 parent-id，格式不对算 `binding_missing`。`association` 记下 `method: "w3c"`、`trace_id`、`parent_span_id`。`metadata` 模式照旧走 bindings |
-| 读取 | `langfuse_reader.py` `__init__` 里算 `parent_ref` 那一段 | `parentObservationId == snapshot.association.parent_span_id` 时，`parent_ref = "/records/trace"`，不进 `missing_parents`。模型调用找 `task_ref` 的那段同样把它当作没有上一级 |
+| 采集 | `langfuse._bound` / `collect` | `id` 模式从 `request["business_trace_association"]["headers"]["traceparent"]` 按 W3C 格式解析 trace-id，格式不对算 `binding_missing`。`association` 记下 `method: "w3c"`、`trace_id`（2026-11-03 起不再记 parent-id）。`metadata` 模式照旧走 bindings |
+| 读取 | `langfuse_reader.py` `__init__` 里算 `parent_ref` 那一段 | 2026-11-03 修订：按 `langfuse.root_id` 只看 trace 本身认根（上一级为空的唯一步骤；没有时，上一级在 trace 外的唯一步骤），根的 `parent_ref = "/records/trace"`，不进 `missing_parents`。见 `spec/alg/business-trace-langfuse.md` §2.4 |
 | 场景保存 | `capability_store.validate_entry` 不改；`eval_axes/validate.py` `validate_scenario_entry` | `{source, bindings}` 的形状不变，`id` 模式下 `bindings` 为 `{}`。保存时用 `propagation_headers` 校验选用，并拒绝 service.headers 里手写 trace 源会自动生成的头 |
 | 资料管理页 | `materials.html` `changeBusinessTraceProvider`、`readBusinessTrace`、`updateBusinessTraceHint` | 选中 `match_field` 为 `id` 的 Langfuse 源时，绑定框预填 `{}`，提示"按 W3C 关联：每次请求自动发 traceparent，不用配绑定"；允许 `{}`。选 `metadata` 源时照旧 |
 | 评估轴、prompt、合成 | — | 不改 |
@@ -182,7 +182,7 @@ Insurance 场景按请求 `body.trace_id` 关联，写死的值重跑会在 Lang
 - `validate_config`：`id` 加非空绑定被拒；`metadata` 不带绑定被拒。
 - 投递：W3C 场景发出的请求头里有且只有一个 `traceparent`；case 或 service 自带 `traceparent` 被拒；Agno 场景、`metadata` 场景不发。
 - 采集：从请求头解出的 id 去查；头缺失或格式坏记 `binding_missing`；详情 id 对不上记关联失败。
-- 读取：上一级等于 `parent_span_id` 时不算缺失父节点，层级为 available；其他缺失的父节点照旧标 partial。
+- 读取：唯一顶层步骤的上一级在 trace 外时不算缺失父节点，层级为 available；已有根另有挂空、或顶层挂空不止一个，照旧标 partial（2026-11-03 修订）。
 - 回归：现有 Agno、llmtracing、metadata 模式测试与快照不变。
 
 ### Insurance 评测分支（`insurance-qa-agent-eval`，`eval/current`）

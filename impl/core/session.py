@@ -410,7 +410,7 @@ class Session:
             raw_input={},
             case_id=self.ctx.case_id or "",
             normalized_request=request,
-            execution_mode="provided" if self.live._has_provided_output() else "live",
+            execution_mode="provided" if self.live._has_provided_output() or self.live.case_provides_output(request) else "live",
             session_id=self.session_id,
         )
         application_boundary = self.live.application_boundary(raw_response, output, live_request)

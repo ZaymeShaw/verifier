@@ -72,12 +72,13 @@ def prepare(config):
 
 
 def _traceparent(request):
-    """本次投递发出的 traceparent（记在请求记录的 business_trace_association）→ (trace-id, parent-id)；没有或格式不对为 None。"""
+    """本次投递发出的 traceparent（记在请求记录的 business_trace_association）→ trace-id；没有或格式不对为 None。
+    parent-id 只是 W3C 格式要求带的一段，不用于关联。"""
     association = request.get("business_trace_association") if isinstance(request, Mapping) else None
     headers = association.get("headers") if isinstance(association, Mapping) else None
     values = [v for k, v in (headers or {}).items() if str(k).lower() == TRACEPARENT] if isinstance(headers, Mapping) else []
     match = _TRACEPARENT.fullmatch(str(values[0]).strip()) if len(values) == 1 else None
-    return match.groups() if match else None
+    return match.group(1) if match else None
 
 
 def validate_connection(value):
@@ -165,8 +166,7 @@ def check_connection(config):
 
 def _bound(config, request, response):
     if config["match_field"] == "id":
-        sent = _traceparent(request)
-        return sent[0] if sent else None
+        return _traceparent(request)
     binding = config["bindings"]["business_trace_id"]
     current = request if binding["source"] == "request" else response
     for token in binding["pointer"].split("/")[1:]:
@@ -212,6 +212,17 @@ def _pages(config, path, query):
         except Exception as exc:
             return rows, errors + [path + ": " + _error(exc)], notes
     return rows, errors + [path + ": page_limit_reached"], notes
+
+
+def root_id(observations):
+    """只看 trace 本身认根（spec/alg/business-trace-langfuse.md §2.4）：上一级为空的步骤恰好一个时就是它；
+    一个都没有、而上一级不在本 trace 里的步骤恰好一个时就是它（上一级是 trace 外的调用方）；否则认不出，返回 None。"""
+    ids = {row["id"] for row in observations}
+    empty = [row["id"] for row in observations if not row.get("parentObservationId")]
+    outside = [row["id"] for row in observations if row.get("parentObservationId") and row["parentObservationId"] not in ids]
+    if len(empty) == 1:
+        return empty[0]
+    return outside[0] if not empty and len(outside) == 1 else None
 
 
 def _matched(config, business_id):
@@ -270,17 +281,23 @@ def _history(config, trace):
 def collect(config, *, request, response):
     clean = validate_config(config)
     business_id = _bound(clean, request, response)
-    snapshot = {"schema_version": 1, "provider": "langfuse",
-        "captured_at": datetime.now(timezone.utc).isoformat(), "status": "failed",
-        "association": {"method": "w3c" if clean["match_field"] == "id" else clean["match_field"],
-                        "business_trace_id": business_id},
-        "records": {}, "errors": [], "coverage": {}, "refs": [],
-        "content_char_limit": clean["content_char_limit"]}
+    snapshot = _snapshot(clean, "w3c" if clean["match_field"] == "id" else clean["match_field"], business_id)
     if business_id is None:
         snapshot["errors"] = ["binding_missing: " + (TRACEPARENT if clean["match_field"] == "id" else "business_trace_id")]
         return snapshot
-    if clean["match_field"] == "id":
-        snapshot["association"]["parent_span_id"] = _traceparent(request)[1]
+    return _settle(clean, business_id, snapshot)
+
+
+def _snapshot(clean, method, business_id):
+    return {"schema_version": 1, "provider": "langfuse",
+            "captured_at": datetime.now(timezone.utc).isoformat(), "status": "failed",
+            "association": {"method": method, "business_trace_id": business_id},
+            "records": {}, "errors": [], "coverage": {}, "refs": [],
+            "content_char_limit": clean["content_char_limit"]}
+
+
+def _settle(clean, business_id, snapshot):
+    """按标识找到唯一 trace，轮询到稳定后冻结 trace、全部 observation 与同 session 历史（现场采集与按 trace 复评共用）。"""
     deadline = time.monotonic() + clean["poll_timeout_seconds"]
     previous = None
     stable_since = None
@@ -376,6 +393,51 @@ def collect(config, *, request, response):
     overview = open_reader(snapshot).overview()
     snapshot["coverage"] = {"categories": overview["categories"], "limitations": overview["limitations"]}
     return snapshot
+
+
+def from_trace(config, trace_id):
+    """按 trace 复评（spec/alg/trace-replay.md §3.1、§5）：按 trace id 取回这一轮。
+    返回 {snapshot, failure, request, delivered, delivered_from}；取不到时 error 写原因，不猜。"""
+    clean = validate_connection(config)
+    trace_id = str(trace_id or "").strip()
+    if not trace_id:
+        raise ValueError("from_trace.trace_id 不能为空")
+    snapshot = _settle(dict(clean, match_field="id"), trace_id, _snapshot(clean, "trace_id", trace_id))
+    out = {"snapshot": snapshot, "failure": "", "request": None, "delivered": None, "delivered_from": "", "error": ""}
+    if snapshot["status"] == "failed":
+        out["error"] = "trace 没采到：" + ("；".join(snapshot.get("errors") or []) or "无记录")
+        return out
+    trace = snapshot["records"].get("trace") or {}
+    rows = snapshot["records"].get("observations") or []
+    top = root_id(rows)
+    if top is None:
+        out["error"] = "找不到唯一的根步骤"
+        return out
+    root = next(row for row in rows if row["id"] == top)
+
+    def recorded(field):
+        """本轮的请求 / 答复：根步骤优先，没有再取 trace 级（Langfuse v4 起以根步骤为准）。"""
+        if root.get(field) not in (None, "", [], {}):
+            return root[field], "root_observation"
+        if trace.get(field) not in (None, "", [], {}):
+            return trace[field], "trace"
+        return None, ""
+
+    # 业务失败了，用户这一轮说了什么照样要记；所以请求先取，取不到也先不报
+    out["request"], _ = recorded("input")
+    attributes = (root.get("metadata") or {}).get("attributes") if isinstance(root.get("metadata"), Mapping) else None
+    status = attributes.get("http.response.status_code") if isinstance(attributes, Mapping) else None
+    if status not in (None, ""):
+        if not str(status).startswith("2"):
+            out["failure"] = f"HTTP {status}"
+    elif root.get("level") == "ERROR":
+        out["failure"] = str(root.get("statusMessage") or "level=ERROR")
+    if out["failure"]:
+        return out
+    out["delivered"], out["delivered_from"] = recorded("output")
+    if out["request"] is None or out["delivered"] is None:
+        out["error"] = "这条 trace 没有记本轮的" + ("请求" if out["request"] is None else "答复")
+    return out
 
 
 def open_reader(snapshot):

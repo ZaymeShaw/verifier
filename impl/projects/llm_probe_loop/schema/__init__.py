@@ -9,7 +9,9 @@ from typing import Any, Dict
 class LlmProbeRequest:
     """curl 信封：HTTP JSON body 是 body，其余字段给 live/judge 用。"""
 
-    body: Dict[str, Any]
+    body: Dict[str, Any] = field(default_factory=dict)
+    # 按 trace 复评（spec/alg/trace-replay.md §2）：{"trace_id": ...}；与 body 二选一，带它就不调业务
+    from_trace: Dict[str, Any] = field(default_factory=dict)
     url: str = ""
     method: str = "POST"
     headers: Dict[str, Any] = field(default_factory=dict)

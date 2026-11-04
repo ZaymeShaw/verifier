@@ -36,13 +36,28 @@ class Case:
         return project_requirements(self.trace)
 
 
+_FROM_TRACE_SOURCE = {"root_observation": "根步骤", "trace": "trace 级字段"}
+
+
+def _delivery_source(record: Mapping[str, Any]) -> str:
+    """按 trace 复评的这一轮：交付取自业务 trace 的记录（spec/alg/trace-replay.md §4）。现场的轮次返回空串、不带这一项。"""
+    request = record.get("request") if isinstance(record.get("request"), Mapping) else {}
+    association = request.get("business_trace_association") if isinstance(request.get("business_trace_association"), Mapping) else {}
+    recorded = association.get("from_trace") if isinstance(association.get("from_trace"), Mapping) else None
+    if not recorded:
+        return ""
+    where = _FROM_TRACE_SOURCE.get(str(recorded.get("delivered_from") or ""), "trace")
+    return f"本轮交付取自业务 trace 的记录（{where}），不是评测方实际收到的；业务记录时可能做过脱敏或改写"
+
+
 def _deliveries(trace: Any) -> list[dict[str, Any]]:
     turns = []
     for n, record in enumerate(getattr(trace, "turn_records", None) or [], 1):
         output = record.get("extracted_output") if isinstance(record, Mapping) else None
         text = (output or {}).get("output_text") if isinstance(output, Mapping) else None
         if isinstance(text, str):
-            turns.append({"turn": f"t{n}", "output_text": text})
+            source = _delivery_source(record)
+            turns.append({"turn": f"t{n}", "output_text": text, **({"source": source} if source else {})})
     if turns:
         return turns
     output = trace.extracted_output if isinstance(trace.extracted_output, Mapping) else {}
@@ -105,7 +120,7 @@ def registry() -> Registry:
                  "看不到交付。按轮切由需求轴的分发脚本做", lambda case, _: case.requirements()),
         Material("case.user_turns", {"type": "array", "items": TEXT}, "用户各轮原话，按先后排列",
                  lambda case, _: user_turns(case.trace)),
-        Material("case.deliveries", {"type": "array", "items": obj(turn=TEXT, output_text=TEXT)},
+        Material("case.deliveries", {"type": "array", "items": obj(turn=TEXT, output_text=TEXT, source=TEXT)},
                  "被测系统各轮的交付文本", lambda case, _: _deliveries(case.trace)),
         Material("case.business_status", obj(ok={"type": "boolean"}, error=TEXT), "被测系统这次有没有正常返回",
                  _business_status),

@@ -156,6 +156,9 @@ class _LiveProtocol(ABC):
         )
         if seed is not None:
             driver: Driver = ReplayDriver(seed)
+        elif self.case_provides_output(initial_request):
+            # 自带产出的 case 不调业务，也就没有下一轮可问：单轮执行
+            driver = OneShotDriver()
         elif max_turns > 1 and isinstance(mock, MultiTurnInteractiveMock):
             driver = PersonaDriver(mock)
         else:
@@ -272,12 +275,14 @@ class _LiveProtocol(ABC):
         try:
             request_validation = self._validate_request(request)
             raw_response = self.deliver_provided(live_request)
-            output = self.extract_output(raw_response, live_request)
+            # RealServiceLive 的 extract_output 只收 raw_response（签名由 __init_subclass__ 校验）
+            output = self.extract_output(raw_response) if isinstance(self, RealServiceLive) else self.extract_output(raw_response, live_request)
             output_validation = self._validate_output(output)
             return output, raw_response, None, [], [request_validation, output_validation], live_request
         except Exception as exc:
+            # 带回原异常：由 Session 按 live_failure_type 分类（与现场同一口径），不在这里改写类型
             fallback = self._build_fallback(live_request, str(exc), LIVE_PROTOCOL_ERROR)
-            return {}, None, str(exc), [fallback], [], live_request
+            return {}, None, exc, [fallback], [], live_request
 
     def _build_fallback(self, request: Any, reason: str, failure_type: str) -> FallbackDecision:
         """内部方法：构建错误 fallback 决策。"""
@@ -325,10 +330,11 @@ class _LiveProtocol(ABC):
         不写入共享 Live 实例字段，避免并发 case 串数据。
         """
         # provided 路径：直接走 deliver_provided，不调 deliver_real。
-        if self._has_provided_output():
+        # 项目级（ready 声明 output）或这个 case 自带产出（case_provides_output，默认否）。
+        if self._has_provided_output() or self.case_provides_output(request):
             output, raw_response, error, fallbacks, validations, delivery_request = self._run_provided(request)
             if error is not None:
-                raise RuntimeError(error)
+                raise error
             _TURN_FACTS.set({
                 "raw_response": raw_response,
                 "live_exchanges": [],
@@ -442,6 +448,14 @@ class _LiveProtocol(ABC):
             f"无法调用业务系统。如果是 provided-output 项目，请继承 ProvidedOutputLive。"
         )
 
+    def case_provides_output(self, request: Any) -> bool:
+        """扩展点：这个 case 是否自带产出（不调业务，走 deliver_provided）。默认否，项目可选覆盖。
+
+        与项目级 provided（ready 声明 output）并存：项目级对所有 case 生效，这里按 case 判断。
+        为真时单轮执行，不进多轮交互。
+        """
+        return False
+
     def deliver_provided(self, request: LiveRequest) -> Any:
         """扩展点：provided 投递。项目可选覆盖。
 
@@ -523,6 +537,7 @@ class RealServiceLive(ProjectLive):
     deliver_provided 有默认实现（raise NotImplementedError）。
 
     继承此类后，项目只需实现 deliver_real，不需要实现 deliver_provided。
+    个别 case 自带产出时（case_provides_output 为真），项目可再覆盖 deliver_provided。
     """
 
     def __init_subclass__(cls, **kwargs):
