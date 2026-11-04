@@ -74,9 +74,14 @@ def validate_scenario_entry(entry: Mapping[str, Any], *, owner: str) -> Scenario
         categories = set()
     errors += check_scenario(defs, axes.enabled, categories)
     if entry.get("business_trace"):
-        from impl.projects.llm_probe_loop.business_trace import validate_selection
+        from impl.projects.llm_probe_loop.business_trace import propagation_headers
         try:
-            validate_selection(entry["business_trace"])
+            # 选用合法；trace 源自动发的头（W3C 的 traceparent）不能再在 service 里手写
+            generated = {key.lower() for key in propagation_headers(entry["business_trace"])}
+            service = entry.get("service") if isinstance(entry.get("service"), Mapping) else {}
+            clash = sorted(str(key) for key in dict(service.get("headers") or {}) if str(key).lower() in generated)
+            if clash:
+                errors.append(f"service.headers 的 {', '.join(clash)} 由评测方按 trace 源自动生成，不要写")
         except ValueError as exc:
             errors.append(f"business_trace: {exc}")
     if errors:

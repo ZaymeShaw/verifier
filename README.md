@@ -5,6 +5,7 @@
 
 ## 目录
 
+- [dataset-building/](dataset-building/README.md)：评测集构建的独立需求、方案与实验记录，当前探索指定环境下的题目可测性。
 - `impl/`：核心实现、项目适配、协议和前端页面。
 - `impl/projects/<project>/project.yaml`：各项目唯一正式运行配置；同目录保存 adapter 和角色实现。
 - `impl/frontend/`：本地分析界面。

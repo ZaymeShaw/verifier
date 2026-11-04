@@ -7,7 +7,9 @@ import hashlib
 import json
 import math
 import re
+import secrets
 import time
+import uuid
 from typing import Any, Mapping
 from urllib.error import HTTPError
 from urllib.parse import quote, urlencode, urlsplit
@@ -18,35 +20,64 @@ from impl.core.config_bootstrap import effective_environment_snapshot
 from ..reader import KINDS
 
 _ENV = re.compile(r"\$\{([A-Z][A-Z0-9_]*)\}")
+# W3C Trace Context：version 00，trace-id 32 位、parent-id 16 位小写十六进制（spec/alg/business-trace-langfuse.md §2）。
+TRACEPARENT = "traceparent"
+_TRACEPARENT = re.compile(r"00-([0-9a-f]{32})-([0-9a-f]{16})-[0-9a-f]{2}")
 
 
 def describe():
     return {"provider": "langfuse", "title": "Langfuse OSS v3",
-            "summary": "用业务 ID 精确关联 trace；轮询异步入库，冻结 trace 与完整 observation 后供案卷及过程六轴读取。",
+            "summary": "默认按 W3C traceparent（评测方每次请求自动发）精确关联 trace，也可按 metadata 字段关联；轮询异步入库，冻结 trace 与完整 observation 后供案卷及过程六轴读取。",
             "reader": {"operations": ["overview", "list_records", "read"],
                        "record_kinds": list(KINDS), "source": "frozen_snapshot",
                        "exact_model_request": "SDK 记录的输入，不保证等于模型实际收到的完整请求"},
             # 连接写在全局登记，绑定写在场景（spec/alg/axis_loop.md §8.2）
             "default_connection": {"base_url": "http://127.0.0.1:3300",
                 "public_key": "${LANGFUSE_PUBLIC_KEY}", "secret_key": "${LANGFUSE_SECRET_KEY}",
-                "match_field": "metadata.business_trace_id",
+                "match_field": "id",
                 "timeout_seconds": 15, "poll_timeout_seconds": 60,
                 "poll_interval_seconds": 1, "quiet_seconds": 3,
                 "max_pages": 20, "page_size": 50, "content_char_limit": None},
-            "default_bindings": {"business_trace_id": {"source": "response", "pointer": "/trace_id"}}}
+            "default_bindings": {},
+            # 登记为 metadata.<键> 时场景要写的绑定模板：标识从请求 / 响应的哪里取
+            "metadata_bindings": {"business_trace_id": {"source": "request", "pointer": "/body/trace_id"}}}
 
 
 def validate_config(value):
-    """登记的连接 + 场景的绑定。"""
+    """登记的连接 + 场景的绑定。id（W3C）方式不配绑定；metadata 方式必须绑定 business_trace_id。"""
     if not isinstance(value, Mapping):
         raise ValueError("business_trace.config 必须是对象")
+    connection = validate_connection(value)
     bindings = value.get("bindings")
+    if connection["match_field"] == "id":
+        if bindings not in (None, {}):
+            raise ValueError("该 Langfuse 源按 W3C 关联：评测方每次请求自动发 traceparent，bindings 写成 {}")
+        return {**connection, "bindings": {}}
     binding = bindings.get("business_trace_id") if isinstance(bindings, Mapping) else None
     if (not isinstance(binding, Mapping) or binding.get("source") not in {"request", "response"}
             or not isinstance(binding.get("pointer"), str) or not binding["pointer"].startswith("/")
             or re.search(r"~(?![01])", binding["pointer"])):
         raise ValueError("bindings.business_trace_id 必须有 request/response source 和有效 JSON Pointer")
-    return {**validate_connection(value), "bindings": {"business_trace_id": dict(binding)}}
+    return {**connection, "bindings": {"business_trace_id": dict(binding)}}
+
+
+def prepare(config):
+    """每次投递前调用：id（W3C）方式返回本次要发的 traceparent 头，metadata 方式不发。"""
+    if validate_config(config)["match_field"] != "id":
+        return {}
+    parent = secrets.token_hex(8)
+    while parent == "0" * 16:
+        parent = secrets.token_hex(8)
+    return {TRACEPARENT: f"00-{uuid.uuid4().hex}-{parent}-01"}
+
+
+def _traceparent(request):
+    """本次投递发出的 traceparent（记在请求记录的 business_trace_association）→ (trace-id, parent-id)；没有或格式不对为 None。"""
+    association = request.get("business_trace_association") if isinstance(request, Mapping) else None
+    headers = association.get("headers") if isinstance(association, Mapping) else None
+    values = [v for k, v in (headers or {}).items() if str(k).lower() == TRACEPARENT] if isinstance(headers, Mapping) else []
+    match = _TRACEPARENT.fullmatch(str(values[0]).strip()) if len(values) == 1 else None
+    return match.groups() if match else None
 
 
 def validate_connection(value):
@@ -133,6 +164,9 @@ def check_connection(config):
 
 
 def _bound(config, request, response):
+    if config["match_field"] == "id":
+        sent = _traceparent(request)
+        return sent[0] if sent else None
     binding = config["bindings"]["business_trace_id"]
     current = request if binding["source"] == "request" else response
     for token in binding["pointer"].split("/")[1:]:
@@ -238,12 +272,15 @@ def collect(config, *, request, response):
     business_id = _bound(clean, request, response)
     snapshot = {"schema_version": 1, "provider": "langfuse",
         "captured_at": datetime.now(timezone.utc).isoformat(), "status": "failed",
-        "association": {"method": clean["match_field"], "business_trace_id": business_id},
+        "association": {"method": "w3c" if clean["match_field"] == "id" else clean["match_field"],
+                        "business_trace_id": business_id},
         "records": {}, "errors": [], "coverage": {}, "refs": [],
         "content_char_limit": clean["content_char_limit"]}
     if business_id is None:
-        snapshot["errors"] = ["binding_missing: business_trace_id"]
+        snapshot["errors"] = ["binding_missing: " + (TRACEPARENT if clean["match_field"] == "id" else "business_trace_id")]
         return snapshot
+    if clean["match_field"] == "id":
+        snapshot["association"]["parent_span_id"] = _traceparent(request)[1]
     deadline = time.monotonic() + clean["poll_timeout_seconds"]
     previous = None
     stable_since = None

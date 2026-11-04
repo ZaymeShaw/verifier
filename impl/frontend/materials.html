@@ -684,22 +684,33 @@ function traceProviderOf(value){
   return traceFromRegistry()?businessTraceProviderById(((knowledgeSources||{})[value]||{}).type):businessTraceProviderById(value);
 }
 function businessTraceProviderById(id){return businessTraceProviders.find(p=>p.provider===id)||null}
+function traceSourceIsW3c(value){
+  // 登记为 Langfuse 且 match_field=id：评测方每次请求自动发 traceparent，场景不配绑定（spec/alg/business-trace-langfuse.md §1）
+  const entry=traceFromRegistry()?((knowledgeSources||{})[value]||null):null;
+  return !!entry&&entry.type==='langfuse'&&(((entry.config||{}).match_field)||'id')==='id';
+}
 function updateBusinessTraceHint(){
-  const description=traceProviderOf(document.getElementById('businessTraceProvider').value);
-  document.getElementById('businessTraceHint').textContent=description?description.summary:'';
+  const value=document.getElementById('businessTraceProvider').value;
+  const description=traceProviderOf(value);
+  document.getElementById('businessTraceHint').textContent=traceSourceIsW3c(value)
+    ?'按 W3C 关联：每次请求自动发 traceparent，绑定写 {}，不用配。'
+    :description?description.summary:'';
 }
 function changeBusinessTraceProvider(){
   const provider=document.getElementById('businessTraceProvider').value;
   const config=document.getElementById('businessTraceConfig');
   const description=traceProviderOf(provider);
-  if(provider&&description){config.value=JSON.stringify(traceFromRegistry()?description.default_bindings:description.default_config,null,2);}
+  if(provider&&description){
+    const bindings=traceSourceIsW3c(provider)?{}:(description.metadata_bindings||description.default_bindings);
+    config.value=JSON.stringify(traceFromRegistry()?bindings:description.default_config,null,2);
+  }
   if(!provider){config.value='';}
   updateBusinessTraceHint();
 }
 function readBusinessTrace(){
   const provider=document.getElementById('businessTraceProvider').value;
   if(!provider){return null;}
-  const text=document.getElementById('businessTraceConfig').value.trim();
+  const text=document.getElementById('businessTraceConfig').value.trim()||(traceSourceIsW3c(provider)?'{}':'');
   if(!text){throw new Error('业务 Trace 已选择，但'+(traceFromRegistry()?'字段绑定':' config')+'为空');}
   let config;
   try{config=JSON.parse(text);}catch(err){throw new Error('业务 Trace 的 JSON 不合法：'+err.message);}

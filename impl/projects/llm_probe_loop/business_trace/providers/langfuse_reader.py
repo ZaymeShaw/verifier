@@ -64,12 +64,16 @@ class LangfuseReader(TraceReader):
         refs = {row["id"]: f"/records/observations/{i}" for i, row in enumerate(observations)}
         by_id = {row["id"]: row for row in observations}
         missing_parents, unknown = [], []
+        # W3C 关联时业务根节点的上一级是评测方发出的 parent-id（评测方不上报），当作根（spec/alg/business-trace-langfuse.md §2.4）。
+        caller = (self.snapshot.get("association") or {}).get("parent_span_id")
         for i, row in enumerate(observations):
             ref = refs[row["id"]]
             typ = _observation_type(row)
             kind = ("model_calls" if typ in {"GENERATION", "EMBEDDING"} else
                     "tool_calls" if typ in {"TOOL", "RETRIEVER"} else "events" if typ == "EVENT" else "steps")
             parent_id = row.get("parentObservationId")
+            if caller and parent_id == caller:
+                parent_id = None
             parent = refs.get(parent_id) if parent_id else "/records/trace"
             if parent_id and not parent:
                 missing_parents.append(parent_id)

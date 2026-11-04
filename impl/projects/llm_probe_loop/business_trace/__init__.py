@@ -36,6 +36,13 @@ def validate_selection(value: Any) -> dict[str, Any]:
             "config": _PROVIDERS[registered.type].validate_config({**registered.config, "bindings": dict(value["bindings"])})}
 
 
+def propagation_headers(value: Any) -> dict[str, str]:
+    """每次投递前：trace 源要求随请求发的头（Langfuse W3C 方式发 traceparent；其他源不发）。"""
+    selection = validate_selection(value)
+    hook = getattr(_PROVIDERS[selection["type"]], "prepare", None)
+    return dict(hook(selection["config"])) if hook else {}
+
+
 def check_connection(value: Any) -> dict[str, Any]:
     """场景页"测试 Trace 连接"：选用写得对（登记存在、绑定合法），再经 trace 源的 MCP 服务连一次平台。"""
     validate_selection(value)
@@ -96,4 +103,5 @@ def open_reader(snapshot: Mapping[str, Any]):
     return module.open_reader(snapshot)
 
 
-__all__ = ["check_connection", "check_source", "collect", "open_reader", "provider_descriptions", "trace_mcp_source", "validate_selection"]
+__all__ = ["check_connection", "check_source", "collect", "open_reader", "propagation_headers", "provider_descriptions",
+           "trace_mcp_source", "validate_selection"]

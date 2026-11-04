@@ -20,6 +20,8 @@ from impl.projects.llm_probe_loop.capability import (
 )
 
 _ENV_PLACEHOLDER = re.compile(r"\$\{([A-Z][A-Z0-9_]*)\}")
+# 每次投递重新生成的业务 Trace 关联（schema 字段，写回请求记录供采集与审计）
+ASSOCIATION_KEY = "business_trace_association"
 
 
 def _expand_header_value(value: str) -> str:
@@ -127,6 +129,25 @@ def _reject_streaming(transport: LiveTransport) -> None:
 class LlmProbeLive(RealServiceLive):
     """按 case 信封发 HTTP，响应收成字符串；sse_last_frame 模式取流的最后一帧。"""
 
+    @staticmethod
+    def _propagate(payload: Dict[str, Any], headers: Dict[str, str]) -> Dict[str, str]:
+        """trace 源要求随请求发的头（Langfuse W3C 方式的 traceparent）每次投递重新生成，记进 business_trace_association
+        供采集取用；多轮沿用信封时上一次的关联被覆盖，不混进 case 自己的请求头（spec/alg/business-trace-langfuse.md §2.2）。"""
+        payload.pop(ASSOCIATION_KEY, None)
+        ref = str(payload.get("capability_ref") or "").strip()
+        trace_config = capability_business_trace(ref) if ref else None
+        if not trace_config:
+            return headers
+        from impl.projects.llm_probe_loop.business_trace import propagation_headers
+
+        sent = propagation_headers(trace_config)
+        clash = sorted(key for key in sent if key.lower() in {k.lower() for k in headers})
+        if clash:
+            raise ValueError(f"请求头 {', '.join(clash)} 由评测方按 trace 源自动生成，service 和 case 里不要写")
+        if sent:
+            payload[ASSOCIATION_KEY] = {"headers": sent}
+        return {**headers, **sent}
+
     def deliver_real(self, request: Any, transport: LiveTransport) -> LiveTransport:
         payload = request if isinstance(request, dict) else {}
         if isinstance(payload.get("body"), (dict, list)):
@@ -134,6 +155,7 @@ class LlmProbeLive(RealServiceLive):
             # 多轮走 Session 路径时翻译函数已填具体会话身份，这里不会再碰到占位符。
             payload["body"] = fresh_delivery_placeholders(payload["body"])
         url, method, headers, body, timeout, response_mode = resolve_http(payload, self.spec)
+        headers = self._propagate(payload, headers)
         if isinstance(request, dict):
             # 回写解析结果，让 execution trace 和 judge 拿到真实 URL/method/响应模式。
             request["url"] = url

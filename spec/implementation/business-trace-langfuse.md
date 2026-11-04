@@ -5,26 +5,22 @@
 入口仍为 `{provider, config}`，`provider: langfuse` 走冻结案卷路线。注册表返回默认配置，
 前端的通用 provider 配置编辑器可直接使用。没有增加 SDK 或 Python 依赖。
 
+登记（`knowledge_sources.json`，连接）与场景（`business_trace`，选用）分开，默认按 W3C 关联
+（`spec/alg/business-trace-langfuse.md`，2026-11-02）：
+
 ```json
-{
-  "provider": "langfuse",
-  "config": {
-    "base_url": "http://127.0.0.1:3300",
-    "public_key": "${LANGFUSE_PUBLIC_KEY}",
-    "secret_key": "${LANGFUSE_SECRET_KEY}",
-    "match_field": "metadata.request_trace_id",
-    "bindings": {
-      "business_trace_id": {"source": "request", "pointer": "/body/trace_id"}
-    },
-    "content_char_limit": 20000
-  }
-}
+// 登记
+{"type": "langfuse", "config": {
+  "base_url": "http://127.0.0.1:3300",
+  "public_key": "${LANGFUSE_PUBLIC_KEY}", "secret_key": "${LANGFUSE_SECRET_KEY}",
+  "match_field": "id", "content_char_limit": 20000}}
+// 场景
+{"source": "langfuse-local", "bindings": {}}
 ```
 
-此示例针对当前 Insurance：调用方每次 HTTP 请求须提供新的 `body.trace_id`，
-业务响应回显该 ID，Langfuse 将其保存到 `metadata.request_trace_id`。
-`metadata.business_trace_id` 是业务内部 ID，与对外 ID 不同，不能混用。
-其他业务可按自身契约选择 provider 默认的 response `/trace_id` 绑定。
+`match_field: id`：每次投递由 verifier 生成新的 `traceparent` 放进请求头，按其 trace-id 直接读 trace；
+业务入口须沿用该上下文（Insurance 评测分支 `58f46778`）。可选 `match_field: metadata.<键>`：场景必须写
+`bindings.business_trace_id`（从 request/response JSON Pointer 取标识），此时不发 `traceparent`。
 
 密钥由 verifier 进程环境解析，不把值写入场景、快照或报告。示例长度上限只适用于业务也配置了
 20000 的情况；默认上限为 null（未知）。不改变业务的脱敏策略。部署在
@@ -32,8 +28,8 @@
 
 ## 关联与采集
 
-1. 从 request/response JSON Pointer 取非空业务 ID。只允许 `id` 或 `metadata.<key>` 精确匹配。
-2. ID 模式读取 `/api/public/traces/{id}`；metadata 模式分页检索，必须唯一匹配，且详情再次验证 ID。
+1. `id`（W3C）方式从本次请求记录 `business_trace_association` 里的 `traceparent` 解出 trace-id 与 parent-id；`metadata.<key>` 方式从 request/response JSON Pointer 取非空标识。取不到记 `binding_missing`，不查。
+2. `id` 方式读取 `/api/public/traces/{trace-id}`；metadata 模式分页检索，必须唯一匹配，且详情再次验证 ID。
    无匹配等待异步入库；多匹配直接失败。分页不完整不能宣称唯一。
 3. 读取 trace、分页 observation 清单以及每条 observation 详情。v3.184.1 的 v1 observation
    API 可返回完整字段，避免 v2 默认字段组和 metadata 预览导致遗漏；没有协议回退。
@@ -148,6 +144,8 @@ Agno 5 份快照产出与 HEAD 逐字节一致（Agno 的限制没有 `items`）
 
 ## 请求标识占位符（2026-10-18）
 
+> 2026-11-02 起 Insurance 改为按 W3C 关联，不再靠 `body.trace_id` 关联；`{request_id}` 占位符在 `metadata.<键>` 方式下仍用于给每次请求一个新标识。
+
 Insurance 场景按请求 `body.trace_id` 关联，写死的值重跑会在 Langfuse 里出现两条同 ID 的 trace，按规则判关联失败。改为场景模板与 case 里写 `"trace_id": "{request_id}"`：`capability.fresh_delivery_placeholders` 在每次投递发送前把它换成新的 `llm-probe-req-<uuid>`（生成 case 时不落定）。原 `fresh_session_placeholders` 改名并同时处理 `{session_id}` 与 `{request_id}`。这是 verifier 作为调用方自己给的请求标识，不改被测系统。
 
 ## 列表计数不可信（2026-10-18）
@@ -158,3 +156,78 @@ Insurance 场景按请求 `body.trace_id` 关联，写死的值重跑会在 Lang
 计数差异记入 `association.listing_notes` / `listing_notes` / `history_coverage.listing_notes`，不当作未列全。
 真有多条同 ID trace 时它们会出现在返回行里，仍判 `association_ambiguous`。observation 完整性另由 trace 详情自带的 observation 清单核对。
 修复后两条真实 trace 重新采集均 succeeded（各 19 个 observation，约 4 秒）。
+
+## W3C 关联（2026-11-02，实施方案，用户确认）
+
+依据 `spec/alg/business-trace-langfuse.md`（2026-11-02 用户确认）。只改 Langfuse；Agno、llmtracing 不动。不保留旧写法，同一处只留一种。
+
+### 评测方代码
+
+| 层 | 文件 / 函数 | 改什么 |
+|---|---|---|
+| 登记默认值 | `business_trace/providers/langfuse.py` `describe()` | `default_connection.match_field` 改为 `id`；`default_bindings` 改为 `{}`（W3C 方式不配绑定）。登记页模板和场景页预填都从这里取 |
+| 场景校验 | `langfuse.validate_config` | `match_field == "id"`：`bindings` 必须是 `{}`，非空就报"W3C 方式由评测方自动发 traceparent，不要配绑定"。`metadata.<键>`：照旧必须有 `business_trace_id` 绑定 |
+| 生成 | `langfuse.py` 新增 `prepare(config)` | `id` 模式返回 `{"traceparent": "00-<uuid4 32位>-<16位随机>-01"}`，`metadata` 模式返回 `{}`。trace-id 用 `uuid4().hex`；parent-id 用 `secrets.token_hex(8)`，全 0 就重取 |
+| 分发 | `business_trace/__init__.py` 新增 `propagation_headers(selection)` | 先 `validate_selection`，再调对应 provider 的 `prepare`；没有 `prepare` 的 provider（agno）返回 `{}` |
+| 投递 | `live.py` `LlmProbeLive._propagate`（`deliver_real` 在 `resolve_http` 之后调用） | 每次投递先清掉请求记录里上一次的 `business_trace_association`（schema 已有字段），场景配了 trace 就取 `propagation_headers`。合并后的请求头（case + service）里已有同名头（不分大小写）就报错拒绝执行；否则合并进发出的请求头，并记 `business_trace_association = {headers: {traceparent}}`。不写进 case 的 `headers`，多轮沿用信封时下一轮覆盖（照 `llm_probe` 的做法） |
+| 采集 | `langfuse._bound` / `collect` | `id` 模式从 `request["business_trace_association"]["headers"]["traceparent"]` 按 W3C 格式解析 trace-id 和 parent-id，格式不对算 `binding_missing`。`association` 记下 `method: "w3c"`、`trace_id`、`parent_span_id`。`metadata` 模式照旧走 bindings |
+| 读取 | `langfuse_reader.py` `__init__` 里算 `parent_ref` 那一段 | `parentObservationId == snapshot.association.parent_span_id` 时，`parent_ref = "/records/trace"`，不进 `missing_parents`。模型调用找 `task_ref` 的那段同样把它当作没有上一级 |
+| 场景保存 | `capability_store.validate_entry` 不改；`eval_axes/validate.py` `validate_scenario_entry` | `{source, bindings}` 的形状不变，`id` 模式下 `bindings` 为 `{}`。保存时用 `propagation_headers` 校验选用，并拒绝 service.headers 里手写 trace 源会自动生成的头 |
+| 资料管理页 | `materials.html` `changeBusinessTraceProvider`、`readBusinessTrace`、`updateBusinessTraceHint` | 选中 `match_field` 为 `id` 的 Langfuse 源时，绑定框预填 `{}`，提示"按 W3C 关联：每次请求自动发 traceparent，不用配绑定"；允许 `{}`。选 `metadata` 源时照旧 |
+| 评估轴、prompt、合成 | — | 不改 |
+
+### 测试（`tests/test_business_trace_langfuse.py` 等）
+
+- `prepare`：`id` 模式生成的值符合 W3C（版本 00、32 位和 16 位小写十六进制、非全 0、采样位 01），每次都不一样；`metadata` 模式返回空。
+- `validate_config`：`id` 加非空绑定被拒；`metadata` 不带绑定被拒。
+- 投递：W3C 场景发出的请求头里有且只有一个 `traceparent`；case 或 service 自带 `traceparent` 被拒；Agno 场景、`metadata` 场景不发。
+- 采集：从请求头解出的 id 去查；头缺失或格式坏记 `binding_missing`；详情 id 对不上记关联失败。
+- 读取：上一级等于 `parent_span_id` 时不算缺失父节点，层级为 available；其他缺失的父节点照旧标 partial。
+- 回归：现有 Agno、llmtracing、metadata 模式测试与快照不变。
+
+### Insurance 评测分支（`insurance-qa-agent-eval`，`eval/current`）
+
+- 新增一个提交，替换 `e433d80d`（用 rebase 重排；改之前备份成 `eval/current-backup-20261102-<sha>`）：
+  - `app/observability/langfuse_middleware.py`：入口用 OTel `TraceContextTextMapPropagator` 从请求头读出上下文，`chat.turn` 根 span 挂在它下面（`span_scope` 增加 `context` 参数）。没带 `traceparent` 时行为不变。
+  - `langfuse_runtime.correlate`：去掉写 `langfuse.trace.metadata.request_trace_id` 的那部分；给 Agno 根 span 补 `session.id`、`user.id`、`agno.run.id` 的部分保留；`chat.py` 里相应的参数去掉。
+  - 测试：带 `traceparent` 时 Langfuse 根节点的 trace id 等于传入值；不带时照旧。
+- `c9f4887b`、`ce36e774`、`4840a6bb`、`332a0631` 不动。
+- 改完重启 18066（`scripts/insurance_validation_app.py`）。
+
+### 8036 实例数据（改之前备份到 scratchpad）
+
+| 项 | 改什么 |
+|---|---|
+| 信息源 `langfuse-local` | `match_field` 改为 `id` |
+| 场景 `verify-insurance-langfuse` | `bindings` 改为 `{}`；mock_body 里的 `trace_id: {request_id}` 是 Insurance 接口自己的字段，保留 |
+| 场景 `verify-insurance-langfuse-sse` | 同样改为 `{}`，留作 SSE 示例；转接服务 18067 留着 |
+
+### 文档
+
+- 本文开头的契约示例改成 W3C 默认写法，`metadata` 写成可选；"请求标识占位符"一节加注：它在 `metadata` 方式下仍然有用。
+- `docs/scene-config-guide.md` 第 0、1、4 节改成默认 W3C。
+
+### 验收
+
+1. 上面的测试全过；`tests/test_business_trace_*.py` 及 llm_probe_loop 相关测试无新增失败。
+2. 用 `scratchpad/w3c_exp/` 的最小业务，在 `id` 模式下端到端跑一次：发头 → 采到 → 层级为 available。
+3. 8036 上用 `verify-insurance-langfuse` 跑 G01、A02，以及一条多轮 case。看三件事：每轮的 trace id 都等于发出的那个；同 session 的历史采得到；结论和改之前的候选区结果对得上，或者差异说得清。
+4. 8036 上 `verify-insurance-agno` 跑 1 条，确认 Agno 场景不受影响。
+
+### 验收结果（2026-11-02 / 03，8036）
+
+测试：`tests/test_llm_probe_loop_langfuse_w3c.py` 14 条，加上 llm_probe_loop、业务 trace、axis_loop 相关共 244 passed；Insurance `tests/observability` 293 passed，4 skipped（live 需真实 Langfuse）。
+
+8036 实跑（`batch_run`，不动候选区；结果在 scratchpad `w3c_run/`）：
+
+| case | 结论 | 候选区原结论 | 关联 |
+|---|---|---|---|
+| langfuse G01 只回答金额 | 做成了 | 没做成 | 发出的 trace-id = 采到的 trace id；22 个步骤，层级 available |
+| langfuse A02 余昕雅两张保单 | 做成了 | 做成了 | 同上；30 个步骤，层级 available |
+| langfuse E01（多轮，3 轮） | 没做成 | 没做成 | 每轮各发一个新的 traceparent，3 轮都对上；同一 session，历史 0 / 1 / 2 条 |
+| agno G01 | 做成了 | 做成了 | 不发 traceparent，Agno 照旧 |
+| langfuse-sse G01（经 18067 转接） | 没做成 | — | 对上；业务这次降级（模型已得 1089.1，交付被换成兜底文案），与 2026-11-02 按 metadata 跑时同一现象 |
+
+G01 两边结论不同，原因在业务：这次答复正常，原结论那次业务降级了。
+
+实跑中修的一处：第一版把生成的 `traceparent` 写进了 case 的 `headers`，多轮的第 2 轮沿用信封时，被当成手写的头拒绝了（E01 首跑失败）。改成记在 `business_trace_association` 里，每次投递覆盖（见上表"投递"一行）。另有两次 SSE 失败与本改动无关：一次是 5 条并发时 18066 返回 429 限流；一次是 18067 转接服务没真正重启（`pkill` 没匹配上进程），旧进程不转发 `traceparent`。
