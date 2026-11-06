@@ -46,8 +46,8 @@ trace 源的回放能力：给一个 trace id，返回这一轮的**请求**、*
 
 依据：Langfuse 建议把整个应用的请求和答复放在根步骤上，trace 级的 input/output 在 v4 已废弃、只为兼容保留（[Migrate ingestion to v4](https://langfuse.com/integrations/native/opentelemetry/migration-to-v4)，[Why are trace input and output empty?](https://langfuse.com/faq/all/empty-trace-input-and-output)）。
 
-1. **采快照**：按 trace id 读 trace 详情和全部步骤，复用现有采集（轮询到稳定、同 session 历史、快照、指纹）。查不到算没采到。
-2. **找根步骤**：上一级为空，或上一级不在这条 trace 里的步骤。**恰好一个**才算；没有或有多个，就报"找不到唯一的根步骤"。
+1. **采快照**：按 trace id 读 trace 详情（步骤取详情自带的，不走 `/observations` 接口），复用现有采集（轮询到稳定、同 session 历史、快照、指纹）。查不到算没采到。
+2. **找根步骤**：步骤为空报"trace 有记录但没读到步骤"；否则，上一级为空，或上一级不在这条 trace 里的步骤。**恰好一个**才算；没有或有多个，就报"找不到唯一的根步骤"。
 3. **取请求和交付**：请求取根步骤的 input，没有再取 trace 级 input；交付取根步骤的 output，没有再取 trace 级 output。任一个两处都没有，就报"这条 trace 没有记本轮的请求 / 答复"。不从子步骤（比如模型调用）取，因为那里的内容不等于业务交付。
 4. **记下取自哪里**：根步骤还是 trace 级，写进快照，后面随交付来源一起交给判卷。
 

@@ -31,8 +31,9 @@
 1. `id`（W3C）方式从本次请求记录 `business_trace_association` 里的 `traceparent` 解出 trace-id；`metadata.<key>` 方式从 request/response JSON Pointer 取非空标识。取不到记 `binding_missing`，不查。
 2. `id` 方式读取 `/api/public/traces/{trace-id}`；metadata 模式分页检索，必须唯一匹配，且详情再次验证 ID。
    无匹配等待异步入库；多匹配直接失败。分页不完整不能宣称唯一。
-3. 读取 trace、分页 observation 清单以及每条 observation 详情。v3.184.1 的 v1 observation
-   API 可返回完整字段，避免 v2 默认字段组和 metadata 预览导致遗漏；没有协议回退。
+3. 读取 trace 详情，步骤（observation）直接取详情自带的完整对象，不再调 `/observations` 列表和单条详情接口
+   （2026-11-06：公司 OSS v3 库上列表接口加时间范围也超时，见文末"步骤取自 trace 详情"）。详情里的步骤不是完整对象
+   （比如只有 id）时记 `trace_observations_not_objects`，不继续采集，不回退到别的接口。
 4. 记录数、内容、完成状态都稳定且所有非 EVENT 记录有 endTime，才结束轮询。
    默认等待 60 秒、间隔 1 秒、稳定窗口 3 秒。变化中的相同数量记录不会提前结束。
    失败的详情保留已经读到的清单行并标 partial；分页限制、未结束及读取错误显式记录。
@@ -231,3 +232,17 @@ Insurance 场景按请求 `body.trace_id` 关联，写死的值重跑会在 Lang
 G01 两边结论不同，原因在业务：这次答复正常，原结论那次业务降级了。
 
 实跑中修的一处：第一版把生成的 `traceparent` 写进了 case 的 `headers`，多轮的第 2 轮沿用信封时，被当成手写的头拒绝了（E01 首跑失败）。改成记在 `business_trace_association` 里，每次投递覆盖（见上表"投递"一行）。另有两次 SSE 失败与本改动无关：一次是 5 条并发时 18066 返回 429 限流；一次是 18067 转接服务没真正重启（`pkill` 没匹配上进程），旧进程不转发 `traceparent`。
+
+## 步骤取自 trace 详情（2026-11-06）
+
+现象：公司 Langfuse OSS v3 库上，按 trace id 复评报"找不到唯一的根步骤"。实测 `GET /api/public/observations?traceId=…`
+返回 `Request timed out`（服务端提示该 legacy 接口慢，v2 只在云版可用；加一天的 `fromStartTime/toStartTime` 仍超时），
+步骤一个没读到，采集状态是 partial，空步骤列表被当成"没有唯一根"。
+
+改法：只用 `GET /api/public/traces/{id}`（按主键取，快）和它自带的 `observations`。本机 3.184.1 三条真实 trace
+（8、15、16 个步骤）对比：步骤 id 与 `/observations` 列表完全一致，`parentObservationId`、`name`、`type`、起止时间、
+`input`、`output`、`metadata`、`level`、`statusMessage`、`model`、`usage`、`latency` 逐项无差异；与单条详情只差
+`inputPrice/outputPrice/totalPrice`（代码不用）。删掉列表分页、逐条详情和"清单对不对得上"的核对。
+
+`from_trace` 另加一条：trace 有记录但步骤为空时，报"trace 有记录但没读到步骤"，不再落到根步骤的错。
+同 session 历史、按 metadata 找 trace 仍用 `/traces` 列表。

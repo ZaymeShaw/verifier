@@ -97,10 +97,6 @@ def _install(monkeypatch, rows):
         calls.append(path)
         if path == "/traces/" + TRACE_ID:
             return trace
-        if path == "/observations":
-            return {"data": rows, "meta": {"totalPages": 1}}
-        if path.startswith("/observations/"):
-            return next(r for r in rows if r["id"] == path.rsplit("/", 1)[-1])
         raise AssertionError(path)
     monkeypatch.setattr(langfuse, "_get_json", get)
     return calls
@@ -113,6 +109,16 @@ def test_collect_uses_the_sent_trace_id(monkeypatch):
     assert {k: snap["association"][k] for k in ("method", "trace_id")} == {"method": "w3c", "trace_id": TRACE_ID}
     assert "parent_span_id" not in snap["association"]  # parent-id 只是格式要求带的一段，不记、不用
     assert "/traces" not in calls
+    assert not any(path.startswith("/observations") for path in calls)  # 步骤取自 trace 详情，不走会超时的列表接口
+
+
+@pytest.mark.parametrize("observations", [["root"], None])
+def test_trace_detail_without_step_objects_is_not_guessed(monkeypatch, observations):
+    _install(monkeypatch, [_observation("root", None)])
+    get = langfuse._get_json
+    monkeypatch.setattr(langfuse, "_get_json", lambda cfg, path, query=None: {**get(cfg, path, query), "observations": observations})
+    snap = langfuse.collect(config(), request={"business_trace_association": {"headers": {"traceparent": f"00-{TRACE_ID}-{PARENT}-01"}}}, response={})
+    assert snap["status"] == "failed" and "trace_observations_not_objects" in snap["errors"]
 
 
 # 认根只看 trace 本身（spec/alg/business-trace-langfuse.md §2.4），和是谁发起的无关

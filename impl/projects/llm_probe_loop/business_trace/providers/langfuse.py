@@ -323,38 +323,17 @@ def _settle(clean, business_id, snapshot):
                 if trace.get("id") != ident or (clean["match_field"] != "id" and
                         (not isinstance(trace.get("metadata"), Mapping) or trace["metadata"].get(key) != business_id)):
                     raise ValueError("association_detail_mismatch")
-                observations, errors, observation_notes = _pages(attempt, "/observations", {"traceId": ident})
-                details = []
-                prior = {row["id"]: row for row in snapshot["records"].get("observations", [])}
-                if snapshot["records"].get("trace", {}).get("id") != ident:
-                    prior = {}
-                for row in observations:
-                    if time.monotonic() >= deadline:
-                        errors.append("observation_detail_deadline")
-                        details.append(row)
-                        continue
-                    if row.get("traceId") != ident:
-                        errors.append("observation_trace_mismatch:" + row["id"])
-                        continue
-                    try:
-                        detail = _get_json(attempt, "/observations/" + quote(row["id"], safe=""))
-                        if detail.get("id") != row["id"] or detail.get("traceId") != ident:
-                            raise ValueError("observation_detail_mismatch")
-                        details.append(detail)
-                    except Exception as exc:
-                        details.append(prior.get(row["id"], row))
-                        errors.append("observation_detail:" + row["id"] + ":" + _error(exc))
-                listed_ids = {row["id"] for row in details}
-                expected_ids = {row["id"] for row in trace.get("observations", [])
-                                if isinstance(row, Mapping) and row.get("id")}
-                if expected_ids - listed_ids:
-                    errors.append("trace_observation_list_incomplete")
-                if errors:
-                    details.extend(row for key, row in prior.items() if key not in listed_ids)
-                details.sort(key=lambda r: (_stamp(r.get("startTime")) or 0, r["id"]))
+                # 步骤取自 trace 详情自带的完整对象：/observations 列表接口在大库上会超时（2026-11-06 公司库实测）
+                details = trace.get("observations")
+                if not isinstance(details, list) or not all(
+                        isinstance(row, Mapping) and isinstance(row.get("id"), str) for row in details):
+                    last_errors = ["trace_observations_not_objects"]
+                    break
+                errors = ["observation_trace_mismatch:" + row["id"] for row in details if row.get("traceId") != ident]
+                details = sorted((dict(row) for row in details if row.get("traceId") == ident),
+                                 key=lambda r: (_stamp(r.get("startTime")) or 0, r["id"]))
                 snapshot["records"] = {"trace": trace, "observations": details}
                 snapshot["association"].update(trace_id=ident, matched_trace_count=1, listing_notes=match_notes)
-                snapshot["listing_notes"] = observation_notes
                 signature = hashlib.sha256(json.dumps(snapshot["records"], sort_keys=True, default=str).encode()).hexdigest()
                 unfinished = [r["id"] for r in details if r.get("type") != "EVENT" and not r.get("endTime")]
                 invalid_times = (["trace"] if _stamp(trace.get("timestamp")) is None else []) + [
@@ -409,6 +388,9 @@ def from_trace(config, trace_id):
         return out
     trace = snapshot["records"].get("trace") or {}
     rows = snapshot["records"].get("observations") or []
+    if not rows:
+        out["error"] = "trace 有记录但没读到步骤"
+        return out
     top = root_id(rows)
     if top is None:
         out["error"] = "找不到唯一的根步骤"

@@ -48,7 +48,7 @@ traceparent: 00-<trace-id>-<parent-id>-01
 
 - 按 `trace-id` 读 trace 详情。查不到（404）算异步入库还没到，按现有轮询规则等；等到超时仍查不到，记"没采到"（`information_sources.md` 要求 1），不改用别的方式找。
 - trace id 本身唯一，不存在多条匹配。详情返回的 `id` 不等于发出的 `trace-id` 时，算关联失败。
-- 采到以后的步骤（observation 清单与详情、稳定判定、同 session 历史、快照）沿用现有实现，不变。
+- 步骤（observation）取 trace 详情自带的完整对象，不再调 `/observations` 列表与单条详情接口（2026-11-06，见 implementation 文档）；稳定判定、同 session 历史、快照沿用现有实现，不变。
 
 ### 2.4 读取：只看 trace 本身认根（2026-11-03 修订）
 

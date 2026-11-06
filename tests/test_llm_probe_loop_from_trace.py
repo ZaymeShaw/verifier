@@ -51,7 +51,11 @@ def test_root_with_external_parent_counts_as_root(monkeypatch):
     assert got["delivered"] == ANS and got["error"] == ""
 
 
-@pytest.mark.parametrize("rows", [[], [_obs("a", input=Q, output=ANS), _obs("b", input=Q, output=ANS)],
+def test_trace_without_readable_steps_says_so(monkeypatch):
+    assert _replay(monkeypatch, [])["error"] == "trace 有记录但没读到步骤"
+
+
+@pytest.mark.parametrize("rows", [[_obs("a", input=Q, output=ANS), _obs("b", input=Q, output=ANS)],
                                   [_obs("a", "x1", input=Q, output=ANS), _obs("b", "x2", input=Q, output=ANS)]])
 def test_root_must_be_unique(monkeypatch, rows):
     assert "唯一的根步骤" in _replay(monkeypatch, rows)["error"]
