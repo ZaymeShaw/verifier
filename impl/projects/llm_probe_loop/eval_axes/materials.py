@@ -67,8 +67,9 @@ def _deliveries(trace: Any) -> list[dict[str, Any]]:
 def _trace(case: Case, _: Mapping) -> dict[str, Any]:
     """这一轮 trace 的存档整理成的案卷（spec/alg/axis_loop.md §12.2.1）：目录、记录正文、程序枚举的环节表、缺口。
     整轮没采到或一条记录都没有 → 取不到（case 记运行失败）；一轮里缺端点照常给，缺口列在 gaps 里。"""
-    from impl.projects.llm_probe_loop.business_trace.dossier import build_catalog, build_dossier, record_body, render_catalog, render_value
+    from impl.projects.llm_probe_loop.business_trace.dossier import build_catalog, render_catalog
     from impl.projects.llm_probe_loop.business_trace.links import build_links, program_suspects
+    from impl.projects.llm_probe_loop.resources.case_trace import build_dossier, record_body, source_record
 
     fields = case.trace.project_fields if isinstance(case.trace.project_fields, Mapping) else {}
     dossier = build_dossier(case.trace, fields.get("business_trace"))
@@ -77,16 +78,20 @@ def _trace(case: Case, _: Mapping) -> dict[str, Any]:
         why = "；".join(f"{g['id']}：{g.get('reason')} {g.get('errors') or ''}".strip() for g in dossier["gaps"]
                        if g["id"].endswith((".collection", ".empty"))) or "存档里没有过程记录"
         raise MaterialUnavailable(f"trace 采集失败：{why}")
-    sources = [{"id": src["id"], "kind": "request_response", "turn": src["id"],
-                "fields": {"request_and_response": {"status": "available",
-                                                    "value": render_value(dossier, src["request_and_response"])}}}
-               for src in dossier["sources"]]
+    sources = [source_record(dossier, src) for src in dossier["sources"]]
     links = build_links(dossier)["links"]
     recorder = next((src["recorder"] for src in dossier["sources"] if src.get("recorder")), "Agno")
     return {"catalog": render_catalog(build_catalog(dossier)),
             "records": sources + [record_body(dossier, row) for row in dossier["records"]],
             "links": links, "program_suspects": program_suspects(links, recorder=recorder),
             "gaps": dossier["gaps"], "coverage": dossier["coverage"], "dossier": dossier}
+
+
+def _trace_resources(value: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """case.trace 提供的资源：案卷按 case_trace 组织（spec/alg/resources.md §10.2）。"""
+    from impl.projects.llm_probe_loop.resources.case_trace import resources
+
+    return resources(value["dossier"])
 
 
 def _evidence(case: Case, _: Mapping) -> dict[str, bool]:
@@ -135,7 +140,8 @@ def registry() -> Registry:
                                    dossier={"type": "object"}),
                  "这一轮业务 trace 的存档整理成的案卷：catalog 目录、records 记录正文（按编号读）、links 程序枚举的环节表"
                  "（类型、输入端 / 输出端是哪些记录的哪些字段）、program_suspects 程序按事实标出的可疑环节、gaps 采集缺口；"
-                 "dossier 是整理前的原始案卷（给程序用）。跑业务时采集、存档，评测只读存档", _trace),
+                 "dossier 是整理前的原始案卷（给程序用）。跑业务时采集、存档，评测只读存档", _trace,
+                 resources=_trace_resources),
         Material("scenario.evidence", obj(knowledge={"type": "boolean"}, trace={"type": "boolean"}),
                  "场景配了哪类证据：knowledge = 选用了知识源；trace = 选用了 trace 源", _evidence),
         Material("axis.note", TEXT, "场景对当前这个轴写的描述", _axis_note),

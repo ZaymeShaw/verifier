@@ -32,6 +32,7 @@ from .reader import Reader, summarize
 from .text import dump
 from .validate import check_entry
 from .view import CallView, TaskView
+from .visible import Visible
 
 SUBMIT, RECALL = "submit", "recall"
 AXIS_NOTE = "axis.note"
@@ -43,7 +44,12 @@ SYSTEM = """你是评测员，在一个 case 上完成一组评测任务。任�
 1. 按任务说明判；只依据给你的材料和工具返回，不凭自己的知识。
 2. 用 submit 交：task_id 写任务名，payload 照提交格式写。分条交的任务每个分项单独交（带 item_id），全部交完再不带 item_id 交一次收尾。
 3. 被拒就按原因改了再交。几个任务可以交错做。
-4. 引用写成 {"ref": 出处, "quote": 原文}：出处是工具返回里的 call_id，或材料的标题；quote 从原文逐字摘，不改写、不拼接。
+4. 引用写成 {"ref": 出处, "quote": 原文}。出处分层级，写到能证明你那句话的那一层：
+   - 一次工具返回：写它的 call_id；
+   - 一份材料：写材料的标题；
+   - 材料里的一条记录（records[] 里的一项）：写记录编号（records[].id）；原文在这条记录里任何位置都算，包括记录本身的属性（name、kind 等）；
+   - 记录里的一个字段：写"记录编号/fields/字段名"，字段名只能是这条记录 fields 下面的名字；原文只在这个字段里找。
+   quote 照原文显示的样子逐字抄：不改写、不补全、不用省略号拼接；JSON 的键和字符串连同双引号照抄（如 "outcome": "ok"），markdown 符号照抄（如 **投保人**）。
 5. 同一次回复里拿到的工具返回，要到下一次回复才能引用。
 6. 已经交过的任务发现交错了，可以重交来修改；依赖它的任务会被作废，需要重做。
 7. 工具返回太长时会被归档，用 recall(call_id) 重看。
@@ -247,7 +253,8 @@ class _Base(Hook):
         if axis_id and self.loop.table.registry.get(AXIS_NOTE) and AXIS_NOTE not in entries:
             chosen.append(parse_entry(AXIS_NOTE))
         materials = self.loop.table.for_code(chosen, axis_id)
-        return TaskView(axis_id, own, materials, dict(params or {}), self.call_views(history), stage, tuple(parts))
+        return TaskView(axis_id, own, materials, dict(params or {}), self.call_views(history), stage, tuple(parts),
+                        Visible(self.loop.table.resources, self.loop.table.view(chosen, axis_id)))
 
     def recall_tool(self) -> VerifiableTool:
         def recall(call_id: str) -> Any:

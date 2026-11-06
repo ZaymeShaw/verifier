@@ -10,6 +10,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, Sequence
 
+from impl.core.resources import ResourceTable
+
 from . import paths
 from .text import dump
 
@@ -23,12 +25,15 @@ class MaterialUnavailable(RuntimeError):
 
 @dataclass(frozen=True)
 class Material:
-    """load(case, context) -> 值，一个 case 一个值（不带参数）。context 只有 axis：读这份材料的轴（axis.* 用）。"""
+    """load(case, context) -> 值，一个 case 一个值（不带参数）。context 只有 axis：读这份材料的轴（axis.* 用）。
+    resources：这份材料的值提供哪些资源（值 → [{uri, type, body, name, title?, description?, meta?}]），
+    取值时挂进本 case 的资源表（spec/alg/resources.md §10.3）；不提供资源的材料不填。"""
 
     name: str
     schema: Mapping[str, Any]
     description: str
     load: Callable[[Any, Mapping[str, Any]], Any]
+    resources: Optional[Callable[[Any], Sequence[Mapping[str, Any]]]] = None
 
 
 @dataclass(frozen=True)
@@ -81,12 +86,13 @@ class Registry:
 
 
 class MaterialTable:
-    """一个 case 的材料表：内置材料按需取一次并缓存；轴结果随台账写入。"""
+    """一个 case 的材料表：内置材料按需取一次并缓存；轴结果随台账写入；声明了资源的材料取值时挂进资源表。"""
 
     def __init__(self, registry: Registry, case: Any) -> None:
         self.registry = registry
         self.case = case
         self._builtin: dict[tuple, Any] = {}
+        self.resources = ResourceTable()   # 本 case 的全部资源（存在）；任务可见哪些按白名单另算
         self.results: dict[str, Optional[Mapping[str, Any]]] = {}  # 轴 id → 完整结果；None = 没出现 / 没启用
 
     def full(self, name: str, axis_id: str = "") -> Any:
@@ -98,7 +104,16 @@ class MaterialTable:
             raise KeyError(f"未登记的内置材料：{name}")
         key = (name, axis_id if name.startswith("axis.") else "")
         if key not in self._builtin:
-            self._builtin[key] = material.load(self.case, {"axis": axis_id})
+            value = material.load(self.case, {"axis": axis_id})
+            if material.resources is not None:
+                try:
+                    for item in material.resources(value):
+                        self.resources.mount(item["uri"], item["type"], item["body"], name=item["name"],
+                                             title=item.get("title"), description=item.get("description"),
+                                             meta=item.get("meta"))
+                except ValueError as exc:   # 地址不合法、重复：与取值失败同等处理（启动检查时整个 case 运行失败）
+                    raise MaterialUnavailable(f"挂资源失败：{exc}") from exc
+            self._builtin[key] = value
         return self._builtin[key]
 
     def take(self, entry: Entry, axis_id: str = "") -> Any:

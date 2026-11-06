@@ -11,8 +11,9 @@ from __future__ import annotations
 import json
 from typing import Any, Callable, Mapping, Sequence
 
-from .dossier import (EVIDENCE_FULL_READ_CHARS, EVIDENCE_NODE_CHARS, PREVIEW_CHARS, node_shape, record_body,
-                      render_value, resolve_node_path)
+from impl.projects.llm_probe_loop.resources.case_trace import record_body, render_value
+
+from .dossier import EVIDENCE_FULL_READ_CHARS, EVIDENCE_NODE_CHARS, PREVIEW_CHARS, node_shape, resolve_node_path
 
 # 单次读取上限：超了就返回结构图让模型下钻，绝不静默截断（截断会让模型以为自己看全了）。
 # 与视图渲染同口径（EVIDENCE_NODE_CHARS）：读的时候按这个数下钻，下游拿到的也是同一精度。

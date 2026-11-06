@@ -101,11 +101,23 @@ ACTUAL = {"actual": [{"id": "E1", "links": [], "observed": "看过两端", "quot
 CURRENT: dict = {}
 
 
+def resources(texts):
+    """校验拿到的可见资源：每个编号一条记录，正文是给的那几段。"""
+    from impl.core.axis_loop.visible import Visible
+    from impl.core.resources import ResourceTable
+
+    table = ResourceTable()
+    for ref, parts in texts.items():
+        table.mount(f"trace://{ref}", "record_set", {"fields": {"v": {"status": "available", "value": parts}}}, name=ref)
+    return Visible(table, {"m": {"records": [{"id": ref} for ref in texts]}})
+
+
 def actual(axis):
     """达到也要引原文：从侦探给这个轴的记录里摘一段（运行到实际阶段时才有）。"""
-    from impl.projects.llm_probe_loop.process_axes import record_texts
+    from impl.core.axis_loop.text import leaves
     view = next(v for v in CURRENT["table"].results["trace_analysis"]["views"] if v["axis"] == axis)
-    found = next(((ref, t) for ref, texts in record_texts(view["full"]).items() for t in texts if len(t) >= 4), None)
+    found = next(((r["id"], s) for r in view["full"]["records"] for s in leaves(r["fields"])
+                  if len(s.strip()) >= 4 and "\\" not in s), None)
     if not found:   # 侦探没给这个轴任何记录：看不到就引不出，只能无法核
         return {**ACTUAL, "actual": [{**ACTUAL["actual"][0], "verdict": "无法核"}]}
     return {**ACTUAL, "actual": [{**ACTUAL["actual"][0], "quotes": [{"ref": found[0], "quote": found[1][:30]}]}]}
@@ -303,10 +315,10 @@ def test_needs_external_not_met_is_sent_back_not_rewritten():
     row = lambda i, verdict: {"id": i, "links": [], "observed": "o", "quotes": quote, "verdict": verdict}
     own = {"actual": [row("E1", "达到"), row("E2", "没达到")], "unexpected": [],
            "problems": [{"phenomenon": "返回为空", "items": ["E2"], "attribution": "本轴", "impact": "y"}], "reason": "r", "scope_note": "无"}
-    problems = check_actual(own, plan, {"r1": ["客户甲"]})
+    problems = check_actual(own, plan, resources({"r1": ["客户甲"]}))
     assert len(problems) == 1 and "E2 必须独立查证" in problems[0]
     fixed = {**own, "actual": [row("E1", "达到"), row("E2", "无法核")], "problems": []}
-    assert check_actual(fixed, plan, {"r1": ["客户甲"]}) == []
+    assert check_actual(fixed, plan, resources({"r1": ["客户甲"]})) == []
     assert {r["id"]: r["verdict"] for r in actual_result("knowledge_data", fixed, plan)["results"]} == {"E1": "达到", "E2": "无法核"}
 
 
@@ -320,7 +332,7 @@ def test_met_needs_a_quote_that_is_in_the_record():
                       {"id": "E3", "links": [], "observed": "返回与请求一致", "quotes": [{"ref": "r1", "quote": "返回了保单"}], "verdict": "达到"}],
            "unexpected": [], "problems": [], "reason": "r", "scope_note": "无"}
     texts = {"r1": ["outcomeok"]}
-    problems = "".join(check_actual(own, plan, texts))
+    problems = "".join(check_actual(own, plan, resources(texts)))
     assert "E2 判达到但没有引文" in problems and "返回了保单" in problems and "outcome ok" not in problems
 
 
@@ -400,7 +412,7 @@ def test_not_applicable_needs_evidence_and_leaves_results():
     row = lambda i, quotes: {"id": i, "links": [], "observed": "走直达工具，没调大模型", "quotes": quotes, "verdict": "不适用"}
     own = {"actual": [row("E1", [{"ref": "r1", "quote": "语义直达判定命中 policy_search"}]), row("E2", [])],
            "unexpected": [], "problems": [], "reason": "r", "scope_note": "无"}
-    assert any("E2 判不适用但没有引文" in p for p in check_actual(own, plan, texts))
+    assert any("E2 判不适用但没有引文" in p for p in check_actual(own, plan, resources(texts)))
     out = actual_result("model_capability", {**own, "actual": own["actual"][:1] + [{**own["actual"][0], "id": "E2"}]}, plan)
     assert out["results"] == [] and out["verdict"] == "not_applicable"
     assert [r["id"] for r in out["composition"]["not_applicable"]] == ["E1", "E2"]

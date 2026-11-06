@@ -1,7 +1,7 @@
 """视图：校验与合成代码的唯一输入，只读（spec/alg/axis_loop.md §7.1）。
 
 只放白名单里的材料（按标准名给值：保留原结构，只应用元素筛选）、本次提交、本次调用参数、此前批次的调用、
-分发出去的各份结果。
+分发出去的各份结果、本任务可见的资源（按白名单裁出的那部分，不是整张资源表）。
 代码拿不到白名单以外的东西：依赖关系不能在代码里偷偷长出来（demand/axis_loop.md §3.4.3）。
 """
 from __future__ import annotations
@@ -9,6 +9,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, Optional, Sequence
+
+from .visible import Visible
 
 
 @dataclass(frozen=True)
@@ -32,6 +34,7 @@ class TaskView:
     calls: Sequence[CallView] = ()               # 此前批次的调用
     stage: str = "final"                         # item：校验一个分项；final：收尾
     parts: Sequence[Mapping[str, Any]] = ()      # 仅有分发的轴的合成：[{id, result}]，各份被接受的结果
+    resources: Optional[Visible] = None          # 本任务可见的资源（spec/alg/resources.md §10.4）
 
     def call(self, call_id: str) -> Optional[CallView]:
         return next((c for c in self.calls if c.call_id == call_id), None)

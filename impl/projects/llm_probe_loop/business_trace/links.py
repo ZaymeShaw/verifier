@@ -14,7 +14,7 @@ import json
 from collections import defaultdict
 from typing import Any, Iterable, Mapping
 
-from impl.projects.llm_probe_loop.business_trace.dossier import render_value
+from impl.projects.llm_probe_loop.resources.case_trace import render_value
 
 LINK_TYPES = {
     "intent_understanding": "表达：用户原文 → 系统内部表达",

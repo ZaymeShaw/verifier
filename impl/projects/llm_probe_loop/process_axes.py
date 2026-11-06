@@ -13,7 +13,6 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
-from impl.projects.llm_probe_loop.business_trace.dossier import expand_content
 from impl.projects.llm_probe_loop.business_trace.links import AXIS_LINK_TYPES, LINK_TYPES, TYPE_AXES
 from impl.projects.llm_probe_loop.business_trace.materials import material_view, model_material
 
@@ -239,44 +238,26 @@ def check_expected(own: Mapping[str, Any], links: list[Mapping[str, Any]], expec
 _QUOTE_MARKS = str.maketrans({"“": '"', "”": '"'})
 
 
-def _squash(text: Any) -> str:
-    return "".join(str(text).split()).translate(_QUOTE_MARKS)
+_WHY = {"no_address": "出处不存在（写记录编号，或 记录编号/fields/字段名）",
+        "out_of_scope": "这条记录不在本轴材料里",
+        "not_found": "出处里找不到这段原文"}
 
 
-def _leaves(value: Any):
-    if isinstance(value, str):
-        yield value
-        try:
-            parsed = json.loads(value)
-        except ValueError:
-            return
-        if not isinstance(parsed, str):
-            yield from _leaves(parsed)
-    elif isinstance(value, dict):
-        for v in value.values():
-            yield from _leaves(v)
-    elif isinstance(value, list):
-        for v in value:
-            yield from _leaves(v)
-
-
-def record_texts(store: Mapping[str, Any]) -> dict[str, list[str]]:
-    """记录编号 → 该记录全部正文叶子（去空白），供逐字核对。"""
-    return {r["id"]: [_squash(t) for t in _leaves(expand_content(r["fields"], {}))] for r in store["records"]}
-
-
-def bad_quotes(row: Mapping[str, Any], texts: Mapping[str, list[str]]) -> list[dict[str, Any]]:
+def bad_quotes(row: Mapping[str, Any], resources: Any) -> list[dict[str, Any]]:
+    """逐条按资源核（spec/alg/resources.md §10.6）：resources 是本任务可见的资源（TaskView.resources）。"""
     out = []
     for q in row.get("quotes") or []:
-        ref, quote = q.get("ref"), _squash(q.get("quote") or "")
-        if ref not in texts:
-            out.append({"row": row.get("id"), "ref": ref, "quote": q.get("quote"), "why": "记录编号不在材料里"})
-        elif not quote or not any(quote in t for t in texts[ref]):
-            out.append({"row": row.get("id"), "ref": ref, "quote": q.get("quote"), "why": "所引记录里找不到这段原文"})
+        ref, quote = str(q.get("ref") or ""), str(q.get("quote") or "")
+        result = resources.cite(ref, quote) if quote.strip() else None
+        if result is None or not result.ok:
+            why = _WHY[result.reason] if result is not None else _WHY["not_found"]
+            if result is not None and result.hint:
+                why += f"；{result.hint}"
+            out.append({"row": row.get("id"), "ref": ref, "quote": q.get("quote"), "why": why})
     return out
 
 
-def check_actual(own: Mapping[str, Any], expected: Mapping[str, Any], texts: Mapping[str, list[str]]) -> list[str]:
+def check_actual(own: Mapping[str, Any], expected: Mapping[str, Any], resources: Any) -> list[str]:
     problems: list[str] = []
     ids = [item["id"] for item in expected["expected"]]
     got = [row["id"] for row in own["actual"]]
@@ -301,11 +282,11 @@ def check_actual(own: Mapping[str, Any], expected: Mapping[str, Any], texts: Map
                             "trace 里看得到做到了就判达到并引原文，看不出就判无法核")
         if row["verdict"] in QUOTED and not row.get("quotes"):
             problems.append(f"{row['id']} 判{row['verdict']}但没有引文" + ("（要引原文说明实际走的是哪条路）" if row["verdict"] == NOT_APPLICABLE else "（引不出原文就判无法核）"))
-        problems += [json.dumps(b, ensure_ascii=False) for b in bad_quotes(row, texts)]
+        problems += [json.dumps(b, ensure_ascii=False) for b in bad_quotes(row, resources)]
     for row in own["unexpected"]:
         if not row.get("quotes"):
             problems.append(f"unexpected {row['id']} 没有引文")
-        problems += [json.dumps(b, ensure_ascii=False) for b in bad_quotes(row, texts)]
+        problems += [json.dumps(b, ensure_ascii=False) for b in bad_quotes(row, resources)]
     return problems
 
 

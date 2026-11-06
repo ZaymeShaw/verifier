@@ -8,7 +8,9 @@ from __future__ import annotations
 import json
 from typing import Any, Mapping
 
-from .dossier import VIEW_BUDGET_CHARS, _Contents, expand_content
+from impl.projects.llm_probe_loop.resources.case_trace import _Contents, expand_content
+
+from .dossier import VIEW_BUDGET_CHARS
 
 
 def _share(value: Any) -> Any:
@@ -156,16 +158,17 @@ def material_view(dossier: Mapping[str, Any], links: list[Mapping[str, Any]],
         same, carried = _source_overlaps(row, names)
         if tools_key:  # llm.tools* is delivered below as captured_tool_definitions
             carried.setdefault("raw_attributes", []).append("llm.tools")
-        rendered = {k: v for k, v in row.items() if k != "fields"}
+        # 字段来源 ref 与记录的 ref 是程序内部用的（取值、按来源去重），长得像地址却不是：不给模型（resources.md §10.6）
+        rendered = {k: v for k, v in row.items() if k not in ("fields", "ref")}
         rendered["fields"] = {}
         for name in sorted(names):
-            info = dict(row["fields"][name])
+            info = {k: v for k, v in row["fields"][name].items() if k != "ref"}
             if "value" in info:
                 delivered.setdefault(json.dumps(expand_content(info["value"], contents), ensure_ascii=False, sort_keys=True),
                                      f"{ref}/fields/{name}")
             if name in same:
-                rendered["fields"][name] = {"status": info.get("status"), "ref": info.get("ref"),
-                                            "same_as": next(n for n in names - same if row["fields"][n].get("ref") == info.get("ref"))}
+                rendered["fields"][name] = {"status": info.get("status"),
+                                            "same_as": next(n for n in names - same if row["fields"][n].get("ref") == row["fields"][name].get("ref"))}
                 continue
             if "value" in info:
                 value = expand_content(info["value"], contents)

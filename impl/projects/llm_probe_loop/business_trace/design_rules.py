@@ -12,7 +12,9 @@ import hashlib
 import json
 from typing import Any, Mapping
 
-from .dossier import expand_content, resolve_node_path
+from impl.projects.llm_probe_loop.resources.case_trace import expand_content
+
+from .dossier import resolve_node_path
 from .materials import _supporting_definitions
 
 COLLECTION = 'observed_at_collection_not_verified_run_version'
