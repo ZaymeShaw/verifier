@@ -1,7 +1,7 @@
 """Link enumeration uses only Agno structure and states relations, never verdicts."""
 import json
 
-from impl.projects.llm_probe.business_trace.links import AXIS_LINK_TYPES, build_links
+from impl.projects.llm_probe_loop.business_trace.links import AXIS_LINK_TYPES, build_links, program_suspects
 
 
 def row(ident, kind, fields, **meta):
@@ -51,7 +51,9 @@ def test_links_cover_each_type_with_both_ends_and_facts_only():
     step = links["context_memory:step:s0→s1"]
     assert step["output"] == [{"ref": "span-s1", "field": "input"}]
     assert step["facts"] == {"next_input_recorded": True, "contains": True}
-    assert links["planning_routing:branch:s1"]["facts"] == {"executed": ["agent"]}
+    # 规划轴每轮只有一个路径环节；分支选了哪个子步骤记在它的 facts 里，不单独成环节。
+    assert [k for k in links if k.startswith("planning_routing:")] == ["planning_routing:path:turn1"]
+    assert links["planning_routing:path:turn1"]["facts"]["branches"] == [{"step": "s1", "name": "route", "executed": ["agent"]}]
     # Exact span request wins over reconstruction; reconstruction is labelled as such.
     assert links["model_capability:call2"]["input"] == [{"ref": "call2", "field": "exact_request"}]
     assert links["model_capability:call1"]["facts"] == {"input_source": "verified"}
@@ -66,11 +68,12 @@ def test_links_cover_each_type_with_both_ends_and_facts_only():
 def test_repeat_uses_canonical_arguments_and_skips_copies_and_history():
     links = by_id(build_links(dossier()))
     assert {k for k in links if k.startswith("tool_execution:")} == {"tool_execution:t0", "tool_execution:t1", "tool_execution:t2"}
-    repeat = links["planning_routing:repeat:t1"]
-    assert repeat["facts"] == {"tool": "lookup", "repeat_of": "t0", "started_after_prior_ended": True,
-                               "same_result": True}
-    # List order is meaning: a different order is a different call.
-    assert "planning_routing:repeat:t2" not in links
+    path = links["planning_routing:path:turn1"]
+    # List order is meaning: a different order (t2) is a different call, so only t1 repeats t0.
+    assert path["facts"]["repeats"] == [{"tool": "lookup", "call": "t1", "repeat_of": "t0",
+                                         "started_after_prior_ended": True, "same_result": True}]
+    hits = {h["link_id"]: h["why"] for h in program_suspects([path])}
+    assert hits == {"planning_routing:path:turn1": "同名同参再次调用（t1 重复 t0）"}
 
 
 def test_axis_filter_keeps_only_its_link_types():
@@ -122,7 +125,6 @@ def test_step_ends_use_step_span_when_step_results_not_saved():
     assert step["input"] == [{"ref": "span-s0", "field": "output"}] and step["facts"]["contains"] is True
     assert links["intent_understanding:turn1"]["output"][0] == {"ref": "span-s0", "field": "output"}
     assert {"ref": "span-s1", "field": "output"} in links["planning_routing:path:turn1"]["output"]
-    assert links["planning_routing:branch:s1"]["output"] == [{"ref": "span-s1", "field": "output"}]
     assert links["context_memory:deliver:turn1"]["input"] == [{"ref": "span-s1", "field": "output"}]
     d["records"].append(row("span-s0b", "steps", {"output": "again"}, name="prepare.aexecute", representation="span"))
     assert by_id(build_links(d))["context_memory:step:s0→s1"]["input"] == [{"ref": "s0", "field": "output"}]

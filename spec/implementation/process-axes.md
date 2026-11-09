@@ -639,3 +639,33 @@ fallback2 修复后对同一冻结样本完整重跑（primary 地区不支持�
 - 起因：2026-10-14 整批（c7a504df + f763d7da）里 7 个轴判定失败（model_capability 6 个、knowledge_data 1 个），错误都是"basis 写了通用职责但没写给定的编号"。15.8 把职责写法改成带编号后，提示词对所有轴都讲了通用职责，但只有 context_memory 给了职责；其他轴的模型照样写"通用职责"，却没有编号可填，纠错一次仍不合格。
 - 代码：`adapters/process_expected.py` 把职责那条要求拆成 `DUTY_RULE`，只在本轴有职责时接到第一步要求后面；编号校验也只在有职责时做。
 - 测试：新增 `test_axis_without_duties_neither_asks_for_nor_checks_duty_numbers`。
+
+## 16. 规划轴改为按整条路径判（2026-11-06，用户确认）
+
+### 16.1 讨论结论
+- 起因：E01 网关拿着完整原话只办了一件事（选直达），实际步按"系统换了一条路把事办了"判不适用，问题落不到规划轴（需求 P8）。另一个 AI 会话把它答成"意图是规划的上游"，被用户否掉。
+- 抽象：前五轴输入决定唯一正确输出，编排是唯一"输入不决定输出"的部件，输出是选择；单点决策说明不了什么，一步对不对取决于后面怎么走。判定单位 = 能独立判对错的最小一段，规划轴的单位是一个任务的整条路径。需求 `demand/process_axes.md` §1.1 规划行改为"任务、可用部件、沿途返回 → 任务的整条路径"，§3 加 P8，§4 加"规划路由的判法 / 边界"两行，§7 加 P8 验收。
+- 本次刻意不碰：上游口径、知识轴、意图环节里的"各次模型调用发出的工具调用"（按解耦应归规划，待用户定）。
+- 工具返回的位置：需求说路径不含返回，但第二步材料只从环节两端与 leads 生成，拿掉返回第二步看不到；放到输入端第一步会看到实际调了什么。决定留在路径环节输出端，spec §2.1 写明它是判依据不是被判对象。
+
+### 16.2 已实施（分层）
+| 层 | 改不改 | 改什么 |
+|---|---|---|
+| 框架（loop 协议、dispatch、`process_axes.py` 校验库、`materials.py`/`dossier.py` 材料生成、axis_code 钩子） | 不改 | |
+| 项目代码 `impl/projects/llm_probe_loop/business_trace/links.py` | 改 | 删 `planning_routing:repeat:*`、`planning_routing:branch:*` 两类环节；新增 `_repeats`、`_branches` 按轮收集事实，并入 `planning_routing:path:{turn}` 的 facts（`repeats: [{tool, call, repeat_of, same_result, started_after_prior_ended}]`、`branches: [{step, name, executed}]`）；`program_suspects` 改读 `repeats`，可疑挂在 path 环节；`LINK_TYPES`、`LIMITS` 文案对齐需求 |
+| 配置 `impl/data/llm_probe_loop/axis_definitions.json` | 改 | `planning_routing_expected`、`planning_routing` 共用的轴头部重写（整条路径、不和输入比、每步以当时信息为限、可用部件定义）；子能力九条收成六条：覆盖、选择、顺序、应变、收尾、系统策略；本应要求里"不写如果则"改为"写触发条件 + 必须成立，条件没出现由第二步判不适用"，允许点名可用部件里的工具；实际要求里"不适用"改为"触发条件没出现"，删"换路办了"的例子，加"换路要看办成没办成"和"每一步只以当时拿到的信息判，拿着完整信息没办好归本轴"；其余五轴不动 |
+| 配置 `impl/data/llm_probe_loop/capability_map.json` | 改 | 职责 `retry_after_non_retryable` 的"适用子能力"改为"应变" |
+| 方案 `spec/alg/process-axes.md` | 改 | 修订记录；§2.1 规划轴一轮一个环节；§3.2 不适用；§8 规划段；§9 加 P8；§12 加 D13；§13 加第 12 条 |
+| 测试 `tests/test_business_trace_links.py` | 改 | import 从旧项目 `llm_probe` 换成 `llm_probe_loop`；branch/repeat 断言改为 path.facts 与 `program_suspects` 命中 |
+| 旧项目 `impl/projects/llm_probe/`、`tests/test_trace_analysis.py` 的 repeat 夹具 | 不改 | 旧项目不再维护 |
+
+### 16.3 已验证
+- 涉及 `llm_probe_loop` 的 11 个测试文件 144 项通过（含改后的环节表测试：规划轴只剩 path 环节、branches/repeats 事实、同参重复仍被程序标可疑）。
+- `tests/test_trace_analysis.py::test_program_suspects_reach_the_axes_without_the_analyst` 失败，改前同样失败（旧项目 `analysis.py` 调 `program_suspects` 带 `recorder` 而测试的替身不接），与本次无关。
+- 未做（D13）：隔离副本上 E01、D16、B02 加 2–3 个原判 sound 的 case 新旧并排人核。
+
+### 16.4 实测（2026-11-07，8036，D13 未通过）
+- 8036 配置已换新（备份 `dataset-building/backups/inst-33ff6254434841b0-20261107-planning-path/`），8037 未动。
+- 按 trace 复评 11 条（job `3c11981e`，基线 `9a22bce1`）：全部出结论；调用 183 → 170，耗时 6446 → 6351 s；规划轴结论变 1 条（E01 最后一轮 sound → problematic，`entity_lookup` 由"上游:模型"改归本轴）；主结论变 1 条（F01 没做成 → 不确定，来自未改的期望与知识轴）。这批 E01 只含最后一轮，验不到 P8。
+- 完整多轮（8037 存的现场 trace，`/api/eval_axes/run` 不落盘）：E01 两遍，P8 **1 / 2**：一遍规划轴判没达到·本轴；另一遍本应写成"必须安排保单与客户数据检索（如调用 policy.search）"，一条装两件事，保单查了就判达到，规划 sound。F01 一遍：改写重复归规划本轴，通过。
+- 已查实：本应确实看到了实际运行结果。侦探补的表外环节把同一条记录同时填成输入端和输出端（E01 的 `turn1/records/observations/11`）；`input_view` 的规则是"输出端整条摘掉，除非它也是本轴的输入端"，于是整条连返回留下，而 `reading_guide` 仍写"输出端没有给"。这段逻辑不是这次引入的（8037 的 11-03 结果也有：规划 4 / 22 条、工具与知识各 19 / 22 条）。但两遍看到的材料基本相同（28814 / 28846 字），第一遍照样拆开写对了，所以它不是第二遍漏判的唯一原因，直接原因是本应把两件事写成一条。`repeats` 在工具入参未记录时把不同查询算成同参（D16、C08）。D16 真实同参重复的 trace 已被覆盖，未验。

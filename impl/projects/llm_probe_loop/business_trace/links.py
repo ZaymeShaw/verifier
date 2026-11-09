@@ -18,7 +18,7 @@ from impl.projects.llm_probe_loop.resources.case_trace import render_value
 
 LINK_TYPES = {
     "intent_understanding": "表达：用户原文 → 系统内部表达",
-    "planning_routing": "编排：任务与当时状态 → 走哪条路、调什么、何时重试或停止",
+    "planning_routing": "编排：任务、可用部件、沿途返回 → 任务的整条路径",
     "tool_execution": "执行：调用参数 → 返回",
     "knowledge_data": "数据源：已正确执行的查询 → 数据是否存在",
     "model_capability": "模型：一次调用的实际输入 → 该次输出",
@@ -32,7 +32,8 @@ AXIS_LINK_TYPES = {
 TYPE_AXES = {t: tuple(a for a, types in AXIS_LINK_TYPES.items() if t in types) for t in LINK_TYPES}
 LIMITS = ("环节表只列程序从 Agno 结构能确定的环节与机器事实，不是可疑判断，也不是全部环节。"
           "facts 只陈述关系（同名同参、包含、相等、时序），不说明对错；contains=false 可能只是表示形式不同，须读两端原文。"
-          "planning_routing:path 与 knowledge_data 以一轮为单位：输入端是本轮用户输入（与运行末态），输出端是本轮全部调用与步骤产出。表外的环节须另行补出。")
+          "planning_routing:path 与 knowledge_data 以一轮为单位：输入端是本轮用户输入（与运行末态），输出端是本轮全部调用与步骤产出。"
+          "规划轴每轮只有这一个环节，分支选了哪个子步骤、哪些调用是同参重复记在它的 facts（branches、repeats）里。表外的环节须另行补出。")
 
 
 def _text(value: Any) -> str:
@@ -138,7 +139,7 @@ def _model_links(dossier: Mapping[str, Any], rows: Mapping[str, Mapping[str, Any
 
 
 def _tool_links(dossier: Mapping[str, Any], rows: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]]:
-    links, groups = [], defaultdict(list)
+    links = []
     # A span paired with a persisted call is the same execution seen twice.
     for tool in [t for t in _live(rows.values(), "tool_calls") if not t.get("persisted_ref")]:
         start, end = _time(dossier, tool, "start_time"), _time(dossier, tool, "end_time")
@@ -146,21 +147,26 @@ def _tool_links(dossier: Mapping[str, Any], rows: Mapping[str, Mapping[str, Any]
                            [(tool["id"], "result"), (tool["id"], "error")], "工具调用参数 → 返回",
                            tool=tool.get("name"), tool_error=_value(dossier, tool, "error") or None,
                            duration_s=round(end - start, 3) if start is not None and end is not None else None))
-        args = _value(dossier, tool, "arguments")
-        groups[(tool.get("run_id"), tool.get("name"), _text(args))].append((start, end, tool))
+    return links
+
+
+def _repeats(dossier: Mapping[str, Any], rows: Mapping[str, Mapping[str, Any]]) -> dict[Any, list[dict[str, Any]]]:
+    """同一 agent run 内同名同参再次发出的调用，按轮归入路径环节的事实（一步对不对要看整条路径，不单独成环节）。"""
+    groups = defaultdict(list)
+    for tool in [t for t in _live(rows.values(), "tool_calls") if not t.get("persisted_ref")]:
+        start, end = _time(dossier, tool, "start_time"), _time(dossier, tool, "end_time")
+        groups[(tool.get("run_id"), tool.get("name"), _text(_value(dossier, tool, "arguments")))].append((start, end, tool))
+    repeats: dict[Any, list[dict[str, Any]]] = defaultdict(list)
     for (_run, name, _args), calls in groups.items():
         if len(calls) < 2:
             continue
         calls.sort(key=lambda c: (c[0] is None, c[0] or 0))
-        for (p_start, p_end, prior), (start, _end, tool) in zip(calls, calls[1:]):
-            same_result = _value(dossier, prior, "result") == _value(dossier, tool, "result")
-            links.append(_link(f"planning_routing:repeat:{tool['id']}", "planning_routing", tool.get("turn"),
-                               [(prior["id"], "result"), (prior["id"], "error")], [(tool["id"], "arguments")],
-                               "同一 agent run 内同名同参再次调用：前次结果 → 编排与模型是否再次发出",
-                               tool=name, repeat_of=prior["id"],
-                               started_after_prior_ended=(start >= p_end) if start is not None and p_end is not None else None,
-                               same_result=same_result))
-    return links
+        for (_p_start, p_end, prior), (start, _end, tool) in zip(calls, calls[1:]):
+            repeats[tool.get("turn")].append({
+                "tool": name, "call": tool["id"], "repeat_of": prior["id"],
+                "started_after_prior_ended": (start >= p_end) if start is not None and p_end is not None else None,
+                "same_result": _value(dossier, prior, "result") == _value(dossier, tool, "result")})
+    return repeats
 
 
 def _transfer_links(dossier: Mapping[str, Any], rows: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -219,15 +225,23 @@ def _step_links(dossier: Mapping[str, Any], rows: Mapping[str, Mapping[str, Any]
                                "步骤产出 → 下一步骤" + ("输入" if recorded is not None else "（下一步输入未记录，输出端为其产出）"),
                                next_input_recorded=recorded is not None,
                                contains=_contains(recorded, _end_value(dossier, rows, produced)) if recorded is not None else None))
-        for step in siblings:
-            nested = children.get(step["id"]) or []
-            if nested:
-                previous = siblings[siblings.index(step) - 1] if siblings.index(step) else None
-                links.append(_link(f"planning_routing:branch:{step['id']}", "planning_routing", step.get("turn"),
-                                   [_step_end(dossier, spans, previous, "output")] if previous else [(parent, "input")],
-                                   [_step_end(dossier, spans, step, "output")], "带子步骤的控制步骤（Condition/Router/Loop 等）→ 实际执行的子步骤",
-                                   executed=[c.get("name") for c in nested]))
     return links
+
+
+def _branches(rows: Mapping[str, Mapping[str, Any]]) -> dict[Any, list[dict[str, Any]]]:
+    """带子步骤的控制步骤（Condition/Router/Loop 等）实际执行了哪些子步骤，按轮归入路径环节的事实。"""
+    steps = [r for r in _live(rows.values(), "steps") if r.get("representation") != "span"
+             and r.get("sequence_known") is not False]
+    children = defaultdict(list)
+    for step in steps:
+        children[step.get("parent_ref")].append(step)
+    branches: dict[Any, list[dict[str, Any]]] = defaultdict(list)
+    for step in steps:
+        nested = children.get(step["id"]) or []
+        if nested:
+            branches[step.get("turn")].append({"step": step["id"], "name": step.get("name"),
+                                               "executed": [c.get("name") for c in nested]})
+    return branches
 
 
 def _input_links(dossier: Mapping[str, Any], rows: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -263,6 +277,7 @@ def _input_links(dossier: Mapping[str, Any], rows: Mapping[str, Mapping[str, Any
 
 def _turn_links(dossier: Mapping[str, Any], rows: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]]:
     links, spans = [], _step_spans(rows)
+    branches, repeats = _branches(rows), _repeats(dossier, rows)
     agent_spans = {r["agent_run_id"]: r for r in _live(rows.values(), "steps") if r.get("agent_run_id")}
     current = [r for r in rows.values() if r.get("scope") == "current" and not r.get("copy_of")]
     said, expressed = [], []  # 意图：截至本轮的用户原文与内部表达
@@ -290,8 +305,9 @@ def _turn_links(dossier: Mapping[str, Any], rows: Mapping[str, Mapping[str, Any]
             steps_out = [_step_end(dossier, spans, s, "output") for s in top]
             tool_ends = [(t["id"], "arguments") for t in tools] + [(t["id"], "result") for t in tools]
             links.append(_link(f"planning_routing:path:{turn}", "planning_routing", turn, [(runs[0]["id"], "input")] + states,
-                               steps_out + tool_ends, "本轮任务与运行末态 → 实际走的路径、调用序列与收尾",
-                               tool_sequence=[t.get("name") for t in tools], model_calls=len(calls)))
+                               steps_out + tool_ends, "本轮任务与运行末态 → 整条路径：步骤产出、调用序列（参数与沿途返回）、收尾",
+                               tool_sequence=[t.get("name") for t in tools], model_calls=len(calls),
+                               branches=branches.get(turn) or None, repeats=repeats.get(turn) or None))
             links.append(_link(f"knowledge_data:{turn}", "knowledge_data", turn,
                                [(runs[0]["id"], "input")] + [(t["id"], "arguments") for t in tools],
                                [(t["id"], "result") for t in tools] or steps_out,
@@ -315,8 +331,8 @@ def program_suspects(links: Iterable[Mapping[str, Any]], *, recorder: str = "Agn
     hits = []
     for link in links:
         facts, why = link["facts"], []
-        if facts.get("repeat_of"):
-            why.append(f"同名同参再次调用（前次 {facts['repeat_of']}）")
+        for repeat in facts.get("repeats") or []:
+            why.append(f"同名同参再次调用（{repeat['call']} 重复 {repeat['repeat_of']}）")
         if facts.get("contains") is False:
             why.append("输出端不含输入端原文")
         diff = facts.get("vs_stored") or {}
