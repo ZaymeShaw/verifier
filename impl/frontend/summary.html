@@ -149,7 +149,7 @@
   </div>
 </main>
 <script src="vendor/exceljs.min.js"></script>
-<script src="case_pool_export.js?v=20260817-verdict"></script>
+<script src="case_pool_export.js?v=20261109-axis-summary"></script>
 <script src="axes_overview.js?v=20261001-labels-fixed100"></script>
 <script>
 async function post(path, body){
@@ -676,7 +676,17 @@ function exportEvalAxes(item){
     return tokens.map(t=>'['+t+']').join(' ');
   }).join('\n');
 }
-// 「扩展轴明细」sheet：一行一件事。生产 live / judge / 轴2 作为伪行进来，一个 case 的耗时和结论就是一条完整时间线。
+// 轴级汇总只读取已有轴级结论与说明，不用逐项理由替代轴级说明。
+function exportEvalAxesSummaryRows(view){
+  const caseId=tableRow(view).id||view.id||'';
+  const scenario=inferCaseScenario(view)||'';
+  return evalAxesRows(view).filter(axis=>axis.status!=='disabled').map(axis=>({
+    caseId,scenario,axisId:axis.axis_id||axis.type_id||'',title:axis.title||axis.type_id||axis.axis_id||'',
+    displayGroup:axisShown(axis)?'主要展示':'其余分析',status:axis.status||'',
+    verdict:axis.verdict??'',reason:axis.text||'',itemCount:(axis.items||[]).length,
+  }));
+}
+// 「扩展轴明细」sheet：逐项解释及原有生产阶段记录；生产阶段的 axis_id 留空。
 function exportEvalAxesDetailRows(view){
   const row=tableRow(view);
   const caseId=row.id||view.id||'';
@@ -692,7 +702,7 @@ function exportEvalAxesDetailRows(view){
   }
   evalAxesRows(view).filter(axis=>axis.status!=='disabled').forEach(axis=>{
     const stage='扩展·'+(axis.type_id||axis.axis_id||'');
-    const base={caseId,scenario,stage,status:axis.status||'',model:axis.llm_model||'',llmCalls:axis.llm_calls??'',toolCalls:axis.tool_calls??'',seconds:axis.elapsed_ms?Math.round(Number(axis.elapsed_ms)/100)/10:''};
+    const base={caseId,scenario,stage,axisId:axis.axis_id||axis.type_id||'',status:axis.status||'',model:axis.llm_model||'',llmCalls:axis.llm_calls??'',toolCalls:axis.tool_calls??'',seconds:axis.elapsed_ms?Math.round(Number(axis.elapsed_ms)/100)/10:''};
     const items=axis.items||[];
     if(!items.length){
       out.push({...base,verdict:axis.verdict||'',subject:'',reason:axis.text||'',citations:''});
@@ -799,8 +809,9 @@ async function exportCurrentCasePoolXlsx(){
   button.disabled=true;button.textContent='正在导出…';
   try{
     if(!globalThis.CasePoolExporter){throw new Error('本地 Excel 导出组件未加载');}
+    const axisRows=entries.flatMap(({view})=>exportEvalAxesSummaryRows(view));
     const detailRows=entries.flatMap(({view})=>exportEvalAxesDetailRows(view));
-    const result=await globalThis.CasePoolExporter.download({projectId:project(),rows:buildCasePoolExportRows(entries),detailRows});
+    const result=await globalThis.CasePoolExporter.download({projectId:project(),rows:buildCasePoolExportRows(entries),axisRows,detailRows});
     setStatus('已导出 '+result.rowCount+' 条当前筛选结果：'+result.fileName);
   }catch(err){setStatus('导出失败：'+(err?.message || String(err)));}
   finally{button.disabled=false;button.textContent=originalText;}

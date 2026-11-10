@@ -5,12 +5,25 @@
   const TRUNCATION_MARKER = '[已因 Excel 单元格 32767 字符上限截断]';
   const MIME_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   const SHEET_NAME = '用例池候选区';
-  // 第二张 sheet：一行一件事（live / 生产 judge / 生产轴2 / 每个扩展轴的每一条 item），理由全文和耗时都在这里。
+  const AXIS_SHEET_NAME = '评测轴汇总';
+  const AXIS_COLUMNS = [
+    {header: 'case_id', key: 'caseId', width: 28},
+    {header: 'scenario', key: 'scenario', width: 20},
+    {header: 'axis_id', key: 'axisId', width: 28},
+    {header: '轴名称', key: 'title', width: 24},
+    {header: '展示分组', key: 'displayGroup', width: 16},
+    {header: '运行状态', key: 'status', width: 14},
+    {header: '轴级判定', key: 'verdict', width: 18},
+    {header: '轴级说明', key: 'reason', width: 80},
+    {header: '项数', key: 'itemCount', width: 10},
+  ];
+  // 第三张 sheet：保留逐项理由、引用和生产阶段记录；用 case_id + axis_id 关联轴级汇总。
   const DETAIL_SHEET_NAME = '扩展轴明细';
   const DETAIL_COLUMNS = [
     {header: 'case_id', key: 'caseId', width: 28},
     {header: 'scenario', key: 'scenario', width: 20},
     {header: '阶段/轴', key: 'stage', width: 20},
+    {header: 'axis_id', key: 'axisId', width: 28},
     {header: 'status', key: 'status', width: 12},
     {header: 'verdict', key: 'verdict', width: 16},
     {header: '对象（断言/期望）', key: 'subject', width: 40},
@@ -196,11 +209,14 @@
     });
   }
 
-  function createWorkbook(rows, excelJsOverride, detailRows) {
+  function createWorkbook(rows, excelJsOverride, axisRows = [], detailRows = []) {
     if (!Array.isArray(rows)) {
       throw new Error('导出数据必须是数组');
     }
-    if (detailRows !== undefined && !Array.isArray(detailRows)) {
+    if (!Array.isArray(axisRows)) {
+      throw new Error('评测轴汇总必须是数组');
+    }
+    if (!Array.isArray(detailRows)) {
       throw new Error('扩展轴明细必须是数组');
     }
     const ExcelJS = requireExcelJS(excelJsOverride);
@@ -209,7 +225,10 @@
     workbook.created = new Date();
 
     fillSheet(workbook.addWorksheet(SHEET_NAME, {views: [{state: 'frozen', ySplit: 1}]}), COLUMNS, rows, 60);
-    if (detailRows && detailRows.length) {
+    if (axisRows.length || detailRows.length) {
+      fillSheet(workbook.addWorksheet(AXIS_SHEET_NAME, {views: [{state: 'frozen', ySplit: 1}]}), AXIS_COLUMNS, axisRows, 0);
+    }
+    if (detailRows.length) {
       fillSheet(workbook.addWorksheet(DETAIL_SHEET_NAME, {views: [{state: 'frozen', ySplit: 1}]}), DETAIL_COLUMNS, detailRows, 0);
     }
 
@@ -220,7 +239,7 @@
     const settings = options || {};
     const rows = settings.rows || [];
     const exportedAt = settings.exportedAt || new Date();
-    const workbook = createWorkbook(rows, settings.ExcelJS, settings.detailRows);
+    const workbook = createWorkbook(rows, settings.ExcelJS, settings.axisRows, settings.detailRows);
     const buffer = await workbook.xlsx.writeBuffer();
     const BlobType = settings.Blob || global.Blob;
     const URLType = settings.URL || global.URL;
@@ -248,6 +267,8 @@
 
   global.CasePoolExporter = Object.freeze({
     COLUMNS,
+    AXIS_COLUMNS,
+    AXIS_SHEET_NAME,
     DETAIL_COLUMNS,
     DETAIL_SHEET_NAME,
     MAX_EXCEL_CELL_LENGTH,

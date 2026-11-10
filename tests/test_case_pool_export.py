@@ -135,11 +135,11 @@ def test_summary_export_rows_pull_trace_show_into_trace_summary():
     assert "CasePoolExporter.formatTraceShow" in formatter
     assert "typeof formatter!=='function'" in formatter
     assert "item.trace" not in formatter
-    assert "case_pool_export.js?v=20260817-verdict" in source
+    assert "case_pool_export.js?v=20261109-axis-summary" in source
     assert "carrierPlacement:carrierPlacementText(view)" in builder.replace(" ", "")
 
 
-def test_exporter_writes_xlsx_with_trace_summary_column(tmp_path):
+def test_exporter_writes_case_axis_and_item_sheets(tmp_path):
     out = tmp_path / "trace-export.xlsx"
     result = subprocess.run(
         ["node", str(ROOT / "tests" / "write_trace_export_xlsx.js"), str(out)],
@@ -150,7 +150,8 @@ def test_exporter_writes_xlsx_with_trace_summary_column(tmp_path):
     assert result.returncode == 0, result.stderr
     assert out.exists() and out.stat().st_size > 0
     from openpyxl import load_workbook
-    workbook = load_workbook(out, read_only=True, data_only=True)
+    workbook = load_workbook(out, data_only=True)
+    assert workbook.sheetnames == ["用例池候选区", "评测轴汇总", "扩展轴明细"]
     sheet = workbook.active
     headers = [cell.value for cell in next(sheet.iter_rows(min_row=1, max_row=1))]
     assert headers[-1] == "扩展轴结论"
@@ -164,13 +165,36 @@ def test_exporter_writes_xlsx_with_trace_summary_column(tmp_path):
     assert "status: SUCCESS" in summary
     # 主表结论格只有令牌：一轴一行，Excel「包含 truthfulness:refuted」即可筛；理由不在这里。
     assert values[-1] == "[truthfulness:refuted×1] [truthfulness:verified×1]\n[fulfillment:not_fulfilled]"
-    # 第二张 sheet 一行一件事：生产阶段伪行 + 扩展轴逐条 item，理由全文、引用、耗时都在这里。
+    # 第二张每轴一行，分类只在这里；轴级说明缺失时不能拿项级理由代替。
+    axes = workbook["评测轴汇总"]
+    axis_rows = list(axes.values)
+    assert axis_rows[0] == ("case_id", "scenario", "axis_id", "轴名称", "展示分组", "运行状态", "轴级判定", "轴级说明", "项数")
+    assert len(axis_rows) == 5
+    assert [row[4] for row in axis_rows[1:]] == ["主要展示", "其余分析", "主要展示", "主要展示"]
+    assert axis_rows[1][2:4] == ("truthfulness-run", "真实性")
+    assert axis_rows[1][6:9] == ("refuted", "轴级原文：发现不符说法", 1)
+    assert axis_rows[2][6:9] == ("", "", 2)
+    assert axis_rows[3][5:9] == ("failed", "", "运行失败原因", 0)
+    assert axes.auto_filter.ref == "A1:I1"
+    assert axes.freeze_panes == "A2"
+    # 第三张保留生产阶段和逐项原文；通过 case_id + axis_id 对应第二张。
     detail = workbook["扩展轴明细"]
     detail_rows = [[cell.value for cell in row] for row in detail.iter_rows()]
-    assert detail_rows[0] == ["case_id", "scenario", "阶段/轴", "status", "verdict", "对象（断言/期望）", "理由", "引用", "模型", "llm_calls", "tool_calls", "秒"]
-    assert [row[2] for row in detail_rows[1:]] == ["live", "生产·judge", "扩展·truthfulness"]
-    assert detail_rows[3][4] == "refuted" and detail_rows[3][6] == "知识库原文为十五日"
-    assert detail_rows[3][9] == 3 and detail_rows[3][11] == 60.4
+    assert detail_rows[0] == ["case_id", "scenario", "阶段/轴", "axis_id", "status", "verdict", "对象（断言/期望）", "理由", "引用", "模型", "llm_calls", "tool_calls", "秒"]
+    assert [row[2] for row in detail_rows[1:]] == [
+        "live", "生产·judge", "生产·轴2", "扩展·truthfulness",
+        "扩展·analysis", "扩展·analysis", "扩展·failed_analysis", "扩展·expanded_analysis",
+    ]
+    assert [row[3] for row in detail_rows[1:]] == [
+        "", "", "", "truthfulness-run",
+        "analysis", "analysis", "failed_analysis", "expanded_analysis",
+    ]
+    assert {(row[0], row[3]) for row in detail_rows[4:]} == {(row[0], row[2]) for row in axis_rows[1:]}
+    assert detail_rows[4][5] == "refuted" and detail_rows[4][7] == "知识库原文为十五日"
+    assert detail_rows[4][8] == "es://clause_kb xx_hesitation#clause_text：本产品犹豫期为十五日"
+    assert detail_rows[4][10] == 3 and detail_rows[4][12] == 60.4
+    assert [row[7] for row in detail_rows[5:]] == ["分析甲全文", "分析乙全文", "运行失败原因", "显式展开说明"]
+    assert detail.auto_filter.ref == "A1:M1"
     workbook.close()
 
 
@@ -184,12 +208,12 @@ def test_exporter_omits_detail_sheet_when_no_detail_rows():
     result = _eval_exporter(
         fake_exceljs
         + "const a=CasePoolExporter.createWorkbook([{id:'a'}], FakeExcelJS);"
-        "const b=CasePoolExporter.createWorkbook([{id:'a'}], FakeExcelJS, [{caseId:'a',stage:'live',seconds:1.5}]);"
-        "process.stdout.write(JSON.stringify([a.worksheets.map(w=>w.name), b.worksheets.map(w=>w.name), b.worksheets[1].rows[0].seconds]));"
+        "const b=CasePoolExporter.createWorkbook([{id:'a'}], FakeExcelJS, [], [{caseId:'a',stage:'live',seconds:1.5}]);"
+        "process.stdout.write(JSON.stringify([a.worksheets.map(w=>w.name), b.worksheets.map(w=>w.name), b.worksheets[2].rows[0].seconds]));"
     )
     assert result.returncode == 0, result.stderr
     names_without, names_with, seconds = json.loads(result.stdout)
     assert names_without == ["用例池候选区"]
-    assert names_with == ["用例池候选区", "扩展轴明细"]
+    assert names_with == ["用例池候选区", "评测轴汇总", "扩展轴明细"]
     # 数字列保持数字，Excel 里才能排序/求和，而不是被 cellText 变成字符串。
     assert seconds == 1.5
