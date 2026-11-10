@@ -61,6 +61,35 @@ def test_root_must_be_unique(monkeypatch, rows):
     assert "唯一的根步骤" in _replay(monkeypatch, rows)["error"]
 
 
+def _at(second):
+    return f"2026-11-01T08:36:{second}Z"
+
+
+def test_root_narrowed_by_trace_name_when_parents_are_missing(monkeypatch):
+    """公司库实测：入口步骤和另外两个步骤的上一级都不在 trace 里（上报漏了一层），按 trace 名认出入口。"""
+    rows = [_obs("gw", "0000000000000001", name="gateway-koudai-e-chat", startTime=_at("43.843"), input=Q, output=ANS),
+            _obs("intent", "a5ba", name="intent", startTime=_at("44.905")),
+            _obs("llm", "intent", type="GENERATION", name="intent", startTime=_at("44.913")),
+            _obs("policy", "a5ba", name="policy-query", startTime=_at("46.025"))]
+    got = _replay(monkeypatch, rows, trace={"name": "gateway-koudai-e-chat"})
+    assert (got["request"], got["delivered"], got["error"]) == (Q, ANS, "")
+
+
+@pytest.mark.parametrize("rows, name, want", [
+    ([_obs("r", name="T", startTime=_at("02")), _obs("x", name="o", startTime=_at("01"))], "T", "r"),
+    ([_obs("r", name="a", startTime=_at("01")), _obs("x", name="b", startTime=_at("02"))], "T", "r"),
+    ([_obs("r", name="T", startTime=_at("02")), _obs("x", name="T", startTime=_at("01")), _obs("y", name="o", startTime=_at("00"))], "T", "x"),
+    ([_obs("r", name="a", startTime=_at("01")), _obs("x", name="b", startTime=_at("01"))], "T", None),
+    ([_obs("r", name="a", startTime=None), _obs("x", name="b", startTime=None)], "T", None),
+    ([_obs("r", name="a", startTime=_at("01")), _obs("x", name="b", startTime="not-a-time")], "T", None),
+    ([_obs("a", "b"), _obs("b", "a")], "T", None),
+    ([_obs("r", "caller"), _obs("c", "r")], "T", "r"),
+    ([_obs("r"), _obs("x", "ghost")], "T", "r"),
+])
+def test_root_id_narrowing(rows, name, want):
+    assert langfuse.root_id(rows, name) == want
+
+
 def test_root_rule_matches_the_reader(monkeypatch):
     """已有上一级为空的根时，另一个挂空的步骤不是根（和读取代码同一认法）。"""
     got = _replay(monkeypatch, [_obs("root", input=Q, output=ANS), _obs("lost", "gone", input="x", output="y")])

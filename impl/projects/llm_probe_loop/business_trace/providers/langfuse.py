@@ -214,15 +214,28 @@ def _pages(config, path, query):
     return rows, errors + [path + ": page_limit_reached"], notes
 
 
-def root_id(observations):
+def root_id(observations, trace_name=None):
     """只看 trace 本身认根（spec/alg/business-trace-langfuse.md §2.4）：上一级为空的步骤恰好一个时就是它；
-    一个都没有、而上一级不在本 trace 里的步骤恰好一个时就是它（上一级是 trace 外的调用方）；否则认不出，返回 None。"""
+    一个都没有、而上一级不在本 trace 里的步骤恰好一个时就是它（上一级是 trace 外的调用方）；
+    否则在这些顶层候选里收窄：步骤名等于 trace 名的恰好一个就是它；同名多个或没有同名，按开始时间最早且唯一；
+    仍认不出（时间并列、缺失）返回 None。"""
     ids = {row["id"] for row in observations}
     empty = [row["id"] for row in observations if not row.get("parentObservationId")]
     outside = [row["id"] for row in observations if row.get("parentObservationId") and row["parentObservationId"] not in ids]
     if len(empty) == 1:
         return empty[0]
-    return outside[0] if not empty and len(outside) == 1 else None
+    if not empty and len(outside) == 1:
+        return outside[0]
+    top = [row for row in observations if row.get("parentObservationId") not in ids]
+    named = [row for row in top if trace_name and row.get("name") == trace_name]
+    if len(named) == 1:
+        return named[0]["id"]
+    pool = named or top
+    stamps = [_stamp(row.get("startTime")) for row in pool]
+    if not pool or None in stamps:
+        return None
+    order = sorted(zip(stamps, (row["id"] for row in pool)))
+    return order[0][1] if len(order) == 1 or order[0][0] != order[1][0] else None
 
 
 def _matched(config, business_id):
@@ -391,7 +404,7 @@ def from_trace(config, trace_id):
     if not rows:
         out["error"] = "trace 有记录但没读到步骤"
         return out
-    top = root_id(rows)
+    top = root_id(rows, trace.get("name"))
     if top is None:
         out["error"] = "找不到唯一的根步骤"
         return out

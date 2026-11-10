@@ -66,7 +66,7 @@ class LangfuseReader(TraceReader):
         missing_parents, unknown = [], []
         # 只看 trace 本身认根（langfuse.root_id）：上一级在 trace 外的根不算缺失；现场与按 trace 复评同一认法。
         from .langfuse import root_id
-        top = root_id(observations)
+        top = root_id(observations, trace.get("name"))
         for i, row in enumerate(observations):
             ref = refs[row["id"]]
             typ = _observation_type(row)
