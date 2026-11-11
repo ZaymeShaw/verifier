@@ -15,10 +15,11 @@
 
 1. case sheet 的“问题 tags”：仅取 `status=succeeded` 的轴级 verdict，按 `type_id`（结果只含 `axis_id` 时用它）匹配名单，输出 `[轴ID:verdict]`，按轴顺序去重并换行。展示分组不影响匹配，items 不参与推断。无命中留空，不增加或删减原有导出行。
 2. 轴汇总 sheet 的“Case 需求达成状态”：读取 case 的 `table_row.fulfillment_status` 或 judge 的 `overall_fulfillment.status`，仅接受 fulfilled / not_fulfilled / not_evaluable。case 运行中、错误或带执行失败标记时留空；不使用中文 `main_verdict`，也不从扩展轴反推 case 结论。每条轴重复同一 case 值，与该轴的“轴级判定”并列。
-3. 两列固定存在；空标签不代表已验证无问题。既有 case → 轴 → 项三级导出、展示分组、原文与引用保持原语义。Excel 使用现有自动筛选：“问题 tags”按包含筛选，“Case 需求达成状态”按精确值筛选。
+3. 轴汇总 sheet 的“是否问题 tag”：该行轴命中关注名单为“是”，否则为“否”，与 case sheet 共用同一个轴级匹配函数。按“是”筛选具体问题轴，不将 case 中其他轴的标签传播到该行。未配置、缺失 verdict、未成功完成均为“否”，仅表示未命中。
+4. 三列固定存在；空标签或“否”不代表已验证无问题。既有 case → 轴 → 项三级导出、展示分组、原文与引用保持原语义。Excel 使用现有自动筛选：“问题 tags”按包含筛选，“Case 需求达成状态”“是否问题 tag”按精确值筛选。
 
 ## 初始项目规则
 
-`llm_probe_loop` 同时关注明确问题和待核验：六个过程轴的 problematic / not_evaluable / untested，真实性的 has_refuted / has_unverifiable，能力兑现的 not_fulfilled / not_evaluable，承载性的做不了 / 做错了 / 说不清。其他项目按各自配置决定，不继承这些名单。
+`llm_probe_loop` 同时关注明确问题和待核验：六个过程轴的 problematic / not_evaluable / untested，真实性的 has_refuted / has_unverifiable，能力兑现的 not_fulfilled / not_evaluable，承载性的做不了 / 做错了 / 说不清，主轴结论的没做成 / 做不了 / 不确定（做成了不加入）。其他项目按各自配置决定，不继承这些名单。
 
 实现入口：`impl/core/axis_display.py`（读与校验）、`impl/server/service.py` 与 `routes.py`（接口）、`impl/frontend/summary.html`（投影）、`case_pool_export.js`（Excel 列）。

@@ -135,7 +135,7 @@ def test_summary_export_rows_pull_trace_show_into_trace_summary():
     assert "CasePoolExporter.formatTraceShow" in formatter
     assert "typeof formatter!=='function'" in formatter
     assert "item.trace" not in formatter
-    assert "case_pool_export.js?v=20261110-axis-display" in source
+    assert "case_pool_export.js?v=20261110-axis-tag-filter" in source
     assert "carrierPlacement:carrierPlacementText(view)" in builder.replace(" ", "")
 
 
@@ -169,7 +169,7 @@ def test_exporter_writes_case_axis_and_item_sheets(tmp_path):
     # 第二张每轴一行，分类只在这里；轴级说明缺失时不能拿项级理由代替。
     axes = workbook["评测轴汇总"]
     axis_rows = list(axes.values)
-    assert axis_rows[0] == ("case_id", "scenario", "axis_id", "轴名称", "展示分组", "运行状态", "轴级判定", "轴级说明", "项数", "Case 需求达成状态")
+    assert axis_rows[0] == ("case_id", "scenario", "axis_id", "轴名称", "展示分组", "运行状态", "轴级判定", "轴级说明", "项数", "Case 需求达成状态", "是否问题 tag")
     assert len(axis_rows) == 5
     assert [row[4] for row in axis_rows[1:]] == ["主要展示", "其余分析", "主要展示", "主要展示"]
     assert axis_rows[1][2:4] == ("truthfulness-run", "真实性")
@@ -177,7 +177,8 @@ def test_exporter_writes_case_axis_and_item_sheets(tmp_path):
     assert axis_rows[2][6:9] == ("", "", 2)
     assert axis_rows[3][5:9] == ("failed", "", "运行失败原因", 0)
     assert [row[9] for row in axis_rows[1:]] == ["fulfilled"] * 4
-    assert axes.auto_filter.ref == "A1:J1"
+    assert [row[10] for row in axis_rows[1:]] == ["是", "否", "否", "否"]
+    assert axes.auto_filter.ref == "A1:K1"
     assert axes.freeze_panes == "A2"
     # 第三张保留生产阶段和逐项原文；通过 case_id + axis_id 对应第二张。
     detail = workbook["扩展轴明细"]

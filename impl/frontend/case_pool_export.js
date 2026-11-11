@@ -17,6 +17,7 @@
     {header: '轴级说明', key: 'reason', width: 80},
     {header: '项数', key: 'itemCount', width: 10},
     {header: 'Case 需求达成状态', key: 'caseFulfillment', width: 24},
+    {header: '是否问题 tag', key: 'problemTag', width: 18},
   ];
   // 第三张 sheet：保留逐项理由、引用和生产阶段记录；用 case_id + axis_id 关联轴级汇总。
   const DETAIL_SHEET_NAME = '扩展轴明细';

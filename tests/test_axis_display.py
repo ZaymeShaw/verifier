@@ -105,6 +105,7 @@ def test_project_default_policy_uses_declared_verdicts_without_loading_execution
     assert policy["axes"]["truthfulness"]["attention_verdicts"] == ["has_refuted", "has_unverifiable"]
     assert policy["axes"]["fulfillment"]["attention_verdicts"] == ["not_fulfilled", "not_evaluable"]
     assert policy["axes"]["carryability"]["attention_verdicts"] == ["做不了", "做错了", "说不清"]
-    process_axes = set(policy["axes"]) - {"truthfulness", "fulfillment", "carryability"}
+    assert policy["axes"]["main_verdict"]["attention_verdicts"] == ["没做成", "做不了", "不确定"]
+    process_axes = set(policy["axes"]) - {"truthfulness", "fulfillment", "carryability", "main_verdict"}
     assert len(process_axes) == 6
     assert all(policy["axes"][axis]["attention_verdicts"] == ["problematic", "not_evaluable", "untested"] for axis in process_axes)

@@ -93,7 +93,7 @@ const rows = [{
 
 // Exercise the page's real row builder before writing XLSX, including its shared visibility rule.
 const summarySource = fs.readFileSync(path.join(frontend, "summary.html"), "utf8");
-for (const name of ["tableRow", "inferCaseScenario", "carrierPlacementText", "evalAxesRows", "axisShown", "executionFailureMarkers", "flagsFromQuality", "flagsFromRun", "exportCaseFulfillment", "exportProblemTags", "exportEvalAxesSummaryRows", "exportEvalAxesDetailRows"]) {
+for (const name of ["tableRow", "inferCaseScenario", "carrierPlacementText", "evalAxesRows", "axisShown", "executionFailureMarkers", "flagsFromQuality", "flagsFromRun", "exportCaseFulfillment", "exportAxisProblemTag", "exportProblemTags", "exportEvalAxesSummaryRows", "exportEvalAxesDetailRows"]) {
   const start = summarySource.indexOf("function " + name + "(");
   const end = summarySource.indexOf("\nfunction ", start);
   if (start < 0 || end < 0) {throw new Error("Missing page function: " + name);}
@@ -116,9 +116,10 @@ const view = {
     {type_id: "disabled_axis", status: "disabled", text: "未启用"},
   ],
 };
-const axisRows = sandbox.exportEvalAxesSummaryRows(view);
+const policy = {axes: {truthfulness: {attention_verdicts: ["refuted"]}}};
+const axisRows = sandbox.exportEvalAxesSummaryRows(view, policy);
 const detailRows = sandbox.exportEvalAxesDetailRows(view);
-rows[0].problemTags = sandbox.exportProblemTags(view, {axes: {truthfulness: {attention_verdicts: ["refuted"]}}});
+rows[0].problemTags = sandbox.exportProblemTags(view, policy);
 
 exporter.createWorkbook(rows, sandbox.ExcelJS, axisRows, detailRows).xlsx.writeBuffer().then((buf) => {
   fs.writeFileSync(outPath, Buffer.from(buf));

@@ -28,7 +28,7 @@ const context = vm.createContext({
 });
 for (const name of ['tableRow', 'evalAxesRows', 'axisShown', 'inferCaseScenario', 'carrierPlacementText',
   'executionFailureMarkers', 'flagsFromQuality', 'flagsFromRun', 'exportCaseFulfillment',
-  'exportProblemTags', 'exportEvalAxes', 'exportEvalAxesSummaryRows', 'exportEvalAxesDetailRows',
+  'exportAxisProblemTag', 'exportProblemTags', 'exportEvalAxes', 'exportEvalAxesSummaryRows', 'exportEvalAxesDetailRows',
   'buildCasePoolExportRows', 'exportCurrentCasePoolXlsx']) {
   const start = source.search(new RegExp('(?:async )?function ' + name + '\\('));
   assert.ok(start >= 0, name);
@@ -68,7 +68,16 @@ for (const invalid of [
 ]) {
   assert.equal(context.exportCaseFulfillment(invalid), '');
 }
-assert.ok(context.exportEvalAxesSummaryRows(view).every(row => row.caseFulfillment === 'not_fulfilled'));
+assert.ok(context.exportEvalAxesSummaryRows(view, policy).every(row => row.caseFulfillment === 'not_fulfilled'));
+assert.equal(context.exportEvalAxesSummaryRows(view, policy).map(row => row.problemTag).join(','), '是,是,是,否,否,否,否');
+assert.ok(context.exportEvalAxesSummaryRows(view, {axes: {}}).every(row => row.problemTag === '否'));
+const projectPolicy = JSON.parse(fs.readFileSync(path.join(__dirname, '../impl/data/llm_probe_loop/axis_display.json'), 'utf8'));
+for (const verdict of ['做成了', '没做成', '做不了', '不确定']) {
+  const mainView = {eval_axes_summary: [{type_id: 'main_verdict', status: 'succeeded', verdict}]};
+  const expectedTag = verdict === '做成了' ? '' : '[main_verdict:' + verdict + ']';
+  assert.equal(context.exportProblemTags(mainView, projectPolicy), expectedTag);
+  assert.equal(context.exportEvalAxesSummaryRows(mainView, projectPolicy)[0].problemTag, expectedTag ? '是' : '否');
+}
 
 async function main() {
   entries = [{item: {id: view.id}, view}];
@@ -83,12 +92,14 @@ async function main() {
   assert.equal(downloads[0].rows[0].problemTags, expected);
   assert.ok(downloads[0].axisRows.every(row => row.caseFulfillment === 'not_fulfilled'));
   assert.equal(downloads[0].axisRows.length, 7); // disabled omitted, all other axes retained
+  assert.equal(downloads[0].axisRows.filter(row => row.problemTag === '是').length, 3);
   assert.equal(button.disabled, false);
   await context.exportCurrentCasePoolXlsx();
   assert.equal(requests, 2); // config is read for every export
   context.post = async () => ({axes: {}});
   await context.exportCurrentCasePoolXlsx();
   assert.equal(downloads[2].rows[0].problemTags, '');
+  assert.ok(downloads[2].axisRows.every(row => row.problemTag === '否'));
   const count = downloads.length;
   context.post = async () => {throw new Error('axis_display.json invalid');};
   await context.exportCurrentCasePoolXlsx();
