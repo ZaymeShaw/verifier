@@ -1,8 +1,23 @@
 import json
 
 import numpy as np
+import httpx
+import pytest
 
 from scripts import embed_cluster as ec
+
+
+@pytest.fixture(autouse=True)
+def embedding_environment(monkeypatch):
+    monkeypatch.setenv("EMBEDDING_BASE_URL", "https://embedding.test/v1")
+    monkeypatch.setenv("EMBEDDING_MODEL", "test-embedding")
+    monkeypatch.setenv("EMBEDDING_API_KEY", "test-secret")
+
+
+def mock_http(monkeypatch, handler):
+    init = httpx.Client.__init__
+    monkeypatch.setattr(httpx.Client, "__init__", lambda self, **kwargs: init(
+        self, transport=httpx.MockTransport(handler), **kwargs))
 
 # 三组近似方向：同组余弦相似度约 0.99，组间约 0
 VEC = {"a1": [1, 0.05, 0], "a2": [1, -0.05, 0], "a3": [1, 0, 0.05],
@@ -112,3 +127,102 @@ def test_main_fine_column(tmp_path):
     got = [json.loads(line) for line in out.read_text().splitlines()]
     assert list(got[0]) == ["id", "cluster_id", "fine_cluster_id", "turns"]
     assert [g["fine_cluster_id"] for g in got] == ["c0.0", "c1.0"]
+
+
+def test_openai_endpoint_and_cache_end_to_end(tmp_path, monkeypatch):
+    requests = []
+
+    def handle(request):
+        requests.append(request)
+        body = json.loads(request.content)
+        assert request.headers["authorization"] == "Bearer test-secret"
+        assert body == {"model": "test-embedding", "input": ["a1", "a2", "c"], "encoding_format": "float"}
+        return httpx.Response(200, json={"object": "list", "model": body["model"],
+            "data": [{"object": "embedding", "index": i, "embedding": VEC[t]}
+                     for i, t in reversed(list(enumerate(body["input"])))],
+            "usage": {"prompt_tokens": 3, "total_tokens": 3}})
+
+    mock_http(monkeypatch, handle)
+    inp, out, cache, report = [tmp_path / name for name in ("in.jsonl", "out.jsonl", "cache.jsonl", "report.json")]
+    inp.write_text("".join(json.dumps({"id": i, "text": t}) + "\n" for i, t in enumerate(["a1", "a2", "c"])))
+    argv = ["--input", str(inp), "--output", str(out), "--cache", str(cache), "--report", str(report)]
+    assert ec.main(argv) == 0
+    got = [json.loads(line) for line in out.read_text().splitlines()]
+    assert [row["cluster_id"] for row in got] == ["c0", "c0", "c1"]
+    assert str(requests[0].url) == "https://embedding.test/v1/embeddings"
+    assert ec.main(argv) == 0
+    assert len(requests) == 1
+    assert ec.main(argv + ["--base-url", "https://other.test/api/v1/"]) == 0
+    assert len(requests) == 2
+    assert str(requests[-1].url) == "https://other.test/api/v1/embeddings"
+    assert "test-secret" not in cache.read_text() + report.read_text()
+
+
+def test_openai_optional_parameters_and_named_key(monkeypatch):
+    monkeypatch.setenv("CUSTOM_EMBED_KEY", "custom-secret")
+
+    def handle(request):
+        body = json.loads(request.content)
+        assert request.headers["authorization"] == "Bearer custom-secret"
+        assert body == {"model": "other-model", "input": ["a1"], "encoding_format": "float",
+                        "dimensions": 3, "instruct": "Cluster texts"}
+        assert request.extensions["timeout"]["read"] == 90
+        return httpx.Response(200, json={"data": [{"index": 0, "embedding": VEC["a1"]}]})
+
+    mock_http(monkeypatch, handle)
+    args = ec.parse_args(["--input", "in.jsonl", "--output", "out.jsonl", "--model", "other-model",
+                          "--dimension", "3", "--extra-body", '{"instruct":"Cluster texts"}',
+                          "--api-key-env", "CUSTOM_EMBED_KEY", "--timeout", "90"])
+    embed, identity = ec.openai_embed(args)
+    assert embed(["a1"]) == [VEC["a1"]]
+    assert json.loads(identity)["model"] == "other-model"
+
+
+@pytest.mark.parametrize("data", [
+    [{"index": 1, "embedding": [1, 0]}],
+    [{"index": 0, "embedding": [1, 0]}, {"index": 0, "embedding": [0, 1]}],
+    [{"index": 0, "embedding": [0, 0]}],
+    [{"index": 0, "embedding": []}],
+    [{"index": 0, "embedding": [1, 0, 0]}],
+])
+def test_invalid_embedding_response_is_not_cached(tmp_path, monkeypatch, data):
+    mock_http(monkeypatch, lambda request: httpx.Response(200, json={"data": data}))
+    args = ec.parse_args(["--input", "in.jsonl", "--output", "out.jsonl", "--dimension", "2"])
+    embed, identity = ec.openai_embed(args)
+    cache = ec.VectorCache(tmp_path / "cache.jsonl", identity)
+    with pytest.raises(ValueError):
+        ec.embed_texts(["a1"], embed, cache, 20)
+    assert not cache.vectors and not cache.path.exists()
+
+
+def test_api_failure_propagates_without_cache_or_retry(tmp_path, monkeypatch):
+    from openai import RateLimitError
+    requests = []
+
+    def handle(request):
+        requests.append(request)
+        return httpx.Response(429, json={"error": {"message": "rate limited", "type": "rate_limit"}})
+
+    mock_http(monkeypatch, handle)
+    args = ec.parse_args(["--input", "in.jsonl", "--output", "out.jsonl"])
+    embed, identity = ec.openai_embed(args)
+    cache = ec.VectorCache(tmp_path / "cache.jsonl", identity)
+    with pytest.raises(RateLimitError):
+        ec.embed_texts(["a1"], embed, cache, 20)
+    assert len(requests) == 1 and not cache.path.exists()
+
+
+def test_missing_key_fails_before_request(monkeypatch):
+    monkeypatch.delenv("EMBEDDING_API_KEY")
+    args = ec.parse_args(["--input", "in.jsonl", "--output", "out.jsonl"])
+    with pytest.raises(SystemExit, match="EMBEDDING_API_KEY"):
+        ec.openai_embed(args)
+
+
+@pytest.mark.parametrize("flags", [
+    ["--dimension", "0"], ["--timeout", "nan"], ["--extra-body", "[]"],
+    ["--extra-body", '{"model":"hidden-override"}'], ["--base-url", "not-a-url"],
+])
+def test_invalid_api_options_are_rejected(flags):
+    with pytest.raises(SystemExit):
+        ec.parse_args(["--input", "in.jsonl", "--output", "out.jsonl", *flags])

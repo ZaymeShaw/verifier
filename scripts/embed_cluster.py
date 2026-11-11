@@ -2,10 +2,11 @@
 
 做法：
 1. 取 --text-column 的文本（值是列表时按换行拼接，适合多轮 turns）；完全相同的文本只请求一次 embedding。
-2. 调百炼 DashScope 原生 embedding 接口，默认 qwen3.7-text-embedding（百炼当前推荐的文本向量模型），
-   可用 --model / --dimension / --instruct 调整；API key 取 impl/config.yaml 的 embedding.api_key（.env 的 BAILIAN_API_KEY）。
-   --instruct 非空时按官方要求以 text_type=query 发送，所有文本用同一条指令，聚类仍是对称的。
-   向量按 --cache 缓存，键为 (模型, 维度, 指令, 文本) 的哈希；改阈值重跑不重复请求。
+2. 通过 OpenAI SDK 调用配置的 /embeddings 接口。--base-url / --model 分别设置服务根地址和模型，
+   也可用 EMBEDDING_BASE_URL / EMBEDDING_MODEL；命令行优先。密钥取 --api-key-env 指定的环境变量
+   （默认 EMBEDDING_API_KEY），不读取 verifier 的 impl/config.yaml 或 .env。
+   --dimension 可选；服务专用参数用 --extra-body JSON 对象传入（如 instruct），按服务实际协议填写。
+   向量按 --cache 缓存，键包含服务地址、模型、维度、额外参数和文本；改阈值重跑不重复请求。
 3. 层次聚类，余弦相似度阈值 --threshold。默认 complete linkage：簇内任意两条的相似度都 >= 阈值，
    不会像 single linkage 那样被模板句串成大簇。
 4. 簇 id 按簇大小降序编号 c0、c1……，大小相同按首次出现顺序。
@@ -19,13 +20,14 @@
 (id, 簇 id) 输入格式一致）。格式按扩展名：.jsonl / .csv / .xlsx。
 --report 输出每个簇的大小和成员文本，用来人工看阈值合不合适。
 
-注意：文本会发到百炼（外部服务）。
+注意：文本会发到配置的 embedding 服务。该服务必须支持 embeddings，不只是聊天接口。
 
 用法：
     python scripts/embed_cluster.py --input questions.jsonl --output clustered.jsonl \
+        --base-url https://embedding.example.com/v1 --model your-embedding-model \
         [--id-column id] [--text-column turns] [--cluster-column cluster_id] \
-        [--model qwen3.7-text-embedding] [--dimension 1024] [--instruct "..."] [--batch-size 20] \
-        [--threshold 0.9] [--fine-threshold 0.85] [--fine-column fine_cluster_id] [--linkage complete] \
+        [--api-key-env EMBEDDING_API_KEY] [--dimension 1024] [--batch-size 20] [--timeout 60] \
+        [--threshold 0.7] [--fine-threshold 0.85] [--fine-column fine_cluster_id] [--linkage complete] \
         [--cache tmp/embed_cache.jsonl] [--report report.json]
     python scripts/cluster_sample.py --input clustered.jsonl --output sampled.jsonl --total 60 ...
 """
@@ -34,10 +36,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
+import os
 import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Sequence
+from urllib.parse import urlsplit
 
 import numpy as np
 from scipy.cluster.hierarchy import fcluster, linkage
@@ -82,7 +87,7 @@ class VectorCache:
         self.path, self.model_id = path, model_id
         self.vectors: dict[str, list[float]] = {}
         if path and path.exists():
-            for line in path.read_text().splitlines():
+            for line in path.read_text(encoding="utf-8-sig").splitlines():
                 if line.strip():
                     item = json.loads(line)
                     self.vectors[item["key"]] = item["vector"]
@@ -94,7 +99,7 @@ class VectorCache:
         self.vectors.update(items)
         if self.path and items:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            with self.path.open("a") as f:
+            with self.path.open("a", encoding="utf-8") as f:
                 for k, v in items.items():
                     f.write(json.dumps({"key": k, "vector": v}) + "\n")
 
@@ -138,34 +143,38 @@ def assign_clusters(texts: list[str], embed: Embed, cache: VectorCache, *, thres
     return coarse, fine, requested
 
 
-DASHSCOPE_URL = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
+def openai_embed(args: argparse.Namespace) -> tuple[Embed, str]:
+    import httpx
+    from openai import OpenAI
 
-
-def bailian_embed(args: argparse.Namespace) -> tuple[Embed, str]:
-    import requests
-    from impl.core.config import get_embedding_config
-
-    api_key = get_embedding_config().api_key
+    api_key = os.environ.get(args.api_key_env)
     if not api_key:
-        raise SystemExit("错误：未配置 embedding.api_key（.env 的 BAILIAN_API_KEY）")
-    params: dict[str, Any] = {"dimension": args.dimension}
-    if args.instruct:
-        params.update(text_type="query", instruct=args.instruct)
-    session = requests.Session()
-    session.trust_env = False  # 与 BailianEmbedder 一致，不走桌面代理
+        raise SystemExit(f"错误：未设置环境变量 {args.api_key_env}")
+    base_url = args.base_url.rstrip("/")
+    params: dict[str, Any] = {}
+    if args.dimension is not None:
+        params["dimensions"] = args.dimension
 
     def embed(texts: Sequence[str]) -> list[list[float]]:
-        resp = session.post(DASHSCOPE_URL, timeout=60,
-                            headers={"Authorization": f"Bearer {api_key}"},
-                            json={"model": args.model, "input": {"texts": list(texts)}, "parameters": params})
-        body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
-        if resp.status_code != 200:
-            raise RuntimeError(f"embedding 请求失败 {resp.status_code}: {body.get('code')} {body.get('message')}")
-        items = sorted(body["output"]["embeddings"], key=lambda x: x["text_index"])
-        return [item["embedding"] for item in items]
+        # 沿用原脚本不继承桌面代理的行为；失败直接交给调用方，不切换服务或模型。
+        with OpenAI(base_url=base_url, api_key=api_key, timeout=args.timeout, max_retries=0,
+                    http_client=httpx.Client(trust_env=False)) as client:
+            resp = client.embeddings.create(model=args.model, input=list(texts), encoding_format="float",
+                                            extra_body=args.extra_body, **params)
+        items = sorted(resp.data, key=lambda x: x.index)
+        if [item.index for item in items] != list(range(len(texts))):
+            raise ValueError("embedding 返回的 index 必须与输入逐条对应，不能缺失或重复")
+        vectors = np.asarray([item.embedding for item in items], dtype=float)
+        if (vectors.ndim != 2 or vectors.shape[1] == 0 or not np.isfinite(vectors).all()
+                or (np.linalg.norm(vectors, axis=1) == 0).any()):
+            raise ValueError("embedding 必须返回等长、有限且非零的向量")
+        if args.dimension is not None and vectors.shape[1] != args.dimension:
+            raise ValueError(f"embedding 返回维度 {vectors.shape[1]}，请求维度 {args.dimension}")
+        return vectors.tolist()
 
-    instruct_hash = hashlib.sha256(args.instruct.encode()).hexdigest()[:12] if args.instruct else "none"
-    return embed, f"{args.model}|dim={args.dimension}|instruct={instruct_hash}"
+    identity = {"protocol": "openai-embeddings", "base_url": base_url, "model": args.model,
+                "dimensions": args.dimension, "extra_body": args.extra_body}
+    return embed, json.dumps(identity, sort_keys=True, ensure_ascii=False)
 
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -181,12 +190,30 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--fine-column", default="fine_cluster_id", help="输出的细簇 id 列名")
     parser.add_argument("--linkage", choices=LINKAGES, default="complete")
     parser.add_argument("--cache", type=Path, help="向量缓存 JSONL，不给则不缓存")
-    parser.add_argument("--model", default="qwen3.7-text-embedding")
-    parser.add_argument("--dimension", type=int, default=1024, help="向量维度，取值见百炼文档")
-    parser.add_argument("--instruct", default="", help="英文任务指令，空表示不加")
+    parser.add_argument("--base-url", default=os.environ.get("EMBEDDING_BASE_URL"),
+                        required=not os.environ.get("EMBEDDING_BASE_URL"), help="API 根地址，不含 /embeddings")
+    parser.add_argument("--model", default=os.environ.get("EMBEDDING_MODEL"),
+                        required=not os.environ.get("EMBEDDING_MODEL"), help="embedding 模型 ID")
+    parser.add_argument("--api-key-env", default="EMBEDDING_API_KEY", help="保存 API 密钥的环境变量名")
+    parser.add_argument("--dimension", type=int, help="可选向量维度；不设置时不发送 dimensions 参数")
+    parser.add_argument("--extra-body", type=json.loads, default={}, help="服务专用请求参数，JSON 对象")
+    parser.add_argument("--timeout", type=float, default=60, help="单次 HTTP 请求超时秒数")
     parser.add_argument("--batch-size", type=int, default=20,
-                        help="每次请求的文本数（qwen3.7-text-embedding 上限 20，text-embedding-v4 上限 10）")
+                        help="每次请求的文本数，按服务的批量上限设置")
     args = parser.parse_args(argv)
+    url = urlsplit(args.base_url)
+    if url.scheme not in {"http", "https"} or not url.hostname or url.query or url.fragment or url.username or url.password:
+        parser.error("base-url 必须是无凭据、查询参数或片段的 HTTP(S) API 根地址")
+    if not args.model.strip() or not args.api_key_env.strip():
+        parser.error("model 和 api-key-env 不能为空")
+    if args.dimension is not None and args.dimension <= 0:
+        parser.error("dimension 必须是正整数")
+    if not math.isfinite(args.timeout) or args.timeout <= 0:
+        parser.error("timeout 必须是有限正数")
+    if not isinstance(args.extra_body, dict):
+        parser.error("extra-body 必须是 JSON 对象")
+    if {"model", "input", "encoding_format", "dimensions"} & args.extra_body.keys():
+        parser.error("extra-body 不能覆盖 model、input、encoding_format 或 dimensions")
     if not 0 < args.threshold <= 1:
         parser.error("threshold 必须在 (0, 1] 内")
     if args.fine_threshold is not None and not args.threshold <= args.fine_threshold <= 1:
@@ -199,7 +226,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None,
-         embed_factory: Callable[[argparse.Namespace], tuple[Embed, str]] = bailian_embed) -> int:
+         embed_factory: Callable[[argparse.Namespace], tuple[Embed, str]] = openai_embed) -> int:
     args = parse_args(argv)
     records, columns = read_records(args.input)
     texts = []
@@ -236,7 +263,7 @@ def main(argv: list[str] | None = None,
             "config": {"model": model_id, "threshold": args.threshold, "fine_threshold": args.fine_threshold,
                        "linkage": args.linkage},
             "clusters": [{"cluster_id": c, "size": n, "members": members[c]} for c, n in sizes.most_common()],
-        }, ensure_ascii=False, indent=2))
+        }, ensure_ascii=False, indent=2), encoding="utf-8")
 
     dist = sorted(Counter(sizes.values()).items())
     print(f"共 {len(records)} 条，不同文本 {len(set(texts))} 条，新请求 embedding {requested} 条")

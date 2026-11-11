@@ -229,10 +229,10 @@ def sample(clusters: list[str], config: SampleConfig,
 def read_records(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
     """返回 (原始记录, 列顺序)。CSV 的值保持字符串原样，JSONL 的值保持原 JSON 类型。"""
     if path.suffix == ".jsonl":
-        records = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+        records = [json.loads(line) for line in path.read_text(encoding="utf-8-sig").splitlines() if line.strip()]
         columns = list(dict.fromkeys(k for r in records for k in r))
     elif path.suffix == ".csv":
-        with path.open(newline="") as f:
+        with path.open(encoding="utf-8-sig", newline="") as f:
             reader = csv.DictReader(f)
             records, columns = list(reader), list(reader.fieldnames or [])
     elif path.suffix == ".xlsx":
@@ -270,9 +270,9 @@ def _cell(value: Any) -> Any:
 def write_records(path: Path, records: list[dict[str, Any]], columns: list[str]) -> None:
     """按 columns 的列顺序写出；格式按扩展名决定。"""
     if path.suffix == ".jsonl":
-        path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records))
+        path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records), encoding="utf-8")
     elif path.suffix == ".csv":
-        with path.open("w", newline="") as f:
+        with path.open("w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=columns)
             writer.writeheader()
             for r in records:
@@ -351,7 +351,7 @@ def main(argv: list[str] | None = None) -> int:
         seg["sampled"] += d["sampled"]
     if args.report:
         args.report.write_text(json.dumps({"config": asdict(config), "segments": segments, "clusters": detail},
-                                          ensure_ascii=False, indent=2))
+                                          ensure_ascii=False, indent=2), encoding="utf-8")
 
     total_n = sum(d["size"] for d in detail.values())
     tail = [d for c, d in detail.items() if c.startswith("tail:")]
