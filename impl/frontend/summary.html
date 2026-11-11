@@ -149,7 +149,7 @@
   </div>
 </main>
 <script src="vendor/exceljs.min.js"></script>
-<script src="case_pool_export.js?v=20261109-axis-summary"></script>
+<script src="case_pool_export.js?v=20261110-axis-display"></script>
 <script src="axes_overview.js?v=20261001-labels-fixed100"></script>
 <script>
 async function post(path, body){
@@ -676,14 +676,28 @@ function exportEvalAxes(item){
     return tokens.map(t=>'['+t+']').join(' ');
   }).join('\n');
 }
+// 关注名单只匹配成功完成的轴级 verdict；收起的轴也参与，不从 items 推断。
+function exportProblemTags(view,display){
+  const tags=evalAxesRows(view).filter(axis=>axis.status==='succeeded').flatMap(axis=>{
+    const id=axis.type_id||axis.axis_id;
+    return display.axes[id]?.attention_verdicts.includes(axis.verdict)?['['+id+':'+axis.verdict+']']:[];
+  });
+  return [...new Set(tags)].join('\n');
+}
+function exportCaseFulfillment(view){
+  if(view.status==='running' || view.status==='error' || view.error || flagsFromRun(view).length){return '';}
+  const value=tableRow(view).fulfillment_status || view.judge?.overall_fulfillment?.status || '';
+  return ['fulfilled','not_fulfilled','not_evaluable'].includes(value)?value:'';
+}
 // 轴级汇总只读取已有轴级结论与说明，不用逐项理由替代轴级说明。
 function exportEvalAxesSummaryRows(view){
   const caseId=tableRow(view).id||view.id||'';
   const scenario=inferCaseScenario(view)||'';
+  const caseFulfillment=exportCaseFulfillment(view);
   return evalAxesRows(view).filter(axis=>axis.status!=='disabled').map(axis=>({
     caseId,scenario,axisId:axis.axis_id||axis.type_id||'',title:axis.title||axis.type_id||axis.axis_id||'',
     displayGroup:axisShown(axis)?'主要展示':'其余分析',status:axis.status||'',
-    verdict:axis.verdict??'',reason:axis.text||'',itemCount:(axis.items||[]).length,
+    verdict:axis.verdict??'',reason:axis.text||'',itemCount:(axis.items||[]).length,caseFulfillment,
   }));
 }
 // 「扩展轴明细」sheet：逐项解释及原有生产阶段记录；生产阶段的 axis_id 留空。
@@ -770,10 +784,10 @@ function exportTraceSummary(item){
   }
   return formatter(show,{scenario:inferCaseScenario(item) || ''});
 }
-function buildCasePoolExportRows(entries){
+function buildCasePoolExportRows(entries,display){
   return (entries || []).map(({item,view})=>{
     const row=tableRow(view);
-    return {id:row.id || item.id || '',source:item.source || '',executionMode:runModeLabel(view),scenario:inferCaseScenario(view) || '',input:caseInputPayload(view),output:view.output,reference:caseReference(view),status:exportStatusText(view),carrierPlacement:carrierPlacementText(view),evalAxes:exportEvalAxes(view),judgeSummary:exportJudgeSummary(view),judgeJson:view.judge || null,attributionSummary:exportAttributionSummary(view),attributeJson:view.attribute || null,traceSummary:exportTraceSummary(view)};
+    return {id:row.id || item.id || '',source:item.source || '',executionMode:runModeLabel(view),scenario:inferCaseScenario(view) || '',input:caseInputPayload(view),output:view.output,reference:caseReference(view),status:exportStatusText(view),problemTags:exportProblemTags(view,display),carrierPlacement:carrierPlacementText(view),evalAxes:exportEvalAxes(view),judgeSummary:exportJudgeSummary(view),judgeJson:view.judge || null,attributionSummary:exportAttributionSummary(view),attributeJson:view.attribute || null,traceSummary:exportTraceSummary(view)};
   });
 }
 // 扩展轴汇总：同一份当前筛选，汇总成新标签页里的独立 HTML（不回写任何结果）。
@@ -805,13 +819,16 @@ async function exportCurrentCasePoolXlsx(){
   const button=document.getElementById('exportCasePoolButton');
   const entries=currentFilteredCaseViews();
   if(!entries.length){setStatus('当前筛选没有可导出用例。');return;}
+  const selectedProject=project(),epoch=workspaceEpoch;
   const originalText=button.textContent;
   button.disabled=true;button.textContent='正在导出…';
   try{
     if(!globalThis.CasePoolExporter){throw new Error('本地 Excel 导出组件未加载');}
+    const display=await post('/api/axis_display',{project:selectedProject});
+    if(project()!==selectedProject || workspaceEpoch!==epoch){throw new Error('项目已切换，请重新导出');}
     const axisRows=entries.flatMap(({view})=>exportEvalAxesSummaryRows(view));
     const detailRows=entries.flatMap(({view})=>exportEvalAxesDetailRows(view));
-    const result=await globalThis.CasePoolExporter.download({projectId:project(),rows:buildCasePoolExportRows(entries),axisRows,detailRows});
+    const result=await globalThis.CasePoolExporter.download({projectId:selectedProject,rows:buildCasePoolExportRows(entries,display),axisRows,detailRows});
     setStatus('已导出 '+result.rowCount+' 条当前筛选结果：'+result.fileName);
   }catch(err){setStatus('导出失败：'+(err?.message || String(err)));}
   finally{button.disabled=false;button.textContent=originalText;}

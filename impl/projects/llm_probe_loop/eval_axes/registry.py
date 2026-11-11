@@ -4,11 +4,12 @@
 """
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from impl.core.axis_loop.definitions import AxisDef, Definitions, load
+from impl.core.axis_loop.definitions import AxisDef, Definitions, load, parse, store_path
 
 PROJECT = "llm_probe_loop"
 
@@ -66,4 +67,6 @@ AXIS_TYPES: Mapping[str, AxisInfo] = _Lazy()
 
 
 def describe_axis_types() -> list[dict[str, Any]]:
-    return [info.describe() for info in axis_types().values()]
+    # 展示只读声明，不加载评测执行代码（checks / synth / dispatch）。
+    metadata = parse(json.loads(store_path(PROJECT).read_text(encoding="utf-8")))
+    return [AxisInfo(key, axis.title, axis.role, axis).describe() for key, axis in metadata.axes.items()]

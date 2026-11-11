@@ -224,6 +224,17 @@ def eval_axes_types(payload: EvalAxesTypesRequest) -> JSONResponse:
     return route(service.eval_axes_types, payload)
 
 
+@router.post("/api/axis_display")
+def axis_display(payload: ProjectRequest) -> JSONResponse:
+    try:
+        # 空 axes / attention_verdicts 是有效配置，不能经 to_public_dict 裁掉。
+        return JSONResponse(content=service.axis_display(payload_dict(payload)))
+    except ValueError as exc:
+        return json_result({"error": str(exc)}, status_code=422)
+    except Exception as exc:
+        return json_result({"error": str(exc)}, status_code=500)
+
+
 @router.post("/api/eval_axes/run")
 def eval_axes_run(payload: EvalAxesRunRequest) -> JSONResponse:
     return route(service.eval_axes_run, payload)

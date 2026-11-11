@@ -135,7 +135,7 @@ def test_summary_export_rows_pull_trace_show_into_trace_summary():
     assert "CasePoolExporter.formatTraceShow" in formatter
     assert "typeof formatter!=='function'" in formatter
     assert "item.trace" not in formatter
-    assert "case_pool_export.js?v=20261109-axis-summary" in source
+    assert "case_pool_export.js?v=20261110-axis-display" in source
     assert "carrierPlacement:carrierPlacementText(view)" in builder.replace(" ", "")
 
 
@@ -158,6 +158,7 @@ def test_exporter_writes_case_axis_and_item_sheets(tmp_path):
     assert headers[-2] == "裁决"
     assert headers[-3] == "Trace 摘要"
     values = [cell.value for cell in next(sheet.iter_rows(min_row=2, max_row=2))]
+    assert values[headers.index("问题 tags")] == "[truthfulness:refuted]"
     summary = values[-3]
     assert "T1  succeeded  2475ms" in summary
     assert "T2  succeeded  26ms" in summary
@@ -168,14 +169,15 @@ def test_exporter_writes_case_axis_and_item_sheets(tmp_path):
     # 第二张每轴一行，分类只在这里；轴级说明缺失时不能拿项级理由代替。
     axes = workbook["评测轴汇总"]
     axis_rows = list(axes.values)
-    assert axis_rows[0] == ("case_id", "scenario", "axis_id", "轴名称", "展示分组", "运行状态", "轴级判定", "轴级说明", "项数")
+    assert axis_rows[0] == ("case_id", "scenario", "axis_id", "轴名称", "展示分组", "运行状态", "轴级判定", "轴级说明", "项数", "Case 需求达成状态")
     assert len(axis_rows) == 5
     assert [row[4] for row in axis_rows[1:]] == ["主要展示", "其余分析", "主要展示", "主要展示"]
     assert axis_rows[1][2:4] == ("truthfulness-run", "真实性")
     assert axis_rows[1][6:9] == ("refuted", "轴级原文：发现不符说法", 1)
     assert axis_rows[2][6:9] == ("", "", 2)
     assert axis_rows[3][5:9] == ("failed", "", "运行失败原因", 0)
-    assert axes.auto_filter.ref == "A1:I1"
+    assert [row[9] for row in axis_rows[1:]] == ["fulfilled"] * 4
+    assert axes.auto_filter.ref == "A1:J1"
     assert axes.freeze_panes == "A2"
     # 第三张保留生产阶段和逐项原文；通过 case_id + axis_id 对应第二张。
     detail = workbook["扩展轴明细"]
@@ -217,3 +219,11 @@ def test_exporter_omits_detail_sheet_when_no_detail_rows():
     assert names_with == ["用例池候选区", "评测轴汇总", "扩展轴明细"]
     # 数字列保持数字，Excel 里才能排序/求和，而不是被 cellText 变成字符串。
     assert seconds == 1.5
+
+
+def test_axis_display_frontend_projection_and_export_flow():
+    result = subprocess.run(
+        ["node", str(ROOT / "tests" / "test_axis_display_frontend.js")],
+        capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 0, result.stderr

@@ -366,6 +366,14 @@ def eval_axes_types(data: Dict[str, Any]) -> Any:
     return {"project_id": project, "types": _project_module(project, "eval_axes.registry").describe_axis_types()}
 
 
+def axis_display(data: Dict[str, Any]) -> Any:
+    from ..core.axis_display import load_axis_display
+
+    project = project_from(data)
+    policy = load_axis_display(project, lambda: _project_module(project, "eval_axes.registry").describe_axis_types())
+    return {"project_id": project, **policy}
+
+
 def eval_axes_run(data: Dict[str, Any]) -> Any:
     """试验入口：对页面上已有的同一个 trace 跑新链路，不落盘、不经过生产 judge。"""
     project = _require_eval_axes_project(project_from(data))

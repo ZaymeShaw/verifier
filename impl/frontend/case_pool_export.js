@@ -16,6 +16,7 @@
     {header: '轴级判定', key: 'verdict', width: 18},
     {header: '轴级说明', key: 'reason', width: 80},
     {header: '项数', key: 'itemCount', width: 10},
+    {header: 'Case 需求达成状态', key: 'caseFulfillment', width: 24},
   ];
   // 第三张 sheet：保留逐项理由、引用和生产阶段记录；用 case_id + axis_id 关联轴级汇总。
   const DETAIL_SHEET_NAME = '扩展轴明细';
@@ -43,6 +44,7 @@
     {header: 'Output / 被评估输出', key: 'output', width: 48},
     {header: 'Reference', key: 'reference', width: 48},
     {header: '状态', key: 'status', width: 22},
+    {header: '问题 tags', key: 'problemTags', width: 48},
     {header: 'Judge 摘要', key: 'judgeSummary', width: 42},
     {header: 'Judge JSON', key: 'judgeJson', width: 54},
     {header: '归因摘要', key: 'attributionSummary', width: 42},
