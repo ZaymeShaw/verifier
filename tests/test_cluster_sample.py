@@ -24,12 +24,47 @@ def _config(**kwargs) -> cs.SampleConfig:
 def test_remap_merges_tail_clusters_by_size_bins():
     clusters = _clusters({"a": 1, "b": 1, "c": 2, "d": 3, "e": 5, "f": 50})
     new = dict(zip(clusters, cs.remap_clusters(clusters, (1, 3))))
-    assert new == {"a": "tail:1", "b": "tail:1", "c": "tail:2-3", "d": "tail:2-3", "e": "e", "f": "f"}
+    assert new == {"a": "tail:1", "b": "tail:1", "c": "pool:2-3", "d": "pool:2-3", "e": "e", "f": "f"}
 
 
 def test_remap_without_bins_keeps_ids():
     clusters = _clusters({"a": 1, "b": 4})
     assert cs.remap_clusters(clusters, ()) == clusters
+
+
+@pytest.mark.parametrize("cap, expected", [(None, 3), (2, 2)])
+def test_tail_capacity_counts_original_clusters_not_rows(cap, expected):
+    clusters = _clusters({"a": 2, "b": 3, "c": 3})
+    config = cs.SampleConfig(total=100, cluster_cap=cap)
+    selected, detail = cs.sample(clusters, config)
+    assert len(selected) == expected
+    assert len({clusters[row] for row in selected}) == expected
+    assert detail["pool:2-3"]["size"] == 8
+    assert detail["pool:2-3"]["capacity"] == expected
+    assert detail["pool:2-3"]["sampled"] == expected
+
+
+def test_tail_capacity_shortfall_redistributes_to_normal_clusters():
+    clusters = _clusters({"a": 2, "b": 3, "normal": 30})
+    selected, detail = cs.sample(clusters, cs.SampleConfig(total=20, single_max_size=0))
+    assert len(selected) == 20
+    assert detail["pool:2-3"]["sampled"] == 2
+    assert detail["normal"]["sampled"] == 18
+    assert Counter(clusters[row] for row in selected)["b"] == 1
+
+
+def test_tail_original_clusters_are_equally_likely_then_rows_are_random():
+    clusters = _clusters({"a": 2, "b": 3})
+    cluster_hits, row_hits = Counter(), Counter()
+    for seed in range(600):
+        selected, _ = cs.sample(clusters, cs.SampleConfig(total=1, seed=seed))
+        assert len(selected) == 1
+        row = next(iter(selected))
+        cluster_hits[clusters[row]] += 1
+        row_hits[row] += 1
+    assert cluster_hits["a"] / 600 == pytest.approx(0.5, abs=0.06)
+    for row, c in enumerate(clusters):
+        assert row_hits[row] / cluster_hits[c] == pytest.approx(1 / clusters.count(c), abs=0.08)
 
 
 def test_allocation_is_sublinear_and_hits_total():
@@ -52,7 +87,7 @@ def test_small_unmerged_clusters_get_exactly_one():
     counts = _counts(cs.sample(_clusters(sizes), config)[0])
     assert counts["four"] == 1 and counts["five"] == 1
     assert counts["six"] > 1
-    assert counts["tail:1"] > 1 and counts["tail:2-3"] > 1  # 合并后的长尾簇不受限
+    assert counts["tail:1"] > 1 and counts["pool:2-3"] > 1  # 合并后的长尾簇不受限
     assert sum(counts.values()) == 150
 
 
@@ -231,7 +266,7 @@ def test_segments_follow_custom_bins():
     clusters = _clusters({"a": 1, "b": 2, "c": 4, "d": 5, "e": 7, "f": 9, "g": 30})
     _, detail = cs.sample(clusters, cs.SampleConfig(total=20, tail_bins=(1, 3, 5), single_max_size=8))
     assert {c: d["segment"] for c, d in detail.items()} == {
-        "tail:1": "tail:1", "tail:2-3": "tail:2-3", "tail:4-5": "tail:4-5",
+        "tail:1": "tail:1", "pool:2-3": "pool:2-3", "pool:4-5": "pool:4-5",
         "e": "small:6-8", "f": "normal:>=9", "g": "normal:>=9"}
 
 
@@ -262,7 +297,7 @@ def test_cli_fine_column(tmp_path):
     assert {r["cluster_size"] for r in got if r["new_cluster_id"] != "tail:1"} == {"9"}
 
 
-def test_tail_ratio_reproduces_historical_budget_without_manual_total():
+def test_tail_ratio_budget_with_only_fixed_non_tail_and_singletons():
     sizes = {**{f"mid{i}": 4 for i in range(682)}, "big": 79,
              **{f"tail{i}": 1 for i in range(1000)}}
     clusters = _clusters(sizes)
@@ -276,14 +311,15 @@ def test_tail_ratio_reproduces_historical_budget_without_manual_total():
 
 
 @pytest.mark.parametrize("rounding", cs.ROUNDING_MODES)
-def test_tail_ratio_caps_all_bins_and_redistributes_to_non_tail(rounding):
+def test_tail_ratio_only_caps_singletons_and_keeps_pool_non_tail(rounding):
     clusters = _clusters({**{f"one{i}": 1 for i in range(100)}, **{f"two{i}": 2 for i in range(50)},
                          "normal": 100})
     selected, detail = cs.sample(clusters, cs.SampleConfig(total=20, single_max_size=0,
                                                           tail_max_ratio=0.3, rounding=rounding))
     assert len(selected) == 20
-    assert detail["tail:1"]["sampled"] + detail["tail:2-3"]["sampled"] == 6
-    assert detail["normal"]["sampled"] == 14
+    assert detail["tail:1"]["sampled"] <= 6
+    assert detail["pool:2-3"]["sampled"] > 0
+    assert detail["pool:2-3"]["sampled"] + detail["normal"]["sampled"] == 20 - detail["tail:1"]["sampled"]
 
 
 @pytest.mark.parametrize("ratio, expected", [(0, 71), (0.29, 100), (1, 100)])
@@ -312,6 +348,35 @@ def test_tail_ratio_does_not_override_fixed_cluster_guarantees():
         cs.sample(_clusters({"a": 4, "b": 5}), cs.SampleConfig(total=1, tail_max_ratio=0.3))
 
 
+def test_singleton_limit_counts_pool_capacity_as_non_tail():
+    clusters = _clusters({**{f"singleton{i}": 1 for i in range(100)}, **{f"pair{i}": 2 for i in range(7)}})
+    selected, detail = cs.sample(clusters, cs.SampleConfig(total=100, tail_max_ratio=0.3))
+    assert len(selected) == 10
+    assert detail["tail:1"]["sampled"] == 3
+    assert detail["pool:2-3"]["sampled"] == 7
+    assert len({clusters[row] for row in selected}) == 10
+
+
+@pytest.mark.parametrize("ratio", [0, 0.3])
+def test_non_singleton_pool_is_not_limited_by_tail_ratio(tmp_path, ratio):
+    src, out, report = [tmp_path / n for n in ("in.jsonl", "out.jsonl", "report.json")]
+    clusters = _clusters({"a": 2, "b": 3})
+    src.write_text("".join(json.dumps({"id": i, "cluster_id": c}) + "\n" for i, c in enumerate(clusters)))
+    assert cs.main(["--input", str(src), "--output", str(out), "--report", str(report),
+                    "--tail-max-ratio", str(ratio)]) == 0
+    data = json.loads(report.read_text())
+    assert data["summary"]["sampled_total"] == 2
+    assert data["summary"]["tail_sampled"] == 0
+    assert data["summary"]["non_tail_sampled"] == 2
+    assert data["summary"]["tail_ratio"] == 0
+    assert set(data["segments"]) == {"pool:2-3"}
+
+
+def test_nonempty_bins_require_singleton_bucket():
+    with pytest.raises(ValueError, match="从 1 开始"):
+        cs.SampleConfig(tail_bins=(3, 5))
+
+
 @pytest.mark.parametrize("rounding", cs.ROUNDING_MODES)
 def test_tail_ratio_capacity_and_integer_invariants_across_distributions(rounding):
     rng = random.Random(99)
@@ -333,6 +398,8 @@ def test_tail_ratio_capacity_and_integer_invariants_across_distributions(roundin
         assert len(selected) == max(feasible)
         assert tail * p.denominator <= len(selected) * p.numerator
         assert all(0 <= d["sampled"] <= d["capacity"] for d in detail.values())
+        tail_originals = Counter(clusters[row] for row, c in selected.items() if detail[c]["segment"].startswith(("tail:", "pool:")))
+        assert all(n == 1 for n in tail_originals.values())
         assert all(d["sampled"] == 1 for d in detail.values() if d["segment"].startswith("small:"))
         assert {c: d["sampled"] for c, d in detail.items() if d["sampled"]} == _counts(selected)
         assert cs.sample(clusters, config)[0] == selected

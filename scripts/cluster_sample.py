@@ -1,17 +1,20 @@
 """按簇规模分配名额，从带簇 id 的批次数据中抽出一个数据集，其他列原样保留。
 
 流程：
-1. 重映射簇 id：统计每个簇的大小，大小落在 tail_bins 某档内的簇改成该档的长尾簇 id，
+1. 重映射簇 id：统计每个簇的大小，大小落在 tail_bins 某档内的簇改成该档的桶 id，
    其余簇保持原 id。--tail-bins 1,3,5 表示 {1}、{2-3}、{4-5} 三档，分别得到
-   tail:1、tail:2-3、tail:4-5；大于 5 的簇不变。结果写进新列 new_cluster_id。
+   tail:1、pool:2-3、pool:4-5；只有原始粗簇大小为 1 的桶属于长尾。大于 5 的簇不变。
+   非空分档必须从 1 开始，避免把单例与非单例合在一个桶里。结果写进新列 new_cluster_id。
 2. 按 new_cluster_id 抽样：每个新簇权重 n^alpha，按权重瓜分 total；
    未被合并且大小 <= single_max_size 的小簇固定抽 1 条（保底且封顶），先从 total 中扣除；
    其余簇按 n^alpha 瓜分剩余名额，单簇名额不超过 min(n, cluster_cap)，超出部分按权重分给其他簇；
-   取整后在簇内随机抽。
+   取整后在簇内随机抽。合并桶先等概率随机选原始粗簇，再从每个选中的粗簇随机抽 1 条，
+   每个被合并的原始簇最多贡献 1 条；桶的容量因此不超过其中原始粗簇数量。
    给了 --fine-column 时，未被合并且大小 > single_max_size 的簇不再按 n^alpha 分配，而是按细簇 id
    拆开，每个细簇固定抽 1 条（与小簇同样计入保底）。细簇须嵌套在簇内，通常由 embed_cluster.py
    --fine-threshold 在同一棵树上按更高阈值切出。
-3. 可用 --tail-max-ratio 限制所有长尾桶合计占最终样本的比例；非长尾容量不足时减少总量，
+3. 可用 --tail-max-ratio 限制单例桶 tail:1 占最终样本的比例；pool 桶属于非长尾。
+   非长尾容量不足时减少总量，
    不突破原有单簇规则、不用长尾凑数。不传则不限制，0 排除长尾，1 不限制。
 
 记录按行区分，id 列允许重复，只用于校验字段存在。
@@ -20,7 +23,7 @@
 输出：被抽中的原始行（所有列不变，保持输入顺序），末尾追加三列：
   new_cluster_id：抽样用的新簇 id（被拆开的大簇为细簇 id）；
   segment：所在分段，由 --tail-bins 和 --single-max-size 自动推出，例如 1,3 和 5 得到
-    tail:1、tail:2-3、small:4-5（每簇固定 1 条）、normal:>=6（按 n^alpha 分配）；
+    tail:1、pool:2-3、small:4-5（每簇固定 1 条）、normal:>=6（按 n^alpha 分配）；
     给了 --fine-column 时 normal 段改为 split:>=6（按细簇拆开，每个细簇 1 条）；
   cluster_size：原簇大小；
 格式按输出文件扩展名决定。--report 输出每个新簇的大小、配额和抽取数。
@@ -76,6 +79,8 @@ class SampleConfig:
         bins = list(self.tail_bins)
         if any(b <= 0 for b in bins) or bins != sorted(set(bins)):
             raise ValueError("tail_bins 必须是严格递增的正整数列表")
+        if bins and bins[0] != 1:
+            raise ValueError("tail_bins 必须从 1 开始，单例长尾须独立成桶")
         if self.cluster_cap is not None and self.cluster_cap <= 0:
             raise ValueError("cluster_cap 必须是正整数")
         if self.single_max_size < 0:
@@ -99,7 +104,7 @@ def remap_clusters(clusters: list[str], tail_bins: tuple[int, ...]) -> list[str]
         lower = 1
         for upper in tail_bins:
             if size <= upper:
-                new_id[cluster_id] = f"tail:{lower}" if lower == upper else f"tail:{lower}-{upper}"
+                new_id[cluster_id] = "tail:1" if lower == upper == 1 else f"pool:{_span(lower, upper)}"
                 break
             lower = upper + 1
     return [new_id[c] for c in clusters]
@@ -111,7 +116,7 @@ def _span(lower: int, upper: int) -> str:
 
 def segment_names(config: SampleConfig) -> tuple[str | None, str]:
     """由 tail_bins 和 single_max_size 推出 small 段和 normal 段的名字。
-    small 段覆盖 (最后一个长尾上界, single_max_size]，为空时返回 None；normal 段是更大的簇。"""
+    small 段覆盖 (最后一个合并桶上界, single_max_size]，为空时返回 None；normal 段是更大的簇。"""
     lower = (config.tail_bins[-1] if config.tail_bins else 0) + 1
     if config.single_max_size >= lower:
         return f"small:{_span(lower, config.single_max_size)}", f"normal:>={config.single_max_size + 1}"
@@ -123,9 +128,9 @@ def split_name(config: SampleConfig) -> str:
     return segment_names(config)[1].replace("normal:", "split:", 1)
 
 
-def small_clusters(sizes: dict[str, int], tail_ids: set[str], config: SampleConfig) -> set[str]:
+def small_clusters(sizes: dict[str, int], excluded: set[str], config: SampleConfig) -> set[str]:
     """未被合并且大小 <= single_max_size 的小簇：固定抽 1 条，不参与按权重分配。"""
-    return {c for c, n in sizes.items() if c not in tail_ids and n <= config.single_max_size}
+    return {c for c, n in sizes.items() if c not in excluded and n <= config.single_max_size}
 
 
 def capacities(sizes: dict[str, int], config: SampleConfig) -> dict[str, int]:
@@ -204,21 +209,27 @@ def sample(clusters: list[str], config: SampleConfig,
     """输入每行的簇 id（和可选的细簇 id），返回 ({被抽中的行号: 新簇 id}, 每个新簇的分配明细)。"""
     rng = random.Random(config.seed)
     new_ids = remap_clusters(clusters, config.tail_bins)
-    tail_ids = {new for old, new in zip(clusters, new_ids) if old != new}
+    pooled_ids = {new for old, new in zip(clusters, new_ids) if old != new}
+    tail_ids = pooled_ids & {"tail:1"}
     split: set[str] = set()
     if fine is not None:
         new_ids, split = split_clusters(clusters, new_ids, fine, config)
     members: dict[str, list[int]] = defaultdict(list)
-    for row, new_id in enumerate(new_ids):
+    pooled_members: dict[str, dict[str, list[int]]] = defaultdict(lambda: defaultdict(list))
+    for row, (original_id, new_id) in enumerate(zip(clusters, new_ids)):
         members[new_id].append(row)
+        if new_id in pooled_ids:
+            pooled_members[new_id][original_id].append(row)
     sizes = {c: len(m) for c, m in members.items()}
-    small = small_clusters(sizes, tail_ids | split, config)
+    small = small_clusters(sizes, pooled_ids | split, config)
     fixed = small | split
     if len(fixed) > config.total:
         raise ValueError(f"需要保底的小簇和细簇有 {len(fixed)} 个，超过 total={config.total}；"
                          "请调大 --total、调小 --single-max-size 或把更多小簇并入 --tail-bins")
     others = {c: n for c, n in sizes.items() if c not in fixed}
     capacity = {**capacities(others, config), **{c: 1 for c in fixed}}
+    for c, originals in pooled_members.items():
+        capacity[c] = min(capacity[c], len(originals))
     budget = min(config.total - len(fixed), sum(capacity[c] for c in others))
     tail_limit = None
     if config.tail_max_ratio is not None and config.tail_max_ratio < 1:
@@ -232,15 +243,22 @@ def sample(clusters: list[str], config: SampleConfig,
     counts = {**integerize({c: quota[c] for c in others}, capacity, budget, config.rounding, rng),
               **{c: 1 for c in fixed}}
     if tail_limit is not None and sum(counts[c] for c in tail_ids) > tail_limit:
-        # 上限作用于所有长尾桶的合计整数名额；超出的名额分给可抽的非长尾簇。
+        # 上限只作用于单例桶；超出的名额可分给 pool 桶或其他可抽的非长尾簇。
         for is_tail, group_budget in ((True, tail_limit), (False, budget - tail_limit)):
             group = {c: n for c, n in others.items() if (c in tail_ids) == is_tail}
             group_quota = allocate(group, capacity, group_budget, config.alpha)
             quota.update(group_quota)
             counts.update(integerize(group_quota, capacity, group_budget, config.rounding, rng))
-    selected = {row: c for c in sorted(members) for row in rng.sample(members[c], counts[c])}
+    selected: dict[int, str] = {}
+    for c in sorted(members):
+        if c in pooled_ids:
+            originals = pooled_members[c]
+            rows = [rng.choice(originals[original]) for original in rng.sample(list(originals), counts[c])]
+        else:
+            rows = rng.sample(members[c], counts[c])
+        selected.update({row: c for row in rows})
     small_name, normal_name = segment_names(config)
-    segment = {c: c if c in tail_ids else split_name(config) if c in split else small_name if c in small
+    segment = {c: c if c in pooled_ids else split_name(config) if c in split else small_name if c in small
                else normal_name for c in members}
     detail = {c: {"segment": segment[c], "size": sizes[c], "capacity": capacity[c], "quota": round(quota[c], 4),
                   "sampled": counts[c]} for c in sorted(members)}
@@ -331,9 +349,9 @@ def parse_args(argv: list[str] | None) -> tuple[argparse.Namespace, SampleConfig
     parser.add_argument("--total", type=int, default=defaults.total, help="目标抽取条数")
     parser.add_argument("--alpha", type=float, default=defaults.alpha, help="权重指数，越小越照顾小簇，1 为等比例")
     parser.add_argument("--tail-bins", type=_int_list, default=list(defaults.tail_bins),
-                        help="长尾分档上界，逗号分隔、严格递增，如 1,3,5；空串 \"\" 表示不合并")
+                        help="合并分档上界，从 1 开始、严格递增，如 1,3,5；只有单例桶是长尾；空串表示不合并")
     parser.add_argument("--tail-max-ratio", type=float, default=defaults.tail_max_ratio,
-                        help="长尾占最终样本的比例上限，如 0.30；非长尾不足时少抽，默认不限制")
+                        help="单例长尾占最终样本的比例上限，如 0.30；非长尾不足时少抽，默认不限制")
     parser.add_argument("--cluster-cap", type=int, default=defaults.cluster_cap, help="单簇最多抽几条，默认不限")
     parser.add_argument("--single-max-size", type=int, default=defaults.single_max_size,
                         help="未被合并且大小 <= 该值的簇固定抽 1 条（保底且封顶）；0 表示关闭")
