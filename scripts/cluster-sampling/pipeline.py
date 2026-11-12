@@ -48,11 +48,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--total", type=int, default=env.get("SAMPLE_TOTAL", "1087"))
     parser.add_argument("--alpha", type=float, default=env.get("SAMPLE_ALPHA", "0.6"))
     parser.add_argument("--tail-bins", default=env.get("SAMPLE_TAIL_BINS", "1,3"))
+    parser.add_argument("--tail-max-ratio", type=optional_float, default=env.get("SAMPLE_TAIL_MAX_RATIO", ""))
     parser.add_argument("--single-max-size", type=int, default=env.get("SAMPLE_SINGLE_MAX_SIZE", "20"))
     parser.add_argument("--cluster-cap", type=optional_int, default=env.get("SAMPLE_CLUSTER_CAP", ""))
     parser.add_argument("--rounding", choices=("pps", "largest_remainder"), default=env.get("SAMPLE_ROUNDING", "pps"))
     parser.add_argument("--seed", type=int, default=env.get("SAMPLE_SEED", "42"))
     args = parser.parse_args(argv)
+    if args.tail_max_ratio is not None and not 0 <= args.tail_max_ratio <= 1:
+        parser.error("SAMPLE_TAIL_MAX_RATIO/--tail-max-ratio 必须是 0 到 1 之间的有限数")
     for name, value in (("INPUT_PATH/--input", args.input), ("OUTPUT_DIR/--output-dir", args.output_dir),
                         ("EMBEDDING_BASE_URL/--base-url", args.base_url), ("EMBEDDING_MODEL/--model", args.model)):
         if not value or not value.strip():
@@ -97,6 +100,8 @@ def main(argv: list[str] | None = None) -> int:
                       "--seed", str(args.seed)]
     if args.cluster_cap is not None:
         sample_command += ["--cluster-cap", str(args.cluster_cap)]
+    if args.tail_max_ratio is not None:
+        sample_command += ["--tail-max-ratio", str(args.tail_max_ratio)]
     if args.fine_threshold is not None:
         sample_command += ["--fine-column", "fine_cluster_id"]
     print(f"覆盖输出：{output_dir}", flush=True)

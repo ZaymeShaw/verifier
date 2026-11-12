@@ -191,3 +191,34 @@ def test_dotenv_utf8_bom_preserves_first_setting(pipeline, tmp_path, monkeypatch
     calls = capture_commands(pipeline, monkeypatch)
     assert pipeline.main([]) == 0
     assert option(calls[-1][0], "--total") == "7"
+
+
+def test_tail_ratio_config_precedence_and_disable(pipeline, tmp_path, monkeypatch):
+    monkeypatch.delenv("SAMPLE_TAIL_MAX_RATIO", raising=False)
+    calls = capture_commands(pipeline, monkeypatch)
+    assert pipeline.main([]) == 0
+    assert "--tail-max-ratio" not in calls[-1][0]
+    with (tmp_path / ".env").open("a", encoding="utf-8") as f:
+        f.write("SAMPLE_TAIL_MAX_RATIO=0.30\n")
+    assert pipeline.main([]) == 0
+    assert option(calls[-1][0], "--tail-max-ratio") == "0.3"
+    monkeypatch.setenv("SAMPLE_TAIL_MAX_RATIO", "0.2")
+    assert pipeline.main([]) == 0
+    assert option(calls[-1][0], "--tail-max-ratio") == "0.2"
+    assert pipeline.main(["--tail-max-ratio", "0"]) == 0
+    assert option(calls[-1][0], "--tail-max-ratio") == "0.0"
+    assert pipeline.main(["--tail-max-ratio", ""]) == 0
+    assert "--tail-max-ratio" not in calls[-1][0]
+
+
+@pytest.mark.parametrize("ratio", ["-0.1", "1.1", "nan", "inf", "30%"])
+def test_invalid_tail_ratio_preserves_old_results_and_skips_requests(pipeline, tmp_path, monkeypatch, ratio):
+    monkeypatch.setenv("SAMPLE_TAIL_MAX_RATIO", ratio)
+    out = tmp_path / "output"
+    out.mkdir()
+    (out / "sampled.xlsx").write_bytes(b"old")
+    calls = capture_commands(pipeline, monkeypatch)
+    with pytest.raises(SystemExit):
+        pipeline.main([])
+    assert not calls
+    assert (out / "sampled.xlsx").read_bytes() == b"old"

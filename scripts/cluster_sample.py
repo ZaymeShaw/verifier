@@ -1,6 +1,6 @@
 """按簇规模分配名额，从带簇 id 的批次数据中抽出一个数据集，其他列原样保留。
 
-两步：
+流程：
 1. 重映射簇 id：统计每个簇的大小，大小落在 tail_bins 某档内的簇改成该档的长尾簇 id，
    其余簇保持原 id。--tail-bins 1,3,5 表示 {1}、{2-3}、{4-5} 三档，分别得到
    tail:1、tail:2-3、tail:4-5；大于 5 的簇不变。结果写进新列 new_cluster_id。
@@ -11,6 +11,8 @@
    给了 --fine-column 时，未被合并且大小 > single_max_size 的簇不再按 n^alpha 分配，而是按细簇 id
    拆开，每个细簇固定抽 1 条（与小簇同样计入保底）。细簇须嵌套在簇内，通常由 embed_cluster.py
    --fine-threshold 在同一棵树上按更高阈值切出。
+3. 可用 --tail-max-ratio 限制所有长尾桶合计占最终样本的比例；非长尾容量不足时减少总量，
+   不突破原有单簇规则、不用长尾凑数。不传则不限制，0 排除长尾，1 不限制。
 
 记录按行区分，id 列允许重复，只用于校验字段存在。
 
@@ -27,7 +29,7 @@
     python scripts/cluster_sample.py --input batch.csv --output sampled.csv \
         [--id-column id] [--cluster-column cluster_id] [--total 1000] [--alpha 0.6] \
         [--tail-bins 1,3] [--cluster-cap 10] [--single-max-size 5] [--fine-column fine_cluster_id] \
-        [--rounding pps] [--seed 42] [--report report.json]
+        [--tail-max-ratio 0.30] [--rounding pps] [--seed 42] [--report report.json]
 """
 from __future__ import annotations
 
@@ -39,6 +41,7 @@ import random
 import sys
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -61,12 +64,15 @@ class SampleConfig:
     id_column: str = "id"
     cluster_column: str = "cluster_id"
     fine_column: str | None = None
+    tail_max_ratio: float | None = None
 
     def __post_init__(self) -> None:
         if self.total <= 0:
             raise ValueError("total 必须是正整数")
         if self.alpha < 0:
             raise ValueError("alpha 不能为负")
+        if self.tail_max_ratio is not None and not 0 <= self.tail_max_ratio <= 1:
+            raise ValueError("tail_max_ratio 必须是 0 到 1 之间的有限数")
         bins = list(self.tail_bins)
         if any(b <= 0 for b in bins) or bins != sorted(set(bins)):
             raise ValueError("tail_bins 必须是严格递增的正整数列表")
@@ -214,9 +220,24 @@ def sample(clusters: list[str], config: SampleConfig,
     others = {c: n for c, n in sizes.items() if c not in fixed}
     capacity = {**capacities(others, config), **{c: 1 for c in fixed}}
     budget = min(config.total - len(fixed), sum(capacity[c] for c in others))
+    tail_limit = None
+    if config.tail_max_ratio is not None and config.tail_max_ratio < 1:
+        # 用十进制配置的精确分数向下取整，避免 0.3 等浮点数使整数边界少一条或超限。
+        ratio = Fraction(str(config.tail_max_ratio))
+        non_tail_capacity = sum(n for c, n in capacity.items() if c not in tail_ids)
+        total_limit = non_tail_capacity * ratio.denominator // (ratio.denominator - ratio.numerator)
+        budget = min(budget, total_limit - len(fixed))
+        tail_limit = (budget + len(fixed)) * ratio.numerator // ratio.denominator
     quota = {**allocate(others, capacity, budget, config.alpha), **{c: 1.0 for c in fixed}}
     counts = {**integerize({c: quota[c] for c in others}, capacity, budget, config.rounding, rng),
               **{c: 1 for c in fixed}}
+    if tail_limit is not None and sum(counts[c] for c in tail_ids) > tail_limit:
+        # 上限作用于所有长尾桶的合计整数名额；超出的名额分给可抽的非长尾簇。
+        for is_tail, group_budget in ((True, tail_limit), (False, budget - tail_limit)):
+            group = {c: n for c, n in others.items() if (c in tail_ids) == is_tail}
+            group_quota = allocate(group, capacity, group_budget, config.alpha)
+            quota.update(group_quota)
+            counts.update(integerize(group_quota, capacity, group_budget, config.rounding, rng))
     selected = {row: c for c in sorted(members) for row in rng.sample(members[c], counts[c])}
     small_name, normal_name = segment_names(config)
     segment = {c: c if c in tail_ids else split_name(config) if c in split else small_name if c in small
@@ -311,6 +332,8 @@ def parse_args(argv: list[str] | None) -> tuple[argparse.Namespace, SampleConfig
     parser.add_argument("--alpha", type=float, default=defaults.alpha, help="权重指数，越小越照顾小簇，1 为等比例")
     parser.add_argument("--tail-bins", type=_int_list, default=list(defaults.tail_bins),
                         help="长尾分档上界，逗号分隔、严格递增，如 1,3,5；空串 \"\" 表示不合并")
+    parser.add_argument("--tail-max-ratio", type=float, default=defaults.tail_max_ratio,
+                        help="长尾占最终样本的比例上限，如 0.30；非长尾不足时少抽，默认不限制")
     parser.add_argument("--cluster-cap", type=int, default=defaults.cluster_cap, help="单簇最多抽几条，默认不限")
     parser.add_argument("--single-max-size", type=int, default=defaults.single_max_size,
                         help="未被合并且大小 <= 该值的簇固定抽 1 条（保底且封顶）；0 表示关闭")
@@ -323,7 +346,7 @@ def parse_args(argv: list[str] | None) -> tuple[argparse.Namespace, SampleConfig
                               cluster_cap=args.cluster_cap, single_max_size=args.single_max_size,
                               rounding=args.rounding, seed=args.seed,
                               id_column=args.id_column, cluster_column=args.cluster_column,
-                              fine_column=args.fine_column)
+                              fine_column=args.fine_column, tail_max_ratio=args.tail_max_ratio)
     except ValueError as exc:
         parser.error(str(exc))
     return args, config
@@ -349,19 +372,25 @@ def main(argv: list[str] | None = None) -> int:
         seg["clusters"] += 1
         seg["size"] += d["size"]
         seg["sampled"] += d["sampled"]
-    if args.report:
-        args.report.write_text(json.dumps({"config": asdict(config), "segments": segments, "clusters": detail},
-                                          ensure_ascii=False, indent=2), encoding="utf-8")
-
     total_n = sum(d["size"] for d in detail.values())
     tail = [d for c, d in detail.items() if c.startswith("tail:")]
     tail_n, tail_k = sum(d["size"] for d in tail), sum(d["sampled"] for d in tail)
-    print(f"原数据 {total_n} 条，目标抽取 {config.total} 条，可抽上限 {sum(d['capacity'] for d in detail.values())} 条，"
+    summary = {"requested_total": config.total, "sampled_total": len(output), "tail_sampled": tail_k,
+               "non_tail_sampled": len(output) - tail_k,
+               "tail_ratio": tail_k / len(output) if output else None}
+    if args.report:
+        args.report.write_text(json.dumps({"config": asdict(config), "summary": summary,
+                                          "segments": segments, "clusters": detail},
+                                         ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"原数据 {total_n} 条，目标抽取 {config.total} 条，单簇容量合计 {sum(d['capacity'] for d in detail.values())} 条，"
           f"实际抽取 {len(output)} 条")
     if len(output) < config.total:
-        print("注意：目标超过可抽上限，已把能抽的全部抽出（受簇大小、--cluster-cap、--single-max-size 限制）")
+        print("注意：实际数量受簇容量、固定抽样规则及长尾占比上限限制，不为凑数突破约束")
+    if config.tail_max_ratio is not None:
+        print(f"长尾样本占比上限：{config.tail_max_ratio:.1%}")
     print(f"新簇 {len(detail)} 个，被抽到 {sum(1 for d in detail.values() if d['sampled'])} 个")
-    print(f"长尾簇：数据占比 {tail_n / total_n:.1%}，样本占比 {tail_k / max(len(output), 1):.1%}")
+    actual_ratio = f"{tail_k / len(output):.1%}" if output else "无样本，比例不适用"
+    print(f"长尾簇：数据占比 {tail_n / max(total_n, 1):.1%}，样本占比 {actual_ratio}")
     for name, seg in segments.items():
         print(f"  {name}：簇 {seg['clusters']} 个，原 {seg['size']} 条，抽 {seg['sampled']} 条")
     return 0

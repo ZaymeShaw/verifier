@@ -1,6 +1,8 @@
 import csv
 import json
+import random
 from collections import Counter
+from fractions import Fraction
 
 import pytest
 
@@ -258,3 +260,98 @@ def test_cli_fine_column(tmp_path):
     _, got = _read_csv(out)
     assert sorted(r["new_cluster_id"] for r in got) == ["a.0", "a.1", "a.2", "tail:1"]
     assert {r["cluster_size"] for r in got if r["new_cluster_id"] != "tail:1"} == {"9"}
+
+
+def test_tail_ratio_reproduces_historical_budget_without_manual_total():
+    sizes = {**{f"mid{i}": 4 for i in range(682)}, "big": 79,
+             **{f"tail{i}": 1 for i in range(1000)}}
+    clusters = _clusters(sizes)
+    fine = [f"big.{i}" if c == "big" else c for i, c in enumerate(clusters)]
+    config = cs.SampleConfig(total=1500, single_max_size=20, tail_max_ratio=0.3)
+    selected, detail = cs.sample(clusters, config, fine)
+    assert len(selected) == 1087
+    assert detail["tail:1"]["sampled"] == 326
+    assert sum(d["sampled"] for d in detail.values() if not d["segment"].startswith("tail:")) == 761
+    assert all(d["sampled"] == 1 for d in detail.values() if d["segment"].startswith("split:"))
+
+
+@pytest.mark.parametrize("rounding", cs.ROUNDING_MODES)
+def test_tail_ratio_caps_all_bins_and_redistributes_to_non_tail(rounding):
+    clusters = _clusters({**{f"one{i}": 1 for i in range(100)}, **{f"two{i}": 2 for i in range(50)},
+                         "normal": 100})
+    selected, detail = cs.sample(clusters, cs.SampleConfig(total=20, single_max_size=0,
+                                                          tail_max_ratio=0.3, rounding=rounding))
+    assert len(selected) == 20
+    assert detail["tail:1"]["sampled"] + detail["tail:2-3"]["sampled"] == 6
+    assert detail["normal"]["sampled"] == 14
+
+
+@pytest.mark.parametrize("ratio, expected", [(0, 71), (0.29, 100), (1, 100)])
+def test_tail_ratio_boundaries_and_decimal_integer_rounding(ratio, expected):
+    clusters = _clusters({**{f"mid{i}": 4 for i in range(71)}, **{f"tail{i}": 1 for i in range(200)}})
+    selected, detail = cs.sample(clusters, cs.SampleConfig(total=100, tail_max_ratio=ratio))
+    assert len(selected) == expected
+    assert detail["tail:1"]["sampled"] == expected - 71
+
+
+@pytest.mark.parametrize("ratio", [-0.1, 1.1, float("nan"), float("inf")])
+def test_invalid_tail_ratio_rejected(ratio):
+    with pytest.raises(ValueError, match="tail_max_ratio"):
+        cs.SampleConfig(tail_max_ratio=ratio)
+
+
+def test_tail_ratio_does_not_force_target_share_when_tail_is_scarce():
+    clusters = _clusters({"normal": 50, "tail": 1})
+    config = dict(total=20, single_max_size=0)
+    assert cs.sample(clusters, cs.SampleConfig(**config, tail_max_ratio=0.3)) == cs.sample(
+        clusters, cs.SampleConfig(**config))
+
+
+def test_tail_ratio_does_not_override_fixed_cluster_guarantees():
+    with pytest.raises(ValueError, match="保底"):
+        cs.sample(_clusters({"a": 4, "b": 5}), cs.SampleConfig(total=1, tail_max_ratio=0.3))
+
+
+@pytest.mark.parametrize("rounding", cs.ROUNDING_MODES)
+def test_tail_ratio_capacity_and_integer_invariants_across_distributions(rounding):
+    rng = random.Random(99)
+    for seed in range(60):
+        sizes = {f"c{i}": rng.randint(1, 30) for i in range(rng.randint(1, 45))}
+        bins = rng.choice([(), (1, 3), (1, 3, 5)])
+        ratio = rng.choice([0, 0.01, 0.29, 0.3, 0.7, 1])
+        cap = rng.choice([None, 1, 5, 10])
+        config = cs.SampleConfig(total=50, tail_bins=bins, single_max_size=8,
+                                 cluster_cap=cap, tail_max_ratio=ratio, rounding=rounding, seed=seed)
+        clusters = _clusters(sizes)
+        selected, detail = cs.sample(clusters, config)
+        tail = sum(d["sampled"] for d in detail.values() if d["segment"].startswith("tail:"))
+        tail_capacity = sum(d["capacity"] for d in detail.values() if d["segment"].startswith("tail:"))
+        non_tail_capacity = sum(d["capacity"] for d in detail.values() if not d["segment"].startswith("tail:"))
+        p = Fraction(str(ratio))
+        feasible = [n for n in range(51) if n <= tail_capacity + non_tail_capacity
+                    and n - non_tail_capacity <= n * p.numerator // p.denominator]
+        assert len(selected) == max(feasible)
+        assert tail * p.denominator <= len(selected) * p.numerator
+        assert all(0 <= d["sampled"] <= d["capacity"] for d in detail.values())
+        assert all(d["sampled"] == 1 for d in detail.values() if d["segment"].startswith("small:"))
+        assert {c: d["sampled"] for c, d in detail.items() if d["sampled"]} == _counts(selected)
+        assert cs.sample(clusters, config)[0] == selected
+
+
+@pytest.mark.parametrize("all_tail", [False, True])
+def test_tail_ratio_cli_excel_and_report(tmp_path, all_tail):
+    from openpyxl import load_workbook
+    src, out, report = (tmp_path / name for name in ["in.jsonl", "sampled.xlsx", "report.json"])
+    sizes = {f"tail{i}": 1 for i in range(30)}
+    if not all_tail:
+        sizes.update({f"mid{i}": 4 for i in range(7)})
+    src.write_text("".join(json.dumps({"id": i, "cluster_id": c}) + "\n"
+                           for i, c in enumerate(_clusters(sizes))), encoding="utf-8")
+    assert cs.main(["--input", str(src), "--output", str(out), "--report", str(report),
+                    "--total", "100", "--tail-max-ratio", "0.30"]) == 0
+    data = json.loads(report.read_text(encoding="utf-8"))
+    assert data["config"]["tail_max_ratio"] == 0.3
+    assert data["summary"] == {"requested_total": 100, "sampled_total": 0 if all_tail else 10,
+                               "tail_sampled": 0 if all_tail else 3, "non_tail_sampled": 0 if all_tail else 7,
+                               "tail_ratio": None if all_tail else 0.3}
+    assert len(list(load_workbook(out).active.values)) == (1 if all_tail else 11)
