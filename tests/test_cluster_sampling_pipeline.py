@@ -48,6 +48,7 @@ def test_default_paths_are_relative_to_module_and_reused(pipeline, tmp_path, mon
     assert Path(sample[1]) == pipeline.SCRIPTS_DIR / "cluster_sample.py"
     assert option(cluster, "--input") == str(tmp_path / "example-input.jsonl")
     assert option(sample, "--input") == option(cluster, "--output")
+    assert Path(option(cluster, "--excel-output")) == tmp_path / "output/clustered.xlsx"
     assert option(sample, "--fine-column") == "fine_cluster_id"
     assert calls[0][1]["EMBEDDING_API_KEY"] == "test-secret"
     assert "test-secret" not in " ".join(cluster)
@@ -147,7 +148,7 @@ def test_invalid_numeric_env_stops_before_request(pipeline, monkeypatch):
 def test_failure_removes_old_results_but_keeps_cache_and_other_files(pipeline, tmp_path, monkeypatch):
     out = tmp_path / "output"
     (out / ".cache").mkdir(parents=True)
-    names = ("sampled.xlsx", "clustered.jsonl", "cluster-report.json", "sample-report.json")
+    names = ("sampled.xlsx", "clustered.jsonl", "clustered.xlsx", "cluster-report.json", "sample-report.json")
     for name in names:
         (out / name).write_text("old result")
     (out / ".cache/embeddings.jsonl").write_text("cache")
@@ -164,26 +165,40 @@ def test_sampling_failure_removes_partial_final_files(pipeline, tmp_path, monkey
     def run(command, *, env, check):
         Path(option(command, "--output")).write_text("partial")
         Path(option(command, "--report")).write_text("partial")
+        if "--excel-output" in command:
+            Path(option(command, "--excel-output")).write_bytes(b"completed cluster workbook")
         return SimpleNamespace(returncode=1 if Path(command[1]).name == "cluster_sample.py" else 0)
 
     monkeypatch.setattr(pipeline.subprocess, "run", run)
     assert pipeline.main([]) == 1
     out = tmp_path / "output"
     assert (out / "clustered.jsonl").exists()
+    assert (out / "clustered.xlsx").read_bytes() == b"completed cluster workbook"
     assert not (out / "sampled.xlsx").exists()
     assert not (out / "sample-report.json").exists()
 
 
-def test_input_cannot_be_overwritten_by_outputs(pipeline, tmp_path, monkeypatch):
+@pytest.mark.parametrize("name", ["clustered.jsonl", "clustered.xlsx"])
+def test_input_cannot_be_overwritten_by_outputs(pipeline, tmp_path, monkeypatch, name):
     out = tmp_path / "output"
     out.mkdir()
-    source = out / "clustered.jsonl"
+    source = out / name
     source.write_text('{"id":"q1","text":"keep input"}\n')
     calls = capture_commands(pipeline, monkeypatch)
     with pytest.raises(SystemExit):
         pipeline.main(["--input", str(source)])
     assert source.read_text() == '{"id":"q1","text":"keep input"}\n'
     assert calls == []
+
+
+def test_clustering_failure_removes_partial_cluster_workbook(pipeline, tmp_path, monkeypatch):
+    def run(command, *, env, check):
+        Path(option(command, "--excel-output")).write_bytes(b"partial")
+        return SimpleNamespace(returncode=1)
+
+    monkeypatch.setattr(pipeline.subprocess, "run", run)
+    assert pipeline.main([]) == 1
+    assert not (tmp_path / "output/clustered.xlsx").exists()
 
 
 def test_dotenv_utf8_bom_preserves_first_setting(pipeline, tmp_path, monkeypatch):

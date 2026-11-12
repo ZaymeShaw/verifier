@@ -181,6 +181,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--excel-output", type=Path, help="额外输出完整聚类结果的 XLSX，与主输出使用同一批记录")
     parser.add_argument("--report", type=Path)
     parser.add_argument("--id-column", default="id")
     parser.add_argument("--text-column", default="text", help="聚类用的文本列；值是列表时按换行拼接")
@@ -201,6 +202,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=20,
                         help="每次请求的文本数，按服务的批量上限设置")
     args = parser.parse_args(argv)
+    if args.excel_output is not None:
+        if args.excel_output.suffix != ".xlsx":
+            parser.error("excel-output 必须是 .xlsx 文件")
+        if args.excel_output.resolve() in {args.input.resolve(), args.output.resolve()}:
+            parser.error("excel-output 不能与 input 或 output 使用同一路径")
     url = urlsplit(args.base_url)
     if url.scheme not in {"http", "https"} or not url.hostname or url.query or url.fragment or url.username or url.password:
         parser.error("base-url 必须是无凭据、查询参数或片段的 HTTP(S) API 根地址")
@@ -251,7 +257,10 @@ def main(argv: list[str] | None = None,
     output = [{args.id_column: r[args.id_column], args.cluster_column: c,
                **({args.fine_column: fine_ids[i]} if fine_ids else {}), **r}
               for i, (r, c) in enumerate(zip(records, cluster_ids))]
-    write_records(args.output, output, list(dict.fromkeys([*head, *columns])))
+    output_columns = list(dict.fromkeys([*head, *columns]))
+    write_records(args.output, output, output_columns)
+    if args.excel_output is not None:
+        write_records(args.excel_output, output, output_columns)
 
     sizes = Counter(cluster_ids)
     if args.report:

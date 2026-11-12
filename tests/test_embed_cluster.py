@@ -108,6 +108,30 @@ def test_record_text_joins_turns():
     assert ec.record_text(["a", "b"]) == "a\nb"
 
 
+@pytest.mark.parametrize("fine", [False, True])
+def test_extra_excel_matches_jsonl_without_repeating_embeddings(tmp_path, fine):
+    from openpyxl import load_workbook
+    rows = [{"id": "q1", "turns": ["a1"], "meta": {"来源": "样例"}},
+            {"id": "q2", "turns": ["c"], "meta": {"来源": "其他"}}]
+    inp, out, excel = [tmp_path / name for name in ("in.jsonl", "clustered.jsonl", "clustered.xlsx")]
+    inp.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
+    embed = FakeEmbed()
+    args = ["--input", str(inp), "--output", str(out), "--excel-output", str(excel), "--text-column", "turns"]
+    if fine:
+        args += ["--fine-threshold", "0.95"]
+    assert ec.main(args, embed_factory=lambda _: (embed, "fake")) == 0
+    assert embed.requested == ["a1", "c"]
+    records = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines()]
+    book = load_workbook(excel)
+    values = list(book.active.values)
+    assert book.active.freeze_panes == "A2"
+    assert ("fine_cluster_id" in values[0]) == fine
+    assert values[1:] == [tuple(json.dumps(r[k], ensure_ascii=False) if isinstance(r[k], (list, dict)) else r[k]
+                                for k in values[0]) for r in records]
+    assert isinstance(records[0]["turns"], list) and isinstance(records[0]["meta"], dict)
+    book.close()
+
+
 def test_fine_threshold_nests_and_names_by_parent():
     # x-y、y-z 约 0.92，x-z 约 0.70；0.6 下一簇，0.9 下拆成 {x,y} 和 {z}；w 单独
     vec = {"x": [1, 0, 0], "y": [np.cos(0.4), np.sin(0.4), 0], "z": [np.cos(0.8), np.sin(0.8), 0], "w": [0, 0, 1]}

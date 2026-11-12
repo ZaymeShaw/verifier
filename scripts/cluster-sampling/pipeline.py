@@ -70,10 +70,11 @@ def main(argv: list[str] | None = None) -> int:
     output_dir = resolve_path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     clustered = output_dir / "clustered.jsonl"
+    clustered_excel = output_dir / "clustered.xlsx"
     sampled = output_dir / "sampled.xlsx"
     cluster_report = output_dir / "cluster-report.json"
     sample_report = output_dir / "sample-report.json"
-    outputs = (clustered, sampled, cluster_report, sample_report)
+    outputs = (clustered, clustered_excel, sampled, cluster_report, sample_report)
     if input_path in {path.resolve() for path in outputs}:
         parser.error("输入文件不能使用本工作流的输出文件路径，请先复制到其他位置")
     # 每次只保留本次结果；缓存和目录中的其他文件不动。
@@ -81,6 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         path.unlink(missing_ok=True)
     cluster_command = [sys.executable, str(SCRIPTS_DIR / "embed_cluster.py"),
                        "--input", str(input_path), "--output", str(clustered),
+                       "--excel-output", str(clustered_excel),
                        "--report", str(cluster_report),
                        "--cache", str(output_dir / ".cache" / "embeddings.jsonl"),
                        "--id-column", args.id_column, "--text-column", args.text_column,
@@ -109,10 +111,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"开始{stage}", flush=True)
         result = subprocess.run(command, env=env, check=False)
         if result.returncode:
+            if stage == "聚类":
+                clustered_excel.unlink(missing_ok=True)
             sampled.unlink(missing_ok=True)
             sample_report.unlink(missing_ok=True)
             print(f"{stage}失败，未保留最终样本；中间产物位于：{output_dir}", file=sys.stderr)
             return result.returncode if result.returncode > 0 else 1
+        if stage == "聚类":
+            print(f"聚类结果：{clustered_excel}", flush=True)
     print(f"完成，最终样本：{sampled}", flush=True)
     return 0
 
