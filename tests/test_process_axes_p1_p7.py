@@ -107,4 +107,4 @@ def test_p7_clustering_members_are_issue_records_not_axis_reason():
     material = build_material([row], types)
     members = [r for label in material["axes"][0]["labels"] for r in label["records"]]
     assert [m["subject"] for m in members] == ["context_memory-B1-P1", "context_memory-B1-P2"]
-    assert members[0]["reason"].startswith("假缺口；预期：本应E1")
+    assert members[0]["reason"] == "预期：本应E1（依据：b）；实际：实际E1；归因：本轴"

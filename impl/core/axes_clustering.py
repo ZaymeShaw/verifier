@@ -78,7 +78,7 @@ def build_material(rows: list[dict], types: list[dict]) -> dict[str, Any]:
                     raise ValueError(f'过程轴 {axis_id} 缺少问题记录，请重新评测')
                 for index, issue in enumerate(source['issues']):
                     records.append((str(source['verdict']), {
-                        'reason': issue['phenomenon'] + '；预期：' + issue['expected'] + '；实际：' + issue['observed'],
+                        'reason': '预期：' + issue['expected'] + '；实际：' + issue['observed'] + '；归因：' + issue['attribution_detail'],
                         'subject': issue['problem_id'], 'issue': issue}, index))
             elif item_scope:
                 for index, item in enumerate(source.get("items") or []):

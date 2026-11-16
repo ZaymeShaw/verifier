@@ -85,11 +85,12 @@ def build_report(spec: Any, trace: Any, *, run_id: str = "", scenario_id: str = 
     entry = load_capability_map(PROJECT)[scenario_id]
     defs = definitions()
     run_id = str(run_id or "").strip() or new_run_id()
-    case = Case(trace, scenario_id, entry, axes.notes)
+    notes = {k: axes.notes.get(k, "") for k in axes.enabled}
+    case = Case(trace, scenario_id, entry, notes)
     started = time.monotonic()
     report: dict[str, Any] = {"run_id": run_id, "scenario_id": scenario_id, "trace_id": str(trace.trace_id or ""),
                               "case_id": str(trace.case_id or ""), "route": "loop",
-                              "axes": [{"type": k, "enabled": True, "description": axes.notes.get(k, "")} for k in axes.enabled],
+                              "axes": [{"type": k, "enabled": True, "description": notes[k]} for k in axes.enabled],
                               "warnings": list(axes.warnings)}
     failure = business_failure.matched(trace, entry)
     if failure:
@@ -98,7 +99,6 @@ def build_report(spec: Any, trace: Any, *, run_id: str = "", scenario_id: str = 
         report.update(results=results, main_verdict=None, business_failure=failure,
                       loop={"status": "skipped", "reason": failure, "seconds": 0})
         return report
-    notes = {k: axes.notes.get(k, "") for k in axes.enabled}
     request = (trace.normalized_request or {}).get("body") or {}
     sources = ProbeSources(notes, request)
     client = axis_llm(spec, role="judge")

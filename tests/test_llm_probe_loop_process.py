@@ -96,8 +96,9 @@ def expected(axis):
             "not_covered": []}
 
 
-ACTUAL = {"actual": [{"id": "E1", "links": [], "observed": "看过两端", "quotes": [], "verdict": "达到"}],
-          "unexpected": [], "problems": [], "reason": "没发现问题", "scope_note": "无"}
+ACTUAL = {"actual": [{"id": "E1", "links": [], "observed": "看过两端", "quotes": [], "verdict": "达到",
+                      "attribution": "", "affected_expectations": []}],
+          "unexpected": [], "reason": "没发现问题", "scope_note": "无"}
 CURRENT: dict = {}
 
 
@@ -186,8 +187,8 @@ def test_process_axes_run_and_expected_loop_never_sees_output_side():
 
 
 def test_not_met_without_quote_is_rejected_and_rows_must_match_expected():
-    bad = {**ACTUAL, "actual": [{**ACTUAL["actual"][0], "verdict": "没达到"}],
-           "problems": [{"phenomenon": "x", "items": ["E1"], "attribution": "本轴", "impact": "y"}]}
+    bad = {**ACTUAL, "actual": [{**ACTUAL["actual"][0], "verdict": "没达到", "attribution": "本轴",
+                                 "affected_expectations": ["t1.E1"]}]}
     r = routes()
     r["process"] = [lambda: [submit(a, bad if a == "tool_execution" else actual(a)) for a in PROCESS_AXES],
                     lambda: [submit(a, actual(a)) for a in PROCESS_AXES]] + [lambda: [submit("tool_execution", actual("tool_execution"))]] * 2
@@ -212,25 +213,30 @@ def test_expected_must_cite_known_expectation_ids():
     assert len(tries) == 2 and any("不在需求清单里" in script.text(g) for g in script.seen if g.startswith("process_expected["))
 
 
-# ---- 主轴证据组（spec/alg/fulfilled.md §2.1，实施 S6） ------------------------------------------
+# ---- 主轴证据组（spec/alg/fulfilled.md §2.1，实施 S6 + §17 程序汇总过程佐证） ---------------------
 
 def _fulfillment_code():
     return definitions().axes["fulfillment"].code
 
 
-def _derive(delivered="给了", needs=(("knowledge",), ("trace",)), evidence=None, claims=(), rows=(), claim_refs=(), process_refs=()):
+def _derive(delivered="给了", needs=(("knowledge",), ("trace",)), evidence=None, claims=(), rows=(), claim_refs=(),
+            expectation_id="t1.E1", unexpected=()):
     derive = _fulfillment_code().synthesize.__globals__["derive"]
-    item = {"delivered": delivered, "claim_refs": list(claim_refs), "process_refs": list(process_refs)}
+    item = {"expectation_id": expectation_id, "delivered": delivered, "claim_refs": list(claim_refs)}
     return derive(item, [list(g) for g in needs], evidence or {"knowledge": True, "trace": True},
-                        {c["claim_id"]: c for c in claims}, {r["ref"]: r for r in rows})
+                  {c["claim_id"]: c for c in claims}, {r["ref"]: r for r in rows},
+                  {u["ref"]: u for u in unexpected})
 
 
 def claim(cid, verdict, qualifies=""):
     return {"claim_id": cid, "verdict": verdict, "qualifies": qualifies}
 
 
-def row(ref, verdict):
-    return {"ref": ref, "verdict": verdict}
+def row(ref, verdict, expectations=("t1.E1",), affected_expectations=None):
+    if affected_expectations is None:
+        affected_expectations = list(expectations) if verdict == "没达到" else []
+    return {"ref": ref, "verdict": verdict, "expectations": list(expectations),
+            "affected_expectations": list(affected_expectations)}
 
 
 def test_delivery_only_and_missing_evidence():
@@ -255,19 +261,19 @@ def test_knowledge_only_scenario():
 def test_trace_only_scenario():
     only_t = {"knowledge": False, "trace": True}
     ok = [row("tool_execution.E1", "达到"), row("model_capability.E2", "达到")]
-    assert _derive(evidence=only_t, rows=ok, process_refs=["tool_execution.E1", "model_capability.E2"])[:2] == ("fulfilled", ["trace"])
+    assert _derive(evidence=only_t, rows=ok)[:2] == ("fulfilled", ["trace"])
     made_up = [row("tool_execution.E1", "达到"), row("model_capability.E2", "没达到")]
-    assert _derive(evidence=only_t, rows=made_up, process_refs=["tool_execution.E1", "model_capability.E2"])[0] == "not_fulfilled"
-    assert _derive(evidence=only_t, rows=[row("tool_execution.E1", "无法核")], process_refs=["tool_execution.E1"])[0] == "not_evaluable"
-    assert _derive(evidence=only_t)[0] == "not_evaluable"   # 配了 trace、没有可引的过程条目：判不了
+    assert _derive(evidence=only_t, rows=made_up)[0] == "not_fulfilled"
+    assert _derive(evidence=only_t, rows=[row("tool_execution.E1", "无法核")])[0] == "not_evaluable"
+    assert _derive(evidence=only_t)[0] == "not_evaluable"   # 配了 trace、没有关联本期望的过程条目：判不了
 
 
 def test_both_configured_both_must_pass():
     k_ok, t_bad = [claim("c1", "verified")], [row("model_capability.E2", "没达到")]
-    assert _derive(claims=k_ok, rows=t_bad, claim_refs=["c1"], process_refs=["model_capability.E2"])[0] == "not_fulfilled"  # 蒙对
+    assert _derive(claims=k_ok, rows=t_bad, claim_refs=["c1"])[0] == "not_fulfilled"  # 蒙对
     k_bad, t_ok = [claim("c1", "refuted")], [row("tool_execution.E1", "达到")]
-    assert _derive(claims=k_bad, rows=t_ok, claim_refs=["c1"], process_refs=["tool_execution.E1"])[0] == "not_fulfilled"   # 过程像样但被证伪
-    status, tier, _, _ = _derive(claims=k_ok, rows=[row("tool_execution.E1", "达到")], claim_refs=["c1"], process_refs=["tool_execution.E1"])
+    assert _derive(claims=k_bad, rows=t_ok, claim_refs=["c1"])[0] == "not_fulfilled"   # 过程像样但被证伪
+    status, tier, _, _ = _derive(claims=k_ok, rows=[row("tool_execution.E1", "达到")], claim_refs=["c1"])
     assert status == "fulfilled" and tier == ["knowledge", "trace"]
 
 
@@ -279,18 +285,77 @@ def test_status_basis_names_what_decided_the_status():
     assert _derive(evidence=only_k)[3] == "knowledge 组判不了：没有引用结果值的说法"
     only_t = {"knowledge": False, "trace": True}
     rows = [{**row("tool_execution.E2", "无法核"), "statement": "按保单号查询"}]
-    assert _derive(evidence=only_t, rows=rows, process_refs=["tool_execution.E2"])[3] == "trace 组判不了：tool_execution.E2（无法核：按保单号查询）"
+    assert _derive(evidence=only_t, rows=rows)[3] == "trace 组判不了：tool_execution.E2（无法核：按保单号查询）"
     assert _derive(delivered="没给")[3] == "交付没给"
 
 
-def test_process_items_based_on_an_expectation_must_all_be_cited():
+def test_p9_multi_expectation_item_partial_deviation_does_not_penalize_unaffected_expectation():
+    """P9（B02 形态）：同一条本应挂了列表与总数两条期望，只因列表截断判没达到、总数未受损 → 总数照样 fulfilled，process_refs 程序自动填。"""
     from types import SimpleNamespace
-    materials = {"result.tool_execution": {"results": [{"id": "E1", "expectations": ["t1.E1"], "verdict": "没达到"},
-                                                      {"id": "E2", "expectations": ["t1.E1"], "verdict": "达到"}]},
-                 "result.expectations": {"expectations": [{"expectation_id": "t1.E1", "turn": "t1"}]}}
-    own = {"assessments": [{"expectation_id": "t1.E1", "claim_refs": [], "process_refs": ["tool_execution.E2"]}]}
-    problems = _fulfillment_code().check(SimpleNamespace(materials=materials, own=own))
-    assert any("tool_execution.E1" in p and "必须引上" in p for p in problems)
+
+    expectations = [
+        {"expectation_id": "t1.E_list", "turn": "t1", "about": "列表", "statement": "给出全部客户", "condition": "总是",
+         "ambiguity_group": "", "source_refs": ["t1.user"], "needs": [["trace"]]},
+        {"expectation_id": "t1.E_count", "turn": "t1", "about": "总数", "statement": "告知客户总数", "condition": "总是",
+         "ambiguity_group": "", "source_refs": ["t1.user"], "needs": [["trace"]]},
+    ]
+    materials = {
+        "result.expectations": {"expectations": expectations},
+        "result.blocking": {"items": [{"expectation_id": "t1.E_list", "blocking": True},
+                                      {"expectation_id": "t1.E_count", "blocking": True}]},
+        "scenario.evidence": {"knowledge": False, "trace": True},
+        "result.planning_routing": {
+            "results": [{"id": "E1", "expectations": ["t1.E_list", "t1.E_count"],
+                         "affected_expectations": ["t1.E_list"],
+                         "statement": "完整返回客户列表与总数", "verdict": "没达到", "observed": "列表截断只剩10条，总数75正确"}],
+            "issues": [],
+        },
+    }
+    own = {"reason": "r", "assessments": [
+        {"expectation_id": "t1.E_list", "delivered": "给了", "evidence": ["前10位客户"], "claim_refs": [], "reason": "列表截断"},
+        {"expectation_id": "t1.E_count", "delivered": "给了", "evidence": ["共75位"], "claim_refs": [], "reason": "总数75由完整统计得出"},
+    ]}
+    assert _fulfillment_code().check(SimpleNamespace(materials=materials, own=own)) == []
+    out = _fulfillment_code().synthesize(SimpleNamespace(materials=materials, own=own))
+    by_id = {a["expectation_id"]: a for a in out["fulfillment_assessments"]}
+    assert by_id["t1.E_list"]["status"] == "not_fulfilled"
+    assert "planning_routing.E1" in by_id["t1.E_list"]["status_basis"]
+    assert by_id["t1.E_count"]["status"] == "fulfilled"
+    assert by_id["t1.E_list"]["process_refs"] == ["planning_routing.E1"]
+    assert by_id["t1.E_count"]["process_refs"] == ["planning_routing.E1"]
+
+
+def test_unexpected_affecting_expectation_fails_trace_group():
+    """本应清单外的意外（如兜底覆盖模型答案）伤及某条期望时，兑现 trace 组不过，并写入 process_refs；未伤及期望的意外不连累它。"""
+    from types import SimpleNamespace
+
+    expectations = [{"expectation_id": "t1.E1", "turn": "t1", "about": "保单", "statement": "告知被保人", "condition": "总是",
+                     "ambiguity_group": "", "source_refs": ["t1.user"], "needs": [["trace"]]}]
+    base = {
+        "result.expectations": {"expectations": expectations},
+        "result.blocking": {"items": [{"expectation_id": "t1.E1", "blocking": True}]},
+        "scenario.evidence": {"knowledge": False, "trace": True},
+        "result.tool_execution": {"results": [{"id": "E1", "expectations": ["t1.E1"], "affected_expectations": [],
+                                               "statement": "按号查询", "verdict": "达到", "observed": "查到张三"}], "issues": []},
+    }
+    own = {"reason": "r", "assessments": [
+        {"expectation_id": "t1.E1", "delivered": "给了", "evidence": ["李四"], "claim_refs": [], "reason": "r"}]}
+    # 伤及 t1.E1 的意外 → trace 组不过
+    hurt_materials = {**base, "result.context_memory": {"results": [], "issues": [
+        {"item_id": "U1", "origin": "unexpected", "observed": "后处理模板把张三替换成李四",
+         "attribution_detail": "本轴", "affected_expectations": ["t1.E1"]}]}}
+    out_hurt = _fulfillment_code().synthesize(SimpleNamespace(materials=hurt_materials, own=own))
+    a_hurt = out_hurt["fulfillment_assessments"][0]
+    assert a_hurt["status"] == "not_fulfilled"
+    assert "context_memory.U1（意外：后处理模板把张三替换成李四）" in a_hurt["status_basis"]
+    assert a_hurt["process_refs"] == ["tool_execution.E1", "context_memory.U1"]
+    # 未伤及 t1.E1 的意外（例如多发了一次无关冗余查询） → t1.E1 仍 fulfilled
+    harmless_materials = {**base, "result.planning_routing": {"results": [], "issues": [
+        {"item_id": "U2", "origin": "unexpected", "observed": "多发了一次同参重试",
+         "attribution_detail": "本轴", "affected_expectations": []}]}}
+    out_ok = _fulfillment_code().synthesize(SimpleNamespace(materials=harmless_materials, own=own))
+    a_ok = out_ok["fulfillment_assessments"][0]
+    assert a_ok["status"] == "fulfilled" and a_ok["process_refs"] == ["tool_execution.E1"]
 
 
 def test_expected_stage_gets_neither_link_facts_nor_detective_reasons():
@@ -312,13 +377,14 @@ def test_needs_external_not_met_is_sent_back_not_rewritten():
     plan = {"expected": [{**expected("knowledge_data")["expected"][0], "id": i, "needs_external": "是"} for i in ("E1", "E2")],
             "not_covered": []}
     quote = [{"ref": "r1", "quote": "客户甲"}]
-    row = lambda i, verdict: {"id": i, "links": [], "observed": "o", "quotes": quote, "verdict": verdict}
-    own = {"actual": [row("E1", "达到"), row("E2", "没达到")], "unexpected": [],
-           "problems": [{"phenomenon": "返回为空", "items": ["E2"], "attribution": "本轴", "impact": "y"}], "reason": "r", "scope_note": "无"}
-    problems = check_actual(own, plan, resources({"r1": ["客户甲"]}))
+    mk = lambda i, verdict: {"id": i, "links": [], "observed": "o", "quotes": quote, "verdict": verdict,
+                             "attribution": "本轴" if verdict == "没达到" else "",
+                             "affected_expectations": ["t1.E1"] if verdict == "没达到" else []}
+    own = {"actual": [mk("E1", "达到"), mk("E2", "没达到")], "unexpected": [], "reason": "r", "scope_note": "无"}
+    problems = check_actual("knowledge_data", own, plan, {"expectations": E}, resources({"r1": ["客户甲"]}))
     assert len(problems) == 1 and "E2 必须独立查证" in problems[0]
-    fixed = {**own, "actual": [row("E1", "达到"), row("E2", "无法核")], "problems": []}
-    assert check_actual(fixed, plan, resources({"r1": ["客户甲"]})) == []
+    fixed = {**own, "actual": [mk("E1", "达到"), {**mk("E2", "无法核"), "quotes": []}]}
+    assert check_actual("knowledge_data", fixed, plan, {"expectations": E}, resources({"r1": ["客户甲"]})) == []
     assert {r["id"]: r["verdict"] for r in actual_result("knowledge_data", fixed, plan)["results"]} == {"E1": "达到", "E2": "无法核"}
 
 
@@ -327,12 +393,15 @@ def test_met_needs_a_quote_that_is_in_the_record():
     from impl.projects.llm_probe_loop.process_axes import check_actual
 
     plan = {"expected": [{**expected("tool_execution")["expected"][0], "id": i} for i in ("E1", "E2", "E3")], "not_covered": []}
-    own = {"actual": [{"id": "E1", "links": [], "observed": "调用成功", "quotes": [{"ref": "r1", "quote": "outcome ok"}], "verdict": "达到"},
-                      {"id": "E2", "links": [], "observed": "返回与请求一致", "quotes": [], "verdict": "达到"},
-                      {"id": "E3", "links": [], "observed": "返回与请求一致", "quotes": [{"ref": "r1", "quote": "返回了保单"}], "verdict": "达到"}],
-           "unexpected": [], "problems": [], "reason": "r", "scope_note": "无"}
+    own = {"actual": [{"id": "E1", "links": [], "observed": "调用成功", "quotes": [{"ref": "r1", "quote": "outcome ok"}],
+                       "verdict": "达到", "attribution": "", "affected_expectations": []},
+                      {"id": "E2", "links": [], "observed": "返回与请求一致", "quotes": [],
+                       "verdict": "达到", "attribution": "", "affected_expectations": []},
+                      {"id": "E3", "links": [], "observed": "返回与请求一致", "quotes": [{"ref": "r1", "quote": "返回了保单"}],
+                       "verdict": "达到", "attribution": "", "affected_expectations": []}],
+           "unexpected": [], "reason": "r", "scope_note": "无"}
     texts = {"r1": ["outcomeok"]}
-    problems = "".join(check_actual(own, plan, resources(texts)))
+    problems = "".join(check_actual("tool_execution", own, plan, {"expectations": E}, resources(texts)))
     assert "E2 判达到但没有引文" in problems and "返回了保单" in problems and "outcome ok" not in problems
 
 
@@ -409,10 +478,11 @@ def test_not_applicable_needs_evidence_and_leaves_results():
     plan = {"expected": [{**expected("model_capability")["expected"][0], "id": i, "expectations": ["t1.E1"]} for i in ("E1", "E2")],
             "not_covered": []}
     texts = {"r1": ["语义直达判定命中policy_search"]}
-    row = lambda i, quotes: {"id": i, "links": [], "observed": "走直达工具，没调大模型", "quotes": quotes, "verdict": "不适用"}
-    own = {"actual": [row("E1", [{"ref": "r1", "quote": "语义直达判定命中 policy_search"}]), row("E2", [])],
-           "unexpected": [], "problems": [], "reason": "r", "scope_note": "无"}
-    assert any("E2 判不适用但没有引文" in p for p in check_actual(own, plan, resources(texts)))
+    mk = lambda i, quotes: {"id": i, "links": [], "observed": "走直达工具，没调大模型", "quotes": quotes,
+                            "verdict": "不适用", "attribution": "", "affected_expectations": []}
+    own = {"actual": [mk("E1", [{"ref": "r1", "quote": "语义直达判定命中 policy_search"}]), mk("E2", [])],
+           "unexpected": [], "reason": "r", "scope_note": "无"}
+    assert any("E2 判不适用但没有引文" in p for p in check_actual("model_capability", own, plan, {"expectations": E}, resources(texts)))
     out = actual_result("model_capability", {**own, "actual": own["actual"][:1] + [{**own["actual"][0], "id": "E2"}]}, plan)
     assert out["results"] == [] and out["verdict"] == "not_applicable"
     assert [r["id"] for r in out["composition"]["not_applicable"]] == ["E1", "E2"]
@@ -480,7 +550,6 @@ def test_main_verdict_basis_tells_wrong_from_missing():
     assert out["basis"] == "给错了：t1.A（knowledge 组不过：c7（有矛盾：保单状态为无效））；没给到：t1.B；系统本可以给出"
 
 
-
 def test_uniqueness_principle_is_defined_once_and_cited_where_lists_are_made():
     """唯一性原则的定义只写在主 loop 的系统提示里，列清单的轴只点名（demand/axis_loop.md §3.8，2026-11-01）。"""
     from impl.core.axis_loop.loop import SYSTEM
@@ -489,3 +558,76 @@ def test_uniqueness_principle_is_defined_once_and_cited_where_lists_are_made():
     assert not [k for k, a in axes.items() if "一份只装一件事" in a.instruction or "看实质" in a.instruction]
     listing = ["claims", "expectations", *(f"{axis}_expected" for axis in PROCESS_AXES)]
     assert all("遵循唯一性原则（系统规则 10）" in axes[k].instruction for k in listing)
+
+
+def test_check_actual_validates_item_attribution_and_affected_expectations_and_builds_issues():
+    """删 problems 表后：归因与受损期望直接在条目核对，问题记录与轴级五值由程序从没达到 + unexpected 生成。"""
+    from impl.projects.llm_probe_loop.process_axes import actual_result, check_actual
+
+    plan = {"expected": [{**expected("tool_execution")["expected"][0], "id": i} for i in ("E1", "E2")], "not_covered": []}
+    q = [{"ref": "r1", "quote": "证据片段"}]
+    res = resources({"r1": ["证据片段"]})
+    # 1) 没达到却空归因、达到却填归因或受损期望、上游指向自己或非英文轴名、未知期望编号 → 全部打回
+    bad = {
+        "actual": [
+            {"id": "E1", "links": ["L1"], "observed": "成功", "quotes": q, "verdict": "达到",
+             "attribution": "本轴", "affected_expectations": ["t1.E1"]},
+            {"id": "E2", "links": ["L2"], "observed": "失败", "quotes": q, "verdict": "没达到",
+             "attribution": "上游:tool_execution", "affected_expectations": ["t1.NOPE"]},
+        ],
+        "unexpected": [{"id": "U1", "observed": "额外异常", "quotes": q,
+                        "attribution": "上游:规划", "affected_expectations": ["t1.NOPE2"]}],
+        "reason": "r", "scope_note": "s",
+    }
+    errs = "\n".join(check_actual("tool_execution", bad, plan, {"expectations": E}, res))
+    assert "E1 判达到时 attribution 必须填空字符串" in errs
+    assert "E1 判达到时 affected_expectations 必须为 []" in errs
+    assert "E2 的 attribution='上游:tool_execution'" in errs
+    assert "t1.NOPE" in errs and "t1.NOPE2" in errs
+    assert "unexpected U1 的 attribution='上游:规划'" in errs
+
+    # 2) 修正后通过检查，actual_result 直接从没达到 + unexpected 生成 issues 与五值
+    good = {
+        "actual": [
+            {"id": "E1", "links": ["L1"], "observed": "成功", "quotes": q, "verdict": "达到",
+             "attribution": "", "affected_expectations": []},
+            {"id": "E2", "links": ["L2"], "observed": "输入参数已被上游改坏", "quotes": q, "verdict": "没达到",
+             "attribution": "上游:planning_routing", "affected_expectations": ["t1.E1"]},
+        ],
+        "unexpected": [{"id": "U1", "observed": "连接超时未正常透出", "quotes": q,
+                        "attribution": "本轴", "affected_expectations": []}],
+        "reason": "r", "scope_note": "s",
+    }
+    assert check_actual("tool_execution", good, plan, {"expectations": E}, res) == []
+    out = actual_result("tool_execution", good, plan)
+    assert out["verdict"] == "problematic"
+    assert out["composition"]["counts"]["问题·上游"] == 1 and out["composition"]["counts"]["问题·本轴"] == 1
+    assert [(i["problem_id"], i["item_id"], i["origin"], i["attribution"], i["affected_expectations"]) for i in out["issues"]] == [
+        ("tool_execution-P1", "E2", "expected", "upstream", ["t1.E1"]),
+        ("tool_execution-P2", "U1", "unexpected", "local", []),
+    ]
+
+
+def test_build_report_passes_only_enabled_axis_notes_to_case(monkeypatch):
+    """禁用（enabled=false）轴的描述不进入 Case.axis_notes（§17 第 1 项）。"""
+    import impl.projects.llm_probe_loop.eval_axes as ea
+    from impl.projects.llm_probe_loop.eval_axes.validate import ScenarioAxes
+
+    captured = {}
+    monkeypatch.setattr(ea, "load_scenario_axes", lambda sid: ScenarioAxes(
+        enabled=["expectations", "blocking", "fulfillment", "main_verdict"],
+        notes={"expectations": "只取本轮交付要求", "intent_understanding": "已关闭框的旧说明"},
+        warnings=[],
+    ))
+    monkeypatch.setattr(ea, "load_capability_map", lambda project: {"scn": {}})
+
+    def fake_case(trace, scenario_id, entry, axis_notes):
+        captured["notes"] = dict(axis_notes)
+        return object()
+
+    monkeypatch.setattr(ea, "Case", fake_case)
+    monkeypatch.setattr(ea.business_failure, "matched", lambda trace, entry: "模拟业务错误早退")
+    trace = normalize_run_trace(json.loads(FIXTURE.read_text()))
+    ea.build_report(None, trace, scenario_id="scn")
+    assert captured["notes"] == {"expectations": "只取本轮交付要求", "blocking": "", "fulfillment": "", "main_verdict": ""}
+    assert "intent_understanding" not in captured["notes"]

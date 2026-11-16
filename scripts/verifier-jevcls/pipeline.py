@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -16,6 +17,7 @@ from urllib.parse import urlsplit
 from dotenv import dotenv_values
 from openpyxl import Workbook
 from openpyxl.styles import Font
+from openpyxl.utils import get_column_letter
 
 from verifier_excel_to_jev_state import convert
 
@@ -56,38 +58,54 @@ def classification_result(data, request):
             or not isinstance(answer.get("choice"), str)
             or answer["choice"] not in request["questions"]["classification"]["criteria"]):
         raise ValueError("JEV 响应中的 classification 缺失或不符合模板选项")
-    review = answers.get("needs_review")
-    if not isinstance(review, dict) or review.get("type") != "noul":
-        raise ValueError("JEV 响应缺少 Noul 判断 needs_review")
-    score = review.get("noul")
-    if type(score) not in (int, float) or not math.isfinite(score) or not 0 <= score <= 1:
-        raise ValueError("needs_review.noul 必须是 0 到 1 的有限数值")
+    labels = request["questions"]["classification"]["criteria"]
+    probabilities = answer.get("probabilities")
+    if ("T:回答正确" not in labels or not isinstance(probabilities, dict)
+            or set(probabilities) != set(labels)
+            or any(type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= 1
+                   for value in probabilities.values())):
+        raise ValueError("classification.probabilities 必须完整匹配模板选项（含 T:回答正确），且均为 0–1 有限数值")
+    confidence = answer.get("confidence")
+    if type(confidence) not in (int, float) or not math.isfinite(confidence) or not 0 <= confidence <= 1:
+        raise ValueError("classification.confidence 必须是 0–1 的有限数值")
     usage = data.get("usage")
     if not isinstance(usage, dict) or any(type(usage.get(k)) is not int or usage[k] < 0
                                          for k in ("input_tokens", "output_tokens")):
         raise ValueError("JEV 响应缺少有效 usage")
     return {"model": data["model"], "answers": answers, "usage": usage,
-            "classification": answers["classification"]["choice"],
-            "needs_review_score": score}
+            "classification": answers["classification"]["choice"]}
 
 
-def write_classification_table(output_dir, results):
+def write_classification_table(output_dir, results, labels):
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "分类结果"
-    sheet.append(["traceid", "标签", "待复核分数"])
+    sheet.append(["traceid", "标签", "T:回答正确概率"])
+    detail = workbook.create_sheet("分类概率明细")
+    detail.append(["traceid", "最终标签", "confidence", *labels])
     for record in results:
-        sheet.append([record["id"], record["classification"], record["needs_review_score"]])
-        for cell in sheet[sheet.max_row][:2]:
-            cell.data_type = "s"
-            cell.number_format = "@"
-        sheet.cell(sheet.max_row, 3).number_format = "0.00"
-    for cell in sheet[1]:
-        cell.font = Font(bold=True)
-    sheet.column_dimensions["A"].width = 44
-    sheet.column_dimensions["B"].width = 32
-    sheet.column_dimensions["C"].width = 20
-    sheet.freeze_panes = "A2"
+        answer = record["answers"]["classification"]
+        probabilities = answer["probabilities"]
+        sheet.append([record["id"], record["classification"],
+                      probabilities["T:回答正确"]])
+        detail.append([record["id"], record["classification"], answer["confidence"],
+                       *(probabilities[label] for label in labels)])
+    for tab in (sheet, detail):
+        for row in tab:
+            for cell in row:
+                if isinstance(cell.value, str):
+                    cell.data_type = "s"
+                    cell.number_format = "@"
+                else:
+                    cell.number_format = "0.00"
+        for cell in tab[1]:
+            cell.font = Font(bold=True)
+        tab.column_dimensions["A"].width = 44
+        tab.column_dimensions["B"].width = 32
+        for index in range(3, tab.max_column + 1):
+            tab.column_dimensions[get_column_letter(index)].width = 26
+        tab.freeze_panes = "C2"
+        tab.auto_filter.ref = tab.dimensions
     workbook.save(output_dir / "classification-results.xlsx")
     workbook.close()
 
@@ -143,8 +161,9 @@ def send_requests(output_dir, api_url, api_key, timeout, curl):
             json.dumps(results, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
         if not record["success"]:
             raise ValueError(f"{entry['id']} 调用失败：{record['error']}；已保存结果，后续请求未发送")
-        print(f"  {record['classification']} / 待复核分数：{record['needs_review_score']:.2f} ({record['elapsed_seconds']}s)", flush=True)
-    write_classification_table(output_dir, results)
+        print(f"  {record['classification']} ({record['elapsed_seconds']}s)", flush=True)
+    labels = list(prepared[0][2]["questions"]["classification"]["criteria"])
+    write_classification_table(output_dir, results, labels)
     return len(results)
 
 
@@ -170,14 +189,17 @@ def run(input_path, output_dir, template, materials=None, mapping=None, *, model
             command += ["--model", model]
         result = subprocess.run(
             command,
+            # Match the pipe decoder even on Windows with a GBK locale.
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
             capture_output=True, text=True, encoding="utf-8", check=False,
         )
         if result.returncode:
             raise ValueError(f"JEV 请求组装失败：{result.stderr.strip() or result.stdout.strip()}")
         effective_template = json.loads((stage / "requests/template.json").read_text(encoding="utf-8"))
-        for name, kind in {"classification": "choice", "needs_review": "noul"}.items():
-            if effective_template["questions"].get(name, {}).get("type") != kind:
-                raise ValueError(f"分类模板必须包含 {kind} 问题 {name}")
+        if effective_template["questions"].get("classification", {}).get("type") != "choice":
+            raise ValueError("分类模板必须包含 choice 问题 classification")
+        if "T:回答正确" not in effective_template["questions"]["classification"]["criteria"]:
+            raise ValueError("分类模板必须包含 T:回答正确 选项，以导出回答正确概率")
         previous = Path(temp) / "previous"
         if output_dir.exists():
             output_dir.rename(previous)

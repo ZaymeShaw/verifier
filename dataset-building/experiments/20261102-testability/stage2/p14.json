@@ -1,0 +1,105 @@
+{
+  "probe_id": "p14",
+  "sample_no": 14,
+  "tool": "customer_search",
+  "arguments": {
+    "query": "居家V1保费缺口为10万的客户"
+  },
+  "purpose": "按题意探查必要资料/数据；不代表完整任务成功",
+  "started_utc": "2026-11-02T15:24:47.906991+00:00",
+  "envelope": {
+    "ok": false,
+    "status": "ERROR",
+    "facts": [],
+    "evidence": [],
+    "gaps": [],
+    "hint": "上游响应格式不符合接口契约，请联系服务维护人员",
+    "source": {
+      "system": "policy_svc",
+      "endpoint": "/customer/search"
+    },
+    "request_id": "CALL-TR-MCP-92ce3951822e-01",
+    "latency_ms": 1998,
+    "error": {
+      "code": "UPSTREAM",
+      "retryable": false
+    }
+  },
+  "http_calls": [
+    {
+      "url": "http://8.148.158.241:8000/llm_ai_agent/client_search_query_parse_no_encipher",
+      "request": {
+        "source": "askbob",
+        "user_text": "居家V1保费缺口为10万的客户",
+        "session_id": "9e06c34f-0620-4455-8be0-d26a135437fe",
+        "trace_id": "TR-MCP-92ce3951822e",
+        "user_id": "pi",
+        "user_action": "write",
+        "action_scenario": "customerSearch",
+        "extra_input_params": {}
+      },
+      "response": {
+        "code": 0,
+        "msg": "操作成功",
+        "data": {
+          "robot_text": "平安居家下一等级为平安居家V1\n并且平安居家1+N保费缺口=100000元\n并且有平安居家服务线\n并且是否潜客为是的客户",
+          "end_flag": 1,
+          "extra_output_params": {
+            "schema_version": null,
+            "query": "居家V1保费缺口为10万的客户",
+            "status": null,
+            "mode": null,
+            "query_logic": "AND",
+            "conditions": [
+              {
+                "field": "pajjMemberGradeInfo.pajjnextmembergrade",
+                "operator": "MATCH",
+                "value": "平安居家V1",
+                "match_mode": null
+              },
+              {
+                "field": "pajjMemberGradeInfo.pajjtotalpremgap",
+                "operator": "RANGE",
+                "value": {
+                  "min": 100000,
+                  "max": 100000
+                },
+                "match_mode": null
+              },
+              {
+                "field": "pajjMemberGradeInfo.pajjmemberproductname",
+                "operator": "EXISTS",
+                "value": "",
+                "match_mode": null
+              },
+              {
+                "field": "qkflag",
+                "operator": "MATCH",
+                "value": "是",
+                "match_mode": null
+              }
+            ],
+            "logic_tree": null,
+            "sort": [],
+            "sort_source": "none",
+            "matched_level": 2,
+            "rewritten_query": "平安居家V1保费缺口为10万的客户",
+            "matched_patterns": "平安居家-指定下一等级保费缺口精确值",
+            "cost_times": 11.0,
+            "confidence": 0.95,
+            "intent_summary": "平安居家下一等级为平安居家V1\n并且平安居家1+N保费缺口=100000元\n并且有平安居家服务线\n并且是否潜客为是的客户",
+            "behavior_debug": null,
+            "executable": null,
+            "clarification_question": null,
+            "reason": null,
+            "warnings": [],
+            "parser_source": null,
+            "debug": null
+          },
+          "trace_id": "TR-MCP-92ce3951822e"
+        }
+      }
+    }
+  ],
+  "elapsed_s": 2.0
+}

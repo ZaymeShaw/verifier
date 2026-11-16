@@ -391,10 +391,10 @@ def test_browser_process_composition_and_quoted_evidence():
     module = Path(cli).resolve().parent / 'node_modules' / 'playwright'
     if not module.exists():
         pytest.skip('Playwright library is unavailable')
-    issue = dict(problem_id='context_memory-B1-P1', phenomenon='Policy omitted', expected='Include policy',
-                 observed='Policy missing', source_refs=[], input_refs=[], output_refs=['prompt'],
+    issue = dict(problem_id='context_memory-B1-P1', item_id='E1', origin='expected', expected='Include policy',
+                 observed='Policy missing', output_refs=['prompt'],
                  quotes=[dict(ref='prompt', quote='no policy here')],
-                 attribution='local', attribution_detail='本轴', impact='用户看不到保单')
+                 attribution='local', attribution_detail='本轴', affected_expectations=['t1.E1'])
     cases = [dict(id='local-test', input='request', output='answer', axes=[
         dict(type_id='context_memory', status='succeeded', verdict='problematic', issues=[issue],
              composition={'counts': {'没达到': 1}}, evidence_records={'prompt': 'ACTUAL PROMPT BODY'}),
@@ -416,7 +416,7 @@ const fs=require('fs'), assert=require('node:assert/strict');
   assert((await page.locator('.matrix-cell[data-axis-id="model_capability"]').textContent()).includes('问题·上游 1'));
   await page.locator('.matrix-cell[data-axis-id="context_memory"]').click();
   assert.equal(await page.locator('#issue-context_memory-B1-P1').count(),1);
-  assert((await page.locator('.case-axis-detail').textContent()).includes('归因：本轴；对最终交付的影响：用户看不到保单'));
+  assert((await page.locator('.case-axis-detail').textContent()).includes('归因：本轴；受损期望：t1.E1'));
   await page.locator('.issue-evidence').filter({hasText:'引文 · prompt'}).locator('summary').click();
   assert.equal(await page.locator('.issue-evidence').filter({hasText:'引文 · prompt'}).locator('pre').textContent(),'ACTUAL PROMPT BODY');
   assert.deepEqual(errors,[]);

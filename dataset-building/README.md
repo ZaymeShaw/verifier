@@ -48,6 +48,40 @@
 - [聚类、采样与过滤产物目录](../tmp/embed_cluster_10k/qwen3.7/pipeline-0.7/)。
 - 原始业务题库位于外部工程 `/Users/xiaozijian/WorkSpace/package/insurance_qa_agent/insurance-qa-agent/benchmark/questions/`；这是本机实验依赖，不是本能力必须采用的目录协议。
 
+## 聚类服务配置
+
+聚类脚本通过 OpenAI SDK 调用配置服务的 `POST /embeddings`。服务必须提供文本向量接口；只有聊天接口的模型不能用于这一步。请求字段参考 [OpenAI embeddings 协议](https://developers.openai.com/api/reference/resources/embeddings/methods/create)。
+
+在仓库根目录运行，先设置当前终端的环境变量（地址和模型是占位示例，替换为实际值；密钥通过终端环境提供）：
+
+```sh
+export EMBEDDING_BASE_URL='https://embedding.example.com/v1'
+export EMBEDDING_MODEL='your-embedding-model'
+# 运行前设置 EMBEDDING_API_KEY；不要把真实密钥提交到仓库。
+
+python scripts/embed_cluster.py \
+  --input tmp/embed_cluster_10k/input-questions.jsonl \
+  --output tmp/clustered-new.jsonl \
+  --text-column turns \
+  --threshold 0.7 --fine-threshold 0.85 \
+  --batch-size 20 \
+  --cache tmp/embedding-cache-new.jsonl \
+  --report tmp/cluster-report-new.json
+```
+
+| 配置 | 设置方式 |
+|---|---|
+| API 根地址 | `--base-url` 或 `EMBEDDING_BASE_URL`，不含末尾 `/embeddings` |
+| 模型 ID | `--model` 或 `EMBEDDING_MODEL`，须为该服务的 embedding 模型 |
+| API 密钥 | 默认读环境变量 `EMBEDDING_API_KEY`；用 `--api-key-env BAILIAN_API_KEY` 等指定其他变量名 |
+| 向量维度 | `--dimension`，可选；省略时不发送 `dimensions`，使用服务默认维度 |
+| 批量与超时 | `--batch-size` 默认 20，按服务上限调整；`--timeout` 默认 60 秒 |
+| 服务专用参数 | `--extra-body '{"instruct":"Cluster texts by semantic similarity"}'`，仅在目标服务支持时设置 |
+
+命令行地址和模型优先于环境变量。脚本不自动加载 `.env`，也不读取 verifier 的全局配置。密钥变量必须已导出到当前进程环境。请求沿用原脚本的直连行为，不继承系统代理。
+
+服务地址、模型、维度或专用参数变化后会使用不同的缓存键；只调整聚类阈值仍复用向量。请求失败直接报错，错误或不完整向量不写入缓存，不自动切换模型。更换模型后，需要重新检查粗、细阈值的效果，不能直接把历史阈值当作新模型的质量保证。
+
 ## 组织约定
 
 需求记录要解决什么；方案记录怎么尝试解决；每轮实施与实验记录放在独立日期目录，保留当时的计划、样本、环境、证据和结果。新认识写入方案及实验解读，不追改冻结样本和历史证据。

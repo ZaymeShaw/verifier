@@ -1,8 +1,9 @@
-"""model_capability 实际清单的程序检查（同现方案 process_expected.check_actual）。"""
+"""model_capability 实际清单的程序检查（spec/alg/process-axes.md §4）。"""
 from impl.projects.llm_probe_loop.process_axes import check_actual
 
 AXIS = "model_capability"
 
 
 def check(view):
-    return check_actual(view.own, view.materials[f"result.{AXIS}_expected"], view.resources)
+    return check_actual(AXIS, view.own, view.materials[f"result.{AXIS}_expected"],
+                        view.materials["result.expectations"], view.resources)

@@ -80,7 +80,7 @@ pipeline 用当前 Python 解释器调用上一级组装器，可从任意目录
 | `verifier_excel_to_jev_state.py` | 读取评测轴结论及理由，按 trace ID 合并字段字典提取的材料 |
 | `../jev_build_requests.py` | 通用组装入口，含协议校验：加工后 JSONL + 模板 → 单条标准请求文件 |
 | `pipeline.py` | 串起加工、组装、curl 发送和分类结果保存 |
-| `templates/answer-classification.json` | 完整 T/F1–F8 分类标签及独立的是否需要复核判断 |
+| `templates/answer-classification.json` | 完整 T/F1–F8 分类标签及分类概率 |
 | `example-processed.jsonl` | 跨业务、结构化 state 的最小合成示例 |
 
 也可以分步运行，检查并确认加工材料后再组装。下方底层脚本独立使用时要求目标文件/目录尚不存在；日常覆盖运行使用 `python pipeline.py`：
@@ -114,7 +114,7 @@ MATERIALS_MAP_PATH=materials-map.json
 ```
 
 其余连接、模型、模板和输出配置不变，仍运行 `python pipeline.py`。材料及字段字典此时必填：只看问答就在字典中选择问题、回答；需要 trace 明细时再选择对应字段。`case_id_path` 指向材料里的 Langfuse trace ID，仍须非空且唯一。
-不打开评测 Excel，不生成 `state.evaluations`，不使用评测筛选配置；state 只包含所选材料及材料说明。缺少评测不被加工成“回答正确”或“回答有问题”的证据。分类和复核状态仍由模型根据实际材料判断。
+不打开评测 Excel，不生成 `state.evaluations`，不使用评测筛选配置；state 只包含所选材料及材料说明。缺少评测不被加工成“回答正确”或“回答有问题”的证据。分类仍由模型根据实际材料判断。
 `INPUT_PATH` 填了非空路径就必须存在且符合评测格式，出错不会自动跳过评测。底层转换器也支持省略 `--input`，并传入 `--materials` 与 `--materials-map`。
 
 ### 当前 Excel 转化
@@ -205,7 +205,7 @@ output/
 ├── processed.jsonl
 ├── materials-mapping.json   # 配置了字段字典时生成
 ├── classification-results.json
-├── classification-results.xlsx  # 最终三列表格：traceid、标签、待复核分数
+├── classification-results.xlsx  # 主表 + 分类概率明细表
 ├── responses/              # 每条 HTTP 原始响应；错误响应也保留
 │   ├── 000001.json
 │   └── 000002.json
@@ -219,7 +219,7 @@ output/
 
 requests 下每个数字命名文件都是直接 POST 到 `JEV_API_URL` 的 JSON body。`manifest.json` 记录 ID → 请求文件及内容哈希，消费程序必须按该清单读取，不能将整个目录的 JSON 都发送。`template.json` 是应用模型配置后的有效模板快照，空 state 不可直接发送。manifest 记录加工输入和原模板文件的 SHA-256，以及实际请求的 model，便于核对来源。独立使用通用组装器时可用 `--model` 覆盖模板模型；不传则使用模板值。
 
-整批请求成功后，最终输出 `classification-results.xlsx`，包含 `traceid`、`标签`、`待复核分数` 三列。traceid 为原始 Langfuse trace ID，以文本保存；标签是模板返回的完整文字（例如 `T:回答正确`、`F4:知识缺失`）。复核列直接保存独立的 `needs_review.noul` 原始分数（0–1 数值），显示两位小数，不按阈值转成“是/否”。分数不是经人工校准的准确率。调用失败时仅保留 JSON 和原始响应，不生成不完整的最终表格。重跑会覆盖固定输出目录中的表格。
+整批请求成功后，最终输出 `classification-results.xlsx`，包含两个工作表：「分类结果」含 `traceid`、`标签`、`T:回答正确概率` 三列；「分类概率明细」含 `traceid`、`最终标签`、`confidence`，并按本次有效模板选项顺序逐列展开全部分类概率。无论最终选中哪个标签，主表 T 概率都取 `answers.classification.probabilities["T:回答正确"]`，与明细表 T 列完全一致；它不等于 confidence。所有数值保留原值，仅显示两位小数；两表均启用筛选并冻结表头和前两列。traceid 为原始 Langfuse trace ID，以文本保存；标签是模板返回的完整文字（例如 `T:回答正确`、`F4:知识缺失`）。分数不是经人工校准的准确率。调用失败时仅保留 JSON 和原始响应，不生成不完整的最终表格。重跑会覆盖固定输出目录中的表格。
 
 ## 协议与分类边界
 
@@ -227,18 +227,17 @@ requests 下每个数字命名文件都是直接 POST 到 `JEV_API_URL` 的 JSON
 
 这是一份标准协议子集的本地结构校验，不替代服务端的模型可用性、token 预算或实际准确率验证。文件生成不检查服务端模型别名是否存在。示例 `JEV_MODEL=jev-latest` 使用服务端模型别名；固定模型实验时请修改 `.env` 的 `JEV_MODEL` 并保存实际响应 model。模型名必须由你配置的服务支持。
 
-分类模板包含两个独立问题：
+分类模板仅包含一个问题：
 
 - `classification`（Choice）：从 `T:回答正确`、`F1:大模型无法回答`、`F2:答非所问`、`F3:回答内容错误`、`F4:知识缺失`、`F5:回答内容不合规`、`F6:错别字原因`、`F7:可能是上下文问题`、`F8:其他bad原因` 中选择一个完整标签，保存原始 probabilities/confidence。
-- `needs_review`（Noul）：是否存在需要人工或更多 trace/原始依据确认的关键不确定性。true 对应需要复核，false 对应现有材料足够；缺少评测文件本身不是复核理由。复核判断不是 badcase 分类，已确认的错误也可能无需进一步复核。它取代原来的可判定性问题，不重复设置两个复核项。需复核时分类仍是候选，不能视为确定标签。
 
-JEV 的问题彼此独立，不能把另一个问题的答案作为本问题输入。最终是否采纳候选由后续消费者处理。工作流已接入模型网络调用和结果整理，不回填 Excel。
+最终是否采纳候选由后续消费者处理。工作流已接入模型网络调用和结果整理，不回填 Excel。
 
-`classification-results.json` 是按发送顺序保存的结果数组，`id` 仍为 Langfuse trace ID。每条包含 `success`、HTTP 状态、请求哈希、响应文件路径和耗时。成功项另含 `classification`、`needs_review_score`（原始分数）、实际 `model`、完整 `answers`（保留 confidence/probabilities）及 `usage`。`success=true` 表示调用成功且分类选项有效，不代表分类已确认；复核倾向看 `needs_review_score`，不自动二值化。失败项仅记录错误，不填分类值；数组后未出现的 case 尚未发送。HTTP 200 但缺少合法分类答案或 0–1 范围内的复核分数也算失败。当前分类工作流要求模板含 `classification`（Choice）和 `needs_review`（Noul）；其他场景的模板组装使用通用组装器。
+`classification-results.json` 是按发送顺序保存的结果数组，`id` 仍为 Langfuse trace ID。每条包含 `success`、HTTP 状态、请求哈希、响应文件路径和耗时。成功项另含 `classification`、实际 `model`、完整 `answers`（保留 confidence/probabilities）及 `usage`。`success=true` 表示调用成功且分类选项有效，不代表分类已确认。失败项仅记录错误，不填分类值；数组后未出现的 case 尚未发送。HTTP 200 但缺少合法分类答案、完整匹配模板的分类概率、confidence 也算失败；两种数值均须为 0–1 有限数值，不接受布尔值，不补零或归一化。当前分类工作流要求模板含 `classification`（Choice，必须包含 `T:回答正确` 选项）；其他场景的模板组装使用通用组装器。
 
 复制本工作流到其他位置时，需要保留 `../jev_build_requests.py` 的相对关系。通用组装器只依赖 Pydantic，可单独复制使用；Excel 转化脚本只依赖标准库和 openpyxl，不导入组装器。
 
-当前分类定义是待业务验证的初稿：F4/F6/F7 要求具体原因证据，F8 不代表未知，多问题按核心任务影响选择主类。F5 没有无条件优先规则。评测未兑现不自动等同于回答错误，正确拒答或对象不存在可能是 T。
+当前分类定义是待业务验证的初稿：F4/F6 要求具体原因线索，F7 针对结合 messages 仍无法理解用户意图、疑似缺少必要上下文的输入，F8 不代表未知，多问题按核心任务影响选择主类。F5 没有无条件优先规则。评测未兑现不自动等同于回答错误，正确拒答或对象不存在可能是 T。
 
 ## 验证
 

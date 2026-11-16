@@ -333,8 +333,9 @@ function renderProcessAxis(output){
     const text=r.verdict==='达到'?escapeHtml(r.observed||''):('本应：'+escapeHtml(r.statement||'')+'（依据：'+escapeHtml(r.basis||'')+'）；实际：'+escapeHtml(r.observed||''));
     return '<div class="kv"><span class="badge '+(state[r.verdict]||'')+'">'+escapeHtml(r.verdict||'')+'</span> <b>'+escapeHtml(r.subcapability||'')+'</b> <span class="muted">@ '+escapeHtml(r.about||'')+'</span> '+text+quoteLines(r.quotes)+'</div>';
   }).join('');
-  const unexpected=(output.unexpected||[]).map(u=>'<div class="kv"><b>意外</b> '+escapeHtml(u.observed||'')+'（'+escapeHtml(u.why||'')+'）'+quoteLines(u.quotes)+'</div>').join('');
-  const issues=(output.issues||[]).map(i=>'<div class="kv"><b>'+escapeHtml(i.problem_id)+'</b> '+escapeHtml(i.phenomenon||'')+'<div class="kv muted" style="margin-left:14px">归因：'+escapeHtml(i.attribution_detail||'')+'；影响：'+escapeHtml(i.impact||'')+'</div></div>').join('');
+  const affectedText=ids=>(ids&&ids.length)?ids.join('、'):'无';
+  const unexpected=(output.unexpected||[]).map(u=>'<div class="kv"><b>意外 · '+escapeHtml(u.id||'')+'</b> '+escapeHtml(u.observed||'')+'<div class="kv muted" style="margin-left:14px">归因：'+escapeHtml(u.attribution||'')+'；受损期望：'+escapeHtml(affectedText(u.affected_expectations))+'</div>'+quoteLines(u.quotes)+'</div>').join('');
+  const issues=(output.issues||[]).map(i=>'<div class="kv"><b>'+escapeHtml(i.problem_id)+'</b> '+escapeHtml(i.observed||'')+'<div class="kv muted" style="margin-left:14px">预期：'+escapeHtml(i.expected||'')+'；归因：'+escapeHtml(i.attribution_detail||'')+'；受损期望：'+escapeHtml(affectedText(i.affected_expectations))+'</div></div>').join('');
   const gaps=(a.gaps||[]).length?'<div class="kv"><b>未覆盖的范围：</b>'+escapeHtml(a.gaps.join('；'))+'</div>':'';
   return selectionText(output)+rule+parts
     +'<details class="inline-details" open><summary>问题（'+(output.issues||[]).length+'）</summary><div style="padding:0 12px 10px">'+issues+'</div></details>'

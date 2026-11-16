@@ -62,7 +62,7 @@ def _fulfillment_check(refs, claim_turns):
     claims = [{"claim_id": c, "spans": [{"turn": t, "text": "x"} for t in ts]} for c, ts in claim_turns.items()]
     materials = {"result.truthfulness": {"claims": claims},
                  "result.expectations": {"expectations": [{"expectation_id": "t1.E1", "turn": "t1"}, {"expectation_id": "t2.E1", "turn": "t2"}]}}
-    own = {"assessments": [{"expectation_id": e, "claim_refs": r, "process_refs": []} for e, r in refs.items()]}
+    own = {"assessments": [{"expectation_id": e, "claim_refs": r} for e, r in refs.items()]}
     return definitions().axes["fulfillment"].code.check(SimpleNamespace(materials=materials, own=own))
 
 

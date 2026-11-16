@@ -1,6 +1,7 @@
 # 能力兑现判法（主轴的业务期望部分）
 
 > 状态：2026-10-20 重写。依据 `demand/main_axis.md`、`demand/expectations.md`、`demand/claims.md`。与需求冲突以需求为准，回来修本文。
+> 2026-11-15：按 `demand/process_axes.md` §4、`demand/main_axis.md` §2.4 改为程序汇总过程佐证：兑现模型不再填 `process_refs`，`process_refs` 与 `trace` 组结论直接由程序按过程六轴的 `expectations`（关联）和 `affected_expectations`（实际受损，含 `unexpected`）派生，避免一条过程条目挂多条期望时的连坐（P9）与模型机械抄写引用。
 > 2026-10-25：按 `demand/main_axis.md` §2.4、§2.10、§2.11 改为"按场景配了的证据判"：新增 §2.1；§2 第 4 条、§4 随之改。
 > 2026-10-28：§2 第 5 行改为隐性期望只引和本轮用户要办的事有关的说法（`demand/main_axis.md` §2.5），删去过时的"不在本轴做、由 M 施加"。
 > 2026-10-29（二）：多轮时期望只引同一轮的说法（`demand/claims.md` §2.6、C16），§4 加一条程序检查；说法材料带上出处轮次。
@@ -13,9 +14,9 @@
 输入  E       期望集：需求轴（expectations）跑了就用它的；没开需求轴时本轴自推一份（§1.1）
       d(x)    本次交付：最终答复（output_text / 结构化输出）、多轮时各轮答复
       K       核事实结果（truthfulness 的 claims：verified / refuted / unverifiable），可选，场景开了才有
-      P       过程六轴的逐条结果（各轴实际清单：本应、实际、达到 / 没达到 / 无法核、归因），可选，场景配了 trace 才有
+      P       过程六轴的逐条结果与问题记录（本应关联的期望 expectations、实际结论 verdict、实际伤到的期望 affected_expectations），可选，场景配了 trace 才有
       业务描述  读法（单位、对象标识、返回怎么读），不是依据
-输出  每条期望一个结果 + 整体一个结果（程序派生）+ 每条引用了哪些 claim
+输出  每条期望一个结果 + 整体一个结果（程序派生）+ 每条引用了哪些 claim（模型填）与哪些过程条目（程序填）
 ```
 
 ### 1.1 期望从哪来（`demand/expectations.md` §3）
@@ -51,9 +52,9 @@
 | 8 | 编造比如实说没有更差 | 期望对象的 claim `refuted` 且理由是对象不存在，而交付给出了值 → `not_fulfilled`（给错了） |
 | 9 | 用户要几样就看几样，单项不受牵连 | 每条期望只看自己的交付片段和自己引用的 claim；别的期望、别的 claim 的结果不影响它 |
 
-### 2.1 按证据组判（2026-10-25，`demand/main_axis.md` §2.4、§2.10、§2.11）
+### 2.1 按证据组判（2026-10-25，`demand/main_axis.md` §2.4、§2.10、§2.11；2026-11-15 改程序汇总 trace）
 
-模型只判交付本身：这条要的东西交付里**给了**、**没给**（以说明代替结果、反问、空）、还是**交付不可读**，并引用交付原文、相关的 claim（`claim_refs`）和过程条目（`process_refs`）。结果值由程序按下面派生，不让模型写：
+模型只判交付本身：这条要的东西交付里**给了**、**没给**（以说明代替结果、反问、空）、还是**交付不可读**，并摘交付原文（`evidence`）和引用相关的核事实说法（`claim_refs`）。过程引用 `process_refs` 与每条结果值全部由程序按下面派生，不让模型写：
 
 ```text
 没给                                  → not_fulfilled
@@ -66,19 +67,21 @@
     knowledge 组：引用的 claim 有 refuted → 不过（给错了）；结果值的 claim verified → 过；
                   否则（unverifiable，或没有对应 claim）→ 判不了
                   （修饰数值的 claim 例外同 §2 第 6 条）
-    trace 组：    引用的过程条目有没达到 → 不过（过程不对：蒙的、查错对象、编造、传丢，§2.10、§2.11）；
-                  都达到 → 过；有无法核、或没有可引用的条目 → 判不了
+    trace 组：    任一过程条目或意外（unexpected）的 affected_expectations 含本期望 → 不过
+                    （过程偏差使本期望没给到、给错或没有来源，§2.10、§2.11）；
+                  否则，挂了本期望的过程条目（expectations 含本期望）为空，或其中有无法核 → 判不了；
+                  否则 → 过（挂了本期望的条目均未伤及本期望且无无法核）
   任一组不过 → not_fulfilled；否则任一组判不了 → not_evaluable；否则 fulfilled（档位：所过各组）
 ```
 
-- `process_refs` 由兑现自己挑：对这条期望要的结果有关的过程条目（查没查、查的对象、返回、模型照没照抄、交付有没有传丢）。程序检查：本应清单里依据（basis）写明是这条期望的条目，必须全部在 `process_refs` 里，不许只挑达到的。
-- 两样都配了时，蒙对（知识 verified、过程没达到）和过程像样被证伪（过程都达到、知识 refuted）都不算给到（§2.10）。
+- `process_refs` 由程序直接算出并写入输出：本应 `expectations` 含本期望的过程条目 `<轴>.<id>`，并上 `affected_expectations` 含本期望的过程条目或意外 `<轴>.<id>`（去重保序）。
+- 两样都配了时，蒙对（知识 verified、过程 `affected_expectations` 含本期望）和过程像样被证伪（过程过、知识 refuted）都不算给到（§2.10）。
 
 ## 3. `not_evaluable` 只有三种来源
 
 1. 交付为空、不可读、必要的答复取不到。
 2. 这条期望需要的证据场景一类都没配（§2.1 可用组为空），写明缺哪一类。
-3. 可用的证据组判不了：对应 claim `unverifiable`，或过程条目无法核。
+3. 可用的证据组判不了：对应 claim `unverifiable`，或关联过程条目为空 / 有无法核。
 
 以下**不是** `not_evaluable`：
 
@@ -90,15 +93,14 @@
 
 ## 4. 输出结构与程序检查
 
-每条期望输出：`expectation_id`、`delivered`（给了 / 没给 / 交付不可读，模型填）、`status`（程序按 §2.1 派生）、`evidence_tier`（所过的证据组，程序填）、`missing_evidence`（缺的组，程序填）、`blocking`、`actual_evidence`（交付原文位置）、`claim_refs`、`process_refs`（引用的过程条目，可空）、`status_basis`（程序为什么得出这个 status，程序填，10-27）、`reason`。
+每条期望输出：`expectation_id`、`delivered`（给了 / 没给 / 交付不可读，模型填）、`status`（程序按 §2.1 派生）、`evidence_tier`（所过的证据组，程序填）、`missing_evidence`（缺的组，程序填）、`blocking`、`actual_evidence`（交付原文位置，模型填）、`claim_refs`（模型填）、`process_refs`（关联的过程条目，程序填）、`status_basis`（程序为什么得出这个 status，程序填，10-27）、`reason`。
 
-`reason` 写这条最终为什么是这个结果，包括程序按证据组算出的部分；status 由程序算，模型在说明回合里看到它（`axis_loop.md` §5.3 第 6 步）后写清原因。认为所引 claim 或过程条目的结论不对，在 reason 里写明依据挑战，不改结论（需求 `axis_loop.md` §3.3.6，10-27）。
+`reason` 写这条最终为什么是这个结果，包括程序按证据组算出的部分；status 与 `status_basis` 由程序算，模型在说明回合里看到它（`axis_loop.md` §5.3 第 6 步）后写清原因。认为所引 claim 或过程条目的结论不对，在 reason 里写明依据挑战，不改结论（需求 `axis_loop.md` §3.3.6，10-27）。
 
-程序检查（`validate.py`）：
+程序检查（`checks.py` / `validate.py`）：
 
-- `claim_refs` 里的 id 必须存在于 K；K 不存在时必须为空。`process_refs` 同理对 P。
+- `claim_refs` 里的 id 必须存在于 K；K 不存在时必须为空。
 - `claim_refs` 引的每条说法，`spans` 里必须有一处的 `turn` 等于这条期望的轮次；否则退回重交（2026-10-29（二））。为此给兑现的说法材料带上每条的出处轮次。
-- 本应依据写明是这条期望的过程条目，必须全在 `process_refs` 里（§2.1）。
 - 引用了 `unverifiable` 的 claim 且该 claim 是这条期望的结果值 → `status` 不得为 `fulfilled`。
 - 引用了 `refuted` 的 claim → `status` 必须为 `not_fulfilled`。
 - 需求轴开了却没跑成，或期望为空（读来的、自推的都算）→ 轴 `failed`，不出整体结果。
@@ -124,12 +126,12 @@
 |---|---|
 | M1 对象不存在、如实说未检索到、被判做成 | E 里只有"告知被保人是谁"（需求轴、自推都不收行为规范）；交付以说明代替结果 → `not_fulfilled`；carryability 查实对象不存在 → M 合成做不了 |
 | M2 反问澄清被判做成 | 第 1 条：澄清不是结果 → `not_fulfilled` |
-| M3 三条路线三种结论 | 本轴输入只有 E、d(x)、K，与路线无关；M 是纯函数 |
+| M3 三条路线三种结论 | 本轴输入只有 E、d(x)、K、P，与路线无关；M 是纯函数 |
 | M4 服务出错、数据在，被说成做不了 | 本轴 `not_fulfilled`；carryability 查到数据在 → 做错了 → M 合成没做成 |
 | M5 核事实没出结果、模型凭常识判对 | 第 4 条：K 不存在或无对应 claim 时不得判对；程序检查 `claim_refs` |
 | M6 值对单位核实不了整项被挡 | 第 6 条 |
-| M7 只接了 trace 的场景几乎全是不确定 | §2.1：trace 组可用，过程条目都达到即给到 |
-| M8 没查、模型写的数碰巧对，判做成 | §2.1：trace 组里引用的条目没达到 → 不过 |
+| M7 只接了 trace 的场景几乎全是不确定 | §2.1：trace 组可用，关联过程条目非空、无无法核且未伤及本期望即给到 |
+| M8 没查、模型写的数碰巧对，判做成 | §2.1：没查使交付值无来源，过程条目的 `affected_expectations` 含本期望 → trace 组不过 |
 
 ## 7. 与旧版的差异（口径迁移）
 

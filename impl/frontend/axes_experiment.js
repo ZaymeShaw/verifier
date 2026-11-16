@@ -51,7 +51,7 @@
   function compositionText(source) {
     return source?.composition ? Object.entries(source.composition.counts).map(([key, count]) => `${key} ${count}`).join(' · ') : '';
   }
-  function issueReason(issue) {return issue.phenomenon + '；预期：' + issue.expected + '；实际：' + issue.observed;}
+  function issueReason(issue) {return '预期：' + issue.expected + '；实际：' + issue.observed + '；归因：' + issue.attribution_detail;}
   function reasonSummary(source) {
     if (!source) {return {label: '说明', text: '该轴未运行，没有判断理由。', detailCount: 0};}
     const items = source.items || [];
@@ -190,8 +190,9 @@
       (source.issues || []).forEach(issue => {
         const row = element('section', undefined, 'process-issue');
         row.id = 'issue-' + issue.problem_id;
-        row.append(element('strong', issue.problem_id + ' · ' + issue.phenomenon),
-          element('p', issueReason(issue)), element('p', '归因：' + issue.attribution_detail + '；对最终交付的影响：' + issue.impact));
+        const affected = (issue.affected_expectations && issue.affected_expectations.length) ? issue.affected_expectations.join('、') : '无';
+        row.append(element('strong', issue.problem_id + ' · ' + issue.observed),
+          element('p', issueReason(issue)), element('p', '归因：' + issue.attribution_detail + '；受损期望：' + affected));
         (issue.quotes || []).forEach(quote => {
           const details = element('details', undefined, 'issue-evidence');
           details.append(element('summary', '引文 · ' + quote.ref + '：「' + quote.quote + '」'));

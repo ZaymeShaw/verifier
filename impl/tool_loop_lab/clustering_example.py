@@ -103,9 +103,9 @@ TYPES = [
 def case(id, axis, verdict, reason, question, answer):
     return {'id': id, 'scenario': '合成聚类示例', 'input': {'query': question}, 'inputPreview': question,
             'output': {'answer': answer}, 'axes': [{'type_id': axis, 'status': 'succeeded', 'verdict': verdict, 'text': reason, 'items': [],
-                'issues': [dict(problem_id=id+'-issue', phenomenon=reason, expected='按合成场景完成职责', observed=reason,
-                               source_refs=[], input_refs=[], output_refs=[id+'-output'], quotes=[],
-                               attribution='local', attribution_detail='本轴', impact='合成示例', units=[])] if verdict == 'problematic' else []}]}
+                'issues': [dict(problem_id=id+'-issue', item_id='E1', origin='expected', expected='按合成场景完成职责', observed=reason,
+                               output_refs=[id+'-output'], quotes=[], attribution='local', attribution_detail='本轴',
+                               affected_expectations=[], subcapability=[], links=[])] if verdict == 'problematic' else []}]}
 
 
 CASES = [
@@ -249,7 +249,7 @@ class ClusteringScriptClient:
         records = {r['ref']: r for a in material['axes'] for label in a['labels'] for r in label['records']}
         def cluster(name, refs, description):
             return {'name': name, 'description': description, 'priority_reason': '脚本演示顺序，不是模型排序结论',
-                    'members': [{'ref': ref, 'evidence': records[ref]['issue']['phenomenon']} for ref in refs]}
+                    'members': [{'ref': ref, 'evidence': records[ref]['issue']['observed']} for ref in refs]}
         def label(value, clusters):
             return {'value': value, 'priority_reason': '脚本演示顺序', 'clusters': clusters}
         output = {'axes': [

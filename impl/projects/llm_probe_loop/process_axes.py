@@ -202,13 +202,18 @@ def check_analysis(trace: Mapping[str, Any], own: Mapping[str, Any], read_ids: s
     return problems
 
 
-def process_rows(materials: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
-    """兑现读的过程六轴逐条结果：{<轴>.<条目id>: 条目}；没开过程轴为空（spec/alg/fulfilled.md §2.1）。"""
-    rows = {}
+def process_trace(materials: Mapping[str, Any]) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    """兑现读的过程六轴逐条结果与意外问题：({<轴>.<id>: 条目}, {<轴>.<unexpected_id>: issue})；没开过程轴为空（spec/alg/fulfilled.md §2.1）。"""
+    rows: dict[str, dict[str, Any]] = {}
+    unexpected: dict[str, dict[str, Any]] = {}
     for axis in PROCESS_AXES:
-        for row in (materials.get(f"result.{axis}") or {}).get("results") or []:
+        axis_out = materials.get(f"result.{axis}") or {}
+        for row in axis_out.get("results") or []:
             rows[f"{axis}.{row['id']}"] = row
-    return rows
+        for issue in axis_out.get("issues") or []:
+            if issue.get("origin") == "unexpected":
+                unexpected[f"{axis}.{issue['item_id']}"] = issue
+    return rows, unexpected
 
 
 # ---- 本应 -----------------------------------------------------------------------------------
@@ -233,7 +238,7 @@ def check_expected(own: Mapping[str, Any], links: list[Mapping[str, Any]], expec
     return problems
 
 
-# ---- 实际（同现方案 process_expected：check_actual / settle / aggregate / issues_of） ------------
+# ---- 实际（spec/alg/process-axes.md §3.2–§5：逐条归因与受损期望、程序汇总问题记录与五值） --------
 
 _QUOTE_MARKS = str.maketrans({"“": '"', "”": '"'})
 
@@ -257,33 +262,62 @@ def bad_quotes(row: Mapping[str, Any], resources: Any) -> list[dict[str, Any]]:
     return out
 
 
-def check_actual(own: Mapping[str, Any], expected: Mapping[str, Any], resources: Any) -> list[str]:
+def _bad_attribution(axis: str, item_id: str, attribution: str) -> list[str]:
+    if attribution == "本轴":
+        return []
+    if attribution.startswith(UPSTREAM):
+        targets = [x.strip() for x in attribution[len(UPSTREAM):].split(",")]
+        allowed = [a for a in PROCESS_AXES if a != axis]
+        if not targets or any(t not in allowed for t in targets):
+            return [f"{item_id} 的 attribution={attribution!r} 冒号后必须是其他过程轴英文名（逗号分隔，可选 {allowed}）"]
+        return []
+    if attribution.startswith(UNRESOLVED):
+        targets = [x.strip() for x in attribution[len(UNRESOLVED):].split(",")]
+        if not targets or any(t not in PROCESS_AXES for t in targets):
+            return [f"{item_id} 的 attribution={attribution!r} 冒号后必须是过程六轴英文名（逗号分隔，可选 {list(PROCESS_AXES)}）"]
+        return []
+    return [f"{item_id} 的 attribution={attribution!r} 格式不合法（只能是 本轴 / 上游:<轴> / 未定位:<候选轴>）"]
+
+
+def check_actual(axis: str, own: Mapping[str, Any], expected: Mapping[str, Any], expectations: Mapping[str, Any],
+                 resources: Any) -> list[str]:
     problems: list[str] = []
     ids = [item["id"] for item in expected["expected"]]
     got = [row["id"] for row in own["actual"]]
     if sorted(got) != sorted(ids) or len(set(got)) != len(got):
         problems.append(f"actual 的 id 必须与本应清单一一对应：本应 {ids}，实际 {got}")
-    failed = {row["id"] for row in own["actual"] if row["verdict"] == NOT_MET}
-    unexpected = {row["id"] for row in own["unexpected"]}
-    cited: set[str] = set()
-    for problem in own["problems"]:
-        stray = [i for i in problem["items"] if i not in failed and i not in unexpected]
-        if stray:
-            problems.append(f"问题「{problem['phenomenon'][:40]}」引用了不是没达到、也不是 unexpected 的 id：{stray}")
-        cited |= set(problem["items"])
-    orphan = sorted((failed | unexpected) - cited)
-    if orphan:
-        problems.append(f"这些没达到的条目或 unexpected 没有被任何 problem 引用：{orphan}")
+    u_ids = [row["id"] for row in own["unexpected"]]
+    if len(set(u_ids)) != len(u_ids) or (set(u_ids) & set(ids)):
+        problems.append(f"unexpected 的 id 不能重复，也不能与本应清单 id 重名：{u_ids}")
+    expectation_ids = {e["expectation_id"] for e in expectations["expectations"]}
     items = {item["id"]: item for item in expected["expected"]}
     for row in own["actual"]:
         # 必须独立查证：trace 证明不了"没做是错的"（spec/alg/process-axes.md §3.2；提交时打回，不由合成改判）
         if row["verdict"] == NOT_MET and items.get(row["id"], {}).get("needs_external") == "是":
             problems.append(f"{row['id']} 必须独立查证（needs_external=是）：trace 证明不了没做是错的，不能判没达到；"
                             "trace 里看得到做到了就判达到并引原文，看不出就判无法核")
+        if row["verdict"] == NOT_MET:
+            if not row["attribution"]:
+                problems.append(f"{row['id']} 判没达到时 attribution 必须填 本轴 / 上游:<轴> / 未定位:<候选轴>")
+            else:
+                problems += _bad_attribution(axis, row["id"], row["attribution"])
+        else:
+            if row["attribution"]:
+                problems.append(f"{row['id']} 判{row['verdict']}时 attribution 必须填空字符串")
+            if row["affected_expectations"]:
+                problems.append(f"{row['id']} 判{row['verdict']}时 affected_expectations 必须为 []"
+                                "（若确实伤及某条期望结果应判没达到；本应清单外的额外问题写进 unexpected）")
+        unknown_exp = [e for e in row["affected_expectations"] if e not in expectation_ids]
+        if unknown_exp:
+            problems.append(f"{row['id']} 的 affected_expectations 含有不在需求清单里的编号：{unknown_exp}")
         if row["verdict"] in QUOTED and not row.get("quotes"):
             problems.append(f"{row['id']} 判{row['verdict']}但没有引文" + ("（要引原文说明实际走的是哪条路）" if row["verdict"] == NOT_APPLICABLE else "（引不出原文就判无法核）"))
         problems += [json.dumps(b, ensure_ascii=False) for b in bad_quotes(row, resources)]
     for row in own["unexpected"]:
+        problems += _bad_attribution(axis, f"unexpected {row['id']}", row["attribution"])
+        unknown_exp = [e for e in row["affected_expectations"] if e not in expectation_ids]
+        if unknown_exp:
+            problems.append(f"unexpected {row['id']} 的 affected_expectations 含有不在需求清单里的编号：{unknown_exp}")
         if not row.get("quotes"):
             problems.append(f"unexpected {row['id']} 没有引文")
         problems += [json.dumps(b, ensure_ascii=False) for b in bad_quotes(row, resources)]
@@ -299,20 +333,35 @@ def _kind(attribution: str) -> str:
 
 
 def actual_result(axis: str, own: Mapping[str, Any], expected: Mapping[str, Any]) -> dict[str, Any]:
-    """程序填：轴级五值与组成、问题记录（同现方案 aggregate + issues_of）。模型交的逐条判断原样照搬：
-    不能成立的（坏引文、必须独立查证却判没达到）已在 check_actual 打回（demand/axis_loop.md §3.3.7）。"""
+    """程序填：轴级五值与组成、问题记录（spec/alg/process-axes.md §4–§5）。模型交的逐条判断原样照搬：
+    不能成立的（坏引文、必须独立查证却判没达到、归因与状态不符）已在 check_actual 打回（demand/axis_loop.md §3.3.7）。"""
     items = {item["id"]: item for item in expected["expected"]}
     rows = [dict(row) for row in own["actual"]]
     # 不适用：这一步这次没发生、也不需要（换了路办成）——移出逐条结果，不计入轴级与兑现（spec/alg/process-axes.md §3.2）
     skipped = [r for r in rows if r["verdict"] == NOT_APPLICABLE]
     rows = [r for r in rows if r["verdict"] != NOT_APPLICABLE]
-    live = {r["id"] for r in rows if r["verdict"] == NOT_MET} | {r["id"] for r in own["unexpected"]}
-    problems = [{**p, "items": [i for i in p["items"] if i in live]} for p in own["problems"]]
-    problems = [p for p in problems if p["items"]]
-    for k, p in enumerate(problems, 1):
-        p["problem_id"] = f"{axis}-P{k}"
+    issues: list[dict[str, Any]] = []
+    for r in rows:
+        if r["verdict"] != NOT_MET:
+            continue
+        e = items[r["id"]]
+        quotes = list(r.get("quotes") or [])
+        issues.append({"problem_id": f"{axis}-P{len(issues) + 1}", "item_id": r["id"], "origin": "expected",
+                       "expected": f"{e['statement']}（依据：{e['basis']}）", "observed": r["observed"],
+                       "attribution": _kind(r["attribution"]), "attribution_detail": r["attribution"],
+                       "affected_expectations": list(r["affected_expectations"]),
+                       "subcapability": [e["subcapability"]], "links": sorted(set(r.get("links") or [])),
+                       "quotes": quotes, "output_refs": sorted({q["ref"] for q in quotes})})
+    for u in own["unexpected"]:
+        quotes = list(u.get("quotes") or [])
+        issues.append({"problem_id": f"{axis}-P{len(issues) + 1}", "item_id": u["id"], "origin": "unexpected",
+                       "expected": "本应清单未覆盖", "observed": u["observed"],
+                       "attribution": _kind(u["attribution"]), "attribution_detail": u["attribution"],
+                       "affected_expectations": list(u["affected_expectations"]),
+                       "subcapability": [], "links": [],
+                       "quotes": quotes, "output_refs": sorted({q["ref"] for q in quotes})})
     verdicts = [r["verdict"] for r in rows]
-    kinds = [_kind(p["attribution"]) for p in problems]
+    kinds = [i["attribution"] for i in issues]
     counts = {MET: verdicts.count(MET), NOT_MET: verdicts.count(NOT_MET), UNCHECKABLE: verdicts.count(UNCHECKABLE),
               "意外": len(own["unexpected"]), "问题·本轴": kinds.count("local"), "问题·上游": kinds.count("upstream"),
               "问题·未定位": kinds.count("unresolved"), "未覆盖": len(expected.get("not_covered") or []),
@@ -327,22 +376,6 @@ def actual_result(axis: str, own: Mapping[str, Any], expected: Mapping[str, Any]
         verdict = "untested"
     else:
         verdict = "not_applicable"
-    rows_by_id = {r["id"]: r for r in rows}
-    unexpected = {u["id"]: u for u in own["unexpected"]}
-    issues = []
-    for p in problems:
-        found = [rows_by_id.get(i) or unexpected[i] for i in p["items"]]
-        from_expected = [items[i] for i in p["items"] if i in items]
-        quotes = [q for row in found for q in row.get("quotes") or []]
-        issues.append({"problem_id": p["problem_id"], "phenomenon": p["phenomenon"],
-                       "expected": "；".join(f"{e['statement']}（依据：{e['basis']}）" for e in from_expected)
-                                   or "；".join("本应清单未覆盖：" + unexpected[i]["why"] for i in p["items"] if i in unexpected),
-                       "observed": "；".join(row["observed"] for row in found),
-                       "attribution": _kind(p["attribution"]), "attribution_detail": p["attribution"], "impact": p["impact"],
-                       "origin": "expected" if from_expected else "unexpected",
-                       "subcapability": sorted({e["subcapability"] for e in from_expected}),
-                       "links": sorted({l for row in found for l in row.get("links") or []}),
-                       "quotes": quotes, "output_refs": sorted({q["ref"] for q in quotes})})
     results = [{**items[r["id"]], **{k: v for k, v in r.items() if k != "id"}, "id": r["id"]} for r in rows]
     return {"verdict": verdict, "composition": {"counts": counts,
                                                 "not_covered": list(expected.get("not_covered") or []),

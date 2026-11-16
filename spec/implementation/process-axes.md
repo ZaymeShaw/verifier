@@ -669,3 +669,54 @@ fallback2 修复后对同一冻结样本完整重跑（primary 地区不支持�
 - 按 trace 复评 11 条（job `3c11981e`，基线 `9a22bce1`）：全部出结论；调用 183 → 170，耗时 6446 → 6351 s；规划轴结论变 1 条（E01 最后一轮 sound → problematic，`entity_lookup` 由"上游:模型"改归本轴）；主结论变 1 条（F01 没做成 → 不确定，来自未改的期望与知识轴）。这批 E01 只含最后一轮，验不到 P8。
 - 完整多轮（8037 存的现场 trace，`/api/eval_axes/run` 不落盘）：E01 两遍，P8 **1 / 2**：一遍规划轴判没达到·本轴；另一遍本应写成"必须安排保单与客户数据检索（如调用 policy.search）"，一条装两件事，保单查了就判达到，规划 sound。F01 一遍：改写重复归规划本轴，通过。
 - 已查实：本应确实看到了实际运行结果。侦探补的表外环节把同一条记录同时填成输入端和输出端（E01 的 `turn1/records/observations/11`）；`input_view` 的规则是"输出端整条摘掉，除非它也是本轴的输入端"，于是整条连返回留下，而 `reading_guide` 仍写"输出端没有给"。这段逻辑不是这次引入的（8037 的 11-03 结果也有：规划 4 / 22 条、工具与知识各 19 / 22 条）。但两遍看到的材料基本相同（28814 / 28846 字），第一遍照样拆开写对了，所以它不是第二遍漏判的唯一原因，直接原因是本应把两件事写成一条。`repeats` 在工具入参未记录时把不同查询算成同参（D16、C08）。D16 真实同参重复的 trace 已被覆盖，未验。
+
+## 17. 删 problems 表、归因与受损期望落条目、兑现程序汇总过程佐证（2026-11-15，用户确认）
+
+### 17.1 起因与规格对齐
+- 依据：`demand/process_axes.md` §3 P9、§4"主轴与六轴"；`demand/main_axis.md` §2.4；`spec/alg/process-axes.md` §3.2–§5；`spec/alg/fulfilled.md` §2.1、§4；`spec/alg/axis_loop.md` §12.2.2–§12.2.3。
+- 解决四件事（基于 `20261113` `dab1ea15` 新切分支 `20261115-process-axes`）：
+  1. `eval_axes/__init__.py` 把未启用（`enabled: false`）轴的 `axes.notes` 传进了 `Case`，改为只传 `axes.enabled` 的描述。
+  2. 删掉 6 条实际轴模型输出的 `problems[]` 表；`attribution`（怪谁）与 `affected_expectations`（本次实际伤到的期望 id）直接落在 `actual[]` 与 `unexpected[]` 每条上，问题记录 `issues[]` 与轴级五值由程序直接从 `actual` 没达到行 + `unexpected` 行生成。
+  3. 精简 `unexpected[]`：删与 `observed` 重复的 `why` 及不参与判定的 `links`，保留 `{id, observed, quotes, attribution, affected_expectations}`，与 `actual[]` 对齐。
+  4. 兑现轴模型不再输出 `process_refs`；`fulfillment/synth.py` 按过程六轴标定的 `expectations`（关联）与 `affected_expectations`（受损，含 `unexpected`）自动算出 `process_refs` 与 `trace` 组结论，消除多期望条目的连坐（P9）与机械抄写引用。
+
+### 17.2 分层实施清单
+| 层 | 改不改 | 改什么 |
+|---|---|---|
+| Loop 框架层（`impl/core/axis_loop/`） | 不改 | — |
+| 框架层·聚类（`impl/core/axes_clustering.py`、`impl/tool_loop_lab/clustering_example.py`） | 改 | `axes_clustering.py` 过程轴聚类文本去掉已删的 `phenomenon`，改为 `"预期：" + expected + "；实际：" + observed + "；归因：" + attribution_detail`；`clustering_example.py` 合成示例问题字典同步去掉 `phenomenon`/`impact` |
+| 纯配置层·过程六轴（`impl/data/llm_probe_loop/axis_definitions.json`） | 改 | 6 个实际轴：`depends` 加 `expectations`（硬），`materials` 加 `result.expectations.expectations[].{expectation_id, about, statement, condition}`；`output` 删 `problems`，`actual[]` 加 `attribution`（`^(|本轴|上游:.+|未定位:.+)$`）和 `affected_expectations`（字符串列表），`unexpected[]` 收敛为 `{id, observed, quotes, attribution, affected_expectations}`（`attribution` 非空三选一）；程序填的 `results.items` 与 `issues.items` 补齐 `attribution`、`affected_expectations`、`item_id`、`origin` 等 schema；`instruction` 删 `problems` 要求，写清 `attribution` 与 `affected_expectations` 口径 |
+| 纯配置层·兑现轴（`impl/data/llm_probe_loop/axis_definitions.json`） | 改 | `fulfillment.materials` 6 条过程轴加上 `results[].affected_expectations` 与 `issues[].{item_id, origin, observed, attribution_detail, affected_expectations}`；`assessments.items` 删模型填的 `process_refs`；`instruction` 删抄写 `process_refs` 要求，保留读懂过程结论写清 `reason` |
+| 轴构建层·过程六轴（`impl/projects/llm_probe_loop/process_axes.py`、`impl/data/llm_probe_loop/axis_code/<6轴>/checks.py`） | 改 | `check_actual` 新增 `axis` 与 `expectation_ids` 参数：删 `problems` 引用检查；校验 `actual` 仅 `没达到` 填非空 `attribution` 且非 `没达到` 的 `affected_expectations` 必须为 `[]`；校验 `上游:`/`未定位:` 后的轴名属于其他 `PROCESS_AXES`；校验 `affected_expectations` 均在 `expectation_ids` 内。`actual_result` 直接从 `没达到` 行与 `unexpected` 生成 `issues[]`（含 `problem_id`、`item_id`、`origin`、`expected`、`observed`、`attribution`、`attribution_detail`、`affected_expectations`、`subcapability`、`links`、`quotes`、`output_refs`）并汇总五值。新增 `process_trace(materials)` 供兑现按期望汇总关联条目与受损情况 |
+| 轴构建层·兑现轴（`impl/data/llm_probe_loop/axis_code/fulfillment/{checks.py,synth.py}`） | 改 | `checks.py` 删 `process_refs` 校验；`synth.py` 的 `_trace` 改为按期望查 `affected_expectations`（命中即 `fail`）、挂靠条目为空或有 `无法核`（`unknown`）、否则 `pass`，并由程序填 `process_refs` |
+| 轴构建层·接入（`impl/projects/llm_probe_loop/eval_axes/__init__.py`） | 改 | `notes = {k: axes.notes.get(k, "") for k in axes.enabled}` 提前到构造 `Case` 之前，只传已启用轴的描述 |
+| 前端展示（`impl/frontend/live.html`、`impl/frontend/axes_experiment.js`） | 改 | 去掉对 `phenomenon`、`impact`、`unexpected.why` 的读取，改为展示 `expected`/`observed`、`attribution_detail`、`affected_expectations` |
+| 测试（`tests/test_llm_probe_loop_process.py`、`tests/test_llm_probe_loop_uniqueness.py`、`tests/test_axes_experiment.py`、`tests/test_process_axes_p1_p7.py`） | 改 | 更新过程六轴与兑现单测夹具，新增：禁用轴说明不泄漏、`attribution` 轴名与状态校验、`affected_expectations` 非法编号打回、多期望条目局部偏差不连坐（P9，B02 形态）、`unexpected` 伤及期望使兑现 `trace` 组不过；同步聚类与前端测试断言 |
+
+### 17.3 验证记录
+- `definitions()` 加载与 `check_definitions` 校验通过（20 条轴 schema、依赖与材料路径一致）。
+- `pytest tests/test_llm_probe_loop_*.py tests/test_axis_loop*.py tests/test_axes_experiment.py tests/test_process_axes_p1_p7.py tests/test_axes_clustering*.py`：**239 passed**（含 Playwright 前端渲染回归）。
+
+### 17.4 11 题实测（2026-11-15，8038，按 trace 复评）
+- 跑法：`dataset-building/backups/run_process_axes_8038.sh <提交> <目录> 2`，样本 `dataset-building/backups/fix-11-20261111/batch11.json`，并发 2。脚本同步实例的 `axis_definitions.json`、`axis_code/`（实例各有一份，只同步 JSON 会跑旧代码）和场景描述，经 tracing 启动后提交批次。
+- 对照：`04fe9d3e`（`20261113` 在 `llm_probe_loop` 上的直接祖先）、`0a903c07`（exp-b）。比较前，切过备用端点的题须重跑，只用纯主模型结果。
+
+| 模型 | 批次 | 与 gold 一致 | 每题秒 | LLM 请求 | Total tok | 六轴实况 LLM 秒 | 兑现 LLM 秒 |
+|---|---|---|---|---|---|---|---|
+| gemini-3.8-flash-medium | `04fe9d3e` | 9/11 | 513 | 192 | 5.45M | 1575 | 1008 |
+| gemini-3.8-flash-medium | `d7f32a8d` | 9/11 | 350 | 185 | 4.74M | 789 | 256 |
+| gpt-6.1-terra | `04fe9d3e` | 4/11 | 391 | 196 | 7.47M | 1818 | 496 |
+| gpt-6.1-terra | `d7f32a8d`（纯 terra） | 4/11 | 329 | 190 | 6.94M | 1478 | 246 |
+
+- 效率：两模型每题耗时 -32% / -16%，省下的全在本次改的两段（六轴不再重抄 problems、兑现不再挑 `process_refs`）；未改的前四段持平。整批墙钟不可与 `04fe9d3e` 直接比（基线并发 4，现为 2；备用端点超时会拖尾）。
+- 效果：P9 连坐止住。gemini C08 没做成✗ → 做成了✓，B02 "是否已购"不再被姓名笔误连坐，A02 捏造只挂 `implicit_correct`；terra 39 条没达到不再把正例错杀成没做成（基线 4 道）。一致率未变：gemini F01 没做成✓ → 做成了✗；terra 6 道正例停在不确定。
+- 遗留（不在本次范围）：
+  1. F01：期望把同句两个问题合成一条；`knowledge_data_expected` 自写"未收录则空结果符合期望"的退路。新规则下未标受损的没达到不再挡结论，"答一半"更易被放过。
+  2. terra 把 trace 里常规 `[REDACTED]` 脱敏与同工具已返回的值判无法核（49 条，gemini 5 条），经"无法核 → not_evaluable"卡住正例。此现象 `04fe9d3e` 已有，原被没达到连坐盖住。
+  3. 现耗时 85% 以上在侦探、六轴本应、六轴实况；再提速需动本应条目数量与粒度。
+- 每配置只跑一轮；单题结论会翻，翻题先重跑再定论。
+
+### 17.5 新基线：`20261115`（`228ff007`）
+- `228ff007` 在 `d7f32a8d` 之上只在 `impl/` 加了未被引用的 `mock_cases-120.json`，运行代码与 `d7f32a8d` 一致，17.4 成绩即本基线成绩。该提交误把 `demand/`、`spec/` 回退到 `20261113` 版本，已从 `d7f32a8d` 恢复。
+- 基线结果（本地，`dataset-building/backups/` 不入库）：gemini `process-axes-20261115/gemini-1`；terra `process-axes-20261115/terra-merged`（`terra-1` 中切 grok 的 fuyunping、A02 已重跑替换）。
+- 测试：`llm_probe_loop` 相关 239 passed。JEV 两组测试 110 个因 `agno` 环境缺 `jsonpointer` 报错，`20261113` 同样，与本基线无关。

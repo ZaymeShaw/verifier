@@ -1,7 +1,7 @@
-"""兑现：模型只判交付给没给与引用，每条结果由程序按证据组派生（spec/alg/fulfilled.md §2.1）；
+"""兑现：模型只判交付给没给与核事实引用，过程佐证与每条结果由程序按证据组派生（spec/alg/fulfilled.md §2.1）；
 输出字段与整体状态同 llm_probe 兑现轴（主轴 M 函数照读）。"""
 from impl.core.judge import _derive_overall_status
-from impl.projects.llm_probe_loop.process_axes import process_rows
+from impl.projects.llm_probe_loop.process_axes import process_trace
 
 FULFILLED, NOT_FULFILLED, NOT_EVALUABLE = "fulfilled", "not_fulfilled", "not_evaluable"
 PASS, FAIL, UNKNOWN = "pass", "fail", "unknown"
@@ -28,23 +28,35 @@ def _knowledge(refs, claims):
                                                    lambda c: f"查不到：{text(c)}")
 
 
-def _trace(refs, rows):
-    """trace 组：引用的过程条目有没达到 → 不过（蒙的、查错对象、编造、传丢）；都达到 → 过；有无法核或没有条目 → 判不了。
-    → (结果, 程序依据)。"""
-    cited = [(r, rows[r]) for r in refs if r in rows]
+def _process_refs(key, rows, unexpected):
+    refs = [r for r, row in rows.items()
+            if key in (row.get("expectations") or []) or key in (row.get("affected_expectations") or [])]
+    refs += [r for r, u in unexpected.items() if key in (u.get("affected_expectations") or [])]
+    return list(dict.fromkeys(refs))
+
+
+def _trace(key, rows, unexpected):
+    """trace 组：任一过程条目或意外的 affected_expectations 含本期望 → 不过；
+    否则挂了本期望的过程条目为空或有无法核 → 判不了；否则 → 过（spec/alg/fulfilled.md §2.1）。"""
+    hurt = [(r, f"{row['verdict']}：{row.get('statement') or ''}")
+            for r, row in rows.items() if key in (row.get("affected_expectations") or [])]
+    hurt += [(r, f"意外：{u.get('observed') or ''}")
+             for r, u in unexpected.items() if key in (u.get("affected_expectations") or [])]
+    if hurt:
+        return FAIL, "trace 组不过：" + _names(hurt, lambda x: x)
+    linked = [(r, row) for r, row in rows.items() if key in (row.get("expectations") or [])]
+    if not linked:
+        return UNKNOWN, "trace 组判不了：没有关联本期望的过程条目"
     text = lambda row: f"{row['verdict']}：{row.get('statement') or ''}"
-    failed = [(r, row) for r, row in cited if row["verdict"] == "没达到"]
-    if failed:
-        return FAIL, "trace 组不过：" + _names(failed, text)
-    if cited and all(row["verdict"] == "达到" for _, row in cited):
-        return PASS, f"trace 组过：{len(cited)} 条过程条目都达到"
-    if not cited:
-        return UNKNOWN, "trace 组判不了：没有可引的过程条目"
-    return UNKNOWN, "trace 组判不了：" + _names([(r, row) for r, row in cited if row["verdict"] != "达到"], text)
+    uncheckable = [(r, row) for r, row in linked if row["verdict"] == "无法核"]
+    if uncheckable:
+        return UNKNOWN, "trace 组判不了：" + _names(uncheckable, text)
+    return PASS, f"trace 组过：{len(linked)} 条过程条目均未伤及本期望"
 
 
-def derive(item, needs, evidence, claims, rows):
+def derive(item, needs, evidence, claims, rows, unexpected=None):
     """→ (status, 档位, 缺的组, 程序依据)。"""
+    unexpected = unexpected or {}
     if item["delivered"] == "没给":
         return NOT_FULFILLED, [], [], "交付没给"
     if item["delivered"] == "交付不可读":
@@ -55,7 +67,9 @@ def derive(item, needs, evidence, claims, rows):
     if not usable:
         wanted = " 或 ".join("+".join(g) for g in needs)
         return NOT_EVALUABLE, [], [list(g) for g in needs], f"缺证据：需要 {wanted}，场景都没配"
-    judge = {"knowledge": lambda: _knowledge(item["claim_refs"], claims), "trace": lambda: _trace(item["process_refs"], rows)}
+    key = item["expectation_id"]
+    judge = {"knowledge": lambda: _knowledge(item["claim_refs"], claims),
+             "trace": lambda: _trace(key, rows, unexpected)}
     groups, notes = [], []
     for group in usable:
         marks = []
@@ -78,7 +92,7 @@ def synthesize(view):
     evidence = view.materials["scenario.evidence"]
     truth = view.materials.get("result.truthfulness")
     claims = {c["claim_id"]: c for c in (truth or {}).get("claims") or []}
-    rows = process_rows(view.materials)
+    rows, unexpected = process_trace(view.materials)
     needs = {e["expectation_id"]: e.get("needs") or [] for e in expectations}
     business = [{
         "expectation_id": e["expectation_id"], "blocking": blocking[e["expectation_id"]],
@@ -89,12 +103,13 @@ def synthesize(view):
     } for e in expectations]
     assessments = []
     for a in view.own["assessments"]:
-        status, tier, missing, basis = derive(a, needs[a["expectation_id"]], evidence, claims, rows)
-        assessments.append({"expectation_id": a["expectation_id"], "status": status, "status_basis": basis,
+        key = a["expectation_id"]
+        status, tier, missing, basis = derive(a, needs[key], evidence, claims, rows, unexpected)
+        assessments.append({"expectation_id": key, "status": status, "status_basis": basis,
                             "delivered": a["delivered"],
                             "evidence_tier": tier, "missing_evidence": missing, "actual_evidence": list(a["evidence"]),
                             "downstream_impact": a["reason"], "claim_refs": list(a["claim_refs"]),
-                            "process_refs": list(a["process_refs"])})
+                            "process_refs": _process_refs(key, rows, unexpected)})
     status = {a["expectation_id"]: a["status"] for a in assessments}
     groups = {}
     for e in expectations:
