@@ -1,0 +1,121 @@
+{
+  "product_parse": {
+    "path": "/product_query_parse",
+    "body": {
+      "query": "平安福的等待期是多少？",
+      "top_n": 5,
+      "trace_id": "migration-example-001"
+    }
+  },
+  "product_retrieve": {
+    "path": "/chunk_context_search",
+    "body": {
+      "source": "product_wiki",
+      "user_text": "已确认产品：示例产品\n查询问题：等待期是多少？",
+      "top_n": 5,
+      "trace_id": "migration-example-001"
+    }
+  },
+  "faq_search": {
+    "path": "/faq_context_search",
+    "body": {
+      "source": "askbob",
+      "user_text": "犹豫期内退保怎么办理？",
+      "top_n": 3,
+      "trace_id": "migration-example-001"
+    }
+  },
+  "benefit_search": {
+    "path": "/service_benefit_search",
+    "body": {
+      "source": "quanyi_wiki",
+      "user_text": "就医绿通怎么使用？",
+      "top_n": 5,
+      "trace_id": "migration-example-001"
+    }
+  },
+  "customer_parse": {
+    "path": "/llm_ai_agent/client_search_query_parse_no_encipher",
+    "body": {
+      "source": "askbob",
+      "user_text": "查询客户号为指定号码的客户",
+      "session_id": "migration-session-001",
+      "trace_id": "migration-example-001",
+      "user_id": "test-subject",
+      "user_action": "write",
+      "action_scenario": "customerSearch",
+      "extra_input_params": {}
+    }
+  },
+  "customer_query": {
+    "path": "/api/v1/customer-search/search",
+    "body": {
+      "queryLogic": "AND",
+      "conditions": [
+        {
+          "field": "idicm_clientno",
+          "operator": "MATCH",
+          "value": "DEMO-CUSTOMER"
+        }
+      ],
+      "sort": [],
+      "agentno": "test-agent",
+      "traceId": "migration-example-001",
+      "pageNo": 1,
+      "pageSize": 5
+    }
+  },
+  "customer_detail": {
+    "path": "/api/v1/customer-search/detail-info",
+    "body": {
+      "traceId": "migration-example-001",
+      "agentNo": "test-agent",
+      "clientMainIdSet": [
+        "DEMO-CUSTOMER"
+      ]
+    }
+  },
+  "policy_parse": {
+    "path": "/api/v1/policy-search/policy-search-parse",
+    "body": {
+      "session_id": "migration-session-001",
+      "trace_id": "migration-example-001",
+      "extra_input_params": {
+        "policySearchParseArgs": {
+          "query": "查询指定完整保单号的保单",
+          "currentTime": "__CURRENT_TIME_UTC_PLUS_08__",
+          "agentCode": "test-agent"
+        },
+        "args": {
+          "contexts": []
+        }
+      }
+    }
+  },
+  "policy_query": {
+    "path": "/api/v1/policy-search/query",
+    "body": {
+      "traceId": "migration-example-001",
+      "empno": "test-agent",
+      "filter": {
+        "type": "PREDICATE",
+        "node_id": "n0",
+        "field": "polno",
+        "operator": "EQ",
+        "value": "P260000000000001"
+      },
+      "pageNo": 1,
+      "pageSize": 5
+    }
+  },
+  "policy_detail": {
+    "path": "/api/v1/policy-search/detail",
+    "body": {
+      "traceId": "migration-example-001",
+      "empno": "test-agent",
+      "polno": "P260000000000001",
+      "pageNo": 1,
+      "pageSize": 5
+    }
+  }
+}

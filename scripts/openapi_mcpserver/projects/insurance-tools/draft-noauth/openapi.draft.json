@@ -1,0 +1,506 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Insurance HTTP APIs",
+    "version": "1.0.0",
+    "description": "由旧 MCP 出站请求还原的最小接口定义；每个 HTTP 操作独立发布，不包含旧业务编排。"
+  },
+  "servers": [
+    {
+      "url": "http://openapi.invalid"
+    }
+  ],
+  "paths": {
+    "/product_query_parse": {
+      "post": {
+        "operationId": "product_parse",
+        "summary": "产品实体解析",
+        "description": "产品实体解析。只有产品被唯一可靠确认后才进入 B02；歧义返回候选，不能任选第一个。 返回原始 JSON；本工具不会自动执行其他 HTTP 操作。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "top_n": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 5
+                  }
+                },
+                "required": [
+                  "query"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "原始业务 JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chunk_context_search": {
+      "post": {
+        "operationId": "product_retrieve",
+        "summary": "产品知识检索",
+        "description": "产品知识检索。标准名来自 B01；有 product_code 时在名称后追加（险种代码：...）。这不是后端 ID 过滤的保证。 返回原始 JSON；本工具不会自动执行其他 HTTP 操作。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_text": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "top_n": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 5
+                  }
+                },
+                "required": [
+                  "user_text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "原始业务 JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/faq_context_search": {
+      "post": {
+        "operationId": "faq_search",
+        "summary": "FAQ 检索",
+        "description": "FAQ 检索。top_n 由工具配置 recall_top_n 传入；当前 common 为 3。 返回原始 JSON；本工具不会自动执行其他 HTTP 操作。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_text": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "top_n": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 3
+                  }
+                },
+                "required": [
+                  "user_text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "原始业务 JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/service_benefit_search": {
+      "post": {
+        "operationId": "benefit_search",
+        "summary": "服务权益知识检索",
+        "description": "服务权益知识检索。查询权益知识，不等于验证具体客户资格或实际已享权益。 返回原始 JSON；本工具不会自动执行其他 HTTP 操作。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_text": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "top_n": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 5
+                  }
+                },
+                "required": [
+                  "user_text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "原始业务 JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/llm_ai_agent/client_search_query_parse_no_encipher": {
+      "post": {
+        "operationId": "customer_parse",
+        "summary": "客户自然语言解析",
+        "description": "客户自然语言解析。当前 MCP 副本的 user_id 来自 context.agent_id（认证主体），不是自动使用 upstream_user_id。迁移需核对身份语义。解析结果必须经字段/运算符映射和校验后送 B06。 返回原始 JSON；本工具不会自动执行其他 HTTP 操作。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_text": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "user_text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "原始业务 JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/customer-search/search": {
+      "post": {
+        "operationId": "customer_query",
+        "summary": "客户结构化搜索",
+        "description": "客户结构化搜索。本例是独立精确目标的条件示例，不是 B05 示例的实际解析结果；真实链路使用 B05 的规范化结果。扁平 conditions，默认首页 5 条。 返回原始 JSON；本工具不会自动执行其他 HTTP 操作。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "queryLogic": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "conditions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  "sort": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "default": []
+                  },
+                  "pageNo": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 1
+                  },
+                  "pageSize": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 5
+                  }
+                },
+                "required": [
+                  "queryLogic",
+                  "conditions"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "原始业务 JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/customer-search/detail-info": {
+      "post": {
+        "operationId": "customer_detail",
+        "summary": "客户详情 v5",
+        "description": "客户详情 v5。注意 agentNo 大小写；customer_id/customer_ids 合并去重为 clientMainIdSet，最多 100 项。MCP 不暴露旧姓名/手机号参数；详情字段以 v5 DTO 为准。 返回原始 JSON；本工具不会自动执行其他 HTTP 操作。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clientMainIdSet": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "description": "客户中心 ID 列表，不是业务客户号。"
+                  }
+                },
+                "required": [
+                  "clientMainIdSet"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "原始业务 JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/policy-search/policy-search-parse": {
+      "post": {
+        "operationId": "policy_parse",
+        "summary": "保单自然语言解析",
+        "description": "保单自然语言解析。currentTime 为调用时 UTC+08 的 YYYY-MM-DD HH:MM:SS；agentCode 来自 upstream_user_id；contexts 固定 []。 返回原始 JSON；本工具不会自动执行其他 HTTP 操作。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "extra_input_params": {
+                    "type": "object",
+                    "properties": {
+                      "policySearchParseArgs": {
+                        "type": "object",
+                        "properties": {
+                          "query": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "query"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "policySearchParseArgs"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "extra_input_params"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "原始业务 JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/policy-search/query": {
+      "post": {
+        "operationId": "policy_query",
+        "summary": "保单结构化查询 / 尾号定位",
+        "description": "保单结构化查询 / 尾号定位。policy_search.query_url 和 policy_detail.query_url 复用本端点类型；真实搜索使用 B08 的 filter。尾号定位用 polno/SUFFIX；只有唯一候选且未截断才取详情。 返回原始 JSON；本工具不会自动执行其他 HTTP 操作。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "filter": {
+                    "type": "object",
+                    "description": "结构化条件树，PREDICATE 节点含 type/node_id/field/operator/value；组合规则须按后端契约填写。完整 JSON 原样发送。",
+                    "additionalProperties": true
+                  },
+                  "pageNo": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 1
+                  },
+                  "pageSize": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 5
+                  }
+                },
+                "required": [
+                  "filter"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "原始业务 JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/policy-search/detail": {
+      "post": {
+        "operationId": "policy_detail",
+        "summary": "保单详情",
+        "description": "保单详情。当前请求显式携带 pageNo=1/pageSize=5；保留服务实际分页容量和多险种行，不把 records[0] 当成整张保单。 返回原始 JSON；本工具不会自动执行其他 HTTP 操作。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "polno": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "pageNo": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 1
+                  },
+                  "pageSize": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 5
+                  }
+                },
+                "required": [
+                  "polno"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "原始业务 JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,76 @@
+# No-auth configuration: no token request or token header.
+# Move trusted body fields from OpenAPI into inject_body before publishing tools.
+version: 1
+name: insurance-tools-http
+openapi: openapi.draft.json
+operations:
+  benefit_search:
+    url: http://8.148.158.241:8010/service_benefit_search
+    auth: null
+    timeout_seconds: 10.0
+    inject_body:
+      source: quanyi_wiki
+  customer_detail:
+    url: http://211.161.232.13:8080/api/v1/customer-search/detail-info
+    auth: null
+    timeout_seconds: 10.0
+    inject_body:
+      agentNo: ${env.MCP_AGENT_NUMBER}
+  customer_parse:
+    url: http://8.148.158.241:8000/llm_ai_agent/client_search_query_parse_no_encipher
+    auth: null
+    timeout_seconds: 75.0
+    inject_body:
+      session_id: ${session_id}
+      source: askbob
+      user_action: write
+      action_scenario: customerSearch
+      extra_input_params: {}
+      user_id: ${env.MCP_AUTH_SUBJECT}
+  customer_query:
+    url: http://211.161.232.13:8080/api/v1/customer-search/search
+    auth: null
+    timeout_seconds: 75.0
+    inject_body:
+      agentno: ${env.MCP_AGENT_NUMBER}
+  faq_search:
+    url: http://8.148.158.241:8010/faq_context_search
+    auth: null
+    timeout_seconds: 10.0
+    inject_body:
+      source: askbob
+  policy_detail:
+    url: http://211.161.232.13:8080/api/v1/policy-search/detail
+    auth: null
+    timeout_seconds: 10.0
+    inject_body:
+      empno: ${env.MCP_AGENT_NUMBER}
+  policy_parse:
+    url: http://43.139.190.73/api/v1/policy-search/policy-search-parse
+    auth: null
+    timeout_seconds: 75.0
+    inject_body:
+      trace_id: ${trace_id}
+      session_id: ${session_id}
+      extra_input_params:
+        policySearchParseArgs:
+          currentTime: ${time_utc8}
+          agentCode: ${env.MCP_AGENT_NUMBER}
+        args:
+          contexts: []
+  policy_query:
+    url: http://211.161.232.13:8080/api/v1/policy-search/query
+    auth: null
+    timeout_seconds: 75.0
+    inject_body:
+      empno: ${env.MCP_AGENT_NUMBER}
+  product_parse:
+    url: http://8.148.158.241:8010/product_query_parse
+    auth: null
+    timeout_seconds: 10.0
+  product_retrieve:
+    url: http://8.148.158.241:8010/chunk_context_search
+    auth: null
+    timeout_seconds: 10.0
+    inject_body:
+      source: product_wiki
