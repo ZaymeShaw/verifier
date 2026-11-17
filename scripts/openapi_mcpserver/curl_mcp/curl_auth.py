@@ -45,7 +45,7 @@ class CurlToken:
 def load_curl(project_dir: Path, filename: str, token_path: str, env: dict[str, str]) -> CurlToken:
     path = (project_dir / filename).resolve()
     # Trusted deployment configuration may reference a shared file relative to its YAML.
-    args = parse_command(path.read_text())
+    args = parse_command(path.read_text(encoding="utf-8"))
     # Unlike an offline business sample, these options would affect a live request.
     if args.insecure or args.location or args.max_time or args.connect_timeout:
         raise ValueError("TLS bypass, redirects and cURL timeouts are unsupported; use the operation timeout")

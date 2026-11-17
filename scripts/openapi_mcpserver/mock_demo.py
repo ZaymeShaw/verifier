@@ -86,12 +86,12 @@ def prepare(config, base_url, mode, mcp_port):
     for name, operation in config["operations"].items():
         operation["url"] = f"{base_url}/business/{name}"
         operation["auth"] = {"curl": f"auth_curls/{name}.txt", "token_path": "/access_token"}
-        curl = (SOURCE / "auth_curls" / f"{name}.txt").read_text()
+        curl = (SOURCE / "auth_curls" / f"{name}.txt").read_text(encoding="utf-8")
         curl = curl.replace("grant_type=待填写", "grant_type=mock-grant")
         curl = curl.replace("invokeInterface=待填写", f"invokeInterface={name}")
-        (OUTPUT / "auth_curls" / f"{name}.txt").write_text(curl)
+        (OUTPUT / "auth_curls" / f"{name}.txt").write_text(curl, encoding="utf-8")
     config_path = OUTPUT / "config.local.yaml"
-    config_path.write_text(yaml.safe_dump(config, allow_unicode=True, sort_keys=False))
+    config_path.write_text(yaml.safe_dump(config, allow_unicode=True, sort_keys=False), encoding="utf-8")
     env = {
         "MCP_CONFIG": "config.local.yaml", "MCP_TRANSPORT": mode,
         "MCP_CLIENT_CONFIG_DIR": "client-configs",
@@ -102,12 +102,12 @@ def prepare(config, base_url, mode, mcp_port):
     }
     env_file = OUTPUT / ".env"
     env_file.write_text("# Generated local mock settings; no real credentials.\n" +
-                        "".join(f"{key}={value}\n" for key, value in env.items()))
+                        "".join(f"{key}={value}\n" for key, value in env.items()), encoding="utf-8")
     return config_path, env_file, env
 
 
 async def verify(client_config, base_url, events):
-    examples = json.loads((ROOT / "tests/fixtures/tool_arguments.json").read_text())
+    examples = json.loads((ROOT / "tests/fixtures/tool_arguments.json").read_text(encoding="utf-8"))
     async with Client(client_config) as client:
         assert {tool.name for tool in await client.list_tools()} == set(examples)
         for name, args in examples.items():
@@ -139,7 +139,7 @@ def main():
     parser.add_argument("--upstream-port", type=int, default=8765)
     parser.add_argument("--mcp-port", type=int, default=8766)
     args = parser.parse_args()
-    config = yaml.safe_load((SOURCE / "config.local.yaml").read_text())
+    config = yaml.safe_load((SOURCE / "config.local.yaml").read_text(encoding="utf-8"))
     events = []
     upstream = ThreadingHTTPServer(("127.0.0.1", 0 if args.test else args.upstream_port),
                                    mock_handler(config["operations"], events))

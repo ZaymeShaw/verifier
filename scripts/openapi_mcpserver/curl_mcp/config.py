@@ -82,9 +82,9 @@ def validate_environment(settings: Settings, env: dict[str, str]) -> None:
 
 
 def load(path: Path) -> tuple[Settings, dict]:
-    settings = Settings.model_validate(yaml.safe_load(path.read_text()))
+    settings = Settings.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
     settings._project_dir = path.resolve().parent
-    spec = json.loads((path.parent / settings.openapi).read_text())
+    spec = json.loads((path.parent / settings.openapi).read_text(encoding="utf-8"))
     # Explicit v1 scope. Fail visibly instead of silently mis-routing unsupported shapes.
     for route, item in spec["paths"].items():
         if "{" in route or set(item) != {"post"}:

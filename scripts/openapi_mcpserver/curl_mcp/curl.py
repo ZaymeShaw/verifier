@@ -10,13 +10,38 @@ class CurlParser(argparse.ArgumentParser):
         raise ValueError("Unsupported or incomplete cURL arguments; see README for supported options")
 
 
+def join_continuations(command: str) -> str:
+    """Remove shell backslash-newlines, preserving single-quoted data verbatim.
+
+    shlex does not implement this shell rule: an unindented continuation
+    otherwise becomes part of the next option token, e.g. '\\n--header'.
+    """
+    result = []
+    quote = None
+    index = 0
+    while index < len(command):
+        char = command[index]
+        if char == "\\" and quote != "'" and index + 1 < len(command):
+            following = command[index + 1]
+            if following != "\n":
+                # Preserve escapes for shlex, without interpreting escaped quotes here.
+                result.extend((char, following))
+            index += 2
+            continue
+        if char in ("'", '"'):
+            if quote is None:
+                quote = char
+            elif quote == char:
+                quote = None
+        result.append(char)
+        index += 1
+    return "".join(result)
+
+
 def parse_command(command: str):
     # No shell evaluation, file indirection, environment expansion, or HTTP request.
     try:
-        tokens = shlex.split(command.replace("\r\n", "\n"), posix=True)
-        # shlex retains an unquoted backslash-newline separator as a newline token.
-        # Remove that separator, without rewriting backslashes inside quoted JSON.
-        tokens = [token for token in tokens if token != "\n"]
+        tokens = shlex.split(join_continuations(command.replace("\r\n", "\n")), posix=True)
     except ValueError:
         raise ValueError("Invalid shell quoting in cURL text") from None
     if not tokens or Path(tokens[0]).name != "curl":

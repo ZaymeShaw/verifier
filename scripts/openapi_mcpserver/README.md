@@ -126,8 +126,10 @@ projects/insurance-tools/curls/
 
 ```bash
 curl 'https://example.internal/api/v1/policy-search/query' \
+  --header 'token: ${token}' \
   --header 'Content-Type: application/json' \
   --data-raw '{
+    "empno": "${env.MCP_AGENT_NUMBER}",
     "filter": {"type": "PREDICATE", "field": "polno", "operator": "EQ", "value": "示例保单号"},
     "pageNo": 1,
     "pageSize": 5
@@ -137,29 +139,29 @@ curl 'https://example.internal/api/v1/policy-search/query' \
 在本目录运行（输出目录应尚未包含这两份草稿）：
 
 ```bash
-uv run --frozen python generate_openapi.py projects/insurance-tools/curls
+uv run --frozen python generate_openapi.py projects/insurance-tools/curls --token-path /access_token
 ```
 
 默认在 `curls/` 的父目录生成：
 
 - `openapi.draft.json`：合并所有接口的路径、方法、参数结构，描述为“待补充”。
-- `config.draft.yaml`：同名操作、从 cURL 提取的真实 URL，以及自动关联的鉴权、Header、字段注入和超时；`openapi` 自动指向配套草稿。无法确定的鉴权仍标为“待填写”。
+- `config.draft.yaml`：同名操作、从 cURL 提取的真实 URL、占位符 Header 和字段注入，以及同名 auth cURL 引用；`openapi` 自动指向配套草稿。服务名取项目目录名，超时使用运行器默认值；无法确定的鉴权仍标为“待填写”。
 
 也可以指定另一个输出目录：
 
 ```bash
-uv run --frozen python generate_openapi.py projects/insurance-tools/curls --output-dir projects/insurance-tools/draft
+uv run --frozen python generate_openapi.py projects/insurance-tools/curls --output-dir projects/insurance-tools/draft --token-path /access_token
 ```
 
 本仓库 `draft/` 和 `draft-noauth/` 已按正式 `openapi.json` 人工同步了工具约束、默认值和固定字段注入；三份 OpenAPI 当前一致。`draft/` 保留鉴权引用，`draft-noauth/` 的 auth 全为 null 且无 token Header；不复制 `auth_curls/`。再次生成到相同目录会拒绝覆盖，请选择新目录。`curls/` 的 10 份脱敏请求样例来自现有地址配置和保存的测试请求；示例身份、客户号、保单号不代表真实可用数据。
 
 自动关联规则：
 
-- 如果 `curls/` 的父目录有 `config.local.yaml`，按同名 operationId 复用其中已确认的 `auth`、`headers`、`inject_body` 和超时。URL 仍取本次 cURL；正式 OpenAPI 的描述和业务约束不会被复制，生成结果仍需人工检查。
-- 从生成的模型参数中移除 `inject_body` 提供的字段，嵌套对象中其余查询字段保留。已确认的规则与 cURL 显式占位符冲突时直接报错，不静默覆盖。
-- 对未配置的新工具，如果存在同名 `auth_curls/tool_name.txt`，自动填写 `auth.curl`。Token 的响应位置不能从请求推断；可用 `--token-path /access_token` 明确指定新工具的共同位置，否则 `token_path: 待填写` 会阻止启动。此选项不覆盖已有配置中的鉴权规则。
+- 生成只以当前 `curls/`、同级 `auth_curls/` 和命令行参数为输入，不读取 `config.local.yaml` 或既有 OpenAPI。即使旧配置包含同名工具，其地址、鉴权、注入规则、超时和服务名也不会混入新草稿。
+- 业务 body 中 `${env.NAME}`、`${token}`、`${session_id}`、`${trace_id}`、`${time_utc8}` 所在字段移到 `inject_body`，嵌套对象中其余字段保留为工具参数。字段名保持原样，`agentNo` 和 `agentno` 不会互相改写。身份字段需要显式写成例如 `"agentNo": "${env.MCP_AGENT_NUMBER}"`，不能仅凭一个数字样例判断其用途。
+- 如果存在同名 `auth_curls/tool_name.txt`，自动填写 `auth.curl`。Token 的响应位置不能从请求推断；可用 `--token-path /access_token` 明确指定共同位置，否则 `token_path: 待填写` 会阻止启动。各接口响应位置不同时，在生成的 YAML 中分别确认。
 - `draft/` 仅输出 OpenAPI 和 YAML 模板，不打包项目。鉴权 cURL 使用相对于输出 YAML 的路径，例如 `../auth_curls/policy_query.txt`；直接引用原文件，不复制。修改原鉴权文件后，下一次启动会读取新内容。移动 YAML 时需相应调整文件引用路径。
-- 脚本鉴权可能依赖其他模块，因此生成器不会猜测或复制脚本依赖。含脚本鉴权时，在原项目目录生成草稿；如需独立部署，再完整整理其脚本依赖。
+- 生成器只自动关联同名 auth cURL。共享鉴权文件或脚本鉴权可在生成后的 YAML 中显式设置，不从旧配置继承，也不复制其依赖。
 
 新项目统一 Token 位置的例子：
 
@@ -190,10 +192,10 @@ curls/tool_name.txt
 生成后需要人工完成：
 
 1. 检查字段类型，补充描述、必填项、默认值、枚举和业务限制。单个样例不能推断这些含义，草稿不设置字段 `required/default/enum`；`null`、空数组和空对象会提示补充实际结构。
-2. 检查自动复用的 `inject_body` 和已移除的参数；新接口需确认哪些字段由服务端提供。未显式配置的普通样例值不会自动成为默认值，也不会自动猜测哪些字段需要隐藏。
+2. 检查从 cURL 占位符生成的 `inject_body` 和已移除的参数。普通样例值不会自动成为默认值，也不会自动猜测哪些字段需要隐藏。例如固定 `source` 可在源 cURL 中写成 `${env.FAQ_SOURCE}`，在 `.env` 填写 `FAQ_SOURCE=askbob`；或在采用草稿时明确移入 YAML 的固定注入规则。
 3. 已自动关联的鉴权无需重复填写；对剩余 `auth: 待填写` 改为 `{curl: auth_curls/xxx.txt, token_path: /access_token}` 或实际的 `脚本.py:函数名`；只有确认无需鉴权时才改为 `null`。原 cURL 的 Token、Cookie、用户名密码不会复制到草稿，也不能用于推断 Token 获取与刷新逻辑。未填写鉴权的草稿无法通过启动检查。
 4. 新项目检查完成后，将两份草稿采用为项目目录中的 `openapi.json`、`config.local.yaml`，并把 YAML 的 `openapi` 改成 `openapi.json`。已有项目则只合入需要的操作，保留正式描述和配置。鉴权 cURL 或脚本放在同一项目目录内，路径相对于 YAML 解析。
-5. 在 `.env` 指定正式 YAML，填写身份和凭据，执行 `server.py --check`，通过后再启动或由 stdio 客户端拉起。
+5. 在 `.env` 指定所采用的 YAML，填写身份和凭据，执行 `server.py --check`。这只验证配置和工具注册，不请求鉴权或业务接口；还需通过 MCP 用原 cURL 的业务样例调用，核对实际请求和业务响应。不能把外层 `code: 0` 或 MCP 非错误状态直接当成业务成功。
 
 运行时的数据链路：
 
@@ -252,7 +254,7 @@ inject_body:
       agentCode: ${env.MCP_AGENT_NUMBER}
 ```
 
-固定的数据源属于部署配置，不交给模型选择：`faq_search` 注入 `source: askbob`，`product_retrieve` 注入 `source: product_wiki`，`benefit_search` 注入 `source: quanyi_wiki`。三套 YAML 均通过 `inject_body` 补充；三套 OpenAPI 和工具调用样例都不包含该输入参数。业务 cURL 样例仍保留 source，因为它展示的是实际发给上游的完整请求。批量生成器复用正式配置的注入规则，会自动从工具 schema 中移除 source，无需修改生成器或增加环境变量。
+固定的数据源属于部署配置，不交给模型选择：`faq_search` 注入 `source: askbob`，`product_retrieve` 注入 `source: product_wiki`，`benefit_search` 注入 `source: quanyi_wiki`。三套已有 YAML 均通过 `inject_body` 补充；三套已有 OpenAPI 和工具调用样例都不包含该输入参数。业务 cURL 样例保留字面量 source，展示完整上游请求；重新生成时不会继承已有 YAML 的固定注入。要自动隐藏该字段，先在源 cURL 中用 `${env.NAME}` 明确标记并在 `.env` 填值；字面量样例仍会生成普通工具参数，需人工确认是否固定。
 
 ```yaml
 operations:
@@ -321,7 +323,7 @@ curl https://business.example/query \
   --json '{"query":"查询样例","user_id":"${env.MCP_AUTH_SUBJECT}"}'
 ```
 
-批量生成器会保留 Header 引用，并将 `user_id` 移到 YAML 的 `inject_body`；OpenAPI 只暴露 `query`。鉴权关系优先复用已有配置，新工具按同名 `auth_curls` 文件约定关联；响应 Token 位置仍需明确指定。多个工具可显式引用同一个鉴权 cURL，但各次调用独立获取 Token。
+批量生成器会保留 Header 引用，并将 `user_id` 移到 YAML 的 `inject_body`；OpenAPI 只暴露 `query`。鉴权关系按同名 `auth_curls` 文件约定关联，不读取已有配置；响应 Token 位置仍需明确指定。多个工具可在生成后的 YAML 中显式引用同一个鉴权 cURL，但各次调用独立获取 Token。
 
 ## 自定义脚本鉴权
 

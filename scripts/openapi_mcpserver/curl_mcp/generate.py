@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 import yaml
 from .curl import parse_command
 from .body import references, text_references
-from .config import CurlAuth, Settings
+from .config import CurlAuth
 
 from genson import SchemaBuilder
 from jsonschema import Draft202012Validator
@@ -119,8 +119,6 @@ def generate_project(curl_dir: Path, *, token_path: str | None = None) -> tuple[
     files = sorted(curl_dir.glob("*.txt"))
     if not files:
         raise ValueError("No .txt cURL samples found")
-    config_file = curl_dir.parent / "config.local.yaml"
-    existing = Settings.model_validate(yaml.safe_load(config_file.read_text())) if config_file.exists() else None
     if token_path is not None:
         CurlAuth(curl="check.txt", token_path=token_path)
     spec = None
@@ -131,7 +129,7 @@ def generate_project(curl_dir: Path, *, token_path: str | None = None) -> tuple[
         if len(name) > 56 or not re.fullmatch(r"[a-z][a-z0-9]*(?:_[a-z0-9]+)*", name):
             raise ValueError(f"{source.name}: use a lowercase snake_case tool name, at most 56 characters")
         try:
-            command = source.read_text()
+            command = source.read_text(encoding="utf-8")
             url, body = parse_curl(command)
             body, injected = split_bindings(body)
             headers = {}
@@ -142,24 +140,15 @@ def generate_project(curl_dir: Path, *, token_path: str | None = None) -> tuple[
                         raise ValueError("Duplicate templated header")
                     headers[key.strip()] = value.strip()
             operation = {"url": url, "auth": "待填写"}
-            if existing is not None and name in existing.operations:
-                operation.update(existing.operations[name].model_dump(exclude_unset=True))
-                # The sample supplies the endpoint; reviewed deployment rules supply auth/injection.
-                operation["url"] = url
-                inherited_headers = operation.pop("headers", {})
-                inherited_headers = {key.lower(): value for key, value in inherited_headers.items()}
-                headers = combine_rules(inherited_headers, {key.lower(): value for key, value in headers.items()})
-                injected = combine_rules(operation.pop("inject_body", {}), injected)
-            elif (curl_dir.parent / "auth_curls" / source.name).is_file():
+            if (curl_dir.parent / "auth_curls" / source.name).is_file():
                 operation["auth"] = {"curl": f"auth_curls/{source.name}",
                                      "token_path": token_path or "待填写"}
             if headers:
                 operation["headers"] = headers
             if injected:
                 operation["inject_body"] = injected
-            arguments = remove_injected(body, injected)
-            item = generate_spec(url, arguments, name)
-            if injected and not arguments:
+            item = generate_spec(url, body, name)
+            if injected and not body:
                 item["paths"][urlsplit(url).path or "/"]["post"]["requestBody"]["content"]["application/json"]["schema"]["additionalProperties"] = False
         except ValueError as exc:
             raise ValueError(f"{source.name}: {exc}") from None
@@ -172,34 +161,8 @@ def generate_project(curl_dir: Path, *, token_path: str | None = None) -> tuple[
                 raise ValueError(f"Duplicate POST path in {previous}.txt and {source.name}; different hosts do not disambiguate tools")
             spec["paths"].update(item["paths"])
         operations[name] = operation
-    return spec, {"version": 1, "name": existing.name if existing else curl_dir.parent.name,
+    return spec, {"version": 1, "name": curl_dir.parent.name,
                   "openapi": "openapi.draft.json", "operations": operations}
-
-
-def combine_rules(existing: dict, explicit: dict) -> dict:
-    result = copy.deepcopy(existing)
-    for key, value in explicit.items():
-        if key not in result:
-            result[key] = value
-        elif isinstance(result[key], dict) and isinstance(value, dict) and result[key] and value:
-            result[key] = combine_rules(result[key], value)
-        elif result[key] != value:
-            raise ValueError("cURL placeholders conflict with config.local.yaml; reconcile the rules before generating")
-    return result
-
-
-def remove_injected(arguments: dict, injected: dict) -> dict:
-    result = copy.deepcopy(arguments)
-    for key, value in injected.items():
-        if key not in result:
-            continue
-        if isinstance(value, dict) and value and isinstance(result[key], dict):
-            remaining = remove_injected(result[key], value)
-            if remaining:
-                result[key] = remaining
-                continue
-        result.pop(key)
-    return result
 
 
 def split_bindings(body: dict) -> tuple[dict, dict]:
@@ -230,8 +193,6 @@ def write_drafts(output_dir: Path, spec: dict, config: dict, *, source_dir: Path
                 if not source.is_file():
                     raise ValueError("Referenced auth cURL file does not exist")
                 auth["curl"] = os.path.relpath(source, output_dir.resolve())
-            elif isinstance(auth, str) and ":" in auth and output_dir.resolve() != source_dir:
-                raise ValueError("Script auth drafts must be generated in the original project directory; script dependencies are not copied")
     outputs = {
         output_dir / "openapi.draft.json": json.dumps(spec, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
         output_dir / "config.draft.yaml": (
@@ -249,7 +210,7 @@ def write_drafts(output_dir: Path, spec: dict, config: dict, *, source_dir: Path
     try:
         for path, encoded in outputs.items():
             path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("x") as target:
+            with path.open("x", encoding="utf-8") as target:
                 created.append(path)
                 target.write(encoded)
     except OSError:
@@ -272,7 +233,7 @@ def main():
     parser.add_argument("curl_dir", type=Path, nargs="?", default=Path("curls"),
                         help="Directory with one Bash-style JSON POST cURL per tool_name.txt")
     parser.add_argument("--output-dir", type=Path, help="Draft destination; defaults to the parent of curls/")
-    parser.add_argument("--token-path", help="Confirmed JSON Pointer for newly matched auth_curls files; never overrides existing auth rules")
+    parser.add_argument("--token-path", help="Confirmed JSON Pointer for matching auth_curls files, e.g. /access_token")
     args = parser.parse_args()
     output = args.output_dir or args.curl_dir.resolve().parent
     try:

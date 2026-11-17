@@ -1,5 +1,6 @@
 """Exercise the deployed entry point with .env and real MCP transports."""
 import asyncio
+import copy
 import json
 import os
 import shlex
@@ -17,6 +18,7 @@ import yaml
 from dotenv import dotenv_values
 from fastmcp import Client
 from fastmcp.client.transports import StdioTransport, StreamableHttpTransport
+from curl_mcp.body import merge
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT = ROOT / "projects/insurance-tools"
@@ -293,15 +295,28 @@ async def test_curl_directory_to_matching_drafts_to_stdio_calls(configured_env, 
     sources.mkdir()
     formal = yaml.safe_load((project / "config.local.yaml").read_text())
     samples = json.loads((ROOT / "tests/fixtures/source_requests.json").read_text())
+    arguments = copy.deepcopy(EXAMPLES)
+
+    def add_literal_fields(target, injected):
+        # Literal samples remain model arguments; only explicit placeholders are injected.
+        for key, value in injected.items():
+            if isinstance(value, dict) and value:
+                add_literal_fields(target.setdefault(key, {}), value)
+            elif not (isinstance(value, str) and value.startswith('${')):
+                target[key] = value
+
     for name in EXAMPLES:
         url = formal["operations"][name]["url"]
         body = samples[name]["body"]
         body.pop("trace_id", None)
         body.pop("traceId", None)
+        merge(body, formal['operations'][name].get('inject_body', {}))
+        add_literal_fields(arguments[name], formal['operations'][name].get('inject_body', {}))
         (sources / f"{name}.txt").write_text(
             "curl " + shlex.quote(url) + " --header 'token: ${token}' --json " + shlex.quote(json.dumps(body)))
     generated = subprocess.run(
-        [sys.executable, str(ROOT / "generate_openapi.py"), str(sources), "--output-dir", str(project / "draft")],
+        [sys.executable, str(ROOT / "generate_openapi.py"), str(sources), "--output-dir", str(project / "draft"),
+         '--token-path', '/access_token'],
         cwd=tmp_path, capture_output=True, text=True, timeout=15,
     )
     assert generated.returncode == 0, generated.stderr
@@ -311,8 +326,8 @@ async def test_curl_directory_to_matching_drafts_to_stdio_calls(configured_env, 
     for name, operation in config["operations"].items():
         original = formal["operations"][name]
         assert operation["auth"]["token_path"] == original["auth"]["token_path"]
-        assert operation.get("inject_body", {}) == original.get("inject_body", {})
         assert (project / "draft" / operation["auth"]["curl"]).resolve() == (project / original["auth"]["curl"]).resolve()
+    assert config['operations']['policy_query']['inject_body'] == {'empno': '${env.MCP_AGENT_NUMBER}'}
     assert not (project / "draft/auth_curls").exists()
     assert not (project / "draft/.env").exists()
     # No hand-written fixes between generation and startup.
@@ -325,7 +340,7 @@ async def test_curl_directory_to_matching_drafts_to_stdio_calls(configured_env, 
                                cwd=str(tmp_path))
     async with Client(transport) as client:
         assert {tool.name for tool in await client.list_tools()} == set(EXAMPLES)
-        for name, args in EXAMPLES.items():
+        for name, args in arguments.items():
             result = await client.call_tool(name, args)
             path = urlsplit(formal["operations"][name]["url"]).path
             assert result.data == {"code": 0, "data": {"fixture": True, "path": path}}
@@ -339,6 +354,43 @@ async def test_curl_directory_to_matching_drafts_to_stdio_calls(configured_env, 
                 assert body["extra_input_params"]["policySearchParseArgs"]["query"] == args["extra_input_params"]["policySearchParseArgs"]["query"]
     assert len(upstream[1]) == 20
     assert sum(call[0].path == "/token" for call in upstream[1]) == 10
+
+
+async def test_generated_customer_query_preserves_curl_request_over_stdio(configured_env, upstream, tmp_path):
+    project = configured_env.parent / 'projects/insurance-tools'
+    curls = project / 'curls'
+    curls.mkdir()
+    args = {'conditions': [{'field': 'clientSex', 'operator': 'MATCH', 'value': '男'}],
+            'queryLogic': 'or', 'pageNo': '1', 'pageSize': '10'}
+    source_body = {**args, 'agentNo': '${env.MCP_AGENT_NUMBER}'}
+    url = upstream[0] + '/new/customer-search/search'
+    (curls / 'customer_query.txt').write_text(
+        'curl --request POST ' + shlex.quote(url) + " --header 'token: ${token}' --json "
+        + shlex.quote(json.dumps(source_body, ensure_ascii=False)), encoding='utf-8')
+    # The copied old deployment injects lowercase agentno and points to another route.
+    old = yaml.safe_load((project / 'config.local.yaml').read_text())
+    assert 'agentno' in old['operations']['customer_query']['inject_body']
+    result = subprocess.run(
+        [sys.executable, str(ROOT / 'generate_openapi.py'), str(curls),
+         '--output-dir', str(project / 'draft'), '--token-path', '/access_token'],
+        capture_output=True, text=True, timeout=15)
+    assert result.returncode == 0, result.stderr
+    before = {p.name: p.read_bytes() for p in (project / 'draft').iterdir()}
+    transport = StdioTransport(command=sys.executable, args=[str(ROOT / 'server.py'),
+        '--env-file', str(configured_env), '--config', str(project / 'draft/config.draft.yaml')], cwd=str(tmp_path))
+    async with Client(transport) as client:
+        tools = await client.list_tools()
+        assert [tool.name for tool in tools] == ['customer_query']
+        assert set(tools[0].input_schema['properties']) == set(args)
+        result = await client.call_tool('customer_query', args)
+        assert result.data == {'code': 0, 'data': {'fixture': True, 'path': '/new/customer-search/search'}}
+    assert len(upstream[1]) == 2
+    assert upstream[1][0][0].path == '/token'
+    sent_url, sent_headers, sent_body = upstream[1][1]
+    assert sent_url.path == '/new/customer-search/search'
+    assert sent_headers['token'] == 'token-customer_query'
+    assert sent_body == {**args, 'agentNo': 'fixture-agent'}
+    assert all((project / 'draft' / name).read_bytes() == data for name, data in before.items())
 
 
 @pytest.mark.parametrize('absolute_output', [False, True])

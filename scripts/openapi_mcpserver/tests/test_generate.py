@@ -193,52 +193,81 @@ async def test_generated_schema_can_register_and_call_through_fastmcp():
         await runtime.aclose()
 
 
-def test_generation_reuses_reviewed_auth_and_hides_injected_fields(tmp_path):
+async def test_curls_are_authoritative_despite_stale_same_named_operation(tmp_path):
     sources = tmp_path / 'curls'
     sources.mkdir()
     auth_dir = tmp_path / 'auth_curls'
     auth_dir.mkdir()
-    (auth_dir / 'shared.txt').write_text("curl '${env.AUTH_URL}'")
-    (sources / 'query.txt').write_text(curl({'query': 'hello', 'empno': 'sample-agent',
-                                          'extra': {'query': 'keep', 'time': 'sample-time'}}, '/query'))
+    (auth_dir / 'query.txt').write_text("curl '${env.AUTH_URL}'")
+    (sources / 'query.txt').write_text(curl({'query': 'hello', 'agentNo': '${env.AGENT}',
+                                          'extra': {'query': 'keep', 'time': '${time_utc8}'}}, '/query')
+                                      + " -H 'token: ${token}'")
     existing = {'name': 'reviewed', 'operations': {'query': {
         'url': 'https://old.invalid/query',
         'auth': {'curl': 'auth_curls/shared.txt', 'token_path': '/data/token'},
         'headers': {'Authorization': 'Bearer ${token}'},
-        'inject_body': {'empno': '${env.AGENT}', 'extra': {'time': '${time_utc8}'}},
+        'inject_body': {'agentno': '${env.WRONG_AGENT}', 'extra': {'time': 'stale-time'}},
         'timeout_seconds': 75.0,
     }}}
     (tmp_path / 'config.local.yaml').write_text(yaml.safe_dump(existing))
-    spec, config = generate_project(sources)
+    spec, config = generate_project(sources, token_path='/access_token')
     op = config['operations']['query']
     assert op['url'] == 'https://upstream.test.invalid/query'
-    assert op['auth'] == existing['operations']['query']['auth']
-    assert op['timeout_seconds'] == 75.0
+    assert config['name'] == tmp_path.name
+    assert op['auth'] == {'curl': 'auth_curls/query.txt', 'token_path': '/access_token'}
+    assert 'timeout_seconds' not in op
+    assert op['headers'] == {'token': '${token}'}
+    assert op['inject_body'] == {'agentNo': '${env.AGENT}', 'extra': {'time': '${time_utc8}'}}
+    # An old or malformed config is not an input, even if it has matching tool names.
+    (tmp_path / 'config.local.yaml').write_text('not: [valid yaml')
+    assert generate_project(sources, token_path='/access_token') == (spec, config)
     props = spec['paths']['/query']['post']['requestBody']['content']['application/json']['schema']['properties']
     assert set(props) == {'query', 'extra'}
     assert set(props['extra']['properties']) == {'query'}
     draft = tmp_path / 'draft'
     write_drafts(draft, spec, config, source_dir=tmp_path)
     assert not (draft / "auth_curls").exists()
-    assert config["operations"]["query"]["auth"]["curl"] == "auth_curls/shared.txt"
-    loaded, _ = load(draft / 'config.draft.yaml')
-    assert loaded.operations['query'].auth.token_path == '/data/token'
-    assert loaded.operations['query'].auth.curl == '../auth_curls/shared.txt'
+    loaded, loaded_spec = load(draft / 'config.draft.yaml')
+    assert loaded.operations['query'].auth.token_path == '/access_token'
+    assert loaded.operations['query'].auth.curl == '../auth_curls/query.txt'
     assert not (draft / '.env').exists()
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        if request.url.host == 'auth.invalid':
+            return httpx.Response(200, json={'access_token': 'fresh-token'})
+        assert request.url == 'https://upstream.test.invalid/query'
+        assert request.headers['token'] == 'fresh-token'
+        assert 'Authorization' not in request.headers
+        body = json.loads(request.content)
+        assert body.keys() == {'query', 'agentNo', 'extra'}
+        assert body['agentNo'] == 'current-agent'
+        assert body['extra']['query'] == 'keep'
+        assert body['extra']['time'] != 'stale-time'
+        return httpx.Response(200, json={'ok': True})
+
+    runtime = Runtime(loaded, loaded_spec, httpx.MockTransport(handler),
+                      env={'AUTH_URL': 'https://auth.invalid/token', 'AGENT': 'current-agent'})
+    try:
+        async with Client(runtime.server) as client:
+            result = await client.call_tool('query', {'query': 'hello', 'extra': {'query': 'keep'}})
+            assert result.data == {'ok': True}
+        assert len(requests) == 2
+    finally:
+        await runtime.aclose()
 
 
-def test_insurance_curls_keep_fixed_sources_out_of_generated_tool_arguments():
+def test_literal_samples_are_not_hidden_by_unrelated_deployment_config():
     project = ROOT / 'projects/insurance-tools'
     spec, config = generate_project(project / 'curls')
     operations = {item['post']['operationId']: item['post'] for item in spec['paths'].values()}
     for name, source in [('faq_search', 'askbob'), ('product_retrieve', 'product_wiki'),
                          ('benefit_search', 'quanyi_wiki')]:
-        assert config['operations'][name]['inject_body']['source'] == source
+        assert 'source' not in config['operations'][name].get('inject_body', {})
         schema = operations[name]['requestBody']['content']['application/json']['schema']
-        assert 'source' not in schema['properties']
+        assert schema['properties']['source']['type'] == 'string'
         assert 'source' not in schema.get('required', [])
-    assert config['operations']['policy_parse']['inject_body']['trace_id'] == '${trace_id}'
-    assert 'trace_id' not in operations['policy_parse']['requestBody']['content']['application/json']['schema']['properties']
 
 
 def test_new_project_matches_auth_filename_but_requires_confirmed_token_path(tmp_path):
@@ -255,15 +284,17 @@ def test_new_project_matches_auth_filename_but_requires_confirmed_token_path(tmp
     assert Settings.model_validate(confirmed).operations['query'].auth.token_path == '/data/access_token'
 
 
-def test_conflicting_explicit_placeholder_is_not_silently_overwritten(tmp_path):
+def test_explicit_placeholder_needs_no_existing_config(tmp_path):
     sources = tmp_path / 'curls'
     sources.mkdir()
     (sources / 'query.txt').write_text(curl({'query': 'hello', 'empno': '${env.OTHER}'}))
     config = {'operations': {'query': {'url': 'https://api.invalid/query', 'auth': None,
                                       'inject_body': {'empno': '${env.AGENT}'}}}}
     (tmp_path / 'config.local.yaml').write_text(yaml.safe_dump(config))
-    with pytest.raises(ValueError, match='conflict'):
-        generate_project(sources)
+    with_existing = generate_project(sources)
+    (tmp_path / 'config.local.yaml').unlink()
+    assert generate_project(sources) == with_existing
+    assert with_existing[1]['operations']['query']['inject_body'] == {'empno': '${env.OTHER}'}
 
 
 def test_drafts_do_not_read_or_overwrite_unrelated_auth_assets(tmp_path):
