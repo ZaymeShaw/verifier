@@ -1,3 +1,4 @@
+import json
 import sqlite3
 
 import pytest
@@ -45,6 +46,22 @@ def test_partial_rerun_preserves_unselected_rows_without_history(store):
         assert db.execute("SELECT COUNT(*) FROM current_cases").fetchone()[0] == 2
         assert db.execute("SELECT COUNT(*) FROM current_batches").fetchone()[0] == 1
         assert db.execute("SELECT COUNT(*) FROM current_cases WHERE run_json LIKE '%old:1%'").fetchone()[0] == 0
+
+
+def test_partial_rerun_compares_case_content_not_json_format(store):
+    cases = [case("a", "查保单"), case("b")]
+    complete(store, "old", cases)
+    # 实例数据可能经 JSON 导出再写回，键顺序、缩进和 Unicode 转义不代表用例变化。
+    serialized = json.dumps(dict(reversed(list(cases[0].items()))), indent=2, ensure_ascii=True)
+    with sqlite3.connect(store.path) as db:
+        db.execute("UPDATE current_cases SET case_json=? WHERE project='p' AND position=0", (serialized,))
+    with pytest.raises(ValueError, match="变化"):
+        store.start("p", "changed", [case("a", "查客户")], [0])
+    assert store.load("p")["batch"]["job_id"] == "old"
+    complete(store, "new", [cases[0]], [0], "new-result")
+    loaded = store.load("p")
+    assert [r["request_key"] for r in loaded["runs"]] == ["new:0", "old:1"]
+    assert loaded["cases"][0]["case"] == cases[0]
 
 
 def test_duplicate_case_ids_keep_distinct_row_identity(store):

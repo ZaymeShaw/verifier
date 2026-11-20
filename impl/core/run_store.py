@@ -170,7 +170,7 @@ class LatestRunStore:
                 raise ValueError("pool_indexes 必须与提交用例一一对应，且不能重复")
             for position, case in zip(pool_indexes, cases):
                 row = db.execute("SELECT case_json FROM current_cases WHERE project=? AND position=?", (project, position)).fetchone()
-                if not row or row["case_json"] != _json(case):
+                if not row or _json(json.loads(row["case_json"])) != _json(case):
                     raise ValueError("候选区已发生变化，请刷新后重新选择用例")
             identities = [{"job_id": job_id, "request_index": i, "request_key": f"{job_id}:{i}",
                            "request_case_id": str(case.get("id") or ""), "pool_index": position}
