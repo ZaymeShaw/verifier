@@ -489,7 +489,7 @@ def test_detective_refs_for_a_link_ride_on_that_link_not_the_flat_list():
 def test_trace_analysis_result_with_link_leads_fits_its_schema():
     from impl.core.axis_loop.acceptance import schema_errors
 
-    defs = json.load(open("impl/data/llm_probe_loop/axis_definitions.json", encoding="utf-8"))
+    defs = json.load(open("impl/projects/llm_probe_loop/eval_axes/axis_definitions.json", encoding="utf-8"))
     link_schema = defs["axes"]["trace_analysis"]["output"]["properties"]["views"]["items"]["properties"]["links"]
     assert schema_errors(link_schema, [{"link_id": "x", "link_type": "tool_execution", "leads": ["r1"]}]) == []
     assert schema_errors(link_schema, [{"link_id": "x", "link_type": "tool_execution", "leads": "r1"}])

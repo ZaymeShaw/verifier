@@ -24,7 +24,7 @@ from .llm import axis_llm
 from .materials import Case, registry as material_registry
 from .registry import PROJECT, definitions
 from .sources import ProbeSources
-from .validate import load_scenario_axes, parse_axes
+from .validate import load_scenario_axes, parse_axes, validate_cases
 
 MAIN_AXIS = "fulfillment"
 MAIN_VERDICT = "main_verdict"
@@ -152,4 +152,4 @@ def run_for_trace(spec: Any, trace: Any) -> Optional[dict[str, Any]]:
     return build_report(spec, trace)
 
 
-__all__ = ["MAIN_AXIS", "build_report", "main_axis_enabled", "main_axis_upstream", "run_for_trace"]
+__all__ = ["MAIN_AXIS", "build_report", "main_axis_enabled", "main_axis_upstream", "run_for_trace", "validate_cases"]

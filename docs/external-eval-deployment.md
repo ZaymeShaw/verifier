@@ -308,6 +308,11 @@ sudo chmod 600 ~eval-tunnel/.ssh/authorized_keys
 
 ## 更新代码
 
+`llm_probe_loop` 的轴定义和脚本属于 `impl/projects/llm_probe_loop/eval_axes/`，与材料协议一起发布。
+拉取代码并重启原端口后，服务直接读取新算法，原实例的场景、资料与用例结果继续使用。
+实例数据目录里的历史 `axis_definitions.json` / `axis_code/` 已退出读取路径，不做旧格式转换或兼容加载。
+批量启动前会校验当前算法与请求场景；失败返回配置错误，不创建批次或覆盖已有结果。
+
 `impl/data/` 里的资料（capability 预设、自由资料、mock、case 池）大约数 MB，**随代码一起部署**。评测机上的探测 URL（`1500X`）部署脚本会写回，不会被本机的 `8000` 盖掉。仍排除：`.env`、本地评测痕迹 `context_store` / `context_runtime`。槽位声明在 `impl/projects/<id>/materials.yaml`，随代码走。rsync 不用 `--delete`，评测机上多出来的文件会留着。
 
 ```bash

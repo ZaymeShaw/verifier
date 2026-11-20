@@ -70,6 +70,12 @@ VERIFIER_PORT=8022 bash run.sh server
 
 以上地址对应 `impl/config.yaml` 中默认的 `server.host` / `server.port`。
 
+更新代码后重启原端口即可沿用实例中的场景、服务端点、资料和用例结果。
+`llm_probe_loop` 的评测算法（`eval_axes/axis_definitions.json` 与 `axis_code/`）位于
+`impl/projects/llm_probe_loop/`，随代码一起更新，运行时不读取实例中的旧轴定义或脚本副本。
+批量运行会先检查所选场景与当前算法是否一致；配置有误直接拒绝启动，保留已有结果。
+需要比较不同算法版本时使用独立代码工作区；不同端口只隔离业务数据和运行记录。
+
 健康检查：
 
 ```bash

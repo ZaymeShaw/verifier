@@ -13,10 +13,28 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 
 HOOK_MODULE = "impl.projects.{project_id}.eval_axes"
 HOOK_SYMBOL = "run_for_trace"
+
+
+def validate_eval_axes_cases(project_id: str, cases: Sequence[dict[str, Any]]) -> None:
+    """批次创建或执行前校验项目评测配置；配置错误直接拒跑，不写成逐例评测结果。"""
+    if not cases:
+        return
+    module_name = HOOK_MODULE.format(project_id=project_id)
+    try:
+        found = importlib.util.find_spec(module_name)
+    except ModuleNotFoundError as exc:
+        if exc.name != module_name and not module_name.startswith(f"{exc.name}."):
+            raise
+        found = None
+    if found is None:
+        return
+    validate = getattr(importlib.import_module(module_name), "validate_cases", None)
+    if validate is not None:
+        validate(cases)
 
 
 def eval_axes_report(spec: Any, trace: Any, judge: Any) -> Optional[dict[str, Any]]:

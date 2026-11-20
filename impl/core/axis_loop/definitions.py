@@ -1,6 +1,7 @@
 """轴定义：一个轴 = 一条配置（spec/alg/axis_loop.md §3）。
 
-存储 `axis_definitions.json`（与场景预设 capability_map.json 同目录、同一种存法，页面读写）：
+存储 `impl/projects/<project>/eval_axes/axis_definitions.json`，与轴脚本、材料协议一起随代码发布。
+实例只保存场景预设、资料与运行结果，不保存评测算法副本。
 
     {"axes": {<id>: {...}}, "loops": {<id>: {...}}}
 
@@ -24,7 +25,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable, Optional
 
-from impl.core import capability_store
+from impl.core.capability_store import PROJECT_PATTERN
+from impl.core.project_config import PROJECTS_DIR
 
 FILL_MODEL, FILL_PROGRAM = "model", "program"
 EXECUTOR_MODEL, EXECUTOR_PROGRAM = "model", "program"
@@ -176,11 +178,13 @@ class Definitions:
 # ---- 读取 -------------------------------------------------------------------------------
 
 def store_path(project_id: str) -> Path:
-    return capability_store.store_path(project_id).with_name(STORE_NAME)
+    if not PROJECT_PATTERN.fullmatch(str(project_id or "")):
+        raise ValueError(f"非法 project id: {project_id!r}")
+    return PROJECTS_DIR / project_id / "eval_axes" / STORE_NAME
 
 
 def code_dir(project_id: str) -> Path:
-    return capability_store.store_path(project_id).with_name(CODE_DIR)
+    return store_path(project_id).with_name(CODE_DIR)
 
 
 def _load_code(directory: Path, label: str) -> Code:

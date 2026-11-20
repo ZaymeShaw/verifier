@@ -751,6 +751,8 @@ def batch_run(
     from .materials_store import require_materials
     require_materials(project_id)
     max_workers = min(resolve_batch_concurrency(concurrency), len(case_list))
+    from .eval_axes import validate_eval_axes_cases
+    validate_eval_axes_cases(project_id, case_list)
     runs_by_index: Dict[int, Dict[str, Any]] = {}
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {submit_with_context(executor, _batch_case, index, case, project_id): index for index, case in enumerate(case_list)}

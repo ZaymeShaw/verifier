@@ -4,7 +4,7 @@
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -98,3 +98,15 @@ def load_scenario_axes(scenario_id: str) -> ScenarioAxes:
     if not isinstance(entry, Mapping):
         raise ValueError(f"场景预设 {scenario_id!r} 不存在")
     return validate_scenario_entry(entry, owner=scenario_id)
+
+
+def validate_cases(cases: Sequence[Mapping[str, Any]]) -> None:
+    """按实际请求里的 capability_ref 校验；同场景一批只校验一次。"""
+    checked: set[str] = set()
+    for case in cases:
+        request = case.get("live_request") or {}
+        scenario_id = str(request.get("capability_ref") or "").strip()
+        # 内联 capability 请求没有场景轴，沿用项目既有的主判路径。
+        if scenario_id and scenario_id not in checked:
+            load_scenario_axes(scenario_id)
+            checked.add(scenario_id)

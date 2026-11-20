@@ -61,9 +61,9 @@ case ─► 加载：场景启用的轴 → 依赖、白名单、工具类别、
 |---|---|
 | `impl/core/axis_loop/` | 轴定义的加载与校验、材料表与白名单取值、台账、门禁、验收流水线、视图、标准校验库、子 loop 运行器、AxisLoop 组装、报告组装 |
 | `impl/projects/llm_probe_loop/axis_loop.py` | 项目接入：从 RunTrace 构造 case；登记本项目的内置材料取值函数；出 `build_report` 同形报告 |
-| `impl/data/llm_probe_loop/axis_definitions.json` | 轴定义存储（§3） |
-| `impl/data/llm_probe_loop/axis_code/<轴id>/` | 上传的 `checks.py`、`synth.py` |
-| `impl/data/llm_probe_loop/axis_code/loops/<loop名>/` | loop 的 `dispatch.py`；被调用启动的 loop 的 `checks.py`、`synth.py`（原 `axis_code/shared/<名>/`，10-25 挪） |
+| `impl/projects/llm_probe_loop/eval_axes/axis_definitions.json` | 随代码发布的轴定义（§3） |
+| `impl/projects/llm_probe_loop/eval_axes/axis_code/<轴id>/` | 随代码发布的 `checks.py`、`synth.py` |
+| `impl/projects/llm_probe_loop/eval_axes/axis_code/loops/<loop名>/` | loop 的 `dispatch.py`；被调用启动的 loop 的 `checks.py`、`synth.py` |
 
 ### 2.4 页面：先能从零配出一个场景（P10 第一步，10-27 定，待确认）
 
@@ -107,9 +107,9 @@ case ─► 加载：场景启用的轴 → 依赖、白名单、工具类别、
 
 ### 3.1 存储
 
-- 所有轴、所有 loop 的定义存成一个配置存储 `axis_definitions.json`，两节 `axes`、`loops`（10-25 定，`shared_tools` 并进 `loops`），读写机制与 `capability_map.json` 相同（`capability_store` 那一套，保存时校验形状）。
+- 所有轴、所有 loop 的定义存成 `impl/projects/<project>/eval_axes/axis_definitions.json`，两节 `axes`、`loops`。它与同目录的 `axis_code/`、项目材料协议一起随代码版本发布，不复制到实例数据目录，不从实例数据读取。场景选择的轴、描述、信息源、服务端点仍由实例维护。改变评测算法使用独立代码工作区，不能仅靠端口隔离算法版本。
 - 说明正文（这个轴的"system prompt"）是其中一个文本字段，只写判法。
-- 上传的代码三种固定插口（10-22 定）：`checks.py` 定义 `check(view)`，`synth.py` 定义 `synthesize(view)`，放在 `axis_code/<轴>/`；`dispatch.py` 定义 `dispatch(view)`，挂在 loop 上，放在 `axis_code/loops/<loop名>/`（10-25 定）。加载时检查名字与参数个数。
+- 轴脚本三种固定插口：`checks.py` 定义 `check(view)`，`synth.py` 定义 `synthesize(view)`，放在同目录的 `axis_code/<轴>/`；`dispatch.py` 定义 `dispatch(view)`，挂在 loop 上，放在 `axis_code/loops/<loop名>/`。加载时检查名字与参数个数。
 
 ### 3.2 一个轴的字段
 
@@ -163,6 +163,8 @@ case ─► 加载：场景启用的轴 → 依赖、白名单、工具类别、
 - 所属 loop 不存在；`start: case` 的 loop 不是恰好一个；`start: tool` 的 loop 里放了轴；
 - 依赖会卡死（10-25 用户定）：任务当节点，两种边——任务的依赖（u → t），以及 ready loop 要等齐才起带来的被迫等（这个 loop 等的每个任务 → loop 里的每个任务）；有圈就报错并列出圈上的任务。case loop 一开始就在跑，不带来被迫等，所以经过它的来回（说法抽取 → 核事实 loop → 兑现）是一条直线，不报。取代原来的"依赖成环"与"loop 之间成环"；
 - 有 `dispatch.py` 的 loop 里有轴没配 `synth.py`。
+
+批量入口在创建批次、替换用例结果、启动 worker 前，按请求的 `capability_ref` 对每个不同场景执行上述校验。失败直接拒绝整个批次（HTTP 422；CLI 抛配置错误），不生成逐例 `not_evaluable`。校验不发业务请求或模型请求；没有场景轴的内联 capability 请求仍走既有主判路径。
 
 ## 4. 材料（10-21 定）
 

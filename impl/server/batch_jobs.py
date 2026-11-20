@@ -53,7 +53,9 @@ def start_batch(data: Dict[str, Any]) -> Dict[str, Any]:
     cases = [to_dict(parse_mock_case(case, project_id=project)) for case in (data.get("cases") or [])]
     if cases:
         from ..core.materials_store import require_materials
+        from ..core.eval_axes import validate_eval_axes_cases
         require_materials(project)
+        validate_eval_axes_cases(project, cases)
     job_id = uuid.uuid4().hex
     if os.environ.get(INSTANCE_ENV):
         with log_lock(exclusive=True):

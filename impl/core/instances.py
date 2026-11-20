@@ -95,7 +95,8 @@ def resolve_instance(port, *, repository_root=None, relay_start=None):
 
 
 def _seed(root, identity):
-    """新实例的出厂数据：仓库 impl/data/ 下各项目目录（场景、登记、轴定义与代码、资料）拷一份，之后各自维护。
+    """新实例的出厂数据：仓库 impl/data/ 下各项目目录（场景、登记、资料）拷一份，之后各自维护。
+    评测轴定义与脚本属于 impl/projects/ 项目代码，不进入实例数据。
     运行期产物（context_store、sqlite、case_pools 等不在项目目录里的）不拷。"""
     source = root / 'impl/data'
     projects = {p.name for p in (root / 'impl/projects').iterdir() if p.is_dir()} if (root / 'impl/projects').is_dir() else set()

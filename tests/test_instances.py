@@ -37,21 +37,24 @@ def test_port_bindings_are_stable_and_locks_exclude_other_processes(tmp_path, mo
 def test_new_instance_starts_from_repository_project_data(tmp_path, monkeypatch):
     monkeypatch.setattr(instances, 'ROOT', tmp_path)
     monkeypatch.setattr(instances, '_port_available', lambda port: True)
-    (tmp_path / 'impl/projects/demo').mkdir(parents=True)
+    code = tmp_path / 'impl/projects/demo/eval_axes'
+    (code / 'axis_code/x').mkdir(parents=True)
+    (code / 'axis_definitions.json').write_text('{}')
+    (code / 'axis_code/x/checks.py').write_text('')
     data = tmp_path / 'impl/data'
-    (data / 'demo/axis_code/x/__pycache__').mkdir(parents=True)
-    (data / 'demo/axis_definitions.json').write_text('{}')
-    (data / 'demo/axis_code/x/checks.py').write_text('')
+    (data / 'demo/materials/__pycache__').mkdir(parents=True)
+    (data / 'demo/capability_map.json').write_text('{}')
+    (data / 'demo/materials/rules.md').write_text('rules')
     (data / 'demo/capability_map.json.bak_1').write_text('')
     (data / 'context_store').mkdir()
     (data / 'latest_runs.sqlite3').write_text('')
     first = instances.resolve_instance(18031)
     seeded = instances.instance_root(first['id'], tmp_path) / 'data'
     assert sorted(str(p.relative_to(seeded)) for p in seeded.rglob('*')) == [
-        'demo', 'demo/axis_code', 'demo/axis_code/x', 'demo/axis_code/x/checks.py', 'demo/axis_definitions.json']
-    (seeded / 'demo/axis_definitions.json').write_text('{"edited": true}')
+        'demo', 'demo/capability_map.json', 'demo/materials', 'demo/materials/rules.md']
+    (seeded / 'demo/capability_map.json').write_text('{"edited": true}')
     assert instances.resolve_instance(18031) == first          # 已绑定的端口不再拷，实例里的改动保留
-    assert (seeded / 'demo/axis_definitions.json').read_text() == '{"edited": true}'
+    assert (seeded / 'demo/capability_map.json').read_text() == '{"edited": true}'
 
 
 def test_instance_data_and_registered_artifacts_are_disjoint(tmp_path, monkeypatch):

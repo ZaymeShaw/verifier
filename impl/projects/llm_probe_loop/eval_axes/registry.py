@@ -51,7 +51,7 @@ def axis_types() -> Mapping[str, AxisInfo]:
 
 
 class _Lazy(Mapping):
-    """AXIS_TYPES：每次读都按当前存储算（页面改了定义不用重启）。"""
+    """AXIS_TYPES：每次读都按当前项目代码中的定义算。"""
 
     def __getitem__(self, key):
         return axis_types()[key]
