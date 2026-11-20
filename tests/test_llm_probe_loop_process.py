@@ -110,15 +110,25 @@ def resources(texts):
     table = ResourceTable()
     for ref, parts in texts.items():
         table.mount(f"trace://{ref}", "record_set", {"fields": {"v": {"status": "available", "value": parts}}}, name=ref)
-    return Visible(table, {"m": {"records": [{"id": ref} for ref in texts]}})
+    return Visible(table, [f"trace://{ref}" for ref in texts])
 
 
 def actual(axis):
-    """达到也要引原文：从侦探给这个轴的记录里摘一段（运行到实际阶段时才有）。"""
+    """达到也要引原文：从侦探给这个轴的 full_uris 所指的 ResourceTable 记录里摘一段。"""
     from impl.core.axis_loop.text import leaves
     view = next(v for v in CURRENT["table"].results["trace_analysis"]["views"] if v["axis"] == axis)
-    found = next(((r["id"], s) for r in view["full"]["records"] for s in leaves(r["fields"])
-                  if len(s.strip()) >= 4 and "\\" not in s), None)
+    res_table = CURRENT["table"].resources
+    found = None
+    for uri in view["full_uris"]:
+        block = res_table.get(uri)
+        if block is None:
+            continue
+        for s in leaves(block.body.get("fields") or {}):
+            if len(s.strip()) >= 4 and "\\" not in s:
+                found = (block.descriptor.name, s)
+                break
+        if found:
+            break
     if not found:   # 侦探没给这个轴任何记录：看不到就引不出，只能无法核
         return {**ACTUAL, "actual": [{**ACTUAL["actual"][0], "verdict": "无法核"}]}
     return {**ACTUAL, "actual": [{**ACTUAL["actual"][0], "quotes": [{"ref": found[0], "quote": found[1][:30]}]}]}
@@ -153,14 +163,23 @@ def before_submit(script, task):
 
 
 def _output_only_texts(table, axis):
-    """这个轴 full 里有、input 里没有的字段正文（够长、能认出来的那些）。"""
+    """这个轴 full_uris 里有、input_uris 里没有的字段正文（够长、能认出来的那些）。"""
+    from impl.projects.llm_probe_loop.process_axes import _uri_pair
     out = set()
     view = next(v for v in table.results["trace_analysis"]["views"] if v["axis"] == axis)
-    seen_input = {(r["id"], f) for r in view["input"]["records"] for f in r["fields"]}
-    for r in view["full"]["records"]:
-        for name, info in r["fields"].items():
+    seen_input = {_uri_pair(u) for u in view["input_uris"]}
+    for uri in view["full_uris"]:
+        part = table.resources.part(uri)
+        if part is None:
+            continue
+        block, node = part
+        rid = block.descriptor.name
+        raw_fields = block.body.get("fields") or {}
+        _, target_field = _uri_pair(uri)
+        cand = [(target_field, raw_fields.get(target_field))] if (node and target_field) else list(raw_fields.items())
+        for name, info in cand:
             value = info.get("value") if isinstance(info, dict) else None
-            if (r["id"], name) not in seen_input and isinstance(value, str) and len(value) >= 30:
+            if (rid, name) not in seen_input and (rid, "") not in seen_input and isinstance(value, str) and len(value) >= 30:
                 out.add(value[:60])
     return out
 
@@ -171,6 +190,10 @@ def test_process_axes_run_and_expected_loop_never_sees_output_side():
     assert [l["id"] for l in report.loops] == ["trace_analysis", "process_expected", "process"]
     groups = sorted({r for r in script.seen if r.startswith("process_expected[")})
     assert 1 <= len(groups) < len(PROCESS_AXES)
+    # 公共资源区段落头在 process 首条消息里只出现一次，且被多轴共用的同一记录正文只嵌一份（不再按轴复印多份）
+    first_process_msg = "\n".join(str(m.get("content")) for m in script.seen["process"][0])
+    assert ("\n" + first_process_msg).count("\n【resources】\n") == 1
+    assert first_process_msg.count('"id": "turn1/records/run"') == 1
     # 样本这一轮没调大模型、程序环节表也没列出后端调用（脚本侦探不补环节），这两个轴拿不到记录：引不出原文，只能无法核
     blind = {"tool_execution", "model_capability"}
     assert {a: report.results[a]["verdict"] for a in PROCESS_AXES} == {a: "not_evaluable" if a in blind else "sound" for a in PROCESS_AXES}
@@ -406,18 +429,19 @@ def test_met_needs_a_quote_that_is_in_the_record():
 
 
 def test_detective_routes_a_record_to_every_axis_it_names():
-    """侦探偏召回：点名的轴都拿到这个环节（加上环节类型本身对应的轴）。"""
+    """侦探偏召回：点名的轴都拿到这个环节的线索（加上环节类型本身对应的轴）；环节本身只归它的类型对应的轴。"""
     from impl.projects.llm_probe_loop.process_axes import axis_links, merge_suspects
 
     table = {"tool_execution:x": {"link_id": "tool_execution:x", "link_type": "tool_execution",
                                   "input": [{"ref": "r1"}], "output": [{"ref": "r1"}]}}
     suspects = merge_suspects(
         [], [{"link_id": "tool_execution:x", "why": "w", "source_refs": ["r1"], "axes": ["model_capability"]}],
-        [{"link_type": "tool_execution", "axes": ["knowledge_data"], "input_refs": ["r2"], "output_refs": ["r3"],
-          "why": "后端返回", "source_refs": ["r3"]}], table)
+        [{"link_type": "tool_execution", "axes": ["knowledge_data"], "input_refs": ["r2/fields/input"], "output_refs": ["r3/fields/output"],
+          "why": "后端返回", "source_refs": ["r3/fields/output"]}], table)
     assert suspects[0]["axes"] == ["tool_execution", "model_capability"]
     assert suspects[1]["axes"] == ["tool_execution", "knowledge_data"]
-    assert [l["link_id"] for l in axis_links("knowledge_data", [], suspects)] == [suspects[1]["link_id"]]
+    assert axis_links("knowledge_data", [], suspects) == []
+    assert [l["link_id"] for l in axis_links("tool_execution", [], suspects)] == [suspects[1]["link_id"]]
 
 
 def test_detective_named_record_reaches_that_axis_material():
@@ -433,8 +457,8 @@ def test_detective_named_record_reaches_that_axis_material():
                                        "source_refs": ["gate"], "axes": ["model_capability"]}], "new_link_suspects": []}
     views = {v["axis"]: v for v in analysis_result(trace, own)["views"]}
     assert views["model_capability"]["links"] == []
-    assert [r["id"] for r in views["model_capability"]["full"]["records"]] == ["gate"]
-    assert views["model_capability"]["input"]["records"] == []
+    assert views["model_capability"]["full_uris"] == ["trace://gate"]
+    assert views["model_capability"]["input_uris"] == []
     assert views["model_capability"]["leads"] == ["gate"]
     assert views["planning_routing"]["links"][0]["leads"] == ["gate"] and views["planning_routing"]["leads"] == []
 
@@ -631,3 +655,377 @@ def test_build_report_passes_only_enabled_axis_notes_to_case(monkeypatch):
     ea.build_report(None, trace, scenario_id="scn")
     assert captured["notes"] == {"expectations": "只取本轮交付要求", "blocking": "", "fulfillment": "", "main_verdict": ""}
     assert "intent_understanding" not in captured["notes"]
+
+
+def test_detective_field_refs_open_only_named_fields_and_isolate_expected_output():
+    """侦探写到字段层（记录编号/fields/字段名）：下游只开所指字段、不把整条记录的无关重字段全打开；
+    同记录既是表外环节输入字段又是输出字段时，本应阶段只保留输入字段、不漏输出字段。"""
+    from impl.core.axis_loop.view import CallView, TaskView
+    from impl.projects.llm_probe_loop.process_axes import analysis_result, check_analysis
+    from impl.projects.llm_probe_loop.eval_axes.registry import definitions as load_defs
+
+    dossier = {
+        "sources": [{"id": "turn1", "request_and_response": {"q": "查保单"}}],
+        "contents": {},
+        "records": [
+            {
+                "id": "turn1/records/observations/10",
+                "kind": "steps",
+                "turn": "turn1",
+                "name": "backend.policy.search",
+                "fields": {
+                    "input": {"status": "available", "value": {"query": "伏云平"}},
+                    "output": {"status": "available", "value": {"policies": ["P001_SECRET_OUTPUT"]}},
+                    "metadata": {"status": "available", "value": {"big_meta": "M" * 500}},
+                },
+            },
+            {
+                "id": "turn1/records/observations/28",
+                "kind": "steps",
+                "turn": "turn1",
+                "name": "rag.parent",
+                "fields": {
+                    "input": {"status": "available", "value": {"q": "条款"}},
+                    "output": {"status": "available", "value": {"docs": "BIG_PARENT_DOC_" * 200}},
+                    "metadata": {"status": "available", "value": {"trace": "x"}},
+                },
+            },
+        ],
+    }
+    links = [{
+        "link_id": "intent_understanding:turn1",
+        "link_type": "intent_understanding",
+        "turn": "turn1",
+        "input": [{"ref": "turn1", "field": "request_and_response"}],
+        "output": [{"ref": "turn1/records/observations/10", "field": "input"}],
+        "facts": {},
+    }]
+    trace = {"dossier": dossier, "links": links, "program_suspects": [], "coverage": [{"status": "succeeded"}]}
+
+    # 1) 校验：把记录头属性 name 写成 /fields/name、或只读了 input 却引 output → 明确拒绝
+    bad_own = {
+        "existing_link_suspects": [{
+            "link_id": "intent_understanding:turn1",
+            "why": "看步骤名",
+            "source_refs": ["turn1/records/observations/10/fields/name"],
+            "axes": ["intent_understanding"],
+        }],
+        "new_link_suspects": [{
+            "link_type": "tool_execution",
+            "input_refs": ["turn1/records/observations/10/fields/input"],
+            "output_refs": ["turn1/records/observations/10/fields/output"],
+            "why": "直连后端调用",
+            "source_refs": ["turn1/records/observations/28/fields/input"],
+            "axes": ["tool_execution", "knowledge_data"],
+        }],
+    }
+    errs = "\n".join(check_analysis(trace, bad_own, {("turn1/records/observations/10", "input")}))
+    assert "fields/name" in errs and "指步骤本身属性" in errs
+    assert "turn1/records/observations/10/fields/output" in errs
+    assert "turn1/records/observations/28/fields/input" in errs
+
+    # 2) 读过整条记录后，引其下任意真实字段通过校验（通过 checks.py 入口验 CallView 解析）
+    good_own = {
+        **bad_own,
+        "existing_link_suspects": [{
+            "link_id": "intent_understanding:turn1",
+            "why": "补看 rag 输入",
+            "source_refs": ["turn1/records/observations/28/fields/input"],
+            "axes": ["intent_understanding", "knowledge_data"],
+        }],
+    }
+    check_fn = load_defs().axes["trace_analysis"].code.check
+    read_call = CallView(
+        call_id="ta.c0", tool="read_material", category="", args={"name": "resources", "ids": ["obs"]}, batch=0,
+        text=json.dumps({"name": "resources", "records": [
+            {"id": "turn1/records/observations/10", "content": {}},
+            {"id": "turn1/records/observations/28", "path": "fields/input", "content": {}},
+            {"id": "turn1/records/observations/99", "error": "本次合计已到 60000 字"},
+        ]}),
+        structured=None, is_error=False,
+    )
+    tview = TaskView(task_id="trace_analysis", own=good_own, materials={"case.trace": trace}, calls=(read_call,))
+    assert check_fn(tview) == []
+
+    # 3) 合成结果：
+    # - tool_execution 本应 input_uris 只有 obs/10/fields/input，绝不含 obs/10/fields/output（同记录输出隔离）
+    # - intent_understanding / knowledge_data 实际 full_uris 只含 obs/28/fields/input，不含 3 万字的 obs/28/fields/output 和 metadata
+    out = analysis_result(trace, good_own)
+    by_axis = {v["axis"]: v for v in out["views"]}
+    assert by_axis["tool_execution"]["input_uris"] == ["trace://turn1/records/observations/10/fields/input"]
+    assert set(by_axis["tool_execution"]["full_uris"]) == {
+        "trace://turn1/records/observations/10/fields/input",
+        "trace://turn1/records/observations/10/fields/output",
+        "trace://turn1/records/observations/28/fields/input",
+    }
+    assert "trace://turn1/records/observations/28" not in by_axis["intent_understanding"]["full_uris"]
+    assert "trace://turn1/records/observations/28/fields/output" not in by_axis["intent_understanding"]["full_uris"]
+    assert "trace://turn1/records/observations/28/fields/input" in by_axis["knowledge_data"]["full_uris"]
+    assert "trace://turn1/records/observations/28" not in by_axis["knowledge_data"]["full_uris"]
+
+
+def test_off_map_link_belongs_only_to_its_link_type_axis_not_named_axes():
+    """表外环节按 link_type 归轴：侦探在 context_memory 表外环节多选 knowledge_data 时，不把内层输出端带进 knowledge_data 本应阶段，只走 leads 进实际阶段。"""
+    from impl.projects.llm_probe_loop.process_axes import analysis_result
+
+    field = lambda v, ref="": {"status": "available", "value": v, **({"ref": ref} if ref else {})}
+    dossier = {
+        "sources": [{"id": "turn1", "request_and_response": {"q": "按业务流水号查保单"}}],
+        "contents": {},
+        "records": [
+            {
+                "id": "obs/14",
+                "kind": "tool_calls",
+                "turn": "turn1",
+                "name": "tool.policy_search",
+                "fields": {
+                    "arguments": field({"bizno": "B1"}, "obs/14/in"),
+                    "input": field({"bizno": "B1"}, "obs/14/in"),
+                    "result": field({"notes": "未提供 clientno"}, "obs/14/out"),
+                    "output": field({"notes": "未提供 clientno"}, "obs/14/out"),
+                },
+            },
+            {
+                "id": "obs/15",
+                "kind": "steps",
+                "turn": "turn1",
+                "name": "backend.policy.search",
+                "fields": {
+                    "input": field({"bizno": "B1"}),
+                    "output": field({"rows": [{"policy_no": "P1"}]}),
+                    "metadata": field({"trace": "t"}),
+                },
+            },
+        ],
+    }
+    links = [{
+        "link_id": "knowledge_data:turn1",
+        "link_type": "knowledge_data",
+        "turn": "turn1",
+        "input": [{"ref": "obs/14", "field": "arguments"}],
+        "output": [{"ref": "obs/14", "field": "result"}],
+        "facts": {},
+    }]
+    trace = {"dossier": dossier, "links": links, "program_suspects": [], "coverage": [{"status": "succeeded"}]}
+    own = {
+        "existing_link_suspects": [],
+        "new_link_suspects": [
+            {
+                "link_type": "knowledge_data",
+                "axes": ["knowledge_data", "tool_execution"],
+                "input_refs": ["obs/15/fields/input"],
+                "output_refs": ["obs/15/fields/output"],
+                "why": "内层后端返回",
+                "source_refs": ["obs/15/fields/output"],
+            },
+            {
+                "link_type": "context_memory",
+                "axes": ["context_memory", "knowledge_data", "tool_execution"],
+                "input_refs": ["obs/15/fields/output"],
+                "output_refs": ["obs/14/fields/output"],
+                "why": "内层返回封装为工具输出",
+                "source_refs": ["obs/15/fields/output", "obs/14/fields/output"],
+            },
+        ],
+    }
+    res = analysis_result(trace, own)
+    views = {v["axis"]: v for v in res["views"]}
+    assert [l["link_type"] for l in views["knowledge_data"]["links"]] == ["knowledge_data", "knowledge_data"]
+    assert views["tool_execution"]["links"] == []
+    # knowledge_data 本应阶段绝不出现 obs/15/output、obs/14/result、obs/14/output
+    kd_in = set(views["knowledge_data"]["input_uris"])
+    assert "trace://obs/15/fields/output" not in kd_in
+    assert "trace://obs/14/fields/result" not in kd_in
+    assert "trace://obs/14/fields/output" not in kd_in
+    # 侦探点名的线索走 leads 进实际阶段 full_uris
+    assert "obs/14/fields/output" in views["knowledge_data"]["leads"]
+    assert "trace://obs/14/fields/output" in views["knowledge_data"]["full_uris"]
+    assert "trace://obs/15/fields/output" in views["knowledge_data"]["full_uris"]
+    assert set(views["tool_execution"]["leads"]) == {"obs/14/fields/output", "obs/15/fields/output"}
+
+
+def test_check_analysis_rejects_same_endpoint_or_alias_on_both_sides():
+    """单条表外环节的 input_refs 与 output_refs 不能写同一位置或同记录同一底层 ref 的别名。"""
+    from impl.projects.llm_probe_loop.process_axes import check_analysis
+
+    trace = {
+        "links": [],
+        "dossier": {
+            "sources": [],
+            "contents": {},
+            "records": [{
+                "id": "obs/20",
+                "kind": "tool_calls",
+                "fields": {
+                    "arguments": {"status": "available", "ref": "obs/20/in", "value": {}},
+                    "result": {"status": "available", "ref": "obs/20/out", "value": {}},
+                    "output": {"status": "available", "ref": "obs/20/out", "value": {}},
+                    "metadata": {"status": "available", "ref": "obs/20/meta", "value": {}},
+                },
+            }],
+        },
+    }
+    mk = lambda ins, outs: {
+        "existing_link_suspects": [],
+        "new_link_suspects": [{
+            "link_type": "knowledge_data", "axes": ["knowledge_data"],
+            "input_refs": ins, "output_refs": outs, "why": "w", "source_refs": ["obs/20/fields/metadata"],
+        }],
+    }
+    read_all = {("obs/20", "")}
+    assert check_analysis(trace, mk(["obs/20/fields/arguments"], ["obs/20/fields/output"]), read_all) == []
+    errs_same = "\n".join(check_analysis(trace, mk(["obs/20/fields/metadata"], ["obs/20/fields/metadata"]), read_all))
+    assert "同一个位置不能既是输入端又是输出端" in errs_same
+    errs_alias = "\n".join(check_analysis(trace, mk(["obs/20/fields/result"], ["obs/20/fields/output"]), read_all))
+    assert "同一个位置不能既是输入端又是输出端" in errs_alias
+
+
+def test_input_view_strips_same_ref_output_aliases_and_preserves_kept_alias_body():
+    """同记录同底层 ref 的 result 与 output：只摘一个时另一个一并摘除；下游显式把其中一个作输入时保留正文不悬空 same_as。"""
+    from impl.projects.llm_probe_loop.process_axes import input_view
+
+    dossier = {
+        "sources": [],
+        "contents": {},
+        "records": [
+            {
+                "id": "msg/1",
+                "kind": "messages",
+                "turn": "turn1",
+                "fields": {
+                    "input": {"status": "available", "ref": "msg/1/in", "value": "问题"},
+                    "output": {"status": "available", "ref": "msg/1/out", "value": "SECRET_OUT"},
+                    "result": {"status": "available", "ref": "msg/1/out", "value": "SECRET_OUT"},
+                },
+            },
+            {
+                "id": "step/2",
+                "kind": "steps",
+                "turn": "turn1",
+                "fields": {"output": {"status": "available", "ref": "step/2/out", "value": "NEXT"}},
+            },
+        ],
+    }
+    # 1) messages 会展开整条记录字段：link 只声明摘 result 时，同底层 ref 的 output 也一起摘掉
+    l1 = {"link_id": "L1", "link_type": "tool_execution", "turn": "turn1",
+          "input": [{"ref": "msg/1", "field": "input"}], "output": [{"ref": "msg/1", "field": "result"}]}
+    v1 = input_view(dossier, [l1])
+    assert set(v1["records"][0]["fields"]) == {"input"}
+
+    # 2) 上游摘 output、同轴下游显式把 result 当输入（keep 胜出）：只留 result 且正文不丢（不留悬空 same_as）
+    l2 = {"link_id": "L2", "link_type": "tool_execution", "turn": "turn1",
+          "input": [{"ref": "msg/1", "field": "input"}], "output": [{"ref": "msg/1", "field": "output"}]}
+    l3 = {"link_id": "L3", "link_type": "tool_execution", "turn": "turn1",
+          "input": [{"ref": "msg/1", "field": "result"}], "output": [{"ref": "step/2", "field": "output"}]}
+    v2 = input_view(dossier, [l2, l3])
+    rec_fields = {r["id"]: r["fields"] for r in v2["records"]}["msg/1"]
+    assert set(rec_fields) == {"input", "result"}
+    assert "value" in rec_fields["result"] and "same_as" not in rec_fields["result"]
+
+
+def test_project_requirements_and_user_turns_keep_multi_turn_history_despite_mock_message():
+    """Bug1: 有 mock_message 时仍从 request 拆出多轮历史；单条 trace 回放多轮时 user_turns 也不被单句 transcript 短路。"""
+    from types import SimpleNamespace
+    from impl.projects.llm_probe_loop.business_trace.expectation_material import project_requirements
+    from impl.projects.llm_probe_loop.eval_axes.requirements import user_turns
+
+    msgs = [
+        {"role": "user", "content": "查伏云平名下保单的累计已交保费"},
+        {"role": "assistant", "content": "未查到伏云平"},
+        {"role": "user", "content": "名字说错了，是余昕雅，问题不变。"},
+    ]
+    trace = SimpleNamespace(
+        turn_records=[{"mock_message": "名字说错了，是余昕雅，问题不变。", "request": {"body": {"messages": msgs}}, "project_fields": {}}],
+        normalized_request={"body": {"messages": msgs}},
+        conversation_transcript=[{"role": "user", "query": "名字说错了，是余昕雅，问题不变。"}],
+    )
+    req = project_requirements(trace)
+    sides = [(s["side"], s["value"]) for s in req["sources"]]
+    assert ("history", {"role": "user", "content": "查伏云平名下保单的累计已交保费"}) in sides
+    assert ("history", {"role": "assistant", "content": "未查到伏云平"}) in sides
+    assert ("want", "名字说错了，是余昕雅，问题不变。") in sides
+    assert user_turns(trace) == ["查伏云平名下保单的累计已交保费", "名字说错了，是余昕雅，问题不变。"]
+
+    # 在线多轮 stateful session：transcript 有两轮，最新 request 只有本轮一句时，仍保留 transcript 的两轮
+    live_trace = SimpleNamespace(
+        turn_records=[{"request": {"body": {"messages": [{"role": "user", "content": "追问一句"}]}}}],
+        normalized_request={"body": {"messages": [{"role": "user", "content": "第一问"}]}},
+        conversation_transcript=[{"role": "user", "query": "第一问"}, {"role": "user", "query": "追问一句"}],
+    )
+    assert user_turns(live_trace) == ["第一问", "追问一句"]
+
+
+def test_materials_does_not_inject_same_turn_model_exact_request():
+    """Bug2: planning_routing / knowledge_data 不再硬塞同轮未引用的 model_calls.exact_request。"""
+    from impl.projects.llm_probe_loop.business_trace.materials import material_view
+
+    dossier = {
+        "sources": [],
+        "contents": {},
+        "records": [
+            {"id": "trace", "kind": "runs", "turn": "turn1", "fields": {"input": {"status": "available", "value": "问题"}}},
+            {"id": "llm/1", "kind": "model_calls", "turn": "turn1",
+             "fields": {"exact_request": {"status": "available", "value": {"messages": ["LEAK"]}}}},
+        ],
+    }
+    link = {"link_id": "planning_routing:path:turn1", "link_type": "planning_routing", "turn": "turn1",
+            "input": [{"ref": "trace", "field": "input"}], "output": []}
+    view = material_view(dossier, [link], [])
+    assert [r["id"] for r in view["records"]] == ["trace"]
+
+
+def test_input_view_whitelists_input_fields_and_definitions_dropping_tool_shells():
+    """Bug3: input_view 除 definitions 外只留 input 声明的字段；纯输出端工具调用整条剔除，输入输出共用工具调用不漏执行态字段。"""
+    from impl.projects.llm_probe_loop.business_trace.materials import material_view
+    from impl.projects.llm_probe_loop.process_axes import input_view
+
+    dossier = {
+        "sources": [],
+        "contents": {},
+        "records": [
+            {"id": "trace", "kind": "runs", "turn": "turn1", "fields": {"input": {"status": "available", "value": "查保单"}}},
+            {
+                "id": "obs/13",
+                "kind": "tool_calls",
+                "name": "policy_detail",
+                "turn": "turn1",
+                "fields": {
+                    "arguments": {"status": "available", "value": {"policy_no": "1"}},
+                    "result": {"status": "available", "value": {"ok": True}},
+                    "start_time": {"status": "available", "value": "2026-11-15T16:25:41Z"},
+                    "end_time": {"status": "available", "value": "2026-11-15T16:25:46Z"},
+                    "status_message": {"status": "available", "value": "OK"},
+                },
+            },
+            {
+                "id": "def/1",
+                "kind": "definitions",
+                "name": "policy_detail",
+                "definition_type": "tool",
+                "turn": "turn1",
+                "fields": {"description": {"status": "available", "value": "查保单详情"}},
+            },
+        ],
+    }
+    # 1) planning_routing: obs/13 只在输出端，input_view 整条删掉 obs/13，保留 trace 与 definitions
+    pr_link = {"link_id": "planning_routing:path:turn1", "link_type": "planning_routing", "turn": "turn1",
+               "input": [{"ref": "trace", "field": "input"}],
+               "output": [{"ref": "obs/13", "field": "arguments"}, {"ref": "obs/13", "field": "result"}]}
+    pr_in = input_view(dossier, [pr_link])
+    pr_ids = {r["id"] for r in pr_in["records"]}
+    assert pr_ids == {"trace", "def/1"}
+
+    # 2) tool_execution: obs/13 的 arguments 在输入端、result 在输出端；本应只留 arguments，实际保留全部执行态字段
+    te_link = {"link_id": "tool_execution:obs/13", "link_type": "tool_execution", "turn": "turn1",
+               "input": [{"ref": "obs/13", "field": "arguments"}],
+               "output": [{"ref": "obs/13", "field": "result"}]}
+    te_in = input_view(dossier, [te_link])
+    te_in_map = {r["id"]: r["fields"] for r in te_in["records"]}
+    assert set(te_in_map) == {"obs/13", "def/1"}
+    assert set(te_in_map["obs/13"]) == {"arguments"}
+
+    te_full = material_view(dossier, [te_link], [])
+    te_full_map = {r["id"]: r["fields"] for r in te_full["records"]}
+    assert {"arguments", "result", "start_time", "end_time", "status_message"} <= set(te_full_map["obs/13"])
+
+

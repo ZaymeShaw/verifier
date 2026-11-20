@@ -49,15 +49,29 @@ def test_mount_failure_is_material_unavailable():
         raise AssertionError("应当取不到")
 
 
-def test_visible_follows_what_the_model_sees_not_the_full_code_view():
+def test_visible_follows_explicit_resource_uris_and_field_templates():
     from impl.core.axis_loop.visible import Visible
     from impl.core.resources import ResourceTable
 
+    row2 = {**ROW, "fields": {**ROW["fields"], "input": {"status": "available", "value": "入参 P1"}}}
+    dossier = {**DOSSIER, "records": [row2, OTHER]}
     table = ResourceTable()
-    for item in case_trace.resources(DOSSIER):
-        table.mount(item["uri"], item["type"], item["body"], name=item["name"])
-    seen = Visible(table, {"result.x.views[axis=a].input": {"records": [{"id": ROW["id"], "fields": {}}]}})
-    assert seen.uris == {"trace://turn1/records/observations/15"}                # 材料里出现的记录可见，别的不可见
-    assert seen.address(ROW["id"]) == "trace://turn1/records/observations/15"
-    assert seen.address(ROW["id"] + "/fields/output") == "trace://turn1/records/observations/15/fields/output"
-    assert seen.address("turn1") == "trace://turn1" and seen.address("turn9/records/x") is None
+    for item in case_trace.resources(dossier):
+        table.mount(item["uri"], item["type"], item["body"], name=item["name"], meta=item.get("meta"))
+
+    # 直接资源 URI：整块与其全部字段可见，未列出的资源 out_of_scope
+    full_seen = Visible(table, [f"trace://{ROW['id']}"])
+    assert full_seen.uris == {"trace://turn1/records/observations/15"}
+    assert full_seen.address(ROW["id"]) == "trace://turn1/records/observations/15"
+    assert full_seen.address(ROW["id"] + "/fields/output") == "trace://turn1/records/observations/15/fields/output"
+    assert full_seen.address("trace://turn1/records/observations/15/fields/output") == "trace://turn1/records/observations/15/fields/output"
+    assert full_seen.cite(ROW["id"] + "/fields/output", "保单 P1").ok
+    assert full_seen.cite("turn1", "查保单").reason == "out_of_scope"
+    assert full_seen.address("turn9/records/x") is None
+
+    # 模板资源 URI（本应阶段）：仅开放的字段可引，同条记录的未开放字段报 out_of_scope
+    field_only = Visible(table, [f"trace://{ROW['id']}/fields/input"])
+    assert field_only.cite(ROW["id"] + "/fields/input", "入参 P1").ok
+    assert field_only.cite(ROW["id"] + "/fields/output", "保单 P1").reason == "out_of_scope"
+    assert field_only.cite(ROW["id"], "保单 P1").reason == "out_of_scope"
+

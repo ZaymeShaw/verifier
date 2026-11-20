@@ -33,6 +33,7 @@ from .text import dump
 from .validate import check_entry
 from .view import CallView, TaskView
 from .visible import Visible
+from .zone import ZONE_NAME, ResourceZone, format_task_resources, resolve_uris
 
 SUBMIT, RECALL = "submit", "recall"
 AXIS_NOTE = "axis.note"
@@ -53,9 +54,9 @@ SYSTEM = """你是评测员，在一个 case 上完成一组评测任务。任�
 5. 同一次回复里拿到的工具返回，要到下一次回复才能引用。
 6. 已经交过的任务发现交错了，可以重交来修改；依赖它的任务会被作废，需要重做。
 7. 工具返回太长时会被归档，用 recall(call_id) 重看。
-8. 材料太大时只给目录：用 read_material 按编号取正文，或 search_material 按关键词找；该看的都要看，依据要充分。
-   按目录里的大小挑要看的编号，ids 可以写多个。
-   读回来的「〔同 X 里已给过的那段〕」表示这段正文和 X 里的一字不差，要引用就引 X；「〔预览…〕」是太长只给了开头，需要全文按里面写的 path 加 full=true 再读。
+8. 公共资源区【resources】或材料太大时只给目录或开头预览：用 read_material(name="resources", ids=[...]) 按编号一次把要看的取回（本会话已给过的不要重读），或用 search_material 按关键词找；该看的都要看，依据要充分。
+   结构超限时超长字段给开头预览，需要全文按预览里写的 path 下钻；单段纯文本超限时按提示加 offset 续读。
+   读回来的「〔内容与本会话前文 X 完全相同…〕」表示该段原文与前文 X 一字不差（原文见前文 X），若本任务需引用当前记录，ref 仍填当前记录自己的编号（只能引本任务「可见资源」列出的范围）。
 9. 互不依赖的工具调用，放在同一次回复里一起发：要读的几份材料、要查的几项数据、已经判完的几个任务，一次发出。后一个调用要用到前一个的返回时（先看结构再下钻、按搜索结果去取、交结果要引用刚取回的证据），才留到下一次回复，因为同一次回复里拿到的返回要到下一次回复才能引用。工具执行得很快，慢的是回复的来回次数。
 10. 唯一性原则：一件事只给一份，一份只装一件事。
    - 一件事只给一份："同一件"看实质——同一个对象、同一件事、同样的内容，换了叫法、编号或措辞也是同一件；出现在几处也只给一份，用到它的地方引用这一份；只去掉重复的部分，判断要用的内容不少给。
@@ -247,14 +248,20 @@ class _Base(Hook):
         return out
 
     def view(self, history: History, entries: Sequence[str], own: Mapping[str, Any], stage: str, axis_id: str,
-             params: Mapping[str, Any] | None = None, parts: Sequence[Mapping[str, Any]] = ()) -> TaskView:
+             params: Mapping[str, Any] | None = None, parts: Sequence[Mapping[str, Any]] = (),
+             resource_entries: Sequence[str] = (), inlined: Sequence[str] | frozenset[str] = ()) -> TaskView:
         chosen = [parse_entry(t) for t in entries]
+        for t in resource_entries:
+            e = parse_entry(t)
+            if all(c.name != e.name for c in chosen):
+                chosen.append(e)
         # 本轴描述同任务文本一样放进来：代码读的范围与所属的轴相同（spec/alg/axis_loop.md §2.5）
         if axis_id and self.loop.table.registry.get(AXIS_NOTE) and AXIS_NOTE not in entries:
             chosen.append(parse_entry(AXIS_NOTE))
         materials = self.loop.table.for_code(chosen, axis_id)
+        uris = resolve_uris(self.loop.table, resource_entries, axis_id)
         return TaskView(axis_id, own, materials, dict(params or {}), self.call_views(history), stage, tuple(parts),
-                        Visible(self.loop.table.resources, self.loop.table.view(chosen, axis_id)))
+                        Visible(self.loop.table.resources, uris, inlined=inlined))
 
     def recall_tool(self) -> VerifiableTool:
         def recall(call_id: str) -> Any:
@@ -280,9 +287,11 @@ class _Submitter(_Base):
     """只做一份工作的子 loop（独立运行的轴的一份、公共 loop 工具的一次调用）：收尾被接受即完成。"""
 
     def __init__(self, loop: "AxisLoop", work: Work, axis_id: str, entries: Sequence[str], prefix: str,
-                 shared: Sequence[str], users: Sequence[str], params: Mapping[str, Any] | None = None) -> None:
+                 shared: Sequence[str], users: Sequence[str], params: Mapping[str, Any] | None = None,
+                 zone: Optional[ResourceZone] = None) -> None:
         super().__init__(loop, prefix, shared)
         self.work, self.axis_id, self.entries, self.params = work, axis_id, list(entries), dict(params or {})
+        self.zone = zone
         self.state = Submissions()
         self.instances = {c.category: {i for k in users for i in loop.allowed_instances(k, c.category)}
                           for c in work.tool_categories}
@@ -300,7 +309,11 @@ class _Submitter(_Base):
             return self.gate_tool(call, self.instances, self.shared)
         if call.args.get("task_id") != self.work.id:
             return Deny(f"task_id 只能是 {self.work.id}")
-        make_view = lambda stage, own: self.view(history, self.entries, own, stage, self.axis_id, self.params)
+        inlined = self.zone.inlined_names if self.zone is not None else ()
+        make_view = lambda stage, own: self.view(
+            history, self.entries, own, stage, self.axis_id, self.params,
+            resource_entries=self.work.resources, inlined=inlined,
+        )
         try:
             outcome = acceptance.submit(self.work, self.state, call.args.get("payload"), call.args.get("item_id") or None, make_view)
         except SynthesisError as exc:
@@ -322,7 +335,8 @@ class _Submitter(_Base):
 
 
 def _task_text(loop: "AxisLoop", work: Work, axis_id: str, entries: Sequence[str], title: str, shared: Sequence[str],
-               users: Sequence[str], params: Mapping[str, Any] | None = None) -> str:
+               users: Sequence[str], params: Mapping[str, Any] | None = None,
+               uris: Sequence[str] = ()) -> str:
     parts = [title, "说明：" + work.instruction]
     chosen = [parse_entry(t) for t in entries]
     if axis_id and loop.table.registry.get(AXIS_NOTE) and AXIS_NOTE not in entries:
@@ -331,6 +345,9 @@ def _task_text(loop: "AxisLoop", work: Work, axis_id: str, entries: Sequence[str
     values = {title: summarize(title, value, limit) for title, value in loop.table.view(chosen, axis_id).items()}
     if values:
         parts.append("材料：\n" + render(values))
+    if uris:
+        refs = format_task_resources(loop.table.resources, uris)
+        parts.append(f"可见资源（正文由上方公共资源区【{ZONE_NAME}】统一提供，仅可查阅与引用以下范围）：\n" + dump(refs))
     if params:
         parts.append("调用参数：\n" + dump(params))
     tools = []
@@ -364,9 +381,13 @@ class _SharedTool:
         if problems:
             return {"status": "error", "isError": True, "error": "参数不对：" + "；".join(problems)}
         work, users = self.tool_def, self.loop.users_of(self.name)
-        gate = _Submitter(self.loop, work, "", work.materials, f"{self.name}#{self.loop.run_state.tool_calls}.", (), users, params)
-        text = _task_text(self.loop, work, "", work.materials, f"【任务 {work.id}】", (), users, params)
-        tools = [submit_tool([work.id]), gate.recall_tool(), *Reader(gate.readable, self.loop.run_state.settings.material_inline_chars).tools(),
+        zone = ResourceZone(self.loop.table.resources, self.loop.run_state.settings.material_inline_chars)
+        uris = resolve_uris(self.loop.table, work.resources)
+        zone_note = zone.push(uris) if uris else ""
+        gate = _Submitter(self.loop, work, "", work.materials, f"{self.name}#{self.loop.run_state.tool_calls}.", (), users, params, zone=zone)
+        card = _task_text(self.loop, work, "", work.materials, f"【任务 {work.id}】", (), users, params, uris=uris)
+        text = f"{zone_note}\n\n{card}" if zone_note else card
+        tools = [submit_tool([work.id]), gate.recall_tool(), *Reader(gate.readable, zone).tools(),
                  *(self.loop.sources.tools if work.tool_categories else [])]
         child = ToolLoop(self.name, SUBLOOP_SYSTEM, tools, self.loop.client, completion_hook=gate,
                          hooks={"start": [gate], "pre_tool": [gate], "post_tool": [gate]},
@@ -523,9 +544,10 @@ class AxisLoop:
 
     def preflight(self) -> str:
         """内置材料先取一遍：取不到就整个 case 运行失败，不起任何 loop（§4.1）。"""
-        names = [(k, parse_entry(t).name) for k in self.enabled for t in self.defs.axes[k].materials]
+        names = [(k, parse_entry(t).name) for k in self.enabled
+                 for t in (*self.defs.axes[k].materials, *self.defs.axes[k].resources)]
         names += [(k, parse_entry(t).name) for k in self.enabled for tool in self.defs.axes[k].tools
-                  for t in self.defs.shared_tools[tool].materials]
+                  for t in (*self.defs.shared_tools[tool].materials, *self.defs.shared_tools[tool].resources)]
         for key, name in dict.fromkeys(names):
             if name.split(".", 1)[0] in BUILTIN_SPACES:
                 try:
@@ -601,7 +623,9 @@ class AxisLoop:
     def _run_dispatched(self, loop: str, members: list[str]) -> None:
         """一份一份跑：每份跑它列的任务（不列就是全部；列了就按先后出现），只交模型填的字段；各轴的 synth 合并各份（§6.2）。"""
         entries = list(dict.fromkeys(t for k in members for t in self.defs.axes[k].materials))
-        base = self.gate.view(History(), entries, {}, acceptance.STAGE_FINAL, members[0], params={"tasks": list(members)})
+        res_entries = list(dict.fromkeys(t for k in members for t in self.defs.axes[k].resources))
+        base = self.gate.view(History(), entries, {}, acceptance.STAGE_FINAL, members[0],
+                              params={"tasks": list(members)}, resource_entries=res_entries)
         try:
             plan = self.defs.loops[loop].dispatch(base)
         except Exception as exc:
@@ -617,7 +641,8 @@ class AxisLoop:
                 parts[k].append({"id": pid, "result": self.table.results[k]})
         for k in members:
             axis = self.defs.axes[k]
-            view = self.gate.view(History(), axis.materials, {}, acceptance.STAGE_FINAL, k, parts=parts[k])
+            view = self.gate.view(History(), axis.materials, {}, acceptance.STAGE_FINAL, k,
+                                  parts=parts[k], resource_entries=axis.resources)
             self.table.results[k] = self._synthesize(axis, view)
             self.state[k] = DONE
 
@@ -653,7 +678,7 @@ class AxisLoop:
 
 
 class _LoopGate(_Base):
-    """一个 loop 实例：自己的台账、推送、提交与门禁；材料、状态、事件、预算与 case 共用。"""
+    """一个 loop 实例：自己的台账、公共资源管理区、推送、提交与门禁；材料、状态、事件、预算与 case 共用。"""
 
     def __init__(self, case: AxisLoop, loop: str, axes: Mapping[str, AxisDef], override: Optional[Sequence[str]],
                  prefix: str, *, is_case: bool = False, after: Sequence[tuple[str, str]] = ()) -> None:
@@ -661,6 +686,7 @@ class _LoopGate(_Base):
         super().__init__(case, prefix, own_tools)
         self.case, self.loop_id, self.axes, self.override, self.is_case = case, loop, dict(axes), override, is_case
         self.after = list(after)  # 分发给的先后对 (前, 后)：后一个出现后，前一个锁住（§6.2）
+        self.zone = ResourceZone(case.table.resources, case.run_state.settings.material_inline_chars)
         self.ledger = Ledger(self.axes, list(axes), case.table.results, self._run_program, state=case.state,
                              case_enabled=case.enabled, dependents=case.dependents, events=case.events, loop=loop)
         self.accepted: list[tuple[str, Mapping[str, Any]]] = []  # 本批被接受的收尾 (任务, 结果)
@@ -670,7 +696,7 @@ class _LoopGate(_Base):
         return list(self.override) if self.override is not None else list(self.axes[key].materials)
 
     def readable(self) -> dict[str, Any]:
-        """read_material / search_material 能读的：本 loop 已出现任务白名单条目的合集（§4.4）。"""
+        """read_material / search_material 能读的普通材料：本 loop 已出现任务白名单条目的合集（§4.4）。"""
         out: dict[str, Any] = {}
         for key, axis in self.axes.items():
             if axis.automatic or self.ledger.state.get(key) not in ("open", "done"):
@@ -679,16 +705,29 @@ class _LoopGate(_Base):
         return out
 
     def _run_program(self, axis: AxisDef, state: Submissions) -> None:
-        view = self.view(self.history or History(), axis.materials, {}, acceptance.STAGE_FINAL, axis.id)
+        view = self.view(self.history or History(), axis.materials, {}, acceptance.STAGE_FINAL, axis.id,
+                         resource_entries=axis.resources, inlined=self.zone.inlined_names)
         state.result = self.case._synthesize(axis, view)
 
     # ---- 推送 ----
 
     def push(self, change: Change) -> list[str]:
+        active = [*change.appeared, *change.invalidated]
+        all_uris: list[str] = []
+        per_task_uris: dict[str, list[str]] = {}
+        for key in active:
+            uris = resolve_uris(self.case.table, self.axes[key].resources, key)
+            per_task_uris[key] = uris
+            all_uris.extend(uris)
+        zone_note = self.zone.push(all_uris) if all_uris else ""
+        notes = [zone_note] if zone_note else []
+
         def text(key: str, title: str) -> str:
             axis = self.axes[key]
-            return _task_text(self.case, axis, key, self.entries(key), title, axis.tools, [key])
-        notes = [text(k, f"【任务 {k}：{self.axes[k].title}】") for k in change.appeared]
+            return _task_text(self.case, axis, key, self.entries(key), title, axis.tools, [key],
+                              uris=per_task_uris.get(key, ()))
+
+        notes += [text(k, f"【任务 {k}：{self.axes[k].title}】") for k in change.appeared]
         notes += [text(k, f"【重做 {k}：{self.axes[k].title}】") + "\n（上游被修改，之前交的作废，按新材料重交）"
                   for k in change.invalidated]
         notes += [f"【撤下 {k}】触发条件不再满足，这个任务不用做了，之前交的作废。" for k in change.withdrawn
@@ -723,13 +762,13 @@ class _LoopGate(_Base):
                 more = self.ledger.settle([], self.case.batch)
                 change.appeared += [k for k in more.appeared if k not in change.appeared]
                 change.withdrawn += more.withdrawn
+            if stuck := self.stuck():
+                self.case.run_state.fatal = self.case.run_state.fatal or stuck
+                return []
+            return self.push(change)
         except (SynthesisError, LoopFailed) as exc:
             self.case.run_state.fatal = self.case.run_state.fatal or str(exc)
             return []
-        if stuck := self.stuck():
-            self.case.run_state.fatal = self.case.run_state.fatal or stuck
-            return []
-        return self.push(change)
 
     def stuck(self) -> str:
         """运行时兜底：本 loop 没有可交的任务、也起不了别的 loop，却还有任务没完成 → 卡住了，写明谁在等谁。"""
@@ -746,7 +785,7 @@ class _LoopGate(_Base):
     def tool_loop(self, name: str, notes: Sequence[str]) -> ToolLoop:
         visible = [k for k, a in self.axes.items() if not a.automatic]
         uses_sources = self.is_case or any(a.tool_categories for a in self.axes.values())
-        tools = [submit_tool(visible or ["-"]), self.recall_tool(), *Reader(self.readable, self.case.run_state.settings.material_inline_chars).tools(),
+        tools = [submit_tool(visible or ["-"]), self.recall_tool(), *Reader(self.readable, self.zone).tools(),
                  *(self.case.sources.tools if uses_sources else []),
                  *(self.case.shared_impl[t].tool() for t in sorted(self.shared))]
         self._notes = list(notes)
@@ -779,7 +818,10 @@ class _LoopGate(_Base):
             self._event("reject", key, call, ("已锁：后面的任务已出现",), item_id or "")
             return Deny(f"任务 {key} 已锁：后面的任务已出现，上下文里有了它的材料，不能再改。当前待交：{ledger.open_tasks()}")
         axis = self.axes[key]
-        make_view = lambda stage, own: self.view(history, self.entries(key), own, stage, key)
+        make_view = lambda stage, own: self.view(
+            history, self.entries(key), own, stage, key,
+            resource_entries=axis.resources, inlined=self.zone.inlined_names,
+        )
         try:
             outcome = acceptance.submit(axis, ledger.subs[key], payload, item_id or None, make_view)
         except SynthesisError as exc:

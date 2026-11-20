@@ -354,78 +354,161 @@ def test_escaped_newlines_count_as_whitespace():
     assert not quote_in_text("第一行 第三行", "第一行\\n第二行")
 
 
-# ---- 大材料：目录 + 按需读（spec §4.4，S2） -----------------------------------------------------
+# ---- 公共资源管理区 ResourceZone + 按需读 Reader（resources.md §11） -----------------------------
 
-STORE_VALUE = {"catalog": [{"id": "r1", "summary": "工具调用"}, {"id": "r2", "summary": "模型输出"}],
-               "records": [{"id": "r1", "input": {"q": "P123"}, "output": {"rows": ["x" * 50]}},
-                           {"id": "r2", "input": {"prompt": "短"}, "output": {"text": "y" * 20000}}]}
+def _mount_records(records):
+    from impl.core.resources import ResourceTable
+    table = ResourceTable()
+    for r in records:
+        table.mount(f"trace://{r['id']}", "record_set", r, name=r["id"], title=r.get("name"))
+    return table
 
 
-def test_summarize_keeps_small_values_and_gives_catalog_for_big_stores():
+def test_resources_entry_schema_is_validated_at_load_time():
+    reg = Registry([
+        Material("case.trace", obj(uris={"type": "array", "items": TEXT}, count={"type": "integer"}),
+                 "案卷", lambda c, ctx: {"uris": [], "count": 0}),
+    ])
+    good = parse({"axes": {"a": {"resources": ["case.trace.uris[]"], "output": obj(verdict=TEXT, reason=TEXT)}},
+                  "loops": {"main": {"start": "case"}}})
+    assert check_definitions(good, reg) == []
+    bad = parse({"axes": {"a": {"resources": ["case.trace.count"], "output": obj(verdict=TEXT, reason=TEXT)}},
+                 "loops": {"main": {"start": "case"}}})
+    errs = check_definitions(bad, reg)
+    assert errs and "array[string]" in errs[0]
+
+
+def test_summarize_keeps_small_materials_and_previews_oversize_plain_materials():
     from impl.core.axis_loop.reader import summarize
     assert summarize("t", {"a": 1}, 100) == {"a": 1}
-    out = summarize("t", STORE_VALUE, 500)
-    assert out["catalog"] == STORE_VALUE["catalog"] and out["records"] == 2 and "y" * 100 not in json.dumps(out)
-    assert "preview" in summarize("t", "z" * 5000, 100)
-    # 记录库旁的字段照推，单个太大的只给开头与读法
-    side = summarize("t", {**STORE_VALUE, "links": [{"link_id": "L1"}], "notes": "n" * 3000}, 2000)
-    assert side["links"] == [{"link_id": "L1"}] and "path='notes'" in side["notes"]["说明"] and side["records"] == 2
+    over = summarize("t", "z" * 5000, 100)
+    assert "preview" in over and "offset" in over["说明"]
 
 
-def test_reader_reads_by_id_previews_long_text_in_big_records_and_drills_by_path():
+def test_resource_zone_deduplicates_push_unlocks_deltas_and_blocks_unopened_fields():
     from impl.core.axis_loop.reader import Reader
-    reader = Reader(lambda: {"case.store": STORE_VALUE}, 8_000)
-    got = reader.read("case.store", ids=["r1", "r9"])
-    assert got["records"][0]["content"]["input"] == {"q": "P123"} and got["records"][1]["error"] == "没有这个编号"
-    big = reader.read("case.store", ids=["r2"])["records"][0]
-    assert big["content"]["input"] == {"prompt": "短"} and big["content"]["output"]["text"].startswith("〔预览，全文 20000 字")
-    assert reader.read("case.store", ids=["r2"], path="input")["records"][0]["content"] == {"prompt": "短"}
-    assert reader.read("case.other", ids=["r1"])["isError"]
+    from impl.core.axis_loop.zone import ResourceZone
+
+    table = _mount_records([
+        {"id": "r1", "turn": "turn1", "kind": "tool_calls", "name": "search",
+         "fields": {"input": {"status": "available", "value": "查 P123"},
+                    "output": {"status": "available", "value": "机密输出 P999"}}},
+        {"id": "r2", "turn": "turn1", "kind": "model_calls", "name": "llm",
+         "fields": {"output": {"status": "available", "value": "最终回复" * 200}}},
+    ])
+    zone = ResourceZone(table, inline_chars=100)  # 强制走目录模式以测按需读取与门禁
+    reader = Reader(lambda: {}, zone)
+
+    # 第 1 波：只开放 r1 的 input 字段 → output 字段读不到也搜不到
+    note1 = zone.push(["trace://r1/fields/input"])
+    assert "【resources】" in note1 and "catalog" in note1 and "P999" not in note1
+    assert zone.push(["trace://r1/fields/input"]) == ""  # 完全相同，静默不重推
+    got_r1 = reader.read("resources", ids=["r1"])["records"][0]["content"]
+    assert got_r1["fields"] == {"input": {"status": "available", "value": "查 P123"}}
+    assert "不在当前已开放范围" in reader.read("resources", ids=["r1/fields/output"])["records"][0]["error"]
+    assert reader.search("resources", "P999")["hits"] == []
+    assert [h["id"] for h in reader.search("resources", "P123")["hits"]] == ["r1"]
+
+    # 同一开放状态下重复点名读 r1 → 短提示见上文，不重吐正文
+    again = reader.read("resources", ids=["r1"])["records"][0]
+    assert "already_shown" in again and "content" not in again
+
+    # 第 2 波：开放整条 r1 与 r2 → 顶层只推新增差量，且此时再读 r1 可拿到新开放的 output 字段
+    note2 = zone.push(["trace://r1", "trace://r2"])
+    assert "【resources（本轮新增开放）】" in note2
+    got_r1_full = reader.read("resources", ids=["r1"])["records"][0]["content"]
+    assert "output" in got_r1_full["fields"] and got_r1_full["fields"]["output"]["value"] == "机密输出 P999"
 
 
-def test_reader_search_returns_ids_and_snippets_only():
+def test_reader_structural_preview_2k_and_offset_pagination_never_infinite_loops():
+    """结构超限时给 2k 预览 + path 下钻；单段纯文本超限时给满单次上限并支持 offset 翻页续读，绝不死循环。"""
     from impl.core.axis_loop.reader import Reader
-    hits = Reader(lambda: {"case.store": STORE_VALUE}, 8_000).search("case.store", "P123")
-    assert [h["id"] for h in hits["hits"]] == ["r1"] and "不算读过" in hits["hint"]
-    assert hits["hits"][0]["path"] == "input/q" and hits["hits"][0]["snippet"] == "P123"
+    from impl.core.axis_loop.zone import ResourceZone
+
+    huge_leaf = "".join(f"[{i:04d}]" for i in range(3000))  # 18,000 字单段纯文本
+    table = _mount_records([
+        {"id": "r_struct", "fields": {
+            "short": {"status": "available", "value": "保留短字段"},
+            "doc": {"status": "available", "value": huge_leaf},
+        }},
+    ])
+    zone = ResourceZone(table, inline_chars=100)
+    zone.push(["trace://r_struct"])
+    reader = Reader(lambda: {}, zone, read_limit=6_000, stub_chars=2_000)
+
+    # 1) 读整条结构化记录（18k > 6k）：短字段保留全文，长字段给 2,000 字预览 + 明确 path（无 full=true）
+    top = reader.read("resources", ids=["r_struct"])["records"][0]
+    assert top["content"]["fields"]["short"]["value"] == "保留短字段"
+    stub = top["content"]["fields"]["doc"]["value"]
+    assert stub.startswith("〔预览，全文 18000 字；读全文请传 path='fields/doc/value'〕")
+    assert "full=true" not in stub and len(stub) > 2_000
+
+    # 2) 按 path 下钻到 18,000 字单段纯文本（仍 > 6k）：直接返回 0..6000 + offset=6000 提示，绝不退回 2k 死循环！
+    page1 = reader.read("resources", ids=["r_struct"], path="fields/doc/value")["records"][0]
+    assert page1["content"] == huge_leaf[:6_000] and "offset=6000" in page1["hint"]
+    page2 = reader.read("resources", ids=["r_struct"], path="fields/doc/value", offset=6_000)["records"][0]
+    assert page2["content"] == huge_leaf[6_000:12_000] and "offset=12000" in page2["hint"]
+    page3 = reader.read("resources", ids=["r_struct"], path="fields/doc/value", offset=12_000)["records"][0]
+    assert page3["content"] == huge_leaf[12_000:18_000] and "已到末尾" in page3["hint"]
 
 
-def test_reader_goes_into_json_text_and_says_what_a_layer_has():
-    """工具返回常是 JSON 文本：按字段搜、按位置下钻都先解开；走不通时报出这一层有什么。"""
+def test_reader_goes_into_json_text_and_folds_2k_repeats_without_cross_record_citation_trap():
     from impl.core.axis_loop.reader import Reader
-    store = {"records": [{"id": "r1", "output": json.dumps({"documents": [{"title": "e生保条款", "body": "等待期 30 天"}]}, ensure_ascii=False)}]}
-    reader = Reader(lambda: {"case.store": store}, 8_000)
-    hit = reader.search("case.store", "等待期")["hits"][0]
-    assert hit == {"id": "r1", "path": "output/documents/0/body", "snippet": "等待期 30 天"}
-    assert reader.read("case.store", ids=["r1"], path=hit["path"])["records"][0]["content"] == "等待期 30 天"
-    wrong = reader.read("case.store", ids=["r1"], path="output/docs")["records"][0]["error"]
-    assert "'docs' 不在这一层" in wrong and "documents" in wrong
+    from impl.core.axis_loop.zone import ResourceZone
+
+    sys_prompt = "系统提示词规则" * 400  # 2,800 字（>= 2,000 字，触发跨记录折叠）
+    short_ans = "保单等待期为 30 天" * 20   # 220 字（< 2,000 字，普通输出不折叠）
+    table = _mount_records([
+        {"id": "call1", "fields": {
+            "exact_request": {"status": "available", "value": [sys_prompt, "第一问"]},
+            "output": {"status": "available", "value": json.dumps({"docs": [{"body": short_ans}]}, ensure_ascii=False)},
+        }},
+        {"id": "call2", "fields": {
+            "exact_request": {"status": "available", "value": [sys_prompt, "第二问"]},
+            "output": {"status": "available", "value": short_ans},
+        }},
+    ])
+    zone = ResourceZone(table, inline_chars=100)
+    zone.push(["trace://call1", "trace://call2"])
+    reader = Reader(lambda: {}, zone)
+
+    # JSON 字符串自动解开搜索与下钻
+    hit = reader.search("resources", "等待期")["hits"][0]
+    assert hit["id"] == "call1" and hit["path"] == "fields/output/value/docs/0/body"
+    assert reader.read("resources", ids=["call1"], path=hit["path"])["records"][0]["content"] == short_ans
+    wrong = reader.read("resources", ids=["call1"], path="fields/output/value/nope")["records"][0]["error"]
+    assert "'nope' 不在这一层" in wrong and "docs" in wrong
+
+    # 跨记录 >=2k 提示词折叠，但短输出完整保留，且提示语明确要求引用填本记录自己的编号
+    c1 = reader.read("resources", ids=["call1"])["records"][0]["content"]
+    c2 = reader.read("resources", ids=["call2"])["records"][0]["content"]
+    assert c1["fields"]["exact_request"]["value"][0] == sys_prompt
+    folded = c2["fields"]["exact_request"]["value"][0]
+    assert "内容与本会话前文 call1 完全相同" in folded and "ref 仍填本记录自己的编号" in folded
+    assert c2["fields"]["output"]["value"] == short_ans
 
 
-def test_reader_gives_a_long_passage_once_per_loop():
-    """被测系统每次调模型都带着累积对话：别的记录里已给过的长段只给指向，重读同一条照常全文。"""
-    from impl.core.axis_loop.reader import Reader
-    prompt = "系统提示词" * 100
-    store = {"records": [{"id": "call1", "messages": [prompt, "问一"]}, {"id": "call2", "messages": [prompt, "问二"]}]}
-    reader = Reader(lambda: {"case.calls": store}, 20_000)
-    first = reader.read("case.calls", ids=["call1"])["records"][0]["content"]
-    second = reader.read("case.calls", ids=["call2"])["records"][0]["content"]
-    assert first["messages"][0] == prompt and second["messages"][0].startswith("〔同 case.calls 的 call1")
-    assert reader.read("case.calls", ids=["call1"])["records"][0]["content"]["messages"][0] == prompt
-    tiny = Reader(lambda: {"case.calls": store}, 100)
-    assert "shape" in tiny.read("case.calls", ids=["call1"])["records"][0] and not tiny.given
+def test_visible_record_level_citation_on_template_scoped_block():
+    from impl.core.axis_loop.visible import Visible
 
+    table = _mount_records([
+        {"id": "turn1/records/observations/13", "kind": "tool_calls", "name": "policy_detail", "outcome": "error",
+         "fields": {
+             "arguments": {"status": "available", "value": "policy_no=P260922"},
+             "result": {"status": "available", "value": "查询超时 504"},
+             "metadata": {"status": "available", "value": "SECRET_UNUSED_SPAN_METADATA"},
+         }},
+    ])
+    vis = Visible(table, [
+        "trace://turn1/records/observations/13/fields/arguments",
+        "trace://turn1/records/observations/13/fields/result",
+    ])
+    # 记录级 ref 命中已开放字段或记录头属性：放行
+    assert vis.cite("turn1/records/observations/13", "查询超时 504").ok
+    assert vis.cite("turn1/records/observations/13", "policy_detail").ok
+    # 记录级 ref 命中同块未开放的 metadata 字段：严格报 out_of_scope，且错引 hint 绝不泄露未开放字段
+    blocked = vis.cite("turn1/records/observations/13", "SECRET_UNUSED_SPAN_METADATA")
+    assert not blocked.ok and blocked.reason == "out_of_scope"
+    miss = vis.cite("turn1/records/observations/13", "SECRET_UNUSED_SPAN_META_TYPO")
+    assert not miss.ok and miss.reason == "not_found" and "SECRET_UNUSED" not in miss.hint
 
-def test_reader_previews_long_parts_and_gives_the_rest_in_full():
-    """超限时长段只给预览（带读全文的 path），小的部分照给全文；按 path + full 能读到全文。"""
-    from impl.core.axis_loop.reader import Reader
-    big = "工具返回" * 3000
-    store = {"records": [{"id": "call", "messages": ["系统提示", "用户问题", big, "模型回答"]}]}
-    reader = Reader(lambda: {"case.calls": store}, 2_000)
-    got = reader.read("case.calls", ids=["call"])["records"][0]
-    msgs = got["content"]["messages"]
-    assert msgs[0] == "系统提示" and msgs[3] == "模型回答"
-    assert msgs[2].startswith("〔预览，全文 12000 字；读全文：path='messages/2', full=true〕") and big not in msgs[2]
-    assert big not in reader.given
-    full = reader.read("case.calls", ids=["call"], path="messages/2", full=True)["records"][0]
-    assert full["content"] == big

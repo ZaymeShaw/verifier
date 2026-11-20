@@ -1,70 +1,45 @@
-"""大材料：推送只放目录，正文按需读（spec/alg/axis_loop.md §4.4、§9）。
+"""公共资源区与大材料的按需读取与搜索（spec/alg/resources.md §11.3、spec/alg/axis_loop.md §4.4）。
 
-做法沿用侦探现有的"先 outline 再读"（`dossier_collect` / `dossier_read` / `dossier_search`），推广成每个 loop 都有的内置工具：
-- 序列化后超过上限的材料，推送时只放目录。值是 `{catalog, records: [{id, ...}]}` 形状的（记录库），目录就是 catalog；
-  别的形状放开头预览与大小。
-- `read_material(name, ids, path, full)`：按编号取记录；单条超过上限（与推送同一个上限 `loop_material_inline_chars`）时，
-  从最长的正文段起换成预览（开头 + 字数 + 读全文的 path），小的部分照给全文；连结构都放不下才只给结构图（字段与大小），带 path 下钻，确需整段 full。
-- `search_material(name, query)`：在记录里逐个字段按关键词找（值是 JSON 文本的先解开），返回命中的编号、字段位置与片段，再用 read_material 按编号 + 位置取。
-- 按位置下钻遇到 JSON 文本先解开再走；走不通时报出这一层有哪些字段。
-- 同一 loop 里已经给过的长段正文，在别的记录里再出现时只给指向（"同 X 里那段"），按大小判断前先去重：
-  被测系统每次调模型的请求都带着完整的累积对话，不去重就一遍遍重读同样的系统提示词与工具返回。重读同一条记录照常给全文。
-能读的范围由调用方给（本 loop 已出现任务的白名单条目，取值已按白名单投影、筛选），白名单没选的读不到。
+契约：
+- 公共资源区（``name='resources'``）直连本 Loop 的 ``ResourceZone``，只暴露当前已开放的资源与字段（防污染）；
+  ``ids`` 同时接受短名（``记录编号`` / ``记录编号/fields/字段名``）与完整 URI（``trace://...``）。
+- 普通超限材料（``materials``）在任务卡内放前 ``PREVIEW_CHARS`` 字预览，可按 ``path`` / ``offset`` 读取。
+- 点名 ``read_material`` 单次上限直接为 ``READ_CHARS = 60_000``（删去 ``full`` 二道门参数；单批合计 ``COLLECT_CHARS = 60_000``）：
+  - 结构化对象超限时，将超长子字段切成 ``STUB_CHARS = 2_000`` 字预览 + 子 ``path`` 下钻；仍放不下则给 ``shape()`` 结构图；
+  - 单段纯文本超限时，直接返回 ``offset .. offset + READ_CHARS`` 并提示续读 ``offset``，杜绝死循环。
+- 同一 Loop 内已在公共资源区内联或此前已完整返回过的 ``(资源, path, offset)`` 重复点名时直接短提示指向上文；
+  跨记录相同大段文本（``>= REPEAT_CHARS = 2_000`` 字）折叠时提示原文见前文，且引用本记录时 ``ref`` 仍填本记录自身编号。
 """
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
-from typing import Any, Callable, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any, Callable, Optional
 
 from impl.tools.protocol import VerifiableTool
 
 from .text import dump
+from .zone import ZONE_NAME, ResourceZone
 
 READ, SEARCH = "read_material", "search_material"
-PREVIEW_CHARS = 2_000
-STUB_CHARS = 300           # 超限时长段只给开头这么多
-FULL_CHARS = 60_000         # full=true 的上限
-COLLECT_CHARS = 60_000      # 一次 read 合计上限
+PREVIEW_CHARS = 2_000       # 普通材料内联超限时的预览字数
+STUB_CHARS = 2_000          # 结构化记录超 60k 时超长子字段的预览字数
+READ_CHARS = 60_000         # 单条点名读取上限
+COLLECT_CHARS = 60_000      # 一次 read_material 调用合计上限
+REPEAT_CHARS = 2_000        # 跨记录重复折叠阈值（仅折叠系统提示词/长历史级大块，不折短输出）
 SEARCH_HITS = 12
-REPEAT_CHARS = 300        # 这么长以上的正文段，同一 loop 里第二次出现只给指向
 SNIPPET_CHARS = 240
 
 
-def _records(items: Any) -> bool:
-    return isinstance(items, list) and bool(items) and all(isinstance(r, Mapping) and "id" in r for r in items)
-
-
-def as_store(value: Any) -> Optional[dict[str, Any]]:
-    """认出记录库：{catalog?, records: [{id…}]}；按白名单投影后常成为一列带 id 的记录，或只含一个记录库的列表。"""
-    if isinstance(value, list) and len(value) == 1 and not _records(value):
-        value = value[0]
-    if isinstance(value, Mapping) and _records(value.get("records")):
-        return {"catalog": value.get("catalog") or [{"id": r["id"]} for r in value["records"]], "records": value["records"]}
-    if _records(value):
-        return {"catalog": [{"id": r["id"]} for r in value], "records": value}
-    return None
-
-
-def is_store(value: Any) -> bool:
-    return as_store(value) is not None
-
-
 def summarize(title: str, value: Any, limit: int) -> Any:
-    """推送时放进上下文的那份：不超限原样；超限的记录库只放目录，其余放预览。"""
+    """普通材料放进任务卡前的大小检查：不超限原样放入；超限放开头预览与读法。"""
     text = dump(value)
     if value is None or len(text) <= limit:
         return value
-    hint = f"正文太大（{len(text)} 字），这里只给目录；用 {READ}(name={title!r}, ids=[...]) 取记录，或 {SEARCH} 按关键词找"
-    store = as_store(value)
-    if store:
-        # 只有记录正文换成目录；记录库旁的其他字段（例：案卷的环节表、可疑环节、缺口）照推，单个太大的给开头 + 读法
-        side = {k: v if len(dump(v)) <= limit else
-                {"说明": f"这一项太大（{len(dump(v))} 字），这里只给开头；用 {READ}(name={title!r}, path={k!r}) 读", "preview": dump(v)[:PREVIEW_CHARS]}
-                for k, v in value.items() if k not in ("catalog", "records")} if isinstance(value, Mapping) else {}
-        return {"说明": hint, "catalog": store["catalog"], **side, "records": len(store["records"])}
-    return {"说明": f"正文太大（{len(text)} 字），这里只给开头；用 {READ}(name={title!r}, path=...) 按位置读",
-            "preview": text[:PREVIEW_CHARS]}
+    return {
+        "说明": f"正文太大（{len(text)} 字），这里只给开头预览；用 {READ}(name={title!r}, path=..., offset=...) 按位置或偏移读",
+        "preview": text[:PREVIEW_CHARS],
+    }
 
 
 def shape(node: Any) -> Any:
@@ -139,136 +114,255 @@ def _put(node: Any, path: str, value: Any) -> Any:
     return {k: _put(v, rest, value) if k == head else v for k, v in node.items()}
 
 
-def _fit(node: Any, limit: int, base: str) -> tuple[Any, set[str]]:
-    """超限时从最长的正文段起换成预览（开头一段 + 字数 + 读全文的 path），直到放得下；小的部分照给全文。"""
+def _fit(node: Any, limit: int, base: str, stub_chars: int) -> tuple[Any, set[str]]:
+    """结构化节点超限时，从最长的字符串叶子起换成预览（开头 + 字数 + path），直到放得下；小的部分照给全文。"""
     size, cut = len(dump(node)), set()
     for at, text in sorted(_leaves(node, ""), key=lambda x: -len(x[1])):
-        if size <= limit or len(text) <= STUB_CHARS * 2:
+        if not at:
+            continue
+        if size <= limit or len(text) <= stub_chars + 200:
             break
         full_path = "/".join(p for p in (base, at) if p)
-        stub = f"〔预览，全文 {len(text)} 字；读全文：path={full_path!r}, full=true〕{text[:STUB_CHARS]}…"
+        stub = f"〔预览，全文 {len(text)} 字；读全文请传 path={full_path!r}〕{text[:stub_chars]}…"
         node, size, cut = _put(node, at, stub), size - len(dump(text)) + len(dump(stub)), cut | {text}
     return node, cut
 
 
-def _render(node: Any, full: bool, limit: int, base: str = "") -> tuple[dict[str, Any], set[str]]:
-    """→ (返回给模型的, 只给了预览的正文段)。"""
+def _slice_text(text: str, limit: int, base: str, offset: int) -> dict[str, Any]:
+    start = max(0, int(offset or 0))
+    total = len(text)
+    if start >= total and total > 0:
+        return {"content": "", "hint": f"offset={start} 已超出总长度 {total} 字"}
+    end = min(total, start + limit)
+    chunk = text[start:end]
+    if start == 0 and end == total:
+        return {"content": chunk}
+    tail = (f"；继续往后读请传 offset={end}" + (f", path={base!r}" if base else "")
+            if end < total else "（已到末尾）")
+    return {"content": chunk, "hint": f"全文共 {total} 字，本次显示 {start}..{end} 字{tail}"}
+
+
+def _render(node: Any, limit: int, base: str = "", offset: int = 0,
+            stub_chars: int = STUB_CHARS) -> tuple[dict[str, Any], set[str], bool]:
+    """→ (返回给模型的字典, 被截断没给全的正文段集合, 本次请求的目标切片是否已完整给出)。"""
+    start = max(0, int(offset or 0))
+    if isinstance(node, str):
+        out = _slice_text(node, limit, base, start)
+        partial = start > 0 or len(node) > limit
+        return out, ({node} if partial else set()), True
+    if start > 0:
+        return _slice_text(dump(node), limit, base, start), set(), True
     text = dump(node)
-    limit = FULL_CHARS if full else limit
     if len(text) <= limit:
-        return {"content": node}, set()
-    fitted, cut = _fit(node, limit, base)
-    if len(dump(fitted)) <= limit:
-        return {"content": fitted, "hint": f"这段 {len(text)} 字，超过单次上限 {limit} 字：长段只给了开头预览，要读全文按预览里写的 path 加 full=true 取"}, cut
-    return {"shape": shape(node),
-            "hint": f"这段 {len(text)} 字，超过单次上限 {limit} 字：带 path 往下取" + ("" if full else "，确需整段用 full=true")}, set()
+        return {"content": node}, set(), True
+    fitted, cut = _fit(node, limit, base, stub_chars)
+    if cut and len(dump(fitted)) <= limit:
+        return {
+            "content": fitted,
+            "hint": f"整条共 {len(text)} 字，超过单次上限 {limit} 字：超长字段已给前 {stub_chars} 字预览，按预览里写的 path 单独取全文",
+        }, cut, False
+    return {
+        "shape": shape(node),
+        "hint": f"整条共 {len(text)} 字，超过单次上限 {limit} 字：请按 shape 里的字段带 path 下钻（或加 offset 分段读）",
+    }, set(), False
 
 
 class Reader:
-    """一个 loop 实例的读工具；readable() 给出当前能读的 {标题: 值}。"""
+    """一个 Loop 实例的读取与搜索工具：支持公共资源区 ``name='resources'`` 与普通材料。"""
 
-    def __init__(self, readable: Callable[[], Mapping[str, Any]], limit: int) -> None:
-        self.readable, self.limit = readable, limit
-        self.given: dict[str, str] = {}   # 已给过的长段正文 → 在哪条记录里给的
+    def __init__(self, readable: Callable[[], Mapping[str, Any]], zone: Optional[ResourceZone] = None, *,
+                 read_limit: int = READ_CHARS, stub_chars: int = STUB_CHARS,
+                 repeat_chars: int = REPEAT_CHARS) -> None:
+        self.readable = readable
+        self.zone = zone
+        self.read_limit = read_limit
+        self.stub_chars = stub_chars
+        self.repeat_chars = repeat_chars
+        self.given: dict[str, str] = {}                     # 已完整给过的长段正文 → 首次出现的记录名
+        self.delivered: dict[tuple[str, str, str, int], str] = {}  # (空间, 标识, path, offset) → 开放签名
 
     def _dedupe(self, node: Any, where: str, fresh: dict[str, str]) -> Any:
-        """别的记录里已给过的长段换成指向；这次新出现的记进 fresh。"""
+        """跨记录重复的大段正文（>= repeat_chars）折叠指向前文，但明确告知引用时仍填当前记录编号。"""
         if isinstance(node, str):
             first = self.given.get(node, where)
-            if len(node) < REPEAT_CHARS or first == where:
-                if len(node) >= REPEAT_CHARS:
+            if len(node) < self.repeat_chars or first == where:
+                if len(node) >= self.repeat_chars:
                     fresh.setdefault(node, where)
                 return node
-            return f"〔同 {first} 里已给过的那段，{len(node)} 字〕"
+            return f"〔内容与本会话前文 {first} 完全相同，共 {len(node)} 字；原文见前文，若本任务需引用本记录，ref 仍填本记录自己的编号〕"
         if isinstance(node, Mapping):
             return {k: self._dedupe(v, where, fresh) for k, v in node.items()}
         if isinstance(node, list):
             return [self._dedupe(v, where, fresh) for v in node]
         return node
 
-    def _give(self, node: Any, full: bool, where: str, path: str) -> dict[str, Any]:
+    def _give(self, node: Any, where: str, path: str, offset: int) -> tuple[dict[str, Any], bool]:
         fresh: dict[str, str] = {}
-        rendered, cut = _render(self._dedupe(node, where, fresh), full, self.limit, path)
-        if "content" in rendered:   # 只给了结构图、预览的没真给出去，不算给过
+        deduped = node if offset > 0 else self._dedupe(node, where, fresh)
+        rendered, cut, complete = _render(deduped, self.read_limit, path, offset, self.stub_chars)
+        if "content" in rendered:
             for text, at in fresh.items():
                 if text not in cut:
                     self.given.setdefault(text, at)
-        return rendered
+        return rendered, complete
 
-    def _value(self, name: str) -> tuple[Any, Optional[str]]:
+    def _available_names(self) -> list[str]:
+        names = sorted(self.readable())
+        if self.zone is not None and self.zone.has_open:
+            names = [ZONE_NAME, *names]
+        return names
+
+    def _read_zone(self, ids: Optional[Sequence[str]], path: str, offset: int) -> dict[str, Any]:
+        if self.zone is None or not self.zone.has_open:
+            return {"isError": True, "error": f"当前没有开放的公共资源（能读的：{self._available_names()}）"}
+        if not ids:
+            return {"isError": True, "error": f"读公共资源区 {ZONE_NAME!r} 必须传 ids=[记录编号, ...]"}
+        items, used = [], 0
+        start = max(0, int(offset or 0))
+        for ident in ids:
+            block, record, sub_path, err = self.zone.resolve_open(ident)
+            if err or block is None or record is None:
+                items.append({"id": ident, "error": err or "没有这个编号"})
+                continue
+            full_path = "/".join(p for p in (sub_path, path) if p)
+            req_field = sub_path.removeprefix("fields/") if sub_path.startswith("fields/") and not path else ""
+            if start == 0 and not path and self.zone.already_inlined(block.uri, req_field):
+                items.append({
+                    "id": block.descriptor.name,
+                    **({"path": full_path} if full_path else {}),
+                    "already_shown": f"该资源已在上文【{ZONE_NAME}】内联给出全文，请直接查阅上文，无需重读",
+                })
+                continue
+            sig = self.zone.open_signature(block.uri)
+            dkey = (ZONE_NAME, block.uri, full_path, start)
+            if self.delivered.get(dkey) == sig:
+                items.append({
+                    "id": block.descriptor.name,
+                    **({"path": full_path} if full_path else {}),
+                    "already_shown": f"本会话上文已完整返回过 {block.descriptor.name}"
+                                     + (f" ({full_path})" if full_path else "") + "，请直接查阅上文，无需重读",
+                })
+                continue
+            try:
+                node = drill(record, full_path)
+            except KeyError as exc:
+                items.append({"id": ident, "error": str(exc)})
+                continue
+            rendered, complete = self._give(node, block.descriptor.name, full_path, start)
+            size = len(dump(rendered))
+            if used and used + size > COLLECT_CHARS:
+                items.append({"id": ident, "error": f"本次合计已到 {COLLECT_CHARS} 字，剩余编号请下次再取"})
+                continue
+            used += size
+            if complete:
+                self.delivered[dkey] = sig
+            items.append({
+                "id": block.descriptor.name,
+                **({"path": full_path} if full_path else {}),
+                **({"offset": start} if start else {}),
+                **rendered,
+            })
+        return {"name": ZONE_NAME, "records": items}
+
+    def read(self, name: str, ids: Optional[Sequence[str]] = None, path: str = "", offset: int = 0) -> dict[str, Any]:
+        if name == ZONE_NAME:
+            return self._read_zone(ids, path, offset)
         values = self.readable()
         if name not in values:
-            return None, f"{name} 不在当前能读的材料里（能读的：{sorted(values)}）"
-        return values[name], None
-
-    def read(self, name: str, ids: Optional[Sequence[str]] = None, path: str = "", full: bool = False) -> dict[str, Any]:
-        value, error = self._value(name)
-        if error:
-            return {"isError": True, "error": error}
+            return {"isError": True, "error": f"{name} 不在当前能读的材料里（能读的：{self._available_names()}）"}
+        value = values[name]
         if value is None:
             return {"isError": True, "error": f"{name} 未启用或未出现"}
+        start = max(0, int(offset or 0))
         if ids:
-            store = as_store(value)
-            if not store:
-                return {"isError": True, "error": f"{name} 不是按编号存的记录，用 path 读"}
-            by_id = {str(r["id"]): r for r in store["records"]}
+            records = value.get("records") if isinstance(value, Mapping) and isinstance(value.get("records"), list) else None
+            if records is None:
+                return {"isError": True, "error": f"{name} 不是按编号存的记录，去掉 ids 改用 path / offset 读"}
+            by_id = {str(r["id"]): r for r in records if isinstance(r, Mapping) and "id" in r}
             items, used = [], 0
             for ident in ids:
                 record = by_id.get(str(ident))
                 if record is None:
                     items.append({"id": ident, "error": "没有这个编号"})
                     continue
+                dkey = (name, str(ident), path, start)
+                if self.delivered.get(dkey) == "*":
+                    items.append({"id": ident, **({"path": path} if path else {}),
+                                  "already_shown": f"本会话上文已完整返回过 {ident}，请直接查阅上文，无需重读"})
+                    continue
                 try:
                     node = drill(record, path)
                 except KeyError as exc:
                     items.append({"id": ident, "error": str(exc)})
                     continue
-                rendered = self._give(node, full, f"{name} 的 {ident}", path)
+                rendered, complete = self._give(node, f"{name} 的 {ident}", path, start)
                 size = len(dump(rendered))
                 if used and used + size > COLLECT_CHARS:
-                    items.append({"id": ident, "error": f"本次合计已到 {COLLECT_CHARS} 字，下次再取"})
+                    items.append({"id": ident, "error": f"本次合计已到 {COLLECT_CHARS} 字，剩余编号请下次再取"})
                     continue
                 used += size
-                items.append({"id": ident, **({"path": path} if path else {}), **rendered})
+                if complete:
+                    self.delivered[dkey] = "*"
+                items.append({"id": ident, **({"path": path} if path else {}), **({"offset": start} if start else {}), **rendered})
             return {"name": name, "records": items}
         try:
             node = drill(value, path)
         except KeyError as exc:
             return {"isError": True, "error": str(exc)}
-        return {"name": name, **({"path": path} if path else {}), **self._give(node, full, f"{name} 的 {path or '整段'}", path)}
+        rendered, _ = self._give(node, f"{name} 的 {path or '整段'}", path, start)
+        return {"name": name, **({"path": path} if path else {}), **({"offset": start} if start else {}), **rendered}
 
     def search(self, name: str, query: str) -> dict[str, Any]:
-        value, error = self._value(name)
-        if error:
-            return {"isError": True, "error": error}
         query = str(query or "").strip()
         if not query:
             return {"isError": True, "error": "query 不能为空"}
-        store = as_store(value)
-        records = store["records"] if store else [{"id": "", "value": value}]
-        hits = []
-        for record in records:
-            node = record if store else value
-            for at, snippet in _hits(node, "", query):
-                hits.append({"id": record.get("id", ""), "path": at, "snippet": snippet})
-        return {"name": name, "query": query, "hits": hits[:SEARCH_HITS], "total": len(hits),
-                "hint": f"片段不算读过正文，用 {READ}(name, ids=[id], path=path) 取回再引用" if store
-                        else f"片段不算读过正文，用 {READ}(name, path=path) 取回再引用"}
+        if name == ZONE_NAME:
+            if self.zone is None or not self.zone.has_open:
+                return {"isError": True, "error": f"当前没有开放的公共资源（能读的：{self._available_names()}）"}
+            records = self.zone.iter_open_records()
+            hits = [
+                {"id": rec.get("id", ""), "path": at, "snippet": snippet}
+                for rec in records for at, snippet in _hits(rec, "", query)
+            ]
+            return {
+                "name": ZONE_NAME, "query": query, "hits": hits[:SEARCH_HITS], "total": len(hits),
+                "hint": f"片段不算读过正文，用 {READ}(name={ZONE_NAME!r}, ids=[id], path=path) 取回再引用",
+            }
+        values = self.readable()
+        if name not in values:
+            return {"isError": True, "error": f"{name} 不在当前能读的材料里（能读的：{self._available_names()}）"}
+        value = values[name]
+        hits = [{"id": "", "path": at, "snippet": snippet} for at, snippet in _hits(value, "", query)]
+        return {
+            "name": name, "query": query, "hits": hits[:SEARCH_HITS], "total": len(hits),
+            "hint": f"片段不算读过正文，用 {READ}(name={name!r}, path=path) 取回再引用",
+        }
 
     def tools(self) -> list[VerifiableTool]:
-        name = {"type": "string", "description": "材料标题（推送里【】中的原文）"}
+        name = {"type": "string", "description": f"公共资源区填 {ZONE_NAME!r}，或普通材料标题（推送里【】中的原文）"}
         return [
-            VerifiableTool(tool_id=READ, execute_fn=self.read,
-                           description="读大材料的正文：ids 按目录里的编号取记录；单条太大会给结构图，带 path（如 fields/content）往下取；确需整段 full=true。",
-                           parameters={"type": "object", "properties": {
-                               "name": name,
-                               "ids": {"type": "array", "items": {"type": "string"}, "description": "要取的记录编号"},
-                               "path": {"type": "string", "description": "记录内的位置，a/b/0 这样写；不填取整条"},
-                               "full": {"type": "boolean", "description": "整段读取（上限更大）"}},
-                               "required": ["name"]}),
-            VerifiableTool(tool_id=SEARCH, execute_fn=self.search,
-                           description="在大材料里按关键词找，逐个字段找（JSON 文本解开找），返回命中的记录编号、字段位置 path 与片段；片段不算读过，要引用先用 read_material 按编号 + path 取回。",
-                           parameters={"type": "object", "properties": {
-                               "name": name, "query": {"type": "string", "description": "关键词"}},
-                               "required": ["name", "query"]}),
+            VerifiableTool(
+                tool_id=READ, execute_fn=self.read,
+                description=(f"按需读取公共资源区（name={ZONE_NAME!r}，传 ids）或超限普通材料正文（单次上限 {READ_CHARS} 字）。"
+                             "结构超限时超长字段给开头预览，按预览提示的 path 下钻；单段纯文本超限时按提示传 offset 续读。"
+                             "同一会话已给过的资源不必重读。"),
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "name": name,
+                        "ids": {"type": "array", "items": {"type": "string"}, "description": "要取的资源编号列表（可一次传多个）"},
+                        "path": {"type": "string", "description": "内部字段路径，如 fields/output；不填取整条"},
+                        "offset": {"type": "integer", "description": "单段超长文本续读的起始字符位置（默认 0）"},
+                    },
+                    "required": ["name"],
+                },
+            ),
+            VerifiableTool(
+                tool_id=SEARCH, execute_fn=self.search,
+                description=(f"在公共资源区（name={ZONE_NAME!r}）或大材料里逐字段按关键词搜索（自动解开内层 JSON 文本），"
+                             "返回命中的编号、字段位置 path 与片段；片段不算读过，要引用须先用 read_material 取回。"),
+                parameters={"type": "object", "properties": {
+                    "name": name, "query": {"type": "string", "description": "关键词"}},
+                    "required": ["name", "query"]},
+            ),
         ]

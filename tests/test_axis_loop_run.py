@@ -356,26 +356,30 @@ def test_governor_single_return_over_limit_still_fails():
 
 # ---- 大材料：读取范围 = 已出现任务白名单的合集（S2） ------------------------------------------------
 
-STORE = {"catalog": [{"id": "r1", "summary": "一次工具调用"}, {"id": "r2", "summary": "又一次"}],
-         "records": [{"id": "r1", "input": {"q": "按 P123 查"}, "output": {"rows": ["返回了 P999 的记录"]}},
-                     {"id": "r2", "input": {"q": "按 P456 查"}, "output": {"rows": ["返回了 P888 的记录"]}}]}
-
-
-def test_big_material_pushes_catalog_and_read_tool_only_sees_whitelisted_fields():
-    reg = Registry([Material("case.store", obj(catalog={"type": "array"}, records={"type": "array", "items": obj(
-        id=TEXT, input={"type": "object"}, output={"type": "object"})}), "记录库", lambda case, ctx: STORE)])
+def test_big_resource_pushes_catalog_in_public_zone_and_read_tool_only_sees_opened_template_fields():
+    exposed = [
+        {"uri": "trace://r1", "type": "record_set", "name": "r1", "title": "一次工具调用",
+         "body": {"id": "r1", "fields": {"input": {"status": "available", "value": "按 P123 查"},
+                                         "output": {"status": "available", "value": "返回了 P999 的记录"}}}},
+        {"uri": "trace://r2", "type": "record_set", "name": "r2", "title": "又一次",
+         "body": {"id": "r2", "fields": {"input": {"status": "available", "value": "按 P456 查"},
+                                         "output": {"status": "available", "value": "返回了 P888 的记录"}}}},
+    ]
+    reg = Registry([Material("case.store", obj(input_uris=STRS), "资源索引",
+                             lambda case, ctx: {"input_uris": ["trace://r1/fields/input", "trace://r2/fields/input"]},
+                             resources=lambda val: exposed)])
     v = lambda *values: {"type": "string", "enum": list(values)}
-    defs = parse({"axes": {"expect": {"title": "本应", "materials": ["case.store.records[].{id, input}"],
+    defs = parse({"axes": {"expect": {"title": "本应", "resources": ["case.store.input_uris[]"],
                                       "output": obj(verdict=v("ok"), reason=TEXT)}},
                   "loops": {"main": {"start": "case"}}})
-    script = Script({"main": [[call("read_material", **{"name": "case.store.records[].{id, input}", "ids": ["r1"]})],
+    script = Script({"main": [[call("read_material", **{"name": "resources", "ids": ["r1"]})],
                               [submit("expect", {"verdict": "ok", "reason": "r"})], "完成"]}, [])
     loop = AxisLoop(defs, ["expect"], MaterialTable(reg, {}), FakeSources(), script,
                     Settings(llm_calls=10, tool_calls=10, seconds=60, material_inline_chars=60))  # 整份超、单条不超
     report = loop.run("case 头", LoopContext(trace_id="t", stage="axis_loop"))
     assert report.status == "complete", report.reason
     pushed = " ".join(script.texts("main"))
-    assert "只给目录" in pushed or "只给开头" in pushed
+    assert "【resources】" in pushed and "统一目录" in pushed
     read_back = [m["content"] for m in report.messages if m.get("role") == "tool" and "按 P123 查" in str(m.get("content"))]
     assert read_back and not any("P999" in str(m.get("content")) for m in report.messages)
 

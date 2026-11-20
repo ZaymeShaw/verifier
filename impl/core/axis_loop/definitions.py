@@ -85,6 +85,7 @@ class Work:
     output: Mapping[str, Any]
     checks: tuple[CheckUse, ...]
     code: Code
+    resources: tuple[str, ...] = ()
 
     def fill(self, name: str) -> str:
         return str((self.output.get("properties") or {}).get(name, {}).get("x-fill") or FILL_MODEL)
@@ -231,7 +232,9 @@ def _work(raw: Mapping[str, Any], label: str, code: Code) -> dict[str, Any]:
             raise ValueError(f"{label}.tool_categories[{i}] 必须有 category")
         cats.append(ToolCategory(str(item["category"]), bool(item.get("required"))))
     return dict(id=str(raw.get("id") or ""), instruction=str(raw.get("instruction") or ""),
-                materials=_strings(raw.get("materials"), f"{label}.materials"), tool_categories=tuple(cats),
+                materials=_strings(raw.get("materials"), f"{label}.materials"),
+                resources=_strings(raw.get("resources"), f"{label}.resources"),
+                tool_categories=tuple(cats),
                 submit=_choice(raw.get("submit"), SUBMIT_ONCE, (SUBMIT_ONCE, SUBMIT_PER_ITEM), f"{label}.submit"),
                 items_field=str(raw.get("items_field") or ""), item_key=str(raw.get("item_key") or "item_id"),
                 output=dict(output), checks=tuple(checks), code=code)

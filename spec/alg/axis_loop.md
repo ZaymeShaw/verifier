@@ -123,7 +123,8 @@ case ─► 加载：场景启用的轴 → 依赖、白名单、工具类别、
 | `depends` | `[{axis, hard}]` | `[{axis: claims, hard: true}]` |
 | `trigger` | `{axis, verdict_in}`，只能引用硬依赖 | — |
 | `instruction` | 说明正文：只写怎么判；推送任务时放进上下文 | "判定回答里的每条说法是否属实……" |
-| `materials` | 材料白名单（§4） | `["result.claims.claims[]"]` |
+| `materials` | 普通材料白名单（§4），原样放进本轴任务卡 | `["result.claims.claims[]"]` |
+| `resources` | 主动推送进本 loop 公共资源区的资源 URI 列表点路径（`resources.md` §11）；加载期校验目标类型为 `string[]` | `["result.trace_analysis.views[axis=tool_execution].full_uris[]"]` |
 | `tool_categories` | 信息源类别 `[{category, required}]` | `[{category: knowledge, required: true}]` |
 | `tools` | 选用的被调用启动的 loop（§3.3），按名字 | `["search_knowledge"]` |
 | `submit` | `once` 或 `per_item`；`per_item` 时写 `items_field` 与 `item_key` | `per_item` |
@@ -219,10 +220,10 @@ case ─► 加载：场景启用的轴 → 依赖、白名单、工具类别、
 - 文本原样放入；结构化的值用 `json.dumps(ensure_ascii=False, sort_keys=True)` 序列化，保证同一份值每次的文本一样，可逐字引用。
 - 引用材料：`{ref: "<标准名>[#轮次]", quote}`，quote 必须逐字出现在那一段的文本里。引用工具返回：`{ref: "<call_id>", quote}`。
 - 小材料由程序直接放进上下文（10-21 定）。
-- **大材料先给目录，正文按需读**（10-25 定，需求 §3.6.6；做法沿用现有案卷与 ES 的"先 outline 再读"，参照 Claude Code 的大结果落盘 + 按需读）：
-  - 序列化后超过 `eval_axes.loop_material_inline_chars`（缺省 20000）的材料，推送时只把记录正文换成目录（材料自己声明哪个字段是目录，例 `case.trace.catalog`；没声明的放前 2000 字预览 + 大小）；记录库旁的其他字段（例 `case.trace` 的 `links` / `program_suspects` / `gaps`）照推，单个超过上限的给前 2000 字预览 + 按 `path` 读的写法（10-26 修：之前连这些字段一起丢了，侦探拿不到环节表）。
-  - 正文用 loop 内置工具取，两种找法（10-25 定）：按目录挑编号，`read_material(name, ids?, path?, full?)` 取记录，单条超过上限时返回结构图（字段、大小），带 `path` 下钻，确需整段时 `full=true`；目录摘要定位不到时，`search_material(name, query)` 按关键词逐个字段找（值是 JSON 文本的先解开），返回命中的编号、字段位置 path 与可读片段，再用 `read_material` 按编号 + path 取；按 path 下钻遇到 JSON 文本先解开再走，走不通时报出这一层有哪些字段（10-26 改：原来在整条记录的 JSON 文本里找，片段满是转义符、看不出在哪个字段，模型反复搜、猜 path）。单次读取的上限与推送上限是同一个（`loop_material_inline_chars`），不另设；超限时从最长的正文段起换成预览（开头一段 + 全文字数 + 读全文的 path，同 Claude Code 读大文件的做法），其余照给全文，要全文再按 path + `full=true` 取，连结构都放不下才只给结构图；同一 loop 里已给过的长段正文（≥300 字），在别的记录里再出现时只给指向"同 X 里那段"，按大小判断前先去重（被测系统每次调模型的请求都带着完整累积对话），重读同一条记录照常给全文（10-25 定）。即侦探现有的 `dossier_collect` / `dossier_read` / `dossier_search` 推广给所有 loop；`dossier_timeline` 不做工具，轮次与先后顺序写进目录；`dossier_verify_quote` 删除，引文由验收程序核。
-  - **能读到的范围 = 这个 loop 里已出现任务白名单的合集**（同一上下文里已推进来的本就收不回，按合集算是一致的）。白名单没选的字段、元素读不到，所以可见性仍由程序保证。读回的原文是一次普通工具返回，可被 `quote_in_call` 引用，按 §9 归档。
+- **公共资源管理区与大材料按需读**（10-25 初定，2026-11-16 P3 修订，详见 `spec/alg/resources.md` §11）：
+  - **普通材料 vs MCP 资源**：普通材料（`materials`）只在任务卡原样放入（超过 `loop_material_inline_chars` 缺省 20000 字时给前 2000 字预览 + `path` 读法）；挂进 `ResourceTable` 的资源统一走轴定义的 `resources` 槽位主动推送 URI（不传正文副本、不扫描普通材料）。每批任务解锁时，`_LoopGate` 将新任务的 URI 推进本 loop 的 `ResourceZone`：任务卡内对等列出本任务可见资源清单，消息顶部的 `【resources】` 公共资源区按新增开放的 `delta` 统一渲染（`≤ loop_material_inline_chars` 嵌唯一正文，`> loop_material_inline_chars` 输出统一目录）。
+  - **读取与截断**：`read_material(name, ids?, path?, offset?)` 点名读取单次上限直接为 `60,000` 字（单批合计 `60,000` 字，删掉 `full` 二道门参数）；结构化内容超 `60,000` 字时将长字段切成 `2,000` 字预览 + `path` 下钻，仍放不下给 `shape()` 结构图；单段纯文本超 `60,000` 字时按 `offset` 分段续读。同一 loop 内已完整给过的资源重复点名时直接指向上文；跨记录 `≥ 2,000` 字相同长段折叠时提示原文见前文、引用本记录仍填本记录编号。`search_material(name, query)` 逐字段（含解开内层 JSON 文本）搜关键词并返回编号、`path` 与片段。
+  - **能读到的范围 = 这个 loop 里已出现任务开放的 `materials` 与 `ResourceZone` 已开放 URI 的合集**；未出现任务的资源或字段（如 `process_expected` 未解锁的输出端）不在公共区也读不到，可见性由程序严格保证。
 
 ## 5. loop 协议
 

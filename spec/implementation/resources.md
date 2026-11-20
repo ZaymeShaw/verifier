@@ -167,3 +167,20 @@
 - 剩下的 5 次过程实际被拒：`level` 压扁 1、把记录属性 `name` 写成 `…/fields/name` 2、不在本轴材料里 4、原文在输入端却写成输出端 1、**抄了去重占位"〔同 X 里已给过的那段，N 字〕" 2**。最后一类：材料里被去重换成占位的那段，模型看不到原文，只能去引 X；P1 时由复核脚本还原，P2 没有处理，待定。
 - **去掉 8036 的 `x-explain` 后重跑**（job `3766f805`，与 8037 同配置）：11 / 11 出结论；对照 8037 当时：调用 196 → 190，耗时 8127 → 7087 s，过程实际被拒提交 23 → 0，最终引用 365 条、写到字段 357 条（98%）。主结论 9 / 11 相同；翻的 2 条都是业务这次答得不一样：bizno 当时答"未命中"、这次答出客户何承琪（没做成 → 做成了）；D16 这次严言琳的查询连续报 `upstream` 错、只给了一位的档案（做成了 → 没做成）。过程轴结论另有 13 处不同（模型能力 5 处为主），都落在这两条业务变化的 case 或已知的"旁白有时抓到有时漏"上。
 - **逐条判对错**（按 `report/eval-gold-dataset-a/RULES.md` 口径，`q.py` 只读查数据源取证）：评测器主结论 22 条对 20 条（mcp 10 / 11、langfuse 10 / 11），错的 2 条都是判成"不确定"，没有误放行、没有误判没做成。mcp-C08：回答把 9117 两条险种的月缴 108.3 + 62.5 写成"约 1,170.8 元"（应 170.8），是用户没要的附带说错，按口径应判做成了，评测器判不确定；langfuse-fuyunping：回答正确，评测器又把 gate 步骤当成模型调用判无法核 → 不确定（§2.4 同一问题）。数据源核实的关键事实：严言雅为男（langfuse-D16 写"女"是错的）；何承琪手机 19909220884（langfuse-bizno 的"尾号 0884"属实，只是 trace 里脱敏，模型能力轴按"输入里没有"判编造）。
+
+## 3. P3：公共资源管理区与存取（2026-11-16，分支 `20261116-resource-zone`）
+
+算法见 `spec/alg/resources.md` §11、`spec/alg/axis_loop.md` §3.2 / §4.4。
+
+### 3.1 分层改动清单
+
+| 层 | 位置 | 改动 |
+|---|---|---|
+| 资源底座层 | `impl/core/resources/types/record_set.py` | `RecordSet` 新增 `field_name`、`catalog_entry`（复用 MCP `Resource` 描述符生成目录项）、`present`（支持整块或指定模板字段子集展示，并按 `_meta["local.verifier/source"]` 折叠同记录内同源重复字段） |
+| Loop 框架层 | `impl/core/axis_loop/definitions.py`、`paths.py`、`validate.py` | 轴定义 `Work` 增加与 `materials` 平级的 `resources: tuple[str, ...]`；加载期静态校验路径与末端类型必为 `string` 或 `array[string]` |
+| Loop 框架层 | `impl/core/axis_loop/zone.py`（新） | `ResourceZone`：接收显式推送的 URI（强校验在 `ResourceTable` 中存在），按本 Loop 已开放范围计算新增 `delta`，统一渲染顶层 `【resources】` 公共资源区（`≤ inline_chars` 嵌唯一正文，`> inline_chars` 给统一目录），对读取/搜索提供已开放门禁视图 |
+| Loop 框架层 | `impl/core/axis_loop/visible.py` | 删除递归扫描普通材料字典猜测 `id` 的 `_ids()`，直接由任务声明的 `resources` URI 构造可见集合（兼容完整 URI 与短名；仅开放模板字段时放行记录头属性与已开放字段引用，同块未开放字段严格报 `out_of_scope` 且错引提示不泄露未开放字段） |
+| Loop 框架层 | `impl/core/axis_loop/reader.py`、`loop.py` | 直连 `ResourceZone`；删除 `full` 二道门参数，点名 `read_material` 单次上限直给 `60,000` 字；结构超限给 `2,000` 字预览 + `path` 下钻；单段纯文本超限支持 `offset` 续读防死循环；同 Loop 已给过防重读；跨记录 `≥ 2,000` 字重复段折叠不诱导跨记录/跨轴越界引用 |
+| 配置与轴构建层 | `impl/data/llm_probe_loop/axis_definitions.json`、`eval_axes/materials.py`、`eval_axes/registry.py`、`process_axes.py`、`axis_code/trace_analysis/checks.py` | `case.trace` 去掉 `records / catalog` 正文副本改为 `uris[]`；`process_axes.py` 删除 `to_store` 12 份展开正文拷贝，改为按 `input_view` / `material_view` 实际选中字段产出精简的 `input_uris[]` 与 `full_uris[]`（剔除未使用的 span `metadata` 与父节点冗余 `output`）；13 个 trace 相关轴将资源声明迁入 `resources` 字段 |
+| 测试 | `tests/test_case_trace.py`、`test_axis_loop_core.py`、`test_axis_loop_run.py`、`test_llm_probe_loop_process.py` | 覆盖加载期 `resources` 类型检查、分波解锁 `delta` 与字段防污染、模板字段块上的记录级引用放行与隔离、`60k / 2k预览 / offset` 续读不死循环、同 Loop 防重读、跨记录折叠自引、过程六轴端到端单份公共资源区；相关测试全过 |
+

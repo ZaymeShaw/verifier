@@ -299,3 +299,37 @@ P1 的 `local.verifier/roles` 不再写：输入端 / 输出端是评测环节�
 | 只交本任务可见的资源 | 敏感资源 SHOULD 做访问控制；资源怎么用由应用方定（application-driven） | 符合：可见性是应用方的访问控制 |
 | 材料里写短编号、按 `name` 换成地址 | MCP 不定义"引用"；`name` 是资源的程序用名字，不要求唯一 | 引用是我们应用方的事，MCP 不管；`name` 唯一是我们的约束，挂载时校验 |
 | 进程内的资源表，不起 MCP 服务 | — | P2 用的是 MCP 的数据结构与读法（`mcp.types`），不对外提供服务；真起服务时地址须带 case / run 编号（§0.2） |
+
+## 11. P3：公共资源管理区与存取（2026-11-16 定）
+
+P2 只把交卷时的引用核对（`cite`）接上了 `ResourceTable`，推送与按需读仍走按轴拷贝的私有记录库（12 份展开正文、跨轴去重指路引发 `out_of_scope` 被拒、`full=false` 20k 二道门与 `>60k` 单段死循环）。P3 把 MCP 资源的**运行时投递与读取**统一收口到 Loop 级的**公共资源管理区（`ResourceZone`）**，删除所有私有正文拷贝与隐式扫描。
+
+### 11.1 主动声明 URI，不扫描普通材料
+
+- **源头只产 URI，不产正文副本**：正文只在启动检查挂载进 `ResourceTable` 时存唯一一份。`case.trace` 给模型的字段不再带 `records / catalog` 正文副本，改为 `uris: string[]`（直接资源 URI 列表）；侦探合成结果 `result.trace_analysis.views[axis]` 删除 `to_store` 展开正文拷贝，改为 `input_uris: string[]`（字段级模板 URI `trace://<id>/fields/<field>`）与 `full_uris: string[]`（直接资源 URI `trace://<id>`），外加 `missing_endpoints / input_limitations / reading_guide` 元信息。
+- **轴定义显式并列 `materials` 与 `resources`**：
+  - `materials`：普通材料白名单，原样贴进本轴任务卡，**不扫描、不剥离**；
+  - `resources`：主动推送进本 Loop 公共资源区的 URI 列表点路径（语法同 `materials`，加载期 `validate.py` 静态校验目标 Schema 必为 `string` 或 `string[]`）。
+- **可见性（取代 §10.4 的递归扫描 `_ids`）**：`TaskView.resources`（`Visible`）直接由本任务 `resources` 求出的 URI 集合构造（不再递归猜测字典里的 `"id"` 键）；直接资源 URI 开放整块及其全部字段，模板资源 URI 仅开放所指字段。`Visible.address(ref)` 同时接受完整 URI 与短记录名（`name` 或 `name/fields/field`）。
+
+### 11.2 Loop 公共资源管理区（`impl/core/axis_loop/zone.py`）
+
+- 每个 Loop 实例持有一个 `ResourceZone(table.resources, inline_chars)`，维护本 Loop 当前已向模型开放的资源范围（整块直接 URI 与字段级模板 URI）。
+- **推送时机（仅在 `_LoopGate` 结算解锁/重做任务时触发）**：`_LoopGate` 从 `MaterialTable` 取出本批出现任务的 `axis.resources` URI 列表：
+  1. **任务卡对等展示**：在每个任务自己的任务卡里完整列出该任务的可见资源清单（不省略、不嵌正文）；
+  2. **顶层公共区增量开放（`zone.push(uris)`）**：逐条强校验 `table.part(uri)` 存在（否则 fail-fast 报错），对比本 Loop 已开放范围算出新增 `delta`：
+     - `delta` 为空：公共区本轮静默（不重推）；
+     - `delta` 正文合计 `≤ loop_material_inline_chars`（缺省 20,000 字）：调 `TYPES[type].present` 从 `ResourceTable` 取正文，在消息顶部的 `【resources】` 公共资源区嵌入一次（`RecordSet.present` 按 `_meta["local.verifier/source"]` 将同记录内同源重复字段标为 `same_as`）；
+     - `> loop_material_inline_chars`：调 `TYPES[type].catalog_entry`（基于 MCP `Resource` 描述符）输出统一目录，指引调 `read_material(name="resources", ids=[...])` 或 `search_material`。
+
+### 11.3 读取与截断策略（`impl/core/axis_loop/reader.py`）
+
+- **门禁与防污染**：`read_material` / `search_material` 对 `name="resources"` 只暴露本 Loop `ResourceZone` 当前已开放的块与字段；未开放的记录或字段拒绝读取（`process_expected` 分波解锁严格隔离输出端）。`ids` 同时接受完整 URI 或资源短 `name`。
+- **点名即给上限 + `2k` 预览 + `offset` 续读**：
+  - 删除 `full` 二道门参数；点名 `read_material` 单次上限直接为 `READ_CHARS = 60,000`（单批合计上限 `COLLECT_CHARS = 60,000`）；
+  - 单条结构化内容超过 `60,000` 字时，长字段切成 **`2,000` 字**开头预览 + 子 `path` 下钻（仍超限退回 `shape()` 字段大小表）；
+  - 新增可选参数 `offset: int = 0`：当读取目标已是单段纯文本且超过 `60,000` 字时，返回 `text[offset : offset + 60_000]` 并提示续读 `offset`，消除无限循环死胡同。
+- **防重读与不跨界指路**：
+  - 同一 Loop 内已在公共资源区内联或此前 `read_material` 完整给过的 `(id, path, offset)`（且开放字段未扩充）被重复点名时，直接返回短提示指向上文，不重吐正文；
+  - 跨记录相同大段文本折叠阈值设为 `2,000` 字（仅折叠系统提示词/长累积历史级重复，不折叠普通输出），提示语明确写“原文见前文；引用本记录时 `ref` 仍填本记录编号”，同步删除 `SYSTEM` 规则 8 中误导跨轴越界引用的“要引用就引 X”。
+

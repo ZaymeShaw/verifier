@@ -21,12 +21,15 @@ def turn_materials(material: dict) -> list[tuple[str, dict]]:
 
 
 def user_turns(trace: Any) -> list[str]:
-    """用户各轮原话，按先后排列。多轮时 normalized_request 只是第一轮，后面的更正、追问在对话记录里；
-    没有对话记录时取请求体里的用户消息（DashScope 形状在 input.messages，其余在 messages）。"""
+    """用户各轮原话，按先后排列。多轮时优先取更完整的来源：在线多轮在 conversation_transcript，
+    单条 trace 回放多轮历史时在请求体的 messages（DashScope 形状在 input.messages，其余在 messages）。"""
     turns = [str(m.get('query') or m.get('content') or '') for m in getattr(trace, 'conversation_transcript', None) or []
              if isinstance(m, Mapping) and m.get('role') == 'user']
-    if turns:
-        return turns
-    body = (getattr(trace, 'normalized_request', None) or {}).get('body') or {}
+    records = getattr(trace, 'turn_records', None) or []
+    req = (records[-1].get('request') if records and isinstance(records[-1], Mapping) else None) or getattr(trace, 'normalized_request', None) or {}
+    body = req.get('body') if isinstance(req, Mapping) and isinstance(req.get('body'), Mapping) else (req if isinstance(req, Mapping) else {})
     messages = (body.get('input') or {}).get('messages') if isinstance(body.get('input'), Mapping) else body.get('messages')
-    return [str(m.get('content') or '') for m in messages or [] if isinstance(m, Mapping) and m.get('role') == 'user']
+    req_turns = [str(m.get('content') or '') for m in messages or [] if isinstance(m, Mapping) and m.get('role') == 'user']
+    if len(req_turns) > len(turns):
+        return req_turns
+    return turns or req_turns

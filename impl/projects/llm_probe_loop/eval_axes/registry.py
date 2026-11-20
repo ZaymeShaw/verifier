@@ -24,7 +24,7 @@ class AxisInfo:
     @property
     def requires_business_trace(self) -> bool:
         """白名单读 trace 存档（case.trace）的轴。"""
-        return any(m == "case.trace" or m.startswith("case.trace.") for m in self.axis.materials)
+        return any(m == "case.trace" or m.startswith("case.trace.") for m in (*self.axis.materials, *self.axis.resources))
 
     def describe(self) -> dict[str, Any]:
         """与 llm_probe 的类型声明同形（资料页 / live 页按 type_id 取）：说明正文第一句当 summary；
@@ -37,7 +37,7 @@ class AxisInfo:
                 "verdict_enum": [{"value": v} for v in a.verdict_values],
                 "depend_on": [{"type_id": d.axis, "optional": not d.hard} for d in a.depends],
                 "trigger_when": {"axis": a.trigger.axis, "verdict_in": list(a.trigger.verdict_in)} if a.trigger else None,
-                "inputs": [{"source": m} for m in a.materials],
+                "inputs": [{"source": m} for m in (*a.materials, *a.resources)],
                 "scenario_fields": [{"name": "description", "required": False}] if not a.automatic else [],
                 "requires_business_trace": self.requires_business_trace}
 

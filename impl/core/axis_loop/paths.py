@@ -170,3 +170,15 @@ def check_schema(schema: Mapping[str, Any], path: Path) -> Optional[str]:
         if missing:
             return f"{path}：投影字段 {missing} 不在 schema 里（可用：{', '.join(sorted(props)) or '无'}）"
     return None
+
+
+def leaf_schema(schema: Mapping[str, Any], path: Path) -> Mapping[str, Any]:
+    """路径走到底后的末端 schema（供 resources 静态校验是否指向字符串 / 字符串列表）。"""
+    current = _resolve(schema)
+    for segment in path.segments:
+        props = current.get("properties") if isinstance(current.get("properties"), Mapping) else {}
+        current = _resolve(props.get(segment.key))
+        if segment.each:
+            current = _resolve(current.get("items"))
+    return {"type": "object"} if path.fields else current
+

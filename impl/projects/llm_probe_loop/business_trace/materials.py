@@ -84,6 +84,12 @@ def model_material(view: Mapping[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in view.items() if key != "reads"}
 
 
+def _split_ref(raw: str) -> tuple[str, str]:
+    text = str(raw or "").strip().removeprefix("trace://")
+    rec, sep, field = text.rpartition("/fields/")
+    return (rec, field) if sep and field else (text, "")
+
+
 def material_view(dossier: Mapping[str, Any], links: list[Mapping[str, Any]],
                   suspects: list[Mapping[str, Any]], *, extra_refs: list[str] = ()) -> dict[str, Any]:
     rows = {r["id"]: r for r in dossier.get("records", [])}
@@ -103,13 +109,14 @@ def material_view(dossier: Mapping[str, Any], links: list[Mapping[str, Any]],
                 info = ((row or {}).get("fields") or {}).get(field)
                 known = row is not None or ref in contents or ref in sources
                 definition = row and row.get("kind") == "definitions" and field == "definition"
+                source_body = ref in sources and field == "request_and_response"
                 if definition:
                     fields[ref] = {""}
                 if row and row.get("scope") == "observed_at_collection_not_verified_run_version":
                     limitations.append({"link_id": link["link_id"], "ref": ref, "reason": "仅采集时定义，未经核对是否为本次执行版本，不能证明本次模型收到该规则"})
                 tool_calls = ((row or {}).get("fields", {}).get("tool_calls") or {})
                 tool_only = field == "content" and tool_calls.get("status") == "available" and bool(tool_calls.get("value"))
-                if not known or (field and not tool_only and not definition and (not info or "value" not in info or info.get("status") not in {"available", "empty"})):
+                if not known or (field and not tool_only and not definition and not source_body and (not info or "value" not in info or info.get("status") not in {"available", "empty"})):
                     missing.append({"link_id": link["link_id"], "side": side, "ref": ref, "field": field,
                                     "reason": (info or {}).get("note") or "端点正文未记录"})
                 # Text alone omits the assistant's tool calls and tool response context.
@@ -120,19 +127,17 @@ def material_view(dossier: Mapping[str, Any], links: list[Mapping[str, Any]],
     link_ids = {l["link_id"] for l in links}
     for suspect in suspects:
         if suspect.get("link_id") in link_ids:
-            for ref in suspect.get("source_refs", []):
+            for raw in suspect.get("source_refs", []):
                 # A model call is judged against its own input. An external suspect
                 # source is a lead, not permission to add unseen rules to that input.
                 if not suspect["link_id"].startswith("model_capability:"):
-                    fields.setdefault(ref, set()).add("")
-    for ref in [*extra_refs, *_supporting_definitions(rows, links)]:
+                    rec, field = _split_ref(raw)
+                    fields.setdefault(rec, set()).add(field)
+    for raw in extra_refs:
+        rec, field = _split_ref(raw)
+        fields.setdefault(rec, set()).add(field)
+    for ref in _supporting_definitions(rows, links):
         fields.setdefault(ref, set()).add("")
-    # Planning and knowledge judge against rules the model actually received that turn:
-    # collection-time definitions alone can never be confirmed as this run's version.
-    turns = {(l.get("turn") or "").replace("turn", "t", 1) for l in links if l["link_type"] in {"planning_routing", "knowledge_data"}}
-    for row in rows.values():
-        if turns and row.get("kind") == "model_calls" and (row.get("turn") or "").replace("turn", "t", 1) in turns:
-            fields.setdefault(row["id"], set()).add("exact_request")
     details = {"tool_description", "metrics", "start_time", "end_time", "duration_ms", "error", "status", "status_code", "status_message"}
     for ref in list(fields):
         row = rows.get(ref)

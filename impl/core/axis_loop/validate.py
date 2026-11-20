@@ -43,12 +43,30 @@ def check_entry(text: str, work: Work, defs: Definitions, registry: Registry) ->
     return paths.check_schema(schema, entry.path)
 
 
+def check_resource_entry(text: str, work: Work, defs: Definitions, registry: Registry) -> Optional[str]:
+    """一条 resources 选择合不合法：走得通，且末端类型是 URI 字符串或字符串列表（resources.md §11.1）。"""
+    if problem := check_entry(text, work, defs, registry):
+        return problem
+    entry = parse_entry(text)
+    schema = _material_schema(entry.name, defs, registry) or {}
+    leaf = paths.leaf_schema(schema, entry.path)
+    ok = leaf.get("type") == "string" or (
+        leaf.get("type") == "array" and (leaf.get("items") or {}).get("type") == "string"
+    )
+    return None if ok else f"{text} 的末端类型必须是 string 或 array[string]（URI 列表），实际是 {leaf}"
+
+
 def _check_work(work: Work, label: str, defs: Definitions, registry: Registry, dispatched: bool = False) -> list[str]:
     errors: list[str] = []
     names: set[str] = set()
     for text in work.materials:
         if problem := check_entry(text, work, defs, registry):
             errors.append(f"{label}.materials: {problem}")
+        else:
+            names.add(parse_entry(text).name)
+    for text in work.resources:
+        if problem := check_resource_entry(text, work, defs, registry):
+            errors.append(f"{label}.resources: {problem}")
         else:
             names.add(parse_entry(text).name)
     props = work.output.get("properties") or {}

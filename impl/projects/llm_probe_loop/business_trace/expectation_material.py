@@ -53,7 +53,7 @@ def project_requirements(trace: Any) -> dict:
         snapshot = (turn.get('project_fields') or {}).get('business_trace') or {}
         records = snapshot.get('records') or {}
         calls = records.get('calls') or []
-        value, history_messages = _request_material(turn.get('mock_message') or turn.get('request'))
+        value, history_messages = _request_material(turn.get('request'))
         source_ref = f'{tid}.request'
         for i, message in history_messages:
             add(f'{tid}.history.{i}', 'history', tid, 'history',

@@ -90,6 +90,87 @@ class RecordSet:
             return Place("attribute")
         return Place("field", tokens[1] if len(tokens) > 1 else "")
 
+    def field_name(self, node: str) -> str:
+        """模板节点 ``/fields/<名>`` → 字段名；整块或其他节点返回空串。"""
+        tokens = pointer_tokens(node)
+        return tokens[1] if len(tokens) == 2 and tokens[0] == FIELDS else ""
+
+    def catalog_entry(self, block: Block, fields: set[str] | frozenset[str] | None = None) -> dict[str, Any]:
+        """公共资源区的目录项：复用 MCP 描述符标签 + 当前已开放字段与字符数。"""
+        body = block.body if isinstance(block.body, dict) else {}
+        raw_fields = body.get(FIELDS) if isinstance(body.get(FIELDS), dict) else {}
+        chosen = sorted(raw_fields if fields is None else (set(fields) & set(raw_fields)))
+        chars = sum(int(raw_fields[n].get("chars") or len(render(raw_fields[n].get("value"))[0]))
+                    for n in chosen if isinstance(raw_fields.get(n), dict) and "value" in raw_fields[n])
+        entry: dict[str, Any] = {"id": block.descriptor.name, "uri": block.uri}
+        if body.get("turn") is not None:
+            entry["turn"] = body["turn"]
+        if block.descriptor.title:
+            entry["title"] = block.descriptor.title
+        if block.descriptor.description:
+            entry["description"] = block.descriptor.description
+        if body.get("parent_ref"):
+            entry["parent_ref"] = body["parent_ref"]
+        if body.get("scope") == "history":
+            entry["scope"] = "history"
+        entry["fields"] = chosen
+        entry["chars"] = chars
+        return entry
+
+    def present(self, block: Block, fields: set[str] | frozenset[str] | None = None) -> dict[str, Any]:
+        """公共资源区内联或按需读取的记录视图：``fields=None`` 为整块直接资源，否则仅暴露指定模板字段。"""
+        body = block.body if isinstance(block.body, dict) else {}
+        raw_fields = body.get(FIELDS) if isinstance(body.get(FIELDS), dict) else {}
+        names = set(raw_fields) if fields is None else (set(fields) & set(raw_fields))
+        src_fields = ((block.meta("source") or {}).get("fields") or {}) if isinstance(block.meta("source"), dict) else {}
+        seen_src: dict[str, str] = {}
+        same: dict[str, str] = {}
+        for name in sorted(names, key=lambda n: (n != "exact_request", n)):
+            src = src_fields.get(name)
+            if src and src in seen_src:
+                same[name] = seen_src[src]
+            elif src:
+                seen_src[src] = name
+        carried: dict[str, list[str]] = {}
+        for name in names - set(same):
+            src = src_fields.get(name)
+            if src:
+                sub = [cs[len(src) + 1:] for cs, cn in seen_src.items() if cn != name and cs.startswith(src + "/")]
+                if sub:
+                    carried[name] = sub
+        if "exact_request" in (names - set(same)) and "raw_attributes" in (names - set(same)):
+            carried.setdefault("raw_attributes", []).append("llm.tools")
+        out_fields: dict[str, Any] = {}
+        sibling_texts: dict[str, str] = {}
+        for name in names - set(same):
+            info = raw_fields.get(name)
+            if isinstance(info, dict) and "value" in info:
+                sibling_texts[name] = render(info["value"])[0]
+        for name in sorted(names):
+            info = raw_fields.get(name)
+            if not isinstance(info, dict):
+                out_fields[name] = info
+                continue
+            if name in same:
+                out_fields[name] = {"status": info.get("status"), "same_as": same[name]}
+                continue
+            item = {k: v for k, v in info.items() if k != "ref"}
+            val = item.get("value")
+            if name in carried and isinstance(val, dict):
+                prefixes = tuple(carried[name])
+                others = [t for k, t in sibling_texts.items() if k != name]
+                dropped = sorted(k for k in val if any(k == p or k.startswith(p + ".") for p in prefixes)
+                                 or (isinstance(val[k], str) and len(val[k]) >= 80 and any(val[k] in t for t in others)))
+                if dropped:
+                    item["value"] = {k: v for k, v in val.items() if k not in dropped}
+                    item["omitted_keys_delivered_elsewhere"] = dropped
+            out_fields[name] = item
+        head = {k: v for k, v in body.items() if k not in (FIELDS, "ref")}
+        head["id"] = block.descriptor.name
+        head[FIELDS] = out_fields
+        return head
+
 
 def _value_span(spans: list[Span], node: str) -> Span | None:
     return next((s for s in spans if s.pointer == node and not s.member), None)
+
